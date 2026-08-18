@@ -123,7 +123,7 @@
 <ul><li><code>codexAdapter.js</code></li><li><code>cliToolAdapter.js</code></li><li><code>aiGateway.js</code></li><li><code>proxyServer.js</code></li><li><code>sseBackpressure.js</code></li><li><code>sseKeepalive.js</code></li></ul>
 <h3 id="7-2-针对性测试">7.2 针对性测试<a class="anchor" href="#7-2-针对性测试" aria-label="锚点">#</a></h3>
 <p>已通过：</p>
-<pre><code class="language-bash">npm test -- --runInBand \
+<pre><code class="language-bash">npm <span class="hljs-built_in">test</span> -- --runInBand \
   tests/gateway/transportResilience.test.js \
   tests/services/sseKeepalive.test.js \
   tests/aiGateway.stability.test.js \
@@ -132,7 +132,7 @@
 <ul><li>4 个 test suite</li><li>93 个测试</li><li>全部通过</li></ul>
 <h3 id="7-3-回归测试">7.3 回归测试<a class="anchor" href="#7-3-回归测试" aria-label="锚点">#</a></h3>
 <p>已通过：</p>
-<pre><code class="language-bash">npm test -- --runInBand \
+<pre><code class="language-bash">npm <span class="hljs-built_in">test</span> -- --runInBand \
   tests/gatewayManage.portDrift.integration.test.js \
   tests/gatewayManage.apiDisplay.test.js \
   tests/services/serviceDefaults.test.js \

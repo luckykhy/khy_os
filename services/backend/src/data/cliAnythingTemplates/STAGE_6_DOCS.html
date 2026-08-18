@@ -34,40 +34,40 @@
 <ol><li><strong>Run tests</strong>:<ul><li>Python: <code>pytest tests/ -v --tb=short</code></li><li>Node.js: <code>node --test tests/</code> or <code>npx jest tests/</code></li><li>Record pass/fail counts and any failures</li></ul></li></ol>
 <ol><li><strong>Update TEST.md (Part 2)</strong> — append test results:</li></ol>
 <pre><code class="language-markdown">   ## Test Results
-   - Total: N tests
-   - Passed: N
-   - Failed: N
-   - Skipped: N
+<span class="hljs-bullet">   -</span> Total: N tests
+<span class="hljs-bullet">   -</span> Passed: N
+<span class="hljs-bullet">   -</span> Failed: N
+<span class="hljs-bullet">   -</span> Skipped: N
 
    ### Failures
-   - test_xxx: &lt;failure reason&gt;</code></pre>
+<span class="hljs-bullet">   -</span> test<span class="hljs-emphasis">_xxx: <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">failure</span> <span class="hljs-attr">reason</span>&gt;</span></span></span></code></pre>
 <ol><li><strong>Generate SKILL.md</strong>:</li></ol>
 <pre><code class="language-markdown">   ---
-   name: cli-anything-&lt;SOFTWARE&gt;
-   description: &lt;one-line description for LLM tool selection&gt;
+   name: cli-anything-<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">SOFTWARE</span>&gt;</span></span>
+   description: <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">one-line</span> <span class="hljs-attr">description</span> <span class="hljs-attr">for</span> <span class="hljs-attr">LLM</span> <span class="hljs-attr">tool</span> <span class="hljs-attr">selection</span>&gt;</span></span>
    version: 1.0.0
-   tags: [&lt;SOFTWARE&gt;, cli-anything, agent-tool]
-   entry_point: cli-anything-&lt;SOFTWARE&gt;
+   tags: [<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">SOFTWARE</span>&gt;</span></span>, cli-anything, agent-tool]
+   entry<span class="hljs-emphasis">_point: cli-anything-<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">SOFTWARE</span>&gt;</span></span>
    ---
 
-   # &lt;SOFTWARE&gt; Agent Tool
+   # <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">SOFTWARE</span>&gt;</span></span> Agent Tool
 
-   You have access to `cli-anything-&lt;SOFTWARE&gt;`, a command-line tool for AI agent control of &lt;SOFTWARE&gt;.
+   You have access to `cli-anything-<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">SOFTWARE</span>&gt;</span></span>`, a command-line tool for AI agent control of <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">SOFTWARE</span>&gt;</span></span>.
 
    ## Available Commands
 
    | Command | Description | Example |
    |---------|-------------|---------|
-   | `project create` | Create new project | `cli-anything-&lt;SOFTWARE&gt; project create --name myproject` |
+   | `project create` | Create new project | `cli-anything-<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">SOFTWARE</span>&gt;</span></span> project create --name myproject` |
    | ... | ... | ... |
 
    ## Usage Patterns
 
    ### Basic Workflow
    ```bash
-   cli-anything-&lt;SOFTWARE&gt; project create --name demo --json
-   cli-anything-&lt;SOFTWARE&gt; &lt;domain&gt; &lt;action&gt; --json
-   cli-anything-&lt;SOFTWARE&gt; export render --output result.png --json</code></pre>
+   cli-anything-<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">SOFTWARE</span>&gt;</span></span> project create --name demo --json
+   cli-anything-<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">SOFTWARE</span>&gt;</span></span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">domain</span>&gt;</span></span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">action</span>&gt;</span></span> --json
+   cli-anything-<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">SOFTWARE</span>&gt;</span></span> export render --output result.png --json</span></code></pre>
 <p>## Error Handling</p>
 <p>If a command fails, check <code>--json</code> output for <code>{&quot;status&quot;: &quot;error&quot;, &quot;error&quot;: &quot;...&quot;}</code>.</p>
 <pre><code>

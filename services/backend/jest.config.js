@@ -64,10 +64,19 @@ function findStandaloneTestFiles(dir) {
 
 const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+// Every root that can hold a `.test.js`, so a node:test suite is never left
+// unignored just because it lives outside tests/ or src/ (e.g. the vendored
+// shared runtime under vendor/). Missing roots are skipped rather than throwing,
+// since vendor/ is only present in the packaged/vendored layout.
+const TEST_ROOTS = ['tests', 'src', 'test', 'vendor'];
+
+const existingRoots = TEST_ROOTS.map((r) => path.join(__dirname, r)).filter((p) =>
+  fs.existsSync(p),
+);
+
 const nodeTestIgnores = [
-  ...findNodeTestFiles(path.join(__dirname, 'tests')),
-  ...findNodeTestFiles(path.join(__dirname, 'src')),
-  ...findStandaloneTestFiles(path.join(__dirname, 'tests')),
+  ...existingRoots.flatMap(findNodeTestFiles),
+  ...existingRoots.flatMap(findStandaloneTestFiles),
 ].map(escapeRegExp);
 
 module.exports = {

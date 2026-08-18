@@ -23,6 +23,9 @@ const zlib = require('zlib');
 
 const pipe = promisify(pipeline);
 
+const atomicWriteJson = require('../utils/atomicWriteJson');
+const { atomicWriteText } = require('../utils/atomicWriteJson');
+
 // Portable-aware app home resolved at load (legacy const semantics preserved).
 function _appHome() {
   try {
@@ -211,7 +214,7 @@ function initGrowthDir() {
     for (const [filename, defaultData] of Object.entries(FILE_DEFAULTS)) {
       const filePath = path.join(GROWTH_DIR, filename);
       if (!fs.existsSync(filePath)) {
-        fs.writeFileSync(filePath, JSON.stringify(defaultData, null, 2));
+        atomicWriteJson(filePath, defaultData, { mode: 0o666 });
       }
     }
   } catch (err) {
@@ -241,13 +244,13 @@ function saveComponent(filename, data) {
   try {
     initGrowthDir();
     const filePath = path.join(GROWTH_DIR, filename);
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+    atomicWriteJson(filePath, data, { mode: 0o666 });
 
     // Update manifest timestamp
     const manifest = loadComponent('manifest.json');
     manifest.lastModified = new Date().toISOString();
     const manifestPath = path.join(GROWTH_DIR, 'manifest.json');
-    fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+    atomicWriteJson(manifestPath, manifest, { mode: 0o666 });
   } catch {
     /* best effort */
   }
@@ -653,7 +656,8 @@ function restoreSnapshot(snapshotId) {
 
   for (const [filename, content] of Object.entries(bundle.files)) {
     const filePath = path.join(GROWTH_DIR, filename);
-    fs.writeFileSync(filePath, content);
+    // 快照里的 content 已是文本原文,原子写文本以免重新序列化改变字节。
+    atomicWriteText(filePath, content, { mode: 0o666 });
   }
 
   return { restored: snapshotId, files: Object.keys(bundle.files).length };
@@ -728,7 +732,7 @@ function validateIntegrity() {
 function resetGrowth() {
   for (const [filename, defaultData] of Object.entries(FILE_DEFAULTS)) {
     const filePath = path.join(GROWTH_DIR, filename);
-    fs.writeFileSync(filePath, JSON.stringify(defaultData, null, 2));
+    atomicWriteJson(filePath, defaultData, { mode: 0o666 });
   }
 }
 

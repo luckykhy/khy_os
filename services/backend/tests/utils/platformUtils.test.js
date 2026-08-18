@@ -25,6 +25,13 @@ describe('platformUtils windows compatibility', () => {
     expect(shellEscape('a "b" c', 'cmd')).toBe('"a ""b"" c"');
   });
 
+  test('shellEscape quotes Windows paths for bash', () => {
+    const { shellEscape } = require('../../src/tools/platformUtils');
+    expect(shellEscape('C:\\Users\\tester\\AppData\\Local\\Temp', 'bash')).toBe(
+      "'C:\\Users\\tester\\AppData\\Local\\Temp'"
+    );
+  });
+
   test('openDefault uses cmd start on Windows for URL targets', () => {
     setPlatform('win32');
     process.env.COMSPEC = 'C:\\Windows\\System32\\cmd.exe';

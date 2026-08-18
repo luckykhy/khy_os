@@ -35,31 +35,31 @@
 <p>注意存储位置差异：live TUI 回合的新字段经 <code>aiSession.attachTurnArtifacts</code> 挂到内存消息后由 <code>_persistLiveSession</code> 落盘——已追加过的行不会重写，因此<strong>已存在回合的字段落在 JSON 快照</strong>（<code>{bucket}/{sessionId}.json</code> 的原始消息透传）；JSONL 的 append 路径同样支持带字段写入（新追加的行直接携带）。</p>
 <h3 id="2-1-timeline-有序回合时间线">2.1 <code>_timeline</code> — 有序回合时间线<a class="anchor" href="#2-1-timeline-有序回合时间线" aria-label="锚点">#</a></h3>
 <p>模型文本、思考与工具步骤的真实交错顺序（连续文本段合并，工具收拢为 <code>tools</code> 组）：</p>
-<pre><code class="language-json">&quot;_timeline&quot;: [
-  { &quot;type&quot;: &quot;text&quot;, &quot;text&quot;: &quot;先看一下配置文件&quot; },
-  { &quot;type&quot;: &quot;thinking&quot;, &quot;text&quot;: &quot;……&quot;, &quot;durationMs&quot;: 800 },
-  { &quot;type&quot;: &quot;tools&quot;, &quot;tools&quot;: [
-    { &quot;name&quot;: &quot;Read&quot;, &quot;paramsSummary&quot;: &quot;{\&quot;file_path\&quot;:\&quot;a.js\&quot;}&quot;, &quot;status&quot;: &quot;done&quot; }
-  ] },
-  { &quot;type&quot;: &quot;text&quot;, &quot;text&quot;: &quot;配置没问题，结论是……&quot; }
-]</code></pre>
+<pre><code class="language-json"><span class="hljs-attr">&quot;_timeline&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+  <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;text&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;text&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;先看一下配置文件&quot;</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;thinking&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;text&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;……&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;durationMs&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">800</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;tools&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;tools&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+    <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Read&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;paramsSummary&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;{\&quot;file_path\&quot;:\&quot;a.js\&quot;}&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;done&quot;</span> <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">]</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;text&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;text&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;配置没问题，结论是……&quot;</span> <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">]</span></code></pre>
 <table><thead><tr><th>字段</th><th>含义</th></tr></thead><tbody><tr><td><code>type</code></td><td><code>text</code>（模型正文）/ <code>thinking</code>（思考段）/ <code>tools</code>（连续工具组）</td></tr><tr><td><code>text</code></td><td>该段文本内容（<code>text</code>/<code>thinking</code> 段）</td></tr><tr><td><code>durationMs</code></td><td>思考段真实耗时毫秒，仅实测到才有</td></tr><tr><td><code>tools[].name</code></td><td>工具名</td></tr><tr><td><code>tools[].paramsSummary</code></td><td>参数一行摘要，200 字符截断（不存完整参数/结果，防存储膨胀）</td></tr><tr><td><code>tools[].status</code></td><td><code>done</code> / <code>error</code>；无结果时整个键缺席（不虚构）</td></tr></tbody></table>
 <h3 id="2-2-toolcalls-工具调用摘要">2.2 <code>_toolCalls</code> — 工具调用摘要<a class="anchor" href="#2-2-toolcalls-工具调用摘要" aria-label="锚点">#</a></h3>
 <p>从工具循环权威日志（toolCallLog）蒸馏，<strong>从不保存完整工具结果</strong>：</p>
-<pre><code class="language-json">&quot;_toolCalls&quot;: [
-  { &quot;seq&quot;: 1, &quot;name&quot;: &quot;Read&quot;, &quot;paramsSummary&quot;: &quot;{\&quot;file_path\&quot;:\&quot;a.js\&quot;}&quot;, &quot;durationMs&quot;: 42, &quot;status&quot;: &quot;done&quot; },
-  { &quot;seq&quot;: 2, &quot;name&quot;: &quot;Bash&quot;, &quot;paramsSummary&quot;: &quot;{\&quot;command\&quot;:\&quot;ls\&quot;}&quot;, &quot;durationMs&quot;: 7, &quot;status&quot;: &quot;error&quot;, &quot;error&quot;: &quot;boom&quot; }
-]</code></pre>
+<pre><code class="language-json"><span class="hljs-attr">&quot;_toolCalls&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+  <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;seq&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Read&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;paramsSummary&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;{\&quot;file_path\&quot;:\&quot;a.js\&quot;}&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;durationMs&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">42</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;done&quot;</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;seq&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">2</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Bash&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;paramsSummary&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;{\&quot;command\&quot;:\&quot;ls\&quot;}&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;durationMs&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">7</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;error&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;error&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;boom&quot;</span> <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">]</span></code></pre>
 <table><thead><tr><th>字段</th><th>含义</th></tr></thead><tbody><tr><td><code>seq</code></td><td>回合内调用序号（从 1 起）</td></tr><tr><td><code>name</code> / <code>paramsSummary</code></td><td>工具名 / 参数摘要（200 字符截断）</td></tr><tr><td><code>durationMs</code></td><td>实测耗时毫秒，日志未带真实耗时则缺席</td></tr><tr><td><code>status</code></td><td><code>done</code> / <code>error</code></td></tr><tr><td><code>error</code></td><td>失败时的一行摘要（200 字符截断），成功时缺席</td></tr></tbody></table>
 <h3 id="2-3-turnstats-回合统计">2.3 <code>_turnStats</code> — 回合统计<a class="anchor" href="#2-3-turnstats-回合统计" aria-label="锚点">#</a></h3>
-<pre><code class="language-json">&quot;_turnStats&quot;: { &quot;elapsedMs&quot;: 1235, &quot;tokens&quot;: 567, &quot;toolCount&quot;: 2 }</code></pre>
+<pre><code class="language-json"><span class="hljs-attr">&quot;_turnStats&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;elapsedMs&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1235</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;tokens&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">567</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;toolCount&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">2</span> <span class="hljs-punctuation">}</span></code></pre>
 <p>诚实省略规则（与 turnStats.js 同一红线）：不可得的量整键缺席、绝不补零。<code>elapsedMs</code>/<code>tokens</code> 仅实测大于 0 才写；<code>toolCount</code> 仅当真实提供了日志数组才写（空数组是事实「零工具运行」→ <code>toolCount: 0</code>）；三个量都缺时整个 <code>_turnStats</code> 缺席。</p>
 <h2 id="三-khy-p-机器可读输出的增量字段">三、<code>khy -p</code> 机器可读输出的增量字段<a class="anchor" href="#三-khy-p-机器可读输出的增量字段" aria-label="锚点">#</a></h2>
 <p>实现：<code>services/backend/src/cli/printOutputFormat.js</code> 的 <code>buildResultMessage</code>。<code>--output-format json</code> 与 <code>stream-json</code> 的终端 <code>result</code> 消息在<strong>旧键序完全不动</strong>的尾部追加：</p>
 <table><thead><tr><th>字段</th><th>出现条件</th><th>内容</th></tr></thead><tbody><tr><td><code>tool_calls</code></td><td>本次运行携带 toolCallLog 数组时（空数组也输出 <code>[]</code>，是「零工具」的事实；降级/旧结果整键缺席）</td><td>同 <code>_toolCalls</code> 结构</td></tr><tr><td><code>turn_stats</code></td><td>至少有一个真实量时</td><td>同 <code>_turnStats</code> 结构</td></tr><tr><td><code>timeline</code></td><td>仅 <code>--include-timeline</code> 开启时（开启但无数据 → <code>[]</code>，门控消费方恒见键）</td><td>同 <code>_timeline</code> 结构</td></tr></tbody></table>
 <p><code>--include-timeline</code> 标志：裸标志即开启；<code>--include-timeline=true|false</code>（或 <code>1|0</code>）显式指定；未知值按 <code>--output-format</code> 同样式报错。</p>
-<pre><code class="language-bash">khy -p &quot;统计 src 下 js 文件数量&quot; --output-format json
-khy -p &quot;同上&quot; --output-format stream-json --include-timeline</code></pre>
+<pre><code class="language-bash">khy -p <span class="hljs-string">&quot;统计 src 下 js 文件数量&quot;</span> --output-format json
+khy -p <span class="hljs-string">&quot;同上&quot;</span> --output-format stream-json --include-timeline</code></pre>
 <h2 id="四-session-export-detailed-与-session-analyze">四、<code>session export --detailed</code> 与 <code>session analyze</code><a class="anchor" href="#四-session-export-detailed-与-session-analyze" aria-label="锚点">#</a></h2>
 <p>实现：<code>services/backend/src/cli/handlers/session.js</code>；命令别名登记于 <code>aliases.js</code>（<code>会话分析</code> / <code>分析会话</code> / <code>huihuafenxi</code> → <code>session analyze</code>），schema 与 <code>bin/khy.js</code> 已同步接线。</p>
 <h3 id="4-1-导出-khy-session-export-format-json-detailed">4.1 导出：<code>khy session export &lt;序号|ID&gt; --format json --detailed</code><a class="anchor" href="#4-1-导出-khy-session-export-format-json-detailed" aria-label="锚点">#</a></h3>
@@ -81,24 +81,24 @@ khy -p &quot;同上&quot; --output-format stream-json --include-timeline</code><
 khy 分析会话 sess-a1b2c3d4 --json
 khy huihuafenxi 1 --json</code></pre>
 <h2 id="五-jq-使用示例">五、jq 使用示例<a class="anchor" href="#五-jq-使用示例" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># 单次运行：提取每个工具的耗时
-khy -p &quot;检查依赖&quot; --output-format json | jq '.tool_calls[] | {name, durationMs}'
+<pre><code class="language-bash"><span class="hljs-comment"># 单次运行：提取每个工具的耗时</span>
+khy -p <span class="hljs-string">&quot;检查依赖&quot;</span> --output-format json | jq <span class="hljs-string">&#x27;.tool_calls[] | {name, durationMs}&#x27;</span>
 
-# 单次运行：回合累计 tokens
-khy -p &quot;检查依赖&quot; --output-format json | jq '.turn_stats.tokens'
+<span class="hljs-comment"># 单次运行：回合累计 tokens</span>
+khy -p <span class="hljs-string">&quot;检查依赖&quot;</span> --output-format json | jq <span class="hljs-string">&#x27;.turn_stats.tokens&#x27;</span>
 
-# 会话分析：每回合耗时与工具清单
-khy session analyze 1 --json | jq '.rounds[] | {index, elapsedMs, tools}'
+<span class="hljs-comment"># 会话分析：每回合耗时与工具清单</span>
+khy session analyze 1 --json | jq <span class="hljs-string">&#x27;.rounds[] | {index, elapsedMs, tools}&#x27;</span>
 
-# 会话分析：全会话累计 tokens
-khy session analyze 1 --json | jq '.metrics.totalTokens'
+<span class="hljs-comment"># 会话分析：全会话累计 tokens</span>
+khy session analyze 1 --json | jq <span class="hljs-string">&#x27;.metrics.totalTokens&#x27;</span>
 
-# 详细导出：跨消息累加所有工具调用耗时（缺字段的旧消息自动跳过）
-khy session export 1 --format json --detailed --json
-jq '[.messages[]._toolCalls // [] | .[] | .durationMs // 0] | add' &lt;导出文件&gt;.json
+<span class="hljs-comment"># 详细导出：跨消息累加所有工具调用耗时（缺字段的旧消息自动跳过）</span>
+khy session <span class="hljs-built_in">export</span> 1 --format json --detailed --json
+jq <span class="hljs-string">&#x27;[.messages[]._toolCalls // [] | .[] | .durationMs // 0] | add&#x27;</span> &lt;导出文件&gt;.json
 
-# 详细导出：找出最慢的一次工具调用
-jq '[.messages[]._toolCalls // [] | .[]] | max_by(.durationMs // 0)' &lt;导出文件&gt;.json</code></pre>
+<span class="hljs-comment"># 详细导出：找出最慢的一次工具调用</span>
+jq <span class="hljs-string">&#x27;[.messages[]._toolCalls // [] | .[]] | max_by(.durationMs // 0)&#x27;</span> &lt;导出文件&gt;.json</code></pre>
 <h2 id="六-向后兼容承诺与门控清单">六、向后兼容承诺与门控清单<a class="anchor" href="#六-向后兼容承诺与门控清单" aria-label="锚点">#</a></h2>
 <p>兼容红线（均有单元测试锁定）：</p>
 <ol><li>旧数据降级：无 artifact 字段的历史会话，所有 reader（restore/export/analyze）照常工作，analyze 诚实降级为仅回合切分并明示「旧版本记录」。</li><li>无新标志时输出字节不变：不带 <code>--include-timeline</code> 的 <code>-p</code> 输出不含 <code>timeline</code> 键；不带 <code>--detailed</code> 的导出与旧字节一致；appendMessage 未挂载新字段时 JSONL 行与旧格式字节一致。</li><li>旧 reader 读新数据不崩溃：新字段遵循「未知字段忽略」的既有增量契约。</li></ol>

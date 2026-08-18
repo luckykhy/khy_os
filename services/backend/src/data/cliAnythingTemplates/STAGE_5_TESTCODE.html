@@ -32,48 +32,48 @@
 <ul><li><code>TEST.md</code> from Stage 4</li><li>Source code from Stage 3</li></ul>
 <h2 id="python-tests">Python Tests<a class="anchor" href="#python-tests" aria-label="锚点">#</a></h2>
 <p>Generate test files at <code>tests/</code>:</p>
-<pre><code class="language-python"># tests/test_&lt;command_group&gt;.py
-import pytest
-from unittest.mock import patch, MagicMock
-from click.testing import CliRunner
-from cli_anything.&lt;SOFTWARE&gt;.&lt;SOFTWARE&gt;_cli import cli
+<pre><code class="language-python"><span class="hljs-comment"># tests/test_&lt;command_group&gt;.py</span>
+<span class="hljs-keyword">import</span> pytest
+<span class="hljs-keyword">from</span> unittest.mock <span class="hljs-keyword">import</span> patch, MagicMock
+<span class="hljs-keyword">from</span> click.testing <span class="hljs-keyword">import</span> CliRunner
+<span class="hljs-keyword">from</span> cli_anything.&lt;SOFTWARE&gt;.&lt;SOFTWARE&gt;_cli <span class="hljs-keyword">import</span> cli
 
-@pytest.fixture
-def runner():
-    return CliRunner()
+<span class="hljs-meta">@pytest.fixture</span>
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">runner</span>():
+    <span class="hljs-keyword">return</span> CliRunner()
 
-class TestProjectCommands:
-    def test_create_project(self, runner):
-        result = runner.invoke(cli, ['project', 'create', '--name', 'test'])
-        assert result.exit_code == 0
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">TestProjectCommands</span>:
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">test_create_project</span>(<span class="hljs-params">self, runner</span>):
+        result = runner.invoke(cli, [<span class="hljs-string">&#x27;project&#x27;</span>, <span class="hljs-string">&#x27;create&#x27;</span>, <span class="hljs-string">&#x27;--name&#x27;</span>, <span class="hljs-string">&#x27;test&#x27;</span>])
+        <span class="hljs-keyword">assert</span> result.exit_code == <span class="hljs-number">0</span>
 
-    def test_create_project_json(self, runner):
-        result = runner.invoke(cli, ['project', 'create', '--name', 'test', '--json'])
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">test_create_project_json</span>(<span class="hljs-params">self, runner</span>):
+        result = runner.invoke(cli, [<span class="hljs-string">&#x27;project&#x27;</span>, <span class="hljs-string">&#x27;create&#x27;</span>, <span class="hljs-string">&#x27;--name&#x27;</span>, <span class="hljs-string">&#x27;test&#x27;</span>, <span class="hljs-string">&#x27;--json&#x27;</span>])
         data = json.loads(result.output)
-        assert data['status'] == 'success'
+        <span class="hljs-keyword">assert</span> data[<span class="hljs-string">&#x27;status&#x27;</span>] == <span class="hljs-string">&#x27;success&#x27;</span>
 
-    @patch('cli_anything.&lt;SOFTWARE&gt;.utils.backend.run_command')
-    def test_backend_called(self, mock_run, runner):
-        mock_run.return_value = MagicMock(returncode=0, stdout='ok')
-        result = runner.invoke(cli, ['export', 'render'])
+<span class="hljs-meta">    @patch(<span class="hljs-params"><span class="hljs-string">&#x27;cli_anything.&lt;SOFTWARE&gt;.utils.backend.run_command&#x27;</span></span>)</span>
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">test_backend_called</span>(<span class="hljs-params">self, mock_run, runner</span>):
+        mock_run.return_value = MagicMock(returncode=<span class="hljs-number">0</span>, stdout=<span class="hljs-string">&#x27;ok&#x27;</span>)
+        result = runner.invoke(cli, [<span class="hljs-string">&#x27;export&#x27;</span>, <span class="hljs-string">&#x27;render&#x27;</span>])
         mock_run.assert_called_once()</code></pre>
 <h2 id="node-js-tests">Node.js Tests<a class="anchor" href="#node-js-tests" aria-label="锚点">#</a></h2>
 <p>Generate test files at <code>tests/</code>:</p>
-<pre><code class="language-javascript">// tests/&lt;command_group&gt;.test.js
-const { execFileSync } = require('child_process');
-const path = require('path');
-const CLI = path.resolve(__dirname, '../src/index.js');
+<pre><code class="language-javascript"><span class="hljs-comment">// tests/&lt;command_group&gt;.test.js</span>
+<span class="hljs-keyword">const</span> { execFileSync } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;child_process&#x27;</span>);
+<span class="hljs-keyword">const</span> path = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;path&#x27;</span>);
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">CLI</span> = path.<span class="hljs-title function_">resolve</span>(__dirname, <span class="hljs-string">&#x27;../src/index.js&#x27;</span>);
 
-describe('&lt;command_group&gt;', () =&gt; {
-  test('create project', () =&gt; {
-    const out = execFileSync('node', [CLI, 'project', 'create', '--name', 'test'], { encoding: 'utf-8' });
-    expect(out).toContain('Created');
+<span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;&lt;command_group&gt;&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-title function_">test</span>(<span class="hljs-string">&#x27;create project&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-keyword">const</span> out = <span class="hljs-title function_">execFileSync</span>(<span class="hljs-string">&#x27;node&#x27;</span>, [<span class="hljs-variable constant_">CLI</span>, <span class="hljs-string">&#x27;project&#x27;</span>, <span class="hljs-string">&#x27;create&#x27;</span>, <span class="hljs-string">&#x27;--name&#x27;</span>, <span class="hljs-string">&#x27;test&#x27;</span>], { <span class="hljs-attr">encoding</span>: <span class="hljs-string">&#x27;utf-8&#x27;</span> });
+    <span class="hljs-title function_">expect</span>(out).<span class="hljs-title function_">toContain</span>(<span class="hljs-string">&#x27;Created&#x27;</span>);
   });
 
-  test('create project --json', () =&gt; {
-    const out = execFileSync('node', [CLI, 'project', 'create', '--name', 'test', '--json'], { encoding: 'utf-8' });
-    const data = JSON.parse(out);
-    expect(data.status).toBe('success');
+  <span class="hljs-title function_">test</span>(<span class="hljs-string">&#x27;create project --json&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-keyword">const</span> out = <span class="hljs-title function_">execFileSync</span>(<span class="hljs-string">&#x27;node&#x27;</span>, [<span class="hljs-variable constant_">CLI</span>, <span class="hljs-string">&#x27;project&#x27;</span>, <span class="hljs-string">&#x27;create&#x27;</span>, <span class="hljs-string">&#x27;--name&#x27;</span>, <span class="hljs-string">&#x27;test&#x27;</span>, <span class="hljs-string">&#x27;--json&#x27;</span>], { <span class="hljs-attr">encoding</span>: <span class="hljs-string">&#x27;utf-8&#x27;</span> });
+    <span class="hljs-keyword">const</span> data = <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">parse</span>(out);
+    <span class="hljs-title function_">expect</span>(data.<span class="hljs-property">status</span>).<span class="hljs-title function_">toBe</span>(<span class="hljs-string">&#x27;success&#x27;</span>);
   });
 });</code></pre>
 <h2 id="output">Output<a class="anchor" href="#output" aria-label="锚点">#</a></h2>

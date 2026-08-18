@@ -68,14 +68,14 @@
     ├── Set up an alert for the specific error signature
     └── Document the conditions observed and revisit when it recurs</code></pre>
 <p>For test failures:</p>
-<pre><code class="language-bash"># Run the specific failing test
-npm test -- --grep &quot;test name&quot;
+<pre><code class="language-bash"><span class="hljs-comment"># Run the specific failing test</span>
+npm <span class="hljs-built_in">test</span> -- --grep <span class="hljs-string">&quot;test name&quot;</span>
 
-# Run with verbose output
-npm test -- --verbose
+<span class="hljs-comment"># Run with verbose output</span>
+npm <span class="hljs-built_in">test</span> -- --verbose
 
-# Run in isolation (rules out test pollution)
-npm test -- --testPathPattern=&quot;specific-file&quot; --runInBand</code></pre>
+<span class="hljs-comment"># Run in isolation (rules out test pollution)</span>
+npm <span class="hljs-built_in">test</span> -- --testPathPattern=<span class="hljs-string">&quot;specific-file&quot;</span> --runInBand</code></pre>
 <h3 id="step-2-localize">Step 2: Localize<a class="anchor" href="#step-2-localize" aria-label="锚点">#</a></h3>
 <p>Narrow down WHERE the failure happens:</p>
 <pre><code>Which layer is failing?
@@ -86,12 +86,12 @@ npm test -- --testPathPattern=&quot;specific-file&quot; --runInBand</code></pre>
 ├── External service → Check connectivity, API changes, rate limits
 └── Test itself     → Check if the test is correct (false negative)</code></pre>
 <p><strong>Use bisection for regression bugs:</strong></p>
-<pre><code class="language-bash"># Find which commit introduced the bug
+<pre><code class="language-bash"><span class="hljs-comment"># Find which commit introduced the bug</span>
 git bisect start
-git bisect bad                    # Current commit is broken
-git bisect good &lt;known-good-sha&gt; # This commit worked
-# Git will checkout midpoint commits; run your test at each
-git bisect run npm test -- --grep &quot;failing test&quot;</code></pre>
+git bisect bad                    <span class="hljs-comment"># Current commit is broken</span>
+git bisect good &lt;known-good-sha&gt; <span class="hljs-comment"># This commit worked</span>
+<span class="hljs-comment"># Git will checkout midpoint commits; run your test at each</span>
+git bisect run npm <span class="hljs-built_in">test</span> -- --grep <span class="hljs-string">&quot;failing test&quot;</span></code></pre>
 <h3 id="step-3-reduce">Step 3: Reduce<a class="anchor" href="#step-3-reduce" aria-label="锚点">#</a></h3>
 <p>Create the minimal failing case:</p>
 <ul><li>Remove unrelated code/config until only the bug remains</li><li>Simplify the input to the smallest example that triggers the failure</li><li>Strip the test to the bare minimum that reproduces the issue</li></ul>
@@ -109,27 +109,27 @@ Root cause fix (good):
 <p>Ask: &quot;Why does this happen?&quot; until you reach the actual cause, not just where it manifests.</p>
 <h3 id="step-5-guard-against-recurrence">Step 5: Guard Against Recurrence<a class="anchor" href="#step-5-guard-against-recurrence" aria-label="锚点">#</a></h3>
 <p>Write a test that catches this specific failure:</p>
-<pre><code class="language-typescript">// The bug: task titles with special characters broke the search
-it('finds tasks with special characters in title', async () =&gt; {
-  await createTask({ title: 'Fix &quot;quotes&quot; &amp; &lt;brackets&gt;' });
-  const results = await searchTasks('quotes');
-  expect(results).toHaveLength(1);
-  expect(results[0].title).toBe('Fix &quot;quotes&quot; &amp; &lt;brackets&gt;');
+<pre><code class="language-typescript"><span class="hljs-comment">// The bug: task titles with special characters broke the search</span>
+<span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;finds tasks with special characters in title&#x27;</span>, <span class="hljs-title function_">async</span> () =&gt; {
+  <span class="hljs-keyword">await</span> <span class="hljs-title function_">createTask</span>({ <span class="hljs-attr">title</span>: <span class="hljs-string">&#x27;Fix &quot;quotes&quot; &amp; &lt;brackets&gt;&#x27;</span> });
+  <span class="hljs-keyword">const</span> results = <span class="hljs-keyword">await</span> <span class="hljs-title function_">searchTasks</span>(<span class="hljs-string">&#x27;quotes&#x27;</span>);
+  <span class="hljs-title function_">expect</span>(results).<span class="hljs-title function_">toHaveLength</span>(<span class="hljs-number">1</span>);
+  <span class="hljs-title function_">expect</span>(results[<span class="hljs-number">0</span>].<span class="hljs-property">title</span>).<span class="hljs-title function_">toBe</span>(<span class="hljs-string">&#x27;Fix &quot;quotes&quot; &amp; &lt;brackets&gt;&#x27;</span>);
 });</code></pre>
 <p>This test will prevent the same bug from recurring. It should fail without the fix and pass with it.</p>
 <h3 id="step-6-verify-end-to-end">Step 6: Verify End-to-End<a class="anchor" href="#step-6-verify-end-to-end" aria-label="锚点">#</a></h3>
 <p>After fixing, verify the complete scenario:</p>
-<pre><code class="language-bash"># Run the specific test
-npm test -- --grep &quot;specific test&quot;
+<pre><code class="language-bash"><span class="hljs-comment"># Run the specific test</span>
+npm <span class="hljs-built_in">test</span> -- --grep <span class="hljs-string">&quot;specific test&quot;</span>
 
-# Run the full test suite (check for regressions)
-npm test
+<span class="hljs-comment"># Run the full test suite (check for regressions)</span>
+npm <span class="hljs-built_in">test</span>
 
-# Build the project (check for type/compilation errors)
+<span class="hljs-comment"># Build the project (check for type/compilation errors)</span>
 npm run build
 
-# Manual spot check if applicable
-npm run dev  # Verify in browser</code></pre>
+<span class="hljs-comment"># Manual spot check if applicable</span>
+npm run dev  <span class="hljs-comment"># Verify in browser</span></code></pre>
 <h2 id="error-specific-patterns">Error-Specific Patterns<a class="anchor" href="#error-specific-patterns" aria-label="锚点">#</a></h2>
 <h3 id="test-failure-triage">Test Failure Triage<a class="anchor" href="#test-failure-triage" aria-label="锚点">#</a></h3>
 <pre><code>Test fails after code change:
@@ -161,26 +161,26 @@ npm run dev  # Verify in browser</code></pre>
     └── Add logging at key points, verify data at each step</code></pre>
 <h2 id="safe-fallback-patterns">Safe Fallback Patterns<a class="anchor" href="#safe-fallback-patterns" aria-label="锚点">#</a></h2>
 <p>When under time pressure, use safe fallbacks:</p>
-<pre><code class="language-typescript">// Safe default + warning (instead of crashing)
-function getConfig(key: string): string {
-  const value = process.env[key];
-  if (!value) {
-    console.warn(`Missing config: ${key}, using default`);
-    return DEFAULTS[key] ?? '';
+<pre><code class="language-typescript"><span class="hljs-comment">// Safe default + warning (instead of crashing)</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">getConfig</span>(<span class="hljs-params"><span class="hljs-attr">key</span>: <span class="hljs-built_in">string</span></span>): <span class="hljs-built_in">string</span> {
+  <span class="hljs-keyword">const</span> value = process.<span class="hljs-property">env</span>[key];
+  <span class="hljs-keyword">if</span> (!value) {
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">warn</span>(<span class="hljs-string">`Missing config: <span class="hljs-subst">${key}</span>, using default`</span>);
+    <span class="hljs-keyword">return</span> <span class="hljs-variable constant_">DEFAULTS</span>[key] ?? <span class="hljs-string">&#x27;&#x27;</span>;
   }
-  return value;
+  <span class="hljs-keyword">return</span> value;
 }
 
-// Graceful degradation (instead of broken feature)
-function renderChart(data: ChartData[]) {
-  if (data.length === 0) {
-    return &lt;EmptyState message=&quot;No data available for this period&quot; /&gt;;
+<span class="hljs-comment">// Graceful degradation (instead of broken feature)</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">renderChart</span>(<span class="hljs-params"><span class="hljs-attr">data</span>: <span class="hljs-title class_">ChartData</span>[]</span>) {
+  <span class="hljs-keyword">if</span> (data.<span class="hljs-property">length</span> === <span class="hljs-number">0</span>) {
+    <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">EmptyState</span> <span class="hljs-attr">message</span>=<span class="hljs-string">&quot;No data available for this period&quot;</span> /&gt;</span></span>;
   }
-  try {
-    return &lt;Chart data={data} /&gt;;
-  } catch (error) {
-    console.error('Chart render failed:', error);
-    return &lt;ErrorState message=&quot;Unable to display chart&quot; /&gt;;
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">Chart</span> <span class="hljs-attr">data</span>=<span class="hljs-string">{data}</span> /&gt;</span></span>;
+  } <span class="hljs-keyword">catch</span> (error) {
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">error</span>(<span class="hljs-string">&#x27;Chart render failed:&#x27;</span>, error);
+    <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">ErrorState</span> <span class="hljs-attr">message</span>=<span class="hljs-string">&quot;Unable to display chart&quot;</span> /&gt;</span></span>;
   }
 }</code></pre>
 <h2 id="instrumentation-guidelines">Instrumentation Guidelines<a class="anchor" href="#instrumentation-guidelines" aria-label="锚点">#</a></h2>

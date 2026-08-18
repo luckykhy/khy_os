@@ -80,7 +80,6 @@
         "docs/07_OPS_运维/[OPS-MAN-013] khy-os-开发者指南.md"
       ],
       "verify": [
-        "npm run check:maintainer:bootstrap",
         "npm run check:manifest-sync",
         "bash scripts/release/build-and-audit-pip-purity.sh"
       ]
@@ -108,7 +107,7 @@
         "docs/07_OPS_运维/[OPS-MAN-011] khy-os-学习指南.md"
       ],
       "verify": [
-        "npm run test:maintainer:cli-routing",
+        "npm run test:one -- services/backend/tests/cli/router.test.js services/backend/tests/cli/repl.tasks.interaction.test.js",
         "node -e \"require('./services/backend/src/cli/router')\""
       ]
     },
@@ -162,7 +161,7 @@
         "docs/08_MGMT_项目管理/[MGMT-RPT-014] khy-qwen-差距修复清单.md"
       ],
       "verify": [
-        "npm run test:maintainer:gateway",
+        "npm run test:one -- services/backend/tests/aiGateway.stability.test.js services/backend/tests/gateway/transportResilience.test.js services/backend/tests/gatewayAdapters.stability.test.js",
         "node -e \"require('./services/backend/src/services/gateway/aiGateway')\"",
         "khy doctor"
       ]
@@ -192,7 +191,7 @@
         "docs/04_IMPL_实现/[IMPL-RPT-020] 网关传输韧性修复-2026-05-29.md"
       ],
       "verify": [
-        "npm run test:maintainer:runtime",
+        "npm run test:one -- services/backend/tests/daemonManager.runtimePort.test.js services/backend/tests/gatewayManage.portDrift.integration.test.js services/backend/tests/services/proxyBaseUrl.test.js services/backend/tests/services/serviceDefaults.test.js",
         "khy doctor"
       ]
     },
@@ -219,7 +218,7 @@
         "docs/07_OPS_运维/[OPS-MAN-002] ai-管理-新api对齐.md"
       ],
       "verify": [
-        "npm run test:maintainer:ai-management",
+        "npm run test:one -- services/backend/tests/routes/aiGatewayAdmin.modelSlots.test.js services/backend/tests/gatewayManage.apiDisplay.test.js",
         "npm run build --prefix apps/ai-frontend"
       ]
     },
@@ -254,7 +253,7 @@
         "docs/03_DESIGN_设计/[DESIGN-ARCH-026] khyos系统级服务调用审批网关规范.md"
       ],
       "verify": [
-        "npm run test:maintainer:projects",
+        "npm run test:one -- services/backend/tests/projectStore.test.js apps/ai-frontend/src/composables/useProjects.wiring.test.js",
         "npm run build --prefix apps/ai-frontend"
       ]
     },
@@ -278,7 +277,7 @@
         "docs/07_OPS_运维/[OPS-MAN-022] pip-安装布局参考.md"
       ],
       "verify": [
-        "npm run test:maintainer:publish"
+        "npm run test:one -- services/backend/tests/publish.sourceReleaseMode.test.js services/backend/tests/publish.dbPreflight.test.js"
       ]
     },
     {
@@ -292,9 +291,9 @@
       "paths": [
         "AGENTS.md",
         "CONTRIBUTING.md",
-        "scripts/check-agent-rules.js",
-        "scripts/check-change-safety.js",
-        "scripts/install-git-hooks.js",
+        "scripts/ci/check-agent-rules.js",
+        "scripts/ci/check-change-safety.js",
+        "scripts/install/install-git-hooks.js",
         "scripts/ci/check-version-sync.js",
         "scripts/ci/check-node-syntax.js",
         "scripts/ci/check-python-syntax.py",
@@ -305,7 +304,7 @@
         "CONTRIBUTING.md"
       ],
       "verify": [
-        "npm run check:maintainer:safety",
+        "npm run check:changed",
         "npm run check:quality-gates"
       ]
     },
@@ -319,21 +318,16 @@
         "release artifacts or the post-release check regressed"
       ],
       "paths": [
-        "maintenance/stable-release.json",
-        "maintenance/lib/ops.js",
-        "maintenance/lib/ops-lib.js",
         "services/backend/src/cli/handlers/publish.js",
         "scripts/release/build-and-audit-pip-purity.sh",
-        "scripts/ci/check-version-sync.js",
-        "maintenance/tests/ops-lib.test.js"
+        "scripts/ci/check-version-sync.js"
       ],
       "docs": [
         "docs/_传承/KHY-OS-传承书.md",
-        "docs/06_DEPLOY_部署/[DEPLOY-MAN-011] pip-docker-打包部署.md",
-        "maintenance/README.md"
+        "docs/06_DEPLOY_部署/[DEPLOY-MAN-011] pip-docker-打包部署.md"
       ],
       "verify": [
-        "node --test maintenance/tests/ops-lib.test.js maintenance/tests/ops.integration.test.js",
+        "npm run test:one -- services/backend/tests/publish.sourceReleaseMode.test.js services/backend/tests/publish.dbPreflight.test.js",
         "npm run check:version-sync"
       ]
     },
@@ -365,7 +359,7 @@
         "docs/03_DESIGN_设计/[DESIGN-ARCH-026] khyos系统级服务调用审批网关规范.md"
       ],
       "verify": [
-        "npm run test:maintainer:env-optimize"
+        "npm run test:one -- services/backend/tests/services/localBrainEnvOptimize.test.js services/backend/tests/services/envProbes.test.js services/backend/tests/services/envRepair.test.js services/backend/tests/services/envPlatform.test.js"
       ]
     },
     {
@@ -386,7 +380,7 @@
         "docs/07_OPS_运维/[OPS-MAN-066] khyos进化提示词手册-1000条.md"
       ],
       "verify": [
-        "npm run test:evolution-prompts"
+        "npm run test:one -- scripts/tests/gen-evolution-prompts.test.js"
       ]
     },
     {
@@ -408,7 +402,7 @@
         "docs/07_OPS_运维/[OPS-MAN-067] 症状分诊速查表.md"
       ],
       "verify": [
-        "npm run test:triage"
+        "npm run test:one -- scripts/tests/maintainerTriage.test.js"
       ]
     },
     {
@@ -429,7 +423,7 @@
         "docs/07_OPS_运维/[OPS-MAN-068] 离机还原自检清单.md"
       ],
       "verify": [
-        "npm run test:restore-readiness"
+        "npm run test:one -- scripts/tests/restoreReadiness.test.js"
       ]
     },
     {
@@ -450,7 +444,7 @@
         "docs/07_OPS_运维/[OPS-MAN-069] 已装副本完整性自检清单.md"
       ],
       "verify": [
-        "npm run test:install-integrity"
+        "npm run test:one -- scripts/tests/installIntegrity.test.js"
       ]
     },
     {
@@ -472,7 +466,7 @@
         "docs/07_OPS_运维/[OPS-MAN-070] 首启依赖hydration自检清单.md"
       ],
       "verify": [
-        "npm run test:hydration-health"
+        "npm run test:one -- scripts/tests/hydrationHealth.test.js"
       ]
     },
     {
@@ -494,7 +488,7 @@
         "docs/07_OPS_运维/[OPS-MAN-075] Agent 还原方案合成器.md"
       ],
       "verify": [
-        "npm run test:agent-restore-plan"
+        "npm run test:one -- scripts/tests/agentRestorePlan.test.js"
       ]
     },
     {
@@ -517,7 +511,7 @@
         "docs/07_OPS_运维/[OPS-MAN-076] 三面镜子矛盾冲突检测.md"
       ],
       "verify": [
-        "npm run test:restore-conflicts"
+        "npm run test:one -- scripts/tests/restoreConflictDetector.test.js"
       ]
     },
     {
@@ -540,7 +534,7 @@
         "docs/07_OPS_运维/[OPS-MAN-079] 三面镜子矛盾冲突消解.md"
       ],
       "verify": [
-        "npm run test:restore-conflict-resolve"
+        "npm run test:one -- scripts/tests/restoreConflictResolver.test.js"
       ]
     },
     {
@@ -562,7 +556,7 @@
         "docs/07_OPS_运维/[OPS-MAN-073] 离机渠道启动入口契约自检清单.md"
       ],
       "verify": [
-        "npm run test:bundle-launch-contract"
+        "npm run test:one -- scripts/tests/bundleLaunchContract.test.js"
       ]
     },
     {
@@ -600,7 +594,7 @@
         "docs/03_DESIGN_设计/[DESIGN-ARCH-066] 前端代理出站桥-选节点实际路由与启用停用开关.md"
       ],
       "verify": [
-        "npm run test:maintainer:proxy-egress",
+        "npm run test:one -- services/backend/tests/proxyCoreConfigGen.test.js services/backend/tests/proxyCoreManager.test.js services/backend/tests/proxyConfigService.egress.test.js services/backend/tests/aiManagementProxyEgress.wiring.test.js apps/ai-frontend/src/composables/useProxies.egress.wiring.test.js services/backend/tests/bootstrap/ensureProxyCoreEnv.test.js services/backend/tests/services/proxyCoreInstaller.test.js",
         "npm run build --prefix apps/ai-frontend"
       ]
     },
@@ -622,7 +616,7 @@
         "docs/07_OPS_运维/[OPS-MAN-011] khy-os-学习指南.md",
         "docs/07_OPS_运维/[OPS-MAN-013] khy-os-开发者指南.md"
       ],
-      "verify": "npm run test:maintainer:slash-unify"
+      "verify": "npm run test:one -- services/backend/tests/slashExtraCommands.test.js services/backend/tests/cli/resumeHint.test.js services/backend/tests/cli/useCompletionsSlashExtras.test.js"
     },
     {
       "id": "frontend-response-envelope",
@@ -636,7 +630,7 @@
       "docs": [
         "docs/07_OPS_运维/[OPS-MAN-003] ai-管理-访问与登录.md"
       ],
-      "verify": "npm run test:maintainer:unwrap-ssot"
+      "verify": "npm run test:one -- apps/ai-frontend/src/api/unwrap.test.js apps/ai-frontend/src/api/unwrap.wiring.test.js"
     },
     {
       "id": "codex-adopt-env",
@@ -654,7 +648,7 @@
       "docs": [
         "docs/07_OPS_运维/[OPS-MAN-013] khy-os-开发者指南.md"
       ],
-      "verify": "npm run test:maintainer:codex-adopt"
+      "verify": "npm run test:one -- services/backend/tests/services/gateway/codexEnvAdoptPolicy.test.js services/backend/tests/services/gateway/openaiRelayPresets.test.js services/backend/tests/cli/codexAdoptRouting.test.js"
     },
     {
       "id": "failure-diagnostics",
@@ -675,7 +669,7 @@
         "docs/04_IMPL_实现/[IMPL-RPT-020] 网关传输韧性修复-2026-05-29.md",
         "docs/07_OPS_运维/[OPS-MAN-002] ai-管理-新api对齐.md"
       ],
-      "verify": "npm run test:maintainer:failure-diagnostics"
+      "verify": "npm run test:one -- services/backend/tests/services/gateway/failureReasonRanking.test.js services/backend/tests/services/gateway/modelNotFoundRecovery.test.js services/backend/tests/services/gateway/modelNotFoundCooldownScope.test.js services/backend/tests/services/gateway/modelExistenceEvidence.test.js"
     },
     {
       "id": "wildcard-pool-guard",
@@ -692,7 +686,7 @@
         "docs/04_IMPL_实现/[IMPL-RPT-020] 网关传输韧性修复-2026-05-29.md",
         "docs/07_OPS_运维/[OPS-MAN-002] ai-管理-新api对齐.md"
       ],
-      "verify": "npm run test:maintainer:wildcard-pool-guard"
+      "verify": "npm run test:one -- services/backend/tests/services/gateway/wildcardPoolGuard.test.js services/backend/tests/services/gateway/wildcardPoolGuard.wiring.test.js"
     },
     {
       "id": "install-ledger",
@@ -713,7 +707,7 @@
         "docs/07_OPS_运维/[OPS-MAN-069] 已装副本完整性自检清单.md",
         "docs/07_OPS_运维/[OPS-MAN-037] pip安装后-完整还原与全功能开启指南.md"
       ],
-      "verify": "npm run test:maintainer:install-ledger"
+      "verify": "npm run test:one -- services/backend/tests/services/installLedger.test.js services/backend/tests/services/uninstallLedgerWiring.test.js services/backend/tests/services/ledgerWriter.test.js"
     },
     {
       "id": "native-uninstall",
@@ -735,7 +729,7 @@
         "docs/07_OPS_运维/[OPS-MAN-071] 卸载第三方应用怎么保证卸干净-原生自带卸载器.md",
         "docs/07_OPS_运维/[OPS-MAN-069] 已装副本完整性自检清单.md"
       ],
-      "verify": "npm run test:maintainer:native-uninstall"
+      "verify": "npm run test:one -- services/backend/tests/services/deviceApps/nativeUninstallPolicy.test.js services/backend/tests/services/deviceApps/nativeUninstaller.test.js services/backend/tests/services/deviceApps/uninstallRoute.test.js services/backend/tests/services/deviceApps/nativeUninstallWiring.test.js"
     },
     {
       "id": "goal-endurance",
@@ -760,7 +754,7 @@
       "docs": [
         "docs/07_OPS_运维/[OPS-MAN-072] 目标连续多日运行不中断的底气自检.md"
       ],
-      "verify": "npm run test:maintainer:goal-endurance"
+      "verify": "npm run test:one -- services/backend/tests/services/goalEndurance.test.js services/backend/tests/services/goalEnduranceWiring.test.js services/backend/tests/services/unattendedAutoAnswer.test.js services/backend/tests/toolUseLoop.unattendedAutoAnswer.test.js services/backend/tests/services/chatErrorGuard.test.js services/backend/tests/toolUseLoop.chatErrorGuard.test.js services/backend/tests/services/autoAnswerIntentGuard.test.js services/backend/tests/services/goalStopGateVerifyRan.test.js"
     },
     {
       "id": "startup-failure-explain",
@@ -780,7 +774,7 @@
         "docs/07_OPS_运维/[OPS-MAN-074] 首启崩溃真实原因加方法归因.md"
       ],
       "verify": [
-        "npm run test:startup-failure-explain"
+        "npm run test:one -- services/backend/tests/bootstrap/startupFailureExplain.test.js"
       ]
     },
     {
@@ -803,7 +797,7 @@
         "docs/07_OPS_运维/[OPS-MAN-077] Windows md 文件建议的应用注册.md"
       ],
       "verify": [
-        "npm run test:md-suggested-apps"
+        "npm run test:one -- services/backend/tests/services/mdSuggestedAppsPlan.test.js"
       ]
     },
     {
@@ -824,7 +818,7 @@
         "docs/07_OPS_运维/[OPS-MAN-078] khy doctor 离机还原自检.md"
       ],
       "verify": [
-        "npm run test:fresh-install-doctor"
+        "npm run test:one -- services/backend/tests/services/freshInstallDoctor.test.js"
       ]
     },
     {
@@ -846,7 +840,7 @@
         "docs/07_OPS_运维/[OPS-MAN-080] recap 的 CJK 化.md"
       ],
       "verify": [
-        "npm run test:recap-cjk"
+        "npm run test:one -- services/backend/tests/services/sessionRecapCjk.test.js services/backend/tests/services/sessionRecapService.cjk.test.js"
       ]
     },
     {
@@ -867,7 +861,7 @@
         "docs/07_OPS_运维/[OPS-MAN-081] npm 渠道 Node 版本预检.md"
       ],
       "verify": [
-        "npm run test:node-preflight"
+        "npm run test:one -- packaging/npm/test/nodeVersionPreflight.test.js"
       ]
     },
     {
@@ -891,7 +885,7 @@
         "docs/07_OPS_运维/[OPS-MAN-082] 三面镜子还原收敛与防循环.md"
       ],
       "verify": [
-        "npm run test:restore-converge"
+        "npm run test:one -- scripts/tests/restoreConvergenceVerifier.test.js"
       ]
     },
     {
@@ -942,13 +936,13 @@
         "docs/07_OPS_运维/[OPS-MAN-101] 角色归属诚实.md"
       ],
       "verify": [
-        "npm run test:dep-wave-schedule",
-        "npm run test:merge-skip-distinct",
-        "npm run test:seq-chain-decompose",
-        "npm run test:role-tool-scope",
-        "npm run test:merge-file-conflict",
-        "npm run test:merge-empty-success",
-        "npm run test:merge-role-attribution"
+        "npm run test:one -- services/backend/tests/services/orchestrator/dependencyWaveScheduler.test.js services/backend/tests/services/mergeResultsSkipDistinct.test.js services/backend/tests/services/sequentialChainDecompose.test.js services/backend/tests/services/orchestrator/roleToolScope.test.js services/backend/tests/services/orchestrator/mergeFileConflicts.test.js services/backend/tests/services/orchestrator/mergeEmptySuccess.test.js services/backend/tests/services/orchestrator/mergeRoleAttribution.test.js",
+        "npm run test:one -- services/backend/tests/services/orchestrator/dependencyWaveScheduler.test.js services/backend/tests/services/mergeResultsSkipDistinct.test.js services/backend/tests/services/sequentialChainDecompose.test.js services/backend/tests/services/orchestrator/roleToolScope.test.js services/backend/tests/services/orchestrator/mergeFileConflicts.test.js services/backend/tests/services/orchestrator/mergeEmptySuccess.test.js services/backend/tests/services/orchestrator/mergeRoleAttribution.test.js",
+        "npm run test:one -- services/backend/tests/services/orchestrator/dependencyWaveScheduler.test.js services/backend/tests/services/mergeResultsSkipDistinct.test.js services/backend/tests/services/sequentialChainDecompose.test.js services/backend/tests/services/orchestrator/roleToolScope.test.js services/backend/tests/services/orchestrator/mergeFileConflicts.test.js services/backend/tests/services/orchestrator/mergeEmptySuccess.test.js services/backend/tests/services/orchestrator/mergeRoleAttribution.test.js",
+        "npm run test:one -- services/backend/tests/services/orchestrator/dependencyWaveScheduler.test.js services/backend/tests/services/mergeResultsSkipDistinct.test.js services/backend/tests/services/sequentialChainDecompose.test.js services/backend/tests/services/orchestrator/roleToolScope.test.js services/backend/tests/services/orchestrator/mergeFileConflicts.test.js services/backend/tests/services/orchestrator/mergeEmptySuccess.test.js services/backend/tests/services/orchestrator/mergeRoleAttribution.test.js",
+        "npm run test:one -- services/backend/tests/services/orchestrator/dependencyWaveScheduler.test.js services/backend/tests/services/mergeResultsSkipDistinct.test.js services/backend/tests/services/sequentialChainDecompose.test.js services/backend/tests/services/orchestrator/roleToolScope.test.js services/backend/tests/services/orchestrator/mergeFileConflicts.test.js services/backend/tests/services/orchestrator/mergeEmptySuccess.test.js services/backend/tests/services/orchestrator/mergeRoleAttribution.test.js",
+        "npm run test:one -- services/backend/tests/services/orchestrator/dependencyWaveScheduler.test.js services/backend/tests/services/mergeResultsSkipDistinct.test.js services/backend/tests/services/sequentialChainDecompose.test.js services/backend/tests/services/orchestrator/roleToolScope.test.js services/backend/tests/services/orchestrator/mergeFileConflicts.test.js services/backend/tests/services/orchestrator/mergeEmptySuccess.test.js services/backend/tests/services/orchestrator/mergeRoleAttribution.test.js",
+        "npm run test:one -- services/backend/tests/services/orchestrator/dependencyWaveScheduler.test.js services/backend/tests/services/mergeResultsSkipDistinct.test.js services/backend/tests/services/sequentialChainDecompose.test.js services/backend/tests/services/orchestrator/roleToolScope.test.js services/backend/tests/services/orchestrator/mergeFileConflicts.test.js services/backend/tests/services/orchestrator/mergeEmptySuccess.test.js services/backend/tests/services/orchestrator/mergeRoleAttribution.test.js"
       ]
     },
     {
@@ -972,7 +966,7 @@
         "docs/07_OPS_运维/[OPS-MAN-084] 还原自驱授权门.md"
       ],
       "verify": [
-        "npm run test:restore-authorize"
+        "npm run test:one -- scripts/tests/restoreAutonomyGate.test.js"
       ]
     },
     {
@@ -996,7 +990,7 @@
         "docs/07_OPS_运维/[OPS-MAN-085] 还原补救追索.md"
       ],
       "verify": [
-        "npm run test:restore-recourse"
+        "npm run test:one -- scripts/tests/restoreRecoursePlan.test.js"
       ]
     },
     {
@@ -1019,7 +1013,7 @@
         "docs/07_OPS_运维/[OPS-MAN-086] 还原轨迹日志.md"
       ],
       "verify": [
-        "npm run test:restore-trace"
+        "npm run test:one -- scripts/tests/restoreTraceJournal.test.js"
       ]
     },
     {
@@ -1042,7 +1036,7 @@
         "docs/07_OPS_运维/[OPS-MAN-088] 还原策略台账.md"
       ],
       "verify": [
-        "npm run test:restore-ledger"
+        "npm run test:one -- scripts/tests/restoreStrategyLedger.test.js"
       ]
     },
     {
@@ -1066,7 +1060,7 @@
         "docs/07_OPS_运维/[OPS-MAN-089] 还原学习应用器.md"
       ],
       "verify": [
-        "npm run test:restore-apply"
+        "npm run test:one -- scripts/tests/restoreSkipApplier.test.js"
       ]
     },
     {
@@ -1091,7 +1085,7 @@
         "docs/07_OPS_运维/[OPS-MAN-090] 还原导航器.md"
       ],
       "verify": [
-        "npm run test:restore-navigate"
+        "npm run test:one -- scripts/tests/restoreNavigator.test.js"
       ]
     },
     {
@@ -1115,7 +1109,7 @@
         "docs/07_OPS_运维/[OPS-MAN-095] 还原解包完整性对账.md"
       ],
       "verify": [
-        "npm run test:restore-verify-complete"
+        "npm run test:one -- scripts/tests/restoreCompletenessVerifier.test.js"
       ]
     },
     {
@@ -1140,7 +1134,7 @@
         "docs/07_OPS_运维/[OPS-MAN-105] 还原快照格式兼容性对账.md"
       ],
       "verify": [
-        "npm run test:restore-check-format"
+        "npm run test:one -- scripts/tests/snapshotFormatCompat.test.js"
       ]
     },
     {
@@ -1163,7 +1157,7 @@
         "docs/07_OPS_运维/[OPS-MAN-107] 还原来源可溯性对账.md"
       ],
       "verify": [
-        "npm run test:restore-provenance"
+        "npm run test:one -- scripts/tests/restoreProvenance.test.js"
       ]
     },
     {
@@ -1188,7 +1182,7 @@
         "docs/07_OPS_运维/[OPS-MAN-108] 还原归档形制可提取性对账.md"
       ],
       "verify": [
-        "npm run test:restore-check-archive"
+        "npm run test:one -- scripts/tests/archiveExtractCompat.test.js"
       ]
     },
     {
@@ -1214,7 +1208,7 @@
         "docs/07_OPS_运维/[OPS-MAN-110] 还原解密套件可执行性对账.md"
       ],
       "verify": [
-        "npm run test:restore-check-crypto"
+        "npm run test:one -- scripts/tests/cryptoSuiteCompat.test.js"
       ]
     },
     {
@@ -1240,7 +1234,7 @@
         "docs/07_OPS_运维/[OPS-MAN-113] 还原字段效应探针（雅可比透镜）.md"
       ],
       "verify": [
-        "npm run test:restore-effect-probe"
+        "npm run test:one -- scripts/tests/restoreEffectProbe.test.js"
       ]
     },
     {
@@ -1263,7 +1257,7 @@
         "docs/07_OPS_运维/[OPS-MAN-114] 还原字段归属探针（label preservation）.md"
       ],
       "verify": [
-        "npm run test:restore-field-attribution"
+        "npm run test:one -- scripts/tests/restoreFieldAttribution.test.js"
       ]
     },
     {
@@ -1286,7 +1280,7 @@
         "docs/07_OPS_运维/[OPS-MAN-117] 还原完整性对账·运行时接线.md"
       ],
       "verify": [
-        "npm run test:restore-completeness-check"
+        "npm run test:one -- services/backend/tests/services/restoreCompletenessCheck.test.js"
       ]
     },
     {
@@ -1310,7 +1304,7 @@
         "docs/07_OPS_运维/[OPS-MAN-119] 还原解密前兼容性预检·运行时接线.md"
       ],
       "verify": [
-        "npm run test:restore-preflight"
+        "npm run test:one -- services/backend/tests/services/restorePreflightCheck.test.js"
       ]
     },
     {
@@ -1333,7 +1327,7 @@
         "docs/07_OPS_运维/[OPS-MAN-128] restore解密后归档形制解包前把关·接线.md"
       ],
       "verify": [
-        "npm run test:restore-archive-check"
+        "npm run test:one -- services/backend/tests/services/restoreArchiveExtractCheck.test.js"
       ]
     },
     {
@@ -1356,7 +1350,7 @@
         "docs/07_OPS_运维/[OPS-MAN-130] 还原来源可溯性·接线运行时横幅.md"
       ],
       "verify": [
-        "npm run test:restore-provenance-check"
+        "npm run test:one -- services/backend/tests/services/restoreProvenanceCheck.test.js"
       ]
     },
     {
@@ -1379,7 +1373,7 @@
         "docs/07_OPS_运维/[OPS-MAN-133] restore跨OS路径可移植性解包前把关·接线.md"
       ],
       "verify": [
-        "npm run test:restore-path-portability"
+        "npm run test:one -- services/backend/tests/services/restorePathPortabilityCheck.test.js"
       ]
     },
     {
@@ -1401,7 +1395,7 @@
         "docs/07_OPS_运维/[OPS-MAN-136] 首响应静默窗口守护·提交到首token及时回应·接线.md"
       ],
       "verify": [
-        "npm run test:first-response-ack"
+        "npm run test:one -- services/backend/tests/cli/firstResponseAckVoice.test.js"
       ]
     },
     {
@@ -1424,7 +1418,7 @@
         "docs/07_OPS_运维/[OPS-MAN-121] readFile二进制文件读前防护·接线.md"
       ],
       "verify": [
-        "npm run test:readfile-binary-guard"
+        "npm run test:one -- services/backend/tests/tools/readBinaryGuard.test.js"
       ]
     },
     {
@@ -1447,7 +1441,7 @@
         "docs/07_OPS_运维/[OPS-MAN-123] readFile按格式路由到提取器·接线.md"
       ],
       "verify": [
-        "npm run test:readfile-format-route"
+        "npm run test:one -- services/backend/tests/tools/readFileFormatRouter.test.js"
       ]
     },
     {
@@ -1470,7 +1464,7 @@
         "docs/07_OPS_运维/[OPS-MAN-125] readFile特殊文件读前防护·接线.md"
       ],
       "verify": [
-        "npm run test:readfile-special-guard"
+        "npm run test:one -- services/backend/tests/tools/specialFileReadGuard.test.js"
       ]
     },
     {
@@ -1494,7 +1488,7 @@
         "docs/07_OPS_运维/[OPS-MAN-129] readFile伪文件系统有界超时读·接线.md"
       ],
       "verify": [
-        "npm run test:readfile-pseudo-guard"
+        "npm run test:one -- services/backend/tests/tools/pseudoFileReadGuard.test.js"
       ]
     },
     {
@@ -1546,7 +1540,7 @@
         "docs/07_OPS_运维/[OPS-MAN-096] 多模型类型 Provider 配置对账.md"
       ],
       "verify": [
-        "npm run test:model-type-providers"
+        "npm run test:one -- scripts/tests/modelTypeProviderPlan.test.js"
       ]
     },
     {
@@ -1569,7 +1563,7 @@
         "docs/07_OPS_运维/[OPS-MAN-102] 卡住任务的强制终止逃生舱.md"
       ],
       "verify": [
-        "npm run test:busy-interrupt-escalation"
+        "npm run test:one -- services/backend/tests/services/cli/repl/busyInterruptEscalation.test.js"
       ]
     },
     {
@@ -1598,7 +1592,7 @@
         "docs/07_OPS_运维/[OPS-MAN-100] 便携 CLI 子系统.md"
       ],
       "verify": [
-        "npm run test:portable-cli"
+        "npm run test:one -- services/backend/tests/services/gateway/adapters/portableCli.test.js"
       ]
     },
     {
@@ -1621,7 +1615,7 @@
         "docs/07_OPS_运维/[OPS-MAN-103] 写记忆·召回记忆明确告知用户.md"
       ],
       "verify": [
-        "npm run test:memory-notice"
+        "npm run test:one -- services/backend/tests/services/memoryOpsNotice.test.js"
       ]
     },
     {
@@ -1649,7 +1643,7 @@
         "docs/07_OPS_运维/[OPS-MAN-104] 纯文本模型图片 OCR 兜底与低置信诚实告诫.md"
       ],
       "verify": [
-        "npm run test:ocr-confidence-caveat",
+        "npm run test:one -- services/backend/tests/gateway/ocrConfidenceCaveat.test.js services/backend/tests/gateway/imageOcrFallbackWiring.test.js services/backend/tests/gateway/imageOcrFallbackRealImage.test.js",
         "node --test services/backend/tests/gateway/imageOcrFallbackRealImage.test.js",
         "python3 -m unittest tests.unit.test_dochelper_ocr_confidence"
       ]
@@ -1674,7 +1668,7 @@
         "docs/07_OPS_运维/[OPS-MAN-109] 纯文本模型图片 OCR 兜底覆盖率诚实告诫.md"
       ],
       "verify": [
-        "npm run test:ocr-coverage-notice",
+        "npm run test:one -- services/backend/tests/gateway/ocrCoverageNotice.test.js services/backend/tests/gateway/imageOcrCoverageWiring.test.js",
         "node --check services/backend/src/services/gateway/ocrCoverageNotice.js",
         "node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js"
       ]
@@ -1700,7 +1694,7 @@
         "docs/07_OPS_运维/[OPS-MAN-111] 纯文本模型图片 OCR 兜底截断诚实告诫.md"
       ],
       "verify": [
-        "npm run test:ocr-truncation-notice",
+        "npm run test:one -- services/backend/tests/gateway/ocrTruncationNotice.test.js services/backend/tests/gateway/imageOcrTruncationWiring.test.js",
         "node --check services/backend/src/services/gateway/ocrTruncationNotice.js",
         "node --check services/backend/src/services/ocrSnippetService.js"
       ]
@@ -1728,7 +1722,7 @@
         "docs/07_OPS_运维/[OPS-MAN-112] 纯文本模型图片 OCR 兜底语言包可用性诚实告诫.md"
       ],
       "verify": [
-        "npm run test:ocr-language-notice",
+        "npm run test:one -- services/backend/tests/gateway/ocrLanguageNotice.test.js services/backend/tests/gateway/imageOcrLanguageWiring.test.js services/backend/tests/gateway/ocrLanguageNarrowing.test.js",
         "node --check services/backend/src/services/gateway/ocrLanguageNotice.js",
         "python3 -m py_compile services/backend/src/services/docHelper.py"
       ]
@@ -1756,7 +1750,7 @@
         "docs/07_OPS_运维/[OPS-MAN-115] 纯文本模型图片 OCR 兜底方向自动校正.md"
       ],
       "verify": [
-        "npm run test:ocr-orientation-notice",
+        "npm run test:one -- services/backend/tests/gateway/ocrOrientationNotice.test.js services/backend/tests/gateway/imageOcrOrientationWiring.test.js services/backend/tests/gateway/ocrOrientationRecovery.test.js",
         "node --check services/backend/src/services/gateway/ocrOrientationNotice.js",
         "python3 -m py_compile services/backend/src/services/docHelper.py"
       ]
@@ -1784,7 +1778,7 @@
         "docs/07_OPS_运维/[OPS-MAN-116] 纯文本模型图片 OCR 兜底低分辨率自动放大.md"
       ],
       "verify": [
-        "npm run test:ocr-resolution-notice",
+        "npm run test:one -- services/backend/tests/gateway/ocrResolutionNotice.test.js services/backend/tests/gateway/imageOcrResolutionWiring.test.js services/backend/tests/gateway/ocrResolutionRecovery.test.js",
         "node --check services/backend/src/services/gateway/ocrResolutionNotice.js",
         "python3 -m py_compile services/backend/src/services/docHelper.py"
       ]
@@ -1808,7 +1802,7 @@
         "docs/07_OPS_运维/[OPS-MAN-106] unpack 未知格式自救.md"
       ],
       "verify": [
-        "npm run test:unpack-generic",
+        "npm run test:one -- services/backend/tests/tools/unpackGeneric.test.js services/backend/tests/tools/unpackAsar.test.js",
         "node --check services/backend/src/services/reverseEngineer/genericExtractor.js",
         "node --check services/backend/src/tools/unpackTool.js"
       ]
@@ -1834,7 +1828,7 @@
         "docs/07_OPS_运维/[OPS-MAN-118] 视觉描述级联全失败 OCR 兜底底线解耦.md"
       ],
       "verify": [
-        "npm run test:vision-describe-fail-floor",
+        "npm run test:one -- services/backend/tests/visionOcrFallback.test.js services/backend/tests/gateway/visionDescribeFailFloorWiring.test.js services/backend/tests/gateway/visionDescribeFailFloorRealImage.test.js",
         "node --check services/backend/src/services/gateway/visionOcrFallback.js",
         "node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js"
       ]
@@ -1859,7 +1853,7 @@
         "docs/07_OPS_运维/[OPS-MAN-120] 剥图必留痕最小底线与OCR功能门解耦.md"
       ],
       "verify": [
-        "npm run test:vision-strip-image-floor",
+        "npm run test:one -- services/backend/tests/gateway/visionStripImageFloorWiring.test.js services/backend/tests/gateway/visionStripImageFloorRealImage.test.js",
         "node --check services/backend/src/services/gateway/visionOcrFallback.js",
         "node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js"
       ]
@@ -1884,7 +1878,7 @@
         "docs/07_OPS_运维/[OPS-MAN-122] post-failure救援网剥图必留痕解耦.md"
       ],
       "verify": [
-        "npm run test:vision-rescue-strip-floor",
+        "npm run test:one -- services/backend/tests/gateway/visionRescueStripFloorWiring.test.js services/backend/tests/gateway/visionRescueStripFloorRealImage.test.js",
         "node --check services/backend/src/services/gateway/visionOcrFallback.js",
         "node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js"
       ]
@@ -1910,7 +1904,7 @@
         "docs/07_OPS_运维/[OPS-MAN-124] OCR成功路径向用户透明告知用了OCR.md"
       ],
       "verify": [
-        "npm run test:ocr-usage-disclosure",
+        "npm run test:one -- services/backend/tests/gateway/ocrUsageNotice.test.js services/backend/tests/gateway/ocrUsageDisclosureWiring.test.js services/backend/tests/gateway/ocrUsageDisclosureRealImage.test.js",
         "node --check services/backend/src/services/gateway/ocrUsageNotice.js",
         "node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js"
       ]
@@ -1936,7 +1930,7 @@
         "docs/07_OPS_运维/[OPS-MAN-126] OCR成功路径确定性脚注兜底告知用了OCR.md"
       ],
       "verify": [
-        "npm run test:ocr-usage-footnote",
+        "npm run test:one -- services/backend/tests/gateway/ocrUsageFootnote.test.js services/backend/tests/gateway/ocrUsageFootnoteWiring.test.js services/backend/tests/gateway/ocrUsageFootnoteRealImage.test.js",
         "node --check services/backend/src/services/gateway/ocrUsageFootnote.js",
         "node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js"
       ]
@@ -1964,7 +1958,7 @@
         "docs/07_OPS_运维/[OPS-MAN-140] OCR成功读出但模型仍谎称没收到图的确定性纠正脚注.md"
       ],
       "verify": [
-        "npm run test:vision-denial-correction",
+        "npm run test:one -- services/backend/tests/gateway/visionDenialCorrection.test.js services/backend/tests/gateway/visionDenialCorrectionWiring.test.js services/backend/tests/gateway/visionDenialCorrectionRealImage.test.js",
         "node --check services/backend/src/services/gateway/visionDenialCorrection.js",
         "node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js"
       ]
@@ -1990,7 +1984,7 @@
         "docs/07_OPS_运维/[OPS-MAN-142] 失败墙推迟到OCR结果已知后减少心灵噪音.md"
       ],
       "verify": [
-        "npm run test:vision-failure-summary-ocr-suppress",
+        "npm run test:one -- services/backend/tests/services/gateway/visionFailureSummary.test.js services/backend/tests/gateway/visionFailureSummaryOcrSuppressWiring.test.js services/backend/tests/gateway/visionFailureSummaryOcrSuppressRealImage.test.js",
         "node --check services/backend/src/services/gateway/visionFailureSummary.js",
         "node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js"
       ]
@@ -2016,7 +2010,7 @@
         "docs/07_OPS_运维/[OPS-MAN-144] describe-fail到OCR成功的用户可见闭合减少心灵噪音.md"
       ],
       "verify": [
-        "npm run test:vision-ocr-success-closure",
+        "npm run test:one -- services/backend/tests/services/gateway/visionOcrSuccessClosure.test.js services/backend/tests/gateway/visionOcrSuccessClosureWiring.test.js services/backend/tests/gateway/visionOcrSuccessClosureRealImage.test.js",
         "node --check services/backend/src/services/gateway/visionOcrSuccessClosure.js",
         "node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js"
       ]
@@ -2042,7 +2036,7 @@
         "docs/07_OPS_运维/[OPS-MAN-145] 级联逐候选请稍候提示减冗余减少心灵噪音.md"
       ],
       "verify": [
-        "npm run test:vision-cascade-attempt-notice",
+        "npm run test:one -- services/backend/tests/services/gateway/visionCascadeAttemptNotice.test.js services/backend/tests/gateway/visionCascadeAttemptNoticeWiring.test.js services/backend/tests/gateway/visionCascadeAttemptNoticeRealImage.test.js",
         "node --check services/backend/src/services/gateway/visionCascadeAttemptNotice.js",
         "node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js"
       ]
@@ -2063,7 +2057,7 @@
         "docs/07_OPS_运维/[OPS-MAN-150] 级联中间提示显示归一去provider前缀减少心灵噪音.md"
       ],
       "verify": [
-        "npm run test:vision-model-display-name",
+        "npm run test:one -- services/backend/tests/services/gateway/visionModelDisplayName.test.js services/backend/tests/gateway/visionModelDisplayNameWiring.test.js services/backend/tests/gateway/visionModelDisplayNameRealImage.test.js",
         "node --check services/backend/src/services/gateway/visionModelDisplayName.js",
         "node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js"
       ]
@@ -2081,7 +2075,7 @@
         "docs/07_OPS_运维/[OPS-MAN-159] 失败墙视觉模型名显示归一去provider前缀减少心灵噪音.md"
       ],
       "verify": [
-        "npm run test:vision-failure-summary-display-name",
+        "npm run test:one -- services/backend/tests/gateway/visionFailureSummaryDisplayName.test.js",
         "node --check services/backend/src/services/gateway/visionFailureSummary.js"
       ]
     },
@@ -2098,7 +2092,7 @@
         "docs/07_OPS_运维/[OPS-MAN-161] 失败墙真实失败原因标签去重减少心灵噪音.md"
       ],
       "verify": [
-        "npm run test:vision-failure-cause-dedup",
+        "npm run test:one -- services/backend/tests/gateway/visionFailureCauseDedup.test.js",
         "node --check services/backend/src/services/gateway/visionFailureSummary.js"
       ]
     },
@@ -2116,7 +2110,7 @@
         "docs/07_OPS_运维/[OPS-MAN-164] 视觉池失败状态人话化减少心灵噪音.md"
       ],
       "verify": [
-        "npm run test:vision-pool-fail-status-humanize",
+        "npm run test:one -- services/backend/tests/gateway/visionPoolFailStatusHumanize.test.js",
         "node --check services/backend/src/services/gateway/visionPoolFailStatus.js"
       ]
     },
@@ -2140,7 +2134,7 @@
         "docs/07_OPS_运维/[OPS-MAN-127] OCR救援网成功实时状态告知已降级到OCR.md"
       ],
       "verify": [
-        "npm run test:ocr-rescue-status",
+        "npm run test:one -- services/backend/tests/gateway/ocrRescueStatusNotice.test.js services/backend/tests/gateway/ocrRescueStatusNoticeWiring.test.js services/backend/tests/gateway/ocrRescueStatusNoticeRealImage.test.js",
         "node --check services/backend/src/services/gateway/ocrRescueStatusNotice.js",
         "node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js"
       ]
@@ -2166,7 +2160,7 @@
         "docs/07_OPS_运维/[OPS-MAN-131] 重复代码检测门与公共测试脚手架.md"
       ],
       "verify": [
-        "npm run test:maintainer:duplication",
+        "npm run test:one -- scripts/tests/duplicationGuard.test.js scripts/tests/check-duplication.test.js",
         "npm run check:duplication",
         "node --check scripts/lib/duplicationGuard.js scripts/check-duplication.js"
       ]
@@ -2191,7 +2185,7 @@
         "docs/07_OPS_运维/[OPS-MAN-132] prep期OCR兜底非verbose实时状态告知已降级到OCR.md"
       ],
       "verify": [
-        "npm run test:ocr-rescue-status-prep",
+        "npm run test:one -- services/backend/tests/gateway/ocrRescueStatusPrep.test.js services/backend/tests/gateway/ocrRescueStatusPrepWiring.test.js services/backend/tests/gateway/ocrRescueStatusPrepRealImage.test.js",
         "node --check services/backend/src/services/gateway/ocrRescueStatusNotice.js",
         "node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js"
       ]
@@ -2217,7 +2211,7 @@
         "docs/07_OPS_运维/[OPS-MAN-148] Site1-prep状态与OCR成功闭合跨层去重减少心灵噪音.md"
       ],
       "verify": [
-        "npm run test:ocr-rescue-prep-closure-dedup",
+        "npm run test:one -- services/backend/tests/gateway/ocrRescueStatusNotice.test.js services/backend/tests/gateway/ocrRescuePrepClosureDedupWiring.test.js services/backend/tests/gateway/ocrRescuePrepClosureDedupRealImage.test.js",
         "node --check services/backend/src/services/gateway/ocrRescueStatusNotice.js",
         "node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js"
       ]
@@ -2240,7 +2234,7 @@
         "docs/07_OPS_运维/[OPS-MAN-134] 视觉级联网络不可达终局诊断.md"
       ],
       "verify": [
-        "npm run test:vision-network-exhaustion",
+        "npm run test:one -- services/backend/tests/services/visionExhaustionDiagnostic.test.js services/backend/tests/gateway/visionNetworkExhaustionRealImage.test.js",
         "node --check services/backend/src/services/gateway/visionExhaustionDiagnostic.js"
       ]
     },
@@ -2261,7 +2255,7 @@
         "docs/07_OPS_运维/[OPS-MAN-135] 工作流列表载入本页降级不泄漏全局横幅.md"
       ],
       "verify": [
-        "npm run test:workflow-list-degraded",
+        "npm run test:one -- apps/ai-frontend/src/composables/useWorkflow.wiring.test.js",
         "node --check apps/ai-frontend/src/composables/useWorkflow.js"
       ]
     },
@@ -2308,7 +2302,7 @@
         "docs/07_OPS_运维/[OPS-MAN-152] 交付门人类可读报告落盘接线.md"
       ],
       "verify": [
-        "node services/backend/tests/services/deliveryGateReporter.test.js",
+        "node --test services/backend/tests/services/deliveryGateReporter.test.js",
         "node --check services/backend/src/services/agenticHarnessService.js",
         "node --check services/backend/src/services/flagRegistry.js"
       ]
@@ -2331,7 +2325,7 @@
         "docs/07_OPS_运维/[OPS-MAN-153] 会话快照损坏兜底修复接线.md"
       ],
       "verify": [
-        "node services/backend/tests/services/sessionFileRepairWiring.test.js",
+        "node --test services/backend/tests/services/sessionFileRepairWiring.test.js",
         "node --check services/backend/src/services/sessionPersistence.js",
         "node --check services/backend/src/services/flagRegistry.js"
       ]
@@ -2354,7 +2348,7 @@
         "docs/07_OPS_运维/[OPS-MAN-154] 任务模板执行手册注入接线.md"
       ],
       "verify": [
-        "node services/backend/tests/services/taskTemplateHintWiring.test.js",
+        "node --test services/backend/tests/services/taskTemplateHintWiring.test.js",
         "node --check services/backend/src/services/agenticHarnessService.js",
         "node --check services/backend/src/services/flagRegistry.js"
       ]

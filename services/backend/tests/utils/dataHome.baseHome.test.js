@@ -16,6 +16,17 @@ const path = require('path');
 describe('dataHome — ecosystem base/app path isolation', () => {
   const OLD_ENV = { ...process.env };
 
+  beforeEach(() => {
+    // These tests assert the non-portable user-home contract. Clear global
+    // worker overrides before loading dataHome so each case observes that
+    // contract instead of the backend worker's project fixture.
+    delete process.env.KHY_PORTABLE_ROOT;
+    delete process.env.KHYQUANT_PORTABLE_ROOT;
+    delete process.env.KHY_PROJECT_DATA_HOME;
+    delete process.env.KHYOS_HOME;
+    delete process.env.KHY_DATA_HOME;
+  });
+
   afterEach(() => {
     process.env = { ...OLD_ENV };
     jest.resetModules();
@@ -23,6 +34,7 @@ describe('dataHome — ecosystem base/app path isolation', () => {
 
   test('getBaseHome() defaults to ~/.khyos', () => {
     delete process.env.KHYOS_HOME;
+    process.env.KHY_OS_ROOT = path.join(os.tmpdir(), 'khyos-nonportable-base-root');
     jest.resetModules();
     const d = require('../../src/utils/dataHome');
     expect(d.getBaseHome()).toBe(path.join(os.homedir(), '.khyos'));
@@ -37,6 +49,7 @@ describe('dataHome — ecosystem base/app path isolation', () => {
 
   test('getBaseDataDir() nests under the base home', () => {
     delete process.env.KHYOS_HOME;
+    process.env.KHY_OS_ROOT = path.join(os.tmpdir(), 'khyos-nonportable-data-root');
     jest.resetModules();
     const d = require('../../src/utils/dataHome');
     expect(d.getBaseDataDir('data')).toBe(path.join(os.homedir(), '.khyos', 'data'));

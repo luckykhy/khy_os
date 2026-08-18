@@ -99,6 +99,91 @@ function _isTruthy(value) {
   return value === true || ['1', 'true', 'yes', 'on'].includes(String(value || '').trim().toLowerCase());
 }
 
+function _isFalsy(value) {
+  return ['0', 'false', 'no', 'off'].includes(String(value || '').trim().toLowerCase());
+}
+
+let _startupUpdateCheckScheduled = false;
+
+/**
+ * Defer the startup version check until the interactive boot path is ready.
+ * The version and update services are lazy-loaded so lightweight commands keep
+ * their existing startup graph and timing.
+ *
+ * "最新版本" is decided across all three release registries (GitHub Releases + PyPI + npm),
+ * not by pip alone: with a PyPI-only probe this line misreported "已是最新版本" /
+ * "领先于已发布版本" whenever another channel published first.
+ */
+function _scheduleStartupUpdateCheck(printInfo, printError) {
+  if (_startupUpdateCheckScheduled || _isFalsy(process.env.KHY_STARTUP_UPDATE_CHECK)) return;
+  _startupUpdateCheckScheduled = true;
+  setImmediate(async () => {
+    try {
+      const { checkForUpdateAll, compareVersions } = require('../src/services/versionService');
+      const result = await checkForUpdateAll();
+      if (!result || !result.current) return;
+      const sourcesText = result.sourcesText || '';
+
+      // 三个仓库都没答上来:诚实沉默(不谎报「已是最新」),仅调试门控下说明原因。
+      if (!result.latest) {
+        if (_isTruthy(process.env.KHY_STARTUP_UPDATE_DEBUG)) {
+          printInfo(`版本检查未完成：${sourcesText || '所有发布源均不可用'}`);
+        }
+        return;
+      }
+
+      if (result.updateAvailable) {
+        printInfo(
+          `发现新版本：当前 v${result.current}，最新 v${result.latest}`
+            + (result.sourceLabel ? `（来源 ${result.sourceLabel}）` : '')
+        );
+        if (sourcesText) printInfo(`发布源：${sourcesText}`);
+        if (_isFalsy(process.env.KHY_AUTO_UPDATE)) {
+          printInfo('自动更新已关闭（KHY_AUTO_UPDATE=0）。');
+          return;
+        }
+
+        const { detectInstallation } = require('../src/services/updateCoordinator');
+        const installation = detectInstallation();
+        if (installation.type !== 'package') {
+          printInfo(`当前安装类型为 ${installation.type || 'unknown'}，请运行 khy update apply 完成更新。`);
+          return;
+        }
+        // 自动安装只走 pip(pip 成功后会顺带同步 npm 渠道)。取胜源不是 PyPI 时 pip 拉不到那个版本,
+        // 硬跑只会每次启动空转一遍 —— 交给 khy update 的级联更新源,并如实说明。
+        if (result.source !== 'pypi' || !(installation.packages && installation.packages.pip)) {
+          printInfo(
+            `最新版本发布在 ${result.sourceLabel || result.source} 渠道，`
+              + '请运行 khy update 从该渠道完成更新。'
+          );
+          return;
+        }
+
+        const { applyUpdate } = require('../src/services/khySelfUpdateService');
+        const update = applyUpdate();
+        if (update && update.success && update.changed) {
+          printInfo('更新完成，请重启 CLI 以使用新版本。');
+        } else if (update && !update.success && update.error) {
+          printError(`自动更新失败：${String(update.error).slice(0, 240)}`);
+        }
+        return;
+      }
+
+      const suffix = sourcesText ? `（发布源：${sourcesText}）` : '';
+      if (compareVersions(result.current, result.latest) > 0) {
+        printInfo(`当前版本 v${result.current} 领先于已发布版本 v${result.latest}${suffix}。`);
+      } else {
+        printInfo(`当前版本 v${result.current} 已是最新版本${suffix}。`);
+      }
+    } catch (error) {
+      // Startup update checks are advisory and must never block the CLI.
+      if (_isTruthy(process.env.KHY_STARTUP_UPDATE_DEBUG)) {
+        printError(`版本检查失败：${String(error?.message || error).slice(0, 240)}`);
+      }
+    }
+  });
+}
+
 function _isMachineReadableInvocation(argv = process.argv.slice(2)) {
   const args = normalizeArgs(Array.isArray(argv) ? argv : []);
   return args.includes('--json')
@@ -1148,7 +1233,7 @@ function getInvokedBinary() {
  */
 async function main() {
   const rawArgs = process.argv.slice(2);
-  const args = normalizeArgs(rawArgs);
+  let args = normalizeArgs(rawArgs);
   if (_startupFsm) _startupFsm.fire('advance', { step: 'args_normalized' }); // -> env_check
 
   // ── 启动提示：阶段进度指示器 ──────────────────────────────────────
@@ -1200,7 +1285,7 @@ async function main() {
   if (_bootPhaseWrite) _bootPhaseWrite('⏳ 加载环境配置');
   if (!_initPromise) {
     const { init: _bootstrapInit } = require('../src/bootstrap/init');
-    _initPromise = _bootstrapInit();
+    _initPromise = _bootstrapInit({ machineReadable: _isMachineReadableInvocation(args) });
   }
   await _initPromise;
   if (_bootPhaseWrite) _bootPhaseWrite('✓ 环境就绪');
@@ -1299,10 +1384,9 @@ async function main() {
   if (ideFlag) {
     const adapterKey = IDE_ADAPTER_FLAGS[ideFlag];
     process.env.GATEWAY_PREFERRED_ADAPTER = adapterKey; // 设置 AI 网关优先适配器
-    const filteredArgs = args.filter(a => a !== ideFlag); // 从参数中移除 IDE 标志
-    args = filteredArgs;
-    process.argv = [process.argv[0], process.argv[1], ...filteredArgs]; // 同步更新全局参数
-
+    args = args.filter(a => !IDE_ADAPTER_FLAGS[a]);     // 移除 IDE 标志以免影响后续命令解析
+    // 无需回写 process.argv：本文件的 argv 读取都发生在 main() 入口（第 1208 行）之前，
+    // 下游脚本的 argv 读取一律在 `require.main === module` 守卫内，进程内 require 时不执行。
   }
 
   // 懒加载格式化工具函数（首次调用时才 require，避免拖慢启动）
@@ -1741,6 +1825,7 @@ async function main() {
       } catch { /* non-critical */ }
       checkpoint('khy:setup-done');
       if (_bootPhaseWrite) _bootPhaseWrite('✓ 就绪');
+      _scheduleStartupUpdateCheck(printInfo, printError);
       const { startRepl } = require('../src/cli/repl');
       if (_startupFsm) _startupFsm.fire('advance', { step: 'khy_repl_enter' }); // -> running
       await startRepl({ mode: 'khy', enablePluginAutoload: false });
@@ -1780,6 +1865,7 @@ async function main() {
       await setup({ mode: 'khyquant' });
     } catch { /* 引导初始化是非关键操作 */ }
     checkpoint('khyquant:setup-done');
+    _scheduleStartupUpdateCheck(printInfo, printError);
 
     // 默认流程：启动后端服务器 + 前端，然后进入 REPL
     if (_startupFsm) _startupFsm.fire('advance', { step: 'full_server_repl_enter' }); // -> running
@@ -1803,6 +1889,7 @@ async function main() {
         await setup({ mode: 'khyquant' });
       } catch { /* bootstrap setup is non-critical */ }
       checkpoint('khyquant:setup-done');
+      _scheduleStartupUpdateCheck(printInfo, printError);
       const { startRepl } = require('../src/cli/repl');
       if (_startupFsm) _startupFsm.fire('advance', { step: 'cli_repl_enter' }); // -> running
       await startRepl();

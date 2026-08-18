@@ -12,6 +12,11 @@
 const fs = require('fs');
 const path = require('path');
 
+// Zero-dependency leaf: the single source of truth for boolean env tokens
+// (1/true/yes/on ↔ 0/false/no/off). Required at module scope is safe — it
+// requires nothing itself, so it cannot participate in a cycle.
+const parseBoolean = require('../utils/parseBoolean');
+
 // ── Cloud (telemetry / profile sync / skill registry) endpoint ──────────────
 // The production cloud endpoint. Overridable per-install via env or the user's
 // cloud.json (cloudSync.getEndpoint reads config.endpoint first). Every module
@@ -151,6 +156,16 @@ const ILINK_MAX_FILE_SIZE_BYTES = parseInt(
   process.env.KHY_ILINK_MAX_FILE_SIZE || String(25 * 1024 * 1024),
   10
 );
+// 自动投递工具白名单与图片回复路径清洗。均可由 env 覆盖。
+const ILINK_DELIVER_TOOLS = String(
+  process.env.KHY_ILINK_DELIVER_TOOLS || 'SendUserFile,image_generate'
+)
+  .split(',')
+  .map((name) => name.trim())
+  .filter(Boolean);
+const ILINK_SANITIZE_PATHS = !/^(?:0|false|off|no)$/i.test(
+  String(process.env.KHY_ILINK_SANITIZE_PATHS || 'true').trim()
+);
 // 大文件上传到 CDN 的墙钟上限。图片仍走 ILINK_CDN_TIMEOUT_MS(30s);文件可能达 25MB,
 // 在其基线上放宽到默认 180s 以覆盖大文件场景。基于活动的超时,超时后 abort 在飞请求,不硬 kill。
 const ILINK_FILE_UPLOAD_TIMEOUT_MS = parseInt(
@@ -218,6 +233,160 @@ const VOICE_INPUT_TRIGGER_TIMEOUT_MS = parseInt(
 // 每收到一个听写字符就重置计时，绝不硬杀进行中的任务。
 const VOICE_SILENCE_TIMEOUT_MS = parseInt(process.env.KHY_VOICE_SILENCE_MS || '6000', 10);
 
+// ── 数据备份与恢复(khy backup / services/backup/*)单一真源 ─────────────────
+// F5「备份目录、保留策略可配置,默认值进 constants,不许散落硬编码」的落点。
+// backupService / restoreService / handlers/backup.js 一律从这里取值,不内联字面量。
+//
+// 保留策略语义(明确定义,免歧义):一份备份被删,当且仅当**同时**满足「按时间倒序排在
+// KEEP_COUNT 之外」**且**「早于 KEEP_DAYS」。最新一份**永不删除**。缺 .complete 标记的
+// 残破备份不受这两条保护,优先清理。
+const BACKUP = Object.freeze({
+  // 备份根目录。空字符串 = 落 utils/dataHome.getDataDir('backups')
+  // (bootstrap/migrations.js 已在建该目录),避免在此内联一个绝对路径。
+  ROOT: process.env.KHY_BACKUP_ROOT || '',
+  // 默认分级。core = 权威且体积可控;full = 追加 audit/receipts 等大体积历史流水。
+  // 取值集合与语义见 services/backup/backupAssetPlan.js(资产规则的单一真源)。
+  TIER: process.env.KHY_BACKUP_TIER || 'core',
+  KEEP_COUNT: parseInt(process.env.KHY_BACKUP_KEEP_COUNT || '10', 10),
+  KEEP_DAYS: parseInt(process.env.KHY_BACKUP_KEEP_DAYS || '30', 10),
+  // 起备前的最小可用空间。默认 512 MB:宁可拒绝开始,也不要写一半把盘撑爆。
+  MIN_FREE_BYTES: parseInt(
+    process.env.KHY_BACKUP_MIN_FREE_BYTES || String(512 * 1024 * 1024),
+    10
+  ),
+  // PostgreSQL 分支(仅 DB_MODE=postgres 时启用)。
+  PG_DUMP_BIN: process.env.KHY_PG_DUMP_BIN || 'pg_dump',
+  PG_DUMP_IDLE_TIMEOUT_MS: parseInt(
+    process.env.KHY_BACKUP_PG_DUMP_IDLE_TIMEOUT_MS || '120000',
+    10
+  ),
+  // 备份集内部布局(restore 与演练测试都按这些名字寻址)。
+  MANIFEST_FILENAME: 'manifest.json',
+  COMPLETE_MARKER: '.complete',
+  DB_SUBDIR: 'db',
+  PG_DUMP_FILENAME: 'postgres.dump',
+  HOME_SUBDIR_PREFIX: 'home-',
+  MANIFEST_SCHEMA_VERSION: 1,
+  // 备份集含 khy-quant.db 的 api_keys/auth_sessions 表与各通道 token,且按表裁剪会
+  // 破坏引用完整性,故不裁 —— 用文件权限兜底,并在 manifest 标记 containsSecrets。
+  DIR_MODE: 0o700,
+  FILE_MODE: 0o600,
+  // khy vault(~/.khyos/vault)属独立机密域,默认不进备份集(见域边界)。
+  INCLUDE_VAULT: false,
+});
+
+// ── API key 池冷却/退避单一真源(services/apiKeyPool.js) ─────────────────────
+// F5「默认值进 constants,不许散落硬编码」的落点。这四个值原先内联在 apiKeyPool.js
+// 顶部且**没有任何 env 覆盖**:某 provider 抖动一阵把 key 推到最高退避级后,用户除了
+// 干等 5 分钟别无办法,想调短必须改代码重装 —— 正是用户报的「硬编码错误」。
+//
+// 退避语义:第 n 次触发冷却(n = backoffLevel,从 1 起)→ BASE_COOLDOWN_MS · 2^(n-1),
+// 取 MAX_COOLDOWN_MS 为上限,级数取 MAX_BACKOFF_LEVEL 为上限。默认 10s→20→40→80→160s,
+// 封顶 300s。**只有** 429/403/401 与限流类文案会触发 key 级冷却;网络抖动
+// (ECONNRESET / socket hang up)只记失败计数,不冷却 —— 换条连接就能好的错误不该停用 key。
+const _poolInt = (raw, fallback, min) => {
+  const n = parseInt(String(raw ?? '').trim(), 10);
+  return Number.isFinite(n) && n >= min ? n : fallback;
+};
+const API_KEY_POOL = Object.freeze({
+  BASE_COOLDOWN_MS: _poolInt(process.env.KHY_API_KEY_POOL_BASE_COOLDOWN_MS, 10000, 1000),
+  MAX_COOLDOWN_MS: _poolInt(process.env.KHY_API_KEY_POOL_MAX_COOLDOWN_MS, 300000, 1000),
+  MAX_BACKOFF_LEVEL: _poolInt(process.env.KHY_API_KEY_POOL_MAX_BACKOFF_LEVEL, 5, 1),
+  // 服务端 Retry-After 的上界。上游给出的秒数不可无条件信任(实测见过 86400):
+  // 没有这个夹子,一个坏响应就能把一把好 key 停用一整天。
+  MAX_RETRY_AFTER_MS: _poolInt(process.env.KHY_API_KEY_POOL_MAX_RETRY_AFTER_MS, 600000, 1000),
+});
+
+// ── Self-update sources ─────────────────────────────────────────────────────
+// Release sources and release tracks are separate concepts. Consumers select
+// sources in this fixed order while stable/preview/dev remains the track.
+const UPDATE = Object.freeze({
+  GITHUB_REPOSITORY: process.env.KHY_UPDATE_GITHUB_REPOSITORY || 'luckykhy/khy_os',
+  GITHUB_RELEASES_API: process.env.KHY_UPDATE_GITHUB_RELEASES_API || `https://api.github.com/repos/${process.env.KHY_UPDATE_GITHUB_REPOSITORY || 'luckykhy/khy_os'}/releases`,
+  GITHUB_REPOSITORY_API:
+    process.env.KHY_UPDATE_GITHUB_REPOSITORY_API ||
+    `https://api.github.com/repos/${process.env.KHY_UPDATE_GITHUB_REPOSITORY || 'luckykhy/khy_os'}`,
+  GITHUB_RAW_BASE_URL: process.env.KHY_UPDATE_GITHUB_RAW_BASE_URL || 'https://raw.githubusercontent.com',
+  // The runnable backend manifest on GitHub's default branch is also a release surface:
+  // it may advance before a GitHub Release/tag is created.
+  GITHUB_VERSION_MANIFEST_PATH:
+    process.env.KHY_UPDATE_GITHUB_VERSION_MANIFEST_PATH || 'services/backend/package.json',
+  GITHUB_TAG_PATTERN: 'v<version>',
+  PROBE_TIMEOUT_MS: parseInt(process.env.KHY_UPDATE_PROBE_TIMEOUT_MS || '8000', 10),
+  PROBE_TOTAL_TIMEOUT_MS: parseInt(process.env.KHY_UPDATE_PROBE_TOTAL_TIMEOUT_MS || '10000', 10),
+  DOWNLOAD_IDLE_TIMEOUT_MS: parseInt(process.env.KHY_UPDATE_DOWNLOAD_IDLE_TIMEOUT_MS || '10000', 10),
+  PROGRESS_MIN_INTERVAL_MS: parseInt(process.env.KHY_UPDATE_PROGRESS_MIN_INTERVAL_MS || '1000', 10),
+  RETRY_COUNT: parseInt(process.env.KHY_UPDATE_RETRY_COUNT || '1', 10),
+  ENABLED_CHANNELS: Object.freeze(['github', 'pypi', 'npm', 'local']),
+  PYPI_BASE_URL: process.env.KHY_UPDATE_PYPI_BASE_URL || 'https://pypi.org/pypi',
+  NPM_REGISTRY_URL: process.env.KHY_UPDATE_NPM_REGISTRY_URL || 'https://registry.npmjs.org',
+});
+
+// Runtime assets excluded from install packages live beside their immutable
+// GitHub release. payloadProvisioner is the only consumer of these endpoints.
+const PAYLOAD = Object.freeze({
+  GITHUB_REPOSITORY:
+    process.env.KHY_PAYLOAD_GITHUB_REPOSITORY || UPDATE.GITHUB_REPOSITORY,
+  RELEASE_DOWNLOAD_BASE_URL:
+    process.env.KHY_PAYLOAD_RELEASE_BASE_URL ||
+    `https://github.com/${process.env.KHY_PAYLOAD_GITHUB_REPOSITORY || UPDATE.GITHUB_REPOSITORY}/releases/download`,
+  TAG_PATTERN: process.env.KHY_PAYLOAD_TAG_PATTERN || UPDATE.GITHUB_TAG_PATTERN,
+  MANIFEST_ASSET: process.env.KHY_PAYLOAD_MANIFEST_ASSET || 'khy-payload-manifest.json',
+  DOWNLOAD_IDLE_TIMEOUT_MS: parseInt(
+    process.env.KHY_PAYLOAD_DOWNLOAD_IDLE_TIMEOUT_MS || String(UPDATE.DOWNLOAD_IDLE_TIMEOUT_MS),
+    10
+  ),
+  RETRY_COUNT: parseInt(
+    process.env.KHY_PAYLOAD_RETRY_COUNT || String(UPDATE.RETRY_COUNT),
+    10
+  ),
+  CACHE_ROOT: process.env.KHY_PAYLOAD_CACHE_ROOT || '',
+});
+
+// ── Observability: slow-request alerting & CPU profiling ───────────────────
+// Single source of truth for every slow-request / profiling threshold. Both
+// features default to OFF: an install that sets none of these env vars pays
+// exactly one boolean check per request and starts no timers at all.
+//
+// Consumers MUST NOT re-read these env vars inline. The pure leaves
+// observability/slowRequestCore.js and observability/profilerCore.js expose
+// resolveConfig(env) which layers env overrides on top of these defaults, so a
+// test can flip a threshold without reloading this module.
+const OBSERVABILITY = Object.freeze({
+  // Slow-request alerting (hooked into observability/metrics.js middleware).
+  SLOW_REQUEST_ENABLED: parseBoolean(process.env.KHY_SLOW_REQUEST_ENABLED, false),
+  SLOW_REQUEST_THRESHOLD_MS: parseInt(process.env.KHY_SLOW_REQUEST_THRESHOLD_MS || '3000', 10),
+  // 0..1 — deterministic token-bucket sampling, not Math.random (reproducible).
+  SLOW_REQUEST_SAMPLE_RATE: Number(process.env.KHY_SLOW_REQUEST_SAMPLE_RATE || '1'),
+  // Per-route alert debounce: slow requests arrive in bursts; logging every one
+  // buries the signal. Aggregation still counts every sampled request.
+  SLOW_REQUEST_ALERT_COOLDOWN_MS: parseInt(
+    process.env.KHY_SLOW_REQUEST_ALERT_COOLDOWN_MS || '60000',
+    10
+  ),
+  // Cardinality cap for the persisted store; overflow lands in `_other`.
+  SLOW_REQUEST_MAX_ROUTES: parseInt(process.env.KHY_SLOW_REQUEST_MAX_ROUTES || '200', 10),
+  SLOW_REQUEST_MAX_SAMPLES: parseInt(process.env.KHY_SLOW_REQUEST_MAX_SAMPLES || '256', 10),
+  // Daily JSONL shards under .khy/monitor/ older than this are pruned.
+  SLOW_REQUEST_RETENTION_DAYS: parseInt(process.env.KHY_SLOW_REQUEST_RETENTION_DAYS || '7', 10),
+
+  // CPU profiling (node:inspector on demand + event-loop delay continuous).
+  PROFILING_ENABLED: parseBoolean(process.env.KHY_PROFILING_ENABLED, false),
+  PROFILING_DURATION_MS: parseInt(process.env.KHY_PROFILING_DURATION_MS || '10000', 10),
+  PROFILING_MAX_DURATION_MS: parseInt(process.env.KHY_PROFILING_MAX_DURATION_MS || '120000', 10),
+  PROFILING_SAMPLE_INTERVAL_US: parseInt(
+    process.env.KHY_PROFILING_SAMPLE_INTERVAL_US || '1000',
+    10
+  ),
+  // perf_hooks.monitorEventLoopDelay resolution + how often the histogram is read.
+  EVENTLOOP_RESOLUTION_MS: parseInt(process.env.KHY_EVENTLOOP_RESOLUTION_MS || '20', 10),
+  EVENTLOOP_CHECK_INTERVAL_MS: parseInt(
+    process.env.KHY_EVENTLOOP_CHECK_INTERVAL_MS || '30000',
+    10
+  ),
+  EVENTLOOP_LAG_THRESHOLD_MS: parseInt(process.env.KHY_EVENTLOOP_LAG_THRESHOLD_MS || '200', 10),
+});
+
 const exported = {
   OLLAMA_HOST,
   INFERENCE_SERVER_PORT,
@@ -259,6 +428,8 @@ const exported = {
   ILINK_SENDTYPING_TIMEOUT_MS,
   ILINK_CDN_TIMEOUT_MS,
   ILINK_MAX_FILE_SIZE_BYTES,
+  ILINK_DELIVER_TOOLS,
+  ILINK_SANITIZE_PATHS,
   ILINK_FILE_UPLOAD_TIMEOUT_MS,
   ILINK_BACKOFF_SHORT_MS,
   ILINK_BACKOFF_LONG_MS,
@@ -280,6 +451,15 @@ const exported = {
   // 语音输入（Win+H）单一真源
   VOICE_INPUT_TRIGGER_TIMEOUT_MS,
   VOICE_SILENCE_TIMEOUT_MS,
+  // 数据备份与恢复单一真源(khy backup;保留策略/根目录/分级默认值)
+  BACKUP,
+  // API key 池冷却/退避单一真源(services/apiKeyPool.js)
+  API_KEY_POOL,
+  UPDATE,
+  PAYLOAD,
+  // Observability thresholds SSOT (slow-request alerting + CPU profiling).
+  // Read through slowRequestCore.resolveConfig / profilerCore.resolveConfig.
+  OBSERVABILITY,
   // LEGACY portable sync configuration — consumed only by the degraded
   // `khy sync` handler (handlers/portableSync.js). The watcher mode it
   // configured was replaced by the one-shot `khy portable sync` engine,

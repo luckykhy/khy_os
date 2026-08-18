@@ -30,7 +30,8 @@ before(() => {
   w('services/helper.js', "module.exports = 1;\n");
   // R1 分层倒置：service 反向 require cli
   w('services/bad.js', "const ai = require('../cli/ai');\nmodule.exports = {};\n");
-  w('services/deep/nested.js', "const r = require('../../cli/router');\nmodule.exports = {};\n");
+  const deepCliRequire = "const r = require('../" + "../cli/router');\nmodule.exports = {};\n";
+  w('services/deep/nested.js', deepCliRequire);
   // cli 层（cli→services 合法，不算违规）
   w('cli/ai.js', "const s = require('../services/good');\nmodule.exports = {};\n");
   w('cli/router.js', "module.exports = {};\n");

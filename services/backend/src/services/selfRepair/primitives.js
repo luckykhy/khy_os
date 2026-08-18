@@ -22,8 +22,12 @@ const path = require('path');
 
 const safety = require('../evolutionSafety');
 
-/** node --check 可解析的纯 JS 扩展名(TS/TSX 交给守卫,不走 node --check)。 */
-const NODE_CHECK_EXTS = new Set(['.js', '.mjs', '.cjs', '.jsx']);
+/**
+ * node --check 可解析的纯 JS 扩展名(TS/TSX/JSX 交给守卫,不走 node --check)。
+ * .jsx 必须排除:node --check 只按扩展名决定 loader,对内容完全合法的 .jsx 也会抛
+ * ERR_UNKNOWN_FILE_EXTENSION,并把 node 内部栈行号(get_format:243)当成源文件行号上报。
+ */
+const NODE_CHECK_EXTS = new Set(['.js', '.mjs', '.cjs']);
 
 function _git(args, cwd) {
   return spawnSync('git', args, {
@@ -181,6 +185,13 @@ function create(opts = {}) {
       const rel = _relToProject(projectDir, f);
       const ext = path.extname(abs).toLowerCase();
 
+      // 删除/重命名后的旧路径仍会留在变更清单里。node --check 一个不存在的路径会以
+      // exit=1 + "Cannot find module" 失败,被下面的语法闸误报成语法错误 —— 任何一次
+      // rename 都会让整轮校验判「改动不对」。文件不在了就没有语法与守卫可查,直接跳过。
+      if (!fs.existsSync(abs)) {
+        continue;
+      }
+
       // ── 语法闸 ──────────────────────────────────────────────────
       if (plan && plan.runSyntax) {
         if (ext === '.json') {
@@ -202,7 +213,7 @@ function create(opts = {}) {
             syntax.push({ file: rel, line: lineM ? parseInt(lineM[1], 10) : 1, message: msg });
           }
         }
-        // .ts/.tsx:node --check 无法解析,跳过语法,交守卫。
+        // .ts/.tsx/.jsx:node --check 无法解析,跳过语法,交守卫。
       }
 
       // ── 机器守卫 ────────────────────────────────────────────────

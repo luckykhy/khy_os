@@ -40,25 +40,25 @@
 <p>如果 <code>pr-gate.yml</code> 还没进默认分支，规则里列的 check 永远不会上报，PR 会一直卡在<br>   &quot;Expected — waiting for status to be reported&quot;。所以顺序必须是：<br>   先合并 CI 配置，再应用规则。</p>
 <hr>
 <h2 id="应用">应用<a class="anchor" href="#应用" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># 逐个创建
+<pre><code class="language-bash"><span class="hljs-comment"># 逐个创建</span>
 gh api --method POST repos/kodehu03/khy-os/rulesets \
   --input .github/rulesets/default-branch-protection.json
 
 gh api --method POST repos/kodehu03/khy-os/rulesets \
   --input .github/rulesets/release-tag-immutability.json</code></pre>
 <h2 id="查看-更新-删除">查看 / 更新 / 删除<a class="anchor" href="#查看-更新-删除" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># 列出现有 ruleset 及其 id
-gh api repos/kodehu03/khy-os/rulesets --jq '.[] | &quot;\(.id)\t\(.name)\t\(.enforcement)&quot;'
+<pre><code class="language-bash"><span class="hljs-comment"># 列出现有 ruleset 及其 id</span>
+gh api repos/kodehu03/khy-os/rulesets --jq <span class="hljs-string">&#x27;.[] | &quot;\(.id)\t\(.name)\t\(.enforcement)&quot;&#x27;</span>
 
-# 导出线上规则，和本目录对比，确认没有人在网页上偷偷改过
-gh api repos/kodehu03/khy-os/rulesets/&lt;id&gt; &gt; /tmp/live.json
+<span class="hljs-comment"># 导出线上规则，和本目录对比，确认没有人在网页上偷偷改过</span>
+gh api repos/kodehu03/khy-os/rulesets/&lt;<span class="hljs-built_in">id</span>&gt; &gt; /tmp/live.json
 
-# 更新（PUT 是整体替换，不是合并）
-gh api --method PUT repos/kodehu03/khy-os/rulesets/&lt;id&gt; \
+<span class="hljs-comment"># 更新（PUT 是整体替换，不是合并）</span>
+gh api --method PUT repos/kodehu03/khy-os/rulesets/&lt;<span class="hljs-built_in">id</span>&gt; \
   --input .github/rulesets/default-branch-protection.json
 
-# 删除
-gh api --method DELETE repos/kodehu03/khy-os/rulesets/&lt;id&gt;</code></pre>
+<span class="hljs-comment"># 删除</span>
+gh api --method DELETE repos/kodehu03/khy-os/rulesets/&lt;<span class="hljs-built_in">id</span>&gt;</code></pre>
 <h2 id="先干跑再启用">先干跑再启用<a class="anchor" href="#先干跑再启用" aria-label="锚点">#</a></h2>
 <p>不确定规则会不会挡住正常工作时，把 <code>enforcement</code> 改成 <code>&quot;evaluate&quot;</code> 再创建 ——<br>GitHub 会记录「本来会被拦」但不真的拦。观察几天后改回 <code>&quot;active&quot;</code>。</p>
 <blockquote><p><code>evaluate</code> 模式需要 GitHub Team / Enterprise 计划。免费计划下只有 <code>active</code> 与<br><code>disabled</code> 可用；如果创建时报 <code>enforcement</code> 无效，说明当前计划不支持干跑模式。</p></blockquote>
@@ -69,29 +69,29 @@ gh api --method DELETE repos/kodehu03/khy-os/rulesets/&lt;id&gt;</code></pre>
 <h3 id="必需的状态检查为什么只列-3-个">必需的状态检查为什么只列 3 个<a class="anchor" href="#必需的状态检查为什么只列-3-个" aria-label="锚点">#</a></h3>
 <table><thead><tr><th>检查</th><th>是否必需</th><th>原因</th></tr></thead><tbody><tr><td><code>Contract checks</code></td><td>✅</td><td>确定性检查，实测全绿</td></tr><tr><td><code>Python syntax</code></td><td>✅</td><td>纯语法，只查变更文件，零误伤</td></tr><tr><td><code>Lint ratchet</code></td><td>✅</td><td>只对<strong>新增</strong>文件零容忍，存量文件仅报告</td></tr><tr><td><code>Test baseline (non-blocking)</code></td><td>❌</td><td>现存 9 个已知失败用例，设为必需等于所有 PR 无法合并</td></tr><tr><td><code>Verify CODEOWNERS</code></td><td>❌</td><td><strong>带 <code>paths:</code> 过滤器</strong>。路径过滤的 workflow 在不相关的 PR 上根本不会运行，也就永远不上报状态 —— 一旦设为必需，这类 PR 会永久停在等待状态。这是分支保护最常见的自锁方式。</td></tr><tr><td><code>AI frontend</code> / <code>KhyQuant frontend</code></td><td>❌</td><td>同上，<code>frontend-ci.yml</code> 带 <code>paths:</code> 过滤器。此外 KhyQuant 的 lint 步骤当前必失败（缺 <code>eslint-plugin-vue</code> 依赖），已标为报告态。</td></tr><tr><td>CodeQL</td><td>❌</td><td>矩阵作业的 check 名随语言变化（<code>Analyze (javascript)</code> 之类），钉死名字容易在改矩阵时静默失效；先观察实际上报名，确认后再加</td></tr></tbody></table>
 <p>check 的名字就是 workflow 里 job 的 <code>name:</code> 字段。改了 job 名字，规则必须同步改 ——<br>否则规则会静默地不再生效（GitHub 不会因为找不到 check 而报错，只会一直等）。<br>改完可用下面这条对照：</p>
-<pre><code class="language-bash"># 看某个 PR 实际上报了哪些 check 名
-gh pr checks &lt;pr-number&gt; --json name,state</code></pre>
+<pre><code class="language-bash"><span class="hljs-comment"># 看某个 PR 实际上报了哪些 check 名</span>
+gh <span class="hljs-built_in">pr</span> checks &lt;pr-number&gt; --json name,state</code></pre>
 <h3 id="为什么开-required-linear-history-squash">为什么开 <code>required_linear_history</code> + squash<a class="anchor" href="#为什么开-required-linear-history-squash" aria-label="锚点">#</a></h3>
 <p>保持主干一条直线，<code>git bisect</code> 才有意义。配合 <code>strict_required_status_checks_policy</code><br>（合并前分支必须已是最新），代价是需要更频繁 rebase —— 对本仓库这种改动规模上限<br>20 个文件、鼓励短分支的流程，这个代价是可接受的。</p>
 <h3 id="bypass-actors-故意留空">bypass_actors 故意留空<a class="anchor" href="#bypass-actors-故意留空" aria-label="锚点">#</a></h3>
 <p>没有任何人可以绕过。如果紧急修复确实需要绕过，显式加上并写清原因，例如：</p>
-<pre><code class="language-json">&quot;bypass_actors&quot;: [
-  { &quot;actor_id&quot;: 5, &quot;actor_type&quot;: &quot;RepositoryRole&quot;, &quot;bypass_mode&quot;: &quot;pull_request&quot; }
-]</code></pre>
+<pre><code class="language-json"><span class="hljs-attr">&quot;bypass_actors&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+  <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;actor_id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">5</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;actor_type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;RepositoryRole&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;bypass_mode&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;pull_request&quot;</span> <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">]</span></code></pre>
 <p>（<code>actor_id: 5</code> 是 Admin 角色；<code>bypass_mode: &quot;pull_request&quot;</code> 表示仅在 PR 场景可绕过，<br>比 <code>&quot;always&quot;</code> 收敛。）<strong>加了就要在 PR 里说明</strong>，不要静默放开。</p>
 <h3 id="关于-allowed-merge-methods">关于 <code>allowed_merge_methods</code><a class="anchor" href="#关于-allowed-merge-methods" aria-label="锚点">#</a></h3>
 <p>这是较新加入 rulesets API 的参数。如果创建时 GitHub 报未知参数错误，<br>删掉 <code>default-branch-protection.json</code> 里的这一行即可，其余规则不受影响；<br>合并方式改到仓库 Settings → General → Pull Requests 里限制。</p>
 <hr>
 <h2 id="应用后的自检">应用后的自检<a class="anchor" href="#应用后的自检" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># 1. 规则确实存在且为 active
-gh api repos/kodehu03/khy-os/rulesets --jq '.[] | &quot;\(.name): \(.enforcement)&quot;'
+<pre><code class="language-bash"><span class="hljs-comment"># 1. 规则确实存在且为 active</span>
+gh api repos/kodehu03/khy-os/rulesets --jq <span class="hljs-string">&#x27;.[] | &quot;\(.name): \(.enforcement)&quot;&#x27;</span>
 
-# 2. 直推默认分支应当被拒
-git commit --allow-empty -m &quot;chore: protection probe&quot; &amp;&amp; git push origin master
-#    预期：remote 拒绝，提示 &quot;Changes must be made through a pull request&quot;
+<span class="hljs-comment"># 2. 直推默认分支应当被拒</span>
+git commit --allow-empty -m <span class="hljs-string">&quot;chore: protection probe&quot;</span> &amp;&amp; git push origin master
+<span class="hljs-comment">#    预期：remote 拒绝，提示 &quot;Changes must be made through a pull request&quot;</span>
 git reset --hard HEAD~1
 
-# 3. CODEOWNERS 是否被 GitHub 认可（无效 owner 会被静默忽略）
+<span class="hljs-comment"># 3. CODEOWNERS 是否被 GitHub 认可（无效 owner 会被静默忽略）</span>
 gh api repos/kodehu03/khy-os/codeowners/errors</code></pre>
       </article>
       <nav class="pager"><a class="prev" href="../../.github/PULL_REQUEST_TEMPLATE.html"><div class="dir">← 上一篇</div><div class="ttl">改动说明</div></a><span></span></nav>

@@ -6,8 +6,8 @@ describe('clipboardRelayAdapter detect on Windows', () => {
     jest.clearAllMocks();
   });
 
-  test('detect succeeds when pwsh clipboard command is available', () => {
-    const execFileSync = jest.fn(() => 'ok');
+  test('detect succeeds when pwsh is available without reading clipboard', () => {
+    const execFileSync = jest.fn(() => 'C:\\Program Files\\PowerShell\\pwsh.exe');
     const execSync = jest.fn();
     const exec = jest.fn();
 
@@ -24,9 +24,14 @@ describe('clipboardRelayAdapter detect on Windows', () => {
     const adapter = require('../../src/services/gateway/adapters/clipboardRelayAdapter');
     expect(adapter.detect()).toBe(true);
     expect(execFileSync).toHaveBeenCalledWith(
+      'where',
+      ['pwsh'],
+      expect.objectContaining({ encoding: 'utf-8', timeout: 3000 })
+    );
+    expect(execFileSync).not.toHaveBeenCalledWith(
       'pwsh',
-      ['-NoProfile', '-NonInteractive', '-Command', 'Get-Clipboard -Raw'],
-      expect.objectContaining({ encoding: 'utf-8', windowsHide: true })
+      expect.arrayContaining(['Get-Clipboard -Raw']),
+      expect.anything()
     );
     expect(execSync).not.toHaveBeenCalled();
   });
@@ -35,7 +40,7 @@ describe('clipboardRelayAdapter detect on Windows', () => {
     const execFileSync = jest
       .fn()
       .mockImplementationOnce(() => { throw new Error('pwsh not found'); })
-      .mockImplementationOnce(() => 'ok');
+      .mockImplementationOnce(() => 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe');
     const execSync = jest.fn();
     const exec = jest.fn();
 
@@ -53,22 +58,23 @@ describe('clipboardRelayAdapter detect on Windows', () => {
     expect(adapter.detect()).toBe(true);
     expect(execFileSync).toHaveBeenNthCalledWith(
       1,
-      'pwsh',
-      ['-NoProfile', '-NonInteractive', '-Command', 'Get-Clipboard -Raw'],
-      expect.objectContaining({ encoding: 'utf-8', windowsHide: true })
+      'where',
+      ['pwsh'],
+      expect.objectContaining({ encoding: 'utf-8', timeout: 3000 })
     );
     expect(execFileSync).toHaveBeenNthCalledWith(
       2,
-      'powershell',
-      ['-NoProfile', '-NonInteractive', '-Command', 'Get-Clipboard -Raw'],
-      expect.objectContaining({ encoding: 'utf-8', windowsHide: true })
+      'where',
+      ['powershell'],
+      expect.objectContaining({ encoding: 'utf-8', timeout: 3000 })
     );
+    expect(execFileSync.mock.calls.some(([, args]) => args.includes('Get-Clipboard -Raw'))).toBe(false);
     expect(execSync).not.toHaveBeenCalled();
   });
 
-  test('detect returns false when all Windows clipboard commands fail', () => {
+  test('detect returns false when no Windows PowerShell binary is present', () => {
     const execFileSync = jest.fn(() => { throw new Error('unavailable'); });
-    const execSync = jest.fn(() => { throw new Error('fallback failed'); });
+    const execSync = jest.fn();
     const exec = jest.fn();
 
     jest.doMock('os', () => ({
@@ -84,6 +90,6 @@ describe('clipboardRelayAdapter detect on Windows', () => {
     const adapter = require('../../src/services/gateway/adapters/clipboardRelayAdapter');
     expect(adapter.detect()).toBe(false);
     expect(execFileSync).toHaveBeenCalledTimes(2);
-    expect(execSync).toHaveBeenCalledTimes(1);
+    expect(execSync).not.toHaveBeenCalled();
   });
 });

@@ -22,10 +22,9 @@
 // (bcryptjs, salt rounds = 10) — do NOT pre-hash here.
 const {
   resolveDefaultAdminUsername,
+  resolveDefaultAdminEmail,
   loadOrCreateDefaultAdminCredentials,
 } = require('../services/credentialGenerator');
-
-const DEFAULT_ADMIN_EMAIL = 'admin@khy-quant.com';
 
 function isDisabled(env = process.env) {
   const raw = String(env.KHY_ADMIN_AUTO_INIT ?? '')
@@ -65,7 +64,7 @@ async function ensureDefaultAdmin() {
     await User.create({
       username: creds.username,
       password: creds.password,
-      email: DEFAULT_ADMIN_EMAIL,
+      email: resolveDefaultAdminEmail(creds.username),
       role: 'admin',
       status: 'active',
     });

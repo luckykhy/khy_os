@@ -25,6 +25,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
+const atomicWriteJson = require('../utils/atomicWriteJson');
+
 // Portable-aware app home resolved at load (legacy const semantics preserved).
 function _appHome() {
   try {
@@ -126,7 +128,7 @@ function _save() {
     if (foreverPatterns.length > 0) {
       data.storePatternRules = foreverPatterns;
     }
-    fs.writeFileSync(PERMISSIONS_FILE, JSON.stringify(data, null, 2));
+    atomicWriteJson(PERMISSIONS_FILE, data, { mode: 0o666 });
   } catch {
     /* best effort */
   }

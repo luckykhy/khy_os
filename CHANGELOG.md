@@ -9,7 +9,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 khy OS 1.1.9 — 精简体积、跨平台脚本补齐与若干修复。
 
+### Added
+
+- **审计日志与上下文压缩透明度**（`services/backend`）
+  - **改了什么**：`src/services/auditLog.js` 补齐八字段契约（`timestamp` / `tool` / `params` /
+    `result` / `permission` / `elapsed` / `user` / `sessionId`），`logToolExecution` 改为幂等
+    （2s 窗口内同一次执行重复上报只落一行，返回 `{written, deduped, reason}`），
+    `getModuleStats({module})` 可按工具名前缀收窄统计，`clearAuditLog()` 清空前把旧文件存为
+    `.bak` 并如实上报是否覆盖了上一份快照。新增纯叶子 `src/utils/khyError.js` 提供错误四件套
+    `{code, message, hint, recoverable, retryable}`；`compactionUiPort.js` 新增第 4 条通道
+    `emitCompactionNotice`，由 `cli/aiRenderer.js` 自注册到 `cli/formatters.print*`。
+    `contextCompressor.js` 的 11 处跳过分支与 5 处失败分支全部改为「动作 + 目标 + 进度」
+    的可见提示 + 审计留痕（`context-compress` / `-skip` / `-degrade` 三个工具名分开，
+    使 `errorCount` 不被正常跳过污染）。
+  - **为什么**：压缩链路此前有十余处静默 `return noOp` 和裸 `catch`，「压缩成功」「有意跳过」
+    「链路失败」三种截然不同的结果对用户长得一模一样 —— 状态栏显示 99% 占用却什么都不发生时，
+    没有任何一行输出能说明原因。审计侧则因为写入方从不检查返回值，写失败也无从察觉。
+  - **影响范围**：审计文件格式向后兼容（只增字段、不改字段名），`getAuditStats()` 保留为零参
+    委托以兼容 `telemetryService.js` 的既有调用；9 处 `logToolExecution` 调用点全部忽略返回值，
+    新返回值纯属增量。所有新增阈值集中为 8 个 `KHY_AUDIT_*` / `KHY_COMPACT_*` 环境变量
+    （见 `services/backend/.env.example`），`KHY_COMPACT_NOTICE=0` 可一键关回旧的静默行为。
+
+### Fixed
+
+- **审计日志轮转在攒满 3 份备份后静默停工，`audit.jsonl` 无上限增长**
+  - **改了什么**：重写 `_rotateIfNeeded()` 的轮转循环 —— 从最旧一代开始迭代（`i = keep … 1`），
+    先删掉 `.keep`，每次 rename 前先删除目标路径，最后才把活动文件移到 `.1`。
+  - **为什么**：Windows 的 `fs.renameSync` 拒绝覆盖已存在的目标。旧循环从 `MAX_BACKUPS - 1 = 2`
+    起步，`.3` 永远没机会被删除，于是第 4 次轮转时 `.2 → .3` 撞上已存在的 `.3` 抛错，又被
+    `catch {}` 吞掉 —— 三份备份齐全之后轮转就再也不会成功，而失败没有任何痕迹。
+    旧代码里那句 `if (i + 1 > MAX_BACKUPS) unlinkSync(from)` 因 `i` 最大只到 2 而永不可达。
+  - **影响范围**：仅影响审计文件的磁盘占用，不改变已落盘内容。新增回归测试连续轮转 5 代，
+    断言 `.1/.2/.3` 世代正确且 `.4` 不出现、目录里只剩 3 个文件。
+
+- **压缩器抛异常与「压缩模块不存在」被同一个裸 catch 吞成同一件事**
+  - **改了什么**：`khyUpgradeRuntime.buildSlidingWindow` 不再 `catch {}`，改为把异常经
+    `toKhyError` 归类后区分 `compressor-unavailable`（模块缺失，正常的可选依赖降级）与
+    `compressor-threw`（链路真的坏了，按 error 级别报出）；同时把 logger 注入进
+    `compress()` —— 此前没传，压缩器自己的跳过日志在生产主路径上全是死代码。
+    legacy 尾部截断路径在确实丢弃了消息时也会报出保留比例。
+  - **为什么**：一条坏掉的压缩链路和一个没安装的可选模块，在日志里长得完全一样，
+    导致「自动压缩为什么不执行」无法从现场定位。
+  - **影响范围**：只增加输出、不改变控制流与返回值。
+
 ### Changed
+
+- **`khy update` 改为 GitHub Release 优先并显示全过程进度**
+  - **改了什么**：更新索引 schema v1 增量支持 pip wheel / npm tgz 的 GitHub 构件 URL、大小与
+    SHA-256；`github → pypi → npm → local` 级联中，GitHub 只有在当前安装渠道存在可验证构件时
+    才会胜出，下载后按大小与哈希校验并从本地文件安装。TTY 用单行进度条显示检查、下载、安装
+    三阶段，非 TTY 按可配置间隔输出包含 `n/m`、百分比和速率的稳定行。
+  - **为什么**：旧命令虽然先检查 GitHub 元数据，pip/npm 安装字节仍来自包仓库，GitHub 并非真实
+    首选源；下载和安装期间也只有底层 pip 文本，无法稳定判断动作、目标与进度。
+  - **影响范围**：旧的 name/version-only 更新索引继续合法，缺构件、GitHub 不可达或索引过旧时
+    自动降级到 PyPI/npm；`KHY_UPDATE_STREAM_PROGRESS=0` 可关闭进度输出，下载活动超时和非 TTY
+    输出间隔可分别用 `KHY_UPDATE_DOWNLOAD_IDLE_TIMEOUT_MS` / `KHY_UPDATE_PROGRESS_MIN_INTERVAL_MS` 调整。
 
 - **体积精简**: 新增 `scripts/maintenance/slim-down.{bat,sh}` 一键清理脚本（日志、构建产物、
   sqlite 临时文件、未使用的 node-llama-cpp 多平台二进制），幂等且双平台覆盖；日志轮转收紧

@@ -38,9 +38,9 @@
 <p>（这正是 khy 自己内存里反复出现的「khy 卡住」「idle-watchdog 被自身心跳续命」的<br>  同一自驱失败模式——只是<strong>还原层此前没人守</strong>。）</p>
 <ul><li><strong>倒退未被察觉</strong>：某个 move 反而让状态变差（冒出新 blocker），agent 却继续往下走。</li><li><strong>已收敛却不收手</strong>：还原其实已完成（三镜子全绿），agent 仍机械地跑剩余 move。</li></ul>
 <p>本层取<strong>前后两个镜子快照</strong> + <strong>刚尝试的 move</strong>，判定这一步的性质并给出停止条件。</p>
-<pre><code class="language-bash">node scripts/restore-converge.js --json   # 自驱 agent 的闭环用这个
-# 每步：执行前采 before → 执行一步 → 重探采 after →
-#       verifyConvergence({before, after, move, stallCount})</code></pre>
+<pre><code class="language-bash">node scripts/restore-converge.js --json   <span class="hljs-comment"># 自驱 agent 的闭环用这个</span>
+<span class="hljs-comment"># 每步：执行前采 before → 执行一步 → 重探采 after →</span>
+<span class="hljs-comment">#       verifyConvergence({before, after, move, stallCount})</span></code></pre>
 <h2 id="四种单步判定与停止条件">四种单步判定与停止条件<a class="anchor" href="#四种单步判定与停止条件" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>判定</th><th>触发</th><th>停止条件</th><th>语义</th></tr></thead><tbody><tr><td><code>converged</code></td><td>after 三镜子全绿且无未决项</td><td><code>converged-stop</code></td><td>还原完成，停止并声称成功</td></tr><tr><td><code>regressed</code></td><td>after 冒出 before 没有的新未决项</td><td><code>escalate-human</code></td><td>倒退最危险，立即止步交人</td></tr><tr><td><code>advanced</code></td><td>未决项严格减少且无新增</td><td><code>continue</code></td><td>在推进，继续下一步</td></tr><tr><td><code>stalled</code></td><td>未决项集合无变化</td><td>continue→escalate</td><td>无进展累计；连续达上限即判死循环交人</td></tr></tbody></table>
 <blockquote><p>防循环阈值 <code>STALL_LIMIT = 2</code>：连续 2 次执行无任何进展<br>（未决项集合既没减也没加），即判定死循环，强制升级交人——不再给第三次空转的机会。</p></blockquote>

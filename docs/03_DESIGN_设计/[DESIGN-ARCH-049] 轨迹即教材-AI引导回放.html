@@ -61,15 +61,15 @@
 <hr>
 <h2 id="3-引擎增量补丁-replayengine-replay-缺省-byte-identical-048-零回归">3. 引擎增量补丁（<code>replayEngine.replay</code> — 缺省 byte-identical，048 零回归）<a class="anchor" href="#3-引擎增量补丁-replayengine-replay-缺省-byte-identical-048-零回归" aria-label="锚点">#</a></h2>
 <p>新增私有助手 <code>_maybeRepair(step, opts, kind)</code>（文件内，<strong>不新增任何 import</strong>；模型只经注入的 <code>opts.repair</code> 闭包进入）：</p>
-<pre><code class="language-js">async function _maybeRepair(step, opts, kind) {
-  if (typeof opts.repair !== 'function') return null;   // 零回归闸：无钩子即 048 原引擎
-  let r;
-  try { r = await opts.repair(step, { kind }); }
-  catch (e) { return { decision: 'halt', reason: `repair error: ${e &amp;&amp; e.message}` }; }
-  if (!r || r.attempted === false) return null;          // 桥放弃 → 落原确定性路径
-  const v = _verifyArtifacts(step);                      // sha256 仍是唯一 oracle
-  if (v.ok) return { decision: 'repaired' };
-  return { decision: 'halt', reason: r.reason || '产物哈希分歧（修复后仍不一致）', detail: v.detail };
+<pre><code class="language-js"><span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">_maybeRepair</span>(<span class="hljs-params">step, opts, kind</span>) {
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> opts.<span class="hljs-property">repair</span> !== <span class="hljs-string">&#x27;function&#x27;</span>) <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;   <span class="hljs-comment">// 零回归闸：无钩子即 048 原引擎</span>
+  <span class="hljs-keyword">let</span> r;
+  <span class="hljs-keyword">try</span> { r = <span class="hljs-keyword">await</span> opts.<span class="hljs-title function_">repair</span>(step, { kind }); }
+  <span class="hljs-keyword">catch</span> (e) { <span class="hljs-keyword">return</span> { <span class="hljs-attr">decision</span>: <span class="hljs-string">&#x27;halt&#x27;</span>, <span class="hljs-attr">reason</span>: <span class="hljs-string">`repair error: <span class="hljs-subst">${e &amp;&amp; e.message}</span>`</span> }; }
+  <span class="hljs-keyword">if</span> (!r || r.<span class="hljs-property">attempted</span> === <span class="hljs-literal">false</span>) <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;          <span class="hljs-comment">// 桥放弃 → 落原确定性路径</span>
+  <span class="hljs-keyword">const</span> v = <span class="hljs-title function_">_verifyArtifacts</span>(step);                      <span class="hljs-comment">// sha256 仍是唯一 oracle</span>
+  <span class="hljs-keyword">if</span> (v.<span class="hljs-property">ok</span>) <span class="hljs-keyword">return</span> { <span class="hljs-attr">decision</span>: <span class="hljs-string">&#x27;repaired&#x27;</span> };
+  <span class="hljs-keyword">return</span> { <span class="hljs-attr">decision</span>: <span class="hljs-string">&#x27;halt&#x27;</span>, <span class="hljs-attr">reason</span>: r.<span class="hljs-property">reason</span> || <span class="hljs-string">&#x27;产物哈希分歧（修复后仍不一致）&#x27;</span>, <span class="hljs-attr">detail</span>: v.<span class="hljs-property">detail</span> };
 }</code></pre>
 <p>在 <strong>5 处</strong>非完成 seam 各插一段 <code>typeof opts.repair === 'function'</code> 守卫下的前置分支（原 halt/skip 块原样保留在下方）：<br>NETWORK_AI 跳过（<code>kind:'network_ai'</code>）、未批准 SHELL 跳过（<code>'shell'</code>）、前置分歧（<code>'precondition'</code>）、<br>执行失败 catch（<code>'exec'</code>）、产物校验失配（<code>'post-verify'</code>）。<code>repaired</code> 时 <code>rec.action='repaired'</code>、<br><code>rec.reason='AI 桥接复现（哈希校验通过）'</code>、<code>summary.replayed</code>+<code>summary.repaired</code>+<code>restored</code> 各递增；<br><code>halt</code> 时 <code>rec.action='halted'</code>、<code>status='diverged'</code>、<code>divergedAt</code> 语义与 048 一致。</p>
 <p><strong>接线</strong>：CLI（<code>handlers/replay.js run</code>）仅当 <code>--ai</code> 或 <code>config.isAiReplayEnabled()</code> 才构造<br><code>opts.repair = aiBridge.createRepairHook({...})</code>，否则 <code>undefined</code> = 纯 048 引擎。</p>

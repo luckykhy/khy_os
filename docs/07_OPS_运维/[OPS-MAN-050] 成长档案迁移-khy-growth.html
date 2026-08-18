@@ -42,21 +42,21 @@
 <p><strong>导出格式</strong>：gzip 后的 JSON，内部 tag <code>khy-growth-archive-v1</code>。文件名虽用 <code>.tar.gz</code> 后缀，但<strong>并非真正的 tar</strong>——直接交给 <code>khy growth import</code> 即可，别用 <code>tar</code> 解。</p>
 <hr>
 <h2 id="三-典型用法-在两台机器间迁移">三、典型用法：在两台机器间迁移<a class="anchor" href="#三-典型用法-在两台机器间迁移" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># —— A 机（旧机）——
-khy growth                          # 先看看当前进度
-khy growth export --path ~/khy-growth.tar.gz
+<pre><code class="language-bash"><span class="hljs-comment"># —— A 机（旧机）——</span>
+khy growth                          <span class="hljs-comment"># 先看看当前进度</span>
+khy growth <span class="hljs-built_in">export</span> --path ~/khy-growth.tar.gz
 
-# 把 ~/khy-growth.tar.gz 拷到 B 机（scp / U 盘 / 网盘均可）
+<span class="hljs-comment"># 把 ~/khy-growth.tar.gz 拷到 B 机（scp / U 盘 / 网盘均可）</span>
 
-# —— B 机（新机）——
-khy growth import ~/khy-growth.tar.gz   # 合并：XP 取大、高 level 胜、主题并集
-khy growth                              # 确认进度已合并</code></pre>
+<span class="hljs-comment"># —— B 机（新机）——</span>
+khy growth import ~/khy-growth.tar.gz   <span class="hljs-comment"># 合并：XP 取大、高 level 胜、主题并集</span>
+khy growth                              <span class="hljs-comment"># 确认进度已合并</span></code></pre>
 <p>本地备份 / 回滚：</p>
-<pre><code class="language-bash">khy growth snapshot                 # 改动前打快照
-khy growth snapshots                # 看有哪些快照
-khy growth restore &lt;快照名&gt;          # ⚠️ 覆盖当前档案</code></pre>
+<pre><code class="language-bash">khy growth snapshot                 <span class="hljs-comment"># 改动前打快照</span>
+khy growth snapshots                <span class="hljs-comment"># 看有哪些快照</span>
+khy growth restore &lt;快照名&gt;          <span class="hljs-comment"># ⚠️ 覆盖当前档案</span></code></pre>
 <p>危险操作：</p>
-<pre><code class="language-bash">khy growth reset                    # ⛔ 不可逆，会要求输入 YES 二次确认</code></pre>
+<pre><code class="language-bash">khy growth reset                    <span class="hljs-comment"># ⛔ 不可逆，会要求输入 YES 二次确认</span></code></pre>
 <hr>
 <h2 id="四-存储">四、存储<a class="anchor" href="#四-存储" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>路径</th><th>内容</th></tr></thead><tbody><tr><td><code>~/.khyquant/growth/</code></td><td>成长档案根目录（硬编码，不认 <code>$KHY_DATA_HOME</code>）</td></tr><tr><td><code>~/.khyquant/growth/snapshots/</code></td><td>本地快照</td></tr><tr><td><code>~/.khyquant/growth/knowledge.json</code></td><td>与 <code>khy knowledge</code> 共享的 XP/level 数据</td></tr></tbody></table>

@@ -318,6 +318,12 @@ async function authenticateAccessToken(token, options = {}) {
     return { ok: false, code: 'invalid_token', message: 'invalid token', error };
   }
 
+  const hasSessionId = !!decoded?.sessionId;
+  const hasUnexpectedType = decoded?.tokenType && decoded.tokenType !== 'access';
+  if (hasUnexpectedType || (hasSessionId && decoded?.tokenType !== 'access')) {
+    return { ok: false, code: 'invalid_token', message: 'invalid token type' };
+  }
+
   const userId = Number(decoded?.userId || 0);
   if (!userId) {
     return { ok: false, code: 'invalid_token', message: 'missing user id in token' };

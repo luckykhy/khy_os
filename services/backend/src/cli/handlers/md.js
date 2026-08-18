@@ -60,6 +60,48 @@ function resolveToolsDir() {
   return null;
 }
 
+function resolveLocalVendorDir(toolsDir) {
+  const vendorDir = path.join(toolsDir, 'vendor');
+  const required = ['MANIFEST.json', 'khyos-muya.js', 'khyos-muya.css'];
+  return required.every(name => {
+    try {
+      return fs.statSync(path.join(vendorDir, name)).isFile();
+    } catch (_) {
+      return false;
+    }
+  })
+    ? vendorDir
+    : null;
+}
+
+async function resolveVendorDir(toolsDir, printInfo, printWarn) {
+  const local = resolveLocalVendorDir(toolsDir);
+  if (local) return local;
+
+  printInfo('获取 Markdown WYSIWYG 资源（正在读取 Release 清单）');
+  const { ensurePayload } = require('../../services/payloadProvisioner');
+  let lastProgressBytes = -1;
+  const result = await ensurePayload('markdown-vendor', {
+    onProgress(progress) {
+      const received = Number(progress.received) || 0;
+      const total = Number(progress.total) || 0;
+      if (received !== total && received - lastProgressBytes < 512 * 1024) return;
+      lastProgressBytes = received;
+      const done = (received / 1024 / 1024).toFixed(1);
+      const all = total > 0 ? `/${(total / 1024 / 1024).toFixed(1)}MB` : 'MB';
+      printInfo(`下载 Markdown WYSIWYG 资源 ${progress.asset}（${done}${all}）`);
+    },
+  });
+  if (result.ok) return result.targetDir;
+
+  printWarn('Markdown WYSIWYG 资源自动获取未完成，本次使用内联引擎。');
+  printInfo(`手动获取清单: ${result.manualUrl}`);
+  printInfo(`放置目录: ${result.targetDir}`);
+  if (result.reason) printInfo(`获取状态: ${result.reason}`);
+  printInfo('离线时可在联网设备下载清单中的 markdown-vendor 文件后复制到放置目录。');
+  return null;
+}
+
 /** 打开 muya 工作台：起桥接器（内部自开浏览器），保持进程存活直到 Ctrl+C。 */
 async function openEditor(targetPath) {
   const { printInfo, printError, printWarn, printSuccess } = fmt();
@@ -86,13 +128,23 @@ async function openEditor(targetPath) {
     }
   }
 
-  const wysiwyg = flagOn('KHY_MD_WYSIWYG');
+  let wysiwyg = flagOn('KHY_MD_WYSIWYG');
+  let vendorDir;
+  if (wysiwyg) {
+    vendorDir = await resolveVendorDir(toolsDir, printInfo, printWarn);
+    if (!vendorDir) wysiwyg = false;
+  }
   // 非 REPL 单次调用启用 autoShutdown：关浏览器标签即干净退出、释放终端，不留常驻孤儿服务；
   // REPL 模式后台复用桥接器，故禁用（由 REPL 生命周期管理）。env KHY_MD_AUTO_SHUTDOWN 可门控回退。
   const autoShutdown = process.env.KHY_REPL_ACTIVE !== '1';
   let handle;
   try {
-    handle = await bridge.startBridge({ targetPath: abs || undefined, wysiwyg, autoShutdown });
+    handle = await bridge.startBridge({
+      targetPath: abs || undefined,
+      wysiwyg,
+      vendorDir,
+      autoShutdown,
+    });
   } catch (e) {
     printError('启动 Markdown 工作台失败：' + e.message);
     return true;
@@ -245,4 +297,4 @@ async function handleMd(parsed = {}) {
   return await openEditor(file || '');
 }
 
-module.exports = { handleMd, resolveToolsDir };
+module.exports = { handleMd, resolveToolsDir, resolveLocalVendorDir, resolveVendorDir };

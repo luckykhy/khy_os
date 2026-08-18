@@ -33,27 +33,27 @@
 <h2 id="prerequisites">Prerequisites<a class="anchor" href="#prerequisites" aria-label="锚点">#</a></h2>
 <ul><li><strong>Krita</strong> installed on the system</li><li><strong>Python 3.10+</strong></li></ul>
 <p>Install the CLI:</p>
-<pre><code class="language-bash">cd krita/agent-harness &amp;&amp; pip install -e .</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> krita/agent-harness &amp;&amp; pip install -e .</code></pre>
 <h2 id="command-reference">Command Reference<a class="anchor" href="#command-reference" aria-label="锚点">#</a></h2>
 <h3 id="project-management">Project Management<a class="anchor" href="#project-management" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-krita project new -n &quot;My Art&quot; -w 2048 -h 2048 -o project.json
+<pre><code class="language-bash">cli-anything-krita project new -n <span class="hljs-string">&quot;My Art&quot;</span> -w 2048 -h 2048 -o project.json
 cli-anything-krita project open project.json
 cli-anything-krita --project project.json project save
 cli-anything-krita --project project.json project info</code></pre>
 <h3 id="layer-management">Layer Management<a class="anchor" href="#layer-management" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-krita -p project.json layer add &quot;Sketch&quot; -t paintlayer
-cli-anything-krita -p project.json layer add &quot;Colors&quot; --opacity 200
-cli-anything-krita -p project.json layer add &quot;Group&quot; -t grouplayer
-cli-anything-krita -p project.json layer remove &quot;Sketch&quot;
+<pre><code class="language-bash">cli-anything-krita -p project.json layer add <span class="hljs-string">&quot;Sketch&quot;</span> -t paintlayer
+cli-anything-krita -p project.json layer add <span class="hljs-string">&quot;Colors&quot;</span> --opacity 200
+cli-anything-krita -p project.json layer add <span class="hljs-string">&quot;Group&quot;</span> -t grouplayer
+cli-anything-krita -p project.json layer remove <span class="hljs-string">&quot;Sketch&quot;</span>
 cli-anything-krita -p project.json layer list
-cli-anything-krita -p project.json layer set &quot;Colors&quot; opacity 180
-cli-anything-krita -p project.json layer set &quot;Colors&quot; visible false
-cli-anything-krita -p project.json layer set &quot;Colors&quot; blending_mode multiply</code></pre>
+cli-anything-krita -p project.json layer <span class="hljs-built_in">set</span> <span class="hljs-string">&quot;Colors&quot;</span> opacity 180
+cli-anything-krita -p project.json layer <span class="hljs-built_in">set</span> <span class="hljs-string">&quot;Colors&quot;</span> visible <span class="hljs-literal">false</span>
+cli-anything-krita -p project.json layer <span class="hljs-built_in">set</span> <span class="hljs-string">&quot;Colors&quot;</span> blending_mode multiply</code></pre>
 <p>Layer types: <code>paintlayer</code>, <code>grouplayer</code>, <code>vectorlayer</code>, <code>filterlayer</code>, <code>filllayer</code>, <code>clonelayer</code>, <code>filelayer</code></p>
 <h3 id="filters">Filters<a class="anchor" href="#filters" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-krita -p project.json filter apply blur -l &quot;Background&quot;
+<pre><code class="language-bash">cli-anything-krita -p project.json filter apply blur -l <span class="hljs-string">&quot;Background&quot;</span>
 cli-anything-krita -p project.json filter apply sharpen
-cli-anything-krita -p project.json filter apply levels -c '{&quot;shadows&quot;: 10, &quot;highlights&quot;: 240}'
+cli-anything-krita -p project.json filter apply levels -c <span class="hljs-string">&#x27;{&quot;shadows&quot;: 10, &quot;highlights&quot;: 240}&#x27;</span>
 cli-anything-krita filter list</code></pre>
 <p>Available: blur, sharpen, desaturate, levels, curves, brightness-contrast, hue-saturation, color-balance, unsharp-mask, posterize, threshold</p>
 <h3 id="canvas-operations">Canvas Operations<a class="anchor" href="#canvas-operations" aria-label="锚点">#</a></h3>
@@ -61,17 +61,17 @@ cli-anything-krita filter list</code></pre>
 cli-anything-krita -p project.json canvas resize --resolution 600
 cli-anything-krita -p project.json canvas info</code></pre>
 <h3 id="export">Export<a class="anchor" href="#export" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-krita -p project.json export render output.png -p png --overwrite
-cli-anything-krita -p project.json export render output.jpg -p jpeg
-cli-anything-krita -p project.json export render output.psd -p psd
-cli-anything-krita -p project.json export animation ./frames/ -p png
-cli-anything-krita export presets
-cli-anything-krita export formats</code></pre>
+<pre><code class="language-bash">cli-anything-krita -p project.json <span class="hljs-built_in">export</span> render output.png -p png --overwrite
+cli-anything-krita -p project.json <span class="hljs-built_in">export</span> render output.jpg -p jpeg
+cli-anything-krita -p project.json <span class="hljs-built_in">export</span> render output.psd -p psd
+cli-anything-krita -p project.json <span class="hljs-built_in">export</span> animation ./frames/ -p png
+cli-anything-krita <span class="hljs-built_in">export</span> presets
+cli-anything-krita <span class="hljs-built_in">export</span> formats</code></pre>
 <p>Presets: png, png-web, jpeg, jpeg-web, jpeg-low, tiff, tiff-lzw, psd, pdf, svg, webp, gif, bmp</p>
 <h3 id="session-undo-redo">Session (Undo/Redo)<a class="anchor" href="#session-undo-redo" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-krita session undo
 cli-anything-krita session redo
-cli-anything-krita session history</code></pre>
+cli-anything-krita session <span class="hljs-built_in">history</span></code></pre>
 <h3 id="status">Status<a class="anchor" href="#status" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-krita status</code></pre>
 <h2 id="agent-usage-json-mode">Agent Usage (JSON Mode)<a class="anchor" href="#agent-usage-json-mode" aria-label="锚点">#</a></h2>
@@ -80,21 +80,21 @@ cli-anything-krita session history</code></pre>
 cli-anything-krita --json -p project.json layer list
 cli-anything-krita --json status</code></pre>
 <h2 id="example-workflow">Example Workflow<a class="anchor" href="#example-workflow" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># 1. Create project
-cli-anything-krita --json project new -n &quot;Illustration&quot; -w 3000 -h 4000 -o art.json
+<pre><code class="language-bash"><span class="hljs-comment"># 1. Create project</span>
+cli-anything-krita --json project new -n <span class="hljs-string">&quot;Illustration&quot;</span> -w 3000 -h 4000 -o art.json
 
-# 2. Set up layer stack
-cli-anything-krita --json -p art.json layer add &quot;Background&quot; -t paintlayer
-cli-anything-krita --json -p art.json layer add &quot;Sketch&quot; -t paintlayer --opacity 180
-cli-anything-krita --json -p art.json layer add &quot;Inking&quot; -t paintlayer
-cli-anything-krita --json -p art.json layer add &quot;Colors&quot; -t paintlayer
-cli-anything-krita --json -p art.json layer add &quot;Effects&quot; -t paintlayer --opacity 128
+<span class="hljs-comment"># 2. Set up layer stack</span>
+cli-anything-krita --json -p art.json layer add <span class="hljs-string">&quot;Background&quot;</span> -t paintlayer
+cli-anything-krita --json -p art.json layer add <span class="hljs-string">&quot;Sketch&quot;</span> -t paintlayer --opacity 180
+cli-anything-krita --json -p art.json layer add <span class="hljs-string">&quot;Inking&quot;</span> -t paintlayer
+cli-anything-krita --json -p art.json layer add <span class="hljs-string">&quot;Colors&quot;</span> -t paintlayer
+cli-anything-krita --json -p art.json layer add <span class="hljs-string">&quot;Effects&quot;</span> -t paintlayer --opacity 128
 
-# 3. Apply effects
-cli-anything-krita --json -p art.json filter apply blur -l &quot;Background&quot;
+<span class="hljs-comment"># 3. Apply effects</span>
+cli-anything-krita --json -p art.json filter apply blur -l <span class="hljs-string">&quot;Background&quot;</span>
 
-# 4. Export
-cli-anything-krita --json -p art.json export render final.png -p png --overwrite</code></pre>
+<span class="hljs-comment"># 4. Export</span>
+cli-anything-krita --json -p art.json <span class="hljs-built_in">export</span> render final.png -p png --overwrite</code></pre>
       </article>
       <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-kdenlive/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">cli-anything-kdenlive</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-libreoffice/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-libreoffice</div></a></nav>
       <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>

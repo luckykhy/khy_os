@@ -56,23 +56,23 @@
 <h2 id="二-凭据文件">二、凭据文件<a class="anchor" href="#二-凭据文件" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>项</th><th>值</th></tr></thead><tbody><tr><td>文件名</td><td><code>default-admin.json</code></td></tr><tr><td>目录</td><td><code>&lt;数据家&gt;/credentials/</code>（便携部署落在便携根的 <code>.khy/credentials/</code>）</td></tr><tr><td>内容</td><td>用户名 + <strong>明文</strong>密码（数据库里存的始终只是 bcrypt 哈希）</td></tr><tr><td>权限</td><td>尽力 <code>chmod 0600</code>；Windows 上设置失败会被忽略</td></tr><tr><td>幂等性</td><td>文件已存在就<strong>永不重新生成、永不覆盖</strong></td></tr></tbody></table>
 <p><strong>数据家（data home）怎么解析</strong>：真源是 <code>services/backend/src/utils/dataHome.js</code>，按序为 ① 环境变量 <code>KHY_DATA_HOME</code> ② <code>~/.khy/.location.json</code> 记录的钉住位置 ③ 已有非空的 <code>~/.khy</code> 原地钉死 ④ 全新安装选剩余空间最大的<strong>非系统盘</strong> ⑤ 兜底 <code>~/.khy</code>。所以凭据文件的绝对路径<strong>因机器而异</strong>，本文刻意不写死某个盘符——要看自己这台机器的实际路径，跑：</p>
-<pre><code class="language-bash">node -e &quot;console.log(require('./services/backend/src/services/credentialGenerator').getDefaultAdminCredentialsPath())&quot;</code></pre>
+<pre><code class="language-bash">node -e <span class="hljs-string">&quot;console.log(require(&#x27;./services/backend/src/services/credentialGenerator&#x27;).getDefaultAdminCredentialsPath())&quot;</span></code></pre>
 <p>CLI 在登录提示里也会打印这个路径。</p>
 <blockquote><p>⚠️ 这个文件里是<strong>明文密码</strong>。它属于机器本地凭据，不要复制到别的机器、不要进版本库（<code>.khy/</code> 已在 <code>.gitignore</code> 内）、不要贴进 issue 或聊天记录。换机器时的正确做法是让新机器自己生成一份（第四节）。</p></blockquote>
 <hr>
 <h2 id="三-想跳过自动登录-换掉生成的密码">三、想跳过自动登录 / 换掉生成的密码<a class="anchor" href="#三-想跳过自动登录-换掉生成的密码" aria-label="锚点">#</a></h2>
-<pre><code class="language-powershell"># 关掉自动登录，每次手动输（用户名仍会预填）
-$env:KHY_CLI_AUTO_LOGIN = &quot;0&quot;
+<pre><code class="language-powershell"><span class="hljs-comment"># 关掉自动登录，每次手动输（用户名仍会预填）</span>
+<span class="hljs-variable">$env:KHY_CLI_AUTO_LOGIN</span> = <span class="hljs-string">&quot;0&quot;</span>
 
-# 指定 CLI 自动登录用的密码（不写凭据文件）
-$env:KHY_DEFAULT_PASSWORD = &quot;&lt;密码&gt;&quot;
+<span class="hljs-comment"># 指定 CLI 自动登录用的密码（不写凭据文件）</span>
+<span class="hljs-variable">$env:KHY_DEFAULT_PASSWORD</span> = <span class="hljs-string">&quot;&lt;密码&gt;&quot;</span>
 
-# 指定默认管理员的用户名 / 密码（纯环境变量模式：不落盘、调用方不打印）
-$env:KHY_ADMIN_USERNAME = &quot;&lt;用户名&gt;&quot;
-$env:KHY_ADMIN_PASSWORD = &quot;&lt;密码&gt;&quot;
+<span class="hljs-comment"># 指定默认管理员的用户名 / 密码（纯环境变量模式：不落盘、调用方不打印）</span>
+<span class="hljs-variable">$env:KHY_ADMIN_USERNAME</span> = <span class="hljs-string">&quot;&lt;用户名&gt;&quot;</span>
+<span class="hljs-variable">$env:KHY_ADMIN_PASSWORD</span> = <span class="hljs-string">&quot;&lt;密码&gt;&quot;</span>
 
-# 把数据家（连带凭据目录）指到别处
-$env:KHY_DATA_HOME = &quot;&lt;目录&gt;&quot;</code></pre>
+<span class="hljs-comment"># 把数据家（连带凭据目录）指到别处</span>
+<span class="hljs-variable">$env:KHY_DATA_HOME</span> = <span class="hljs-string">&quot;&lt;目录&gt;&quot;</span></code></pre>
 <p>Linux/macOS 用 <code>export KHY_CLI_AUTO_LOGIN=0</code> 等价形式。</p>
 <table><thead><tr><th>变量</th><th>作用域</th><th>说明</th></tr></thead><tbody><tr><td><code>KHY_CLI_AUTO_LOGIN</code></td><td>CLI</td><td>置 <code>0</code> 关闭首次尝试的自动登录；其余值等同开启</td></tr><tr><td><code>KHY_DEFAULT_PASSWORD</code></td><td>CLI</td><td>凭据文件取不到密码时的回退来源</td></tr><tr><td><code>KHY_ADMIN_USERNAME</code></td><td>凭据生成</td><td>覆盖「用系统用户名」的默认行为</td></tr><tr><td><code>KHY_ADMIN_PASSWORD</code></td><td>凭据生成</td><td>纯环境变量模式，<strong>不写凭据文件</strong></td></tr><tr><td><code>DEFAULT_ADMIN_PASSWORD</code></td><td>凭据生成</td><td><code>KHY_ADMIN_PASSWORD</code> 的历史别名</td></tr><tr><td><code>KHY_DATA_HOME</code></td><td>全局</td><td>显式指定数据家，凭据目录随之移动</td></tr></tbody></table>
 <blockquote><p>红线：真密码只经环境变量瞬时注入，<strong>绝不写进源码、配置模板或提交</strong>。上表里的变量用于本机会话，不要固化到仓库文件里。</p></blockquote>
@@ -88,7 +88,7 @@ $env:KHY_DATA_HOME = &quot;&lt;目录&gt;&quot;</code></pre>
 <h2 id="关联">关联<a class="anchor" href="#关联" aria-label="锚点">#</a></h2>
 <ul><li>访问与登录（Web 侧）：<code>[OPS-MAN-003] ai-管理-访问与登录</code></li><li>快速开始：<code>[OPS-MAN-027] 快速开始</code></li><li>便携版部署：<code>docs/06_DEPLOY_部署/PORTABLE.md</code></li><li>环境开关命名规范：<code>[OPS-MAN-058] 环境开关与文档命名规范</code></li><li>一次性脚本的位置约定：<code>docs/03_DESIGN_设计/[DESIGN-ARCH-068] 仓库层级板块规范</code></li></ul>
       </article>
-      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-174] 任务入口总表.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-174] 任务入口总表</div></a><a class="next" href="../../docs/07_OPS_运维/00_INDEX_运维-分类索引.html"><div class="dir">下一篇 →</div><div class="ttl">00INDEX 运维分类索引</div></a></nav>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-174] 任务入口总表.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-174] 任务入口总表</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-176] 数据备份与恢复.html"><div class="dir">下一篇 →</div><div class="ttl">数据备份与恢复</div></a></nav>
       <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
     </div>
   </main>

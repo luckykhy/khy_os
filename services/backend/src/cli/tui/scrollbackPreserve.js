@@ -20,19 +20,10 @@
 // 与 `liveRegionBudget`(尽量不触发 fullscreen)正交叠加:那是第一层「少触发」,本叶子是第二层
 // 「即便触发也不擦回滚」。
 //
-// 平台对称(win32 反向注入,修复 Windows「同一对话窗口重复显示多份」):
-//   • 非 win32 的 clearTerminal `\x1b[2J\x1b[3J\x1b[H` 里的 `\x1b[2J`(erase display)在
-//     xterm 系是**原地擦除**,`\x1b[3J` 才擦回滚 → 剥掉 `3J` 即保全 scrollback(见上)。
-//   • win32 的 clearTerminal 是 `\x1b[2J\x1b[0f`(**无 `3J`**)。但 Windows conhost /
-//     Windows Terminal 上 `\x1b[2J` 的历史行为是把当前可视帧**向上滚进 scrollback**(而非原地
-//     擦除)→ ink 每次 fullscreen 重绘都把整段 `fullStaticOutput` 连同旧帧堆进 scrollback,
-//     用户看到同一段对话被重复显示 2–3 份。修法:在 win32 的 clearTerminal 里**注入 `\x1b[3J`**
-//     (`\x1b[2J\x1b[0f` → `\x1b[2J\x1b[3J\x1b[0f`),让每次重绘先清掉刚滚进去的重复副本 →
-//     随后写出的 `fullStaticOutput` 成为唯一一份干净 transcript。
-//   • 分发函数 `normalizeClearTerminal(chunk, env, platform)` 按平台选择「剥离(非 win32)/
-//     注入(win32)」;注入**幂等**(WIN_CLEAR_FIXED 不含完整 WIN_CLEAR token,重复跑不二次注入)。
-//   • `\x1b[3J` 在 ink TUI 表面唯一语义就是「擦回滚」,本仓自有源码从不发它(仅
-//     liveRegionBudget.js 注释提及)→ 统一剥离/注入不破坏任何既有功能。
+// 平台对称：两类终端都只剥离 clearTerminal 中的 `3J`。Windows 的 `2J` 行为
+// 依终端实现而异，但主动注入 `3J` 会直接清空用户正在查看的原生 scrollback，
+// 因此不能用它修复重复帧；保留终端原生滚动缓冲比去重更重要。
+// 分发函数 `normalizeClearTerminal` 在两平台统一执行剥离，且不会主动生成任何新字节。
 //
 // 门控 KHY_PRESERVE_SCROLLBACK 默认开;关 → `normalizeClearTerminal`/`stripScrollbackClear`
 // 原样返回 → ink 写出原字节 → 两平台行为与今日逐字节一致(Windows 重复症状保留 = 诚实回退)。
@@ -49,7 +40,8 @@ const SCROLLBACK_CLEAR = '[3J';
  */
 const ESC = SCROLLBACK_CLEAR.charAt(0); // '\x1b'
 const WIN_CLEAR = `${ESC}[2J${ESC}[0f`; // win32 ink clearTerminal(无 3J)
-const WIN_CLEAR_FIXED = `${ESC}[2J${ESC}[3J${ESC}[0f`; // 注入 3J → 擦回滚,消除重复副本
+// 兼容旧调用方的导出名；修复后它等于原始 Windows 清屏序列，不再注入 3J。
+const WIN_CLEAR_FIXED = WIN_CLEAR;
 
 /**
  * scrollback 保全默认开;仅显式 falsy 关闭。
@@ -58,7 +50,7 @@ const WIN_CLEAR_FIXED = `${ESC}[2J${ESC}[3J${ESC}[0f`; // 注入 3J → 擦回�
  */
 function isEnabled(env = process.env) {
   const raw = env && env.KHY_PRESERVE_SCROLLBACK;
-  const v = String(raw == null ? '' : raw)
+  const v = String(raw === null || raw === undefined ? '' : raw)
     .trim()
     .toLowerCase();
   return !OFF_VALUES.includes(v);
@@ -93,13 +85,9 @@ function stripScrollbackClear(chunk, env = process.env) {
 }
 
 /**
- * 按平台规范化 ink 写出的 clearTerminal 序列(fullscreen 重绘的单一处理点):
- *   • 非 win32 → 委托 `stripScrollbackClear`(剥 `\x1b[3J`,保全 scrollback,行为不变)。
- *   • win32   → 把 ink 的 `\x1b[2J\x1b[0f` 注入为 `\x1b[2J\x1b[3J\x1b[0f`,清掉被 `\x1b[2J`
- *     滚进 scrollback 的重复副本 → 每次重绘只留一份干净 transcript。
- *
- * 门控关 → 原样返回(逐字节回退)。非字符串 → 原样返回。win32 注入**幂等**:WIN_CLEAR_FIXED
- * 不含完整 WIN_CLEAR token,重复处理不会二次注入。整体 try/catch 兜底,绝不抛。
+ * 规范化 ink 写出的 clearTerminal 序列：所有平台都剥离 `\x1b[3J`，因此
+ * fullscreen 重绘仍可清理当前可视区，但不会清空终端原生 scrollback。
+ * Windows 的 ink 序列本身不含 3J，保持逐字节不变。
  *
  * @param {*} chunk - stdout.write 的首参
  * @param {object} [env]
@@ -114,22 +102,71 @@ function normalizeClearTerminal(chunk, env = process.env, platform = process.pla
     if (typeof chunk !== 'string') {
       return chunk;
     }
-    if (platform === 'win32') {
-      if (chunk.indexOf(WIN_CLEAR) === -1) {
-        return chunk;
-      }
-      return chunk.split(WIN_CLEAR).join(WIN_CLEAR_FIXED);
-    }
     return stripScrollbackClear(chunk, env);
   } catch {
     return chunk;
   }
 }
 
+/**
+ * 为 stdout.write() 创建有状态规范化器。Ink 通常一次写出完整全屏帧，但流包装器
+ * 允许把清屏序列拆到多次 write()，也允许传 Buffer。这里只保留「可能是目标序列
+ * 开头」的最长尾缀，序列完整后再规范化；最多暂存 WIN_CLEAR.length - 1 个字节。
+ *
+ * 门控关闭时每次写入逐字节直通。flush() 返回尚未闭合的尾缀，供退出清理和测试使用。
+ * @param {object} [env]
+ * @param {string} [platform]
+ * @returns {{write:function(*):*,flush:function():string}}
+ */
+function createClearTerminalNormalizer(env = process.env, platform = process.platform) {
+  let pending = '';
+
+  function write(chunk) {
+    try {
+      if (!isEnabled(env)) {
+        return chunk;
+      }
+      const isBuffer = Buffer.isBuffer(chunk);
+      if (typeof chunk !== 'string' && !isBuffer) {
+        return chunk;
+      }
+      const token = SCROLLBACK_CLEAR;
+      const text = pending + (isBuffer ? chunk.toString('utf8') : chunk);
+      pending = '';
+
+      let keep = 0;
+      const max = Math.min(token.length - 1, text.length);
+      for (let n = max; n > 0; n -= 1) {
+        if (text.endsWith(token.slice(0, n))) {
+          keep = n;
+          break;
+        }
+      }
+
+      const ready = keep > 0 ? text.slice(0, -keep) : text;
+      pending = keep > 0 ? text.slice(-keep) : '';
+      const normalized = normalizeClearTerminal(ready, env, platform);
+      return isBuffer ? Buffer.from(normalized, 'utf8') : normalized;
+    } catch {
+      pending = '';
+      return chunk;
+    }
+  }
+
+  function flush() {
+    const rest = pending;
+    pending = '';
+    return rest;
+  }
+
+  return { write, flush };
+}
+
 module.exports = {
   isEnabled,
   stripScrollbackClear,
   normalizeClearTerminal,
+  createClearTerminalNormalizer,
   OFF_VALUES,
   SCROLLBACK_CLEAR,
   WIN_CLEAR,

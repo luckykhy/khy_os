@@ -45,11 +45,11 @@
 <h2 id="how-to-extend">HOW-TO-EXTEND<a class="anchor" href="#how-to-extend" aria-label="锚点">#</a></h2>
 <ol><li>在 <code>gatherFreshInstallFacts</code> 采一个新事实（布尔/字符串）。</li><li>在 <code>assessFreshInstall</code> 用 <code>_check(label, ok, detail, level)</code> + <code>_causeFix(cause, fix)</code> 推一条检查项。</li><li>加 node:test：断言 ok 形态 <strong>与</strong> 失败形态（detail 含原因+解决方法）。保持断言器纯净。</li></ol>
 <h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">npm run test:fresh-install-doctor
-# 或
-node --test services/backend/tests/services/freshInstallDoctor.test.js
-# 实机观察
-khy doctor            # 应出现「离机还原自检」分类</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:fresh-install-doctor
+<span class="hljs-comment"># 或</span>
+node --<span class="hljs-built_in">test</span> services/backend/tests/services/freshInstallDoctor.test.js
+<span class="hljs-comment"># 实机观察</span>
+khy doctor            <span class="hljs-comment"># 应出现「离机还原自检」分类</span></code></pre>
 <h2 id="相关">相关<a class="anchor" href="#相关" aria-label="锚点">#</a></h2>
 <ul><li><code>services/backend/src/services/freshInstallDoctor.js</code>（纯断言器 + IO 采集器）</li><li><code>services/backend/src/cli/handlers/init.js</code>（<code>runDoctorChecks</code> 接线点）</li><li>[OPS-MAN-074] 首启崩溃真实原因加方法归因（运行期崩溃归因，互补）</li><li>agentRestorePlan（agent 面 JSON 还原方案）</li></ul>
       </article>

@@ -91,6 +91,7 @@ describe('windsurf adapter token priority and fallback', () => {
 
     const result = await adapter.generate('hello');
     expect(result.success).toBe(true);
+    expect(result.tokenUsage).toEqual({ inputTokens: 0, outputTokens: 0, totalTokens: 0 });
     expect(httpsMock.request).toHaveBeenCalledTimes(1);
     expect(httpsMock.request.mock.calls[0][0].headers.Authorization).toBe(`Bearer ${localToken}`);
   });

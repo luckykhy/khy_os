@@ -37,26 +37,26 @@
 <p>快照不携带提交历史。进入还原目录后：</p>
 <pre><code class="language-bash">git init
 git add -A
-git commit -m &quot;restore from khy source snapshot&quot;</code></pre>
+git commit -m <span class="hljs-string">&quot;restore from khy source snapshot&quot;</span></code></pre>
 <h2 id="2-安装依赖-各-npm-workspace">2. 安装依赖（各 npm workspace）<a class="anchor" href="#2-安装依赖-各-npm-workspace" aria-label="锚点">#</a></h2>
 <p>本仓库是 npm workspaces 单仓。<code>@khy/shared</code> 等内部包通过 workspace 解析，<br>在仓库根执行一次即可：</p>
-<pre><code class="language-bash"># 仓库根目录
+<pre><code class="language-bash"><span class="hljs-comment"># 仓库根目录</span>
 npm install</code></pre>
 <blockquote><p>若只想跑后端：<code>cd services/backend &amp;&amp; npm install</code>。后端对 <code>@khy/shared</code> 的依赖在源码里写作<br><code>file:./vendor/shared</code>；从 npm 包还原时 <code>vendor/shared</code> 已随包带上，从 pip 快照还原时<br>由根 workspace（<code>platform/packages/shared</code>）解析，二者都无需手动处理。</p></blockquote>
 <h2 id="3-构建内核-iso-可选-需要时再做">3. 构建内核 ISO（可选，需要时再做）<a class="anchor" href="#3-构建内核-iso-可选-需要时再做" aria-label="锚点">#</a></h2>
 <p>推荐用一键命令（自动选后端、跨平台）：</p>
-<pre><code class="language-bash">khy os build    # 定位源码 → 体检工具链 → 构建，产出 build/khy-os-kernel.iso</code></pre>
+<pre><code class="language-bash">khy os build    <span class="hljs-comment"># 定位源码 → 体检工具链 → 构建，产出 build/khy-os-kernel.iso</span></code></pre>
 <p>或手动直跑 Makefile：</p>
-<pre><code class="language-bash">cd kernel
-make            # 产出 build/khy-os-kernel.iso（Linux/macOS/WSL2）</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> kernel
+make            <span class="hljs-comment"># 产出 build/khy-os-kernel.iso（Linux/macOS/WSL2）</span></code></pre>
 <p>工具链与依赖见 <code>kernel/README.md</code>（默认需 <code>nasm</code>/<code>gcc</code>/<code>ld</code>/<code>grub-mkrescue</code>/<code>qemu</code>，还需 MoonBit <code>moon</code>）。<br><strong>Windows 上</strong> <code>khy os build</code> 已能 auto 级联：<strong>首选原生 LLVM+Limine 后端</strong>（无需 WSL/Docker/VM，<br>首次按 sha256 钉死自动下载工具链到 <code>~/.khyos/cache</code>，用 Limine 取代无 Windows 版的 <code>grub-mkrescue</code>），<br>不可用时回退 WSL2 → Docker → QEMU 构建器虚拟机。完整说明见 [OPS-MAN-036] §8。</p>
 <h2 id="4-构建前端-可选">4. 构建前端（可选）<a class="anchor" href="#4-构建前端-可选" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># 主前端 (AI 管理前端)
-cd apps/ai-frontend &amp;&amp; npm install &amp;&amp; npm run build
-# AI 管理前端
-cd apps/ai-frontend &amp;&amp; npm install &amp;&amp; npm run build
-# 量化前端
-cd software/khyquant/frontend &amp;&amp; npm install &amp;&amp; npm run build</code></pre>
+<pre><code class="language-bash"><span class="hljs-comment"># 主前端 (AI 管理前端)</span>
+<span class="hljs-built_in">cd</span> apps/ai-frontend &amp;&amp; npm install &amp;&amp; npm run build
+<span class="hljs-comment"># AI 管理前端</span>
+<span class="hljs-built_in">cd</span> apps/ai-frontend &amp;&amp; npm install &amp;&amp; npm run build
+<span class="hljs-comment"># 量化前端</span>
+<span class="hljs-built_in">cd</span> software/khyquant/frontend &amp;&amp; npm install &amp;&amp; npm run build</code></pre>
 <h2 id="5-运行时前置依赖">5. 运行时前置依赖<a class="anchor" href="#5-运行时前置依赖" aria-label="锚点">#</a></h2>
 <ul><li><strong>Node.js</strong>（运行后端/CLI）。</li><li><strong>Python 3.10+</strong>（pip 入口 <code>khy</code> / 量化部分）。</li><li><strong>QEMU</strong>（<code>qemu-system-x86_64</code> + <code>qemu-img</code>，仅在用 <code>khy os</code> 跑裸机内核时需要）。<ul><li>Windows：从 https://qemu.weilnetz.de/ 安装并加入 PATH，或设 <code>KHY_QEMU</code> 指向可执行文件。</li></ul></li></ul>
 <hr>

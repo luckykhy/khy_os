@@ -156,7 +156,7 @@ describe('promptCacheService', () => {
     test('removes a specific entry', () => {
       cache.put('to-remove', { data: 'bye' });
       expect(cache.has('to-remove')).toBe(true);
-      cache.invalidate('to-remove');
+      cache.invalidate('to-remove', { immediate: true });
       expect(cache.has('to-remove')).toBe(false);
       expect(cache.get('to-remove')).toBeNull();
     });
@@ -215,7 +215,7 @@ describe('promptCacheService', () => {
 
     test('tracks eviction count', () => {
       cache.put('e1', { data: 'a' });
-      cache.invalidate('e1');
+      cache.invalidate('e1', { immediate: true });
       const metrics = cache.getMetrics();
       expect(metrics.evictions).toBe(1);
     });

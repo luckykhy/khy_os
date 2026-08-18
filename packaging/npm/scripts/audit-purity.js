@@ -46,6 +46,12 @@ const REQUIRED_EXECUTABLE_NAMES = [
   // full-platform entrypoint must exist so `npx khy` works after install.
 ];
 
+// Launch floor consumed by the cross-channel contract tests. The npm launcher
+// executes this single-file runtime directly.
+const REQUIRED_PATHS = [
+  'package/bundled/runtime/khy/bundle.mjs',
+];
+
 // ── CLI ───────────────────────────────────────────────────────────────────────
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -57,7 +63,11 @@ function parseArgs() {
     const i = args.indexOf('--platform');
     return i !== -1 ? args[i + 1] : null;
   })();
-  return { distDir, platformFilter };
+  const packageRoot = (() => {
+    const i = args.indexOf('--package-root');
+    return i !== -1 ? path.resolve(args[i + 1]) : null;
+  })();
+  return { distDir, platformFilter, packageRoot };
 }
 
 function log(...a) { console.log('[audit:purity]', ...a); }
@@ -87,6 +97,19 @@ function checkDir(dir, label) {
   if (!fs.statSync(dir).isDirectory()) {
     fail(`${label} is not a directory: ${dir}`);
   }
+}
+
+function assertNoResourceStore(root, label) {
+  function walk(current) {
+    const names = new Set(fs.readdirSync(current));
+    const hasStoreLayout = names.has('blobs') && names.has('installs')
+      && names.has('active') && names.has('staging') && names.has('locks');
+    if (hasStoreLayout) fail(`${label}: contains Resource Store state: ${path.relative(root, current) || '.'}`);
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      if (entry.isDirectory()) walk(path.join(current, entry.name));
+    }
+  }
+  walk(root);
 }
 
 // ── Audit a single platform directory ────────────────────────────────────────
@@ -127,6 +150,7 @@ function auditPlatform(execDir, platformName) {
     }
   }
   walk(execDir);
+  assertNoResourceStore(execDir, `${platformName} executables`);
 
   // Required: at least one file whose name starts with the expected prefix
   const hasExecutable = entries.some(e => REQUIRED_EXECUTABLE_NAMES.some(p => e.startsWith(p)));
@@ -137,9 +161,49 @@ function auditPlatform(execDir, platformName) {
   log(`  OK — ${platformName} is pure and complete`);
 }
 
+function auditPackage(packageRoot) {
+  checkDir(packageRoot, 'npm package root');
+  const manifestPath = path.join(packageRoot, 'package.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  for (const field of ['dependencies', 'optionalDependencies', 'peerDependencies']) {
+    if (manifest[field] && Object.keys(manifest[field]).length > 0) {
+      fail(`package.json declares runtime ${field}`);
+    }
+  }
+  for (const hook of ['preinstall', 'install', 'postinstall']) {
+    if (manifest.scripts && manifest.scripts[hook]) fail(`package.json declares ${hook}`);
+  }
+
+  const required = ['bin/khy.js', 'bundled/runtime/khy/bundle.mjs'];
+  for (const relative of required) {
+    if (!fs.existsSync(path.join(packageRoot, ...relative.split('/')))) {
+      fail(`required package path missing: ${relative}`);
+    }
+  }
+
+  function walk(current) {
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const full = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        if (FORBIDDEN_DIRS.has(entry.name)) fail(`contains forbidden directory: ${path.relative(packageRoot, full)}`);
+        walk(full);
+      } else if (isForbiddenFile(entry.name)) {
+        fail(`contains forbidden file: ${path.relative(packageRoot, full)}`);
+      }
+    }
+  }
+  walk(packageRoot);
+  assertNoResourceStore(packageRoot, 'npm package');
+  log('Package is complete and install-time dependency-free.');
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 function main() {
-  const { distDir, platformFilter } = parseArgs();
+  const { distDir, platformFilter, packageRoot } = parseArgs();
+  if (packageRoot) {
+    auditPackage(packageRoot);
+    return;
+  }
 
   const executablesRoot = path.join(distDir, 'executables');
   checkDir(executablesRoot, 'executables root');

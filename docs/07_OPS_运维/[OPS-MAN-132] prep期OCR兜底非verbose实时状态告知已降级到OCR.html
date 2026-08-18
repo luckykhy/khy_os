@@ -38,13 +38,13 @@
 <p><code>检测到图片输入：{modelName} 不支持图像识别，已降级用本地 OCR 成功提取 {N 张图片}文本并据此作答</code>;<br>  门关 / count 非正 / 畸形 → <code>null</code>;零 IO,绝不抛。与 Site3 变体唯一差异:主语用「模型」而非<br>  「适配器」(prep 期尚未落到具体适配器),且<strong>独立门</strong> <code>KHY_OCR_RESCUE_STATUS_PREP</code>(与 Site3 的<br>  <code>KHY_OCR_RESCUE_STATUS</code> 分开,单独字节回退)。</p>
 <ul><li>接线 <code>aiGatewayGenerateMethod.js</code> Site1(~1591)/ Site2(~1704)OCR-成功分支,<strong>仅 <code>!_isVerbose</code></strong></li></ul>
 <p>时补一条(verbose 用户已有既有状态,<code>!_isVerbose</code> 守卫避免重复):</p>
-<pre><code class="language-js">  if (!_isVerbose) {
-    try {
-      const _prep = require('./ocrRescueStatusNotice').buildOcrRescuePrepStatus({
-        count: ocrTexts.length, modelName: _primaryModel, env: process.env,
+<pre><code class="language-js">  <span class="hljs-keyword">if</span> (!_isVerbose) {
+    <span class="hljs-keyword">try</span> {
+      <span class="hljs-keyword">const</span> _prep = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./ocrRescueStatusNotice&#x27;</span>).<span class="hljs-title function_">buildOcrRescuePrepStatus</span>({
+        <span class="hljs-attr">count</span>: ocrTexts.<span class="hljs-property">length</span>, <span class="hljs-attr">modelName</span>: _primaryModel, <span class="hljs-attr">env</span>: process.<span class="hljs-property">env</span>,
       });
-      if (_prep) emitStatus(_prep);
-    } catch { /* fail-soft:叶不可用则按历史静默 */ }
+      <span class="hljs-keyword">if</span> (_prep) <span class="hljs-title function_">emitStatus</span>(_prep);
+    } <span class="hljs-keyword">catch</span> { <span class="hljs-comment">/* fail-soft:叶不可用则按历史静默 */</span> }
   }</code></pre>
 <p>门关 → 叶返 null → 不 emitStatus → 逐字节回退「非 verbose prep 期静默」。</p>
 <ul><li><code>flagRegistry.js</code> 登记 <code>KHY_OCR_RESCUE_STATUS_PREP: { mode: 'default-on', off: 'CANON', default: true }</code>。</li></ul>

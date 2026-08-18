@@ -743,6 +743,38 @@ class MultiFreeService {
       }
     }
 
+    // 一个 provider 都没被尝试过(attempts 为空)= **配置/可用性**问题,不是通道健康问题。
+    // 典型成因:用户把 key 都放在 apiKeyPool 里、env 里没有裸 API key,而本次请求又没解析出
+    // pool provider(空 model / 无 apiPoolProvider)→ apiAdapter 走 getService() 拿到的实例
+    // 里每个 provider 都是 enabled:false → 下面的 for 循环一次都没进 → 旧代码返回
+    // 「All providers failed」+ errorType 'unknown'。
+    //
+    // 为什么这条必须单独成一类:上游 recordFailureEarly 直接把顶层 errorType 记成该通道的
+    // 失败,而 'unknown' 是**熔断合格**类型(_recordAdapterFailure 的 circuitEligible 只排除
+    // network/timeout/rate_limit/overloaded/cancelled/empty)。于是连续 3 次「根本没试」被
+    // 当成「通道连挂 3 次」→ circuitOpen → 冷却指数放大到 300s 上限,且熔断态下 fast-fail 的
+    // 探测放行被关闭、api 通道的自愈深探针又要求 generation 成功(同样解析不出 provider)
+    // → 谁都救不回来,就是用户报的「一次失败永久失败,无法恢复」。
+    //
+    // 'no_provider' 刻意**不在** _TRANSIENT_COOLDOWN_MS 里、也**不**进 circuitEligible
+    // (与 `empty` 同策):它零冷却 —— 下一个请求立刻重新判定。这是对的,因为这类失败不花
+    // 网络代价,而且它随时可能因为「用户刚配好 key」或「pool 解析成功」而消失。
+    if (attempts.length === 0) {
+      const noProviderMsg =
+        providers.length === 0
+          ? '没有可用的 API 通道:环境变量里没有 API key,本次请求也没解析出 key 池 provider。用 `khy key list` 看池、`khy model` 指定模型(形如 api:<池名>:<模型>)'
+          : '没有 provider 被实际尝试(全部被前置条件跳过)';
+      return {
+        success: false,
+        content: '',
+        provider: 'none',
+        error: noProviderMsg,
+        errorType: 'no_provider',
+        attempts,
+        availableProviders: providers.map((p) => p.name),
+      };
+    }
+
     // If every provider returned empty (and none threw), surface the failure as
     // `empty` at the top level too: recordFailureEarly (aiGateway) reads the
     // top-level errorType to decide the cooldown, and `empty` is cooldown-free.

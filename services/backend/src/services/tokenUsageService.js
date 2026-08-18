@@ -9,6 +9,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
+const atomicWriteJson = require('../utils/atomicWriteJson');
+
 // Legacy user-home usage file (pre portable-aware resolution).
 function _legacyUsageFile() {
   return path.join(os.homedir(), '.khyquant', 'token_usage.json');
@@ -96,7 +98,7 @@ function saveUsageData(data) {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    fs.writeFileSync(_usageFile(), JSON.stringify(data, null, 2), 'utf-8');
+    atomicWriteJson(_usageFile(), data, { mode: 0o666 });
   } catch {
     /* ignore write failure */
   }

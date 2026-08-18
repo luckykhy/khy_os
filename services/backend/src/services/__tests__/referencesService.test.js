@@ -185,7 +185,9 @@ describe('referencesService', () => {
       fs.mkdirSync(path.dirname(outside), { recursive: true });
       const { cwd } = mkRefs({});
       // tmp dir is under os.tmpdir() which is not a trusted user root by default
-      expect(svc.isWithinBoundary(outside, cwd)).toBe(false);
+      expect(
+        svc.isWithinBoundary(outside, cwd, { _isUnderTrustedRoot: () => false })
+      ).toBe(false);
     });
   });
 

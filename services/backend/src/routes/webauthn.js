@@ -11,6 +11,7 @@ const { Op } = require('sequelize');
 const { BACKEND_PORT } = require('../constants/serviceDefaults');
 const { authMiddleware } = require('../middleware/auth');
 const { User } = require('../models');
+const { normalizeEmail, normalizeLoginIdentifier } = require('../services/authPolicy');
 const authSessionService = require('../services/authSessionService');
 
 const router = express.Router();
@@ -124,8 +125,10 @@ function normalizeCredentialPayload(payload) {
 }
 
 async function findUserByIdentifier(identifier) {
+  const username = normalizeLoginIdentifier(identifier);
+  const email = normalizeEmail(username);
   return User.findOne({
-    where: { [Op.or]: [{ username: identifier }, { email: identifier }] },
+    where: { [Op.or]: [{ username }, { email }] },
   });
 }
 

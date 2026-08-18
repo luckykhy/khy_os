@@ -5,7 +5,7 @@
  *
  * Covers:
  *   - isMouseSequence / parseSgrMouse (press/release/motion, 0-based coords)
- *   - gates (win32 default on, others off, env override; hover default on)
+ *   - gates (buttons win32-default-on, hover default off)
  *   - enable/disable bytes (1000/1006/1003)
  *   - collectLayout (static/display:none skip, offset accumulation, handlers)
  *   - screenOffset (anchor-bottom vs top modes)
@@ -128,26 +128,28 @@ test('parseSgrMouse: null on non-mouse / non-string', () => {
 });
 
 // ── gates ───────────────────────────────────────────────────────────────────
-test('mouseButtonsEnabled: win32 default on, others off', () => {
+test('mouseButtonsEnabled: win32 defaults on and other platforms default off', () => {
   assert.equal(mouseButtonsEnabled({}, 'win32'), true);
   assert.equal(mouseButtonsEnabled({}, 'linux'), false);
   assert.equal(mouseButtonsEnabled({}, 'darwin'), false);
 });
 
-test('mouseButtonsEnabled: explicit env overrides both ways', () => {
+test('mouseButtonsEnabled: explicit env overrides platform defaults', () => {
   assert.equal(mouseButtonsEnabled({ KHY_MOUSE_BUTTONS: '1' }, 'linux'), true);
   assert.equal(mouseButtonsEnabled({ KHY_MOUSE_BUTTONS: 'on' }, 'darwin'), true);
-  assert.equal(mouseButtonsEnabled({ KHY_MOUSE_BUTTONS: '0' }, 'win32'), false);
+  assert.equal(mouseButtonsEnabled({ KHY_MOUSE_BUTTONS: 'yes' }, 'win32'), true);
   for (const v of ['0', 'false', 'off', 'no', 'OFF']) {
     assert.equal(mouseButtonsEnabled({ KHY_MOUSE_BUTTONS: v }, 'win32'), false, v);
   }
 });
 
-test('mouseHoverEnabled: default on, explicit falsy off', () => {
-  assert.equal(mouseHoverEnabled({}), true);
+test('mouseHoverEnabled: default off, explicit truthy on', () => {
+  assert.equal(mouseHoverEnabled({}), false);
   assert.equal(mouseHoverEnabled({ KHY_MOUSE_HOVER: '0' }), false);
   assert.equal(mouseHoverEnabled({ KHY_MOUSE_HOVER: 'no' }), false);
   assert.equal(mouseHoverEnabled({ KHY_MOUSE_HOVER: '1' }), true);
+  assert.equal(mouseHoverEnabled({ KHY_MOUSE_HOVER: 'yes' }), true);
+  assert.equal(mouseHoverEnabled({ KHY_MOUSE_HOVER: 'unexpected' }), false);
 });
 
 // ── enable/disable bytes ────────────────────────────────────────────────────
@@ -227,10 +229,10 @@ test('screenOffset: bottom-anchor mode subtracts root height', () => {
   assert.equal(screenOffset(20, { rows: 30, anchorBottom: false }), 0);
 });
 
-test('screenOffset: defaults to bottom-anchor and fallback rows', () => {
-  assert.equal(screenOffset(20, { rows: 30 }), 10);
-  assert.equal(screenOffset(20, {}), 4); // rows fallback 24
-  assert.equal(screenOffset(20), 4);
+test('screenOffset: defaults to top-aligned continuous rendering', () => {
+  assert.equal(screenOffset(20, { rows: 30 }), 0);
+  assert.equal(screenOffset(20, {}), 0);
+  assert.equal(screenOffset(20), 0);
 });
 
 // ── hitTest ─────────────────────────────────────────────────────────────────
@@ -282,6 +284,24 @@ test('dispatcher: click fires onClick on release', () => {
   assert.equal(dispatch('[<0;2;20M', ctx), true); // press
   assert.equal(clicks, 0);
   assert.equal(dispatch('[<0;2;20m', ctx), true); // release on the button
+  assert.equal(clicks, 1);
+});
+
+test('dispatcher: top-aligned continuous mode clicks without a bottom offset', () => {
+  let clicks = 0;
+  const button = makeNode({
+    left: 0,
+    top: 0,
+    width: 4,
+    height: 1,
+    style: { onClick: () => clicks++ },
+  });
+  const root = makeNode({ width: 80, height: 5, children: [button] });
+  const dispatch = createMouseDispatcher({ hover: false }).onInput;
+  const ctx = { rootNode: root, rows: 24, anchorBottom: false };
+
+  dispatch('[<0;2;1M', ctx);
+  dispatch('[<0;2;1m', ctx);
   assert.equal(clicks, 1);
 });
 

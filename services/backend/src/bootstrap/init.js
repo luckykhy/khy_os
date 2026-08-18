@@ -23,17 +23,18 @@ let _promise = null;
 /**
  * Run all one-time initialization steps.
  * Memoized: first call creates the promise, subsequent calls return it.
+ * @param {{ machineReadable?: boolean }} [options]
  * @returns {Promise<void>}
  */
-function init() {
+function init(options = {}) {
   if (_promise) {
     return _promise;
   }
-  _promise = _doInit();
+  _promise = _doInit(options);
   return _promise;
 }
 
-async function _doInit() {
+async function _doInit(options) {
   checkpoint('init:start');
 
   // 1. Load .env from canonical env file
@@ -140,6 +141,22 @@ async function _doInit() {
       }
     })(),
   ]);
+
+  // 2. Database health service initialization (sequential, after parallel init)
+  checkpoint('init:dbHealth:start');
+  try {
+    const dbHealthService = require('../services/dbHealthService');
+    await dbHealthService.init({ silentConsole: options.machineReadable === true });
+  } catch (err) {
+    // Non-fatal: log and continue. Database health is defensive — if init fails,
+    // the databases might still work, just without auto-healing.
+    try {
+      console.warn(`  ⚠ Database health service init failed: ${err.message}`);
+    } catch {
+      /* ignore */
+    }
+  }
+  checkpoint('init:dbHealth:done');
 
   // 8. Mark as initialized
   state.set('initialized', true);

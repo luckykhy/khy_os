@@ -43,51 +43,51 @@
 <hr>
 <h2 id="快速启动指南">🚀 快速启动指南<a class="anchor" href="#快速启动指南" aria-label="锚点">#</a></h2>
 <h3 id="方式-1-使用便携启动器-推荐">方式 1：使用便携启动器（推荐）<a class="anchor" href="#方式-1-使用便携启动器-推荐" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Windows
+<pre><code class="language-bash"><span class="hljs-comment"># Windows</span>
 .\khy.bat
 
-# Linux/macOS  
+<span class="hljs-comment"># Linux/macOS  </span>
 ./khy.sh</code></pre>
 <p>启动器会自动：</p>
 <ul><li>检测 Python 和 Node.js 环境</li><li>拉起后端服务</li><li>进入 CLI 交互模式</li></ul>
 <h3 id="方式-2-直接启动后端">方式 2：直接启动后端<a class="anchor" href="#方式-2-直接启动后端" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cd services/backend
-npm start          # 生产模式
-# 或
-npm run dev        # 开发模式（热重载）</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> services/backend
+npm start          <span class="hljs-comment"># 生产模式</span>
+<span class="hljs-comment"># 或</span>
+npm run dev        <span class="hljs-comment"># 开发模式（热重载）</span></code></pre>
 <p>后端服务默认运行在：<code>http://localhost:5000</code></p>
 <h3 id="方式-3-启动前端开发服务器">方式 3：启动前端开发服务器<a class="anchor" href="#方式-3-启动前端开发服务器" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cd apps/ai-frontend
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> apps/ai-frontend
 npm run dev</code></pre>
 <p>前端开发服务器默认运行在：<code>http://localhost:3000</code></p>
 <p>API 请求会自动代理到后端 <code>http://localhost:5000</code></p>
 <h3 id="方式-4-cli-模式">方式 4：CLI 模式<a class="anchor" href="#方式-4-cli-模式" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cd services/backend
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> services/backend
 npm run cli</code></pre>
 <p>直接进入 Khy-OS 命令行界面。</p>
 <hr>
 <h2 id="首次运行配置">🔧 首次运行配置<a class="anchor" href="#首次运行配置" aria-label="锚点">#</a></h2>
 <h3 id="1-环境变量-可选">1. 环境变量（可选）<a class="anchor" href="#1-环境变量-可选" aria-label="锚点">#</a></h3>
 <p>前端环境变量（如需自定义）：</p>
-<pre><code class="language-bash">cd apps/ai-frontend
-cp .env.example .env.local
-# 编辑 .env.local 配置 API 地址等</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> apps/ai-frontend
+<span class="hljs-built_in">cp</span> .env.example .env.local
+<span class="hljs-comment"># 编辑 .env.local 配置 API 地址等</span></code></pre>
 <p>后端环境变量（如需配置数据库等）：</p>
-<pre><code class="language-bash">cd services/backend
-# 创建 .env 文件
-# 配置数据库连接、API 密钥等</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> services/backend
+<span class="hljs-comment"># 创建 .env 文件</span>
+<span class="hljs-comment"># 配置数据库连接、API 密钥等</span></code></pre>
 <h3 id="2-数据库初始化-如使用-postgresql">2. 数据库初始化（如使用 PostgreSQL）<a class="anchor" href="#2-数据库初始化-如使用-postgresql" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cd services/backend
-npm run migrate    # 运行数据库迁移
-npm run seed       # 填充种子数据</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> services/backend
+npm run migrate    <span class="hljs-comment"># 运行数据库迁移</span>
+npm run seed       <span class="hljs-comment"># 填充种子数据</span></code></pre>
 <h3 id="3-默认管理员账号">3. 默认管理员账号<a class="anchor" href="#3-默认管理员账号" aria-label="锚点">#</a></h3>
 <p>首次启动后端时会自动创建默认管理员账号。</p>
 <p><strong>查看默认密码</strong>：</p>
-<pre><code class="language-bash"># Windows
-type %USERPROFILE%\.khy\credentials\default-admin.json
+<pre><code class="language-bash"><span class="hljs-comment"># Windows</span>
+<span class="hljs-built_in">type</span> %USERPROFILE%\.khy\credentials\default-admin.json
 
-# Linux/macOS
-cat ~/.khy/credentials/default-admin.json</code></pre>
+<span class="hljs-comment"># Linux/macOS</span>
+<span class="hljs-built_in">cat</span> ~/.khy/credentials/default-admin.json</code></pre>
 <p>或在后端启动日志中查看输出的账号信息。</p>
 <hr>
 <h2 id="项目结构确认">📂 项目结构确认<a class="anchor" href="#项目结构确认" aria-label="锚点">#</a></h2>
@@ -116,78 +116,78 @@ cat ~/.khy/credentials/default-admin.json</code></pre>
 <hr>
 <h2 id="常用命令">⚙️ 常用命令<a class="anchor" href="#常用命令" aria-label="锚点">#</a></h2>
 <h3 id="后端">后端<a class="anchor" href="#后端" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cd services/backend
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> services/backend
 
-# 开发模式
-npm run dev              # 启动开发服务器（热重载）
+<span class="hljs-comment"># 开发模式</span>
+npm run dev              <span class="hljs-comment"># 启动开发服务器（热重载）</span>
 
-# 生产模式  
-npm start                # 启动生产服务器
+<span class="hljs-comment"># 生产模式  </span>
+npm start                <span class="hljs-comment"># 启动生产服务器</span>
 
-# CLI 模式
-npm run cli              # 进入命令行界面
+<span class="hljs-comment"># CLI 模式</span>
+npm run cli              <span class="hljs-comment"># 进入命令行界面</span>
 
-# 数据库
-npm run migrate          # 运行迁移
-npm run seed             # 填充种子数据
-npm run reset-db         # 重置数据库
+<span class="hljs-comment"># 数据库</span>
+npm run migrate          <span class="hljs-comment"># 运行迁移</span>
+npm run seed             <span class="hljs-comment"># 填充种子数据</span>
+npm run reset-db         <span class="hljs-comment"># 重置数据库</span>
 
-# 测试
-npm test                 # 运行测试
-npm run test:all         # 运行所有测试
+<span class="hljs-comment"># 测试</span>
+npm <span class="hljs-built_in">test</span>                 <span class="hljs-comment"># 运行测试</span>
+npm run <span class="hljs-built_in">test</span>:all         <span class="hljs-comment"># 运行所有测试</span>
 
-# 代码质量
-npm run lint             # 代码检查
-npm run format           # 代码格式化</code></pre>
+<span class="hljs-comment"># 代码质量</span>
+npm run lint             <span class="hljs-comment"># 代码检查</span>
+npm run format           <span class="hljs-comment"># 代码格式化</span></code></pre>
 <h3 id="前端">前端<a class="anchor" href="#前端" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cd apps/ai-frontend
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> apps/ai-frontend
 
-# 开发
-npm run dev              # 启动开发服务器
+<span class="hljs-comment"># 开发</span>
+npm run dev              <span class="hljs-comment"># 启动开发服务器</span>
 
-# 构建
-npm run build            # 生产构建
-npm run preview          # 预览构建结果
+<span class="hljs-comment"># 构建</span>
+npm run build            <span class="hljs-comment"># 生产构建</span>
+npm run preview          <span class="hljs-comment"># 预览构建结果</span>
 
-# 代码质量
-npm run lint             # 代码检查
-npm run format           # 代码格式化</code></pre>
+<span class="hljs-comment"># 代码质量</span>
+npm run lint             <span class="hljs-comment"># 代码检查</span>
+npm run format           <span class="hljs-comment"># 代码格式化</span></code></pre>
 <hr>
 <h2 id="验证部署">🔍 验证部署<a class="anchor" href="#验证部署" aria-label="锚点">#</a></h2>
 <h3 id="1-检查后端健康状态">1. 检查后端健康状态<a class="anchor" href="#1-检查后端健康状态" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cd services/backend
-node check-env.js        # 检查环境
-npm run test             # 运行测试</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> services/backend
+node check-env.js        <span class="hljs-comment"># 检查环境</span>
+npm run <span class="hljs-built_in">test</span>             <span class="hljs-comment"># 运行测试</span></code></pre>
 <h3 id="2-检查前端构建">2. 检查前端构建<a class="anchor" href="#2-检查前端构建" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cd apps/ai-frontend
-npm run build            # 尝试构建</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> apps/ai-frontend
+npm run build            <span class="hljs-comment"># 尝试构建</span></code></pre>
 <h3 id="3-测试启动器">3. 测试启动器<a class="anchor" href="#3-测试启动器" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Windows
-.\khy.bat preflight      # 预检查
+<pre><code class="language-bash"><span class="hljs-comment"># Windows</span>
+.\khy.bat preflight      <span class="hljs-comment"># 预检查</span>
 
-# Linux/macOS
-./khy.sh preflight       # 预检查</code></pre>
+<span class="hljs-comment"># Linux/macOS</span>
+./khy.sh preflight       <span class="hljs-comment"># 预检查</span></code></pre>
 <hr>
 <h2 id="已知问题">📋 已知问题<a class="anchor" href="#已知问题" aria-label="锚点">#</a></h2>
 <h3 id="npm-安全漏洞">npm 安全漏洞<a class="anchor" href="#npm-安全漏洞" aria-label="锚点">#</a></h3>
 <ul><li>后端：42 个漏洞（1 低、27 中、13 高、1 严重）</li><li>前端：3 个漏洞（2 中、1 高）</li></ul>
 <p><strong>修复方法</strong>：</p>
-<pre><code class="language-bash"># 在各自目录下运行
-npm audit fix            # 自动修复
-# 或
-npm audit fix --force    # 强制修复（可能有破坏性变更）</code></pre>
+<pre><code class="language-bash"><span class="hljs-comment"># 在各自目录下运行</span>
+npm audit fix            <span class="hljs-comment"># 自动修复</span>
+<span class="hljs-comment"># 或</span>
+npm audit fix --force    <span class="hljs-comment"># 强制修复（可能有破坏性变更）</span></code></pre>
 <h3 id="可选依赖警告">可选依赖警告<a class="anchor" href="#可选依赖警告" aria-label="锚点">#</a></h3>
 <p>部分可选依赖（如 <code>node-llama-cpp</code>、<code>node-pty</code>）可能需要编译。如不需要相关功能，可忽略这些警告。</p>
 <hr>
 <h2 id="下一步">🎯 下一步<a class="anchor" href="#下一步" aria-label="锚点">#</a></h2>
 <h3 id="1-启动服务">1. 启动服务<a class="anchor" href="#1-启动服务" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># 同时启动后端和前端（推荐开两个终端）
+<pre><code class="language-bash"><span class="hljs-comment"># 同时启动后端和前端（推荐开两个终端）</span>
 
-# 终端 1：后端
-cd services/backend &amp;&amp; npm run dev
+<span class="hljs-comment"># 终端 1：后端</span>
+<span class="hljs-built_in">cd</span> services/backend &amp;&amp; npm run dev
 
-# 终端 2：前端  
-cd apps/ai-frontend &amp;&amp; npm run dev</code></pre>
+<span class="hljs-comment"># 终端 2：前端  </span>
+<span class="hljs-built_in">cd</span> apps/ai-frontend &amp;&amp; npm run dev</code></pre>
 <h3 id="2-访问管理界面">2. 访问管理界面<a class="anchor" href="#2-访问管理界面" aria-label="锚点">#</a></h3>
 <p>浏览器打开：http://localhost:3000</p>
 <h3 id="3-登录系统">3. 登录系统<a class="anchor" href="#3-登录系统" aria-label="锚点">#</a></h3>

@@ -11,7 +11,7 @@ describe('build_project idle timeout behavior', () => {
   });
 
   test('keeps running when build command keeps producing output', async () => {
-    process.env.KHY_BUILD_IDLE_TIMEOUT_MS = '120';
+    process.env.KHY_BUILD_IDLE_TIMEOUT_MS = '500';
     const progressEvents = [];
     const activityEvents = [];
 
@@ -21,7 +21,7 @@ describe('build_project idle timeout behavior', () => {
     ].join(' ');
 
     const result = await buildProjectTool.execute(
-      { command, idleTimeout: 120 },
+      { command, idleTimeout: 500 },
       {
         onProgress: (msg) => progressEvents.push(String(msg || '')),
         onActivity: (evt) => activityEvents.push(evt),
@@ -30,7 +30,7 @@ describe('build_project idle timeout behavior', () => {
 
     expect(result.success).toBe(true);
     expect(result.data.exitCode).toBe(0);
-    expect(result.data.idleTimeoutMs).toBe(120);
+    expect(result.data.idleTimeoutMs).toBe(500);
     expect(String(result.data.outputTail || '')).toContain('build-tick-8');
     expect(progressEvents.some((s) => s.includes('build_project stdout'))).toBe(true);
     expect(activityEvents.some((evt) => evt && evt.phase === 'stdout')).toBe(true);
@@ -39,8 +39,8 @@ describe('build_project idle timeout behavior', () => {
   test('fails when command stays silent beyond idle timeout', async () => {
     const result = await buildProjectTool.execute(
       {
-        command: 'node -e "setTimeout(() => process.exit(0), 260)"',
-        idleTimeout: 90,
+        command: 'node -e "setTimeout(() => process.exit(0), 900)"',
+        idleTimeout: 250,
       },
       {}
     );

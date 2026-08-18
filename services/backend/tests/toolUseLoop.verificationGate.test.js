@@ -26,7 +26,8 @@ function tmpJs() {
 }
 
 function disableHooks() {
-  jest.doMock('../src/cli/hooks/hookSystem', () => ({
+  process.env.KHY_AUDIT_FIX_LOOP = 'false';
+  jest.doMock('../src/services/hooks/hookSystem', () => ({
     isInitialized: () => true,
     init: () => {},
     registry: { count: 0 }, // → _getHookSystem() returns null, no PreToolUse guard
@@ -57,6 +58,7 @@ describe('toolUseLoop hard verification gate', () => {
     jest.clearAllMocks();
     delete process.env.KHY_VERIFY_MAX_ROUNDS;
     delete process.env.KHY_VERIFY_GATE;
+    delete process.env.KHY_AUDIT_FIX_LOOP;
   });
 
   test('FAIL forces another iteration, then PASS lets the turn conclude', async () => {

@@ -63,16 +63,16 @@ contextWindow &lt; 8K     →  budget = 4096</code></pre>
       → convertMessagesAnthropicToOpenAI(messages, hasTools, { useToolRole })</code></pre>
 <p><strong>当 <code>useToolRole: false</code> 时</strong>：</p>
 <p>不再生成：</p>
-<pre><code class="language-json">{ &quot;role&quot;: &quot;tool&quot;, &quot;tool_call_id&quot;: &quot;call_abc&quot;, &quot;content&quot;: &quot;file contents...&quot; }</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;role&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;tool&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;tool_call_id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;call_abc&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;content&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;file contents...&quot;</span> <span class="hljs-punctuation">}</span></code></pre>
 <p>转换器改为生成：</p>
-<pre><code class="language-json">{ &quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;[Tool Result: call_abc]\nfile contents...&quot; }</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;role&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;user&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;content&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;[Tool Result: call_abc]\nfile contents...&quot;</span> <span class="hljs-punctuation">}</span></code></pre>
 <p>并且不再在 assistant 消息上使用 <code>tool_calls</code>：</p>
-<pre><code class="language-json">{ &quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: &quot;[Tool Call: Bash({\&quot;command\&quot;:\&quot;ls\&quot;})]&quot; }</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;role&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;assistant&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;content&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;[Tool Call: Bash({\&quot;command\&quot;:\&quot;ls\&quot;})]&quot;</span> <span class="hljs-punctuation">}</span></code></pre>
 <p><strong>模型规模检测</strong>（位于 <code>ollamaAdapter.js</code>）：</p>
-<pre><code class="language-javascript">// Extract param count from model tag: &quot;qwen2:7b&quot; → 7, &quot;phi3:mini&quot; → null
-const match = model.toLowerCase().match(/:(\d+(?:\.\d+)?)b/);
-const paramB = match ? parseFloat(match[1]) : null;
-const useToolRole = paramB !== null ? paramB &gt;= 7 : true;</code></pre>
+<pre><code class="language-javascript"><span class="hljs-comment">// Extract param count from model tag: &quot;qwen2:7b&quot; → 7, &quot;phi3:mini&quot; → null</span>
+<span class="hljs-keyword">const</span> match = model.<span class="hljs-title function_">toLowerCase</span>().<span class="hljs-title function_">match</span>(<span class="hljs-regexp">/:(\d+(?:\.\d+)?)b/</span>);
+<span class="hljs-keyword">const</span> paramB = match ? <span class="hljs-built_in">parseFloat</span>(match[<span class="hljs-number">1</span>]) : <span class="hljs-literal">null</span>;
+<span class="hljs-keyword">const</span> useToolRole = paramB !== <span class="hljs-literal">null</span> ? paramB &gt;= <span class="hljs-number">7</span> : <span class="hljs-literal">true</span>;</code></pre>
 <p>没有可识别参数标签的模型（如 <code>llama3:latest</code>）默认 <code>useToolRole: true</code>，因为不带规模后缀的热门模型通常都是 7B 及以上。</p>
 <hr>
 <h2 id="修复-4-json-代码块工具调用解析">修复 4：JSON 代码块工具调用解析<a class="anchor" href="#修复-4-json-代码块工具调用解析" aria-label="锚点">#</a></h2>

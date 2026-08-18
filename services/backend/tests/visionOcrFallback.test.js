@@ -189,3 +189,51 @@ test('isDescribeFailFloorEnabled:畸形入参不抛', () => {
   assert.doesNotThrow(() => vof.isDescribeFailFloorEnabled());
   assert.doesNotThrow(() => vof.isDescribeFailFloorEnabled(null));
 });
+
+// ── MCP 已消费图片后的 CLI 文件桥清理 ───────────────────────────────────────
+test('stripConsumedImageBridgeText 清理 Windows/POSIX 临时图片路径和附件标记', () => {
+  const input = [
+    '用户原问题：请描述图片',
+    '【图片附件】共 2 张，请使用 Read 工具读取：',
+    '- C:\\Temp\\khy-cli-img-a1b2\\image-1-deadbeef.png',
+    '- /tmp/khy-cli-img-c3d4/image-2-acde1234.jpg',
+    '普通路径 C:\\work\\image.png 应保留',
+  ].join('\n');
+  const cleaned = vof.stripConsumedImageBridgeText(input);
+
+  assert.match(cleaned, /用户原问题：请描述图片/);
+  assert.match(cleaned, /C:\\work\\image\.png 应保留/);
+  assert.doesNotMatch(cleaned, /【图片附件】|khy-cli-img-/);
+});
+
+test('stripConsumedImageBridgeMessages 只改文本字段并保留消息结构和无关内容', () => {
+  const untouchedBlock = { type: 'image', source: { type: 'base64', data: 'abc' } };
+  const messages = [
+    { role: 'user', content: '读取 C:\\Temp\\khy-cli-img-aa\\image-1-acde.png' },
+    {
+      role: 'assistant',
+      tool_use_id: 'tool-1',
+      content: [
+        { type: 'text', text: '旧路径 /tmp/khy-cli-img-bb/image-2-beef.jpg' },
+        untouchedBlock,
+      ],
+    },
+    { role: 'system', content: '普通 JSON {"file_path":"C:\\\\work\\\\report.json"}' },
+  ];
+  const cleaned = vof.stripConsumedImageBridgeMessages(messages);
+
+  assert.doesNotMatch(cleaned[0].content, /khy-cli-img-/);
+  assert.doesNotMatch(cleaned[1].content[0].text, /khy-cli-img-/);
+  assert.strictEqual(cleaned[1].content[1], untouchedBlock);
+  assert.strictEqual(cleaned[2], messages[2]);
+  assert.match(cleaned[2].content, /report\.json/);
+});
+
+test('buildMcpVisionSuccessNote 使用真实换行并禁止重复 Read', () => {
+  const note = vof.buildMcpVisionSuccessNote({ count: 2 });
+  assert.ok(note.startsWith(vof.MCP_VISION_SUCCESS_MARKER));
+  assert.match(note, /2 张图片/);
+  assert.match(note, /不要再次调用 Read/);
+  assert.strictEqual(note.split('\n').length, 3);
+  assert.doesNotMatch(note, /\\n/);
+});

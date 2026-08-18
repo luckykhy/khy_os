@@ -18,6 +18,7 @@ exports.sessionRecapService = require('./services/sessionRecapService');
 exports.followupSuggestionService = require('./services/followupSuggestionService');
 exports.arenaManager = require('./services/arenaManager');
 exports.lspClient = require('./services/lspClient');
+exports.dbHealthService = require('./services/dbHealthService');
 
 // ── i18n ──
 exports.i18n = require('./i18n');

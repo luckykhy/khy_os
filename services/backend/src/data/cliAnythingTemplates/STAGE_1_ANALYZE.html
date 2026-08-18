@@ -35,25 +35,25 @@
 <ol><li><strong>Read documentation</strong> — scan README, docs/, man pages, <code>--help</code> output</li><li><strong>Identify key workflows</strong> — what does a typical user do with this software?<ul><li>Creation workflow (new project/document/scene)</li><li>Editing workflow (modify, transform, adjust)</li><li>Export workflow (render, compile, save)</li><li>Batch workflow (multiple files, automation)</li></ul></li></ol>
 <ol><li><strong>Map capabilities</strong> — for each workflow, list:<ul><li>Required parameters</li><li>Optional parameters with defaults</li><li>Output types and formats</li><li>Error conditions</li></ul></li></ol>
 <ol><li><strong>Generate <code>&lt;SOFTWARE&gt;.md</code></strong> (SOP document):</li></ol>
-<pre><code class="language-markdown">   # &lt;SOFTWARE&gt; Analysis
+<pre><code class="language-markdown">   # <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">SOFTWARE</span>&gt;</span></span> Analysis
 
    ## Overview
-   &lt;what the software does, primary use case&gt;
+   <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">what</span> <span class="hljs-attr">the</span> <span class="hljs-attr">software</span> <span class="hljs-attr">does</span>, <span class="hljs-attr">primary</span> <span class="hljs-attr">use</span> <span class="hljs-attr">case</span>&gt;</span></span>
 
    ## Key Capabilities
-   &lt;numbered list of what can be controlled&gt;
+   <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">numbered</span> <span class="hljs-attr">list</span> <span class="hljs-attr">of</span> <span class="hljs-attr">what</span> <span class="hljs-attr">can</span> <span class="hljs-attr">be</span> <span class="hljs-attr">controlled</span>&gt;</span></span>
 
    ## Workflows
-   ### 1. &lt;workflow name&gt;
-   - Steps: ...
-   - Parameters: ...
-   - Output: ...
+   ### 1. <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">workflow</span> <span class="hljs-attr">name</span>&gt;</span></span>
+<span class="hljs-bullet">   -</span> Steps: ...
+<span class="hljs-bullet">   -</span> Parameters: ...
+<span class="hljs-bullet">   -</span> Output: ...
 
    ## State Model
-   &lt;what state needs to be tracked between operations&gt;
+   <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">what</span> <span class="hljs-attr">state</span> <span class="hljs-attr">needs</span> <span class="hljs-attr">to</span> <span class="hljs-attr">be</span> <span class="hljs-attr">tracked</span> <span class="hljs-attr">between</span> <span class="hljs-attr">operations</span>&gt;</span></span>
 
    ## Error Patterns
-   &lt;common failure modes and how to detect them&gt;</code></pre>
+   <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">common</span> <span class="hljs-attr">failure</span> <span class="hljs-attr">modes</span> <span class="hljs-attr">and</span> <span class="hljs-attr">how</span> <span class="hljs-attr">to</span> <span class="hljs-attr">detect</span> <span class="hljs-attr">them</span>&gt;</span></span></code></pre>
 <h2 id="output">Output<a class="anchor" href="#output" aria-label="锚点">#</a></h2>
 <ul><li><code>&lt;SOFTWARE&gt;.md</code> — the SOP analysis document</li></ul>
       </article>

@@ -17,10 +17,16 @@ const path = require('path');
 const chalk = require('chalk').default || require('chalk');
 const readline = require('readline');
 
-const { validateManifest } = require('@khy/plugin-sdk');
-const { createMockContext } = require('@khy/plugin-sdk/testing');
+const { validateManifest } = require('../../plugin-loader');
+const { createMockContext } = require('../../plugin-loader/sdkCompat');
 
 const { getDataHome } = require('../../utils/dataHome');
+// Scaffolded dev harnesses proxy to the local backend. The port default lives
+// ONLY in serviceDefaults (Zero Hardcoding) and is interpolated into the
+// generated files at scaffold time — the generated project cannot require it,
+// and a duplicated '3000' would strand every previously scaffolded plugin on a
+// stale port the day the backend default moves.
+const { BACKEND_PORT } = require('../../constants/serviceDefaults');
 const {
   printSuccess,
   printError,
@@ -328,7 +334,7 @@ export default defineConfig({
   server: {
     port: ${8080 + Math.floor(Math.random() * 20)},
     proxy: {
-      '/api': { target: 'http://localhost:' + (process.env.PORT || '3000'), changeOrigin: true },
+      '/api': { target: 'http://localhost:' + (process.env.PORT || '${BACKEND_PORT}'), changeOrigin: true },
     },
   },
 })
@@ -382,7 +388,7 @@ plugin.install({
   pinia,
   addMenuItems(items) { console.log('[Dev] Menus:', items) },
   addAdminTabs() {},
-  host: { apiBaseUrl: 'http://localhost:' + (process.env.PORT || '3000'), websocket: {}, user: {}, request: null },
+  host: { apiBaseUrl: 'http://localhost:' + (process.env.PORT || '${BACKEND_PORT}'), websocket: {}, user: {}, request: null },
   provide(k, v) { app.provide(k, v) },
 })
 

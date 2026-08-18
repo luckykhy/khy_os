@@ -370,7 +370,7 @@ function listWorktrees(cwd) {
         if (current.path) {
           worktrees.push(current);
         }
-        current = { path: line.slice(9) };
+        current = { path: path.normalize(line.slice(9)) };
       } else if (line.startsWith('HEAD ')) {
         current.head = line.slice(5);
       } else if (line.startsWith('branch ')) {
@@ -386,8 +386,10 @@ function listWorktrees(cwd) {
       worktrees.push(current);
     }
 
-    // Filter to only .khy/worktrees/ entries
-    return worktrees.filter((w) => w.path.includes(WORKTREE_DIR_NAME));
+    // Filter to only .khy/worktrees/ entries. Both the parsed path and the
+    // marker must use the host separator after porcelain normalization.
+    const worktreeDirMarker = path.normalize(WORKTREE_DIR_NAME);
+    return worktrees.filter((w) => w.path.includes(worktreeDirMarker));
   } catch {
     return [];
   }

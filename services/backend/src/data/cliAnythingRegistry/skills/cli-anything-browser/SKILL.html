@@ -33,12 +33,12 @@
 <h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
 <h3 id="prerequisites">Prerequisites<a class="anchor" href="#prerequisites" aria-label="锚点">#</a></h3>
 <ol><li><strong>Node.js and npx</strong> (for DOMShell MCP server):</li></ol>
-<pre><code class="language-bash">   # Install Node.js from https://nodejs.org/
+<pre><code class="language-bash">   <span class="hljs-comment"># Install Node.js from https://nodejs.org/</span>
    npx --version</code></pre>
 <ol><li><strong>Chrome/Chromium</strong> with <a href="https://chromewebstore.google.com/detail/domshell-browser-filesy/okcliheamhmijccjknkkplploacoidnp" target="_blank" rel="noopener">DOMShell extension</a>:<ul><li>Install extension in Chrome</li><li>Ensure Chrome is running before using CLI</li></ul></li></ol>
 <ol><li><strong>Python 3.10+</strong></li></ol>
 <h3 id="install-cli">Install CLI<a class="anchor" href="#install-cli" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cd browser/agent-harness
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> browser/agent-harness
 pip install -e .</code></pre>
 <h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
 <h3 id="page-page-navigation"><code>page</code> — Page Navigation<a class="anchor" href="#page-page-navigation" aria-label="锚点">#</a></h3>
@@ -51,33 +51,33 @@ pip install -e .</code></pre>
 <ul><li><code>session status</code> — Show session state</li><li><code>session daemon-start</code> — Start persistent daemon mode</li><li><code>session daemon-stop</code> — Stop daemon mode</li></ul>
 <h2 id="usage-examples">Usage Examples<a class="anchor" href="#usage-examples" aria-label="锚点">#</a></h2>
 <h3 id="basic-navigation">Basic Navigation<a class="anchor" href="#basic-navigation" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Open a page
+<pre><code class="language-bash"><span class="hljs-comment"># Open a page</span>
 cli-anything-browser page open https://example.com
 
-# Explore structure
-cli-anything-browser fs ls /
-cli-anything-browser fs cd /main
-cli-anything-browser fs ls
+<span class="hljs-comment"># Explore structure</span>
+cli-anything-browser fs <span class="hljs-built_in">ls</span> /
+cli-anything-browser fs <span class="hljs-built_in">cd</span> /main
+cli-anything-browser fs <span class="hljs-built_in">ls</span>
 
-# Go back to root
-cli-anything-browser fs cd /</code></pre>
+<span class="hljs-comment"># Go back to root</span>
+cli-anything-browser fs <span class="hljs-built_in">cd</span> /</code></pre>
 <h3 id="search-and-click">Search and Click<a class="anchor" href="#search-and-click" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-browser fs grep &quot;Login&quot;
+<pre><code class="language-bash">cli-anything-browser fs grep <span class="hljs-string">&quot;Login&quot;</span>
 cli-anything-browser act click /main/button[0]</code></pre>
 <h3 id="form-fill">Form Fill<a class="anchor" href="#form-fill" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-browser act type /main/input[0] &quot;user@example.com&quot;
+<pre><code class="language-bash">cli-anything-browser act <span class="hljs-built_in">type</span> /main/input[0] <span class="hljs-string">&quot;user@example.com&quot;</span>
 cli-anything-browser act click /main/button[0]</code></pre>
 <h3 id="json-output">JSON Output<a class="anchor" href="#json-output" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-browser --json fs ls /</code></pre>
+<pre><code class="language-bash">cli-anything-browser --json fs <span class="hljs-built_in">ls</span> /</code></pre>
 <h3 id="daemon-mode-faster-interactive-use">Daemon Mode (Faster Interactive Use)<a class="anchor" href="#daemon-mode-faster-interactive-use" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Start persistent connection
+<pre><code class="language-bash"><span class="hljs-comment"># Start persistent connection</span>
 cli-anything-browser session daemon-start
 
-# Run commands (uses persistent connection)
-cli-anything-browser fs ls /
-cli-anything-browser fs cd /main
+<span class="hljs-comment"># Run commands (uses persistent connection)</span>
+cli-anything-browser fs <span class="hljs-built_in">ls</span> /
+cli-anything-browser fs <span class="hljs-built_in">cd</span> /main
 
-# Stop daemon when done
+<span class="hljs-comment"># Stop daemon when done</span>
 cli-anything-browser session daemon-stop</code></pre>
 <h3 id="interactive-repl">Interactive REPL<a class="anchor" href="#interactive-repl" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-browser</code></pre>
@@ -91,14 +91,14 @@ cli-anything-browser session daemon-stop</code></pre>
 <h2 id="agent-specific-guidance">Agent-Specific Guidance<a class="anchor" href="#agent-specific-guidance" aria-label="锚点">#</a></h2>
 <h3 id="json-output-for-parsing">JSON Output for Parsing<a class="anchor" href="#json-output-for-parsing" aria-label="锚点">#</a></h3>
 <p>All commands support <code>--json</code> flag for machine-readable output:</p>
-<pre><code class="language-bash">cli-anything-browser --json fs ls /</code></pre>
+<pre><code class="language-bash">cli-anything-browser --json fs <span class="hljs-built_in">ls</span> /</code></pre>
 <p>Returns:</p>
-<pre><code class="language-json">{
-  &quot;path&quot;: &quot;/&quot;,
-  &quot;entries&quot;: [
-    {&quot;name&quot;: &quot;main&quot;, &quot;role&quot;: &quot;landmark&quot;, &quot;path&quot;: &quot;/main&quot;}
-  ]
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;path&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;/&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;entries&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+    <span class="hljs-punctuation">{</span><span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;main&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;role&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;landmark&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;path&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;/main&quot;</span><span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">]</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <h3 id="error-handling">Error Handling<a class="anchor" href="#error-handling" aria-label="锚点">#</a></h3>
 <p>The CLI provides clear error messages for common issues:</p>
 <ul><li><strong>npx not found</strong>: Install Node.js from https://nodejs.org/</li><li><strong>DOMShell not found</strong>: Run <code>npx @apireno/domshell --version</code></li><li><strong>MCP call failed</strong>: Install DOMShell Chrome extension</li></ul>
@@ -121,8 +121,8 @@ cli-anything-browser session daemon-stop</code></pre>
 <ol><li>Using the <code>--json</code> flag for structured output that's easier to parse safely</li><li>Sanitizing or filtering DOM content before including it in prompts</li><li>Limiting navigation to trusted domains</li></ol>
 <h3 id="private-network-access">Private Network Access<a class="anchor" href="#private-network-access" aria-label="锚点">#</a></h3>
 <p>By default, the browser can access localhost and private networks (192.168.x.x, 10.x.x.x, etc.). To block:</p>
-<pre><code class="language-bash">export CLI_ANYTHING_BROWSER_BLOCK_PRIVATE=true
-cli-anything-browser page open http://localhost:8080  # Will be blocked</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">export</span> CLI_ANYTHING_BROWSER_BLOCK_PRIVATE=<span class="hljs-literal">true</span>
+cli-anything-browser page open http://localhost:8080  <span class="hljs-comment"># Will be blocked</span></code></pre>
 <h3 id="session-isolation">Session Isolation<a class="anchor" href="#session-isolation" aria-label="锚点">#</a></h3>
 <p>Multiple browser sessions share the same Chrome instance. Cookies and authentication state may persist across sessions. For sensitive operations, consider:</p>
 <ol><li>Using Chrome's guest mode or incognito</li><li>Clearing cookies between sessions</li><li>Using separate Chrome profiles for different security contexts</li></ol>

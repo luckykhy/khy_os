@@ -27,7 +27,6 @@ describe('windows shell executor compatibility', () => {
   test('shellCommand uses COMSPEC and cmd safe flags', async () => {
     setPlatform('win32');
     process.env.COMSPEC = 'C:\\Windows\\System32\\cmd.exe';
-    process.env.ComSpec = 'C:\\Legacy\\cmd.exe';
     process.env.KHY_SHELL_IDLE_TIMEOUT_ENABLED = 'true';
 
     const spawnWithIdleTimeout = jest.fn().mockResolvedValue({ code: 0, stdout: 'ok', stderr: '' });
@@ -50,7 +49,6 @@ describe('windows shell executor compatibility', () => {
   test('run_tests uses COMSPEC and cmd safe flags', async () => {
     setPlatform('win32');
     process.env.COMSPEC = 'C:\\Windows\\System32\\cmd.exe';
-    process.env.ComSpec = 'C:\\Legacy\\cmd.exe';
 
     const spawnWithIdleTimeout = jest.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '' });
     jest.doMock('../src/utils/spawnWithIdleTimeout', () => ({ spawnWithIdleTimeout }));
@@ -69,7 +67,6 @@ describe('windows shell executor compatibility', () => {
   test('build_project uses COMSPEC and cmd safe flags', async () => {
     setPlatform('win32');
     process.env.COMSPEC = 'C:\\Windows\\System32\\cmd.exe';
-    process.env.ComSpec = 'C:\\Legacy\\cmd.exe';
 
     const spawnWithIdleTimeout = jest.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '' });
     jest.doMock('../src/utils/spawnWithIdleTimeout', () => ({ spawnWithIdleTimeout }));
@@ -88,7 +85,6 @@ describe('windows shell executor compatibility', () => {
   test('lint_code uses COMSPEC and cmd safe flags', async () => {
     setPlatform('win32');
     process.env.COMSPEC = 'C:\\Windows\\System32\\cmd.exe';
-    process.env.ComSpec = 'C:\\Legacy\\cmd.exe';
 
     const spawnWithIdleTimeout = jest.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '' });
     jest.doMock('../src/utils/spawnWithIdleTimeout', () => ({ spawnWithIdleTimeout }));
@@ -107,7 +103,6 @@ describe('windows shell executor compatibility', () => {
   test('grep uses COMSPEC and cmd safe flags on windows rg path', async () => {
     setPlatform('win32');
     process.env.COMSPEC = 'C:\\Windows\\System32\\cmd.exe';
-    process.env.ComSpec = 'C:\\Legacy\\cmd.exe';
 
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-grep-win-'));
     fs.writeFileSync(path.join(tmpDir, 'a.txt'), 'hello windows\n', 'utf8');

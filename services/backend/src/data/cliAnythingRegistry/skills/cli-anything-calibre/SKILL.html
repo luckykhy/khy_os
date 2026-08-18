@@ -35,35 +35,35 @@
 <pre><code class="language-bash">pip install git+https://github.com/HKUDS/CLI-Anything.git#subdirectory=calibre/agent-harness</code></pre>
 <p><strong>Prerequisites:</strong></p>
 <ul><li>Python 3.10+</li><li>Calibre must be installed on your system (hard dependency)</li></ul>
-<pre><code class="language-bash"># Debian/Ubuntu
-sudo apt-get install calibre
+<pre><code class="language-bash"><span class="hljs-comment"># Debian/Ubuntu</span>
+<span class="hljs-built_in">sudo</span> apt-get install calibre
 
-# macOS
+<span class="hljs-comment"># macOS</span>
 brew install --cask calibre
 
-# Verify tools are in PATH
-which calibredb
-which ebook-convert
-which ebook-meta</code></pre>
+<span class="hljs-comment"># Verify tools are in PATH</span>
+<span class="hljs-built_in">which</span> calibredb
+<span class="hljs-built_in">which</span> ebook-convert
+<span class="hljs-built_in">which</span> ebook-meta</code></pre>
 <h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
 <h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Show help
-cli-anything-calibre --help
+<pre><code class="language-bash"><span class="hljs-comment"># Show help</span>
+cli-anything-calibre --<span class="hljs-built_in">help</span>
 
-# Start interactive REPL mode
+<span class="hljs-comment"># Start interactive REPL mode</span>
 cli-anything-calibre
 
-# Connect to a Calibre library
+<span class="hljs-comment"># Connect to a Calibre library</span>
 cli-anything-calibre library connect ~/Calibre\ Library
 
-# Run with JSON output (for agent consumption)
+<span class="hljs-comment"># Run with JSON output (for agent consumption)</span>
 cli-anything-calibre --json books list</code></pre>
 <h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
 <p>When invoked without a subcommand, the CLI enters an interactive REPL session:</p>
 <pre><code class="language-bash">cli-anything-calibre
-# Enter commands interactively with tab-completion and history
-# Use 'help' to see available commands
-# Use 'quit' or 'exit' to leave</code></pre>
+<span class="hljs-comment"># Enter commands interactively with tab-completion and history</span>
+<span class="hljs-comment"># Use &#x27;help&#x27; to see available commands</span>
+<span class="hljs-comment"># Use &#x27;quit&#x27; or &#x27;exit&#x27; to leave</span></code></pre>
 <h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
 <h3 id="library">Library<a class="anchor" href="#library" aria-label="锚点">#</a></h3>
 <p>Library management commands.</p>
@@ -88,20 +88,20 @@ cli-anything-calibre --json books list</code></pre>
 <p>Connect to your Calibre library and list books.</p>
 <pre><code class="language-bash">cli-anything-calibre library connect ~/Calibre\ Library
 cli-anything-calibre books list
-# Or with JSON output
-cli-anything-calibre --json books list --search &quot;author:asimov&quot;</code></pre>
+<span class="hljs-comment"># Or with JSON output</span>
+cli-anything-calibre --json books list --search <span class="hljs-string">&quot;author:asimov&quot;</span></code></pre>
 <h3 id="search-and-filter">Search and Filter<a class="anchor" href="#search-and-filter" aria-label="锚点">#</a></h3>
 <p>Search books using Calibre query language.</p>
-<pre><code class="language-bash">cli-anything-calibre books search &quot;title:Foundation&quot;
-cli-anything-calibre books search &quot;author:asimov and tags:scifi&quot;
-cli-anything-calibre books search &quot;rating:&gt;3&quot;</code></pre>
+<pre><code class="language-bash">cli-anything-calibre books search <span class="hljs-string">&quot;title:Foundation&quot;</span>
+cli-anything-calibre books search <span class="hljs-string">&quot;author:asimov and tags:scifi&quot;</span>
+cli-anything-calibre books search <span class="hljs-string">&quot;rating:&gt;3&quot;</span></code></pre>
 <h3 id="metadata-editing">Metadata Editing<a class="anchor" href="#metadata-editing" aria-label="锚点">#</a></h3>
 <p>Set metadata fields on books.</p>
-<pre><code class="language-bash">cli-anything-calibre meta set 42 title &quot;New Title&quot;
-cli-anything-calibre meta set 42 series &quot;Foundation&quot;
-cli-anything-calibre meta set 42 series_index 1
-cli-anything-calibre meta set 42 tags &quot;scifi,classic&quot;
-cli-anything-calibre meta set 42 rating 5</code></pre>
+<pre><code class="language-bash">cli-anything-calibre meta <span class="hljs-built_in">set</span> 42 title <span class="hljs-string">&quot;New Title&quot;</span>
+cli-anything-calibre meta <span class="hljs-built_in">set</span> 42 series <span class="hljs-string">&quot;Foundation&quot;</span>
+cli-anything-calibre meta <span class="hljs-built_in">set</span> 42 series_index 1
+cli-anything-calibre meta <span class="hljs-built_in">set</span> 42 tags <span class="hljs-string">&quot;scifi,classic&quot;</span>
+cli-anything-calibre meta <span class="hljs-built_in">set</span> 42 rating 5</code></pre>
 <h3 id="format-conversion">Format Conversion<a class="anchor" href="#format-conversion" aria-label="锚点">#</a></h3>
 <p>Convert between e-book formats.</p>
 <pre><code class="language-bash">cli-anything-calibre formats convert 42 EPUB MOBI
@@ -133,10 +133,10 @@ author:asimov and tags:scifi     # Boolean AND</code></pre>
 <h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
 <p>All commands support dual output modes:</p>
 <ul><li><strong>Human-readable</strong> (default): Tables, colors, formatted text</li><li><strong>Machine-readable</strong> (<code>--json</code> flag): Structured JSON for agent consumption</li></ul>
-<pre><code class="language-bash"># Human output
+<pre><code class="language-bash"><span class="hljs-comment"># Human output</span>
 cli-anything-calibre books list
 
-# JSON output for agents
+<span class="hljs-comment"># JSON output for agents</span>
 cli-anything-calibre --json books list</code></pre>
 <h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
 <p>When using this CLI programmatically:</p>

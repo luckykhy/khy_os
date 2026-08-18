@@ -1034,3 +1034,21 @@ try {
 } catch {
   /* port unavailable — services degrade to no-op */
 }
+
+// Same seam for compaction *notices* (skip / degrade / failure lines). Reuses the
+// existing formatters instead of introducing another printer, so notice lines are
+// visually identical to every other status line in the CLI.
+try {
+  const fmt = require('./formatters');
+  const BY_LEVEL = {
+    error: fmt.printError,
+    warn: fmt.printWarn,
+    success: fmt.printSuccess,
+    info: fmt.printInfo,
+  };
+  require('../services/compactionUiPort').registerCompactionNoticeRenderer(({ level, text }) => {
+    (BY_LEVEL[level] || fmt.printInfo)(text);
+  });
+} catch {
+  /* port or formatters unavailable — services fall back to their injected logger */
+}

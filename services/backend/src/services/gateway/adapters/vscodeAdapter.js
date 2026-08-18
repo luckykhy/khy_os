@@ -356,7 +356,11 @@ async function generate(prompt, options = {}) {
         model: parsed.model || model,
         toolUseBlocks: parsed.toolUseBlocks,
         stopReason: parsed.stopReason,
-        tokenUsage: parsed.usage,
+        tokenUsage: {
+          inputTokens: Number(parsed.usage?.prompt_tokens || 0),
+          outputTokens: Number(parsed.usage?.completion_tokens || 0),
+          totalTokens: Number(parsed.usage?.total_tokens || 0),
+        },
         thinking: parsed.thinking,
         attempts: [{ provider: 'VSCode', success: true }],
       });

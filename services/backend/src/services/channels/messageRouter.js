@@ -321,6 +321,38 @@ function _bootstrapChannels(router) {
   } catch (err) {
     log.warn(`ilink channel bootstrap failed: ${err.message}`);
   }
+
+  // IM 长连接适配器(adapters/im):门 KHY_IM_ADAPTERS,未设置 = 零渠道且**渠道模块零加载**
+  // (故这里的 require 只碰注册表本身,不会把飞书/ws 拉进来)。注册名带 `im:` 前缀,与
+  // webhook 版 feishuChannel 并存互不覆盖。长连接是主动收信的通道:没人调它就永远不会
+  // 开始收消息,所以这里和 ilink 一样必须 eager 注册 + eager connect。
+  // fail-soft:单渠道异常只 warn;首连失败由适配器自己退避重连,不影响启动。
+  try {
+    const imRegistry = require('../../adapters/im/adapterRegistry');
+    const { adapters } = imRegistry.createAdapters({ env: process.env, logger: log });
+    if (adapters.length) {
+      const { ImAdapterChannel } = require('./imAdapterChannel');
+      let registered = 0;
+      for (const adapter of adapters) {
+        try {
+          const ch = new ImAdapterChannel({ adapter });
+          router.registerChannel(ch);
+          registered += 1;
+          ch.connect().catch((err) =>
+            log.warn(`IM 渠道 ${ch.name} 首连未成功(后台按指数退避重连中):${err.message}`)
+          );
+          log.info(`IM 长连接通道已注册:${ch.name}(${adapter.describeEndpoint()})`);
+        } catch (err) {
+          log.warn(`IM 渠道 ${adapter && adapter.channel} bootstrap failed: ${err.message}`);
+        }
+      }
+      if (registered > 0) {
+        wireAiReply();
+      }
+    }
+  } catch (err) {
+    log.warn(`IM adapter channels bootstrap failed: ${err.message}`);
+  }
 }
 
 module.exports = { MessageRouter, getMessageRouter, _bootstrapChannels };

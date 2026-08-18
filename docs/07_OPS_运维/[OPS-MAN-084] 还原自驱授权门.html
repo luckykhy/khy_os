@@ -32,8 +32,8 @@
 <ol><li>三面镜子 <code>restore-check</code> / <code>verify-install</code> / <code>hydration-doctor</code>（<strong>看</strong>）；</li><li><code>restore-plan</code>（OPS-MAN-075）把三者合成为有序还原方案（<strong>排序</strong>）；</li><li><code>restore-conflicts</code>（OPS-MAN-076）检测三镜子是否互相矛盾（<strong>矛盾</strong>）；</li><li><code>restore-resolve</code>（OPS-MAN-079）把矛盾升级成有序恢复链，标出何处交人（<strong>走出</strong>）；</li><li><code>restore-converge</code>（OPS-MAN-082）agent 跑完一步后判进展、防死循环（<strong>收敛</strong>）；</li><li><code>restore-authorize</code>（本文件）在<strong>开跑任何 move 之前</strong>判定「该不该在这台机器上</li></ol>
 <p>自动动手」（<strong>授权</strong>）。</p>
 <p>前五层回答的是执行<strong>过程</strong>的问题（怎么做、做完了没）。<code>converge</code> 关的是循环的<strong>尾</strong>；<br>本层关的是循环的<strong>头</strong>——<strong>「我到底该不该自动开跑？」</strong> 这是安全 agent 的「should I?」<br>先于「how」：动手之前，先确认这一步不会擅自覆盖用户既有可用数据、链里没藏危险动作、<br>该交人时能交到人。</p>
-<pre><code class="language-bash">node scripts/restore-authorize.js --json   # 自驱 agent 动手前先读这个
-# authorized → 自驱整条链；ask-first → 每步问人；forbidden → 整条交人</code></pre>
+<pre><code class="language-bash">node scripts/restore-authorize.js --json   <span class="hljs-comment"># 自驱 agent 动手前先读这个</span>
+<span class="hljs-comment"># authorized → 自驱整条链；ask-first → 每步问人；forbidden → 整条交人</span></code></pre>
 <h2 id="三档授权与降级逻辑">三档授权与降级逻辑<a class="anchor" href="#三档授权与降级逻辑" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>授权</th><th>触发</th><th>含义</th></tr></thead><tbody><tr><td><code>authorized</code></td><td>链干净·无覆盖风险·无危险动作</td><td>agent 可自驱整条还原链</td></tr><tr><td><code>ask-first</code></td><td>有覆盖风险 / 链要交人，<strong>且有人在场</strong></td><td>每步前向人确认，不得静默自驱</td></tr><tr><td><code>forbidden</code></td><td>含危险动作；或有覆盖风险却<strong>问不到人</strong></td><td>不得自驱，整条交人</td></tr></tbody></table>
 <h2 id="判定优先级-安全优先-宁可不动不可擅动">判定优先级（安全优先，宁可不动不可擅动）<a class="anchor" href="#判定优先级-安全优先-宁可不动不可擅动" aria-label="锚点">#</a></h2>

@@ -38,21 +38,21 @@
 <p>still render through the built-in Pillow path when GIMP is unavailable or when<br>  deferred <code>draw</code> operations are present</p>
 <h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
 <h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Show help
-cli-anything-gimp --help
+<pre><code class="language-bash"><span class="hljs-comment"># Show help</span>
+cli-anything-gimp --<span class="hljs-built_in">help</span>
 
-# Start interactive REPL mode
+<span class="hljs-comment"># Start interactive REPL mode</span>
 cli-anything-gimp
 
-# Create a new project
+<span class="hljs-comment"># Create a new project</span>
 cli-anything-gimp project new -o project.json
 
-# Run with JSON output (for agent consumption)
+<span class="hljs-comment"># Run with JSON output (for agent consumption)</span>
 cli-anything-gimp --json project info -p project.json</code></pre>
 <h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
 <p>When invoked without a subcommand, the CLI enters an interactive REPL session:</p>
 <pre><code class="language-bash">cli-anything-gimp
-# Enter commands interactively with tab-completion and history</code></pre>
+<span class="hljs-comment"># Enter commands interactively with tab-completion and history</span></code></pre>
 <h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
 <h3 id="project">Project<a class="anchor" href="#project" aria-label="锚点">#</a></h3>
 <p>Project management commands.</p>
@@ -82,23 +82,23 @@ cli-anything-gimp --json project info -p project.json</code></pre>
 <h3 id="create-a-new-project">Create a New Project<a class="anchor" href="#create-a-new-project" aria-label="锚点">#</a></h3>
 <p>Create a new gimp project file.</p>
 <pre><code class="language-bash">cli-anything-gimp project new -o myproject.json
-# Or with JSON output for programmatic use
+<span class="hljs-comment"># Or with JSON output for programmatic use</span>
 cli-anything-gimp --json project new -o myproject.json</code></pre>
 <h3 id="interactive-repl-session">Interactive REPL Session<a class="anchor" href="#interactive-repl-session" aria-label="锚点">#</a></h3>
 <p>Start an interactive session with undo/redo support.</p>
 <pre><code class="language-bash">cli-anything-gimp
-# Enter commands interactively
-# Use 'help' to see available commands
-# Use 'undo' and 'redo' for history navigation</code></pre>
+<span class="hljs-comment"># Enter commands interactively</span>
+<span class="hljs-comment"># Use &#x27;help&#x27; to see available commands</span>
+<span class="hljs-comment"># Use &#x27;undo&#x27; and &#x27;redo&#x27; for history navigation</span></code></pre>
 <h3 id="export-project">Export Project<a class="anchor" href="#export-project" aria-label="锚点">#</a></h3>
 <p>Export the project to a final output format.</p>
-<pre><code class="language-bash">cli-anything-gimp --project myproject.json export render output.png --overwrite</code></pre>
+<pre><code class="language-bash">cli-anything-gimp --project myproject.json <span class="hljs-built_in">export</span> render output.png --overwrite</code></pre>
 <h3 id="layered-composition-workflow">Layered Composition Workflow<a class="anchor" href="#layered-composition-workflow" aria-label="锚点">#</a></h3>
 <p>For overlay-heavy compositions:</p>
-<pre><code class="language-bash">cli-anything-gimp --project poster.gimp-cli.json layer set 0 offset_x -48
-cli-anything-gimp --project poster.gimp-cli.json layer set 0 offset_y 24
-cli-anything-gimp --project poster.gimp-cli.json draw text --layer 0 --text &quot;Launch Night&quot; --x 96 --y 120 --size 72 --color &quot;#f6f1e8&quot;
-cli-anything-gimp --project poster.gimp-cli.json export render output.png --overwrite</code></pre>
+<pre><code class="language-bash">cli-anything-gimp --project poster.gimp-cli.json layer <span class="hljs-built_in">set</span> 0 offset_x -48
+cli-anything-gimp --project poster.gimp-cli.json layer <span class="hljs-built_in">set</span> 0 offset_y 24
+cli-anything-gimp --project poster.gimp-cli.json draw text --layer 0 --text <span class="hljs-string">&quot;Launch Night&quot;</span> --x 96 --y 120 --size 72 --color <span class="hljs-string">&quot;#f6f1e8&quot;</span>
+cli-anything-gimp --project poster.gimp-cli.json <span class="hljs-built_in">export</span> render output.png --overwrite</code></pre>
 <p>Notes:</p>
 <ul><li><code>layer set</code> now accepts negative <code>offset_x</code> and <code>offset_y</code> values in both command mode and REPL mode.</li><li><code>draw text</code> and <code>draw rect</code> are render-time operations. Treat the exported image, not only the project JSON, as the thing to review.</li><li>For projects with deferred draw ops, expect the Pillow render path to be the stable default even if GIMP is installed.</li></ul>
 <h2 id="state-management">State Management<a class="anchor" href="#state-management" aria-label="锚点">#</a></h2>
@@ -107,10 +107,10 @@ cli-anything-gimp --project poster.gimp-cli.json export render output.png --over
 <h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
 <p>All commands support dual output modes:</p>
 <ul><li><strong>Human-readable</strong> (default): Tables, colors, formatted text</li><li><strong>Machine-readable</strong> (<code>--json</code> flag): Structured JSON for agent consumption</li></ul>
-<pre><code class="language-bash"># Human output
+<pre><code class="language-bash"><span class="hljs-comment"># Human output</span>
 cli-anything-gimp project info -p project.json
 
-# JSON output for agents
+<span class="hljs-comment"># JSON output for agents</span>
 cli-anything-gimp --json project info -p project.json</code></pre>
 <h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
 <p>When using this CLI programmatically:</p>

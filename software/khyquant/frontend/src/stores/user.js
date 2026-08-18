@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { hasAuthToken } from '@khy/ui-shared/auth/state'
+import { normalizeToken } from '@khy/ui-shared/auth/token'
 import { login, register, getCurrentUser, logout as logoutAPI } from '@/api/auth'
 import {
   loginLocalUser,
@@ -17,21 +19,6 @@ import {
 } from '@/utils/connectionMode'
 
 export const useUserStore = defineStore('user', () => {
-  const normalizeToken = (rawToken) => {
-    if (!rawToken) return ''
-
-    let tokenValue = rawToken
-    if (typeof tokenValue === 'object') {
-      tokenValue = tokenValue.token || tokenValue.value || tokenValue.data?.token || ''
-    }
-
-    if (typeof tokenValue !== 'string') {
-      return ''
-    }
-
-    return tokenValue.replace(/^Bearer\s+/i, '').trim()
-  }
-
   const user = ref(null)
   const token = ref(normalizeToken(localStorage.getItem('token') || ''))
   const connectionMode = ref(getConnectionMode())
@@ -39,7 +26,7 @@ export const useUserStore = defineStore('user', () => {
   const logoutInProgress = ref(false)
 
   const isAuthenticated = () => {
-    return !!token.value
+    return hasAuthToken(token.value)
   }
 
   const setUser = (userData) => {

@@ -51,7 +51,7 @@
 <h3 id="1-拉取或-cherry-pick-这些确切的文件">1. 拉取或 cherry-pick 这些确切的文件<a class="anchor" href="#1-拉取或-cherry-pick-这些确切的文件" aria-label="锚点">#</a></h3>
 <ul><li><code>backend/src/services/toolUseLoop.js</code></li><li><code>backend/src/services/claudeCompat.js</code></li><li><code>backend/tests/toolUseLoop.symbolParsingRegression.test.js</code></li></ul>
 <h3 id="2-在-linux-上运行针对性回归测试">2. 在 Linux 上运行针对性回归测试<a class="anchor" href="#2-在-linux-上运行针对性回归测试" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">npm --prefix backend test -- backend/tests/toolUseLoop.symbolParsingRegression.test.js</code></pre>
+<pre><code class="language-bash">npm --prefix backend <span class="hljs-built_in">test</span> -- backend/tests/toolUseLoop.symbolParsingRegression.test.js</code></pre>
 <h3 id="3-可选的运行时健全性检查-cli">3. 可选的运行时健全性检查（CLI）<a class="anchor" href="#3-可选的运行时健全性检查-cli" aria-label="锚点">#</a></h3>
 <ul><li>用于验证的提示词模式：<ul><li>&quot;你真的具有工具调用能力吗&quot;</li><li>要求演示一次文件搜索。</li></ul></li><li>通过标准：<ul><li>带符号前缀的行应导致真正的工具执行和最终回复，而不是无尽的队列重放。</li></ul></li></ul>
 <h2 id="推迟的事项-今晚未完成">推迟的事项（今晚未完成）<a class="anchor" href="#推迟的事项-今晚未完成" aria-label="锚点">#</a></h2>

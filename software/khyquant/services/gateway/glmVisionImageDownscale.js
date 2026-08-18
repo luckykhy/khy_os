@@ -63,7 +63,7 @@ const DOWNSCALE_TIMEOUT_MS = 15000;
  * @param {boolean} [dflt]
  */
 // 收敛到 utils/onValueOr 单一真源(逐字节委托,调用点不变)
-const _envOn = require('../../utils/onValueOr');
+const _envOn = require('../../../../services/backend/src/utils/onValueOr');
 
 /**
  * 「统一归一化所有输入图」门 KHY_GLM_VISION_NORMALIZE_ALL(默认开)。
@@ -354,7 +354,7 @@ function downscaleGlmVisionImages(model, images, env = process.env) {
  * @returns {{base64: string, mimeType: string}|null}
  */
 function _downscaleOneBase64(base64, env = process.env) {
-  const { probeImageMetadata } = require('../imageMetadataProbe');
+  const { probeImageMetadata } = require('../../../../services/backend/src/services/imageMetadataProbe');
   const buf = Buffer.from(base64, 'base64');
   if (buf.length < 64) return null;
 

@@ -59,32 +59,32 @@
 <p>单一真源：<code>platform/khy_platform/app_protocol.py</code>。</p>
 <p>底座通过两路来源发现应用，按 <code>name</code> 去重（entry_points 优先）：</p>
 <ol><li><strong>entry_points</strong>（推荐，最权威）——应用在自身 <code>pyproject.toml</code> 声明：</li></ol>
-<pre><code class="language-toml">   [project.entry-points.&quot;khyos.apps&quot;]
-   khyquant = &quot;khy_quant.app:create_app&quot;</code></pre>
+<pre><code class="language-toml">   <span class="hljs-section">[project.entry-points.&quot;khyos.apps&quot;]</span>
+   <span class="hljs-attr">khyquant</span> = <span class="hljs-string">&quot;khy_quant.app:create_app&quot;</span></code></pre>
 <ol><li><strong>注册表目录扫描</strong>——清单 JSON 落在底座归属的 <code>~/.khyos/apps/&lt;name&gt;.json</code></li></ol>
 <p>（兼容历史位置 <code>~/.khyquant/apps/</code>）。清单 schema 见 <code>AppManifest</code>：</p>
-<pre><code class="language-json">   {
-     &quot;name&quot;: &quot;khyquant&quot;,
-     &quot;version&quot;: &quot;0.1.78&quot;,
-     &quot;description&quot;: &quot;量化交易系统&quot;,
-     &quot;commands&quot;: [&quot;khyquant&quot;, &quot;quant&quot;],
-     &quot;entry&quot;: &quot;/abs/path/to/server.js&quot;,
-     &quot;source&quot;: &quot;registry&quot;
-   }</code></pre>
+<pre><code class="language-json">   <span class="hljs-punctuation">{</span>
+     <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;khyquant&quot;</span><span class="hljs-punctuation">,</span>
+     <span class="hljs-attr">&quot;version&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;0.1.78&quot;</span><span class="hljs-punctuation">,</span>
+     <span class="hljs-attr">&quot;description&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;量化交易系统&quot;</span><span class="hljs-punctuation">,</span>
+     <span class="hljs-attr">&quot;commands&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;khyquant&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;quant&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+     <span class="hljs-attr">&quot;entry&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;/abs/path/to/server.js&quot;</span><span class="hljs-punctuation">,</span>
+     <span class="hljs-attr">&quot;source&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;registry&quot;</span>
+   <span class="hljs-punctuation">}</span></code></pre>
 <p>查看已发现应用：<code>khy apps</code>（或 <code>khy apps --json</code>）。</p>
 <h2 id="三-应用生命周期协议-应用实现">三、应用生命周期协议（应用实现）<a class="anchor" href="#三-应用生命周期协议-应用实现" aria-label="锚点">#</a></h2>
 <p>应用应实现 <code>app_protocol.KhyApp</code> 基类，声明双模初始化入口：</p>
-<pre><code class="language-python">from khy_platform.app_protocol import KhyApp, EcoContext
+<pre><code class="language-python"><span class="hljs-keyword">from</span> khy_platform.app_protocol <span class="hljs-keyword">import</span> KhyApp, EcoContext
 
-class KhyQuant(KhyApp):
-    name = &quot;khyquant&quot;
-    version = &quot;0.1.78&quot;
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">KhyQuant</span>(<span class="hljs-title class_ inherited__">KhyApp</span>):
+    name = <span class="hljs-string">&quot;khyquant&quot;</span>
+    version = <span class="hljs-string">&quot;0.1.78&quot;</span>
 
-    def standalone_init(self) -&gt; None:
-        ...  # 独立模式：自建日志/配置/数据目录，提供降级体验
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">standalone_init</span>(<span class="hljs-params">self</span>) -&gt; <span class="hljs-literal">None</span>:
+        ...  <span class="hljs-comment"># 独立模式：自建日志/配置/数据目录，提供降级体验</span>
 
-    def eco_init(self, ctx: EcoContext) -&gt; None:
-        ...  # 生态模式：接入底座注入的上下文与生命周期</code></pre>
+    <span class="hljs-keyword">def</span> <span class="hljs-title function_">eco_init</span>(<span class="hljs-params">self, ctx: EcoContext</span>) -&gt; <span class="hljs-literal">None</span>:
+        ...  <span class="hljs-comment"># 生态模式：接入底座注入的上下文与生命周期</span></code></pre>
 <h2 id="四-双模运行标准-所有应用必须遵守">四、双模运行标准（所有应用必须遵守）<a class="anchor" href="#四-双模运行标准-所有应用必须遵守" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>模式</th><th>触发</th><th>初始化</th></tr></thead><tbody><tr><td><strong>独立</strong> <code>standalone</code></td><td>默认；或 <code>KHYOS_ECO_MODE=0</code></td><td>应用自备日志/配置/数据目录</td></tr><tr><td><strong>生态</strong> <code>eco</code></td><td><code>KHYOS_ECO_MODE=1</code>；或检测到底座 <code>app_protocol</code> 可导入</td><td>接入底座上下文与生命周期</td></tr></tbody></table>
 <p>环境感知由应用入口在启动时完成（参考 <code>khy_quant/cli.py:_detect_mode()</code>），<br>并经环境变量 <code>KHYQUANT_MODE</code> / <code>KHYQUANT_HOME</code> 下传给运行时（Node 后端）。</p>

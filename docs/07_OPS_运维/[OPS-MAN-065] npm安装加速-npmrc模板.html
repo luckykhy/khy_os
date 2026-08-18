@@ -29,18 +29,18 @@
 <p>面向已通过 npm 渠道安装 <code>@khy-os/khy-os</code> 的用户。国内网络直连<br><code>registry.npmjs.org</code> 常常很慢，可用镜像加速下载，同时仍从官方 registry<br>拉取 <code>@khy-os</code> 作用域包（镜像同步有延迟，作用域包固定走官方最稳）。</p>
 <h2 id="用法">用法<a class="anchor" href="#用法" aria-label="锚点">#</a></h2>
 <p>把下面内容保存为用户目录下的 <code>~/.npmrc</code>（Windows 为<br><code>C:\Users\&lt;你&gt;\.npmrc</code>）。已有 <code>~/.npmrc</code> 的话，追加这几行即可。</p>
-<pre><code class="language-ini"># 默认走国内镜像加速普通依赖下载
-registry=https://registry.npmmirror.com/
+<pre><code class="language-ini"><span class="hljs-comment"># 默认走国内镜像加速普通依赖下载</span>
+<span class="hljs-attr">registry</span>=https://registry.npmmirror.com/
 
-# @khy-os 作用域固定走官方 registry（镜像同步有延迟，保证拿到最新版）
-@khy-os:registry=https://registry.npmjs.org/</code></pre>
+<span class="hljs-comment"># @khy-os 作用域固定走官方 registry（镜像同步有延迟，保证拿到最新版）</span>
+@khy-os:<span class="hljs-attr">registry</span>=https://registry.npmjs.org/</code></pre>
 <p>保存后安装/升级：</p>
 <pre><code class="language-bash">npm install -g @khy-os/khy-os
-# 或升级
+<span class="hljs-comment"># 或升级</span>
 npm update -g @khy-os/khy-os</code></pre>
 <h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">npm config get registry            # 应为 https://registry.npmmirror.com/
-npm view @khy-os/khy-os version    # 应能取到最新版本号
+<pre><code class="language-bash">npm config get registry            <span class="hljs-comment"># 应为 https://registry.npmmirror.com/</span>
+npm view @khy-os/khy-os version    <span class="hljs-comment"># 应能取到最新版本号</span>
 khy --version</code></pre>
 <h2 id="说明">说明<a class="anchor" href="#说明" aria-label="锚点">#</a></h2>
 <ul><li>这份 <code>~/.npmrc</code> 只影响<strong>下载来源</strong>，不含任何令牌，可放心保存。</li><li>发布方 <code>.npmrc</code>（仓库内 <code>packaging/npm/.npmrc</code>）与本模板无关，令牌只在</li></ul>

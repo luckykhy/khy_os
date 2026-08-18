@@ -1106,10 +1106,16 @@ async function chat(userMessage, opts = {}) {
   try {
     const changeWatch = require('../services/changeWatchService');
     if (changeWatch.isWatchEnabled(process.env)) {
-      try {
-        await changeWatch.checkOnce();
-      } catch {
-        /* detect best-effort */
+      // 轻量turn(招呼/笑话/自我介绍)跳过**新一轮侦测**:checkOnce 实测每轮 ~800ms
+      // (spawnSync git ×3 + 脏树逐文件 spawn node --check),对一句「你好」是纯开销。
+      // 注意只跳过侦测,不跳过反馈——下面的 consumePendingInjection 照常读盘,daemon 或
+      // 上一轮已落盘的判定仍会注入,所以「khy 被改动时不一声不吭」在招呼轮同样成立。
+      if (!lightweightConversation) {
+        try {
+          await changeWatch.checkOnce();
+        } catch {
+          /* detect best-effort */
+        }
       }
       // 内部消费者通道:与原生 PrePrompt 钩子共用 'khy-internal' ID,同一轮不重复注入;
       // 外部 AI 工具走各自 consumerId(见 `khy verdict emit`),与此互不抢占。
@@ -1451,6 +1457,8 @@ async function chat(userMessage, opts = {}) {
     preferredModel: requestPreferredModel,
     preferredStrict: requestPreferredStrict,
     taskScale: requestTaskScale,
+    // 轻量对话标记 → aiMessageBuilder 据此把 160 个工具定义裁到核心集(省 ~45k token/轮)。
+    _lightweightConversation: lightweightConversation,
     onChunk: (chunk) => {
       // Any chunk counts as activity for the sliding idle guard; drop stray
       // late chunks from an already idle-aborted pass so they can't corrupt
@@ -2066,6 +2074,20 @@ async function chat(userMessage, opts = {}) {
       intentAssurance.shouldInject && intentAssurance.directive
         ? String(intentAssurance.directive).trim()
         : '';
+    // ── 插件注册点 PromptSection(Block B):只追加段落,永不改写既有指令 ──
+    // 收集结果作为**一条新 entry** 交给整合层(key=pluginPromptSection,guard tier),
+    // 因此既有 22 条 directive 的相对顺序与文本逐字不变。门控关 / 无 hook / 任何异常 →
+    // 空串 → entries 不含该条 → 输出与接线前逐字节一致。
+    let _pluginPromptSection = '';
+    try {
+      const seams = require('../services/hooks/hookContribSeams');
+      _pluginPromptSection = await seams.collectPromptSections({
+        model: _getModelInfo(),
+        intent: intentAssurance && intentAssurance.mode,
+      });
+    } catch {
+      /* 接缝不可用 → 空串,逐字节回退 */
+    }
     try {
       const { composeDirectives } = require('../services/directiveComposer');
       const _composed = composeDirectives({
@@ -2074,6 +2096,9 @@ async function chat(userMessage, opts = {}) {
         entries: [
           ...(_composerOn && _intentAssuranceDirectiveText
             ? [{ key: 'intentAssurance', directive: _intentAssuranceDirectiveText }]
+            : []),
+          ...(_pluginPromptSection
+            ? [{ key: 'pluginPromptSection', directive: _pluginPromptSection }]
             : []),
           { key: 'flowPriority', directive: flowPriorityDirectiveText },
           { key: 'intent', directive: intentDirective },
@@ -3128,7 +3153,24 @@ async function chat(userMessage, opts = {}) {
       errorType: (result && result.errorType) || 'unknown',
     });
 
-    let errorMsg = result && result.content ? result.content : 'AI 请求失败。';
+    // A failed gateway turn must never read as if the model answered. The
+    // `result.content` available here is a low-level diagnostic string (e.g.
+    // "请求超时: 网关链路空闲保护触发（gateway idle timeout (60000ms)）"), so returning it
+    // verbatim as `reply` made even a plain "你好" come back looking like a
+    // garbled answer. Frame it explicitly as a failure, and drop the empty "-"
+    // bullets some upstream layers leave behind in that diagnostic text.
+    const rawFailureText = String((result && result.content) || '')
+      .split('\n')
+      .filter((line) => {
+        const t = line.trim();
+        return t !== '-' && t !== '·' && t !== '- ';
+      })
+      .join('\n')
+      .trim();
+    let errorMsg = '⚠️ 本次请求未能完成，AI 服务没有返回回答。';
+    if (rawFailureText) {
+      errorMsg = `${errorMsg}\n\n失败信息: ${rawFailureText}`;
+    }
     const failureDetails = _formatGatewayFailureDetails(result);
     if (failureDetails && !/真实失败原因/.test(errorMsg)) {
       errorMsg = `${errorMsg}\n\n${failureDetails}`;
@@ -4373,6 +4415,17 @@ async function chat(userMessage, opts = {}) {
     syntheticFirstToken: firstTokenAt <= 0 && !!safeReply,
   });
   _maybeAnnounceAutoTune(tuneResult);
+
+  // End-of-turn think finalize: if the model left an UNCLOSED <think> tag open
+  // (e.g. it buried its answer inside reasoning, or max_tokens snipped the close),
+  // fail open so buffered reasoning becomes visible text instead of a blank turn —
+  // but only when NO text ever streamed. Shows a raw reasoning dump is better than
+  // showing nothing. Runs once, after ALL passes, so it sees only the FINAL pass's
+  // interceptor state (a mid-loop tool continuation pass may legitimately re-open
+  // thinking after the reply already streamed; we must not be fooled by that).
+  if (thinkInterceptedOnChunk !== userOnChunk && typeof thinkInterceptedOnChunk.finalize === 'function') {
+    thinkInterceptedOnChunk.finalize();
+  }
 
   return {
     reply: safeReply,

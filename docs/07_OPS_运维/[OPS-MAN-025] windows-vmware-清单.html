@@ -45,23 +45,23 @@
 <h3 id="2-1-前置条件">2.1 前置条件<a class="anchor" href="#2-1-前置条件" aria-label="锚点">#</a></h3>
 <ol><li>带 <code>pip</code> 的 Python</li><li>Docker Desktop</li><li>PowerShell 5+ 或 PowerShell 7</li><li>VMware Workstation Pro/Player</li><li>推荐：以 WSL2 作为 Docker 后端</li></ol>
 <h3 id="2-2-安装并验证-khy">2.2 安装并验证 KHY<a class="anchor" href="#2-2-安装并验证-khy" aria-label="锚点">#</a></h3>
-<pre><code class="language-powershell">py -m pip install -U khy-os
-khy --version</code></pre>
+<pre><code class="language-powershell">py <span class="hljs-literal">-m</span> pip install <span class="hljs-literal">-U</span> khy<span class="hljs-literal">-os</span>
+khy <span class="hljs-literal">--version</span></code></pre>
 <p>预期结果：</p>
 <ol><li><code>khy</code> 在 <code>PATH</code> 中可用</li><li>版本命令正常输出</li></ol>
 <h3 id="2-3-构建-iso">2.3 构建 ISO<a class="anchor" href="#2-3-构建-iso" aria-label="锚点">#</a></h3>
 <p>默认构建：</p>
-<pre><code class="language-powershell">khy iso build --output C:\khy\dist\khy-os.iso</code></pre>
+<pre><code class="language-powershell">khy iso build <span class="hljs-literal">--output</span> C:\khy\dist\khy<span class="hljs-literal">-os</span>.iso</code></pre>
 <p>说明：</p>
 <ol><li><code>khy iso build</code> 是 <code>pip</code> 安装方式推荐使用的命令</li><li>该命令在内部调用捆绑的 Windows 辅助脚本与 Docker 构建器</li><li>可选择任意可写的输出路径；<code>C:\khy\dist\khy-os.iso</code> 仅为示例</li></ol>
 <p>如果你是在克隆的源码树中操作，以下等效命令同样有效：</p>
-<pre><code class="language-powershell">powershell -ExecutionPolicy Bypass -File scripts\alpine\windows-iso-preflight.ps1 -Output dist\khy-os.iso
-powershell -ExecutionPolicy Bypass -File scripts\alpine\build-iso-windows.ps1 -Output dist\khy-os.iso</code></pre>
+<pre><code class="language-powershell">powershell <span class="hljs-literal">-ExecutionPolicy</span> Bypass <span class="hljs-operator">-File</span> scripts\alpine\windows<span class="hljs-literal">-iso-preflight</span>.ps1 <span class="hljs-literal">-Output</span> dist\khy<span class="hljs-literal">-os</span>.iso
+powershell <span class="hljs-literal">-ExecutionPolicy</span> Bypass <span class="hljs-operator">-File</span> scripts\alpine\<span class="hljs-built_in">build-iso</span><span class="hljs-literal">-windows</span>.ps1 <span class="hljs-literal">-Output</span> dist\khy<span class="hljs-literal">-os</span>.iso</code></pre>
 <p>仅在需要使 Docker 缓存失效时才强制执行完整重建：</p>
-<pre><code class="language-powershell">powershell -ExecutionPolicy Bypass -File scripts\alpine\build-iso-windows.ps1 -Output dist\khy-os.iso -NoCache</code></pre>
+<pre><code class="language-powershell">powershell <span class="hljs-literal">-ExecutionPolicy</span> Bypass <span class="hljs-operator">-File</span> scripts\alpine\<span class="hljs-built_in">build-iso</span><span class="hljs-literal">-windows</span>.ps1 <span class="hljs-literal">-Output</span> dist\khy<span class="hljs-literal">-os</span>.iso <span class="hljs-literal">-NoCache</span></code></pre>
 <h3 id="2-4-验证产物">2.4 验证产物<a class="anchor" href="#2-4-验证产物" aria-label="锚点">#</a></h3>
-<pre><code class="language-powershell">Get-Item C:\khy\dist\khy-os.iso | Select-Object FullName,Length,LastWriteTime
-Get-FileHash C:\khy\dist\khy-os.iso -Algorithm SHA256</code></pre>
+<pre><code class="language-powershell"><span class="hljs-built_in">Get-Item</span> C:\khy\dist\khy<span class="hljs-literal">-os</span>.iso | <span class="hljs-built_in">Select-Object</span> FullName,Length,LastWriteTime
+<span class="hljs-built_in">Get-FileHash</span> C:\khy\dist\khy<span class="hljs-literal">-os</span>.iso <span class="hljs-literal">-Algorithm</span> SHA256</code></pre>
 <p>检查：</p>
 <ol><li>文件存在</li><li>大小非零</li><li>哈希命令成功完成</li></ol>
 <h3 id="2-5-创建-vmware-虚拟机">2.5 创建 VMware 虚拟机<a class="anchor" href="#2-5-创建-vmware-虚拟机" aria-label="锚点">#</a></h3>
@@ -93,7 +93,7 @@ khy ai status</code></pre>
   --convert-vmdk</code></pre>
 <p>这会在任何破坏性或特权构建步骤运行前，打印计划中的布局。</p>
 <h3 id="3-3-构建-raw-镜像及可选的-vmdk">3.3 构建 raw 镜像及可选的 VMDK<a class="anchor" href="#3-3-构建-raw-镜像及可选的-vmdk" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">sudo bash scripts/khytogo/make-khytogo.sh \
+<pre><code class="language-bash"><span class="hljs-built_in">sudo</span> bash scripts/khytogo/make-khytogo.sh \
   --mode vmware-create \
   --image-path dist/khy-os-vmware.raw \
   --image-size-gib 32 \
@@ -102,7 +102,7 @@ khy ai status</code></pre>
   --confirm-image dist/khy-os-vmware.raw \
   --convert-vmdk</code></pre>
 <p>替代封装脚本：</p>
-<pre><code class="language-bash">sudo bash scripts/install/install-khy.sh \
+<pre><code class="language-bash"><span class="hljs-built_in">sudo</span> bash scripts/install/install-khy.sh \
   --as system \
   --system-mode vmware-create \
   --image-path dist/khy-os-vmware.raw \

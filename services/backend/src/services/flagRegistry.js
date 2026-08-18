@@ -161,6 +161,218 @@ const FLAGS = {
   // serve` 报「未启用」并逐字节回退(不起任何 server;client 侧只读行为零变化)。
   KHY_MCP_SERVE: { mode: 'default-on', off: 'CANON', default: true },
 
+  // ── 蹭 MCP 生态:通用生态桥(mcpEcosystemRegistry;goal「khyos 的生态不够完善,我希望你蹭生态」)──
+  // MCP server 是当下唯一跨厂商通用的工具层:同一个 `mcpServers` 形状被十几个 agent 各存在自己的
+  // 配置文件里。用户在任何一个 agent 里装过的 server 都是 khy 可直接复用的既有资产。此前只桥了 2 家
+  // (ccMcpBridge / ocMcpBridge),且各写一段结构相同的 merge 块;本门后面是**一个通用循环** +
+  // 一张声明表(每家:配置文件位置 / json·json5·toml / servers 所在键 / 条目形状)。
+  // 开 → loadConfig 以**最低优先级**(仅在名字不存在时填充)折入 Claude Desktop / Cursor /
+  // Windsurf / VS Code / Codex / Gemini / Qwen / Kiro / Amazon Q / Copilot CLI / Continue / Zed /
+  // Cline / Roo 已配置的 server;文件不存在或解析失败静默跳过(只读,不安装、不联网、不写别家配置)。
+  // 关 → 该循环整体空转,合并结果与接入前逐字节相同(CC/OpenClaw 专用桥不受影响)。
+  // 每家还有自己的子门控 KHY_MCP_ECO_<ID>(父为本门),便于只关掉某一家。
+  KHY_MCP_ECOSYSTEM: { mode: 'default-on', off: 'CANON', default: true },
+  KHY_MCP_ECO_CLAUDE_DESKTOP: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_MCP_ECOSYSTEM',
+  },
+  KHY_MCP_ECO_CURSOR: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_MCP_ECOSYSTEM',
+  },
+  KHY_MCP_ECO_WINDSURF: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_MCP_ECOSYSTEM',
+  },
+  KHY_MCP_ECO_VSCODE: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_MCP_ECOSYSTEM',
+  },
+  KHY_MCP_ECO_CODEX: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_MCP_ECOSYSTEM',
+  },
+  KHY_MCP_ECO_GEMINI: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_MCP_ECOSYSTEM',
+  },
+  KHY_MCP_ECO_QWEN: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_MCP_ECOSYSTEM',
+  },
+  KHY_MCP_ECO_KIRO: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_MCP_ECOSYSTEM',
+  },
+  KHY_MCP_ECO_AMAZONQ: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_MCP_ECOSYSTEM',
+  },
+  KHY_MCP_ECO_COPILOT_CLI: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_MCP_ECOSYSTEM',
+  },
+  KHY_MCP_ECO_CONTINUE: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_MCP_ECOSYSTEM',
+  },
+  KHY_MCP_ECO_ZED: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_MCP_ECOSYSTEM',
+  },
+  KHY_MCP_ECO_CLINE: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_MCP_ECOSYSTEM',
+  },
+  KHY_MCP_ECO_ROO: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_MCP_ECOSYSTEM',
+  },
+
+  // ── 蹭规则生态:通用指令桥(instructionEcosystemRegistry;同一 goal 的第二块)────────────
+  // 第一块(KHY_MCP_ECOSYSTEM)蹭的是工具层,这一块蹭的是**上下文层**:每个仓库里别的 agent 早就
+  // 写好了「这个项目该怎么干活」的规则文件 —— 全生态存量最大的资产。此前 khy 只认两组来源:
+  // 自己的 khy.md/.khy/rules,以及 prompts.js 里**手写**的兼容块(CLAUDE.md/.claude/CLAUDE.md/
+  // AGENTS.md)。一个写满 .cursor/rules + .github/copilot-instructions.md + .kiro/steering 的仓库,
+  // 在 khy 眼里等于没有规则,而且每接一家都要再手写一段。
+  // 开 → 在 khy 自己的指令**之后**追加一层「生态指令」:.cursor/rules · .cursorrules ·
+  // .github/copilot-instructions.md · .github/instructions · .windsurf/rules · .clinerules ·
+  // .roo/rules · GEMINI.md · QWEN.md · .kiro/steering · .amazonq/rules · .continue/rules ·
+  // .junie/guidelines.md · .trae/rules · .rules · CONVENTIONS.md · .idx/airules.md ·
+  // ~/.codex/AGENTS.md。三道闸限制它的破坏力:①与 khy 自己的文件走同一条
+  // scanForPromptInjection 脱敏路径;②生态层有独立字符预算(单文件 4000 / 本层 8000),排在最后,
+  // 永远挤不掉 khy 自己的指令;③带作用域的规则(Cursor `alwaysApply:false`/`globs:`、Copilot
+  // `applyTo:` 窄 glob、Kiro `inclusion:fileMatch`)一律不收 —— khy 的提示词没有 per-file 作用域,
+  // 照单全收等于每轮灌噪音。CLAUDE.md/AGENTS.md 刻意留给 prompts.js 的兼容块,不重复注入。
+  // 只读不写:khy 绝不写 AGENTS.md/CLAUDE.md/.cursor/rules。
+  // 关 → 该循环整体空转,discoverInstructionFiles 返回值与接入前逐字节相同。
+  // 每家还有自己的子门控 KHY_RULES_ECO_<ID>(父为本门),便于只关掉某一家。
+  KHY_RULES_ECOSYSTEM: { mode: 'default-on', off: 'CANON', default: true },
+  KHY_RULES_ECO_CODEX: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_RULES_ECOSYSTEM',
+  },
+  KHY_RULES_ECO_CURSOR: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_RULES_ECOSYSTEM',
+  },
+  KHY_RULES_ECO_COPILOT: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_RULES_ECOSYSTEM',
+  },
+  KHY_RULES_ECO_WINDSURF: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_RULES_ECOSYSTEM',
+  },
+  KHY_RULES_ECO_CLINE: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_RULES_ECOSYSTEM',
+  },
+  KHY_RULES_ECO_ROO: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_RULES_ECOSYSTEM',
+  },
+  KHY_RULES_ECO_GEMINI: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_RULES_ECOSYSTEM',
+  },
+  KHY_RULES_ECO_QWEN: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_RULES_ECOSYSTEM',
+  },
+  KHY_RULES_ECO_KIRO: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_RULES_ECOSYSTEM',
+  },
+  KHY_RULES_ECO_AMAZONQ: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_RULES_ECOSYSTEM',
+  },
+  KHY_RULES_ECO_CONTINUE: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_RULES_ECOSYSTEM',
+  },
+  KHY_RULES_ECO_JUNIE: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_RULES_ECOSYSTEM',
+  },
+  KHY_RULES_ECO_TRAE: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_RULES_ECOSYSTEM',
+  },
+  KHY_RULES_ECO_ZED: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_RULES_ECOSYSTEM',
+  },
+  KHY_RULES_ECO_AIDER: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_RULES_ECOSYSTEM',
+  },
+  KHY_RULES_ECO_FIREBASE_STUDIO: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_RULES_ECOSYSTEM',
+  },
+
   // ── 未知斜杠命令提示(unknownCommandHint;「教会 khyos 怎么处理未知指令/未知问题」)────────
   // 会话 /goal:用户显式敲了命令语法 `/x` 却没有任何命令/技能/插件匹配时,router 的交互式模糊
   // 纠错(inquirer「你是否想执行 X?」)被 `&& !isTui` 门住,在正常 TUI/REPL 里整块跳过 → literal
@@ -437,6 +649,45 @@ const FLAGS = {
   KHY_UPSTREAM_STUDY_MAX_FILE_KB: { mode: 'numeric', default: 256, min: 1, max: 1048576 },
   // 「超大 blob」判为糟粕的大小阈值(MB);单文件超此直接归 oversized 糟粕桶。clamp[1, 1048576]。默认 5MB。
   KHY_UPSTREAM_STUDY_BLOB_MB: { mode: 'numeric', default: 5, min: 1, max: 1048576 },
+
+  // ── 系统提示词瘦身(promptSlim;对标 opencode 静态骨架 + AGENTS.md 按需加载)────────────────
+  // 背景(goal 2026-08-17「对照 opencode 瘦身系统提示词」):khy 系统提示词 ~78KB/1066 行,远超
+  // opencode 的 <5KB 常驻契约。四大冗余:动态节(Project structure 5300 + gitStatus 2053 +
+  // Memory 4565 + Environment 1896 = 13.8KB,opencode 明确不进 prompt)、冗余节合并(Output
+  // efficiency/Response formatting/Output Style/Conversation/Tone 5 节表达同一件事 = 5.6KB;
+  // Executing actions/Security/Sensitive data 3 节同质 = 4.5KB)、静态节压缩(<4k 窗口模型下
+  // 占比>15% 的大节压缩成要点式 ≤1KB)、available skills 展示瘦身(3975 → ≤1KB)。目标:≤55KB/≤700 行,
+  // 缩 ≥20%,且逐字节回退到今日基线。
+  //
+  // 下面 6 个门控各自控制一项瘦身措施;全关时输出与今日 78182 chars / 1066 lines 逐字节一致。
+
+  // gitStatus 最小化:只保留 branch + 一句话 dirty 摘要,砍掉完整文件状态清单与 recent commits
+  // 列表(这些 git 命令能瞬时拿回,放进 prompt 浪费)。开 → 最小化;关 → 逐字节回退今日完整清单。
+  KHY_PROMPT_GIT_STATUS_MIN: { mode: 'default-on', off: 'CANON', default: true },
+
+  // Memory 只注入索引:MEMORY.md 索引(标题行)注入 prompt,条目正文交给模型按需 Read。开 → 索引
+  // 模式;关 → 逐字节回退今日全量注入(14 条工作记忆 + 全部正文)。进度检查点(RecordProgress)照旧。
+  KHY_PROMPT_MEMORY_INDEX_ONLY: { mode: 'default-on', off: 'CANON', default: true },
+
+  // Environment 最小化:砍掉近重复的模型身份/时钟/平台冗余行,保留 platform+path 必要事实。
+  // 开 → 最小化;关 → 逐字节回退今日完整 env 段(1896 chars)。
+  KHY_PROMPT_ENV_MIN: { mode: 'default-on', off: 'CANON', default: true },
+
+  // 输出与语气 5 节合 1:Output efficiency(732) + Response formatting(1825) + Output Style:
+  // senior-engineer(959) + Conversation style(628) + Tone and style(1440) 合并为一节
+  // 「输出与语气总纪律」,去重不删规则。Executing actions with care(2834) + Security(1182) +
+  // Sensitive data(491) 合并为一节「安全与脱敏」,密钥脱敏规则只保留一次。开 → 合并去重;
+  // 关 → 逐字节回退今日 5 节 + 3 节分立。
+  KHY_PROMPT_UNIFIED_OUTPUT: { mode: 'default-on', off: 'CANON', default: true },
+
+  // available skills 展示瘦身:只列 name + 一句用途,砍掉超长 use-when 引用;完整目录留给
+  // /skills 命令。开 → 最小化(≤1KB);关 → 逐字节回退今日完整展示(3975 chars)。
+  KHY_PROMPT_SKILLS_MIN: { mode: 'default-on', off: 'CANON', default: true },
+
+  // Project structure 最大深度:默认 2 层(原 3 层),配合 KHY_PROJECT_TREE_CHARS 默认预算
+  // 2000(原 5120)双管齐下瘦身目录树。开 → 2 层;关 → 逐字节回退原深度逻辑。SKIP 新增
+  // tests/、logs/、data/ 等低信息量目录(独立受 KHY_PROJECT_TREE_SKIP 门控,不计入此门)。
+  KHY_PROJECT_TREE_MAXDEPTH: { mode: 'numeric', default: 2, min: 1, max: 10 },
 
   // ── 非阻塞子进程执行(防同步 execSync 阻塞事件循环导致的「调用工具卡死」)──────────────
   // Grep 等工具用同步 execSync 跑 rg/grep,子进程期间阻塞整个事件循环(spinner 停、ESC 无效),
@@ -918,6 +1169,20 @@ const FLAGS = {
   // 关 → checkUpdate/applyUpdate 均返回 {disabled:true},禁掉一切自升级(装包)动作。
   KHY_SELF_UPDATE: { mode: 'default-on', off: 'CANON', default: true },
 
+  // ── Independent cascade update sources (GitHub → PyPI → npm → local) ──
+  KHY_UPDATE_ENABLE_GITHUB: {
+    mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_SELF_UPDATE',
+  },
+  KHY_UPDATE_ENABLE_PYPI: {
+    mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_SELF_UPDATE',
+  },
+  KHY_UPDATE_ENABLE_NPM: {
+    mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_SELF_UPDATE',
+  },
+  KHY_UPDATE_ENABLE_LOCAL: {
+    mode: 'default-on', off: 'CANON', default: true, parent: 'KHY_SELF_UPDATE',
+  },
+
   // ── 渠道感知自更新:pip 升级时顺带同步 npm 渠道(khySelfUpdateService)──
   // 用户诉求「不要卸载哪一个,希望相互兼容,pip 装的也支持 npm 更新」。开该门 → `khy update`
   // 在 pip 升级成功后,若检测到 npm 全局装有 @khy-os/khy-os,顺带 `npm install -g @khy-os/khy-os@latest`
@@ -929,6 +1194,9 @@ const FLAGS = {
     default: true,
     parent: 'KHY_SELF_UPDATE',
   },
+
+  // ── 更新检查间隔(协调器后台检查)──
+  KHY_UPDATE_CHECK_INTERVAL_MS: { mode: 'numeric', default: 14400000, min: 60000, max: 604800000 },
 
   // ── 更新时实时显示 pip 下载进度(routerDispatchOps case 'update')──
   // 用户诉求「khy update 更新时不显示下载进度」。旧路径用 execSync 整段捕获 pip 输出,跑完才出结果、
@@ -3073,6 +3341,57 @@ const FLAGS = {
   // 网络往返可忽略)。高 QPS 下可调大以减少 stat 次数,代价是生效延迟至多该毫秒数。
   // 不设 parent:总闸关时注册表本身也不该被强行禁用(它只是一次只读查表)。
   KHY_MODEL_FEATURES_TTL_MS: { mode: 'numeric', default: 0, min: 0, max: 3600000 },
+
+  // ── JSON 原子写 / 数据备份(utils/atomicWriteJson + services/backup/*)──────
+  // 原子写本身**无门控**:临时文件 + rename 是唯一写法,不给「退回裸 writeFileSync」
+  // 的开关(那正是这次要消灭的不一致)。可门控的只有 fsync —— 它只影响**掉电**时的
+  // 持久性,不影响原子性(rename 的原子性由文件系统保证)。默认开;在 fsync 昂贵的
+  // 环境(网络盘 / 容器 overlayfs / CI)可关掉换吞吐,代价仅限「掉电时最后一次写可能丢」。
+  KHY_ATOMIC_FSYNC: { mode: 'default-on', off: 'CANON', default: true },
+  // `khy backup` 命令族总闸。关 → 命令仍在注册表里但不执行任何备份/恢复动作
+  // (用于确诊「是不是备份在拖慢/干扰某个流程」)。不设 parent:它是自己的顶层域。
+  KHY_BACKUP: { mode: 'default-on', off: 'CANON', default: true },
+
+  // ── IM Adapter 框架(adapters/im/*)─────────────────────────────────────
+  // 框架总闸。关 → adapterRegistry 一个渠道都不启用(连 env 里点名的也不启),用于确诊
+  // 「是不是 IM 通道在占资源/干扰」。注意:**启用哪些渠道**由 `KHY_IM_ADAPTERS=feishu,telegram`
+  // 决定,那是个列表不是布尔,不适合登记进本表(本表只管布尔/数值),故只登记这道总闸。
+  // 渠道本身是 opt-in(env 不设 → 零渠道 + 未启用渠道模块零加载),所以总闸默认开是安全的。
+  KHY_IM_ADAPTER_FRAMEWORK: { mode: 'default-on', off: 'CANON', default: true },
+  // 空闲**滑动**超时(ms):任何入站活动都把窗口整体推后,故一条持续有数据的连接永不超时。
+  // 0 = 不启用空闲判定(只靠 TCP/心跳失败发现断开)。默认与 baseImAdapter.js 的 DEFAULTS 一致。
+  KHY_IM_IDLE_MS: { mode: 'numeric', default: 90000, min: 0, max: 3600000 },
+  // 出站心跳间隔(ms)。必须 < 空闲窗口(基类会强制,否则塌到 idle/3),否则自己还没探活
+  // 就先被判空闲。0 = 不发心跳。
+  KHY_IM_HEARTBEAT_MS: { mode: 'numeric', default: 30000, min: 0, max: 600000 },
+  // 重连退避下界/上界(ms):第 n 次退避 ≈ min(max, min×2^(n-1)) ± 20% 抖动,无限重试。
+  KHY_IM_RECONNECT_MIN_MS: { mode: 'numeric', default: 1000, min: 100, max: 60000 },
+  KHY_IM_RECONNECT_MAX_MS: { mode: 'numeric', default: 60000, min: 1000, max: 3600000 },
+  // 单次握手(TCP + HTTP upgrade)上界(ms)。这是**建立一次连接**的有界等待,不是对已建立
+  // 连接的固定时长限制;超时只让这一次握手失败并转入退避重连。
+  KHY_IM_HANDSHAKE_MS: { mode: 'numeric', default: 10000, min: 1000, max: 120000 },
+
+  // ── 插件按需激活(resolver pluginContribResolver:插件贡献工具懒加载到漏斗)──
+  // 会话 /goal:接入 dsh(deepseek-ai/deepseek-harness,Cordis 系)「插件按需激活」设计,但绝不动
+  // 「唯一 executeTool 漏斗 / fail-closed」骨架 —— 插件入口只在它的工具名**真正被调用**时才
+  // require + 注册进工具注册表。默认开(CANON 4 词开/关,符合插件生态「工具即插即用」预期);
+  // 关 → resolver 短路,插件贡献的工具名照旧落到原「未知工具/混淆修复」fail-closed 路径,
+  // 逐字节等价于基线。双闸 fail-closed:flutter KHY_ 门 与 extensions_state.json `enabled`
+  // **两者都必须过**,任一处失败 → 返回 null → 走原未知工具路径,绝无绕过漏斗的入口。
+  // 不设 parent:它是自己的顶层域(插件加载不受模型适配等其它域牵连)。
+  KHY_PLUGIN_LAZY_LOAD: { mode: 'default-on', off: 'CANON', default: true },
+
+  // ── 插件注册点(hookContribSeams:插件在明确接缝上注册能力)──
+  // 同一 /goal 的 Block B:接入 dsh「插件注册点」思路,但**只开放两个方向安全的接缝**:
+  //   KHY_HOOK_TOOL_PERMISSION — ToolPermission 事件。handler 永远只能把权限裁决**收紧**
+  //     (auto<confirm<deny 取更严者,格借自 permissionPolicy/config 的 STRATEGIES 真源),
+  //     绝无放松路径;handler 崩溃/超时/坏返回 → 回落基线裁决,等价于未注册任何 hook。
+  //   KHY_HOOK_PROMPT_SECTION — PromptSection 事件。handler 只能**追加**提示词段落,
+  //     由 directiveComposer 按 tier 编排,永不改写既有指令。
+  // 两者默认开(插件生态「装上即生效」预期),关 → hookContribSeams 在门控判定处短路,
+  // 调用点逐字节回退到接线前行为。不设 parent:hook 生态是自己的顶层域。
+  KHY_HOOK_TOOL_PERMISSION: { mode: 'default-on', off: 'CANON', default: true },
+  KHY_HOOK_PROMPT_SECTION: { mode: 'default-on', off: 'CANON', default: true },
 };
 
 /**

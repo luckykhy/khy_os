@@ -69,30 +69,30 @@
 <h3 id="services-backend-src-services-toolcalling-js"><code>services/backend/src/services/toolCalling.js</code><a class="anchor" href="#services-backend-src-services-toolcalling-js" aria-label="锚点">#</a></h3>
 <ul><li>新增纯函数 <code>_decisionFromControl(resp)</code>：把 ink 原语映射为决策，并对将来可能的</li></ul>
 <p>对象形状（<code>{behavior}</code>、<code>control_response</code> 包裹）做容错。</p>
-<pre><code class="language-js">  // true → allow；'always' / 'allow-always' → allow-always；其余 → deny</code></pre>
+<pre><code class="language-js">  <span class="hljs-comment">// true → allow；&#x27;always&#x27; / &#x27;allow-always&#x27; → allow-always；其余 → deny</span></code></pre>
 <ul><li><code>requestPermission(toolName, params, onControlRequest = null)</code>：在**全部既有提前返回</li></ul>
 <p>之后<strong>、调用 <code>formatPermissionDialog</code> </strong>之前**，新增分支：</p>
-<pre><code class="language-js">  if (typeof onControlRequest === 'function') {
-    let ctrlResp = null;
-    try {
-      ctrlResp = await onControlRequest({
-        requestId: `perm_${Date.now()}_${...}`,
-        request: { subtype: 'can_use_tool', tool_name: toolName, input: params },
+<pre><code class="language-js">  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> onControlRequest === <span class="hljs-string">&#x27;function&#x27;</span>) {
+    <span class="hljs-keyword">let</span> ctrlResp = <span class="hljs-literal">null</span>;
+    <span class="hljs-keyword">try</span> {
+      ctrlResp = <span class="hljs-keyword">await</span> <span class="hljs-title function_">onControlRequest</span>({
+        <span class="hljs-attr">requestId</span>: <span class="hljs-string">`perm_<span class="hljs-subst">${<span class="hljs-built_in">Date</span>.now()}</span>_<span class="hljs-subst">${...}</span>`</span>,
+        <span class="hljs-attr">request</span>: { <span class="hljs-attr">subtype</span>: <span class="hljs-string">&#x27;can_use_tool&#x27;</span>, <span class="hljs-attr">tool_name</span>: toolName, <span class="hljs-attr">input</span>: params },
       });
-    } catch { ctrlResp = null; }
-    const decision = _decisionFromControl(ctrlResp);
-    // 镜像经典弹窗的落库，使后续调用短路
-    if (decision === 'allow-always') { approveTool(permissionKey, true); permStore.approve(key, 'forever'); }
-    else if (decision === 'allow')   { permStore.approve(key, 'once'); }
-    else                             { permStore.deny(key, 'session'); }
-    return decision; // 绝不触碰 raw 模式
+    } <span class="hljs-keyword">catch</span> { ctrlResp = <span class="hljs-literal">null</span>; }
+    <span class="hljs-keyword">const</span> decision = <span class="hljs-title function_">_decisionFromControl</span>(ctrlResp);
+    <span class="hljs-comment">// 镜像经典弹窗的落库，使后续调用短路</span>
+    <span class="hljs-keyword">if</span> (decision === <span class="hljs-string">&#x27;allow-always&#x27;</span>) { <span class="hljs-title function_">approveTool</span>(permissionKey, <span class="hljs-literal">true</span>); permStore.<span class="hljs-title function_">approve</span>(key, <span class="hljs-string">&#x27;forever&#x27;</span>); }
+    <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (decision === <span class="hljs-string">&#x27;allow&#x27;</span>)   { permStore.<span class="hljs-title function_">approve</span>(key, <span class="hljs-string">&#x27;once&#x27;</span>); }
+    <span class="hljs-keyword">else</span>                             { permStore.<span class="hljs-title function_">deny</span>(key, <span class="hljs-string">&#x27;session&#x27;</span>); }
+    <span class="hljs-keyword">return</span> decision; <span class="hljs-comment">// 绝不触碰 raw 模式</span>
   }</code></pre>
 <ul><li><code>executeTool</code> 调用点：把 <code>traceContext.onControlRequest</code> 传入 <code>requestPermission</code>。</li></ul>
 <h3 id="services-backend-src-services-preflightpermission-js"><code>services/backend/src/services/preflightPermission.js</code><a class="anchor" href="#services-backend-src-services-preflightpermission-js" aria-label="锚点">#</a></h3>
 <ul><li><code>runPreflight(toolCalls, options)</code> 顶部新增 ink 守卫：</li></ul>
-<pre><code class="language-js">  // Ink/host 通道存在 → 改用 per-tool 交互式授权，绝不跑经典 raw-mode 批量弹窗
-  if (typeof options.onControlRequest === 'function') {
-    return { approved, denied }; // 空集
+<pre><code class="language-js">  <span class="hljs-comment">// Ink/host 通道存在 → 改用 per-tool 交互式授权，绝不跑经典 raw-mode 批量弹窗</span>
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> options.<span class="hljs-property">onControlRequest</span> === <span class="hljs-string">&#x27;function&#x27;</span>) {
+    <span class="hljs-keyword">return</span> { approved, denied }; <span class="hljs-comment">// 空集</span>
   }</code></pre>
 <h3 id="services-backend-src-services-tooluseloop-js"><code>services/backend/src/services/toolUseLoop.js</code><a class="anchor" href="#services-backend-src-services-tooluseloop-js" aria-label="锚点">#</a></h3>
 <ul><li>预检调用点：<code>runPreflight(toolCalls)</code> → <code>runPreflight(toolCalls, { onControlRequest })</code></li></ul>

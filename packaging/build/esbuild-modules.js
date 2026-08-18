@@ -45,6 +45,15 @@ const NODE_BUILTINS = [
   'string_decoder', 'module', 'constants',
 ].flatMap(m => [m, `node:${m}`]);
 
+// Native and optional modules are supplied as platform resources. Keeping this
+// list explicit prevents an accidentally missing ordinary JS dependency from
+// being hidden as a runtime lookup.
+const OPTIONAL_RUNTIME_MODULES = [
+  'sqlite3',
+  'node-llama-cpp',
+  'node-pty',
+];
+
 /**
  * Compute the external dependencies for a module.
  * Deps listed in excludeDeps are bundled out (marked external).
@@ -52,26 +61,11 @@ const NODE_BUILTINS = [
  */
 function computeExternals(moduleConfig) {
   // All node built-ins are always external
-  const externals = [...NODE_BUILTINS];
+  const externals = [...NODE_BUILTINS, ...OPTIONAL_RUNTIME_MODULES];
 
-  // For the full 'khy' module, mark nothing as external (bundle everything possible)
-  // For other modules, mark excluded deps as external
-  if (moduleConfig.id !== 'khy') {
-    for (const dep of moduleConfig.excludeDeps || []) {
-      if (dep.endsWith('/*') || dep.endsWith('*')) {
-        // Wildcard pattern like "@opentelemetry/*"
-        const prefix = dep.replace(/\/?\*$/, '');
-        // Find all matching packages from backend dependencies
-        const allDeps = Object.keys(backendPkg.dependencies || {});
-        for (const d of allDeps) {
-          if (d.startsWith(prefix)) externals.push(d);
-        }
-      } else {
-        externals.push(dep);
-      }
-    }
-  }
-
+  // Every ordinary JavaScript dependency is bundled for install-time zero
+  // dependency releases. Module manifests may still describe feature scope,
+  // while optional native modules remain explicit runtime resources.
   return [...new Set(externals)];
 }
 
@@ -101,7 +95,7 @@ async function buildModule(moduleConfig) {
   }
 
   const externals = computeExternals(moduleConfig);
-  const outfile = path.join(outDir, 'bundle.cjs');
+  const outfile = path.join(outDir, 'bundle.mjs');
 
   const config = {
     entryPoints: [entryPoint],
@@ -109,8 +103,11 @@ async function buildModule(moduleConfig) {
     bundle: true,
     platform: 'node',
     target: catalog.nodeTarget || 'node22',
-    format: 'cjs',
+    format: 'esm',
     external: externals,
+    alias: {
+      'react-devtools-core': path.join(__dirname, 'shims/react-devtools-core.mjs'),
+    },
     sourcemap: true,
     metafile: true,
     treeShaking: true,
@@ -120,10 +117,11 @@ async function buildModule(moduleConfig) {
     minifySyntax: isProd,
     logLevel: 'warning',
     banner: {
-      js: `/* KHY OS Module: ${moduleId} v${catalog.version} | ${new Date().toISOString().split('T')[0]} */`,
+      js: `import { createRequire as __khyCreateRequire } from 'node:module';\nimport { fileURLToPath as __khyFileURLToPath } from 'node:url';\nimport { dirname as __khyDirname } from 'node:path';\nconst require = __khyCreateRequire(import.meta.url);\nconst __filename = __khyFileURLToPath(import.meta.url);\nconst __dirname = __khyDirname(__filename);\n/* KHY OS Module: ${moduleId} v${catalog.version} | ${new Date().toISOString().split('T')[0]} */`,
     },
     define: {
       'process.env.KHY_BUNDLED': '"true"',
+      'process.env.NODE_ENV': '"production"',
       'process.env.KHY_MODULE': `"${moduleId}"`,
     },
   };

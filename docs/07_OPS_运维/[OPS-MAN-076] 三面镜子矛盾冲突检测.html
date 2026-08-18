@@ -31,8 +31,8 @@
 <p>khyos 有三面独立还原镜子，探同一批事实却走不同代码路径：</p>
 <ul><li><code>restore-check</code>（OPS-MAN-068）：这台机器能不能还原？</li><li><code>verify-install</code>（OPS-MAN-069）：已装副本完整吗？</li><li><code>hydration-doctor</code>（OPS-MAN-070）：首启水合成功了吗？</li></ul>
 <p><code>restore-plan</code>（OPS-MAN-075）把三者<strong>合成</strong>成一份有序还原方案——但它<strong>默认三面镜子一致</strong>。<br>不同代码路径可能给出<strong>互相矛盾的结论</strong>。一个 agent 若拿着<strong>自相矛盾的世界模型</strong><br>去无人值守自动还原，会照着一面绿灯猛冲、无视另一面红灯。本检测补上这层<strong>元诊断</strong>：<br>在 agent 信任方案、开始自动还原<strong>之前</strong>，先问「三面镜子彼此一致吗？」。</p>
-<pre><code class="language-bash">node scripts/restore-conflicts.js --json   # landing agent 先读这个
-# safeToAutodrive=false（有硬矛盾）→ agent 必须停下：重探或升级交人</code></pre>
+<pre><code class="language-bash">node scripts/restore-conflicts.js --json   <span class="hljs-comment"># landing agent 先读这个</span>
+<span class="hljs-comment"># safeToAutodrive=false（有硬矛盾）→ agent 必须停下：重探或升级交人</span></code></pre>
 <h2 id="两级冲突">两级冲突<a class="anchor" href="#两级冲突" aria-label="锚点">#</a></h2>
 <ul><li><strong><code>contradiction</code>（硬矛盾）</strong>：两面镜子对重叠事实给出逻辑不相容的结论，</li></ul>
 <p>或某面镜子自身顶层判定与明细自相矛盾。→ 世界模型不可信，<strong>禁止自动还原</strong>。</p>

@@ -53,33 +53,33 @@
 <p><strong>经典 REPL 模式：</strong></p>
 <p>输入 <code>/rollback</code> 后会弹出最近 10 个检查点的列表，用方向键选择要回滚到的版本。</p>
 <h3 id="workspace-命令-高级检查点管理"><code>workspace</code> 命令 — 高级检查点管理<a class="anchor" href="#workspace-命令-高级检查点管理" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">workspace list                    # 列出所有检查点
-workspace diff &lt;id&gt;               # 查看检查点包含的改动
-workspace delete &lt;id&gt;             # 删除指定检查点
-workspace cleanup --keep 10       # 只保留最近 10 个检查点
-workspace stats                   # 查看检查点统计信息</code></pre>
+<pre><code class="language-bash">workspace list                    <span class="hljs-comment"># 列出所有检查点</span>
+workspace diff &lt;<span class="hljs-built_in">id</span>&gt;               <span class="hljs-comment"># 查看检查点包含的改动</span>
+workspace delete &lt;<span class="hljs-built_in">id</span>&gt;             <span class="hljs-comment"># 删除指定检查点</span>
+workspace cleanup --keep 10       <span class="hljs-comment"># 只保留最近 10 个检查点</span>
+workspace stats                   <span class="hljs-comment"># 查看检查点统计信息</span></code></pre>
 <hr>
 <h2 id="断电恢复流程">断电恢复流程<a class="anchor" href="#断电恢复流程" aria-label="锚点">#</a></h2>
 <h3 id="场景-ai-改到一半突然断电">场景：AI 改到一半突然断电<a class="anchor" href="#场景-ai-改到一半突然断电" aria-label="锚点">#</a></h3>
 <ol><li>AI 正在修改多个文件（比如重构一个模块）</li><li>改到第 3 个文件时突然断电/token 耗尽</li><li>重启后项目处于不一致状态：有些文件改了，有些没改</li></ol>
 <h3 id="恢复步骤">恢复步骤<a class="anchor" href="#恢复步骤" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># 1. 启动 KHY OS
+<pre><code class="language-bash"><span class="hljs-comment"># 1. 启动 KHY OS</span>
 khy
 
-# 2. 查看可用检查点
+<span class="hljs-comment"># 2. 查看可用检查点</span>
 workspace list
 
-# 3. 回滚到 AI 开始之前的状态
+<span class="hljs-comment"># 3. 回滚到 AI 开始之前的状态</span>
 /rollback
 
-# 4. 确认恢复成功
+<span class="hljs-comment"># 4. 确认恢复成功</span>
 git status
 git diff</code></pre>
 <h3 id="场景-只想恢复某一个文件">场景：只想恢复某一个文件<a class="anchor" href="#场景-只想恢复某一个文件" aria-label="锚点">#</a></h3>
 <p>如果只有某个文件被改坏了，不需要整体回滚：</p>
-<pre><code class="language-bash"># 查看哪些文件有快照
-# 文件快照在 ~/.khyquant/file_history/ 下按会话组织
-ls ~/.khyquant/file_history/</code></pre>
+<pre><code class="language-bash"><span class="hljs-comment"># 查看哪些文件有快照</span>
+<span class="hljs-comment"># 文件快照在 ~/.khyquant/file_history/ 下按会话组织</span>
+<span class="hljs-built_in">ls</span> ~/.khyquant/file_history/</code></pre>
 <hr>
 <h2 id="技术细节">技术细节<a class="anchor" href="#技术细节" aria-label="锚点">#</a></h2>
 <h3 id="检查点模式">检查点模式<a class="anchor" href="#检查点模式" aria-label="锚点">#</a></h3>
@@ -89,13 +89,13 @@ ls ~/.khyquant/file_history/</code></pre>
   s_1717234567_a1b2c3/           # 会话 ID
     &lt;sha256_of_filepath&gt;.json     # 每个文件一个 JSON</code></pre>
 <p>每个 JSON 文件包含该文件的历史快照数组：</p>
-<pre><code class="language-json">[
-  {
-    &quot;timestamp&quot;: 1717234567890,
-    &quot;content&quot;: &quot;文件原始内容...&quot;,
-    &quot;reason&quot;: &quot;FileEditTool&quot;
-  }
-]</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">[</span>
+  <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1717234567890</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;content&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;文件原始内容...&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;reason&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;FileEditTool&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">]</span></code></pre>
 <h3 id="检查点存储结构">检查点存储结构<a class="anchor" href="#检查点存储结构" aria-label="锚点">#</a></h3>
 <pre><code>~/.khyquant/checkpoints/
   &lt;项目路径哈希&gt;/

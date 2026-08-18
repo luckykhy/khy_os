@@ -144,6 +144,55 @@ test('generate: tool WITHOUT supportsImageFiles gets no image block (gating)', a
   }
 });
 
+test('generate: consumed image transport never materializes or appends a Read block', async () => {
+  const mod = require('../../../src/services/gateway/adapters/cliToolAdapter');
+  const TOOLS = mod.TOOLS;
+  const original = TOOLS.slice();
+  TOOLS.length = 0;
+  TOOLS.push({
+    name: 'EchoCat',
+    cmd: 'cat',
+    buildArgs: () => [],
+    useStdin: true,
+    streaming: false,
+    priority: 1,
+    supportsImageFiles: true,
+  });
+  mod.detect(true);
+  try {
+    const res = await mod.generate('已由 MCP 识别', {
+      images: [PNG_DATAURL],
+      _imageTransportConsumed: true,
+    });
+    assert.strictEqual(res.success, true);
+    assert.doesNotMatch(String(res.content || ''), /【图片附件】|khy-cli-img-|请使用 Read/);
+    assert.match(String(res.content || ''), /已由 MCP 识别/);
+  } finally {
+    TOOLS.length = 0; TOOLS.push(...original);
+    mod.detect(true);
+  }
+});
+
+test('handlesImagesNatively follows the selected detected CLI tool', () => {
+  const mod = require('../../../src/services/gateway/adapters/cliToolAdapter');
+  const TOOLS = mod.TOOLS;
+  const original = TOOLS.slice();
+  TOOLS.length = 0;
+  TOOLS.push(
+    { name: 'Claude Code', cmd: 'cat', supportsImageFiles: true, priority: 1 },
+    { name: 'Codex', cmd: 'sh', priority: 2 }
+  );
+  mod.detect(true);
+  try {
+    assert.strictEqual(mod.handlesImagesNatively({}), true);
+    assert.strictEqual(mod.handlesImagesNatively({ cliTool: 'cat' }), true);
+    assert.strictEqual(mod.handlesImagesNatively({ cliTool: 'sh' }), false);
+  } finally {
+    TOOLS.length = 0; TOOLS.push(...original);
+    mod.detect(true);
+  }
+});
+
 test('TOOLS: only Claude Code declares supportsImageFiles', () => {
   const mod = require('../../../src/services/gateway/adapters/cliToolAdapter');
   const capable = mod.TOOLS.filter(t => t.supportsImageFiles);

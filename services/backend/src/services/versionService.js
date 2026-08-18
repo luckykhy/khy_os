@@ -1,8 +1,9 @@
 /**
  * Version check + auto-update notification service.
  *
- * On startup (non-blocking), checks if a newer version of khy-os
- * is available on PyPI. If so, displays a one-line upgrade notice.
+ * On startup (non-blocking), checks whether a newer version of khy-os has been published.
+ * "Published" means any of the three release registries — GitHub Releases, PyPI, npm —
+ * see `checkForUpdateAll()`; the highest version across them is what gets displayed.
  *
  * Also handles IDE adapter auto-recovery when tokens/logins change.
  */
@@ -68,6 +69,13 @@ function writeCache(data) {
 
 /**
  * Check PyPI for latest version (synchronous, with timeout).
+ *
+ * LEGACY / single-channel: this only asks pip, so its `latest` reflects PyPI alone.
+ * Anything that *displays* "最新版本" must use `checkForUpdateAll()` instead — the real
+ * release surface is three registries (GitHub Releases + PyPI + npm) and a PyPI-only
+ * answer misreports "已是最新" / "领先于已发布版本" whenever another channel is ahead.
+ * Kept for the synchronous callers that cannot await.
+ *
  * Returns { latest, current, updateAvailable } or null.
  */
 function checkForUpdate() {
@@ -139,6 +147,73 @@ function checkForUpdate() {
 }
 
 /**
+ * Multi-registry version check: GitHub Releases + PyPI + npm, highest version wins.
+ *
+ * This is the source of truth for every "最新版本" display. `checkForUpdate()` above only
+ * asks pip, which silently made PyPI the single arbiter of "latest"; when a release lands
+ * on GitHub or npm first (or a PyPI upload fails), that display lies. Here every enabled
+ * channel is queried and reported, including the per-channel breakdown for the UI.
+ *
+ * Never throws. If no channel answers, returns `latest: null, indeterminate: true` —
+ * callers must degrade honestly instead of claiming the install is up to date.
+ *
+ * @param {object} [opts] { env?, fetch?, force?, probes?, cache? } — force skips the cache read,
+ *   cache:false skips both read and write (tests / one-off queries).
+ * @returns {Promise<{latest,current,updateAvailable,source,sourceLabel,sources,sourcesText,
+ *   indeterminate,cached}>}
+ */
+async function checkForUpdateAll(opts = {}) {
+  const current = getCurrentVersion();
+  const useCache = opts.cache !== false;
+  const cache = useCache ? readCache() : null;
+  if (
+    !opts.force &&
+    cache &&
+    cache.checkedAt &&
+    Array.isArray(cache.sources) &&
+    Date.now() - cache.checkedAt < CHECK_INTERVAL_MS
+  ) {
+    return {
+      latest: cache.latest || null,
+      current,
+      updateAvailable: !!cache.latest && compareVersions(cache.latest, current) > 0,
+      source: cache.source || null,
+      sourceLabel: cache.sourceLabel || null,
+      sources: cache.sources,
+      sourcesText: cache.sourcesText || '',
+      indeterminate: !cache.latest,
+      cached: true,
+    };
+  }
+
+  const resolver = require('./latestVersionResolver');
+  const resolved = await resolver.resolveLatestVersion(opts);
+  const result = {
+    latest: resolved.latest,
+    current,
+    updateAvailable: !!resolved.latest && compareVersions(resolved.latest, current) > 0,
+    source: resolved.source,
+    sourceLabel: resolved.sourceLabel,
+    sources: resolved.sources,
+    sourcesText: resolved.text,
+    indeterminate: resolved.indeterminate,
+    cached: false,
+  };
+  // Only a determinate answer is cached — caching "查不到" would turn a transient network
+  // failure into 4 hours of silence about a real update.
+  if (resolved.latest) {
+    writeCache({
+      latest: resolved.latest,
+      source: resolved.source,
+      sourceLabel: resolved.sourceLabel,
+      sources: resolved.sources,
+      sourcesText: resolved.text,
+    });
+  }
+  return result;
+}
+
+/**
  * Compare semver strings. Returns >0 if a > b, <0 if a < b, 0 if equal.
  */
 function compareVersions(a, b) {
@@ -157,11 +232,19 @@ function compareVersions(a, b) {
  * Format update notification string (or empty if up-to-date).
  */
 function getUpdateNotice() {
-  const result = checkForUpdate();
-  if (!result || !result.updateAvailable) {
+  try {
+    const coordinator = require('./updateCoordinator');
+    const state = coordinator.readState();
+    if (!state || state.state !== 'available' && state.state !== 'staged') {
+      return '';
+    }
+    const current = state.current && (state.current.version || state.current.commit);
+    const target = state.target && (state.target.version || state.target.commit);
+    if (!target) return '';
+    return `更新可用: ${current || '当前版本'} → ${target}  运行 khy update 接受`;
+  } catch {
     return '';
   }
-  return `更新可用: v${result.current} → v${result.latest}  运行 update 升级`;
 }
 
 // ── IDE Adapter Auto-Recovery ───────────────────────────────────────────
@@ -244,6 +327,7 @@ module.exports = {
   PACKAGE_CANDIDATES,
   getCurrentVersion,
   checkForUpdate,
+  checkForUpdateAll,
   compareVersions,
   getUpdateNotice,
   recoverIdeAdapters,

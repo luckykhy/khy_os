@@ -277,6 +277,40 @@ function loadMemoryPrompt() {
     // No memory file yet
   }
 
+  // KHY_PROMPT_MEMORY_INDEX_ONLY: minimal mode — inject only MEMORY.md index, skip full instructions
+  let minimalMemory = false;
+  try {
+    const { isFlagEnabled } = require('../services/flagRegistry');
+    minimalMemory = isFlagEnabled('KHY_PROMPT_MEMORY_INDEX_ONLY', process.env);
+  } catch {
+    // fail-soft: cannot load flag → default to full mode
+  }
+
+  if (minimalMemory) {
+    // Minimal mode: brief header + index only
+    const lines = [
+      '# Memory System',
+      '',
+      `You have a persistent, file-based memory system at \`${memoryDir}\`.`,
+      `See \`${MEMORY_INDEX_NAME}\` for the index.`,
+      '',
+    ];
+
+    if (indexContent.trim()) {
+      const truncated = truncateEntrypoint(indexContent);
+      lines.push(`## ${MEMORY_INDEX_NAME}`, '', truncated.content);
+    } else {
+      lines.push(
+        `## ${MEMORY_INDEX_NAME}`,
+        '',
+        `Your ${MEMORY_INDEX_NAME} is currently empty. When you save new memories, they will appear here.`
+      );
+    }
+
+    return lines.join('\n');
+  }
+
+  // Original full mode (flag off = byte-for-byte rollback)
   const lines = _buildMemoryLines(memoryDir);
 
   if (indexContent.trim()) {
@@ -1187,4 +1221,8 @@ module.exports = {
   // exact same tokenizer/overlap math instead of duplicating it.
   _tokenizeForRecall,
   _overlapCount,
+  // Atomic write (retry + temp rename + read-back verify, gated by
+  // memoryWriteSafety). Exposed so the vector sidecar persists through the same
+  // path as memory files themselves rather than growing a second write impl.
+  _safeWriteFileSync,
 };

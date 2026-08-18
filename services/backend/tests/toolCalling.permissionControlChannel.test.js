@@ -27,6 +27,7 @@ describe('toolCalling requestPermission — host control channel (Ink-safe)', ()
     // Skip the human-gate riskGate probe and force the enhanced (non-legacy) UI
     // so the test deterministically reaches the approval branch.
     process.env.KHY_HUMAN_GATE = 'off';
+    process.env.KHY_PERMISSION_MODE = 'default';
     delete process.env.KHY_LEGACY_PERMISSION_UI;
     delete process.env.KHY_PERMISSION_STORE;
 
@@ -92,9 +93,9 @@ describe('toolCalling requestPermission — host control channel (Ink-safe)', ()
     const permStore = require('../src/services/permissionStore');
     const { requestPermission } = require('../src/services/toolCalling');
     await withRawModeSpy(async (rawSpy) => {
-      const decision = await requestPermission('qux_unapproved_tool', {}, async () => false);
+      const decision = await requestPermission('qux_unapproved_tool_deny', {}, async () => false);
       expect(decision).toBe('deny');
-      expect(permStore.deny).toHaveBeenCalledWith('qux_unapproved_tool', 'session', expect.anything());
+      expect(permStore.deny).toHaveBeenCalledWith('qux_unapproved_tool_deny', 'session', expect.anything());
       expect(rawSpy).not.toHaveBeenCalled();
     });
   });
@@ -105,7 +106,7 @@ describe('toolCalling requestPermission — host control channel (Ink-safe)', ()
     const prompt = jest.fn(async () => 'deny');
     require('../src/services/permissionPromptPort').registerPermissionPrompter({ prompt });
     const { requestPermission } = require('../src/services/toolCalling');
-    const decision = await requestPermission('qux_unapproved_tool', {});
+    const decision = await requestPermission('qux_unapproved_tool_prompt', {});
     expect(prompt).toHaveBeenCalledTimes(1);
     expect(decision).toBe('deny');
   });

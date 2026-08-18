@@ -62,7 +62,7 @@ const _CJK_RE = /[\u3400-\u9fff\uf900-\ufaff\u3040-\u30ff\uac00-\ud7af\uff00-\uf
  * @returns {boolean}
  */
 // 收敛到 utils/onValueOr 单一真源(逐字节委托,调用点不变)
-const _envOn = require('../../utils/onValueOr');
+const _envOn = require('../../../../services/backend/src/utils/onValueOr');
 
 /**
  * 门控 KHY_GLM_VISION_TEXT_BUDGET:默认开;0/false/off/no → 关。异常 → 关门(false)。

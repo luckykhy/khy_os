@@ -4,7 +4,7 @@ const express = require('express');
 const router = express.Router();
 const { GuiEvalTask, GuiEvalRun } = require('@khy/shared/models');
 
-const { authenticateToken, requireAdmin } = require('../../../ai-backend/src/middleware/auth');
+const { authenticateToken, requireAdmin } = require('khy-ai-backend/middleware/auth');
 
 // ── helpers ──────────────────────────────────────────────────────────
 

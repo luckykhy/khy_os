@@ -38,20 +38,11 @@ const DOC_TYPESET = path.join(__dirname, '../services/docTypeset.py');
 const MAX_CONTENT_SIZE = 4 * 1024 * 1024; // 4 MB structured content cap
 const IDLE_TIMEOUT_MS = 60000;
 
+// docTypeset.py 存在 + python 可运行 → 启用。python 探活走共享 TTL 缓存
+// (utils/pythonAvailable),避免简单打招呼的一轮里多处 isEnabled 各 spawn 一次 python。
 let _enabled = null;
 function _checkEnabled() {
-  if (!fs.existsSync(DOC_TYPESET)) {
-    return false;
-  }
-  for (const py of ['python3', 'python']) {
-    try {
-      require('child_process').execFileSync(py, ['--version'], { stdio: 'ignore', timeout: 3000 });
-      return true;
-    } catch {
-      /* try next */
-    }
-  }
-  return false;
+  return fs.existsSync(DOC_TYPESET) && require('../utils/pythonAvailable')();
 }
 
 const _resolvePath = require('../utils/resolveUserPath');

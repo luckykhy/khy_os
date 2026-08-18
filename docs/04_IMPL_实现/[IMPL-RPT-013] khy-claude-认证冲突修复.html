@@ -37,12 +37,12 @@
   (ANTHROPIC_API_KEY) are set.</code></pre>
 <h2 id="根因分析">根因分析<a class="anchor" href="#根因分析" aria-label="锚点">#</a></h2>
 <p>用户的 Anthropic 认证信息存储在 <code>~/.claude/settings.json</code> 中：</p>
-<pre><code class="language-json">{
-  &quot;env&quot;: {
-    &quot;ANTHROPIC_AUTH_TOKEN&quot;: &quot;sk-xxx&quot;,
-    &quot;ANTHROPIC_BASE_URL&quot;: &quot;https://ai.mindflow.com.cn&quot;
-  }
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;env&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;ANTHROPIC_AUTH_TOKEN&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;sk-xxx&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;ANTHROPIC_BASE_URL&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;https://ai.mindflow.com.cn&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <p>KHY 的 <code>_sync_claude_code_auth_token()</code> 会在每次启动时运行，并检查<br><code>os.environ</code> 中是否存在外部认证。但用户的认证信息<strong>并不在 shell 环境变量中</strong>——<br>它只存在于 <code>settings.json</code> 里。该检查漏掉了这种情况，于是向 settings.json<br>注入了 <code>ANTHROPIC_API_KEY=khy-xxx</code>。</p>
 <p>结果：settings.json 同时存在 <code>ANTHROPIC_AUTH_TOKEN</code>（Mindflow）和<br><code>ANTHROPIC_API_KEY</code>（KHY 本地代理）。Claude Code 选用了 KHY 的密钥，并<br>将其发送给 Mindflow——后者以 401 拒绝了该请求。</p>
 <p>安全路径（<code>_maybe_configure_claude_code_settings</code>）带有 BASE_URL 守卫，<br>当 URL 非本地时会阻止注入。而出问题的路径<br>（<code>_sync_claude_code_auth_token</code>）缺少这个守卫。</p>
@@ -77,19 +77,19 @@
 <pre><code class="language-bash">khy doctor --fix-claude-conflict</code></pre>
 <p>它会安全地移除常见的冲突残留（例如 <code>ANTHROPIC_API_KEY=khy-*</code><br>与外部 <code>ANTHROPIC_AUTH_TOKEN</code> 共存），然后重新运行诊断。</p>
 <h2 id="验证方式">验证方式<a class="anchor" href="#验证方式" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># Simulate khy startup without shell auth (the real scenario)
-python3 -c &quot;
+<pre><code class="language-bash"><span class="hljs-comment"># Simulate khy startup without shell auth (the real scenario)</span>
+python3 -c <span class="hljs-string">&quot;
 import os
-os.environ.pop('ANTHROPIC_AUTH_TOKEN', None)
-os.environ.pop('ANTHROPIC_API_KEY', None)
+os.environ.pop(&#x27;ANTHROPIC_AUTH_TOKEN&#x27;, None)
+os.environ.pop(&#x27;ANTHROPIC_API_KEY&#x27;, None)
 from khy_platform._bootstrap import _has_external_anthropic_auth
-print('Detected:', _has_external_anthropic_auth())  # Should be True
-&quot;
+print(&#x27;Detected:&#x27;, _has_external_anthropic_auth())  # Should be True
+&quot;</span>
 
-# Full bootstrap test
-cp ~/.claude/settings.json /tmp/before.json
-khy --help  # triggers bootstrap for non-version commands
-diff /tmp/before.json ~/.claude/settings.json  # should show no change</code></pre>
+<span class="hljs-comment"># Full bootstrap test</span>
+<span class="hljs-built_in">cp</span> ~/.claude/settings.json /tmp/before.json
+khy --<span class="hljs-built_in">help</span>  <span class="hljs-comment"># triggers bootstrap for non-version commands</span>
+diff /tmp/before.json ~/.claude/settings.json  <span class="hljs-comment"># should show no change</span></code></pre>
       </article>
       <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-012] 航天级重构白皮书-第二轮-2026-06-10.html"><div class="dir">← 上一篇</div><div class="ttl">《Khyos 航天级重构白皮书 · 第二轮》</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-014] trae-适配器-官方扫描修复-2026-05-25.html"><div class="dir">下一篇 →</div><div class="ttl">Trae 适配器官方登录态扫描修复报告</div></a></nav>
       <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>

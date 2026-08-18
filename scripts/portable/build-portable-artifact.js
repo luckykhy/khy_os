@@ -99,6 +99,7 @@ function resolveInputs(options) {
     artifactDir: path.join(options.out, `${options.kind}-${VERSION}-${slug}`),
     aiFrontend: path.join(ROOT, 'apps', 'ai-frontend', 'dist'),
     quantFrontend: path.join(ROOT, 'software', 'khyquant', 'frontend', 'dist'),
+    runtimeBundle: path.join(ROOT, 'dist', 'modules', 'khy', 'bundle.mjs'),
   };
 }
 
@@ -128,6 +129,9 @@ function validateInputs(options, inputs) {
   }
   requireFile(path.join(inputs.aiFrontend, 'index.html'), 'AI frontend build', errors);
   requireFile(path.join(inputs.quantFrontend, 'index.html'), 'quant frontend build', errors);
+  if (options.kind === 'portable-runtime') {
+    requireFile(inputs.runtimeBundle, 'standalone runtime bundle', errors);
+  }
   return errors;
 }
 
@@ -195,7 +199,7 @@ function writeLaunchers(artifactDir, kind, target) {
   if (windows) {
     const command = kind === 'portable-dev'
       ? '"%ROOT%runtime\\python\\python.exe" -m khy_platform %*'
-      : '"%ROOT%runtime\\node\\node.exe" "%ROOT%services\\backend\\bin\\khy.js" %*';
+      : '"%ROOT%runtime\\node\\node.exe" "%ROOT%runtime\\khy\\bundle.mjs" %*';
     const lines = [
       '@echo off',
       'setlocal',
@@ -234,7 +238,7 @@ function writeLaunchers(artifactDir, kind, target) {
   } else {
     const command = kind === 'portable-dev'
       ? 'exec "$ROOT/runtime/python/bin/python3" -m khy_platform "$@"'
-      : 'exec "$ROOT/runtime/node/bin/node" "$ROOT/services/backend/bin/khy.js" "$@"';
+      : 'exec "$ROOT/runtime/node/bin/node" "$ROOT/runtime/khy/bundle.mjs" "$@"';
     const lines = [
       '#!/usr/bin/env sh',
       'set -eu',
@@ -292,7 +296,10 @@ function writeBuildInfo(artifactDir, options, inputs) {
     inputs: {
       nodeRuntime: path.relative(ROOT, options.nodeRuntime).split(path.sep).join('/'),
       pythonRuntime: path.relative(ROOT, options.pythonRuntime).split(path.sep).join('/'),
-      source: '.',
+      source: options.kind === 'portable-dev' ? '.' : undefined,
+      bundle: options.kind === 'portable-runtime'
+        ? path.relative(ROOT, inputs.runtimeBundle).split(path.sep).join('/')
+        : undefined,
     },
   };
   fs.writeFileSync(path.join(artifactDir, BUILD_INFO_FILENAME), `${JSON.stringify(info, null, 2)}\n`, 'utf8');
@@ -336,10 +343,9 @@ function runtimeSourceFilter(relative, entry) {
 
 function buildRuntime(options, inputs) {
   const artifactDir = inputs.artifactDir;
-  copyTree(ROOT, artifactDir, {
-    skipSymlinks: false,
-    filter: runtimeSourceFilter,
-  });
+  const runtimeDir = path.join(artifactDir, 'runtime', 'khy');
+  fs.mkdirSync(runtimeDir, { recursive: true });
+  fs.copyFileSync(inputs.runtimeBundle, path.join(runtimeDir, 'bundle.mjs'));
   copyTree(options.nodeRuntime, path.join(artifactDir, 'runtime', 'node'), { skipSymlinks: false });
   copyTree(options.pythonRuntime, path.join(artifactDir, 'runtime', 'python'), { skipSymlinks: false });
   copyTree(inputs.aiFrontend, path.join(artifactDir, 'web', 'ai'), { skipSymlinks: false });
@@ -401,7 +407,7 @@ function printPlan(result) {
   if (options.kind === 'portable-runtime') {
     console.log(`Node:     ${options.nodeRuntime || '<not specified>'}`);
     console.log(`Python:   ${options.pythonRuntime || '<not specified>'}`);
-    console.log(`Backend:  ${path.join(ROOT, 'services', 'backend')}`);
+    console.log(`Bundle:   ${inputs.runtimeBundle}`);
     console.log(`AI web:   ${inputs.aiFrontend}`);
     console.log(`Quant web:${inputs.quantFrontend}`);
   } else {

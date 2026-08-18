@@ -29,7 +29,7 @@
 <blockquote><p>状态:已实现(未提交,待用户点头)。承接 [OPS-MAN-104] 低置信诚实告诫,补<strong>正交</strong>的第二条诚实维度。<br>门控:<code>KHY_OCR_COVERAGE_NOTICE</code>(default-on,<code>0/false/off/no</code> 关 → 逐字节回退)。</p></blockquote>
 <h2 id="一-背景与缺口-goal-2026-07-12">一、背景与缺口(/goal 2026-07-12)<a class="anchor" href="#一-背景与缺口-goal-2026-07-12" aria-label="锚点">#</a></h2>
 <p>当运行模型为<strong>纯文本 / 非多模态</strong>、且识图模型不可用时,khy 落到本地 OCR 兜底,把提取到的文字<br>当作「请据此作答」的权威依据注入 prompt。gateway 三处注入点都以:</p>
-<pre><code class="language-js">extractImageOcrDetails(images, { maxImages: 3, maxChars: 1200 })</code></pre>
+<pre><code class="language-js"><span class="hljs-title function_">extractImageOcrDetails</span>(images, { <span class="hljs-attr">maxImages</span>: <span class="hljs-number">3</span>, <span class="hljs-attr">maxChars</span>: <span class="hljs-number">1200</span> })</code></pre>
 <p>提取。其中 <code>aiGateway.js</code> 的实现对图片做 <code>images.slice(0, maxImages)</code> —— <strong>第 4 张起被静默丢弃</strong>,<br>无计数、无标记;此外部分图片(纯照片 / 场景图 / 缺字库)会<strong>提取不到文字</strong>,在这批明细里静默消失。</p>
 <p>于是模型收到 <code>【图片1】【图片2】【图片3】</code> 三块并被告知「以下为图片 OCR 识别文本,请据此作答」,<br>却以为这就是全部。用户发了 5 张、其中 2 张读不出时,模型基于<strong>残缺</strong>输入自信作答而毫不知情——<br>这正是「silent truncation reads as covered everything」反模式:上限已在代码里生效,却从不向作答的<br>模型披露被截断 / 被丢弃了什么。</p>
 <p><strong>与 OPS-104 的正交关系</strong>:OPS-104(<code>ocrConfidenceCaveat</code>)管<strong>准确性</strong>——识别出的字可能是错的;<br>本条(<code>ocrCoverageNotice</code>)管<strong>完整性</strong>——注入的文本可能没覆盖全部图片。二者是同一 consumer<br>(OCR 注入点)上两条互相独立的诚实轴,可同时出现、互不替代。</p>

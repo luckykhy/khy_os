@@ -56,18 +56,18 @@ spinner.start('request') 被某处重新调用
 <p><strong>关键教训</strong>: 5 次方案全部试图在渲染管道中修复，但 REPL 的渲染管道有 3+ 个并发定时器（spinner 120ms、keepalive 500ms、adapter pulse 4s）共享同一个 stdout 行，竞态条件难以在非 TTY 测试中复现。<code>-p</code> 模式不触发 busy prompt keepalive，因此无法复现。</p>
 <h2 id="最终修复">最终修复<a class="anchor" href="#最终修复" aria-label="锚点">#</a></h2>
 <p><strong>从源头消除</strong> — 在 <code>claudeAdapter.js</code> 中删除桥接状态块的发射。</p>
-<pre><code class="language-js">// Before (claudeAdapter.js:812-819)
-try {
-  onChunk({
-    type: 'status',
-    text: '🔗 中转桥接：通过 Claude CLI 子进程启动...',
+<pre><code class="language-js"><span class="hljs-comment">// Before (claudeAdapter.js:812-819)</span>
+<span class="hljs-keyword">try</span> {
+  <span class="hljs-title function_">onChunk</span>({
+    <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;status&#x27;</span>,
+    <span class="hljs-attr">text</span>: <span class="hljs-string">&#x27;🔗 中转桥接：通过 Claude CLI 子进程启动...&#x27;</span>,
   });
-} catch { /* best effort */ }
+} <span class="hljs-keyword">catch</span> { <span class="hljs-comment">/* best effort */</span> }
 
-// After — 完全移除，替换为注释
-// Bridge handshake status suppressed — the adapter pulse
-// (&quot;Claude Code 正在生成响应（已耗时 Ns）&quot;) already communicates
-// progress, and emitting a status chunk here caused terminal flooding.</code></pre>
+<span class="hljs-comment">// After — 完全移除，替换为注释</span>
+<span class="hljs-comment">// Bridge handshake status suppressed — the adapter pulse</span>
+<span class="hljs-comment">// (&quot;Claude Code 正在生成响应（已耗时 Ns）&quot;) already communicates</span>
+<span class="hljs-comment">// progress, and emitting a status chunk here caused terminal flooding.</span></code></pre>
 <p><strong>理由</strong>: 适配器脉冲 <code>&quot;Claude Code 正在生成响应（已耗时 Ns）&quot;</code> 每 4s 自动发射，已经向用户传达了&quot;请求正在进行&quot;的信息。桥接握手消息没有额外的用户价值。</p>
 <h2 id="修改文件">修改文件<a class="anchor" href="#修改文件" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>文件</th><th>改动</th></tr></thead><tbody><tr><td><code>backend/src/services/gateway/adapters/claudeAdapter.js</code></td><td>删除桥接 status chunk 发射（根因修复）</td></tr><tr><td><code>backend/src/cli/repl.js</code></td><td>添加 <code>_transientStatusActive</code> 防护（防御性改进，防止其他 status 刷屏）</td></tr><tr><td><code>backend/src/cli/repl.js</code></td><td><code>emitRuntimeStatus</code> 入口添加&quot;中转桥接&quot;过滤（双保险）</td></tr><tr><td><code>backend/src/cli/liteRepl.js</code></td><td>同步添加&quot;中转桥接&quot;过滤</td></tr></tbody></table>

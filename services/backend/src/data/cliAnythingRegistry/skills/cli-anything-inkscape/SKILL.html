@@ -37,21 +37,21 @@
 <ul><li>Python 3.10+</li><li>inkscape must be installed on your system</li></ul>
 <h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
 <h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Show help
-cli-anything-inkscape --help
+<pre><code class="language-bash"><span class="hljs-comment"># Show help</span>
+cli-anything-inkscape --<span class="hljs-built_in">help</span>
 
-# Start interactive REPL mode
+<span class="hljs-comment"># Start interactive REPL mode</span>
 cli-anything-inkscape
 
-# Create a new document
+<span class="hljs-comment"># Create a new document</span>
 cli-anything-inkscape document new -o project.json
 
-# Run with JSON output (for agent consumption)
+<span class="hljs-comment"># Run with JSON output (for agent consumption)</span>
 cli-anything-inkscape --json document info -p project.json</code></pre>
 <h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
 <p>When invoked without a subcommand, the CLI enters an interactive REPL session:</p>
 <pre><code class="language-bash">cli-anything-inkscape
-# Enter commands interactively with tab-completion and history</code></pre>
+<span class="hljs-comment"># Enter commands interactively with tab-completion and history</span></code></pre>
 <p>You can also start the REPL with a nonexistent project path. The CLI now seeds a<br>new in-memory document instead of failing immediately:</p>
 <pre><code class="language-bash">cli-anything-inkscape --project /abs/path/new-title.inkscape-cli.json</code></pre>
 <h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
@@ -89,26 +89,26 @@ cli-anything-inkscape --json document info -p project.json</code></pre>
 <h3 id="create-a-new-project">Create a New Project<a class="anchor" href="#create-a-new-project" aria-label="锚点">#</a></h3>
 <p>Create a new inkscape project file.</p>
 <pre><code class="language-bash">cli-anything-inkscape document new -o myproject.json
-# Or with JSON output for programmatic use
+<span class="hljs-comment"># Or with JSON output for programmatic use</span>
 cli-anything-inkscape --json document new -o myproject.json</code></pre>
 <h3 id="interactive-repl-session">Interactive REPL Session<a class="anchor" href="#interactive-repl-session" aria-label="锚点">#</a></h3>
 <p>Start an interactive session with undo/redo support.</p>
 <pre><code class="language-bash">cli-anything-inkscape
-# Enter commands interactively
-# Use 'help' to see available commands
-# Use 'undo' and 'redo' for history navigation</code></pre>
+<span class="hljs-comment"># Enter commands interactively</span>
+<span class="hljs-comment"># Use &#x27;help&#x27; to see available commands</span>
+<span class="hljs-comment"># Use &#x27;undo&#x27; and &#x27;redo&#x27; for history navigation</span></code></pre>
 <h3 id="export-project">Export Project<a class="anchor" href="#export-project" aria-label="锚点">#</a></h3>
 <p>Export the project to a final output format.</p>
-<pre><code class="language-bash">cli-anything-inkscape --project myproject.json export pdf output.pdf --overwrite</code></pre>
+<pre><code class="language-bash">cli-anything-inkscape --project myproject.json <span class="hljs-built_in">export</span> pdf output.pdf --overwrite</code></pre>
 <h3 id="wrapped-text-layout">Wrapped Text Layout<a class="anchor" href="#wrapped-text-layout" aria-label="锚点">#</a></h3>
 <p>For title cards, chips, and portrait-safe panels, prefer wrapped text boxes<br>instead of manually inserting line breaks:</p>
 <pre><code class="language-bash">cli-anything-inkscape --project title.json text add \
-  --text &quot;Real capture + Veo cold open + Gemini score + thumbnail plate&quot; \
+  --text <span class="hljs-string">&quot;Real capture + Veo cold open + Gemini score + thumbnail plate&quot;</span> \
   --x 180 --y 470 --font-size 118 \
   --box-width 1180 --box-height 260 --line-height 1.05
 
-cli-anything-inkscape --project title.json text set 0 box-width 980
-cli-anything-inkscape --project title.json text set 0 line-height 1.15</code></pre>
+cli-anything-inkscape --project title.json text <span class="hljs-built_in">set</span> 0 box-width 980
+cli-anything-inkscape --project title.json text <span class="hljs-built_in">set</span> 0 line-height 1.15</code></pre>
 <p>Notes:</p>
 <ul><li><code>box-width</code> wraps long copy into multiple exported SVG <code>tspan</code> lines.</li><li><code>box-height</code> lets long copy fail safely instead of running off-canvas.</li><li>Use wrapped text boxes for long-copy graphics before resorting to manual line breaking.</li></ul>
 <h2 id="state-management">State Management<a class="anchor" href="#state-management" aria-label="锚点">#</a></h2>
@@ -117,10 +117,10 @@ cli-anything-inkscape --project title.json text set 0 line-height 1.15</code></p
 <h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
 <p>All commands support dual output modes:</p>
 <ul><li><strong>Human-readable</strong> (default): Tables, colors, formatted text</li><li><strong>Machine-readable</strong> (<code>--json</code> flag): Structured JSON for agent consumption</li></ul>
-<pre><code class="language-bash"># Human output
+<pre><code class="language-bash"><span class="hljs-comment"># Human output</span>
 cli-anything-inkscape project info -p project.json
 
-# JSON output for agents
+<span class="hljs-comment"># JSON output for agents</span>
 cli-anything-inkscape --json project info -p project.json</code></pre>
 <h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
 <p>When using this CLI programmatically:</p>

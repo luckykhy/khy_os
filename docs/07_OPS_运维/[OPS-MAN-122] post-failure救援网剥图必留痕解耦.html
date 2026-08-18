@@ -44,20 +44,20 @@
 <p>仅显式 <code>0/false/off/no</code> 关闭；env 经 opts 注入可测。</p>
 <ol><li><strong><code>aiGatewayGenerateMethod.js</code>（<code>_visionFallback</code> 块，<code>break</code> 之前）</strong>：加一处<strong>门控守卫</strong>，</li></ol>
 <p>仅当门开 且 <code>hasImageInput</code> 且 <code>!_ocrFallbackApplied</code> 且仍有图像时触发（故 OCR-成功分支<br>   已 <code>_ocrFallbackApplied=true</code> 时<strong>跳过</strong>，无回归）——与 OCR-成功分支<strong>同款无条件剥图</strong>并注入<br>   诚实底线：优先 <code>buildVisionUnreadableNote</code>（救援网前置条件是 <code>KHY_VISION_OCR_FALLBACK</code> <strong>开</strong>，<br>   故此说明可用），叶子/说明缺失时退回 <code>buildStrippedImageFloorNote</code> 兜底：</p>
-<pre><code class="language-js">   const _rescueFloorOn = require('./visionOcrFallback').isRescueStripFloorEnabled(process.env);
-   if (_rescueFloorOn &amp;&amp; hasImageInput &amp;&amp; !adapterOptions._ocrFallbackApplied
-       &amp;&amp; Array.isArray(adapterOptions.images) &amp;&amp; adapterOptions.images.length &gt; 0) {
-     let _note = null;
-     try { _note = require('./visionOcrFallback').buildVisionUnreadableNote({ count: _imgCount }); } catch {}
-     if (!_note) {
-       try { _note = require('./visionOcrFallback')
-         .buildStrippedImageFloorNote({ count: _imgCount, env: process.env }); } catch {}
+<pre><code class="language-js">   <span class="hljs-keyword">const</span> _rescueFloorOn = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./visionOcrFallback&#x27;</span>).<span class="hljs-title function_">isRescueStripFloorEnabled</span>(process.<span class="hljs-property">env</span>);
+   <span class="hljs-keyword">if</span> (_rescueFloorOn &amp;&amp; hasImageInput &amp;&amp; !adapterOptions.<span class="hljs-property">_ocrFallbackApplied</span>
+       &amp;&amp; <span class="hljs-title class_">Array</span>.<span class="hljs-title function_">isArray</span>(adapterOptions.<span class="hljs-property">images</span>) &amp;&amp; adapterOptions.<span class="hljs-property">images</span>.<span class="hljs-property">length</span> &gt; <span class="hljs-number">0</span>) {
+     <span class="hljs-keyword">let</span> _note = <span class="hljs-literal">null</span>;
+     <span class="hljs-keyword">try</span> { _note = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./visionOcrFallback&#x27;</span>).<span class="hljs-title function_">buildVisionUnreadableNote</span>({ <span class="hljs-attr">count</span>: _imgCount }); } <span class="hljs-keyword">catch</span> {}
+     <span class="hljs-keyword">if</span> (!_note) {
+       <span class="hljs-keyword">try</span> { _note = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./visionOcrFallback&#x27;</span>)
+         .<span class="hljs-title function_">buildStrippedImageFloorNote</span>({ <span class="hljs-attr">count</span>: _imgCount, <span class="hljs-attr">env</span>: process.<span class="hljs-property">env</span> }); } <span class="hljs-keyword">catch</span> {}
      }
-     if (_note) prompt = `${prompt || ''}\n\n${_note}`;
-     adapterOptions.images = [];
-     adapterOptions._ocrFallbackApplied = true;
-     options = { ...options, images: undefined, _ocrFallbackApplied: true };
-     hasImageInput = false;
+     <span class="hljs-keyword">if</span> (_note) prompt = <span class="hljs-string">`<span class="hljs-subst">${prompt || <span class="hljs-string">&#x27;&#x27;</span>}</span>\n\n<span class="hljs-subst">${_note}</span>`</span>;
+     adapterOptions.<span class="hljs-property">images</span> = [];
+     adapterOptions.<span class="hljs-property">_ocrFallbackApplied</span> = <span class="hljs-literal">true</span>;
+     options = { ...options, <span class="hljs-attr">images</span>: <span class="hljs-literal">undefined</span>, <span class="hljs-attr">_ocrFallbackApplied</span>: <span class="hljs-literal">true</span> };
+     hasImageInput = <span class="hljs-literal">false</span>;
    }</code></pre>
 <ol><li><strong><code>flagRegistry.js</code></strong>：登记</li></ol>
 <p><code>KHY_VISION_RESCUE_STRIP_FLOOR: { mode: 'default-on', off: 'CANON', default: true }</code>。</p>

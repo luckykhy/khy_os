@@ -36,19 +36,19 @@
 <ul><li>Python 3.10+</li><li>PM2 installed globally (<code>npm install -g pm2</code>)</li></ul>
 <h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
 <h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Show help
-cli-anything-pm2 --help
+<pre><code class="language-bash"><span class="hljs-comment"># Show help</span>
+cli-anything-pm2 --<span class="hljs-built_in">help</span>
 
-# Start interactive REPL mode
+<span class="hljs-comment"># Start interactive REPL mode</span>
 cli-anything-pm2
 
-# Run with JSON output (for agent consumption)
+<span class="hljs-comment"># Run with JSON output (for agent consumption)</span>
 cli-anything-pm2 --json process list
 cli-anything-pm2 --json system version</code></pre>
 <h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
 <p>When invoked without a subcommand, the CLI enters an interactive REPL session:</p>
 <pre><code class="language-bash">cli-anything-pm2
-# Enter commands interactively with tab-completion and history</code></pre>
+<span class="hljs-comment"># Enter commands interactively with tab-completion and history</span></code></pre>
 <h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
 <h3 id="process">process<a class="anchor" href="#process" aria-label="锚点">#</a></h3>
 <p>Process inspection commands.</p>
@@ -65,10 +65,10 @@ cli-anything-pm2 --json system version</code></pre>
 <h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
 <p>All commands support dual output modes:</p>
 <ul><li><strong>Human-readable</strong> (default): Tables, colors, formatted text</li><li><strong>Machine-readable</strong> (<code>--json</code> flag): Structured JSON for agent consumption</li></ul>
-<pre><code class="language-bash"># Human output
+<pre><code class="language-bash"><span class="hljs-comment"># Human output</span>
 cli-anything-pm2 process list
 
-# JSON output for agents
+<span class="hljs-comment"># JSON output for agents</span>
 cli-anything-pm2 --json process list</code></pre>
 <h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
 <p>When using this CLI programmatically:</p>

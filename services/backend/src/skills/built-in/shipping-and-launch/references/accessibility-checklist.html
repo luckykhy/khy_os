@@ -42,68 +42,68 @@
 <ul><li>[ ] Language declared (<code>&lt;html lang=&quot;en&quot;&gt;</code>)</li><li>[ ] Page has a descriptive <code>&lt;title&gt;</code></li><li>[ ] Links distinguish from surrounding text (not by color alone)</li><li>[ ] Touch targets ≥ 44x44px on mobile</li><li>[ ] Meaningful empty states (not blank screens)</li></ul>
 <h2 id="common-html-patterns">Common HTML Patterns<a class="anchor" href="#common-html-patterns" aria-label="锚点">#</a></h2>
 <h3 id="buttons-vs-links">Buttons vs. Links<a class="anchor" href="#buttons-vs-links" aria-label="锚点">#</a></h3>
-<pre><code class="language-html">&lt;!-- Use &lt;button&gt; for actions --&gt;
-&lt;button onClick={handleDelete}&gt;Delete Task&lt;/button&gt;
+<pre><code class="language-html"><span class="hljs-comment">&lt;!-- Use &lt;button&gt; for actions --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">button</span> <span class="hljs-attr">onClick</span>=<span class="hljs-string">{handleDelete}</span>&gt;</span>Delete Task<span class="hljs-tag">&lt;/<span class="hljs-name">button</span>&gt;</span>
 
-&lt;!-- Use &lt;a&gt; for navigation --&gt;
-&lt;a href=&quot;/tasks/123&quot;&gt;View Task&lt;/a&gt;
+<span class="hljs-comment">&lt;!-- Use &lt;a&gt; for navigation --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">a</span> <span class="hljs-attr">href</span>=<span class="hljs-string">&quot;/tasks/123&quot;</span>&gt;</span>View Task<span class="hljs-tag">&lt;/<span class="hljs-name">a</span>&gt;</span>
 
-&lt;!-- NEVER use div/span as buttons --&gt;
-&lt;div onClick={handleDelete}&gt;Delete&lt;/div&gt;  &lt;!-- BAD --&gt;</code></pre>
+<span class="hljs-comment">&lt;!-- NEVER use div/span as buttons --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">onClick</span>=<span class="hljs-string">{handleDelete}</span>&gt;</span>Delete<span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>  <span class="hljs-comment">&lt;!-- BAD --&gt;</span></code></pre>
 <h3 id="form-labels">Form Labels<a class="anchor" href="#form-labels" aria-label="锚点">#</a></h3>
-<pre><code class="language-html">&lt;!-- Explicit label association --&gt;
-&lt;label htmlFor=&quot;email&quot;&gt;Email address&lt;/label&gt;
-&lt;input id=&quot;email&quot; type=&quot;email&quot; required /&gt;
+<pre><code class="language-html"><span class="hljs-comment">&lt;!-- Explicit label association --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">label</span> <span class="hljs-attr">htmlFor</span>=<span class="hljs-string">&quot;email&quot;</span>&gt;</span>Email address<span class="hljs-tag">&lt;/<span class="hljs-name">label</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">input</span> <span class="hljs-attr">id</span>=<span class="hljs-string">&quot;email&quot;</span> <span class="hljs-attr">type</span>=<span class="hljs-string">&quot;email&quot;</span> <span class="hljs-attr">required</span> /&gt;</span>
 
-&lt;!-- Implicit wrapping --&gt;
-&lt;label&gt;
+<span class="hljs-comment">&lt;!-- Implicit wrapping --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">label</span>&gt;</span>
   Email address
-  &lt;input type=&quot;email&quot; required /&gt;
-&lt;/label&gt;
+  <span class="hljs-tag">&lt;<span class="hljs-name">input</span> <span class="hljs-attr">type</span>=<span class="hljs-string">&quot;email&quot;</span> <span class="hljs-attr">required</span> /&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">label</span>&gt;</span>
 
-&lt;!-- Hidden label (visible label preferred) --&gt;
-&lt;input type=&quot;search&quot; aria-label=&quot;Search tasks&quot; /&gt;</code></pre>
+<span class="hljs-comment">&lt;!-- Hidden label (visible label preferred) --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">input</span> <span class="hljs-attr">type</span>=<span class="hljs-string">&quot;search&quot;</span> <span class="hljs-attr">aria-label</span>=<span class="hljs-string">&quot;Search tasks&quot;</span> /&gt;</span></code></pre>
 <h3 id="aria-roles">ARIA Roles<a class="anchor" href="#aria-roles" aria-label="锚点">#</a></h3>
-<pre><code class="language-html">&lt;!-- Navigation --&gt;
-&lt;nav aria-label=&quot;Main navigation&quot;&gt;...&lt;/nav&gt;
-&lt;nav aria-label=&quot;Footer links&quot;&gt;...&lt;/nav&gt;
+<pre><code class="language-html"><span class="hljs-comment">&lt;!-- Navigation --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">nav</span> <span class="hljs-attr">aria-label</span>=<span class="hljs-string">&quot;Main navigation&quot;</span>&gt;</span>...<span class="hljs-tag">&lt;/<span class="hljs-name">nav</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">nav</span> <span class="hljs-attr">aria-label</span>=<span class="hljs-string">&quot;Footer links&quot;</span>&gt;</span>...<span class="hljs-tag">&lt;/<span class="hljs-name">nav</span>&gt;</span>
 
-&lt;!-- Status messages --&gt;
-&lt;div role=&quot;status&quot; aria-live=&quot;polite&quot;&gt;Task saved&lt;/div&gt;
+<span class="hljs-comment">&lt;!-- Status messages --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">role</span>=<span class="hljs-string">&quot;status&quot;</span> <span class="hljs-attr">aria-live</span>=<span class="hljs-string">&quot;polite&quot;</span>&gt;</span>Task saved<span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
 
-&lt;!-- Alert messages --&gt;
-&lt;div role=&quot;alert&quot;&gt;Error: Title is required&lt;/div&gt;
+<span class="hljs-comment">&lt;!-- Alert messages --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">role</span>=<span class="hljs-string">&quot;alert&quot;</span>&gt;</span>Error: Title is required<span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span>
 
-&lt;!-- Modal dialogs --&gt;
-&lt;dialog aria-modal=&quot;true&quot; aria-labelledby=&quot;dialog-title&quot;&gt;
-  &lt;h2 id=&quot;dialog-title&quot;&gt;Confirm Delete&lt;/h2&gt;
+<span class="hljs-comment">&lt;!-- Modal dialogs --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">dialog</span> <span class="hljs-attr">aria-modal</span>=<span class="hljs-string">&quot;true&quot;</span> <span class="hljs-attr">aria-labelledby</span>=<span class="hljs-string">&quot;dialog-title&quot;</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">h2</span> <span class="hljs-attr">id</span>=<span class="hljs-string">&quot;dialog-title&quot;</span>&gt;</span>Confirm Delete<span class="hljs-tag">&lt;/<span class="hljs-name">h2</span>&gt;</span>
   ...
-&lt;/dialog&gt;
+<span class="hljs-tag">&lt;/<span class="hljs-name">dialog</span>&gt;</span>
 
-&lt;!-- Loading states --&gt;
-&lt;div aria-busy=&quot;true&quot; aria-label=&quot;Loading tasks&quot;&gt;
-  &lt;Spinner /&gt;
-&lt;/div&gt;</code></pre>
+<span class="hljs-comment">&lt;!-- Loading states --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">aria-busy</span>=<span class="hljs-string">&quot;true&quot;</span> <span class="hljs-attr">aria-label</span>=<span class="hljs-string">&quot;Loading tasks&quot;</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">Spinner</span> /&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span></code></pre>
 <h3 id="accessible-lists">Accessible Lists<a class="anchor" href="#accessible-lists" aria-label="锚点">#</a></h3>
-<pre><code class="language-html">&lt;ul role=&quot;list&quot; aria-label=&quot;Tasks&quot;&gt;
-  &lt;li&gt;
-    &lt;input type=&quot;checkbox&quot; id=&quot;task-1&quot; aria-label=&quot;Complete: Buy groceries&quot; /&gt;
-    &lt;label htmlFor=&quot;task-1&quot;&gt;Buy groceries&lt;/label&gt;
-  &lt;/li&gt;
-&lt;/ul&gt;</code></pre>
+<pre><code class="language-html"><span class="hljs-tag">&lt;<span class="hljs-name">ul</span> <span class="hljs-attr">role</span>=<span class="hljs-string">&quot;list&quot;</span> <span class="hljs-attr">aria-label</span>=<span class="hljs-string">&quot;Tasks&quot;</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">li</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">input</span> <span class="hljs-attr">type</span>=<span class="hljs-string">&quot;checkbox&quot;</span> <span class="hljs-attr">id</span>=<span class="hljs-string">&quot;task-1&quot;</span> <span class="hljs-attr">aria-label</span>=<span class="hljs-string">&quot;Complete: Buy groceries&quot;</span> /&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">label</span> <span class="hljs-attr">htmlFor</span>=<span class="hljs-string">&quot;task-1&quot;</span>&gt;</span>Buy groceries<span class="hljs-tag">&lt;/<span class="hljs-name">label</span>&gt;</span>
+  <span class="hljs-tag">&lt;/<span class="hljs-name">li</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">ul</span>&gt;</span></code></pre>
 <h2 id="testing-tools">Testing Tools<a class="anchor" href="#testing-tools" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># Automated audit
-npx axe-core          # Programmatic accessibility testing
-npx pa11y             # CLI accessibility checker
+<pre><code class="language-bash"><span class="hljs-comment"># Automated audit</span>
+npx axe-core          <span class="hljs-comment"># Programmatic accessibility testing</span>
+npx pa11y             <span class="hljs-comment"># CLI accessibility checker</span>
 
-# In browser
-# Chrome DevTools → Lighthouse → Accessibility
-# Chrome DevTools → Elements → Accessibility tree
+<span class="hljs-comment"># In browser</span>
+<span class="hljs-comment"># Chrome DevTools → Lighthouse → Accessibility</span>
+<span class="hljs-comment"># Chrome DevTools → Elements → Accessibility tree</span>
 
-# Screen reader testing
-# macOS: VoiceOver (Cmd + F5)
-# Windows: NVDA (free) or JAWS
-# Linux: Orca</code></pre>
+<span class="hljs-comment"># Screen reader testing</span>
+<span class="hljs-comment"># macOS: VoiceOver (Cmd + F5)</span>
+<span class="hljs-comment"># Windows: NVDA (free) or JAWS</span>
+<span class="hljs-comment"># Linux: Orca</span></code></pre>
 <h2 id="quick-reference-aria-live-regions">Quick Reference: ARIA Live Regions<a class="anchor" href="#quick-reference-aria-live-regions" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>Value</th><th>Behavior</th><th>Use For</th></tr></thead><tbody><tr><td><code>aria-live=&quot;polite&quot;</code></td><td>Announced at next pause</td><td>Status updates, saved confirmations</td></tr><tr><td><code>aria-live=&quot;assertive&quot;</code></td><td>Announced immediately</td><td>Errors, time-sensitive alerts</td></tr><tr><td><code>role=&quot;status&quot;</code></td><td>Same as <code>polite</code></td><td>Status messages</td></tr><tr><td><code>role=&quot;alert&quot;</code></td><td>Same as <code>assertive</code></td><td>Error messages</td></tr></tbody></table>
 <h2 id="common-anti-patterns">Common Anti-Patterns<a class="anchor" href="#common-anti-patterns" aria-label="锚点">#</a></h2>

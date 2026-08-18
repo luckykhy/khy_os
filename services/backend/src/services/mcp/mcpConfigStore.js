@@ -18,6 +18,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
+const atomicWriteJson = require('../../utils/atomicWriteJson');
+
 /**
  * 解析某 scope 的 mcp.json 绝对路径。
  * @param {'user'|'project'} scope
@@ -72,7 +74,13 @@ function _writeConfigFile(filePath, config) {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
-  fs.writeFileSync(filePath, `${JSON.stringify(config, null, 2)}\n`, 'utf-8');
+  // 原子写:临时文件 + rename。trailingNewline 保持与旧的 `${JSON.stringify(…)}\n` 字节一致
+  // (project 作用域的 .khy/mcp.json 常被提交进仓库,少一个换行就是一条 diff)。
+  // mode 0o666 = writeFileSync 的默认值,由 umask 决定实际权限——本次迁移只换写入原语,不改权限。
+  if (!atomicWriteJson(filePath, config, { mode: 0o666, trailingNewline: true })) {
+    // atomicWriteJson 不抛;此处调用方(addServer/removeServer)一直靠异常报错,必须自己抛回去。
+    throw new Error(`无法写入 MCP 配置文件:${filePath}`);
+  }
 }
 
 /**

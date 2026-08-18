@@ -6,13 +6,8 @@
  * This is functionally equivalent to bin/khy.js but wrapped for pkg bundling.
  */
 
-process.env.KHY_MODULE = 'khy';
 process.env.KHY_MODE = 'standalone';
 
-const path = require('path');
-
-const BACKEND_ROOT = process.env.KHY_BACKEND_ROOT
-  || path.resolve(__dirname, '../../../services/backend');
-
-// The backend is supplied by the portable runtime layout.
-require(path.join(BACKEND_ROOT, 'bin/khy.js'));
+// Keep this path static so esbuild includes the complete runtime dependency
+// graph. Runtime resources are resolved separately from the emitted manifest.
+require('../../../services/backend/bin/khy.js');

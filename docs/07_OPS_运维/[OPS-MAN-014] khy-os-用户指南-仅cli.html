@@ -42,16 +42,16 @@
 <pre><code class="language-bash">python -m pip install -U khy-os
 khy --version</code></pre>
 <p>Windows PowerShell：</p>
-<pre><code class="language-powershell">python.exe -m pip install -U khy-os
-khy --version</code></pre>
+<pre><code class="language-powershell">python.exe <span class="hljs-literal">-m</span> pip install <span class="hljs-literal">-U</span> khy<span class="hljs-literal">-os</span>
+khy <span class="hljs-literal">--version</span></code></pre>
 <h3 id="2-2-升级">2.2 升级<a class="anchor" href="#2-2-升级" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">python -m pip install --upgrade khy-os
 khy --version</code></pre>
 <h3 id="2-3-可选依赖">2.3 可选依赖<a class="anchor" href="#2-3-可选依赖" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">python -m pip install -U &quot;khy-os[data]&quot;
-python -m pip install -U &quot;khy-os[ml]&quot;
-python -m pip install -U &quot;khy-os[doc]&quot;
-python -m pip install -U &quot;khy-os[full]&quot;</code></pre>
+<pre><code class="language-bash">python -m pip install -U <span class="hljs-string">&quot;khy-os[data]&quot;</span>
+python -m pip install -U <span class="hljs-string">&quot;khy-os[ml]&quot;</span>
+python -m pip install -U <span class="hljs-string">&quot;khy-os[doc]&quot;</span>
+python -m pip install -U <span class="hljs-string">&quot;khy-os[full]&quot;</span></code></pre>
 <h3 id="2-4-docker-部署安装-详细">2.4 Docker 部署安装（详细）<a class="anchor" href="#2-4-docker-部署安装-详细" aria-label="锚点">#</a></h3>
 <p>适用场景：</p>
 <ul><li>你希望把 KHY OS 部署为容器服务</li><li>使用者不需要本地 Python/Node 运行环境，只需 Docker</li></ul>
@@ -66,14 +66,14 @@ khy publish pip-dir-bundle --out ./dist/docker-bundles --name khy-os-pip-share</
 <ol><li>解压部署包  </li></ol>
 <p>Linux/macOS：</p>
 <pre><code class="language-bash">tar -xzf khy-os-pip-share*.tar.gz
-cd khy-os-pip-share*</code></pre>
+<span class="hljs-built_in">cd</span> khy-os-pip-share*</code></pre>
 <p>Windows PowerShell：</p>
-<pre><code class="language-powershell">Expand-Archive .\khy-os-pip-share*.zip -DestinationPath .\khy-os-pip-share -Force
-cd .\khy-os-pip-share</code></pre>
+<pre><code class="language-powershell"><span class="hljs-built_in">Expand-Archive</span> .\khy<span class="hljs-literal">-os-pip-share</span>*.zip <span class="hljs-literal">-DestinationPath</span> .\khy<span class="hljs-literal">-os-pip-share</span> <span class="hljs-literal">-Force</span>
+<span class="hljs-built_in">cd</span> .\khy<span class="hljs-literal">-os-pip-share</span></code></pre>
 <ol><li>初始化环境文件</li></ol>
-<pre><code class="language-bash">cp .env.example .env</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">cp</span> .env.example .<span class="hljs-built_in">env</span></code></pre>
 <p>Windows PowerShell：</p>
-<pre><code class="language-powershell">Copy-Item .env.example .env</code></pre>
+<pre><code class="language-powershell"><span class="hljs-built_in">Copy-Item</span> .env.example .env</code></pre>
 <ol><li>启动服务</li></ol>
 <pre><code class="language-bash">docker compose up -d --build</code></pre>
 <ol><li>检查运行状态</li></ol>
@@ -100,7 +100,7 @@ docker compose up -d --build</code></pre>
 <h2 id="4-常用-cli-命令">4. 常用 CLI 命令<a class="anchor" href="#4-常用-cli-命令" aria-label="锚点">#</a></h2>
 <h3 id="4-1-基础检查">4.1 基础检查<a class="anchor" href="#4-1-基础检查" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">khy --version
-khy --help
+khy --<span class="hljs-built_in">help</span>
 khy doctor</code></pre>
 <h3 id="4-2-数据库相关">4.2 数据库相关<a class="anchor" href="#4-2-数据库相关" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">khy db status
@@ -127,7 +127,7 @@ khy models pull qwen2.5:7b</code></pre>
 <p>通常是某些可选工具未安装或未加入 PATH。</p>
 <p>优先检查：</p>
 <pre><code class="language-bash">khy doctor
-khy --help</code></pre>
+khy --<span class="hljs-built_in">help</span></code></pre>
 <p>如果当前已能正常进入 <code>khy</code> 并对话，通常不影响核心使用。</p>
 <h3 id="6-2-首次启动出现-seed-警告">6.2 首次启动出现 seed 警告<a class="anchor" href="#6-2-首次启动出现-seed-警告" aria-label="锚点">#</a></h3>
 <p>常见提示：</p>
@@ -155,10 +155,10 @@ git checkout -b release/public-vX.Y.Z</code></pre>
 <pre><code class="language-bash">khy --version
 khy doctor</code></pre>
 <ol><li>执行公开版合规检查（确认不包含内部/敏感内容）</li></ol>
-<pre><code class="language-bash">rg -n &quot;网络访问限制规避|仅内部|internal only|private only&quot; docs/</code></pre>
+<pre><code class="language-bash">rg -n <span class="hljs-string">&quot;网络访问限制规避|仅内部|internal only|private only&quot;</span> docs/</code></pre>
 <ol><li>提交改动</li></ol>
 <pre><code class="language-bash">git add -- .
-git commit -m &quot;docs: prepare public release vX.Y.Z&quot;</code></pre>
+git commit -m <span class="hljs-string">&quot;docs: prepare public release vX.Y.Z&quot;</span></code></pre>
 <ol><li>配置公开仓库远程（首次）</li></ol>
 <pre><code class="language-bash">git remote add origin-public git@github.com:Program-master-leader/khy_os.git</code></pre>
 <p>如果已存在 <code>origin-public</code>，改用：</p>
@@ -173,7 +173,7 @@ git commit -m &quot;docs: prepare public release vX.Y.Z&quot;</code></pre>
 <ol><li>推送到公开仓库</li></ol>
 <pre><code class="language-bash">git push -u origin-public release/public-vX.Y.Z</code></pre>
 <ol><li>创建公开版本标签并推送</li></ol>
-<pre><code class="language-bash">git tag -a vX.Y.Z-public -m &quot;public release vX.Y.Z&quot;
+<pre><code class="language-bash">git tag -a vX.Y.Z-public -m <span class="hljs-string">&quot;public release vX.Y.Z&quot;</span>
 git push origin-public vX.Y.Z-public</code></pre>
 <ol><li>可选：使用内置发布命令（等价能力）</li></ol>
 <pre><code class="language-bash">khy publish git-push --platform github --repo Program-master-leader/khy_os --remote origin-public --set-upstream</code></pre>

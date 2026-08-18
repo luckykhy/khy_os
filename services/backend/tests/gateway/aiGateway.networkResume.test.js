@@ -82,6 +82,7 @@ const ENV_KEYS = [
   'KHY_GATEWAY_NETWORK_RESUME_MAX_MS',
   'KHY_GATEWAY_NETWORK_RESUME_POLL_MS',
   'KHY_GATEWAY_NETWORK_RESUME_PROBE_TIMEOUT_MS',
+  'KHY_GATEWAY_RESUME_MAX_CYCLES',
 ];
 
 const savedEnv = {};
@@ -118,6 +119,7 @@ describe('Gateway network-recovery resume (KHY_GATEWAY_NETWORK_RESUME)', () => {
     process.env.KHY_GATEWAY_NETWORK_RESUME_MAX_MS = '2500';
     process.env.KHY_GATEWAY_NETWORK_RESUME_POLL_MS = '300';
     process.env.KHY_GATEWAY_NETWORK_RESUME_PROBE_TIMEOUT_MS = '2000';
+    process.env.KHY_GATEWAY_RESUME_MAX_CYCLES = '2';
 
     setupGateway();
     neutralizeCuratedDefaultModel();
@@ -228,6 +230,7 @@ describe('Gateway network-recovery resume (KHY_GATEWAY_NETWORK_RESUME)', () => {
   }, 30000);
 
   test('single resume cycle: recovery re-run failure reports honestly', async () => {
+    process.env.KHY_GATEWAY_RESUME_MAX_CYCLES = '1';
     const netState = { up: false };
     const a = createAdapterEntry('a', async () => netFail('a'), () => netState.up);
     const b = createAdapterEntry('b', async () => netFail('b'), () => netState.up);
@@ -239,6 +242,6 @@ describe('Gateway network-recovery resume (KHY_GATEWAY_NETWORK_RESUME)', () => {
 
     expect(result.success).toBe(false);
     expect(String(result.content || '')).toContain('所有 AI 通道均不可用');
-    expect(String(result.content || '')).toContain('已等待网络恢复并自动重试，重试仍未成功。');
+    expect(String(result.content || '')).toMatch(/已等待网络恢复并自动重试（\d+ 轮续传），重试仍未成功。/);
   }, 30000);
 });

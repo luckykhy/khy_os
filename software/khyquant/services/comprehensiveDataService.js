@@ -3805,7 +3805,7 @@ class ComprehensiveDataService {
 
     // Use fast indicator engine (20-28x speedup over legacy inline methods).
     // Toggle via env INDICATOR_ENGINE=fast|legacy (default: fast).
-    const engine = require('./indicators');
+    const engine = require('../indicators/indicators');
 
     return {
 

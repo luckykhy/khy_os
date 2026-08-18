@@ -32,7 +32,7 @@
 <ul><li>只认 <code>algo === 'aes-256-gcm'</code>（其它抛 <code>unsupported or missing snapshot crypto header</code>）；</li><li><strong>总是跑 <code>scryptSync</code>，从不读 <code>crypto.kdf</code></strong>。</li></ul>
 <p>于是未来一个 <code>kdf:'argon2'</code> 或未知 <code>algo</code> 的快照送到旧机器：运行时要么抛底层天书，<br>要么盲跑 scrypt 派生出<strong>错误密钥</strong> → GCM 认证失败。而这两种失败在 <code>publish.js</code> 的<br><code>catch</code> 里被<strong>一律</strong>改写成误导性的<br>「该快照由自定义密钥加密，请用 <code>--secret &lt;密钥&gt;</code> 指定」——<br>把「本机能力缺失、请升级 khy」<strong>谎报成「你密钥/口令错了」</strong>。陌生机器上的用户于是<br>一直找错方向。= <strong>能力存在、没接线的代码</strong>。</p>
 <p>本层就是那条缺失的接线：在 bundled 运行时里，<strong>解密之前</strong>给已解析的快照头跑一遍<br>兼容性预检，把「真因」明确出来，取代那条误导消息。</p>
-<pre><code class="language-bash">khy restore ./Khy-OS   # 解密前先判本机能否解开：套件不兼容 → 提前拦下并说清「请升级 khy」</code></pre>
+<pre><code class="language-bash">khy restore ./Khy-OS   <span class="hljs-comment"># 解密前先判本机能否解开：套件不兼容 → 提前拦下并说清「请升级 khy」</span></code></pre>
 <h2 id="二级严重度-只在-证明性不可解-时硬拦-绝不误伤-zero-false-block">二级严重度：只在「证明性不可解」时硬拦，绝不误伤（zero false-block）<a class="anchor" href="#二级严重度-只在-证明性不可解-时硬拦-绝不误伤-zero-false-block" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>层</th><th>判据</th><th>severity</th><th>运行时动作</th></tr></thead><tbody><tr><td>加密套件</td><td><code>algo</code> 缺失/不受支持、<code>kdf</code> 存在且不受支持、salt/iv/authTag 残缺</td><td><strong>block</strong></td><td>解密前 <code>throw pf.message</code>（精确成因）</td></tr><tr><td>格式</td><td><code>format</code> 陌生、<code>formatVersion</code> 过新/过旧</td><td><strong>warn</strong></td><td><code>printWarn(pf.message)</code> 后<strong>仍继续</strong>尝试解密</td></tr><tr><td>受支持 / 证据不足</td><td>supported / unverifiable</td><td>none</td><td>静默继续，权威留给 <code>decrypt</code> 本身</td></tr></tbody></table>
 <ul><li><strong>block = 证明性不可解</strong>：这些条件<strong>必然</strong>让运行时 <code>decrypt()</code> 失败（今天只给误导</li></ul>
@@ -52,10 +52,10 @@
 <p>salt/iv/authTag 的<strong>存在性布尔</strong>；<strong>绝不</strong>把 salt/iv/authTag 的<strong>值</strong>读进变量或裁决<br>  输出（单测断言裁决 JSON 序列化不含密钥值）。</p>
 <ul><li>叶子纯计算、零 IO、绝不抛；<code>ok===true</code> 仅当 <code>status === supported</code>。</li><li>真 key/token 永不进包、不落盘；pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本必须一致。</li></ul>
 <h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">npm run test:restore-preflight     # 纯叶单测（15 用例）
-# LIVE：合成 kdf:'argon2' 头 → block（解密前抛「请升级 khy」）；
-#       合成 format:'v2' 头 → warn（提示后仍尝试）；真快照头 → supported（安心还原）；
-#       KHY_RESTORE_PREFLIGHT=0 → 字节等价旧行为，直入 decrypt。</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:restore-preflight     <span class="hljs-comment"># 纯叶单测（15 用例）</span>
+<span class="hljs-comment"># LIVE：合成 kdf:&#x27;argon2&#x27; 头 → block（解密前抛「请升级 khy」）；</span>
+<span class="hljs-comment">#       合成 format:&#x27;v2&#x27; 头 → warn（提示后仍尝试）；真快照头 → supported（安心还原）；</span>
+<span class="hljs-comment">#       KHY_RESTORE_PREFLIGHT=0 → 字节等价旧行为，直入 decrypt。</span></code></pre>
       </article>
       <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-118] 视觉描述级联全失败 OCR 兜底底线解耦.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-118] 视觉描述级联全失败 → OCR 兜底底线与「失败说明门」解耦</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-120] 剥图必留痕最小底线与OCR功能门解耦.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-120] 剥图必留痕：最小诚实底线与「OCR 功能门」解耦</div></a></nav>
       <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>

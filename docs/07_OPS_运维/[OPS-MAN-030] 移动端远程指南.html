@@ -32,7 +32,7 @@
 <h2 id="先选路-khy-mobile-还是-khy-bridge">先选路：<code>khy mobile</code> 还是 <code>khy bridge</code>？<a class="anchor" href="#先选路-khy-mobile-还是-khy-bridge" aria-label="锚点">#</a></h2>
 <p>KHY 有<strong>两条</strong>手机访问路径，先按需求选：</p>
 <table><thead><tr><th></th><th><code>khy mobile</code>（推荐，最省心）</th><th><code>khy bridge</code>（高级，本指南主线）</th></tr></thead><tbody><tr><td>做什么</td><td>在终端打印一个<strong>二维码</strong>，手机扫码直达网关管理/对话页</td><td>启动一个带鉴权的远程控制 bridge 服务</td></tr><tr><td>端口</td><td><code>:9090</code>（网关管理页，默认入口 <code>/admin/ai-gateway</code>）</td><td><code>:9222</code></td></tr><tr><td>鉴权</td><td>跟随网关自身（无独立账号体系）</td><td>PIN / 账号 JWT（见下文）</td></tr><tr><td>是否起服务</td><td>否，纯展示二维码（指向已运行的网关页）</td><td>是，<code>khy bridge start</code> 起独立服务</td></tr><tr><td>适合</td><td>同一 Wi-Fi 下「我自己掏出手机看一眼/操作」</td><td>需要账号体系、公网部署、权限审批的远程控制</td></tr></tbody></table>
-<pre><code class="language-bash"># 最简单：扫码即用（要求网关已在运行）
+<pre><code class="language-bash"><span class="hljs-comment"># 最简单：扫码即用（要求网关已在运行）</span>
 khy mobile</code></pre>
 <blockquote><p>只是想用手机快速连一下，用 <code>khy mobile</code> 即可。需要账号登录、权限审批卡片、公网部署，再看下面的 <code>khy bridge</code> 完整流程。</p></blockquote>
 <hr>

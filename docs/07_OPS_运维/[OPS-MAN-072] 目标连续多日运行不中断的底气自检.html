@@ -28,7 +28,7 @@
 <h1 id="ops-man-072-目标连续多日运行不中断的底气自检">[OPS-MAN-072] 目标连续多日运行不中断的底气自检<a class="anchor" href="#ops-man-072-目标连续多日运行不中断的底气自检" aria-label="锚点">#</a></h1>
 <h2 id="这份清单是干什么的">这份清单是干什么的<a class="anchor" href="#这份清单是干什么的" aria-label="锚点">#</a></h2>
 <p>khy 的持久目标(<code>khy goal set …</code>)已能像 Claude Code 的 <code>/goal</code> 那样<strong>自主自驱</strong>(stop-gate<br>续接)并<strong>跨会话持久化</strong>。但<strong>默认配置其实是敌视多日运行的</strong>:闲置退役窗口默认 <strong>12 小时</strong>,到点<br>会把目标自动退役(<code>exhausted</code>)。想像 CC 那样「连续几天不完成任务、token 足够不中断」地跑,先跑一句<br>自检确认配置扛得住:</p>
-<pre><code class="language-bash">khy goal endurance          # 别名:khy goal stamina / endure</code></pre>
+<pre><code class="language-bash">khy goal endurance          <span class="hljs-comment"># 别名:khy goal stamina / endure</span></code></pre>
 <p>它对<strong>两个维度</strong>判定「连续跑约 N 小时(默认 72h ≈『连续几天』)不中断」的底气:</p>
 <ol><li><strong>交互式会话(无需目标)</strong> —— 「不一定是目标,可能是一个超长的人机互动任务」。</li><li><strong>目标(<code>/goal</code>)专属治理器</strong> —— 仅在设定了持久目标后才适用。</li></ol>
 <p>判定/文案的单一真源在纯叶子 <code>services/backend/src/services/goalEndurance.js</code>(零 IO、确定性、绝不抛);<br>读目标 + 打印在 <code>services/backend/src/cli/handlers/goal.js</code>。</p>
@@ -64,19 +64,19 @@
 <p>未构成阻断的项会以「已就绪 ✓」列出(例如闲置退役已关闭、无硬 token 上限)。</p>
 <h2 id="一键-endurance-配置">一键 endurance 配置<a class="anchor" href="#一键-endurance-配置" aria-label="锚点">#</a></h2>
 <p>自检末尾给出可照抄的配置块;写进当前 shell 即可连续跑几天不自我中断:</p>
-<pre><code class="language-bash"># 目标(/goal)治理器
-export KHY_GOAL_IDLE_MS=0        # 关闭 12h 闲置退役(头号确定性杀手)
-export KHY_GOAL_MAX_TURNS=1000   # 把用户轮预算提到上限
-export KHY_GOAL_STOP_GATE_MAX=10 # 单轮多自续接几步再交还控制权
-# 交互会话 + 无人值守
-export KHY_TOKEN_BUDGET=0                       # 取消硬 token 上限(上下文自动压缩)
-export KHY_TOOL_LOOP_ABSOLUTE_TIMEOUT_MS=86400000  # 单轮绝对上限 → 24h(超长回复更少被墙钟切)
-export KHY_TOOL_LOOP_MAX_MS=1800000             # 单轮空闲守卫 → 30min(活跃推进时不触发)
-export KHY_UNATTENDED_AUTOANSWER=1              # AI 中途提问自动采用推荐选项作答(不阻塞等人)</code></pre>
+<pre><code class="language-bash"><span class="hljs-comment"># 目标(/goal)治理器</span>
+<span class="hljs-built_in">export</span> KHY_GOAL_IDLE_MS=0        <span class="hljs-comment"># 关闭 12h 闲置退役(头号确定性杀手)</span>
+<span class="hljs-built_in">export</span> KHY_GOAL_MAX_TURNS=1000   <span class="hljs-comment"># 把用户轮预算提到上限</span>
+<span class="hljs-built_in">export</span> KHY_GOAL_STOP_GATE_MAX=10 <span class="hljs-comment"># 单轮多自续接几步再交还控制权</span>
+<span class="hljs-comment"># 交互会话 + 无人值守</span>
+<span class="hljs-built_in">export</span> KHY_TOKEN_BUDGET=0                       <span class="hljs-comment"># 取消硬 token 上限(上下文自动压缩)</span>
+<span class="hljs-built_in">export</span> KHY_TOOL_LOOP_ABSOLUTE_TIMEOUT_MS=86400000  <span class="hljs-comment"># 单轮绝对上限 → 24h(超长回复更少被墙钟切)</span>
+<span class="hljs-built_in">export</span> KHY_TOOL_LOOP_MAX_MS=1800000             <span class="hljs-comment"># 单轮空闲守卫 → 30min(活跃推进时不触发)</span>
+<span class="hljs-built_in">export</span> KHY_UNATTENDED_AUTOANSWER=1              <span class="hljs-comment"># AI 中途提问自动采用推荐选项作答(不阻塞等人)</span></code></pre>
 <h3 id="一键落盘-持久化-跨会话-重启生效">一键落盘(持久化,跨会话/重启生效)<a class="anchor" href="#一键落盘-持久化-跨会话-重启生效" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">khy goal endurance --apply             # 两维度都落盘(目标治理键 + 会话回复边界)
-khy goal endurance --apply --session   # 仅交互会话(单轮回复边界 + token 上限)
-khy goal endurance --apply --goal      # 仅目标治理器(闲置退役 / 轮预算 / stop-gate)</code></pre>
+<pre><code class="language-bash">khy goal endurance --apply             <span class="hljs-comment"># 两维度都落盘(目标治理键 + 会话回复边界)</span>
+khy goal endurance --apply --session   <span class="hljs-comment"># 仅交互会话(单轮回复边界 + token 上限)</span>
+khy goal endurance --apply --goal      <span class="hljs-comment"># 仅目标治理器(闲置退役 / 轮预算 / stop-gate)</span></code></pre>
 <p><code>--apply</code> 把推荐键幂等写入 khy 的 <code>.env</code> 配置(SSOT 写入器 <code>config._writeEnvPatch</code>,与 <code>khy goal on</code><br>同一处;canonical = <code>KHY_ENV_FILE</code> 或 <code>&lt;backend&gt;/.env</code>),只写与目标值不同的键、从不删除其它配置、<strong>绝不写入任何<br>key/token</strong>。默认 <code>scope=all</code> 落两维度并集(共有的 <code>KHY_TOKEN_BUDGET=0</code> 无冲突),<code>--session</code> / <code>--goal</code> 只落对应一维。<br>写后用合并 env 复评并打印落盘路径与两维度「落盘后判定」。撤销:编辑该文件或用 <code>khy config</code> 改回相应键。</p>
 <h2 id="做完任务及时验证测试-verify-ran-行为证据门">做完任务及时验证测试 —— verify-ran 行为证据门<a class="anchor" href="#做完任务及时验证测试-verify-ran-行为证据门" aria-label="锚点">#</a></h2>
 <p>诉求(goal「khy 做完任务不会及时验证测试」):Stop-gate 的<strong>证据门</strong><br>(<code>goalStopGate.claimsVerificationWithoutEvidence</code>)只检查回复里<strong>有没有「证据形状的文字」</strong><br>(```<code> </code>`<code> </code>``<code> 代码块 / </code>PASS<code> / 字面 </code>npm test`)。模型只要贴一段<strong>看起来像输出的文字</strong>——哪怕<br>整轮从未真正调用过 shell——就能骗过证据门,让「声称测试通过却根本没跑」蒙混收尾。</p>
@@ -91,7 +91,7 @@ khy goal endurance --apply --goal      # 仅目标治理器(闲置退役 / 轮�
 <p>所有默认值/阈值定义在纯叶子 <code>goalCore.js</code>,<code>goalEndurance.js</code> 只<strong>读取并分类</strong>,不重复定义:</p>
 <ul><li>闲置退役窗口:<code>goalCore.resolveIdleMs</code>(默认 <code>GOAL_DEFAULT_IDLE_MS</code> = 12h;<code>KHY_GOAL_IDLE_MS=0</code> → <code>Infinity</code> 关闭)</li><li>轮次预算:<code>goalCore.resolveMaxTurns</code>(默认 <code>GOAL_DEFAULT_MAX_TURNS</code> = 25;clamp <code>[1,1000]</code>)</li><li>自愈对账开关:<code>goalCore.isReconcileEnabled</code>(<code>KHY_GOAL_RECONCILE</code>,父门 <code>KHY_GOAL</code>)</li><li>有界终止态开关:<code>goalCore.isBounded</code>(<code>KHY_GOAL_BOUNDED</code>)</li><li>单轮自续接:<code>KHY_GOAL_STOP_GATE_MAX</code>(flagRegistry,默认 1,clamp <code>[0,10]</code>)</li></ul>
 <h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">npm run test:maintainer:goal-endurance</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:maintainer:goal-endurance</code></pre>
       </article>
       <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-071] 卸载第三方应用怎么保证卸干净-原生自带卸载器.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-071] 卸载第三方应用怎么保证卸干净(原生自带卸载器 T2 层)</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-073] 离机渠道启动入口契约自检清单.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-073] 离机渠道启动入口契约自检清单</div></a></nav>
       <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>

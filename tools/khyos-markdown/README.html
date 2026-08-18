@@ -35,51 +35,51 @@
 <h3 id="方式二-全局安装">方式二：全局安装<a class="anchor" href="#方式二-全局安装" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">npm install -g khyos-markdown
 khyos-markdown ~/docs/notes.md
-# 或简写
+<span class="hljs-comment"># 或简写</span>
 khyosmd ~/docs/notes.md</code></pre>
 <h3 id="方式三-注册为系统默认-md-编辑器">方式三：注册为系统默认 .md 编辑器<a class="anchor" href="#方式三-注册为系统默认-md-编辑器" aria-label="锚点">#</a></h3>
 <p><strong>Windows：</strong></p>
-<pre><code class="language-powershell">cd node_modules/khyos-markdown  # 或克隆目录
-powershell -ExecutionPolicy Bypass -File register-windows.ps1</code></pre>
+<pre><code class="language-powershell"><span class="hljs-built_in">cd</span> node_modules/khyos<span class="hljs-literal">-markdown</span>  <span class="hljs-comment"># 或克隆目录</span>
+powershell <span class="hljs-literal">-ExecutionPolicy</span> Bypass <span class="hljs-operator">-File</span> <span class="hljs-built_in">register-windows</span>.ps1</code></pre>
 <p><strong>Linux：</strong></p>
 <pre><code class="language-bash">bash register-linux.sh</code></pre>
 <h3 id="方式四-作为-khy-os-内置工具">方式四：作为 khy-os 内置工具<a class="anchor" href="#方式四-作为-khy-os-内置工具" aria-label="锚点">#</a></h3>
 <p>已集成在 khy-os 中，<code>khy</code> CLI 自动使用。</p>
 <h2 id="命令行用法">命令行用法<a class="anchor" href="#命令行用法" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># 打开指定文件
+<pre><code class="language-bash"><span class="hljs-comment"># 打开指定文件</span>
 khyos-markdown /path/to/file.md
 
-# 浏览项目文档目录（项目内嵌模式）
+<span class="hljs-comment"># 浏览项目文档目录（项目内嵌模式）</span>
 khyos-markdown
 
-# 不自动打开浏览器（API 模式）
+<span class="hljs-comment"># 不自动打开浏览器（API 模式）</span>
 khyos-markdown --no-open</code></pre>
 <h2 id="mcp-集成-供-ai-agent-调用">MCP 集成（供 AI Agent 调用）<a class="anchor" href="#mcp-集成-供-ai-agent-调用" aria-label="锚点">#</a></h2>
 <p>khyosMarkdown 内置 MCP (Model Context Protocol) 服务器，任何支持 MCP 的 AI Agent（Claude Desktop、Cursor、Qoder 等）都可以调用。</p>
 <h3 id="提供的工具">提供的工具<a class="anchor" href="#提供的工具" aria-label="锚点">#</a></h3>
 <table><thead><tr><th>工具</th><th>说明</th></tr></thead><tbody><tr><td><code>read_markdown</code></td><td>读取 Markdown 文件内容</td></tr><tr><td><code>write_markdown</code></td><td>写入/保存 Markdown 文件（自动建目录）</td></tr><tr><td><code>list_markdown</code></td><td>递归列出目录下所有 .md 文件</td></tr><tr><td><code>search_markdown</code></td><td>全文搜索关键词</td></tr><tr><td><code>open_editor</code></td><td>在 khyosMarkdown GUI 中打开文件供人查看</td></tr><tr><td><code>get_outline</code></td><td>提取文档标题大纲</td></tr></tbody></table>
 <h3 id="配置示例-claude-desktop-cursor-qoder">配置示例（Claude Desktop / Cursor / Qoder）<a class="anchor" href="#配置示例-claude-desktop-cursor-qoder" aria-label="锚点">#</a></h3>
-<pre><code class="language-json">{
-  &quot;mcpServers&quot;: {
-    &quot;khyos-markdown&quot;: {
-      &quot;command&quot;: &quot;node&quot;,
-      &quot;args&quot;: [
-        &quot;D:/Portable/khy-os/tools/khyos-markdown/khyos-md-mcp.js&quot;,
-        &quot;--root&quot;, &quot;D:/你的文档目录&quot;
-      ]
-    }
-  }
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;mcpServers&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;khyos-markdown&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;command&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;node&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;args&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+        <span class="hljs-string">&quot;D:/Portable/khy-os/tools/khyos-markdown/khyos-md-mcp.js&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-string">&quot;--root&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;D:/你的文档目录&quot;</span>
+      <span class="hljs-punctuation">]</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <p><code>--root</code> 限制文件操作范围（安全边界），默认为当前工作目录。</p>
 <h2 id="目录文件">目录文件<a class="anchor" href="#目录文件" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>文件</th><th>职责</th></tr></thead><tbody><tr><td><code>khyosMarkdown.html</code></td><td>单文件工作台：内联 MD 解析器 + 编辑器 + 预览 + CSS，零 CDN，断网可用</td></tr><tr><td><code>khyos-md-bridge.js</code></td><td>纯 Node 零依赖桥接器：<code>127.0.0.1</code> 同源服务，token 鉴权，消除 <code>file://</code> CORS</td></tr><tr><td><code>khyos-md-mcp.js</code></td><td>零依赖 MCP 服务器（stdio JSON-RPC 2.0），供 AI Agent 调用</td></tr><tr><td><code>KhyosMarkdown.exe</code></td><td>Windows 启动器（C# 编译，自动定位 node，无控制台窗口）</td></tr><tr><td><code>khyosmarkdown</code></td><td>Linux/macOS 启动脚本（自动查找 fnm/nvm/PATH 中的 node）</td></tr><tr><td><code>khyosmarkdown.command</code></td><td>macOS 双击启动器</td></tr><tr><td><code>register-windows.ps1</code> / <code>unregister-windows.ps1</code></td><td>Windows 右键注册 / 卸载（仅 HKCU，无 UAC）</td></tr><tr><td><code>register-linux.sh</code> / <code>unregister-linux.sh</code></td><td>Linux 关联注册 / 卸载（仅 <code>~/.local</code>，无 sudo）</td></tr><tr><td><code>vendor/</code></td><td>muya WYSIWYG 引擎（可选，自打包）</td></tr><tr><td><code>test/</code></td><td><code>node:test</code> 用例</td></tr></tbody></table>
 <h2 id="为什么需要桥接器-cors-绝路">为什么需要桥接器（CORS 绝路）<a class="anchor" href="#为什么需要桥接器-cors-绝路" aria-label="锚点">#</a></h2>
 <p>浏览器禁止 <code>file://</code> 页面 <code>fetch</code> 本地文件。桥接器以 <code>http://127.0.0.1:&lt;随机端口&gt;</code> <strong>同源</strong>服务页面与<br><code>/api/*</code>，请求根本不跨域 —— 不是放宽 CORS，而是消除它。仅监听本机回环，并用一次性 token 防止本机其他<br>网页越权调用。</p>
 <h2 id="开发">开发<a class="anchor" href="#开发" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">git clone https://github.com/khy-os/khy-os.git
-cd khy-os/tools/khyos-markdown
-npm test
-node khyos-md-bridge.js  # 启动开发服务</code></pre>
+<pre><code class="language-bash">git <span class="hljs-built_in">clone</span> https://github.com/khy-os/khy-os.git
+<span class="hljs-built_in">cd</span> khy-os/tools/khyos-markdown
+npm <span class="hljs-built_in">test</span>
+node khyos-md-bridge.js  <span class="hljs-comment"># 启动开发服务</span></code></pre>
 <h2 id="宪法红线-已落地">宪法红线（已落地）<a class="anchor" href="#宪法红线-已落地" aria-label="锚点">#</a></h2>
 <ol><li><strong>零外部依赖</strong>：<code>khyosMarkdown.html</code> 不加载任何外部 CSS/JS/字体；MD 解析器自带。</li><li><strong>跨域绝路</strong>：经桥接器同源服务，彻底消除 <code>file://</code> CORS；右键打开绝不因 CORS 读取失败。</li><li><strong>路径免疫</strong>：路径经 <code>encodeURIComponent</code> + WHATWG URL 解码，空格/中文/特殊字符不断裂。</li><li><strong>系统纯净</strong>：注册仅写用户级（HKCU / <code>~/.local</code>），无 UAC、无 sudo；卸载脚本零残留。</li></ol>
       </article>

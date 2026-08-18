@@ -39,10 +39,10 @@
 <h2 id="它和家族其它层的正交关系-别混淆">它和家族其它层的正交关系（别混淆）<a class="anchor" href="#它和家族其它层的正交关系-别混淆" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>层</th><th>管什么</th><th>一句话</th></tr></thead><tbody><tr><td>105 <code>snapshotFormatCompat</code></td><td>外层快照信封契约（<code>format</code>/<code>formatVersion</code>）</td><td>「这是不是 khy 快照」</td></tr><tr><td>107 <code>restoreProvenance</code></td><td>git 来源（<code>captureMode</code>/<code>includesUncommitted</code>）</td><td>「这源码等于哪个提交」</td></tr><tr><td>095 <code>completenessVerifier</code></td><td>解包后文件数</td><td>「落地数量对得上清单吗」</td></tr><tr><td><strong>108 本层 <code>archiveExtractCompat</code></strong></td><td><strong>解密后、解包前的内层归档形制</strong>（<code>plaintextFormat</code>/<code>layout</code>）</td><td><strong>「我的 tar -xzf 认不认识这团解密归档」</strong></td></tr></tbody></table>
 <p>位置恰在「信封看得懂(105)」之后、「解包完整(095)」之前。</p>
-<pre><code class="language-bash">node scripts/restore-check-format.js  ./Khy-OS --json   # ① 信封格式：本机看得懂吗？（105）
-node scripts/restore-check-archive.js ./Khy-OS --json   # ② 内层归档：本机解包器解得开吗？（本层 108）
-khy restore ./Khy-OS                                    # ③ 两门都过才敢解密解包还原
-node scripts/restore-verify-complete.js ./Khy-OS --json # ④ 再对账数量：真完整吗？（095）</code></pre>
+<pre><code class="language-bash">node scripts/restore-check-format.js  ./Khy-OS --json   <span class="hljs-comment"># ① 信封格式：本机看得懂吗？（105）</span>
+node scripts/restore-check-archive.js ./Khy-OS --json   <span class="hljs-comment"># ② 内层归档：本机解包器解得开吗？（本层 108）</span>
+khy restore ./Khy-OS                                    <span class="hljs-comment"># ③ 两门都过才敢解密解包还原</span>
+node scripts/restore-verify-complete.js ./Khy-OS --json <span class="hljs-comment"># ④ 再对账数量：真完整吗？（095）</span></code></pre>
 <h2 id="判定档-解包能力门-最保守优先">判定档：解包能力门（最保守优先）<a class="anchor" href="#判定档-解包能力门-最保守优先" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>档</th><th>条件</th><th>裁决</th><th>ok</th></tr></thead><tbody><tr><td>1</td><td>头非对象 / 数组 / <code>plaintextFormat</code> 非非空串</td><td><code>unverifiable</code>：证据不足，绝不谎报 supported</td><td>✗</td></tr><tr><td>2</td><td><code>plaintextFormat</code> ∉ 支持集</td><td><code>unsupported-format</code>：本机 <code>tar -xzf</code> 解不开，<strong>先升级 khy</strong></td><td>✗</td></tr><tr><td>3</td><td>格式可解压但 <code>layout</code> 存在且 ∉ 支持集</td><td><code>unknown-layout</code>：能解开却不认识内部布局，别当「原样」</td><td>✗</td></tr><tr><td>4</td><td><code>plaintextFormat</code> ∈ 支持集且（<code>layout</code> 缺省 / ∈ 支持集）</td><td><code>supported</code>：唯一可安心交给解包器的档</td><td>✓</td></tr></tbody></table>
 <ul><li>本机解包器真能解开的形制由叶子常量 <code>SUPPORTED_PLAINTEXT_FORMATS</code> / <code>SUPPORTED_LAYOUTS</code> 定义</li></ul>

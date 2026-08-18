@@ -48,15 +48,15 @@
 <h3 id="4-1-安全优先">4.1 安全优先<a class="anchor" href="#4-1-安全优先" aria-label="锚点">#</a></h3>
 <p>如果任何 token 曾在聊天/日志/终端截图中暴露，请立即吊销并创建新的 PyPI token。</p>
 <h3 id="4-2-上传命令-非交互式">4.2 上传命令（非交互式）<a class="anchor" href="#4-2-上传命令-非交互式" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">TWINE_USERNAME=__token__ TWINE_PASSWORD='pypi-&lt;NEW_TOKEN&gt;' \
+<pre><code class="language-bash">TWINE_USERNAME=__token__ TWINE_PASSWORD=<span class="hljs-string">&#x27;pypi-&lt;NEW_TOKEN&gt;&#x27;</span> \
 python3 -m twine upload /home/kodehu03/Downloads/khy_os-0.1.17-py3-none-win_amd64.whl</code></pre>
 <h3 id="4-3-校验">4.3 校验<a class="anchor" href="#4-3-校验" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">python3 - &lt;&lt;'PY'
+<pre><code class="language-bash">python3 - &lt;&lt;<span class="hljs-string">&#x27;PY&#x27;</span>
 import json, urllib.request
-u = 'https://pypi.org/pypi/khy-os/0.1.17/json'
-data = json.load(urllib.request.urlopen(u, timeout=20))
-for f in data['urls']:
-    print(f['filename'])
+u = <span class="hljs-string">&#x27;https://pypi.org/pypi/khy-os/0.1.17/json&#x27;</span>
+data = json.load(urllib.request.urlopen(u, <span class="hljs-built_in">timeout</span>=20))
+<span class="hljs-keyword">for</span> f <span class="hljs-keyword">in</span> data[<span class="hljs-string">&#x27;urls&#x27;</span>]:
+    <span class="hljs-built_in">print</span>(f[<span class="hljs-string">&#x27;filename&#x27;</span>])
 PY</code></pre>
 <p>预期输出必须包含全部 3 个文件：</p>
 <ol><li><code>khy_os-0.1.17.tar.gz</code></li><li><code>khy_os-0.1.17-py3-none-manylinux2014_x86_64.whl</code></li><li><code>khy_os-0.1.17-py3-none-win_amd64.whl</code></li></ol>
@@ -75,26 +75,26 @@ PY</code></pre>
 <p>推荐顺序：</p>
 <ol><li>上传 <code>sdist</code></li><li>上传 Linux wheel</li><li>上传 Windows wheel</li></ol>
 <p>示例：</p>
-<pre><code class="language-bash">TWINE_USERNAME=__token__ TWINE_PASSWORD='pypi-&lt;NEW_TOKEN&gt;' \
+<pre><code class="language-bash">TWINE_USERNAME=__token__ TWINE_PASSWORD=<span class="hljs-string">&#x27;pypi-&lt;NEW_TOKEN&gt;&#x27;</span> \
 python3 -m twine upload dist/khy_os-0.1.18.tar.gz
 
-TWINE_USERNAME=__token__ TWINE_PASSWORD='pypi-&lt;NEW_TOKEN&gt;' \
+TWINE_USERNAME=__token__ TWINE_PASSWORD=<span class="hljs-string">&#x27;pypi-&lt;NEW_TOKEN&gt;&#x27;</span> \
 python3 -m twine upload dist/khy_os-0.1.18-py3-none-manylinux2014_x86_64.whl
 
-TWINE_USERNAME=__token__ TWINE_PASSWORD='pypi-&lt;NEW_TOKEN&gt;' \
+TWINE_USERNAME=__token__ TWINE_PASSWORD=<span class="hljs-string">&#x27;pypi-&lt;NEW_TOKEN&gt;&#x27;</span> \
 python3 -m twine upload /path/to/khy_os-0.1.18-py3-none-win_amd64.whl</code></pre>
 <p>轻量化模式构建命令示例：</p>
-<pre><code class="language-bash">rm -rf dist build khy_os.egg-info
+<pre><code class="language-bash"><span class="hljs-built_in">rm</span> -rf dist build khy_os.egg-info
 python3 setup.py sdist bdist_wheel
-ls -lh dist</code></pre>
+<span class="hljs-built_in">ls</span> -lh dist</code></pre>
 <p>含运行时模式构建命令示例：</p>
-<pre><code class="language-bash">rm -rf dist build khy_os.egg-info
+<pre><code class="language-bash"><span class="hljs-built_in">rm</span> -rf dist build khy_os.egg-info
 KHY_INCLUDE_LOCAL_RUNTIME=1 python3 setup.py sdist bdist_wheel
-ls -lh dist</code></pre>
+<span class="hljs-built_in">ls</span> -lh dist</code></pre>
 <h3 id="5-4-发布后验收">5.4 发布后验收<a class="anchor" href="#5-4-发布后验收" aria-label="锚点">#</a></h3>
 <p>在 Windows 上：</p>
-<pre><code class="language-powershell">python -m pip install -U khy-os==0.1.18
-khy --version
+<pre><code class="language-powershell">python <span class="hljs-literal">-m</span> pip install <span class="hljs-literal">-U</span> khy<span class="hljs-literal">-os</span>==<span class="hljs-number">0.1</span>.<span class="hljs-number">18</span>
+khy <span class="hljs-literal">--version</span>
 khy gateway status</code></pre>
 <p>在 Linux 上：</p>
 <pre><code class="language-bash">python3 -m pip install -U khy-os==0.1.18

@@ -31,7 +31,7 @@
 <ol><li><strong>Understand &amp; Expand (Divergent):</strong> Restate the idea, ask sharpening questions, and generate variations.</li><li><strong>Evaluate &amp; Converge:</strong> Cluster ideas, stress-test them, and surface hidden assumptions.</li><li><strong>Sharpen &amp; Ship:</strong> Produce a concrete markdown one-pager moving work forward.</li></ol>
 <h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
 <p>This skill is primarily an interactive dialogue. Invoke it with an idea, and the agent will guide you through the process.</p>
-<pre><code class="language-bash"># Optional: Initialize the ideas directory
+<pre><code class="language-bash"><span class="hljs-comment"># Optional: Initialize the ideas directory</span>
 bash /mnt/skills/user/idea-refine/scripts/idea-refine.sh</code></pre>
 <p><strong>Trigger Phrases:</strong></p>
 <ul><li>&quot;Help me refine this idea&quot;</li><li>&quot;Ideate on [concept]&quot;</li><li>&quot;Stress-test my plan&quot;</li></ul>
@@ -53,35 +53,35 @@ bash /mnt/skills/user/idea-refine/scripts/idea-refine.sh</code></pre>
 <ul><li><strong>A) Passive sip-tracking bottle cap</strong> — high user value, but hardware is the hardest part and slow to test.</li><li><strong>B) Calendar-aware gentle nudge</strong> — pure software, testable this week, and it dodges the &quot;another dumb timer&quot; trap.</li></ul>
 <p><strong>Hidden assumption I'd bet the whole idea on:</strong> that people ignore reminders because of <em>bad timing</em>, not because they don't care. If that's false, no amount of cleverness saves this. Test it before building.</p></blockquote>
 <p><strong>Phase 3 — Sharpen &amp; Ship.</strong> The agent produces the concrete one-pager. Notice the <strong>MVP Scope</strong> (the smallest thing that tests the core assumption) and the <strong>Not Doing</strong> list (the trade-offs made explicit):</p>
-<pre><code class="language-markdown"># Hydrate — the reminder that reads your calendar
+<pre><code class="language-markdown"><span class="hljs-section"># Hydrate — the reminder that reads your calendar</span>
 
-## Problem Statement
+<span class="hljs-section">## Problem Statement</span>
 How might we help desk workers drink more water without adding one more
-notification they'll mute by Thursday?
+notification they&#x27;ll mute by Thursday?
 
-## Recommended Direction
-A calendar-aware nudge (Direction B). It's pure software — testable this
+<span class="hljs-section">## Recommended Direction</span>
+A calendar-aware nudge (Direction B). It&#x27;s pure software — testable this
 week — and it attacks the real reason reminders fail: bad timing. We nudge
 in the gaps between meetings, never mid-call.
 
-## Key Assumptions to Validate
-- [ ] People ignore reminders because of *timing*, not apathy — test with 10
-      users and a one-week timing-only prototype before writing real code.
+<span class="hljs-section">## Key Assumptions to Validate</span>
+<span class="hljs-bullet">-</span> [ ] People ignore reminders because of <span class="hljs-emphasis">*timing*</span>, not apathy — test with 10
+<span class="hljs-code">      users and a one-week timing-only prototype before writing real code.
 - [ ] A calendar-gap nudge feels &quot;helpful&quot; not &quot;creepy&quot; — ask the 10 users.
-
-## MVP Scope
-IN: read the user's free/busy calendar; send ONE gentle nudge in the first
+</span>
+<span class="hljs-section">## MVP Scope</span>
+IN: read the user&#x27;s free/busy calendar; send ONE gentle nudge in the first
 gap after a 90-min busy block; a single &quot;drank it 💧&quot; tap to log.
 OUT: no hardware, no accounts, no streaks, no social features, no charts.
 The whole MVP exists only to test the timing assumption.
 
-## Not Doing (and Why)
-- Smart bottle hardware — too slow and costly to test the core bet.
-- Gamified streaks — solves engagement we haven't earned the right to chase yet.
-- Health-data integrations — scope creep before the core idea is validated.
+<span class="hljs-section">## Not Doing (and Why)</span>
+<span class="hljs-bullet">-</span> Smart bottle hardware — too slow and costly to test the core bet.
+<span class="hljs-bullet">-</span> Gamified streaks — solves engagement we haven&#x27;t earned the right to chase yet.
+<span class="hljs-bullet">-</span> Health-data integrations — scope creep before the core idea is validated.
 
-## Open Questions
-- Which calendar (Google/Outlook) do the target users actually live in?</code></pre>
+<span class="hljs-section">## Open Questions</span>
+<span class="hljs-bullet">-</span> Which calendar (Google/Outlook) do the target users actually live in?</code></pre>
 <p><strong>What made this session good:</strong> it reframed before solving, named the 10x-simpler version, refused to yes-machine a weak &quot;blind timer,&quot; surfaced the one assumption the whole idea rests on, and shipped an MVP defined by what it <em>leaves out</em>. That &quot;Not Doing&quot; list is the most valuable part — see <a href="../../../../../../docs/02_CONCEPTS_概念入门/[CONCEPT-32]%20什么是MVP-最小可行产品.html">what is MVP</a> for why cutting scope this hard is the whole point.</p>
 <h2 id="detailed-instructions">Detailed Instructions<a class="anchor" href="#detailed-instructions" aria-label="锚点">#</a></h2>
 <p>You are an ideation partner. Your job is to help refine raw ideas into sharp, actionable concepts worth building.</p>
@@ -106,29 +106,29 @@ The whole MVP exists only to test the timing assumption.
 <p><strong>Be honest, not supportive.</strong> If an idea is weak, say so with kindness. A good ideation partner is not a yes-machine. Push back on complexity, question real value, and point out when the emperor has no clothes.</p>
 <h4 id="phase-3-sharpen-ship">Phase 3: Sharpen &amp; Ship<a class="anchor" href="#phase-3-sharpen-ship" aria-label="锚点">#</a></h4>
 <p>Produce a concrete artifact — a markdown one-pager that moves work forward:</p>
-<pre><code class="language-markdown"># [Idea Name]
+<pre><code class="language-markdown"><span class="hljs-section"># [Idea Name]</span>
 
-## Problem Statement
+<span class="hljs-section">## Problem Statement</span>
 [One-sentence &quot;How Might We&quot; framing]
 
-## Recommended Direction
+<span class="hljs-section">## Recommended Direction</span>
 [The chosen direction and why — 2-3 paragraphs max]
 
-## Key Assumptions to Validate
-- [ ] [Assumption 1 — how to test it]
-- [ ] [Assumption 2 — how to test it]
-- [ ] [Assumption 3 — how to test it]
+<span class="hljs-section">## Key Assumptions to Validate</span>
+<span class="hljs-bullet">-</span> [ ] [Assumption 1 — how to test it]
+<span class="hljs-bullet">-</span> [ ] [Assumption 2 — how to test it]
+<span class="hljs-bullet">-</span> [ ] [Assumption 3 — how to test it]
 
-## MVP Scope
-[The minimum version that tests the core assumption. What's in, what's out.]
+<span class="hljs-section">## MVP Scope</span>
+[The minimum version that tests the core assumption. What&#x27;s in, what&#x27;s out.]
 
-## Not Doing (and Why)
-- [Thing 1] — [reason]
-- [Thing 2] — [reason]
-- [Thing 3] — [reason]
+<span class="hljs-section">## Not Doing (and Why)</span>
+<span class="hljs-bullet">-</span> [Thing 1] — [reason]
+<span class="hljs-bullet">-</span> [Thing 2] — [reason]
+<span class="hljs-bullet">-</span> [Thing 3] — [reason]
 
-## Open Questions
-- [Question that needs answering before building]</code></pre>
+<span class="hljs-section">## Open Questions</span>
+<span class="hljs-bullet">-</span> [Question that needs answering before building]</code></pre>
 <p><strong>The &quot;Not Doing&quot; list is arguably the most valuable part.</strong> Focus is about saying no to good ideas. Make the trade-offs explicit.</p>
 <p>Ask the user if they'd like to save this to <code>docs/ideas/[idea-name].md</code> (or a location of their choosing). Only save if they confirm.</p>
 <h3 id="anti-patterns-to-avoid">Anti-patterns to Avoid<a class="anchor" href="#anti-patterns-to-avoid" aria-label="锚点">#</a></h3>

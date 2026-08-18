@@ -47,7 +47,7 @@ khy publish docker-bundle --name khy-os-docker-share</code></pre>
 <pre><code class="language-bash">khy publish pip-dir-bundle --out ./dist/docker-bundles
 khy publish pip-dir-bundle --name khy-os-pip-share
 
-# 若自动探测不到 site-packages，可手动指定
+<span class="hljs-comment"># 若自动探测不到 site-packages，可手动指定</span>
 khy publish pip-dir-bundle --pip-root /path/to/site-packages</code></pre>
 <p>默认生成目录：</p>
 <p><code>dist/docker-bundles/</code></p>
@@ -66,7 +66,7 @@ khy publish pip-dir-bundle --pip-root /path/to/site-packages</code></pre>
 khy publish origin-code --name khy-os-origin-restore
 khy publish origin-code --secret khy2026
 khy publish origin-code --pip-root /path/to/site-packages
-# npm 安装目录场景可显式指定
+<span class="hljs-comment"># npm 安装目录场景可显式指定</span>
 khy publish origin-code --install npm --npm-root /path/to/npm-install-root</code></pre>
 <h3 id="方式-d-npm-安装目录-docker-部署入口">方式 D：npm 安装目录 + Docker 部署入口<a class="anchor" href="#方式-d-npm-安装目录-docker-部署入口" aria-label="锚点">#</a></h3>
 <p>适用于通过 npm 安装的运行目录（或你指定的 npm backend 目录）：</p>
@@ -77,8 +77,8 @@ khy publish npm-dir-bundle --name khy-os-npm-share
 khy publish npm-dir-bundle --npm-root /path/to/npm-install-root</code></pre>
 <h2 id="3-接收方-docker-部署步骤">3. 接收方 Docker 部署步骤<a class="anchor" href="#3-接收方-docker-部署步骤" aria-label="锚点">#</a></h2>
 <pre><code class="language-bash">tar -xzf khy-os-*.tar.gz
-cd khy-os-*
-cp .env.example .env
+<span class="hljs-built_in">cd</span> khy-os-*
+<span class="hljs-built_in">cp</span> .env.example .<span class="hljs-built_in">env</span>
 docker compose up -d --build</code></pre>
 <p>查看状态：</p>
 <pre><code class="language-bash">docker compose ps
@@ -91,35 +91,35 @@ docker compose logs -f khy-backend</code></pre>
 <p>源码推送同样受密钥门禁控制：</p>
 <ul><li>提供正确密钥（<code>--secret khy2026</code>）才执行真实推送</li><li>未提供或密钥错误时，自动切换为扰乱发布模式（仅 dry-run 输出推送计划，不推送真实源码）</li></ul>
 <h3 id="首次配置并推送-owner-repo-形式">首次配置并推送（owner/repo 形式）<a class="anchor" href="#首次配置并推送-owner-repo-形式" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># GitHub
+<pre><code class="language-bash"><span class="hljs-comment"># GitHub</span>
 khy publish git-push --platform github --repo yourname/khy-os --remote github --set-upstream
 
-# Gitee
+<span class="hljs-comment"># Gitee</span>
 khy publish git-push --platform gitee --repo yourname/khy-os --remote gitee --set-upstream
 
-# GitLab
+<span class="hljs-comment"># GitLab</span>
 khy publish git-push --platform gitlab --repo yourname/khy-os --remote gitlab --set-upstream</code></pre>
 <h3 id="使用完整仓库-url-ssh-https-都支持">使用完整仓库 URL（SSH/HTTPS 都支持）<a class="anchor" href="#使用完整仓库-url-ssh-https-都支持" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">khy publish git-push git@github.com:yourname/khy-os.git --remote github --set-upstream</code></pre>
 <h3 id="有未提交改动时自动提交再推送">有未提交改动时自动提交再推送<a class="anchor" href="#有未提交改动时自动提交再推送" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">khy publish git-push --auto-commit --commit-message &quot;chore: sync latest&quot;</code></pre>
+<pre><code class="language-bash">khy publish git-push --auto-commit --commit-message <span class="hljs-string">&quot;chore: sync latest&quot;</span></code></pre>
 <p>仅预览命令不执行：</p>
 <pre><code class="language-bash">khy publish git-push --dry-run</code></pre>
 <p>带密钥执行真实推送：</p>
 <pre><code class="language-bash">khy publish git-push --secret khy2026 --platform github --repo yourname/khy-os</code></pre>
 <h2 id="5-khy-自修复与自发布">5. KHY 自修复与自发布<a class="anchor" href="#5-khy-自修复与自发布" aria-label="锚点">#</a></h2>
 <h3 id="5-1-一键自修复-review-fix-verify">5.1 一键自修复（Review -&gt; Fix -&gt; Verify）<a class="anchor" href="#5-1-一键自修复-review-fix-verify" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">khy publish self-fix --yes</code></pre>
+<pre><code class="language-bash">khy publish self-fix --<span class="hljs-built_in">yes</span></code></pre>
 <p>可选参数：</p>
-<pre><code class="language-bash">khy publish self-fix --max-rounds 5 --yes</code></pre>
+<pre><code class="language-bash">khy publish self-fix --max-rounds 5 --<span class="hljs-built_in">yes</span></code></pre>
 <h3 id="5-2-一键自发布到-pypi-先修复再发布">5.2 一键自发布到 PyPI（先修复再发布）<a class="anchor" href="#5-2-一键自发布到-pypi-先修复再发布" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">khy publish self-pypi --version 0.1.10 --yes</code></pre>
+<pre><code class="language-bash">khy publish self-pypi --version 0.1.10 --<span class="hljs-built_in">yes</span></code></pre>
 <p>发布到 TestPyPI：</p>
-<pre><code class="language-bash">khy publish self-testpypi --version 0.1.10 --yes</code></pre>
+<pre><code class="language-bash">khy publish self-testpypi --version 0.1.10 --<span class="hljs-built_in">yes</span></code></pre>
 <p>若只发布不跑修复：</p>
-<pre><code class="language-bash">khy publish self-pypi --skip-fix --yes</code></pre>
+<pre><code class="language-bash">khy publish self-pypi --skip-fix --<span class="hljs-built_in">yes</span></code></pre>
 <p>仅做 self-testpypi 演练（检查 + 构建 + twine 命令预览，不实际上传）：</p>
-<pre><code class="language-bash">khy publish self-testpypi --skip-fix --yes --dry-run</code></pre>
+<pre><code class="language-bash">khy publish self-testpypi --skip-fix --<span class="hljs-built_in">yes</span> --dry-run</code></pre>
 <h2 id="6-关键说明">6. 关键说明<a class="anchor" href="#6-关键说明" aria-label="锚点">#</a></h2>
 <ul><li>默认数据库为 SQLite，数据保存在 Docker 卷 <code>backend_data</code>。</li><li>首次启动会先执行 <code>node scripts/seed.js</code> 再启动服务。</li><li>生产环境务必在 <code>.env</code> 中修改 <code>JWT_SECRET</code>。</li><li><code>git-push</code> 默认不会自动提交改动；如需自动提交请显式加 <code>--auto-commit</code>。</li><li><code>self-pypi</code>/<code>self-testpypi</code> 依赖你本机已有 PyPI/TestPyPI 凭据（token 或 <code>.pypirc</code>）。</li><li>pip 安装目录与源码映射细节，见：<code>docs/07_OPS_运维/[OPS-MAN-022] pip-安装布局参考.md</code>。</li><li><code>origin-code</code> 还原包用于结构回放与二次开发，不包含 <code>.git/</code> 和被打包流程裁剪的产物。</li><li><code>origin-code</code> 在未通过密钥校验时会自动导出“扰乱后发布”包：目录骨架保留，但核心技术实现会被移除/改写。</li><li><code>pip-dir-bundle</code>/<code>origin-code</code> 默认 <code>auto</code> 探测安装布局；可用 <code>--install pip|npm</code> 强制指定。</li><li><code>auto</code> 探测在 pip 与 npm 同时存在时会进行冲突仲裁：优先更高版本；版本相同再选最近更新的一侧，避免两套安装互相覆盖冲突。</li></ul>
       </article>

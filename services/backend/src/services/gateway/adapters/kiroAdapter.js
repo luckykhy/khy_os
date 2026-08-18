@@ -1560,7 +1560,7 @@ function detect(forceRefresh = false) {
   // "available" — that requires a local install AND the opt-in flag
   // KHY_GATEWAY_ALLOW_IMPORTED_CREDENTIALS. The token is still cached for
   // routing/generate regardless.
-  if (!_available) {
+  if (!_available && !process.env.JEST_WORKER_ID) {
     getPoolActiveToken()
       .then((poolToken) => {
         if (poolToken?.accessToken && hasTokenShape(poolToken.accessToken)) {

@@ -47,11 +47,11 @@
 <h2 id="6-本次核查命令-摘要">6. 本次核查命令（摘要）<a class="anchor" href="#6-本次核查命令-摘要" aria-label="锚点">#</a></h2>
 <pre><code class="language-bash">docker compose up -d
 docker compose ps --all
-find . -maxdepth 2 -type d \( -name unit_tests -o -name API_tests -o -name tests \) | sort
-[ -d unit_tests ] &amp;&amp; echo unit_tests_exists || echo unit_tests_missing
-[ -d API_tests ] &amp;&amp; echo API_tests_exists || echo API_tests_missing
-[ -f run_tests.sh ] &amp;&amp; echo run_tests_exists || echo run_tests_missing
-wc -l frontend/src/views/Dashboard.vue backend/src/cli/router.js backend/src/routes/largeTasks.js</code></pre>
+find . -maxdepth 2 -<span class="hljs-built_in">type</span> d \( -name unit_tests -o -name API_tests -o -name tests \) | <span class="hljs-built_in">sort</span>
+[ -d unit_tests ] &amp;&amp; <span class="hljs-built_in">echo</span> unit_tests_exists || <span class="hljs-built_in">echo</span> unit_tests_missing
+[ -d API_tests ] &amp;&amp; <span class="hljs-built_in">echo</span> API_tests_exists || <span class="hljs-built_in">echo</span> API_tests_missing
+[ -f run_tests.sh ] &amp;&amp; <span class="hljs-built_in">echo</span> run_tests_exists || <span class="hljs-built_in">echo</span> run_tests_missing
+<span class="hljs-built_in">wc</span> -l frontend/src/views/Dashboard.vue backend/src/cli/router.js backend/src/routes/largeTasks.js</code></pre>
 <h2 id="7-当前判定">7. 当前判定<a class="anchor" href="#7-当前判定" aria-label="锚点">#</a></h2>
 <ul><li>按你的规则，3.1 与 3.7 命中即一票否决。</li><li><strong>当前状态：不合格，建议先修复红线项后再进入返修与评分流程。</strong></li></ul>
       </article>

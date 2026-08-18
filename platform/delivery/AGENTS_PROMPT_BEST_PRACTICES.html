@@ -102,22 +102,22 @@
 <ul><li><strong>基础 Prompt</strong> (role + responsibilities + input/output schema) — 不变</li><li><strong>平台特定规则</strong> (rules + error handling) — 按平台替换</li><li><strong>示例</strong> — 按场景替换</li></ul>
 <hr>
 <h2 id="三-通用模板">三、通用模板<a class="anchor" href="#三-通用模板" aria-label="锚点">#</a></h2>
-<pre><code class="language-markdown"># {{agent_name}} Prompt
+<pre><code class="language-markdown"><span class="hljs-section"># {{agent<span class="hljs-emphasis">_name}} Prompt
 
 ## 角色
-你是 {{agent_name}}，负责 {{responsibility}}。
+你是 {{agent_</span>name}}，负责 {{responsibility}}。</span>
 
-## 职责
-- {{responsibility_1}}
-- {{responsibility_2}}
-- {{responsibility_3}}
+<span class="hljs-section">## 职责</span>
+<span class="hljs-bullet">-</span> {{responsibility<span class="hljs-emphasis">_1}}
+- {{responsibility_</span>2}}
+<span class="hljs-bullet">-</span> {{responsibility<span class="hljs-emphasis">_3}}
 
 ## 输入格式
 ```json
 {
-  &quot;{{field_1}}&quot;: &quot;类型 (必填/可选) — 描述&quot;,
-  &quot;{{field_2}}&quot;: &quot;类型 (必填/可选) — 描述&quot;
-}</code></pre>
+  &quot;{{field_</span>1}}&quot;: &quot;类型 (必填/可选) — 描述&quot;,
+  &quot;{{field<span class="hljs-emphasis">_2}}&quot;: &quot;类型 (必填/可选) — 描述&quot;
+}</span></code></pre>
 <h2 id="执行流程">执行流程<a class="anchor" href="#执行流程" aria-label="锚点">#</a></h2>
 <ol><li>{{step_1}}</li><li>{{step_2}}</li><li>{{step_3}}</li></ol>
 <h2 id="规则">规则<a class="anchor" href="#规则" aria-label="锚点">#</a></h2>
@@ -128,11 +128,11 @@
 <h3 id="可选">可选<a class="anchor" href="#可选" aria-label="锚点">#</a></h3>
 <ul><li>{{rule_4}}</li></ul>
 <h2 id="输出格式">输出格式<a class="anchor" href="#输出格式" aria-label="锚点">#</a></h2>
-<pre><code class="language-json">{
-  &quot;success&quot;: &quot;boolean&quot;,
-  &quot;{{platform}}_specific_field&quot;: &quot;值&quot;,
-  &quot;error&quot;: &quot;string | null&quot;
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;boolean&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;{{platform}}_specific_field&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;值&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;error&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;string | null&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <h2 id="异常处理">异常处理<a class="anchor" href="#异常处理" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>错误</th><th>处理</th></tr></thead><tbody><tr><td>{{error_1}}</td><td>{{action_1}}</td></tr><tr><td>{{error_2}}</td><td>{{action_2}}</td></tr></tbody></table>
 <h2 id="示例">示例<a class="anchor" href="#示例" aria-label="锚点">#</a></h2>

@@ -37,21 +37,21 @@
 <ul><li>Python 3.10+</li><li>ComfyUI must be installed and running at http://localhost:8188</li></ul>
 <h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
 <h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Show help
-cli-anything-comfyui --help
+<pre><code class="language-bash"><span class="hljs-comment"># Show help</span>
+cli-anything-comfyui --<span class="hljs-built_in">help</span>
 
-# Start interactive REPL mode
+<span class="hljs-comment"># Start interactive REPL mode</span>
 cli-anything-comfyui repl
 
-# Check server stats
+<span class="hljs-comment"># Check server stats</span>
 cli-anything-comfyui system stats
 
-# Run with JSON output (for agent consumption)
+<span class="hljs-comment"># Run with JSON output (for agent consumption)</span>
 cli-anything-comfyui --json system stats</code></pre>
 <h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
 <p>Start an interactive session for exploratory use:</p>
 <pre><code class="language-bash">cli-anything-comfyui repl
-# Enter commands interactively with tab-completion and history</code></pre>
+<span class="hljs-comment"># Enter commands interactively with tab-completion and history</span></code></pre>
 <h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
 <h3 id="workflow">Workflow<a class="anchor" href="#workflow" aria-label="锚点">#</a></h3>
 <p>Workflow management commands.</p>
@@ -70,45 +70,45 @@ cli-anything-comfyui --json system stats</code></pre>
 <table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>stats</code></td><td>Show ComfyUI system statistics (GPU, CPU, memory)</td></tr><tr><td><code>info</code></td><td>Show ComfyUI server info and extensions</td></tr></tbody></table>
 <h2 id="examples">Examples<a class="anchor" href="#examples" aria-label="锚点">#</a></h2>
 <h3 id="check-system-status">Check System Status<a class="anchor" href="#check-system-status" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Server stats
+<pre><code class="language-bash"><span class="hljs-comment"># Server stats</span>
 cli-anything-comfyui system stats
 
-# Server info
+<span class="hljs-comment"># Server info</span>
 cli-anything-comfyui system info</code></pre>
 <h3 id="discover-available-models">Discover Available Models<a class="anchor" href="#discover-available-models" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># List checkpoints
+<pre><code class="language-bash"><span class="hljs-comment"># List checkpoints</span>
 cli-anything-comfyui models checkpoints
 
-# List LoRAs
+<span class="hljs-comment"># List LoRAs</span>
 cli-anything-comfyui models loras
 
-# List all node types
+<span class="hljs-comment"># List all node types</span>
 cli-anything-comfyui models list-nodes</code></pre>
 <h3 id="queue-and-monitor-generation">Queue and Monitor Generation<a class="anchor" href="#queue-and-monitor-generation" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Queue a workflow
+<pre><code class="language-bash"><span class="hljs-comment"># Queue a workflow</span>
 cli-anything-comfyui queue prompt --workflow my_workflow.json
 
-# Check queue status
+<span class="hljs-comment"># Check queue status</span>
 cli-anything-comfyui queue status
 
-# View execution history
-cli-anything-comfyui --json queue history</code></pre>
+<span class="hljs-comment"># View execution history</span>
+cli-anything-comfyui --json queue <span class="hljs-built_in">history</span></code></pre>
 <h3 id="download-generated-images">Download Generated Images<a class="anchor" href="#download-generated-images" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># List generated images
+<pre><code class="language-bash"><span class="hljs-comment"># List generated images</span>
 cli-anything-comfyui images list
 
-# Download a specific image
+<span class="hljs-comment"># Download a specific image</span>
 cli-anything-comfyui images download --filename ComfyUI_00001_.png --output ./out.png
 
-# Download all images from a prompt
-cli-anything-comfyui images download-all --prompt-id &lt;id&gt; --output-dir ./outputs</code></pre>
+<span class="hljs-comment"># Download all images from a prompt</span>
+cli-anything-comfyui images download-all --prompt-id &lt;<span class="hljs-built_in">id</span>&gt; --output-dir ./outputs</code></pre>
 <h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
 <p>All commands support dual output modes:</p>
 <ul><li><strong>Human-readable</strong> (default): Tables, colors, formatted text</li><li><strong>Machine-readable</strong> (<code>--json</code> flag): Structured JSON for agent consumption</li></ul>
-<pre><code class="language-bash"># Human output
+<pre><code class="language-bash"><span class="hljs-comment"># Human output</span>
 cli-anything-comfyui system stats
 
-# JSON output for agents
+<span class="hljs-comment"># JSON output for agents</span>
 cli-anything-comfyui --json system stats</code></pre>
 <h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
 <p>When using this CLI programmatically:</p>

@@ -39,131 +39,131 @@
 <ul><li><strong>Never commit secrets</strong> to version control (API keys, passwords, tokens)</li><li><strong>Never log sensitive data</strong> (passwords, tokens, full credit card numbers)</li><li><strong>Never trust client-side validation</strong> as a security boundary</li><li><strong>Never disable security headers</strong> for convenience</li><li><strong>Never use <code>eval()</code> or <code>innerHTML</code></strong> with user-provided data</li><li><strong>Never store sessions in client-accessible storage</strong> (localStorage for auth tokens)</li><li><strong>Never expose stack traces</strong> or internal error details to users</li></ul>
 <h2 id="owasp-top-10-prevention">OWASP Top 10 Prevention<a class="anchor" href="#owasp-top-10-prevention" aria-label="锚点">#</a></h2>
 <h3 id="1-injection-sql-nosql-os-command">1. Injection (SQL, NoSQL, OS Command)<a class="anchor" href="#1-injection-sql-nosql-os-command" aria-label="锚点">#</a></h3>
-<pre><code class="language-typescript">// BAD: SQL injection via string concatenation
-const query = `SELECT * FROM users WHERE id = '${userId}'`;
+<pre><code class="language-typescript"><span class="hljs-comment">// BAD: SQL injection via string concatenation</span>
+<span class="hljs-keyword">const</span> query = <span class="hljs-string">`SELECT * FROM users WHERE id = &#x27;<span class="hljs-subst">${userId}</span>&#x27;`</span>;
 
-// GOOD: Parameterized query
-const user = await db.query('SELECT * FROM users WHERE id = $1', [userId]);
+<span class="hljs-comment">// GOOD: Parameterized query</span>
+<span class="hljs-keyword">const</span> user = <span class="hljs-keyword">await</span> db.<span class="hljs-title function_">query</span>(<span class="hljs-string">&#x27;SELECT * FROM users WHERE id = $1&#x27;</span>, [userId]);
 
-// GOOD: ORM with parameterized input
-const user = await prisma.user.findUnique({ where: { id: userId } });</code></pre>
+<span class="hljs-comment">// GOOD: ORM with parameterized input</span>
+<span class="hljs-keyword">const</span> user = <span class="hljs-keyword">await</span> prisma.<span class="hljs-property">user</span>.<span class="hljs-title function_">findUnique</span>({ <span class="hljs-attr">where</span>: { <span class="hljs-attr">id</span>: userId } });</code></pre>
 <h3 id="2-broken-authentication">2. Broken Authentication<a class="anchor" href="#2-broken-authentication" aria-label="锚点">#</a></h3>
-<pre><code class="language-typescript">// Password hashing
-import { hash, compare } from 'bcrypt';
+<pre><code class="language-typescript"><span class="hljs-comment">// Password hashing</span>
+<span class="hljs-keyword">import</span> { hash, compare } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;bcrypt&#x27;</span>;
 
-const SALT_ROUNDS = 12;
-const hashedPassword = await hash(plaintext, SALT_ROUNDS);
-const isValid = await compare(plaintext, hashedPassword);
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">SALT_ROUNDS</span> = <span class="hljs-number">12</span>;
+<span class="hljs-keyword">const</span> hashedPassword = <span class="hljs-keyword">await</span> <span class="hljs-title function_">hash</span>(plaintext, <span class="hljs-variable constant_">SALT_ROUNDS</span>);
+<span class="hljs-keyword">const</span> isValid = <span class="hljs-keyword">await</span> <span class="hljs-title function_">compare</span>(plaintext, hashedPassword);
 
-// Session management
-app.use(session({
-  secret: process.env.SESSION_SECRET,  // From environment, not code
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    httpOnly: true,     // Not accessible via JavaScript
-    secure: true,       // HTTPS only
-    sameSite: 'lax',    // CSRF protection
-    maxAge: 24 * 60 * 60 * 1000,  // 24 hours
+<span class="hljs-comment">// Session management</span>
+app.<span class="hljs-title function_">use</span>(<span class="hljs-title function_">session</span>({
+  <span class="hljs-attr">secret</span>: process.<span class="hljs-property">env</span>.<span class="hljs-property">SESSION_SECRET</span>,  <span class="hljs-comment">// From environment, not code</span>
+  <span class="hljs-attr">resave</span>: <span class="hljs-literal">false</span>,
+  <span class="hljs-attr">saveUninitialized</span>: <span class="hljs-literal">false</span>,
+  <span class="hljs-attr">cookie</span>: {
+    <span class="hljs-attr">httpOnly</span>: <span class="hljs-literal">true</span>,     <span class="hljs-comment">// Not accessible via JavaScript</span>
+    <span class="hljs-attr">secure</span>: <span class="hljs-literal">true</span>,       <span class="hljs-comment">// HTTPS only</span>
+    <span class="hljs-attr">sameSite</span>: <span class="hljs-string">&#x27;lax&#x27;</span>,    <span class="hljs-comment">// CSRF protection</span>
+    <span class="hljs-attr">maxAge</span>: <span class="hljs-number">24</span> * <span class="hljs-number">60</span> * <span class="hljs-number">60</span> * <span class="hljs-number">1000</span>,  <span class="hljs-comment">// 24 hours</span>
   },
 }));</code></pre>
 <h3 id="3-cross-site-scripting-xss">3. Cross-Site Scripting (XSS)<a class="anchor" href="#3-cross-site-scripting-xss" aria-label="锚点">#</a></h3>
-<pre><code class="language-typescript">// BAD: Rendering user input as HTML
-element.innerHTML = userInput;
+<pre><code class="language-typescript"><span class="hljs-comment">// BAD: Rendering user input as HTML</span>
+element.<span class="hljs-property">innerHTML</span> = userInput;
 
-// GOOD: Use framework auto-escaping (React does this by default)
-return &lt;div&gt;{userInput}&lt;/div&gt;;
+<span class="hljs-comment">// GOOD: Use framework auto-escaping (React does this by default)</span>
+<span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">div</span>&gt;</span>{userInput}<span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span></span>;
 
-// If you MUST render HTML, sanitize first
-import DOMPurify from 'dompurify';
-const clean = DOMPurify.sanitize(userInput);</code></pre>
+<span class="hljs-comment">// If you MUST render HTML, sanitize first</span>
+<span class="hljs-keyword">import</span> <span class="hljs-title class_">DOMPurify</span> <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;dompurify&#x27;</span>;
+<span class="hljs-keyword">const</span> clean = <span class="hljs-title class_">DOMPurify</span>.<span class="hljs-title function_">sanitize</span>(userInput);</code></pre>
 <h3 id="4-broken-access-control">4. Broken Access Control<a class="anchor" href="#4-broken-access-control" aria-label="锚点">#</a></h3>
-<pre><code class="language-typescript">// Always check authorization, not just authentication
-app.patch('/api/tasks/:id', authenticate, async (req, res) =&gt; {
-  const task = await taskService.findById(req.params.id);
+<pre><code class="language-typescript"><span class="hljs-comment">// Always check authorization, not just authentication</span>
+app.<span class="hljs-title function_">patch</span>(<span class="hljs-string">&#x27;/api/tasks/:id&#x27;</span>, authenticate, <span class="hljs-title function_">async</span> (req, res) =&gt; {
+  <span class="hljs-keyword">const</span> task = <span class="hljs-keyword">await</span> taskService.<span class="hljs-title function_">findById</span>(req.<span class="hljs-property">params</span>.<span class="hljs-property">id</span>);
 
-  // Check that the authenticated user owns this resource
-  if (task.ownerId !== req.user.id) {
-    return res.status(403).json({
-      error: { code: 'FORBIDDEN', message: 'Not authorized to modify this task' }
+  <span class="hljs-comment">// Check that the authenticated user owns this resource</span>
+  <span class="hljs-keyword">if</span> (task.<span class="hljs-property">ownerId</span> !== req.<span class="hljs-property">user</span>.<span class="hljs-property">id</span>) {
+    <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">status</span>(<span class="hljs-number">403</span>).<span class="hljs-title function_">json</span>({
+      <span class="hljs-attr">error</span>: { <span class="hljs-attr">code</span>: <span class="hljs-string">&#x27;FORBIDDEN&#x27;</span>, <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;Not authorized to modify this task&#x27;</span> }
     });
   }
 
-  // Proceed with update
-  const updated = await taskService.update(req.params.id, req.body);
-  return res.json(updated);
+  <span class="hljs-comment">// Proceed with update</span>
+  <span class="hljs-keyword">const</span> updated = <span class="hljs-keyword">await</span> taskService.<span class="hljs-title function_">update</span>(req.<span class="hljs-property">params</span>.<span class="hljs-property">id</span>, req.<span class="hljs-property">body</span>);
+  <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">json</span>(updated);
 });</code></pre>
 <h3 id="5-security-misconfiguration">5. Security Misconfiguration<a class="anchor" href="#5-security-misconfiguration" aria-label="锚点">#</a></h3>
-<pre><code class="language-typescript">// Security headers (use helmet for Express)
-import helmet from 'helmet';
-app.use(helmet());
+<pre><code class="language-typescript"><span class="hljs-comment">// Security headers (use helmet for Express)</span>
+<span class="hljs-keyword">import</span> helmet <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;helmet&#x27;</span>;
+app.<span class="hljs-title function_">use</span>(<span class="hljs-title function_">helmet</span>());
 
-// Content Security Policy
-app.use(helmet.contentSecurityPolicy({
-  directives: {
-    defaultSrc: [&quot;'self'&quot;],
-    scriptSrc: [&quot;'self'&quot;],
-    styleSrc: [&quot;'self'&quot;, &quot;'unsafe-inline'&quot;],  // Tighten if possible
-    imgSrc: [&quot;'self'&quot;, 'data:', 'https:'],
-    connectSrc: [&quot;'self'&quot;],
+<span class="hljs-comment">// Content Security Policy</span>
+app.<span class="hljs-title function_">use</span>(helmet.<span class="hljs-title function_">contentSecurityPolicy</span>({
+  <span class="hljs-attr">directives</span>: {
+    <span class="hljs-attr">defaultSrc</span>: [<span class="hljs-string">&quot;&#x27;self&#x27;&quot;</span>],
+    <span class="hljs-attr">scriptSrc</span>: [<span class="hljs-string">&quot;&#x27;self&#x27;&quot;</span>],
+    <span class="hljs-attr">styleSrc</span>: [<span class="hljs-string">&quot;&#x27;self&#x27;&quot;</span>, <span class="hljs-string">&quot;&#x27;unsafe-inline&#x27;&quot;</span>],  <span class="hljs-comment">// Tighten if possible</span>
+    <span class="hljs-attr">imgSrc</span>: [<span class="hljs-string">&quot;&#x27;self&#x27;&quot;</span>, <span class="hljs-string">&#x27;data:&#x27;</span>, <span class="hljs-string">&#x27;https:&#x27;</span>],
+    <span class="hljs-attr">connectSrc</span>: [<span class="hljs-string">&quot;&#x27;self&#x27;&quot;</span>],
   },
 }));
 
-// CORS — restrict to known origins
-app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || 'http://localhost:3000',
-  credentials: true,
+<span class="hljs-comment">// CORS — restrict to known origins</span>
+app.<span class="hljs-title function_">use</span>(<span class="hljs-title function_">cors</span>({
+  <span class="hljs-attr">origin</span>: process.<span class="hljs-property">env</span>.<span class="hljs-property">ALLOWED_ORIGINS</span>?.<span class="hljs-title function_">split</span>(<span class="hljs-string">&#x27;,&#x27;</span>) || <span class="hljs-string">&#x27;http://localhost:3000&#x27;</span>,
+  <span class="hljs-attr">credentials</span>: <span class="hljs-literal">true</span>,
 }));</code></pre>
 <h3 id="6-sensitive-data-exposure">6. Sensitive Data Exposure<a class="anchor" href="#6-sensitive-data-exposure" aria-label="锚点">#</a></h3>
-<pre><code class="language-typescript">// Never return sensitive fields in API responses
-function sanitizeUser(user: UserRecord): PublicUser {
-  const { passwordHash, resetToken, ...publicFields } = user;
-  return publicFields;
+<pre><code class="language-typescript"><span class="hljs-comment">// Never return sensitive fields in API responses</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">sanitizeUser</span>(<span class="hljs-params"><span class="hljs-attr">user</span>: <span class="hljs-title class_">UserRecord</span></span>): <span class="hljs-title class_">PublicUser</span> {
+  <span class="hljs-keyword">const</span> { passwordHash, resetToken, ...publicFields } = user;
+  <span class="hljs-keyword">return</span> publicFields;
 }
 
-// Use environment variables for secrets
-const API_KEY = process.env.STRIPE_API_KEY;
-if (!API_KEY) throw new Error('STRIPE_API_KEY not configured');</code></pre>
+<span class="hljs-comment">// Use environment variables for secrets</span>
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">API_KEY</span> = process.<span class="hljs-property">env</span>.<span class="hljs-property">STRIPE_API_KEY</span>;
+<span class="hljs-keyword">if</span> (!<span class="hljs-variable constant_">API_KEY</span>) <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">&#x27;STRIPE_API_KEY not configured&#x27;</span>);</code></pre>
 <h2 id="input-validation-patterns">Input Validation Patterns<a class="anchor" href="#input-validation-patterns" aria-label="锚点">#</a></h2>
 <h3 id="schema-validation-at-boundaries">Schema Validation at Boundaries<a class="anchor" href="#schema-validation-at-boundaries" aria-label="锚点">#</a></h3>
-<pre><code class="language-typescript">import { z } from 'zod';
+<pre><code class="language-typescript"><span class="hljs-keyword">import</span> { z } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;zod&#x27;</span>;
 
-const CreateTaskSchema = z.object({
-  title: z.string().min(1).max(200).trim(),
-  description: z.string().max(2000).optional(),
-  priority: z.enum(['low', 'medium', 'high']).default('medium'),
-  dueDate: z.string().datetime().optional(),
+<span class="hljs-keyword">const</span> <span class="hljs-title class_">CreateTaskSchema</span> = z.<span class="hljs-title function_">object</span>({
+  <span class="hljs-attr">title</span>: z.<span class="hljs-title function_">string</span>().<span class="hljs-title function_">min</span>(<span class="hljs-number">1</span>).<span class="hljs-title function_">max</span>(<span class="hljs-number">200</span>).<span class="hljs-title function_">trim</span>(),
+  <span class="hljs-attr">description</span>: z.<span class="hljs-title function_">string</span>().<span class="hljs-title function_">max</span>(<span class="hljs-number">2000</span>).<span class="hljs-title function_">optional</span>(),
+  <span class="hljs-attr">priority</span>: z.<span class="hljs-title function_">enum</span>([<span class="hljs-string">&#x27;low&#x27;</span>, <span class="hljs-string">&#x27;medium&#x27;</span>, <span class="hljs-string">&#x27;high&#x27;</span>]).<span class="hljs-title function_">default</span>(<span class="hljs-string">&#x27;medium&#x27;</span>),
+  <span class="hljs-attr">dueDate</span>: z.<span class="hljs-title function_">string</span>().<span class="hljs-title function_">datetime</span>().<span class="hljs-title function_">optional</span>(),
 });
 
-// Validate at the route handler
-app.post('/api/tasks', async (req, res) =&gt; {
-  const result = CreateTaskSchema.safeParse(req.body);
-  if (!result.success) {
-    return res.status(422).json({
-      error: {
-        code: 'VALIDATION_ERROR',
-        message: 'Invalid input',
-        details: result.error.flatten(),
+<span class="hljs-comment">// Validate at the route handler</span>
+app.<span class="hljs-title function_">post</span>(<span class="hljs-string">&#x27;/api/tasks&#x27;</span>, <span class="hljs-title function_">async</span> (req, res) =&gt; {
+  <span class="hljs-keyword">const</span> result = <span class="hljs-title class_">CreateTaskSchema</span>.<span class="hljs-title function_">safeParse</span>(req.<span class="hljs-property">body</span>);
+  <span class="hljs-keyword">if</span> (!result.<span class="hljs-property">success</span>) {
+    <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">status</span>(<span class="hljs-number">422</span>).<span class="hljs-title function_">json</span>({
+      <span class="hljs-attr">error</span>: {
+        <span class="hljs-attr">code</span>: <span class="hljs-string">&#x27;VALIDATION_ERROR&#x27;</span>,
+        <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;Invalid input&#x27;</span>,
+        <span class="hljs-attr">details</span>: result.<span class="hljs-property">error</span>.<span class="hljs-title function_">flatten</span>(),
       },
     });
   }
-  // result.data is now typed and validated
-  const task = await taskService.create(result.data);
-  return res.status(201).json(task);
+  <span class="hljs-comment">// result.data is now typed and validated</span>
+  <span class="hljs-keyword">const</span> task = <span class="hljs-keyword">await</span> taskService.<span class="hljs-title function_">create</span>(result.<span class="hljs-property">data</span>);
+  <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">status</span>(<span class="hljs-number">201</span>).<span class="hljs-title function_">json</span>(task);
 });</code></pre>
 <h3 id="file-upload-safety">File Upload Safety<a class="anchor" href="#file-upload-safety" aria-label="锚点">#</a></h3>
-<pre><code class="language-typescript">// Restrict file types and sizes
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+<pre><code class="language-typescript"><span class="hljs-comment">// Restrict file types and sizes</span>
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">ALLOWED_TYPES</span> = [<span class="hljs-string">&#x27;image/jpeg&#x27;</span>, <span class="hljs-string">&#x27;image/png&#x27;</span>, <span class="hljs-string">&#x27;image/webp&#x27;</span>];
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">MAX_SIZE</span> = <span class="hljs-number">5</span> * <span class="hljs-number">1024</span> * <span class="hljs-number">1024</span>; <span class="hljs-comment">// 5MB</span>
 
-function validateUpload(file: UploadedFile) {
-  if (!ALLOWED_TYPES.includes(file.mimetype)) {
-    throw new ValidationError('File type not allowed');
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">validateUpload</span>(<span class="hljs-params"><span class="hljs-attr">file</span>: <span class="hljs-title class_">UploadedFile</span></span>) {
+  <span class="hljs-keyword">if</span> (!<span class="hljs-variable constant_">ALLOWED_TYPES</span>.<span class="hljs-title function_">includes</span>(file.<span class="hljs-property">mimetype</span>)) {
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ValidationError</span>(<span class="hljs-string">&#x27;File type not allowed&#x27;</span>);
   }
-  if (file.size &gt; MAX_SIZE) {
-    throw new ValidationError('File too large (max 5MB)');
+  <span class="hljs-keyword">if</span> (file.<span class="hljs-property">size</span> &gt; <span class="hljs-variable constant_">MAX_SIZE</span>) {
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ValidationError</span>(<span class="hljs-string">&#x27;File too large (max 5MB)&#x27;</span>);
   }
-  // Don't trust the file extension — check magic bytes if critical
+  <span class="hljs-comment">// Don&#x27;t trust the file extension — check magic bytes if critical</span>
 }</code></pre>
 <h2 id="triaging-npm-audit-results">Triaging npm audit Results<a class="anchor" href="#triaging-npm-audit-results" aria-label="锚点">#</a></h2>
 <p>Not all audit findings require immediate action. Use this decision tree:</p>
@@ -184,20 +184,20 @@ function validateUpload(file: UploadedFile) {
 <ul><li>Is the vulnerable function actually called in your code path?</li><li>Is the dependency a runtime dependency or dev-only?</li><li>Is the vulnerability exploitable given your deployment context (e.g., a server-side vulnerability in a client-only app)?</li></ul>
 <p>When you defer a fix, document the reason and set a review date.</p>
 <h2 id="rate-limiting">Rate Limiting<a class="anchor" href="#rate-limiting" aria-label="锚点">#</a></h2>
-<pre><code class="language-typescript">import rateLimit from 'express-rate-limit';
+<pre><code class="language-typescript"><span class="hljs-keyword">import</span> rateLimit <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;express-rate-limit&#x27;</span>;
 
-// General API rate limit
-app.use('/api/', rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,                   // 100 requests per window
-  standardHeaders: true,
-  legacyHeaders: false,
+<span class="hljs-comment">// General API rate limit</span>
+app.<span class="hljs-title function_">use</span>(<span class="hljs-string">&#x27;/api/&#x27;</span>, <span class="hljs-title function_">rateLimit</span>({
+  <span class="hljs-attr">windowMs</span>: <span class="hljs-number">15</span> * <span class="hljs-number">60</span> * <span class="hljs-number">1000</span>, <span class="hljs-comment">// 15 minutes</span>
+  <span class="hljs-attr">max</span>: <span class="hljs-number">100</span>,                   <span class="hljs-comment">// 100 requests per window</span>
+  <span class="hljs-attr">standardHeaders</span>: <span class="hljs-literal">true</span>,
+  <span class="hljs-attr">legacyHeaders</span>: <span class="hljs-literal">false</span>,
 }));
 
-// Stricter limit for auth endpoints
-app.use('/api/auth/', rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,  // 10 attempts per 15 minutes
+<span class="hljs-comment">// Stricter limit for auth endpoints</span>
+app.<span class="hljs-title function_">use</span>(<span class="hljs-string">&#x27;/api/auth/&#x27;</span>, <span class="hljs-title function_">rateLimit</span>({
+  <span class="hljs-attr">windowMs</span>: <span class="hljs-number">15</span> * <span class="hljs-number">60</span> * <span class="hljs-number">1000</span>,
+  <span class="hljs-attr">max</span>: <span class="hljs-number">10</span>,  <span class="hljs-comment">// 10 attempts per 15 minutes</span>
 }));</code></pre>
 <h2 id="secrets-management">Secrets Management<a class="anchor" href="#secrets-management" aria-label="锚点">#</a></h2>
 <pre><code>.env files:
@@ -212,35 +212,35 @@ app.use('/api/auth/', rateLimit({
   *.pem
   *.key</code></pre>
 <p><strong>Always check before committing:</strong></p>
-<pre><code class="language-bash"># Check for accidentally staged secrets
-git diff --cached | grep -i &quot;password\|secret\|api_key\|token&quot;</code></pre>
+<pre><code class="language-bash"><span class="hljs-comment"># Check for accidentally staged secrets</span>
+git diff --cached | grep -i <span class="hljs-string">&quot;password\|secret\|api_key\|token&quot;</span></code></pre>
 <h2 id="security-review-checklist">Security Review Checklist<a class="anchor" href="#security-review-checklist" aria-label="锚点">#</a></h2>
-<pre><code class="language-markdown">### Authentication
-- [ ] Passwords hashed with bcrypt/scrypt/argon2 (salt rounds ≥ 12)
-- [ ] Session tokens are httpOnly, secure, sameSite
-- [ ] Login has rate limiting
-- [ ] Password reset tokens expire
+<pre><code class="language-markdown"><span class="hljs-section">### Authentication</span>
+<span class="hljs-bullet">-</span> [ ] Passwords hashed with bcrypt/scrypt/argon2 (salt rounds ≥ 12)
+<span class="hljs-bullet">-</span> [ ] Session tokens are httpOnly, secure, sameSite
+<span class="hljs-bullet">-</span> [ ] Login has rate limiting
+<span class="hljs-bullet">-</span> [ ] Password reset tokens expire
 
-### Authorization
-- [ ] Every endpoint checks user permissions
-- [ ] Users can only access their own resources
-- [ ] Admin actions require admin role verification
+<span class="hljs-section">### Authorization</span>
+<span class="hljs-bullet">-</span> [ ] Every endpoint checks user permissions
+<span class="hljs-bullet">-</span> [ ] Users can only access their own resources
+<span class="hljs-bullet">-</span> [ ] Admin actions require admin role verification
 
-### Input
-- [ ] All user input validated at the boundary
-- [ ] SQL queries are parameterized
-- [ ] HTML output is encoded/escaped
+<span class="hljs-section">### Input</span>
+<span class="hljs-bullet">-</span> [ ] All user input validated at the boundary
+<span class="hljs-bullet">-</span> [ ] SQL queries are parameterized
+<span class="hljs-bullet">-</span> [ ] HTML output is encoded/escaped
 
-### Data
-- [ ] No secrets in code or version control
-- [ ] Sensitive fields excluded from API responses
-- [ ] PII encrypted at rest (if applicable)
+<span class="hljs-section">### Data</span>
+<span class="hljs-bullet">-</span> [ ] No secrets in code or version control
+<span class="hljs-bullet">-</span> [ ] Sensitive fields excluded from API responses
+<span class="hljs-bullet">-</span> [ ] PII encrypted at rest (if applicable)
 
-### Infrastructure
-- [ ] Security headers configured (CSP, HSTS, etc.)
-- [ ] CORS restricted to known origins
-- [ ] Dependencies audited for vulnerabilities
-- [ ] Error messages don't expose internals</code></pre>
+<span class="hljs-section">### Infrastructure</span>
+<span class="hljs-bullet">-</span> [ ] Security headers configured (CSP, HSTS, etc.)
+<span class="hljs-bullet">-</span> [ ] CORS restricted to known origins
+<span class="hljs-bullet">-</span> [ ] Dependencies audited for vulnerabilities
+<span class="hljs-bullet">-</span> [ ] Error messages don&#x27;t expose internals</code></pre>
 <h2 id="see-also">See Also<a class="anchor" href="#see-also" aria-label="锚点">#</a></h2>
 <p>For detailed security checklists and pre-commit verification steps, see <code>references/security-checklist.md</code>.</p>
 <h2 id="common-rationalizations">Common Rationalizations<a class="anchor" href="#common-rationalizations" aria-label="锚点">#</a></h2>

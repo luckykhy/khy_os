@@ -1,18 +1,10 @@
 import { defineStore } from 'pinia';
+import { hasAuthToken, parseStoredJson } from '@khy/ui-shared/auth/state';
 import request from '@/api/request';
 import { TOKEN_KEY } from '@/utils/safeStorage';
 
 const USER_STORAGE_KEY = 'khy_ai_user';
 const WORKSPACE_STORAGE_KEY = 'khy_ai_workspace';
-
-function safeParseJson(raw, fallback = null) {
-  if (!raw || typeof raw !== 'string') return fallback;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return fallback;
-  }
-}
 
 function normalizeRole(user) {
   const role = String(user?.role || '')
@@ -28,7 +20,7 @@ function normalizeWorkspace(next, isAdmin) {
 
 export const useUserStore = defineStore('user', {
   state: () => {
-    const storedUser = safeParseJson(localStorage.getItem(USER_STORAGE_KEY), null);
+    const storedUser = parseStoredJson(localStorage.getItem(USER_STORAGE_KEY), null);
     const role = normalizeRole(storedUser);
     const storedWorkspace = String(localStorage.getItem(WORKSPACE_STORAGE_KEY) || '').trim();
     return {
@@ -102,7 +94,7 @@ export const useUserStore = defineStore('user', {
       localStorage.removeItem(WORKSPACE_STORAGE_KEY);
     },
     isAuthenticated() {
-      return !!this.token;
+      return hasAuthToken(this.token);
     },
   },
 });

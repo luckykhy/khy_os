@@ -156,57 +156,11 @@ router.get('/symbols', authMiddleware, async (req, res) => {
 
 module.exports = router;
 // 批量导入股票数据
-router.post('/import', authMiddleware, async (req, res) => {
-  try {
-    const { days = 252, symbols = [] } = req.body;
-    
-    // 导入指定股票或全部股票
-    let importAllStocks, importSingleStock, STOCK_LIST;
-    try {
-      ({ importAllStocks, importSingleStock, STOCK_LIST } = require('../../import-stock-data'));
-    } catch {
-      return res.status(501).json({ success: false, message: 'import-stock-data 模块不可用，请使用 CLI 的 khy data 命令导入数据' });
-    }
-    
-    let results;
-    if (symbols.length > 0) {
-      // 导入指定股票
-      results = { success: 0, skipped: 0, failed: 0, totalRecords: 0 };
-      
-      for (const symbolCode of symbols) {
-        const stock = STOCK_LIST.find(s => s.code === symbolCode);
-        if (stock) {
-          const result = await importSingleStock(stock, days);
-          if (result.success) {
-            results.success++;
-            results.totalRecords += result.count;
-          } else if (result.skipped) {
-            results.skipped++;
-            results.totalRecords += result.count;
-          } else {
-            results.failed++;
-          }
-        }
-      }
-    } else {
-      // 导入所有股票
-      results = await importAllStocks(days);
-    }
-    
-    res.json({
-      success: true,
-      message: '股票数据导入完成',
-      data: results
-    });
-    
-  } catch (error) {
-    console.error('批量导入股票数据错误:', error);
-    res.status(500).json({
-      success: false,
-      message: '导入失败',
-      error: error.message
-    });
-  }
+router.post('/import', authMiddleware, async (_req, res) => {
+  return res.status(501).json({
+    success: false,
+    message: 'import-stock-data 模块不可用，请使用 CLI 的 khy data 命令导入数据',
+  });
 });
 
 // 获取数据统计信息

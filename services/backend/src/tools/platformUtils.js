@@ -144,11 +144,15 @@ function shellEscape(arg, shell) {
   if (!arg) {
     return "''";
   }
-  // Safe chars that need no quoting on any platform
-  if (/^[a-zA-Z0-9._\-/\\:=@]+$/.test(arg)) {
+  const sh = shell || getShellConfiguration().shell;
+  // A backslash is a path separator in Windows shells but an escape character
+  // in POSIX shells (including Git Bash). Quote it before bash can consume it.
+  const safeChars = sh === 'bash' || sh === 'sh'
+    ? /^[a-zA-Z0-9._\-/:=@]+$/
+    : /^[a-zA-Z0-9._\-/\\:=@]+$/;
+  if (safeChars.test(arg)) {
     return arg;
   }
-  const sh = shell || getShellConfiguration().shell;
   if (sh === 'powershell') {
     return "'" + arg.replace(/'/g, "''") + "'";
   }

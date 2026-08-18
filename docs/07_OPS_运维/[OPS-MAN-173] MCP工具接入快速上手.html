@@ -32,19 +32,19 @@
 <ul><li>CLI 入口：<code>services/backend/src/cli/handlers/mcp.js</code></li><li>预设单一真源（18 条）：<code>services/backend/src/services/mcp/mcpServerPresets.js</code></li><li>配置读写与启用/禁用：<code>services/backend/src/services/mcp/mcpConfigStore.js</code></li><li>配置加载与自动连接：<code>services/backend/src/services/mcp/index.js</code></li><li>配置文件：<code>.khy/mcp.json</code>（用户级），项目级为 <code>./.khy/mcp.json</code></li></ul></blockquote>
 <hr>
 <h2 id="一-命令总览">一、命令总览<a class="anchor" href="#一-命令总览" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">khy mcp add &lt;名&gt; [--scope user|project] [--env K=V] [--transport sse|http --url &lt;地址&gt;] -- &lt;命令&gt; [参数…]
+<pre><code class="language-bash">khy mcp add &lt;名&gt; [--scope user|project] [--<span class="hljs-built_in">env</span> K=V] [--transport sse|http --url &lt;地址&gt;] -- &lt;命令&gt; [参数…]
 khy mcp remove &lt;名&gt; [--scope user|project]
-khy mcp presets                                   # 列出内置开源 server 预设
-khy mcp show &lt;名&gt;                                 # 查看单台 server 配置详情
-khy mcp test &lt;名&gt;                                 # 连接并验证一台已配置 server
-khy mcp enable|disable &lt;名&gt; [--scope user|project] # 启用/禁用（不删除配置）</code></pre>
+khy mcp presets                                   <span class="hljs-comment"># 列出内置开源 server 预设</span>
+khy mcp show &lt;名&gt;                                 <span class="hljs-comment"># 查看单台 server 配置详情</span>
+khy mcp <span class="hljs-built_in">test</span> &lt;名&gt;                                 <span class="hljs-comment"># 连接并验证一台已配置 server</span>
+khy mcp <span class="hljs-built_in">enable</span>|<span class="hljs-built_in">disable</span> &lt;名&gt; [--scope user|project] <span class="hljs-comment"># 启用/禁用（不删除配置）</span></code></pre>
 <ul><li><code>presets</code> / <code>show</code> / <code>test</code> 为只读或按需连接，<strong>不受</strong> <code>KHY_MCP_ADD</code> 门控约束（<code>presets</code> 由 <code>KHY_MCP_PRESETS</code> 门控）。</li><li><code>add</code> / <code>remove</code> / <code>enable</code> / <code>disable</code> 会写配置，需 <code>KHY_MCP_ADD</code> 开启。</li><li>解析/校验/构形在纯叶子 <code>mcpAddSpec</code>；文件读改写在薄 IO 层 <code>mcpConfigStore</code>。</li></ul>
 <hr>
 <h2 id="二-用预设一键安装-add-presets">二、用预设一键安装（<code>add</code> + <code>presets</code>）<a class="anchor" href="#二-用预设一键安装-add-presets" aria-label="锚点">#</a></h2>
 <p>预设让你免写完整启动命令。发现入口：</p>
 <pre><code class="language-bash">khy mcp presets</code></pre>
 <p>安装（短名或别名皆可，位置参数追加到命令末尾）：</p>
-<pre><code class="language-bash">khy mcp add github --env GITHUB_PERSONAL_ACCESS_TOKEN=&lt;token&gt;
+<pre><code class="language-bash">khy mcp add github --<span class="hljs-built_in">env</span> GITHUB_PERSONAL_ACCESS_TOKEN=&lt;token&gt;
 khy mcp add filesystem ~/Documents
 khy mcp add postgres postgresql://localhost/mydb</code></pre>
 <p>添加成功后会打印：写入路径、启动命令/端点、环境变量键、预设描述；若预设声明了敏感 <code>env</code> 但你没提供，会给出<strong>缺失提示</strong>（见第五节）。下次启动 khy 会话时会 <code>autoConnect</code> 自动连接。</p>
@@ -57,11 +57,11 @@ khy mcp add postgres postgresql://localhost/mydb</code></pre>
 <p><strong>接位置参数的预设</strong>（<code>argHint</code>）：<code>git</code>（<code>--repository &lt;本地仓库路径&gt;</code>）、<code>filesystem</code>（一个或多个允许访问的目录）、<code>postgres</code>（连接串）、<code>sqlite</code>（<code>--db-path &lt;数据库文件&gt;</code>）、<code>docker</code>（可追加 <code>--transport</code> 等）。</p>
 <hr>
 <h2 id="四-单台管理-show-test-enable-disable">四、单台管理：show / test / enable / disable<a class="anchor" href="#四-单台管理-show-test-enable-disable" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">khy mcp show github     # 来源/传输/状态/工具数/命令或端点/环境变量键/配置文件路径
-khy mcp test github     # 主动连接并报告暴露工具数（不写配置）
-khy mcp disable github  # 在该 server 配置上写 disabled:true → autoConnect 跳过
-khy mcp enable github   # 删掉 disabled 字段
-khy mcp remove github   # 从配置中删除</code></pre>
+<pre><code class="language-bash">khy mcp show github     <span class="hljs-comment"># 来源/传输/状态/工具数/命令或端点/环境变量键/配置文件路径</span>
+khy mcp <span class="hljs-built_in">test</span> github     <span class="hljs-comment"># 主动连接并报告暴露工具数（不写配置）</span>
+khy mcp <span class="hljs-built_in">disable</span> github  <span class="hljs-comment"># 在该 server 配置上写 disabled:true → autoConnect 跳过</span>
+khy mcp <span class="hljs-built_in">enable</span> github   <span class="hljs-comment"># 删掉 disabled 字段</span>
+khy mcp remove github   <span class="hljs-comment"># 从配置中删除</span></code></pre>
 <ul><li><code>disable</code> = 写 <code>&quot;disabled&quot;: true</code>（<code>loadConfig</code> 映射为内部 <code>_disabled</code> → <code>connectAll</code> 跳过）；<code>enable</code> = 删除该字段。</li><li><code>test</code> 若目标已禁用会提示先 <code>enable</code>。</li></ul>
 <hr>
 <h2 id="五-缺失-env-提示机制">五、缺失 env 提示机制<a class="anchor" href="#五-缺失-env-提示机制" aria-label="锚点">#</a></h2>
@@ -73,50 +73,50 @@ khy mcp remove github   # 从配置中删除</code></pre>
 <h2 id="六-mcp-json-三种传输配置示例">六、<code>mcp.json</code> 三种传输配置示例<a class="anchor" href="#六-mcp-json-三种传输配置示例" aria-label="锚点">#</a></h2>
 <p>配置文件位于 <code>.khy/mcp.json</code>（用户级）。<strong>JSON 不支持注释</strong>，故以下用代码块给注释模板；实际写入时请去掉注释或用 <code>khy mcp add</code> 生成。三种传输分别为：<code>stdio</code>（本地子进程，最常见）、<code>sse</code>（Server-Sent Events）、<code>http</code>（Streamable HTTP）。</p>
 <h3 id="6-1-stdio-本地子进程">6.1 stdio（本地子进程）<a class="anchor" href="#6-1-stdio-本地子进程" aria-label="锚点">#</a></h3>
-<pre><code class="language-jsonc">{
-  &quot;mcpServers&quot;: {
-    &quot;my-stdio&quot;: {
-      &quot;type&quot;: &quot;stdio&quot;,
-      &quot;command&quot;: &quot;npx&quot;,                 // 可执行命令
-      &quot;args&quot;: [&quot;-y&quot;, &quot;@modelcontextprotocol/server-filesystem&quot;, &quot;~/Documents&quot;],
-      &quot;env&quot;: { &quot;SOME_TOKEN&quot;: &quot;xxx&quot; }   // 可选：注入子进程的环境变量
-    }
-  }
-}</code></pre>
+<pre><code class="language-jsonc"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;mcpServers&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;my-stdio&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;stdio&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;command&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;npx&quot;</span><span class="hljs-punctuation">,</span>                 <span class="hljs-comment">// 可执行命令</span>
+      <span class="hljs-attr">&quot;args&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;-y&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;@modelcontextprotocol/server-filesystem&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;~/Documents&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;env&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;SOME_TOKEN&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;xxx&quot;</span> <span class="hljs-punctuation">}</span>   <span class="hljs-comment">// 可选：注入子进程的环境变量</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <h3 id="6-2-sse-server-sent-events">6.2 SSE（Server-Sent Events）<a class="anchor" href="#6-2-sse-server-sent-events" aria-label="锚点">#</a></h3>
-<pre><code class="language-jsonc">{
-  &quot;mcpServers&quot;: {
-    &quot;my-sse&quot;: {
-      &quot;type&quot;: &quot;sse&quot;,
-      &quot;url&quot;: &quot;https://mcp.example.com/sse&quot;,  // SSE 端点
-      &quot;headers&quot;: { &quot;Authorization&quot;: &quot;Bearer &lt;token&gt;&quot; }  // 可选鉴权头
-    }
-  }
-}</code></pre>
+<pre><code class="language-jsonc"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;mcpServers&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;my-sse&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;sse&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;url&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;https://mcp.example.com/sse&quot;</span><span class="hljs-punctuation">,</span>  <span class="hljs-comment">// SSE 端点</span>
+      <span class="hljs-attr">&quot;headers&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;Authorization&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Bearer &lt;token&gt;&quot;</span> <span class="hljs-punctuation">}</span>  <span class="hljs-comment">// 可选鉴权头</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <h3 id="6-3-http-streamable-http">6.3 HTTP（Streamable HTTP）<a class="anchor" href="#6-3-http-streamable-http" aria-label="锚点">#</a></h3>
-<pre><code class="language-jsonc">{
-  &quot;mcpServers&quot;: {
-    &quot;my-http&quot;: {
-      &quot;type&quot;: &quot;http&quot;,
-      &quot;url&quot;: &quot;https://mcp.example.com/mcp&quot;,   // HTTP 端点
-      &quot;headers&quot;: { &quot;Authorization&quot;: &quot;Bearer &lt;token&gt;&quot; }
-    }
-  }
-}</code></pre>
+<pre><code class="language-jsonc"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;mcpServers&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;my-http&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;http&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;url&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;https://mcp.example.com/mcp&quot;</span><span class="hljs-punctuation">,</span>   <span class="hljs-comment">// HTTP 端点</span>
+      <span class="hljs-attr">&quot;headers&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;Authorization&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Bearer &lt;token&gt;&quot;</span> <span class="hljs-punctuation">}</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <h3 id="6-4-禁用一台-server-示例条目通用做法">6.4 禁用一台 server（示例条目通用做法）<a class="anchor" href="#6-4-禁用一台-server-示例条目通用做法" aria-label="锚点">#</a></h3>
 <p>在任意 server 配置里加 <code>&quot;disabled&quot;: true</code>，<code>autoConnect</code> 会跳过它——本仓库 <code>.khy/mcp.json</code> 里的 <code>example-stdio</code> / <code>example-sse</code> / <code>example-http</code> 三条示例条目即用此法保持「可见但不连接」，同时不破坏现有可用配置的合法性。</p>
 <hr>
 <h2 id="七-最小可用-mcp-json-现有真实配置">七、最小可用 <code>mcp.json</code>（现有真实配置）<a class="anchor" href="#七-最小可用-mcp-json-现有真实配置" aria-label="锚点">#</a></h2>
-<pre><code class="language-json">{
-  &quot;mcpServers&quot;: {
-    &quot;deepseek-eyes&quot;: {
-      &quot;type&quot;: &quot;stdio&quot;,
-      &quot;command&quot;: &quot;D:\\Portable\\khy-os\\tools\\deepseek-eyes\\.venv\\Scripts\\python.exe&quot;,
-      &quot;args&quot;: [&quot;-m&quot;, &quot;deepseek_eyes&quot;],
-      &quot;env&quot;: { &quot;MODELSCOPE_API_KEY&quot;: &quot;&lt;your-key&gt;&quot; }
-    }
-  }
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;mcpServers&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;deepseek-eyes&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;stdio&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;command&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;D:\\Portable\\khy-os\\tools\\deepseek-eyes\\.venv\\Scripts\\python.exe&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;args&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;-m&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;deepseek_eyes&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;env&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;MODELSCOPE_API_KEY&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;&lt;your-key&gt;&quot;</span> <span class="hljs-punctuation">}</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <blockquote><p>支持新格式 <code>{ &quot;mcpServers&quot;: {...} }</code> 与 legacy <code>{ &quot;servers&quot;: [...] }</code>（数组用 <code>enabled:false</code> 表示禁用）。推荐用新格式。</p></blockquote>
 <hr>
 <h2 id="关联文档">关联文档<a class="anchor" href="#关联文档" aria-label="锚点">#</a></h2>

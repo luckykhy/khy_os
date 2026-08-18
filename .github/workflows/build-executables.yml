@@ -2,6 +2,9 @@ name: Build Standalone Executables
 
 on:
   push:
+    branches:
+      - main
+      - master
     tags:
       - 'v*'
   workflow_dispatch:
@@ -94,17 +97,71 @@ jobs:
             scripts/tests/portableHostIsolation.test.js \
             scripts/tests/packagePortable.test.js
 
-      - name: Build and package portable runtime
-        run: node scripts/portable/package-portable.js --kind runtime --keep-artifact
+      - name: Build and package portable artifact
+        shell: bash
+        run: |
+          KIND=dev
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then KIND=runtime; fi
+          node scripts/portable/package-portable.js --kind "$KIND" --keep-artifact
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: khy-os-${{ matrix.platform }}
           path: |
-            dist/portable/portable-runtime-*-${{ matrix.platform }}/
-            dist/releases/portable-runtime-*-${{ matrix.platform }}.zip
+            dist/portable/portable-*-${{ matrix.platform }}/
+            dist/releases/portable-*-${{ matrix.platform }}.zip
           retention-days: 30
+
+  publish-dev-index:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout update index generator
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Generate and verify dev update index
+        shell: bash
+        run: |
+          mkdir -p publish
+          while IFS= read -r -d '' archive; do
+            cp "$archive" "publish/$(basename "$archive")"
+          done < <(find artifacts -type f -name 'portable-dev-*.zip' -print0)
+          BASE_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/dev-channel"
+          node scripts/release/update-index.js \
+            --artifacts artifacts \
+            --base-url "$BASE_URL" \
+            --channel dev \
+            --commit "$GITHUB_SHA" \
+            --published-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --out publish/update-index-dev.json
+          node scripts/release/update-index.js \
+            --verify publish/update-index-dev.json \
+            --channel dev \
+            --commit "$GITHUB_SHA"
+
+      - name: Publish dev channel assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if ! gh release view dev-channel >/dev/null 2>&1; then
+            gh release create dev-channel \
+              --target "$GITHUB_SHA" \
+              --prerelease \
+              --title "KhyOS development channel" \
+              --notes "Automatically updated development-channel artifacts."
+          fi
+          gh release upload dev-channel publish/* --clobber
 
   release:
     needs: build
@@ -116,16 +173,61 @@ jobs:
       contents: write
 
     steps:
+      - name: Checkout release metadata generator
+        uses: actions/checkout@v4
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts/
 
+      - name: Build GitHub package artifacts
+        shell: bash
+        run: |
+          python -m pip install build
+          python -m build --wheel --sdist --outdir artifacts/package
+          npm pack packaging/npm --pack-destination artifacts/package
+
+      - name: Generate and verify update index
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          CHANNEL=stable
+          if [[ "$VERSION" == *-rc* || "$VERSION" == *-beta* || "$VERSION" == *-alpha* ]]; then
+            CHANNEL=preview
+          fi
+          BASE_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}"
+          PIP_ARTIFACT="$(find artifacts/package -maxdepth 1 -type f -name '*.whl' -print -quit)"
+          NPM_ARTIFACT="$(find artifacts/package -maxdepth 1 -type f -name '*.tgz' -print -quit)"
+          test -n "$PIP_ARTIFACT"
+          test -n "$NPM_ARTIFACT"
+          node scripts/release/update-index.js \
+            --artifacts artifacts \
+            --base-url "$BASE_URL" \
+            --channel "$CHANNEL" \
+            --version "$VERSION" \
+            --commit "$GITHUB_SHA" \
+            --published-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --pip-artifact "$PIP_ARTIFACT" \
+            --npm-artifact "$NPM_ARTIFACT" \
+            --out "artifacts/update-index-${CHANNEL}.json"
+          node scripts/release/update-index.js \
+            --verify "artifacts/update-index-${CHANNEL}.json" \
+            --channel "$CHANNEL" \
+            --version "$VERSION" \
+            --commit "$GITHUB_SHA"
+
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/**/*
+            artifacts/**/portable-runtime-*.zip
+            artifacts/package/*.whl
+            artifacts/package/*.tar.gz
+            artifacts/package/*.tgz
+            artifacts/update-index-stable.json
+            artifacts/update-index-preview.json
+          fail_on_unmatched_files: false
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}

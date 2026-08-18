@@ -1,0 +1,32 @@
+{
+  "name": "@khy-os/mobile-companion",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "vitest run",
+    "android:add": "cap add android",
+    "android:sync": "npm run build && cap sync android",
+    "android:debug": "npm run android:sync && cd android && ./gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.3.0",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/barcode-scanner": "^3.1.0",
+    "@capacitor/core": "^8.3.0",
+    "@capacitor/network": "^8.0.1",
+    "@capacitor/preferences": "^8.0.1",
+    "capacitor-secure-storage-plugin": "^0.13.0",
+    "pinia": "^2.1.7",
+    "vue": "^3.4.0",
+    "vue-router": "^4.2.5"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.3.0",
+    "@vitejs/plugin-vue": "^5.0.0",
+    "typescript": "^6.0.2",
+    "vite": "^5.0.0",
+    "vitest": "^2.0.0"
+  }
+}

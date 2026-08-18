@@ -59,31 +59,31 @@ running → ...
   ↙     ↘
 failed       dead_letter（终态，重试耗尽）</code></pre>
 <h3 id="2-2-合法转换">2.2 合法转换<a class="anchor" href="#2-2-合法转换" aria-label="锚点">#</a></h3>
-<pre><code class="language-javascript">const STATUS_TRANSITIONS = {
-  queued:       ['claimed', 'cancelling', 'cancelled'],
-  claimed:      ['running', 'retry_wait', 'cancelling', 'cancelled', 'failed'],
-  running:      ['retry_wait', 'pausing', 'cancelling', 'succeeded', 'failed'],
-  retry_wait:   ['claimed', 'dead_letter', 'cancelling', 'cancelled'],
-  pausing:      ['paused', 'cancelling', 'cancelled'],
-  paused:       ['running', 'cancelling', 'cancelled'],
-  cancelling:   ['cancelled'],
-  succeeded:    [],   // 终态
-  failed:       [],   // 终态
-  cancelled:    [],   // 终态
-  dead_letter:  [],   // 终态
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> <span class="hljs-variable constant_">STATUS_TRANSITIONS</span> = {
+  <span class="hljs-attr">queued</span>:       [<span class="hljs-string">&#x27;claimed&#x27;</span>, <span class="hljs-string">&#x27;cancelling&#x27;</span>, <span class="hljs-string">&#x27;cancelled&#x27;</span>],
+  <span class="hljs-attr">claimed</span>:      [<span class="hljs-string">&#x27;running&#x27;</span>, <span class="hljs-string">&#x27;retry_wait&#x27;</span>, <span class="hljs-string">&#x27;cancelling&#x27;</span>, <span class="hljs-string">&#x27;cancelled&#x27;</span>, <span class="hljs-string">&#x27;failed&#x27;</span>],
+  <span class="hljs-attr">running</span>:      [<span class="hljs-string">&#x27;retry_wait&#x27;</span>, <span class="hljs-string">&#x27;pausing&#x27;</span>, <span class="hljs-string">&#x27;cancelling&#x27;</span>, <span class="hljs-string">&#x27;succeeded&#x27;</span>, <span class="hljs-string">&#x27;failed&#x27;</span>],
+  <span class="hljs-attr">retry_wait</span>:   [<span class="hljs-string">&#x27;claimed&#x27;</span>, <span class="hljs-string">&#x27;dead_letter&#x27;</span>, <span class="hljs-string">&#x27;cancelling&#x27;</span>, <span class="hljs-string">&#x27;cancelled&#x27;</span>],
+  <span class="hljs-attr">pausing</span>:      [<span class="hljs-string">&#x27;paused&#x27;</span>, <span class="hljs-string">&#x27;cancelling&#x27;</span>, <span class="hljs-string">&#x27;cancelled&#x27;</span>],
+  <span class="hljs-attr">paused</span>:       [<span class="hljs-string">&#x27;running&#x27;</span>, <span class="hljs-string">&#x27;cancelling&#x27;</span>, <span class="hljs-string">&#x27;cancelled&#x27;</span>],
+  <span class="hljs-attr">cancelling</span>:   [<span class="hljs-string">&#x27;cancelled&#x27;</span>],
+  <span class="hljs-attr">succeeded</span>:    [],   <span class="hljs-comment">// 终态</span>
+  <span class="hljs-attr">failed</span>:       [],   <span class="hljs-comment">// 终态</span>
+  <span class="hljs-attr">cancelled</span>:    [],   <span class="hljs-comment">// 终态</span>
+  <span class="hljs-attr">dead_letter</span>:  [],   <span class="hljs-comment">// 终态</span>
 };</code></pre>
 <p>非法状态转换必须被拒绝（抛出错误或忽略）。</p>
 <h3 id="2-3-心跳保活">2.3 心跳保活<a class="anchor" href="#2-3-心跳保活" aria-label="锚点">#</a></h3>
 <p>Detached task runner 每 <strong>15 秒</strong>向 store 发送 heartbeat：</p>
-<pre><code class="language-javascript">const HEARTBEAT_MS = 15_000;
-const heartbeat = setInterval(() =&gt; {
-  store.heartbeatTask(taskId, WORKER_ID);
-}, HEARTBEAT_MS);</code></pre>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> <span class="hljs-variable constant_">HEARTBEAT_MS</span> = <span class="hljs-number">15_000</span>;
+<span class="hljs-keyword">const</span> heartbeat = <span class="hljs-built_in">setInterval</span>(<span class="hljs-function">() =&gt;</span> {
+  store.<span class="hljs-title function_">heartbeatTask</span>(taskId, <span class="hljs-variable constant_">WORKER_ID</span>);
+}, <span class="hljs-variable constant_">HEARTBEAT_MS</span>);</code></pre>
 <p>Store 据此检测 worker 存活。Worker 超时未 heartbeat → 标记任务失败。</p>
 <h3 id="2-4-fail-soft-原则">2.4 Fail-Soft 原则<a class="anchor" href="#2-4-fail-soft-原则" aria-label="锚点">#</a></h3>
 <p>状态机操作失败时<strong>不得抛到上层</strong>，而是尽力记录终端状态：</p>
-<pre><code class="language-javascript">try { store.markFailed(taskId, ...); } catch { /* already terminal */ }
-try { store.heartbeatTask(...); } catch { /* best-effort */ }</code></pre>
+<pre><code class="language-javascript"><span class="hljs-keyword">try</span> { store.<span class="hljs-title function_">markFailed</span>(taskId, ...); } <span class="hljs-keyword">catch</span> { <span class="hljs-comment">/* already terminal */</span> }
+<span class="hljs-keyword">try</span> { store.<span class="hljs-title function_">heartbeatTask</span>(...); } <span class="hljs-keyword">catch</span> { <span class="hljs-comment">/* best-effort */</span> }</code></pre>
 <h3 id="2-5-实现参考">2.5 实现参考<a class="anchor" href="#2-5-实现参考" aria-label="锚点">#</a></h3>
 <ul><li><code>services/backend/src/tasks/largeTaskRuntimeStore.js</code> — 状态机定义</li><li><code>services/backend/scripts/task-runner.js</code> — detached runner + heartbeat</li></ul>
 <hr>
@@ -101,21 +101,21 @@ try { store.heartbeatTask(...); } catch { /* best-effort */ }</code></pre>
 <p><strong>AI Gateway 的 &quot;45s hard / 20s idle&quot; 双层超时说明</strong>：</p>
 <ul><li><strong>hard（45s）</strong>：从发起请求到收到<strong>任何响应字节</strong>的绝对上限，用于防御完全无响应的死连接；</li><li><strong>idle（20s）</strong>：相邻流式分块（chunk）之间的最大间隔，用于防御中途停流（连接未断但不再产出数据）；</li><li>两者<strong>同时启用</strong>、各防一类故障：hard 保证&quot;开始有响应&quot;，idle 保证&quot;响应持续推进&quot;。</li></ul>
 <h3 id="3-3-api">3.3 API<a class="anchor" href="#3-3-api" aria-label="锚点">#</a></h3>
-<pre><code class="language-javascript">const { startWatchdog } = require('./resourceGuard');
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> { startWatchdog } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./resourceGuard&#x27;</span>);
 
-const guard = startWatchdog('operation-name', timeoutMs, (name, elapsedSec) =&gt; {
-  // 超时回调：reject promise 或抛错
-  reject(new Error(`Operation &quot;${name}&quot; timed out after ${elapsedSec}s`));
+<span class="hljs-keyword">const</span> guard = <span class="hljs-title function_">startWatchdog</span>(<span class="hljs-string">&#x27;operation-name&#x27;</span>, timeoutMs, <span class="hljs-function">(<span class="hljs-params">name, elapsedSec</span>) =&gt;</span> {
+  <span class="hljs-comment">// 超时回调：reject promise 或抛错</span>
+  <span class="hljs-title function_">reject</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">`Operation &quot;<span class="hljs-subst">${name}</span>&quot; timed out after <span class="hljs-subst">${elapsedSec}</span>s`</span>));
 });
 
-// 有进度时 touch
-guard.touch();
+<span class="hljs-comment">// 有进度时 touch</span>
+guard.<span class="hljs-title function_">touch</span>();
 
-// 完成时清理
-guard.done();
+<span class="hljs-comment">// 完成时清理</span>
+guard.<span class="hljs-title function_">done</span>();
 
-// 查询已耗时
-const elapsed = guard.elapsed();</code></pre>
+<span class="hljs-comment">// 查询已耗时</span>
+<span class="hljs-keyword">const</span> elapsed = guard.<span class="hljs-title function_">elapsed</span>();</code></pre>
 <h3 id="3-4-强制约束">3.4 强制约束<a class="anchor" href="#3-4-强制约束" aria-label="锚点">#</a></h3>
 <ol><li><strong>每个 Watchdog 必须有 <code>.done()</code> 清理路径</strong>（成功 / 失败 / 取消 都要调）</li><li><strong>超时回调不得吞异常</strong>——必须向上传播（reject promise 或 throw）</li><li><strong>Watchdog timer 必须 <code>.unref()</code></strong>——不得阻塞进程退出</li><li><strong>内存监控每 30 秒检查一次</strong>，超过 80% heap 触发 GC，超过 95% 告警</li></ol>
 <h3 id="3-5-覆盖要求">3.5 覆盖要求<a class="anchor" href="#3-5-覆盖要求" aria-label="锚点">#</a></h3>
@@ -142,20 +142,20 @@ KHY_TOOL_ABORT_SIGNAL=off → 不传 abortSignal（逐字节回退）</code></pr
 <p><strong>默认开启</strong>（除非显式关闭）。</p>
 <h3 id="4-3-工具执行方的责任">4.3 工具执行方的责任<a class="anchor" href="#4-3-工具执行方的责任" aria-label="锚点">#</a></h3>
 <p>每个工具/异步操作<strong>必须</strong>尊重 <code>abortSignal</code>：</p>
-<pre><code class="language-javascript">// 模式 1: 传给子 fetch/exec
-fetch(url, { signal })
+<pre><code class="language-javascript"><span class="hljs-comment">// 模式 1: 传给子 fetch/exec</span>
+<span class="hljs-title function_">fetch</span>(url, { signal })
 
-// 模式 2: 定期检查
-while (working) {
-  if (signal.aborted) throw new Error('Aborted');
-  doWork();
+<span class="hljs-comment">// 模式 2: 定期检查</span>
+<span class="hljs-keyword">while</span> (working) {
+  <span class="hljs-keyword">if</span> (signal.<span class="hljs-property">aborted</span>) <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">&#x27;Aborted&#x27;</span>);
+  <span class="hljs-title function_">doWork</span>();
 }
 
-// 模式 3: Promise.race
-const result = await Promise.race([
-  longOperation(),
-  new Promise((_, reject) =&gt; {
-    signal.addEventListener('abort', () =&gt; reject(new Error('Aborted')));
+<span class="hljs-comment">// 模式 3: Promise.race</span>
+<span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> <span class="hljs-title class_">Promise</span>.<span class="hljs-title function_">race</span>([
+  <span class="hljs-title function_">longOperation</span>(),
+  <span class="hljs-keyword">new</span> <span class="hljs-title class_">Promise</span>(<span class="hljs-function">(<span class="hljs-params">_, reject</span>) =&gt;</span> {
+    signal.<span class="hljs-title function_">addEventListener</span>(<span class="hljs-string">&#x27;abort&#x27;</span>, <span class="hljs-function">() =&gt;</span> <span class="hljs-title function_">reject</span>(<span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(<span class="hljs-string">&#x27;Aborted&#x27;</span>)));
   }),
 ]);</code></pre>
 <h3 id="4-4-esc-中断的响应保证">4.4 ESC 中断的响应保证<a class="anchor" href="#4-4-esc-中断的响应保证" aria-label="锚点">#</a></h3>
@@ -188,31 +188,31 @@ const result = await Promise.race([
 <h3 id="5-2-强制约束">5.2 强制约束<a class="anchor" href="#5-2-强制约束" aria-label="锚点">#</a></h3>
 <ol><li><strong>每个长任务会话必须有 Receipt</strong>，从 start 到 finalize 完整闭合</li><li><strong>finalizeReceipt 是幂等的</strong>——对无 open receipt 的调用是 no-op</li><li><strong>startReceipt 自动清理前一个同会话的 open receipt</strong>，防止遗漏</li><li><strong>Receipt 一旦写入磁盘不可变</strong>（不得原地修改已持久化的 JSON 文件）</li><li><strong>失败的任务也必须有 Receipt</strong>（status: 'failed' 或 'partial'）</li></ol>
 <h3 id="5-3-receipt-结构">5.3 Receipt 结构<a class="anchor" href="#5-3-receipt-结构" aria-label="锚点">#</a></h3>
-<pre><code class="language-jsonc">{
-  &quot;id&quot;: &quot;RCPT-20260726-143022-a1b2&quot;,
-  &quot;sessionId&quot;: &quot;s1&quot;,
-  &quot;traceId&quot;: &quot;&lt;32-hex&gt;&quot;,
-  &quot;requestId&quot;: &quot;r1&quot;,
-  &quot;status&quot;: &quot;completed&quot;,        // completed | partial | failed | interrupted
-  &quot;goal&quot;: &quot;分析项目架构&quot;,
-  &quot;plan&quot;: &quot;...&quot;,
-  &quot;toolChain&quot;: [
-    { &quot;tool&quot;: &quot;read_file&quot;, &quot;params&quot;: {...}, &quot;result&quot;: {...}, &quot;elapsedMs&quot;: 25, &quot;permission&quot;: &quot;allow&quot; }
-  ],
-  &quot;artifacts&quot;: { &quot;files&quot;: [], &quot;summary&quot;: &quot;...&quot; },
-  &quot;riskApproval&quot;: {
-    &quot;maxRisk&quot;: &quot;safe&quot;,
-    &quot;humanGated&quot;: [],
-    &quot;denied&quot;: [],
-    &quot;permissions&quot;: {}
-  },
-  &quot;error&quot;: null,
-  &quot;startedAt&quot;: &quot;2026-07-26T14:30:22.000Z&quot;,
-  &quot;startedTs&quot;: 1690000000000,
-  &quot;finalizedAt&quot;: &quot;2026-07-26T14:32:15.000Z&quot;,
-  &quot;durationMs&quot;: 113000,
-  &quot;counts&quot;: { &quot;tools&quot;: 5, &quot;ok&quot;: 4, &quot;failed&quot;: 1 }
-}</code></pre>
+<pre><code class="language-jsonc"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;RCPT-20260726-143022-a1b2&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;sessionId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;s1&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;traceId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;&lt;32-hex&gt;&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;requestId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;r1&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;completed&quot;</span><span class="hljs-punctuation">,</span>        <span class="hljs-comment">// completed | partial | failed | interrupted</span>
+  <span class="hljs-attr">&quot;goal&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;分析项目架构&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;plan&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;...&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;toolChain&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+    <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;tool&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;read_file&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;params&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>...<span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;result&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>...<span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;elapsedMs&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">25</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;permission&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;allow&quot;</span> <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;artifacts&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;files&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;summary&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;...&quot;</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;riskApproval&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;maxRisk&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;safe&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;humanGated&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;denied&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;permissions&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;error&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">null</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;startedAt&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-07-26T14:30:22.000Z&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;startedTs&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1690000000000</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;finalizedAt&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-07-26T14:32:15.000Z&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;durationMs&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">113000</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;counts&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;tools&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">5</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;ok&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">4</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;failed&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1</span> <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <h3 id="5-4-实现参考">5.4 实现参考<a class="anchor" href="#5-4-实现参考" aria-label="锚点">#</a></h3>
 <ul><li><code>services/backend/src/services/receiptService.js</code> — startReceipt / appendToolCall / finalizeReceipt</li><li><code>services/backend/src/services/toolCalling.js:1256</code> — emitWrapper 驱动 receipt 记录</li></ul>
 <hr>
@@ -260,11 +260,11 @@ const result = await Promise.race([
 <p>每个失败必须携带：</p>
 <ol><li><strong>错误类型</strong>（errorType / code）</li><li><strong>人类可读描述</strong>（message）</li><li><strong>恢复建议</strong>（hint，可选）</li><li><strong>可恢复标记</strong>（recoverable, retryable）</li></ol>
 <pre><code class="language-javascript">{
-  code: &quot;RESOURCE_NOT_FOUND&quot;,
-  message: &quot;File not found: /path/to/file&quot;,
-  hint: &quot;Check the file path or create the file first&quot;,
-  recoverable: true,
-  retryable: false
+  <span class="hljs-attr">code</span>: <span class="hljs-string">&quot;RESOURCE_NOT_FOUND&quot;</span>,
+  <span class="hljs-attr">message</span>: <span class="hljs-string">&quot;File not found: /path/to/file&quot;</span>,
+  <span class="hljs-attr">hint</span>: <span class="hljs-string">&quot;Check the file path or create the file first&quot;</span>,
+  <span class="hljs-attr">recoverable</span>: <span class="hljs-literal">true</span>,
+  <span class="hljs-attr">retryable</span>: <span class="hljs-literal">false</span>
 }</code></pre>
 <h3 id="7-4-实现参考">7.4 实现参考<a class="anchor" href="#7-4-实现参考" aria-label="锚点">#</a></h3>
 <ul><li><code>services/backend/src/services/toolCalling.js:1256</code> — emitWrapper fail-soft</li><li><code>services/backend/src/services/receiptService.js:291-294</code> — 写入失败 non-critical</li><li><code>services/backend/scripts/task-runner.js:34-36</code> — heartbeat fail-soft</li></ul>
@@ -275,15 +275,15 @@ const result = await Promise.race([
   → &gt; 80%: 触发 GC（global.gc）或清理 expendable 模块缓存
   → &gt; 95%: 告警 + 建议减少并发或重启</code></pre>
 <h3 id="8-2-shell-资源限制">8.2 Shell 资源限制<a class="anchor" href="#8-2-shell-资源限制" aria-label="锚点">#</a></h3>
-<pre><code class="language-javascript">// 自适应容器检测
-isContainer() → 跳过 ulimit（cgroup 已限制）
-!isContainer() → 应用 ulimit
+<pre><code class="language-javascript"><span class="hljs-comment">// 自适应容器检测</span>
+<span class="hljs-title function_">isContainer</span>() → 跳过 ulimit（cgroup 已限制）
+!<span class="hljs-title function_">isContainer</span>() → 应用 ulimit
 
-// 环境变量覆盖
-KHY_ULIMIT_NPROC=1024    // 子进程数上限（默认 256→1024）
-KHY_ULIMIT_VMEM=...       // 虚拟内存
-KHY_ULIMIT_FD=...         // 文件描述符
-KHY_ULIMIT_FSIZE=...      // 文件大小</code></pre>
+<span class="hljs-comment">// 环境变量覆盖</span>
+<span class="hljs-variable constant_">KHY_ULIMIT_NPROC</span>=<span class="hljs-number">1024</span>    <span class="hljs-comment">// 子进程数上限（默认 256→1024）</span>
+<span class="hljs-variable constant_">KHY_ULIMIT_VMEM</span>=...       <span class="hljs-comment">// 虚拟内存</span>
+<span class="hljs-variable constant_">KHY_ULIMIT_FD</span>=...         <span class="hljs-comment">// 文件描述符</span>
+<span class="hljs-variable constant_">KHY_ULIMIT_FSIZE</span>=...      <span class="hljs-comment">// 文件大小</span></code></pre>
 <h3 id="8-3-进程退出保护">8.3 进程退出保护<a class="anchor" href="#8-3-进程退出保护" aria-label="锚点">#</a></h3>
 <pre><code>所有 timer/interval 必须 .unref()
   → 不阻止进程退出
@@ -307,11 +307,11 @@ KHY_ULIMIT_FSIZE=...      // 文件大小</code></pre>
 <h3 id="10-1-发布阶段">10.1 发布阶段<a class="anchor" href="#10-1-发布阶段" aria-label="锚点">#</a></h3>
 <p>可靠性校验已加入发布门禁：</p>
 <pre><code class="language-javascript">{
-  id: 'reliability-gate',
-  title: '可靠性契约校验(状态机/Watchdog/Receipt/AbortSignal)',
-  tier: 'must',
-  kind: 'deterministic',
-  command: 'node scripts/ci/validate-reliability.js',
+  <span class="hljs-attr">id</span>: <span class="hljs-string">&#x27;reliability-gate&#x27;</span>,
+  <span class="hljs-attr">title</span>: <span class="hljs-string">&#x27;可靠性契约校验(状态机/Watchdog/Receipt/AbortSignal)&#x27;</span>,
+  <span class="hljs-attr">tier</span>: <span class="hljs-string">&#x27;must&#x27;</span>,
+  <span class="hljs-attr">kind</span>: <span class="hljs-string">&#x27;deterministic&#x27;</span>,
+  <span class="hljs-attr">command</span>: <span class="hljs-string">&#x27;node scripts/ci/validate-reliability.js&#x27;</span>,
 }</code></pre>
 <h3 id="10-2-校验项">10.2 校验项<a class="anchor" href="#10-2-校验项" aria-label="锚点">#</a></h3>
 <table><thead><tr><th>校验</th><th>规则</th></tr></thead><tbody><tr><td>状态机合法性</td><td>所有状态转换在 <code>STATUS_TRANSITIONS</code> 中合法</td></tr><tr><td>Watchdog 覆盖率</td><td>所有 <code>execSync</code>/<code>spawn</code>/长时间异步调用有超时保护</td></tr><tr><td>Receipt 闭合</td><td>无无限期 open 的 Receipt（测试环境）</td></tr><tr><td>AbortSignal 传播</td><td>ESC 中断链路中每个异步边界检查 <code>signal.aborted</code></td></tr><tr><td>重试分类</td><td>不可重试错误不进入重试循环</td></tr></tbody></table>

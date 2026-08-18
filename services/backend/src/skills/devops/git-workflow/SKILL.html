@@ -48,18 +48,18 @@ release/&lt;version&gt;</code></pre>
 <h3 id="common-operations">Common Operations<a class="anchor" href="#common-operations" aria-label="锚点">#</a></h3>
 <h4 id="feature-branch-workflow">Feature Branch Workflow<a class="anchor" href="#feature-branch-workflow" aria-label="锚点">#</a></h4>
 <pre><code class="language-bash">git checkout -b feature/add-backtest-engine
-# ... work ...
+<span class="hljs-comment"># ... work ...</span>
 git add -p
-git commit -m &quot;feat(backtest): add multi-strategy engine&quot;
+git commit -m <span class="hljs-string">&quot;feat(backtest): add multi-strategy engine&quot;</span>
 git push -u origin feature/add-backtest-engine</code></pre>
 <h4 id="interactive-rebase-cleanup-before-merge">Interactive Rebase (cleanup before merge)<a class="anchor" href="#interactive-rebase-cleanup-before-merge" aria-label="锚点">#</a></h4>
 <pre><code class="language-bash">git rebase -i HEAD~5
-# squash, reword, fixup as needed</code></pre>
+<span class="hljs-comment"># squash, reword, fixup as needed</span></code></pre>
 <h4 id="conflict-resolution">Conflict Resolution<a class="anchor" href="#conflict-resolution" aria-label="锚点">#</a></h4>
 <pre><code class="language-bash">git merge main
-# resolve conflicts in editor
+<span class="hljs-comment"># resolve conflicts in editor</span>
 git add &lt;resolved-files&gt;
-git merge --continue</code></pre>
+git merge --<span class="hljs-built_in">continue</span></code></pre>
 <h3 id="ci-cd-integration">CI/CD Integration<a class="anchor" href="#ci-cd-integration" aria-label="锚点">#</a></h3>
 <ul><li>Pre-commit hooks: lint, format, type-check</li><li>Pre-push hooks: test suite</li><li>Branch protection: require reviews, passing CI</li></ul>
 <h2 id="safety-rules">Safety Rules<a class="anchor" href="#safety-rules" aria-label="锚点">#</a></h2>

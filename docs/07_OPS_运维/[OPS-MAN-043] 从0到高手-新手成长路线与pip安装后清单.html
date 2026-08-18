@@ -37,9 +37,9 @@
 阶段 3  进阶能力 ──►  阶段 4  成为高手 ──►  （随时）出问题怎么自救
   learn/workflow/agent     os/mobile/restore/量化     doctor · preflight</code></pre>
 <p><strong>最短可用路径（3 条命令就能开聊）：</strong></p>
-<pre><code class="language-bash">khy preflight          # 体检：Node/依赖/PATH 是否就绪
-khy gateway config     # 配一个 AI 服务商（填你自己的 key）
-khy                    # 进入 agentic 终端，开始对话</code></pre>
+<pre><code class="language-bash">khy preflight          <span class="hljs-comment"># 体检：Node/依赖/PATH 是否就绪</span>
+khy gateway config     <span class="hljs-comment"># 配一个 AI 服务商（填你自己的 key）</span>
+khy                    <span class="hljs-comment"># 进入 agentic 终端，开始对话</span></code></pre>
 <hr>
 <h2 id="阶段-0-装完第一件事-先体检-别急着用">阶段 0 · 装完第一件事：先体检，别急着用<a class="anchor" href="#阶段-0-装完第一件事-先体检-别急着用" aria-label="锚点">#</a></h2>
 <p>刚 <code>pip install khy-os</code>（或 <code>npm install -g @khy-os/khy-os</code>）之后，<strong>第一条命令永远是体检</strong>，<br>而不是直接开聊。原因：khy 后端是 Node 写的（需 Node ≥ 20），首次运行还会自动初始化运行目录，<br>先体检能把&quot;找不到命令&quot;&quot;缺依赖&quot;&quot;PATH 没配好&quot;这类问题一次性照出来。</p>
@@ -74,10 +74,10 @@ khy                    # 进入 agentic 终端，开始对话</code></pre>
 <hr>
 <h2 id="随时-出问题怎么自救-按顺序试">随时 · 出问题怎么自救（按顺序试）<a class="anchor" href="#随时-出问题怎么自救-按顺序试" aria-label="锚点">#</a></h2>
 <p>任何阶段卡住，<strong>不要先怀疑&quot;网络不好&quot;</strong>——khy 的设计是把真实原因告诉你。按这个顺序自救：</p>
-<pre><code class="language-bash">khy preflight      # 1) 启动依赖体检（Node/依赖/PATH），给可粘贴的修复命令
-khy where          # 2) 确认装在哪、依赖是否就绪
-khy doctor         # 3) 让它尝试自动修复
-khy os doctor      # 4) 只在跑内核出问题时：体检 QEMU/工具链</code></pre>
+<pre><code class="language-bash">khy preflight      <span class="hljs-comment"># 1) 启动依赖体检（Node/依赖/PATH），给可粘贴的修复命令</span>
+khy <span class="hljs-built_in">where</span>          <span class="hljs-comment"># 2) 确认装在哪、依赖是否就绪</span>
+khy doctor         <span class="hljs-comment"># 3) 让它尝试自动修复</span>
+khy os doctor      <span class="hljs-comment"># 4) 只在跑内核出问题时：体检 QEMU/工具链</span></code></pre>
 <table><thead><tr><th>症状</th><th>多半是</th><th>去哪</th></tr></thead><tbody><tr><td><code>khy</code> 命令找不到</td><td>PATH 没配好</td><td>先 <code>khy where</code>（若连它都找不到，看 [OPS-MAN-027] 第 A/B 部分的 PATH 段）</td></tr><tr><td>启动报缺 Node / 版本低</td><td>Node &lt; 20</td><td>装 Node ≥ 20（[OPS-MAN-028] 环境要求）</td></tr><tr><td>AI 不回话 / 报错</td><td>没配 key 或通道挂了</td><td><code>khy gateway status</code> 看在线情况，重配 <code>khy gateway config</code></td></tr><tr><td>跑内核报缺 QEMU</td><td>主机没装 QEMU</td><td>按提示装 <code>qemu-system-x86_64</code> 并加 PATH（提示里会给真实步骤）</td></tr></tbody></table>
 <hr>
 <h2 id="一页速查-打印贴墙">一页速查（打印贴墙）<a class="anchor" href="#一页速查-打印贴墙" aria-label="锚点">#</a></h2>

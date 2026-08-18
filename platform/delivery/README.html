@@ -28,37 +28,37 @@
 <h1 id="跨平台交付工具-cross-platform-delivery-tool">跨平台交付工具 (Cross-Platform Delivery Tool)<a class="anchor" href="#跨平台交付工具-cross-platform-delivery-tool" aria-label="锚点">#</a></h1>
 <p>将同一份内容投递到 Slack、Notion、Markdown、Webhook、Email、API 等多个平台，<br>并通过 DiffEngine 进行一致性校验。</p>
 <h2 id="快速开始">快速开始<a class="anchor" href="#快速开始" aria-label="锚点">#</a></h2>
-<pre><code class="language-js">const { DeliveryController } = require('./platform/delivery/deliveryController');
+<pre><code class="language-js"><span class="hljs-keyword">const</span> { <span class="hljs-title class_">DeliveryController</span> } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./platform/delivery/deliveryController&#x27;</span>);
 
-const controller = new DeliveryController({
-  platforms: {
-    slack: { botToken: process.env.SLACK_TOKEN, channel: '#general' },
-    notion: { apiKey: process.env.NOTION_TOKEN, defaultPageId: 'xxx' },
-    markdown: { outputDir: './deliveries' },
+<span class="hljs-keyword">const</span> controller = <span class="hljs-keyword">new</span> <span class="hljs-title class_">DeliveryController</span>({
+  <span class="hljs-attr">platforms</span>: {
+    <span class="hljs-attr">slack</span>: { <span class="hljs-attr">botToken</span>: process.<span class="hljs-property">env</span>.<span class="hljs-property">SLACK_TOKEN</span>, <span class="hljs-attr">channel</span>: <span class="hljs-string">&#x27;#general&#x27;</span> },
+    <span class="hljs-attr">notion</span>: { <span class="hljs-attr">apiKey</span>: process.<span class="hljs-property">env</span>.<span class="hljs-property">NOTION_TOKEN</span>, <span class="hljs-attr">defaultPageId</span>: <span class="hljs-string">&#x27;xxx&#x27;</span> },
+    <span class="hljs-attr">markdown</span>: { <span class="hljs-attr">outputDir</span>: <span class="hljs-string">&#x27;./deliveries&#x27;</span> },
   },
-  maxConcurrency: 3,
+  <span class="hljs-attr">maxConcurrency</span>: <span class="hljs-number">3</span>,
 });
 
-await controller.init();
+<span class="hljs-keyword">await</span> controller.<span class="hljs-title function_">init</span>();
 
-const report = await controller.deliver({
-  content: '# Hello World\n\nThis is a test message.',
-  platforms: ['markdown', 'slack', 'notion'],
-  priority: 1,
-  metadata: { author: 'khy', tags: ['test'] },
+<span class="hljs-keyword">const</span> report = <span class="hljs-keyword">await</span> controller.<span class="hljs-title function_">deliver</span>({
+  <span class="hljs-attr">content</span>: <span class="hljs-string">&#x27;# Hello World\n\nThis is a test message.&#x27;</span>,
+  <span class="hljs-attr">platforms</span>: [<span class="hljs-string">&#x27;markdown&#x27;</span>, <span class="hljs-string">&#x27;slack&#x27;</span>, <span class="hljs-string">&#x27;notion&#x27;</span>],
+  <span class="hljs-attr">priority</span>: <span class="hljs-number">1</span>,
+  <span class="hljs-attr">metadata</span>: { <span class="hljs-attr">author</span>: <span class="hljs-string">&#x27;khy&#x27;</span>, <span class="hljs-attr">tags</span>: [<span class="hljs-string">&#x27;test&#x27;</span>] },
 });
 
-console.log(report);</code></pre>
+<span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(report);</code></pre>
 <h2 id="api-接口">API 接口<a class="anchor" href="#api-接口" aria-label="锚点">#</a></h2>
 <h3 id="post-api-delivery-send">POST /api/delivery/send<a class="anchor" href="#post-api-delivery-send" aria-label="锚点">#</a></h3>
 <p>投递内容到指定平台。</p>
 <pre><code class="language-bash">curl -X POST http://localhost:3000/api/delivery/send \
-  -H &quot;Content-Type: application/json&quot; \
-  -d '{
+  -H <span class="hljs-string">&quot;Content-Type: application/json&quot;</span> \
+  -d <span class="hljs-string">&#x27;{
     &quot;content&quot;: &quot;# Report\n\nSales: $1.2M&quot;,
     &quot;platforms&quot;: [&quot;markdown&quot;, &quot;slack&quot;],
     &quot;priority&quot;: 1
-  }'</code></pre>
+  }&#x27;</span></code></pre>
 <h3 id="get-api-delivery-status-taskid">GET /api/delivery/status/:taskId<a class="anchor" href="#get-api-delivery-status-taskid" aria-label="锚点">#</a></h3>
 <p>查询任务状态。</p>
 <h3 id="get-api-delivery-tasks">GET /api/delivery/tasks<a class="anchor" href="#get-api-delivery-tasks" aria-label="锚点">#</a></h3>

@@ -55,22 +55,22 @@
 <p>仓库已包含 <code>khy-trae-bridge-0.2.1.vsix</code>，直接安装即可：</p>
 <ol><li>打开 <strong>Trae</strong></li><li>按 <code>Ctrl+Shift+X</code> 打开扩展面板</li><li>点击面板右上角 <strong><code>···</code></strong> → <strong>从 VSIX 安装...</strong>（Install from VSIX）</li><li>选择文件：<code>extensions\khy-trae-bridge\khy-trae-bridge-0.2.1.vsix</code></li><li>等待安装完成 → 重启 Trae</li></ol>
 <p>或使用命令行：</p>
-<pre><code class="language-powershell"># Trae CLI（如果已配置 PATH）
-trae --install-extension extensions\khy-trae-bridge\khy-trae-bridge-0.2.1.vsix
+<pre><code class="language-powershell"><span class="hljs-comment"># Trae CLI（如果已配置 PATH）</span>
+trae <span class="hljs-literal">--install-extension</span> extensions\khy<span class="hljs-literal">-trae-bridge</span>\khy<span class="hljs-literal">-trae-bridge-0</span>.<span class="hljs-number">2.1</span>.vsix
 
-# 也可能是
-code --install-extension extensions\khy-trae-bridge\khy-trae-bridge-0.2.1.vsix</code></pre>
+<span class="hljs-comment"># 也可能是</span>
+code <span class="hljs-literal">--install-extension</span> extensions\khy<span class="hljs-literal">-trae-bridge</span>\khy<span class="hljs-literal">-trae-bridge-0</span>.<span class="hljs-number">2.1</span>.vsix</code></pre>
 <h3 id="方式二-从源码打包后安装">方式二：从源码打包后安装<a class="anchor" href="#方式二-从源码打包后安装" aria-label="锚点">#</a></h3>
-<pre><code class="language-powershell">cd extensions\khy-trae-bridge
+<pre><code class="language-powershell"><span class="hljs-built_in">cd</span> extensions\khy<span class="hljs-literal">-trae-bridge</span>
 
-# 安装打包工具
-npm install --save-dev @vscode/vsce
+<span class="hljs-comment"># 安装打包工具</span>
+npm install <span class="hljs-literal">--save-dev</span> @vscode/vsce
 
-# 打包
-npx @vscode/vsce package --allow-missing-repository
+<span class="hljs-comment"># 打包</span>
+npx @vscode/vsce package <span class="hljs-literal">--allow-missing-repository</span>
 
-# 安装
-trae --install-extension khy-trae-bridge-0.2.1.vsix</code></pre>
+<span class="hljs-comment"># 安装</span>
+trae <span class="hljs-literal">--install-extension</span> khy<span class="hljs-literal">-trae-bridge-0</span>.<span class="hljs-number">2.1</span>.vsix</code></pre>
 <hr>
 <h2 id="使用方法">使用方法<a class="anchor" href="#使用方法" aria-label="锚点">#</a></h2>
 <h3 id="自动模式-零配置">自动模式（零配置）<a class="anchor" href="#自动模式-零配置" aria-label="锚点">#</a></h3>
@@ -86,20 +86,20 @@ trae --install-extension khy-trae-bridge-0.2.1.vsix</code></pre>
 <table><thead><tr><th>触发方式</th><th>时机</th><th>说明</th></tr></thead><tbody><tr><td>启动同步</td><td>Trae 启动后立即</td><td><code>onStartupFinished</code></td></tr><tr><td>定时刷新</td><td>每 10 分钟</td><td><code>setInterval</code></td></tr><tr><td>事件驱动</td><td>登录/登出时</td><td><code>onDidChangeSessions</code></td></tr><tr><td>手动命令</td><td>用户触发</td><td>命令面板或状态栏</td></tr></tbody></table>
 <hr>
 <h2 id="auth-json-格式">auth.json 格式<a class="anchor" href="#auth-json-格式" aria-label="锚点">#</a></h2>
-<pre><code class="language-json">{
-  &quot;accessToken&quot;: &quot;eyJhbGciOi...&quot;,
-  &quot;userId&quot;: &quot;user_xxxx&quot;,
-  &quot;username&quot;: &quot;example&quot;,
-  &quot;host&quot;: &quot;grow-normal.trae.ai&quot;,
-  &quot;region&quot;: &quot;cn&quot;,
-  &quot;ts&quot;: 1748150400000
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;accessToken&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;eyJhbGciOi...&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;userId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;user_xxxx&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;username&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;example&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;host&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;grow-normal.trae.ai&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;region&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;cn&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;ts&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1748150400000</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <p>未登录时：</p>
-<pre><code class="language-json">{
-  &quot;accessToken&quot;: null,
-  &quot;status&quot;: &quot;no_session&quot;,
-  &quot;ts&quot;: 1748150400000
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;accessToken&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">null</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;no_session&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;ts&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1748150400000</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <hr>
 <h2 id="区域检测">区域检测<a class="anchor" href="#区域检测" aria-label="锚点">#</a></h2>
 <p>扩展自动根据 Trae 版本和系统语言判断区域：</p>
@@ -112,22 +112,22 @@ trae --install-extension khy-trae-bridge-0.2.1.vsix</code></pre>
 <ol><li>确认 Trae 版本 ≥ 1.80（<code>engines.vscode: ^1.80.0</code>）</li><li>查看输出面板日志是否有错误</li><li>确认 Trae 内已登录 — 如果未登录，auth.json 会写入 <code>&quot;status&quot;: &quot;no_session&quot;</code></li></ol>
 <h3 id="khy-cli-没有拾取到-token">KHY CLI 没有拾取到 token<a class="anchor" href="#khy-cli-没有拾取到-token" aria-label="锚点">#</a></h3>
 <ol><li>检查 auth.json 是否存在：</li></ol>
-<pre><code class="language-powershell"># globalStorage 路径通常在
-# Windows: %APPDATA%\Trae\User\globalStorage\khy-trae-bridge\auth.json
-dir &quot;%APPDATA%\Trae\User\globalStorage\khy-trae-bridge\auth.json&quot;</code></pre>
+<pre><code class="language-powershell"><span class="hljs-comment"># globalStorage 路径通常在</span>
+<span class="hljs-comment"># Windows: %APPDATA%\Trae\User\globalStorage\khy-trae-bridge\auth.json</span>
+<span class="hljs-built_in">dir</span> <span class="hljs-string">&quot;%APPDATA%\Trae\User\globalStorage\khy-trae-bridge\auth.json&quot;</span></code></pre>
 <ol><li>确认 <code>accessToken</code> 字段不为 <code>null</code></li><li>确认 <code>ts</code> 是最近的时间戳（不超过 24 小时）</li></ol>
 <h3 id="手动验证-token-是否有效">手动验证 token 是否有效<a class="anchor" href="#手动验证-token-是否有效" aria-label="锚点">#</a></h3>
-<pre><code class="language-powershell"># 在 KHY CLI 中执行
+<pre><code class="language-powershell"><span class="hljs-comment"># 在 KHY CLI 中执行</span>
 khy ai status
-# 应显示 adapter: trae, state: verified</code></pre>
+<span class="hljs-comment"># 应显示 adapter: trae, state: verified</span></code></pre>
 <hr>
 <h2 id="卸载">卸载<a class="anchor" href="#卸载" aria-label="锚点">#</a></h2>
 <h3 id="从-trae-卸载">从 Trae 卸载<a class="anchor" href="#从-trae-卸载" aria-label="锚点">#</a></h3>
 <p><code>Ctrl+Shift+X</code> → 搜索 <code>KHY Trae Bridge</code> → 点击齿轮图标 → <strong>卸载</strong></p>
 <h3 id="清理残留文件">清理残留文件<a class="anchor" href="#清理残留文件" aria-label="锚点">#</a></h3>
-<pre><code class="language-powershell"># 删除桥接数据
-del &quot;%APPDATA%\Trae\User\globalStorage\khy-trae-bridge\auth.json&quot;
-rmdir &quot;%APPDATA%\Trae\User\globalStorage\khy-trae-bridge&quot;</code></pre>
+<pre><code class="language-powershell"><span class="hljs-comment"># 删除桥接数据</span>
+<span class="hljs-built_in">del</span> <span class="hljs-string">&quot;%APPDATA%\Trae\User\globalStorage\khy-trae-bridge\auth.json&quot;</span>
+<span class="hljs-built_in">rmdir</span> <span class="hljs-string">&quot;%APPDATA%\Trae\User\globalStorage\khy-trae-bridge&quot;</span></code></pre>
 <hr>
 <h2 id="开发者信息">开发者信息<a class="anchor" href="#开发者信息" aria-label="锚点">#</a></h2>
 <ul><li><strong>激活方式</strong>：<code>onStartupFinished</code>（不阻塞 Trae 启动）</li><li><strong>依赖</strong>：零运行时依赖，仅使用 VS Code API + Node.js 内置模块</li><li><strong>体积</strong>：打包后 ~4 KB</li><li><strong>兼容性</strong>：VS Code / Trae / 任何兼容 VS Code 扩展 API 的 IDE</li></ul>

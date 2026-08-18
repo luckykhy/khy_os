@@ -39,21 +39,21 @@
 <h3 id="修复方案">修复方案<a class="anchor" href="#修复方案" aria-label="锚点">#</a></h3>
 <h4 id="a-全局超时包装-gateway-js">A. 全局超时包装（<code>gateway.js</code>）<a class="anchor" href="#a-全局超时包装-gateway-js" aria-label="锚点">#</a></h4>
 <p>新增 <code>GATEWAY_STATUS_TIMEOUT_MS</code>（默认 20s，可通过环境变量配置）。每个适配器结果都用 <code>Promise.race</code> 与一个截止计时器竞争 await。在时限内完成的适配器显示正常结果；未完成的则得到 <code>{ connectivity: { success: false, error: 'global timeout' } }</code>。</p>
-<pre><code class="language-js">const GLOBAL_TEST_TIMEOUT_MS = parseInt(
-  process.env.GATEWAY_STATUS_TIMEOUT_MS || '20000', 10
-) || 20000;
+<pre><code class="language-js"><span class="hljs-keyword">const</span> <span class="hljs-variable constant_">GLOBAL_TEST_TIMEOUT_MS</span> = <span class="hljs-built_in">parseInt</span>(
+  process.<span class="hljs-property">env</span>.<span class="hljs-property">GATEWAY_STATUS_TIMEOUT_MS</span> || <span class="hljs-string">&#x27;20000&#x27;</span>, <span class="hljs-number">10</span>
+) || <span class="hljs-number">20000</span>;
 
-const globalDeadline = Date.now() + GLOBAL_TEST_TIMEOUT_MS;
-for (const [key, promise] of Object.entries(testPromises)) {
-  const remaining = globalDeadline - Date.now();
-  if (remaining &lt;= 0) {
-    testResults[key] = { connectivity: { success: false, latencyMs: 0, error: 'global timeout' } };
-    continue;
+<span class="hljs-keyword">const</span> globalDeadline = <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() + <span class="hljs-variable constant_">GLOBAL_TEST_TIMEOUT_MS</span>;
+<span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> [key, promise] <span class="hljs-keyword">of</span> <span class="hljs-title class_">Object</span>.<span class="hljs-title function_">entries</span>(testPromises)) {
+  <span class="hljs-keyword">const</span> remaining = globalDeadline - <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>();
+  <span class="hljs-keyword">if</span> (remaining &lt;= <span class="hljs-number">0</span>) {
+    testResults[key] = { <span class="hljs-attr">connectivity</span>: { <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">latencyMs</span>: <span class="hljs-number">0</span>, <span class="hljs-attr">error</span>: <span class="hljs-string">&#x27;global timeout&#x27;</span> } };
+    <span class="hljs-keyword">continue</span>;
   }
-  testResults[key] = await Promise.race([
+  testResults[key] = <span class="hljs-keyword">await</span> <span class="hljs-title class_">Promise</span>.<span class="hljs-title function_">race</span>([
     promise,
-    new Promise(resolve =&gt; setTimeout(() =&gt; resolve(
-      { connectivity: { success: false, latencyMs: 0, error: 'global timeout' } }
+    <span class="hljs-keyword">new</span> <span class="hljs-title class_">Promise</span>(<span class="hljs-function"><span class="hljs-params">resolve</span> =&gt;</span> <span class="hljs-built_in">setTimeout</span>(<span class="hljs-function">() =&gt;</span> <span class="hljs-title function_">resolve</span>(
+      { <span class="hljs-attr">connectivity</span>: { <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">latencyMs</span>: <span class="hljs-number">0</span>, <span class="hljs-attr">error</span>: <span class="hljs-string">&#x27;global timeout&#x27;</span> } }
     ), remaining)),
   ]);
 }</code></pre>
@@ -76,20 +76,20 @@ for (const [key, promise] of Object.entries(testPromises)) {
 <h3 id="修复方案-repl-js-renderinputpromptframe">修复方案（<code>repl.js</code> — <code>renderInputPromptFrame</code>）<a class="anchor" href="#修复方案-repl-js-renderinputpromptframe" aria-label="锚点">#</a></h3>
 <h4 id="a-立即绘制底部装饰">A. 立即绘制底部装饰<a class="anchor" href="#a-立即绘制底部装饰" aria-label="锚点">#</a></h4>
 <p>在 <code>_origPrompt()</code> 之后，该函数现在会立即使用与 <code>_refreshLine</code> 猴子补丁相同的 ANSI 转义逻辑写入底部分隔线 + 状态栏。这样就消除了对按键输入的依赖。</p>
-<pre><code class="language-js">// After _origPrompt(...args):
-if (_promptFooterEnabled &amp;&amp; _frameRendered &amp;&amp; process.stdout.isTTY &amp;&amp; _cachedBottomRule) {
-  // Move cursor down past prompt, draw bottom rule + footer,
-  // then move cursor back to the prompt position.
-  let out = '';
-  // ... (ANSI cursor movement + draw + return)
-  process.stdout.write(out);
+<pre><code class="language-js"><span class="hljs-comment">// After _origPrompt(...args):</span>
+<span class="hljs-keyword">if</span> (_promptFooterEnabled &amp;&amp; _frameRendered &amp;&amp; process.<span class="hljs-property">stdout</span>.<span class="hljs-property">isTTY</span> &amp;&amp; _cachedBottomRule) {
+  <span class="hljs-comment">// Move cursor down past prompt, draw bottom rule + footer,</span>
+  <span class="hljs-comment">// then move cursor back to the prompt position.</span>
+  <span class="hljs-keyword">let</span> out = <span class="hljs-string">&#x27;&#x27;</span>;
+  <span class="hljs-comment">// ... (ANSI cursor movement + draw + return)</span>
+  process.<span class="hljs-property">stdout</span>.<span class="hljs-title function_">write</span>(out);
 }</code></pre>
 <h4 id="b-绘制前预留终端行">B. 绘制前预留终端行<a class="anchor" href="#b-绘制前预留终端行" aria-label="锚点">#</a></h4>
 <p>在写入顶部分隔线之前，该函数会通过打印空行再把光标上移的方式预先分配终端空间。这会强制终端在分隔线绘制<em>之前</em>完成滚动，从而确保分隔线保持在可见区域内。</p>
-<pre><code class="language-js">if (_promptFooterEnabled &amp;&amp; process.stdout.isTTY) {
-  // Reserve: status bar + top rule + prompt + gap + bottom rule + footer
-  const reserveRows = 4 + _inputFooterGapRows;
-  process.stdout.write('\n'.repeat(reserveRows) + `\x1b[${reserveRows}A`);
+<pre><code class="language-js"><span class="hljs-keyword">if</span> (_promptFooterEnabled &amp;&amp; process.<span class="hljs-property">stdout</span>.<span class="hljs-property">isTTY</span>) {
+  <span class="hljs-comment">// Reserve: status bar + top rule + prompt + gap + bottom rule + footer</span>
+  <span class="hljs-keyword">const</span> reserveRows = <span class="hljs-number">4</span> + _inputFooterGapRows;
+  process.<span class="hljs-property">stdout</span>.<span class="hljs-title function_">write</span>(<span class="hljs-string">&#x27;\n&#x27;</span>.<span class="hljs-title function_">repeat</span>(reserveRows) + <span class="hljs-string">`\x1b[<span class="hljs-subst">${reserveRows}</span>A`</span>);
 }</code></pre>
 <p>修复后的顺序：</p>
 <ol><li>写入 <code>reserveRows</code> 个空 <code>\n</code> —— 终端在需要时滚动</li><li>把光标上移 <code>reserveRows</code> 行</li><li>写入 git 分支 + 顶部分隔线 + <code>\n</code></li><li><code>_origPrompt()</code> 渲染 <code>❯ </code></li><li>立即在提示符下方绘制底部分隔线 + 状态栏</li><li>把光标移回提示符位置</li></ol>

@@ -1,14 +1,18 @@
+const crypto = require('crypto');
+
 const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
-
-const crypto = require('crypto');
-
-const { Sequelize } = require('sequelize');
+const { Sequelize, UniqueConstraintError } = require('sequelize');
 
 const { BACKEND_PORT } = require('../constants/serviceDefaults');
 const { authMiddleware } = require('../middleware/auth');
 const { User } = require('../models');
+const {
+  PASSWORD_MIN_LENGTH,
+  normalizeEmail,
+  normalizeLoginIdentifier,
+} = require('../services/authPolicy');
 const authSessionService = require('../services/authSessionService');
 const UserLogService = require('../services/userLogService');
 const { Op } = Sequelize;
@@ -162,8 +166,10 @@ router.post(
       .trim()
       .isLength({ min: 3, max: 50 })
       .withMessage('用户名长度必须在3-50个字符之间'),
-    body('email').isEmail().withMessage('请输入有效的邮箱地址'),
-    body('password').isLength({ min: 6 }).withMessage('密码长度至少6个字符'),
+    body('email').trim().isEmail().withMessage('请输入有效的邮箱地址'),
+    body('password')
+      .isLength({ min: PASSWORD_MIN_LENGTH })
+      .withMessage(`密码长度至少${PASSWORD_MIN_LENGTH}个字符`),
   ],
   async (req, res) => {
     try {
@@ -176,7 +182,9 @@ router.post(
         });
       }
 
-      const { username, email, password, securityQuestion, securityAnswer } = req.body;
+      const username = normalizeLoginIdentifier(req.body.username);
+      const email = normalizeEmail(req.body.email);
+      const { password, securityQuestion, securityAnswer } = req.body;
 
       // 检查用户是否已存在
       const existingUser = await User.findOne({
@@ -231,6 +239,12 @@ router.post(
         data: authData,
       });
     } catch (error) {
+      if (error instanceof UniqueConstraintError || error?.name === 'SequelizeUniqueConstraintError') {
+        return res.status(409).json({
+          success: false,
+          message: '用户名或邮箱已被注册',
+        });
+      }
       console.error('注册错误:', error);
       res.status(500).json({
         success: false,
@@ -259,12 +273,14 @@ router.post(
         });
       }
 
-      const { username, password } = req.body;
+      const username = normalizeLoginIdentifier(req.body.username);
+      const email = normalizeEmail(username);
+      const { password } = req.body;
 
       // 查找用户（支持用户名或邮箱登录）
       const user = await User.findOne({
         where: {
-          [Op.or]: [{ username }, { email: username }],
+          [Op.or]: [{ username }, { email }],
         },
       });
 
@@ -492,7 +508,8 @@ router.post(
 
       cleanupQrLoginStore();
       const token = String(req.body.token);
-      const username = String(req.body.username || '').trim();
+      const username = normalizeLoginIdentifier(req.body.username);
+      const email = normalizeEmail(username);
       const password = String(req.body.password || '');
 
       const record = qrLoginStore.get(token);
@@ -506,7 +523,7 @@ router.post(
 
       const user = await User.findOne({
         where: {
-          [Op.or]: [{ username }, { email: username }],
+          [Op.or]: [{ username }, { email }],
         },
       });
 
@@ -763,7 +780,9 @@ router.post(
   '/change-password',
   [
     body('currentPassword').notEmpty().withMessage('请输入当前密码'),
-    body('newPassword').isLength({ min: 6 }).withMessage('新密码长度至少6个字符'),
+    body('newPassword')
+      .isLength({ min: PASSWORD_MIN_LENGTH })
+      .withMessage(`新密码长度至少${PASSWORD_MIN_LENGTH}个字符`),
     body('confirmPassword').custom((value, { req }) => {
       if (value !== req.body.newPassword) {
         throw new Error('确认密码与新密码不匹配');

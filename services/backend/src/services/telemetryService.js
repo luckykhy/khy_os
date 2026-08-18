@@ -20,6 +20,8 @@ const _counters = {
   toolCalls: 0,
   toolErrors: 0,
   agentRuns: 0,
+  agentSucceeded: 0,
+  agentFailed: 0,
   serviceCalls: 0,
   totalLatencyMs: 0,
   startTime: Date.now(),
@@ -32,6 +34,7 @@ const APP_RUN_LATENCY_VERSION = 1;
 const APP_RUN_MAX_SAMPLES = 256;
 const CHAT_TTFT_VERSION = 1;
 const CHAT_TTFT_MAX_SAMPLES = 320;
+const SLOW_REQUEST_VERSION = 1;
 
 const _appRunLatencyState = {
   loaded: false,
@@ -52,6 +55,21 @@ const _chatTtftState = {
     version: CHAT_TTFT_VERSION,
     updatedAt: null,
     profiles: {},
+  },
+};
+
+// Slow HTTP requests — same store family as app_run_latency / chat_ttft
+// (versioned JSON, bounded sample ring, atomic tmp+rename). Populated by
+// observability/slowRequest.js, which is itself only invoked when
+// KHY_SLOW_REQUEST_ENABLED is on, so a default install never touches it.
+const _slowRequestState = {
+  loaded: false,
+  flushing: false,
+  dirty: false,
+  store: {
+    version: SLOW_REQUEST_VERSION,
+    updatedAt: null,
+    routes: {},
   },
 };
 
@@ -104,6 +122,11 @@ function trackAgentRun(entry) {
   }
 
   _counters.agentRuns++;
+  if (entry.success) {
+    _counters.agentSucceeded++;
+  } else {
+    _counters.agentFailed++;
+  }
   if (entry.elapsed) {
     _counters.totalLatencyMs += entry.elapsed;
   }
@@ -359,6 +382,101 @@ function getChatFirstTokenLatencySummaries() {
     .map((profile) => getChatFirstTokenLatencySummary(profile));
 }
 
+// ── Slow HTTP requests ─────────────────────────────────────────────
+//
+// The aggregation half of slow-request alerting. The detection half lives in
+// observability/metrics.js (threshold check inside the existing res.on('finish')
+// handler) and the side effects in observability/slowRequest.js. All merge /
+// percentile / cardinality logic is the pure leaf observability/slowRequestCore.js
+// — this function is only the store owner, exactly like the TTFT store above.
+
+/**
+ * Merge one slow-request record into the persisted per-route aggregate.
+ *
+ * @param {object} record - Output of slowRequestCore.buildRecord()
+ * @param {object} [opts]
+ * @param {number} [opts.maxRoutes] - Cardinality cap; overflow lands in `_other`
+ * @param {number} [opts.maxSamples] - Bounded sample ring size
+ * @returns {{route:string,totalSlow:number,todayCount:number,p50:number,p95:number,maxMs:number}}
+ */
+function trackSlowRequest(record, opts = {}) {
+  _ensureSlowRequestStoreLoaded();
+
+  const core = require('../observability/slowRequestCore');
+  const routes = _slowRequestState.store.routes;
+  const requested = String((record && record.route) || core.buildRouteKey('GET', '/'));
+  const key = core.selectRouteKey(
+    requested,
+    new Set(Object.keys(routes)),
+    opts.maxRoutes || undefined
+  );
+
+  const rec = routes[key] || core.emptyRouteRecord();
+  routes[key] = core.mergeSummary(rec, record, opts.maxSamples);
+
+  _slowRequestState.store.updatedAt = new Date().toISOString();
+  _slowRequestState.dirty = true;
+  if (process.env.NODE_ENV === 'test') {
+    _flushSlowRequestStoreSync();
+  } else {
+    _flushSlowRequestStore().catch(() => {});
+  }
+
+  return core.summarizeRoute(key, routes[key]);
+}
+
+/**
+ * Read one route's slow-request summary. Unknown routes return a zeroed shape
+ * (never null) so callers never branch on existence.
+ *
+ * @param {string} route - e.g. "POST /api/backtest/#path"
+ */
+function getSlowRequestSummary(route) {
+  _ensureSlowRequestStoreLoaded();
+  const core = require('../observability/slowRequestCore');
+  const key = String(route || '');
+  return core.summarizeRoute(key, _slowRequestState.store.routes[key]);
+}
+
+/**
+ * All route summaries, slowest-first (by p95, then total count) — the ordering
+ * `khy monitor slow` renders.
+ *
+ * @returns {Array<object>}
+ */
+function getSlowRequestSummaries() {
+  _ensureSlowRequestStoreLoaded();
+  const core = require('../observability/slowRequestCore');
+  const routes = _slowRequestState.store.routes || {};
+  return Object.keys(routes)
+    .map((key) => core.summarizeRoute(key, routes[key]))
+    .sort((a, b) => b.p95 - a.p95 || b.totalSlow - a.totalSlow || a.route.localeCompare(b.route));
+}
+
+/**
+ * Persist the current per-route alert debounce timestamp. Kept in the store (not
+ * only in memory) so a restarted process does not re-alert on every route at once.
+ *
+ * @param {string} route
+ * @param {number} atMs
+ */
+function markSlowRequestAlerted(route, atMs) {
+  _ensureSlowRequestStoreLoaded();
+  const rec = _slowRequestState.store.routes[String(route || '')];
+  if (!rec) {
+    return;
+  }
+  rec.lastAlertAt = Number(atMs) || 0;
+  _slowRequestState.dirty = true;
+}
+
+/** Last alert timestamp for a route (0 when never alerted). */
+function getSlowRequestLastAlertAt(route) {
+  _ensureSlowRequestStoreLoaded();
+  const rec = _slowRequestState.store.routes[String(route || '')];
+  return rec && Number.isFinite(Number(rec.lastAlertAt)) ? Number(rec.lastAlertAt) : 0;
+}
+
 /**
  * Get app run latency summary.
  *
@@ -422,6 +540,14 @@ function getUnifiedStats() {
         ? Math.round(((_counters.toolCalls - _counters.toolErrors) / _counters.toolCalls) * 100)
         : 100,
     agentRuns: _counters.agentRuns,
+    // Per-outcome agent breakdown. computeRollup() spreads this into
+    // rollup.agents — before it existed that spread was a no-op and the rollup
+    // always reported 0/0/0.
+    agents: {
+      spawned: _counters.agentRuns,
+      succeeded: _counters.agentSucceeded,
+      failed: _counters.agentFailed,
+    },
     serviceCalls: _counters.serviceCalls,
     avgLatency:
       _counters.toolCalls > 0 ? Math.round(_counters.totalLatencyMs / _counters.toolCalls) : 0,
@@ -524,6 +650,8 @@ function reset() {
   _counters.toolCalls = 0;
   _counters.toolErrors = 0;
   _counters.agentRuns = 0;
+  _counters.agentSucceeded = 0;
+  _counters.agentFailed = 0;
   _counters.serviceCalls = 0;
   _counters.totalLatencyMs = 0;
   _counters.startTime = Date.now();
@@ -545,6 +673,15 @@ function reset() {
     version: CHAT_TTFT_VERSION,
     updatedAt: null,
     profiles: {},
+  };
+
+  _slowRequestState.loaded = true;
+  _slowRequestState.flushing = false;
+  _slowRequestState.dirty = false;
+  _slowRequestState.store = {
+    version: SLOW_REQUEST_VERSION,
+    updatedAt: null,
+    routes: {},
   };
 }
 
@@ -647,6 +784,105 @@ function _chatTtftStorePath() {
 function _normalizeProfileKey(raw) {
   const text = String(raw || 'default').trim();
   return text || 'default';
+}
+
+function _slowRequestStorePath() {
+  try {
+    const { getDataDir } = require('../utils/dataHome');
+    return path.join(getDataDir('telemetry'), 'slow_requests.json');
+  } catch {
+    const fallbackDir = path.join(os.homedir(), '.khyquant', 'telemetry');
+    try {
+      fs.mkdirSync(fallbackDir, { recursive: true });
+    } catch {
+      /* ignore */
+    }
+    return path.join(fallbackDir, 'slow_requests.json');
+  }
+}
+
+function _ensureSlowRequestStoreLoaded() {
+  if (_slowRequestState.loaded) {
+    return;
+  }
+  _slowRequestState.loaded = true;
+
+  const filePath = _slowRequestStorePath();
+  try {
+    if (!fs.existsSync(filePath)) {
+      return;
+    }
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    if (!parsed || typeof parsed !== 'object') {
+      return;
+    }
+    const routes = parsed.routes && typeof parsed.routes === 'object' ? parsed.routes : {};
+    _slowRequestState.store = {
+      version: SLOW_REQUEST_VERSION,
+      updatedAt: typeof parsed.updatedAt === 'string' ? parsed.updatedAt : null,
+      routes,
+    };
+  } catch {
+    // Keep default empty store on parse/read errors.
+  }
+}
+
+async function _flushSlowRequestStore() {
+  if (!_slowRequestState.loaded || _slowRequestState.flushing || !_slowRequestState.dirty) {
+    return;
+  }
+
+  _slowRequestState.flushing = true;
+  _slowRequestState.dirty = false;
+
+  const payload = JSON.stringify(_slowRequestState.store, null, 2);
+  const filePath = _slowRequestStorePath();
+  const tmpPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+
+  try {
+    await fs.promises.writeFile(tmpPath, payload, 'utf-8');
+    await fs.promises.rename(tmpPath, filePath);
+  } catch {
+    try {
+      await fs.promises.unlink(tmpPath);
+    } catch {
+      /* ignore */
+    }
+  } finally {
+    _slowRequestState.flushing = false;
+    if (_slowRequestState.dirty) {
+      await _flushSlowRequestStore();
+    }
+  }
+}
+
+function _flushSlowRequestStoreSync() {
+  if (!_slowRequestState.loaded || !_slowRequestState.dirty || _slowRequestState.flushing) {
+    return;
+  }
+
+  _slowRequestState.flushing = true;
+  _slowRequestState.dirty = false;
+
+  const payload = JSON.stringify(_slowRequestState.store, null, 2);
+  const filePath = _slowRequestStorePath();
+  const tmpPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+
+  try {
+    fs.writeFileSync(tmpPath, payload, 'utf-8');
+    fs.renameSync(tmpPath, filePath);
+  } catch {
+    try {
+      fs.unlinkSync(tmpPath);
+    } catch {
+      /* ignore */
+    }
+  } finally {
+    _slowRequestState.flushing = false;
+    if (_slowRequestState.dirty) {
+      _flushSlowRequestStoreSync();
+    }
+  }
 }
 
 function _ensureAppRunStoreLoaded() {
@@ -864,6 +1100,16 @@ async function _flushChatTtftForTest() {
   }
 }
 
+async function _flushSlowRequestForTest() {
+  _ensureSlowRequestStoreLoaded();
+  if (_slowRequestState.dirty) {
+    await _flushSlowRequestStore();
+  }
+  while (_slowRequestState.flushing) {
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+}
+
 // ── Three-Source Rollup (借鉴 DeepSeek-TUI metrics.rs 三源聚合) ──
 
 /**
@@ -898,28 +1144,25 @@ function computeRollup(opts = {}) {
   const until = Date.now();
 
   const rollup = {
-    tools: {}, // per-tool: { calls, successes, failures, totalMs, p50Ms, p95Ms }
+    tools: {}, // per-tool: { calls, successes, failures, totalMs }
     agents: { spawned: 0, succeeded: 0, failed: 0 },
     sessions: { count: 0, totalMessages: 0 },
-    audit: { events: 0, byType: {} },
+    audit: { events: 0, byType: {}, unparsedTs: 0 },
     period: { since, until },
   };
 
   // ── Source 1: 运行时内存 (当前进程的计数器) ──
   const unified = getUnifiedStats();
-  for (const [name, stats] of Object.entries(unified.tools || {})) {
-    rollup.tools[name] = {
-      calls: stats.count || 0,
-      successes: stats.successes || stats.count || 0,
-      failures: stats.failures || 0,
-      totalMs: stats.totalMs || 0,
-      autoApproved: stats.autoApproved || 0,
-      manualApproved: stats.manualApproved || 0,
-    };
-  }
   rollup.agents = { ...rollup.agents, ...(unified.agents || {}) };
 
   // ── Source 2: 审计日志 (append-only JSONL) ──
+  //
+  // audit.jsonl 里**混着两种记录形状**,它们由不同模块追加到同一个文件:
+  //   a) auditLog.logToolExecution → { timestamp, tool, permission, elapsed, result }
+  //   b) telemetryService.recordAuditEvent → { ts, event, details }
+  // 时间戳键不同(timestamp / ts),故两个键都要读 —— 只读 `ts` 会让 (a) 类记录的
+  // 时间戳变成 NaN,NaN 既不 < since 也不 > until,于是全部漏进 byType['unknown'],
+  // 同时 per-tool 统计一条都拿不到。tools 必须从 (a) 类记录本身聚合。
   try {
     const { getDataDir } = require('../utils/dataHome');
     const auditPath = path.join(getDataDir(), 'audit.jsonl');
@@ -928,13 +1171,39 @@ function computeRollup(opts = {}) {
       for (const line of lines) {
         try {
           const entry = JSON.parse(line);
-          const ts = new Date(entry.ts).getTime();
+          const raw = entry.ts != null ? entry.ts : entry.timestamp;
+          const ts = raw == null ? NaN : new Date(raw).getTime();
+          if (!Number.isFinite(ts)) {
+            rollup.audit.unparsedTs++;
+            continue;
+          }
           if (ts < since || ts > until) {
             continue;
           }
-          rollup.audit.events++;
-          const type = entry.event || 'unknown';
-          rollup.audit.byType[type] = (rollup.audit.byType[type] || 0) + 1;
+
+          if (entry.tool) {
+            // (a) 工具执行记录
+            const name = String(entry.tool);
+            const bucket =
+              rollup.tools[name] ||
+              (rollup.tools[name] = { calls: 0, successes: 0, failures: 0, totalMs: 0, denied: 0 });
+            bucket.calls++;
+            bucket.totalMs += Number(entry.elapsed) || 0;
+            // result 缺失视为成功(旧记录没有 result 字段)。
+            if (entry.result && entry.result.success === false) {
+              bucket.failures++;
+            } else {
+              bucket.successes++;
+            }
+            if (entry.permission === 'deny') {
+              bucket.denied++;
+            }
+          } else {
+            // (b) 通用审计事件
+            rollup.audit.events++;
+            const type = entry.event || 'unknown';
+            rollup.audit.byType[type] = (rollup.audit.byType[type] || 0) + 1;
+          }
         } catch {
           /* skip corrupt */
         }
@@ -1014,6 +1283,12 @@ module.exports = {
   trackChatFirstTokenLatency,
   getChatFirstTokenLatencySummary,
   getChatFirstTokenLatencySummaries,
+  // Slow HTTP requests (observability/slowRequest.js is the only writer)
+  trackSlowRequest,
+  getSlowRequestSummary,
+  getSlowRequestSummaries,
+  markSlowRequestAlerted,
+  getSlowRequestLastAlertAt,
   getUnifiedStats,
   getRecentEvents,
   createDashboardData,
@@ -1024,4 +1299,5 @@ module.exports = {
   formatRollupText,
   __flushAppRunLatencyForTest: _flushAppRunLatencyForTest,
   __flushChatTtftForTest: _flushChatTtftForTest,
+  __flushSlowRequestForTest: _flushSlowRequestForTest,
 };

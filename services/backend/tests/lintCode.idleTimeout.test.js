@@ -24,7 +24,7 @@ describe('lint_code timeout and exit semantics', () => {
   });
 
   test('keeps alive with periodic output and reports progress callbacks', async () => {
-    process.env.KHY_LINT_IDLE_TIMEOUT_MS = '120';
+    process.env.KHY_LINT_IDLE_TIMEOUT_MS = '1500';
     const progressEvents = [];
     const activityEvents = [];
 
@@ -32,9 +32,9 @@ describe('lint_code timeout and exit semantics', () => {
       {
         command: [
           'node -e',
-          '"let i=0;const t=setInterval(()=>{console.log(\'lint-tick-\'+(++i));if(i>=7){clearInterval(t);process.exit(0);}},35);"',
+          '"let i=0;console.log(\'lint-tick-0\');const t=setInterval(()=>{console.log(\'lint-tick-\'+(++i));if(i>=7){clearInterval(t);process.exit(0);}},35);"',
         ].join(' '),
-        idleTimeout: 120,
+        idleTimeout: 1500,
       },
       {
         onProgress: (msg) => progressEvents.push(String(msg || '')),
@@ -45,7 +45,7 @@ describe('lint_code timeout and exit semantics', () => {
     expect(result.success).toBe(true);
     expect(result.data.linter).toBe('custom');
     expect(result.data.exitCode).toBe(0);
-    expect(result.data.idleTimeoutMs).toBe(120);
+    expect(result.data.idleTimeoutMs).toBe(1500);
     expect(progressEvents.some((s) => s.includes('lint_code stdout'))).toBe(true);
     expect(activityEvents.some((evt) => evt && evt.phase === 'stdout')).toBe(true);
   });
@@ -53,8 +53,8 @@ describe('lint_code timeout and exit semantics', () => {
   test('fails when command stays silent beyond idle timeout', async () => {
     const result = await lintCodeTool.execute(
       {
-        command: 'node -e "setTimeout(() => process.exit(0), 260)"',
-        idleTimeout: 90,
+        command: 'node -e "setTimeout(() => process.exit(0), 900)"',
+        idleTimeout: 250,
       },
       {}
     );

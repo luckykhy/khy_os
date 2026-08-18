@@ -37,11 +37,11 @@
 <table><thead><tr><th>命令</th><th>作用</th></tr></thead><tbody><tr><td><code>khy evolve</code>（或 <code>status</code>）</td><td>演进治理总览</td></tr><tr><td><code>khy evolve rules</code></td><td>查看分级规则（spec）</td></tr><tr><td><code>khy evolve safety</code></td><td>安全约束说明</td></tr><tr><td><code>khy evolve classify &lt;path…&gt;</code></td><td>对指定路径分级</td></tr><tr><td><code>khy evolve check [--changed]</code></td><td>评估变更是否越界（<code>--changed</code> 看当前改动）</td></tr><tr><td><code>khy evolve cascades</code></td><td>查看联动义务（改了 A 必须连带处理 B）</td></tr><tr><td><code>khy evolve --json</code></td><td>机读输出</td></tr></tbody></table>
 <hr>
 <h2 id="三-典型用法">三、典型用法<a class="anchor" href="#三-典型用法" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">khy evolve                       # 总览
-khy evolve classify services/backend/src/cli/router.js   # 这个文件什么级别？
-khy evolve check --changed       # 我当前的改动有没有碰红线？
-khy evolve cascades              # 改这些文件还要连带做什么？
-khy evolve rules                 # 分级规则是怎么定的</code></pre>
+<pre><code class="language-bash">khy evolve                       <span class="hljs-comment"># 总览</span>
+khy evolve classify services/backend/src/cli/router.js   <span class="hljs-comment"># 这个文件什么级别？</span>
+khy evolve check --changed       <span class="hljs-comment"># 我当前的改动有没有碰红线？</span>
+khy evolve cascades              <span class="hljs-comment"># 改这些文件还要连带做什么？</span>
+khy evolve rules                 <span class="hljs-comment"># 分级规则是怎么定的</span></code></pre>
 <hr>
 <h2 id="四-诚实边界-只读咨询-不自改">四、诚实边界（只读咨询，不自改）<a class="anchor" href="#四-诚实边界-只读咨询-不自改" aria-label="锚点">#</a></h2>
 <ul><li><code>khy evolve</code> <strong>只报告与建议</strong>：它能把一次越界变更标为 <code>blocked</code> 并说明理由，但<strong>实际的强制拦截 / 回滚发生在别处</strong>（自愈事务流程内），本命令<strong>不会</strong>替你修改或还原代码。</li><li>分级与评估本身是<strong>真实确定</strong>的逻辑，不是桩；只是「执行后果」不由它落地。</li><li>门控环境变量 <code>KHY_EVOLUTION_POLICY</code>；越权覆盖用 <code>KHY_EVOLUTION_OVERRIDE</code>。</li></ul>

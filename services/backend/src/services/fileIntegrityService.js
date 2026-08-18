@@ -118,6 +118,24 @@ function loadManifest() {
 }
 
 /**
+ * Rebuild the baseline after a verified application update and immediately
+ * verify the active source tree against it.
+ */
+function rebuildAndVerify() {
+  const manifest = generateManifest();
+  saveManifest(manifest);
+  const verification = verify();
+  return { manifest, verification };
+}
+
+/** Restore the previous baseline when an update transaction rolls back. */
+function restoreManifest(manifest) {
+  if (manifest) return saveManifest(manifest);
+  fs.rmSync(MANIFEST_PATH, { force: true });
+  return null;
+}
+
+/**
  * Verify current files against saved manifest.
  * @returns {{ verified: boolean, added: string[], removed: string[], modified: string[], unchanged: number }}
  */
@@ -223,6 +241,8 @@ module.exports = {
   loadManifest,
   verify,
   verifyOnStartup,
+  rebuildAndVerify,
+  restoreManifest,
   collectFiles,
   MANIFEST_PATH,
 };

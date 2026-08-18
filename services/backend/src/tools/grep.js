@@ -165,7 +165,7 @@ module.exports = defineTool({
     }
 
     // Strategy 3: Pure-JS fallback (Windows without rg, or bare environments)
-    return _execPureJs(params, searchPath, cwd, mode, maxResults);
+    return _execPureJs(params, searchPath, cwd, mode, maxResults, context);
   },
 });
 
@@ -306,7 +306,7 @@ function _execGrep(params, searchPath, cwd, mode, maxResults, context, idleTimeo
   }
 
   const escaped = shellEscape(params.pattern);
-  const cmd = `grep ${args.join(' ')} ${escaped} ${searchPath}`;
+  const cmd = `grep ${args.join(' ')} ${escaped} ${shellEscape(searchPath)}`;
 
   return _runAndParse(cmd, cwd, mode, maxResults, searchPath, context, idleTimeoutMs, 'grep:grep');
 }
@@ -431,8 +431,22 @@ async function _runAndParse(cmd, cwd, mode, maxResults, searchPath, context, idl
 
 // ── Pure-JS fallback ────────────────────────────────────────────────
 
-async function _execPureJs(params, searchPath, cwd, mode, maxResults) {
+async function _execPureJs(params, searchPath, cwd, mode, maxResults, context = {}) {
   try {
+    if (typeof context.onProgress === 'function') {
+      try {
+        context.onProgress('grep stdout 0KB (pure-js scan)');
+      } catch {
+        /* non-critical */
+      }
+    }
+    if (typeof context.onActivity === 'function') {
+      try {
+        context.onActivity({ tool: 'grep', phase: 'stdout', source: 'pure-js' });
+      } catch {
+        /* non-critical */
+      }
+    }
     const flags = params.case_insensitive ? 'i' : '';
     const regex = new RegExp(params.pattern, flags);
 

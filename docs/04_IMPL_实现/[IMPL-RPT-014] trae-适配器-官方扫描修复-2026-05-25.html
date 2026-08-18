@@ -119,34 +119,34 @@ encryptionService: 'electron-safeStorage'</code></pre>
 <hr>
 <h2 id="七-验证">七、验证<a class="anchor" href="#七-验证" aria-label="锚点">#</a></h2>
 <h3 id="语法检查">语法检查<a class="anchor" href="#语法检查" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">node -c backend/src/services/gateway/adapters/traeOfficialArtifacts.js  # OK
-node -c backend/src/services/gateway/adapters/traeAdapter.js            # OK</code></pre>
+<pre><code class="language-bash">node -c backend/src/services/gateway/adapters/traeOfficialArtifacts.js  <span class="hljs-comment"># OK</span>
+node -c backend/src/services/gateway/adapters/traeAdapter.js            <span class="hljs-comment"># OK</span></code></pre>
 <h3 id="功能验证">功能验证<a class="anchor" href="#功能验证" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Trae 自定义加密 blob 识别
-node -e &quot;
-const a = require('./backend/src/services/gateway/adapters/traeOfficialArtifacts');
+<pre><code class="language-bash"><span class="hljs-comment"># Trae 自定义加密 blob 识别</span>
+node -e <span class="hljs-string">&quot;
+const a = require(&#x27;./backend/src/services/gateway/adapters/traeOfficialArtifacts&#x27;);
 const b = Buffer.alloc(200); b[0]=0x74;b[1]=0x63;b[2]=0x05;b[3]=0x10;b[4]=0;b[5]=0;
-const r = a.decodeTraeOfficialAuthBlob(b.toString('base64'));
+const r = a.decodeTraeOfficialAuthBlob(b.toString(&#x27;base64&#x27;));
 console.log(r.schemeHint);           // trae-custom-encrypted
 console.log(r.encryptionService);    // electron-safeStorage
 console.log(r.decryptable);          // false
-&quot;
+&quot;</span>
 
-# 端到端: 模拟含加密 blob 的 storage.json → credentialMode=encrypted
-node -e &quot;
-const a = require('./backend/src/services/gateway/adapters/traeOfficialArtifacts');
+<span class="hljs-comment"># 端到端: 模拟含加密 blob 的 storage.json → credentialMode=encrypted</span>
+node -e <span class="hljs-string">&quot;
+const a = require(&#x27;./backend/src/services/gateway/adapters/traeOfficialArtifacts&#x27;);
 const b = Buffer.alloc(200); b[0]=0x74;b[1]=0x63;b[2]=0x05;b[3]=0x10;b[4]=0;b[5]=0;
 const mock = {
-  'iCubeAuthInfo://icube.cloudide': b.toString('base64'),
-  'iCubeServerData://icube.cloudide': JSON.stringify({region:'cn-east',userId:'u123'}),
+  &#x27;iCubeAuthInfo://icube.cloudide&#x27;: b.toString(&#x27;base64&#x27;),
+  &#x27;iCubeServerData://icube.cloudide&#x27;: JSON.stringify({region:&#x27;cn-east&#x27;,userId:&#x27;u123&#x27;}),
 };
-const r = a.extractTraeOfficialArtifactsFromStorage(mock, '/mock');
+const r = a.extractTraeOfficialArtifactsFromStorage(mock, &#x27;/mock&#x27;);
 console.log(r.officialArtifactsDetected);  // true
 console.log(r.credentialMode);             // encrypted
 const c = a.resolveTraeOfficialCredential({artifacts: r});
 console.log(c.credentialMode);             // encrypted
 console.log(c.authBlobAnalysis.schemeHint); // trae-custom-encrypted
-&quot;</code></pre>
+&quot;</span></code></pre>
 <h3 id="验证结果">验证结果<a class="anchor" href="#验证结果" aria-label="锚点">#</a></h3>
 <table><thead><tr><th>测试项</th><th>结果</th></tr></thead><tbody><tr><td><code>tc 05 10</code> 前缀识别</td><td><code>trae-custom-encrypted</code> + <code>electron-safeStorage</code></td></tr><tr><td>DPAPI 前缀识别</td><td><code>dpapi</code></td></tr><tr><td>v10/v11 前缀识别</td><td><code>chromium-safe-storage-v10</code>/<code>v11</code></td></tr><tr><td>无 Nirvana 时 officialArtifactsDetected</td><td><code>true</code></td></tr><tr><td>加密态 credentialMode</td><td><code>encrypted</code>（不再是 <code>none</code>）</td></tr><tr><td>端点不再盲选</td><td><code>resolveTraeApiBases()</code> 空列表时不会 fallback 到 <code>api.trae.ai/v1</code></td></tr><tr><td>getRelayProfile 无端点时</td><td>抛出明确错误而非返回无效 URL</td></tr></tbody></table>
 <hr>

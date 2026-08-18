@@ -37,21 +37,21 @@
 <ul><li>Python 3.10+</li><li>AdGuard Home must be installed and running</li><li>Install AdGuard Home: <code>curl -s -S -L https://raw.githubusercontent.com/AdguardTeam/AdGuardHome/master/scripts/install.sh | sh -s -- -v</code></li></ul>
 <h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
 <h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Show help
-cli-anything-adguardhome --help
+<pre><code class="language-bash"><span class="hljs-comment"># Show help</span>
+cli-anything-adguardhome --<span class="hljs-built_in">help</span>
 
-# Start interactive REPL mode
+<span class="hljs-comment"># Start interactive REPL mode</span>
 cli-anything-adguardhome
 
-# Check server status
+<span class="hljs-comment"># Check server status</span>
 cli-anything-adguardhome server status
 
-# Run with JSON output (for agent consumption)
+<span class="hljs-comment"># Run with JSON output (for agent consumption)</span>
 cli-anything-adguardhome --json server status</code></pre>
 <h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
 <p>When invoked without a subcommand, the CLI enters an interactive REPL session:</p>
 <pre><code class="language-bash">cli-anything-adguardhome
-# Enter commands interactively with tab-completion and history</code></pre>
+<span class="hljs-comment"># Enter commands interactively with tab-completion and history</span></code></pre>
 <h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
 <h3 id="config">Config<a class="anchor" href="#config" aria-label="锚点">#</a></h3>
 <p>Connection and configuration management.</p>
@@ -91,36 +91,36 @@ cli-anything-adguardhome --json server status</code></pre>
 <pre><code class="language-bash">cli-anything-adguardhome server status
 cli-anything-adguardhome server version</code></pre>
 <h3 id="manage-filter-lists">Manage Filter Lists<a class="anchor" href="#manage-filter-lists" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># List current filters
+<pre><code class="language-bash"><span class="hljs-comment"># List current filters</span>
 cli-anything-adguardhome filter list
 
-# Add a new blocklist
-cli-anything-adguardhome filter add --url https://somehost.com/list.txt --name &quot;My List&quot;
+<span class="hljs-comment"># Add a new blocklist</span>
+cli-anything-adguardhome filter add --url https://somehost.com/list.txt --name <span class="hljs-string">&quot;My List&quot;</span>
 
-# Refresh all filters
+<span class="hljs-comment"># Refresh all filters</span>
 cli-anything-adguardhome filter refresh</code></pre>
 <h3 id="dns-rewrites">DNS Rewrites<a class="anchor" href="#dns-rewrites" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Add a local DNS entry
-cli-anything-adguardhome rewrite add --domain &quot;myserver.local&quot; --answer &quot;192.168.1.50&quot;
+<pre><code class="language-bash"><span class="hljs-comment"># Add a local DNS entry</span>
+cli-anything-adguardhome rewrite add --domain <span class="hljs-string">&quot;myserver.local&quot;</span> --answer <span class="hljs-string">&quot;192.168.1.50&quot;</span>
 
-# List all rewrites
+<span class="hljs-comment"># List all rewrites</span>
 cli-anything-adguardhome rewrite list</code></pre>
 <h3 id="client-management">Client Management<a class="anchor" href="#client-management" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-adguardhome clients add --name &quot;My PC&quot; --ip 192.168.1.100
+<pre><code class="language-bash">cli-anything-adguardhome clients add --name <span class="hljs-string">&quot;My PC&quot;</span> --ip 192.168.1.100
 cli-anything-adguardhome clients list</code></pre>
 <h3 id="query-statistics">Query Statistics<a class="anchor" href="#query-statistics" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Show stats (human-readable)
+<pre><code class="language-bash"><span class="hljs-comment"># Show stats (human-readable)</span>
 cli-anything-adguardhome stats show
 
-# Show stats (JSON for agents)
+<span class="hljs-comment"># Show stats (JSON for agents)</span>
 cli-anything-adguardhome --json stats show</code></pre>
 <h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
 <p>All commands support dual output modes:</p>
 <ul><li><strong>Human-readable</strong> (default): Tables, colors, formatted text</li><li><strong>Machine-readable</strong> (<code>--json</code> flag): Structured JSON for agent consumption</li></ul>
-<pre><code class="language-bash"># Human output
+<pre><code class="language-bash"><span class="hljs-comment"># Human output</span>
 cli-anything-adguardhome filter list
 
-# JSON output for agents
+<span class="hljs-comment"># JSON output for agents</span>
 cli-anything-adguardhome --json filter list</code></pre>
 <h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
 <p>When using this CLI programmatically:</p>

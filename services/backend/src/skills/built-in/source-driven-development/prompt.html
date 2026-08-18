@@ -85,9 +85,9 @@ B) Match existing code (useState) — consistent with codebase
 <h3 id="step-4-cite-your-sources">Step 4: Cite Your Sources<a class="anchor" href="#step-4-cite-your-sources" aria-label="锚点">#</a></h3>
 <p>Every framework-specific pattern gets a citation. The user must be able to verify every decision.</p>
 <p><strong>In code comments:</strong></p>
-<pre><code class="language-typescript">// React 19 form handling with useActionState
-// Source: https://react.dev/reference/react/useActionState#usage
-const [state, formAction, isPending] = useActionState(submitOrder, initialState);</code></pre>
+<pre><code class="language-typescript"><span class="hljs-comment">// React 19 form handling with useActionState</span>
+<span class="hljs-comment">// Source: https://react.dev/reference/react/useActionState#usage</span>
+<span class="hljs-keyword">const</span> [state, formAction, isPending] = <span class="hljs-title function_">useActionState</span>(submitOrder, initialState);</code></pre>
 <p><strong>In conversation:</strong></p>
 <pre><code>I'm using useActionState instead of manual useState for the
 form submission state. React 19 replaced the manual

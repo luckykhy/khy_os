@@ -37,21 +37,21 @@
 <ul><li>Python 3.10+</li><li><code>melt</code> (MLT CLI) — required for rendering and playback</li><li><code>ffmpeg</code> / <code>ffprobe</code> — required for media probing</li><li><code>shotcut</code> must be installed on your system</li></ul>
 <h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
 <h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Show help
-cli-anything-shotcut --help
+<pre><code class="language-bash"><span class="hljs-comment"># Show help</span>
+cli-anything-shotcut --<span class="hljs-built_in">help</span>
 
-# Start interactive REPL mode
+<span class="hljs-comment"># Start interactive REPL mode</span>
 cli-anything-shotcut
 
-# Create a new project
+<span class="hljs-comment"># Create a new project</span>
 cli-anything-shotcut project new -o project.json
 
-# Run with JSON output (for agent consumption)
+<span class="hljs-comment"># Run with JSON output (for agent consumption)</span>
 cli-anything-shotcut --json project info -p project.json</code></pre>
 <h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
 <p>When invoked without a subcommand, the CLI enters an interactive REPL session with undo/redo support:</p>
 <pre><code class="language-bash">cli-anything-shotcut
-# or with a project:
+<span class="hljs-comment"># or with a project:</span>
 cli-anything-shotcut --project my_project.mlt</code></pre>
 <h4 id="repl-commands">REPL Commands<a class="anchor" href="#repl-commands" aria-label="锚点">#</a></h4>
 <p><strong>Workflow:</strong> Always <code>media import</code> first to get a <code>clip_id</code>, then use <code>add-clip</code> to place it on the timeline.</p>
@@ -107,26 +107,26 @@ cli-hub previews open /path/to/bundle-or-session</code></pre>
 <h3 id="create-a-new-project">Create a New Project<a class="anchor" href="#create-a-new-project" aria-label="锚点">#</a></h3>
 <p>Create a new shotcut project file.</p>
 <pre><code class="language-bash">cli-anything-shotcut project new -o myproject.json
-# Or with JSON output for programmatic use
+<span class="hljs-comment"># Or with JSON output for programmatic use</span>
 cli-anything-shotcut --json project new -o myproject.json</code></pre>
 <h3 id="interactive-repl-session">Interactive REPL Session<a class="anchor" href="#interactive-repl-session" aria-label="锚点">#</a></h3>
 <p>Start an interactive session with undo/redo support.</p>
 <pre><code class="language-bash">cli-anything-shotcut
-# Enter commands interactively
-# Use 'help' to see available commands
-# Use 'undo' and 'redo' for history navigation</code></pre>
+<span class="hljs-comment"># Enter commands interactively</span>
+<span class="hljs-comment"># Use &#x27;help&#x27; to see available commands</span>
+<span class="hljs-comment"># Use &#x27;undo&#x27; and &#x27;redo&#x27; for history navigation</span></code></pre>
 <h3 id="export-project">Export Project<a class="anchor" href="#export-project" aria-label="锚点">#</a></h3>
 <p>Export the project to a final output format.</p>
-<pre><code class="language-bash">cli-anything-shotcut --project myproject.json export render output.mp4 --overwrite</code></pre>
+<pre><code class="language-bash">cli-anything-shotcut --project myproject.json <span class="hljs-built_in">export</span> render output.mp4 --overwrite</code></pre>
 <h3 id="deterministic-timeline-reconstruction">Deterministic Timeline Reconstruction<a class="anchor" href="#deterministic-timeline-reconstruction" aria-label="锚点">#</a></h3>
 <p>For rebuilds, prefer absolute placement over append-only clip insertion:</p>
 <pre><code class="language-bash">cli-anything-shotcut --project myproject.mlt media import intro.mp4
 cli-anything-shotcut --project myproject.mlt timeline add-clip clip0 \
-  --track 1 --in 00:00:00.000 --out 00:00:04.000 --at 00:00:00.000
+  --track 1 --<span class="hljs-keyword">in</span> 00:00:00.000 --out 00:00:04.000 --at 00:00:00.000
 
 cli-anything-shotcut --project myproject.mlt media import broll.mp4
 cli-anything-shotcut --project myproject.mlt timeline add-clip clip1 \
-  --track 1 --in 00:00:10.000 --out 00:00:16.000 --at 00:00:08.000</code></pre>
+  --track 1 --<span class="hljs-keyword">in</span> 00:00:10.000 --out 00:00:16.000 --at 00:00:08.000</code></pre>
 <ul><li><code>--at</code> inserts blanks automatically when the target time lands in empty space.</li><li>The CLI rejects overlap with an existing clip.</li><li>Prefer explicit <code>--in</code> and <code>--out</code> values so later absolute placement remains unambiguous.</li></ul>
 <h3 id="audio-automation">Audio Automation<a class="anchor" href="#audio-automation" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-shotcut --project myproject.mlt filter volume-envelope \
@@ -145,10 +145,10 @@ cli-anything-shotcut --project myproject.mlt filter duck \
 <h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
 <p>All commands support dual output modes:</p>
 <ul><li><strong>Human-readable</strong> (default): Tables, colors, formatted text</li><li><strong>Machine-readable</strong> (<code>--json</code> flag): Structured JSON for agent consumption</li></ul>
-<pre><code class="language-bash"># Human output
+<pre><code class="language-bash"><span class="hljs-comment"># Human output</span>
 cli-anything-shotcut project info -p project.json
 
-# JSON output for agents
+<span class="hljs-comment"># JSON output for agents</span>
 cli-anything-shotcut --json project info -p project.json</code></pre>
 <h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
 <p>When using this CLI programmatically:</p>

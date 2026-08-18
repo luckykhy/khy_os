@@ -117,7 +117,7 @@ function computeFile(value, offset) {
   if (!partial.includes('/')) {
     let refItems = [];
     try {
-      const { listRefEntries } = require('../../services/referencesService');
+      const { listRefEntries } = require('../../../services/referencesService');
       refItems = listRefEntries(process.cwd())
         .filter((r) => r.name.toLowerCase().startsWith(partial.toLowerCase()))
         .map((r) => ({
@@ -139,7 +139,7 @@ function computeFile(value, offset) {
   // historical cwd-relative listing when no alias matches.
   let refRoot = null;
   try {
-    const { resolveMentionAbs } = require('../../services/referencesService');
+    const { resolveMentionAbs } = require('../../../services/referencesService');
     const [first] = partial.split('/');
     if (first && partial.includes('/')) {
       refRoot = resolveMentionAbs(first, process.cwd());

@@ -75,6 +75,9 @@ jobs:
       - name: Verify CHANGELOG
         run: node scripts/release/changelog-new.js --check
 
+      - name: Verify update index protocol
+        run: node --test scripts/tests/updateIndex.test.js
+
       - name: Run release gate (deterministic checks)
         run: node scripts/release/release-gate.js
         env:
@@ -84,6 +87,16 @@ jobs:
         run: |
           node packaging/build/esbuild-modules.js --prod
           node packaging/build/pack-executable.js --all
+
+      - name: Build on-demand payload assets
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          else
+            VERSION="$(node -p "require('./services/backend/package.json').version")"
+          fi
+          node scripts/release/build-payload-assets.js --version "$VERSION" --out publish/payloads
+          node -e "const m=require('./publish/payloads/khy-payload-manifest.json'); if(m.version!==process.argv[1]) process.exit(1); if(Object.values(m.payloads).some(p=>p.files.some(f=>!/^[a-f0-9]{64}$/.test(f.sha256)||f.size<=0))) process.exit(1)" "$VERSION"
 
       # ── Sign artifacts before publishing ─────────────────────────────────────
       # Sigstore keyless signing (OIDC) provides cryptographic proof that the
@@ -140,15 +153,34 @@ jobs:
       - name: Publish dual-channel
         run: |
           chmod +x scripts/release/publish-dual.sh
-          VERSION="${GITHUB_REF#refs/tags/v}"
-          ARGS=( "--version" "$VERSION" "--rehearse" "--tag" "--push" )
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          else
+            VERSION="$(node -p "require('./services/backend/package.json').version")"
+          fi
+          ARGS=( "--version" "$VERSION" "--rehearse" )
           if [ "${{ inputs.skip_pip || 'false' }}" = 'true' ]; then ARGS+=( "--skip-pip" ); fi
           if [ "${{ inputs.skip_npm || 'false' }}" = 'true' ]; then ARGS+=( "--skip-npm" ); fi
           if [ "${{ inputs.test_pypi || 'false' }}" = 'true' ]; then ARGS+=( "--test-pypi" ); fi
-          if [ "${{ github.event_name }}" = 'workflow_dispatch' ]; then ARGS+=( "-y" ); fi
+          if [ "${{ github.event_name }}" = 'workflow_dispatch' ]; then ARGS+=( "--tag" "--push" "-y" ); fi
           bash scripts/release/publish-dual.sh "${ARGS[@]}"
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload on-demand payloads to GitHub Release
+        if: ${{ inputs.test_pypi != 'true' }}
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          else
+            VERSION="$(node -p "require('./services/backend/package.json').version")"
+          fi
+          TAG="v${VERSION}"
+          gh release view "$TAG" >/dev/null 2>&1 || \
+            gh release create "$TAG" --title "khy OS ${VERSION}" --notes "khy OS ${VERSION} release assets"
+          gh release upload "$TAG" publish/payloads/* --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

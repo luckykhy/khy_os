@@ -201,6 +201,20 @@ describe('check-repo-layout: 任务入口与跨层引用', () => {
     assert.match(stdout, /services\/ai-backend\/src\/routes\/admin\.js/);
   });
 
+  test('cross-layer-require: 测试 fixture 不进入运行时依赖计数', () => {
+    const root = makeFixture((dir) => {
+      writeFile(dir, 'services/backend/package.json', '{"name":"backend"}\n');
+      writeFile(dir, 'services/backend/src/utils/parseBoolean.js', 'module.exports = () => true;\n');
+      writeFile(dir, 'services/ai-backend/package.json', '{"name":"ai-backend"}\n');
+      writeFile(dir, 'services/ai-backend/tests/admin.test.js',
+        "const parseBoolean = require('../../../backend/src/utils/parseBoolean');\nmodule.exports = { parseBoolean };\n");
+    });
+    const { status, stdout } = runGuard(root);
+    assert.equal(status, 0, stdout);
+    assert.match(stdout, /"cross-layer-require":0/);
+    assert.match(stdout, /"unresolved-require":0/);
+  });
+
   test('cross-layer-require: 纯 re-export 壳文件按兼容别名豁免', () => {
     const root = makeFixture((dir) => {
       writeFile(dir, 'services/backend/package.json', '{"name":"backend"}\n');

@@ -31,124 +31,124 @@
 <h1 id="cli-anything-nslogger">cli-anything-nslogger<a class="anchor" href="#cli-anything-nslogger" aria-label="锚点">#</a></h1>
 <p>A complete CLI harness for <a href="https://github.com/fpillet/NSLogger" target="_blank" rel="noopener">NSLogger</a>, the macOS log viewer for iOS/macOS apps.</p>
 <h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">cd nslogger/agent-harness
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> nslogger/agent-harness
 pip install -e .
-# Verify
-cli-anything-nslogger --help</code></pre>
+<span class="hljs-comment"># Verify</span>
+cli-anything-nslogger --<span class="hljs-built_in">help</span></code></pre>
 <h2 id="command-reference">Command Reference<a class="anchor" href="#command-reference" aria-label="锚点">#</a></h2>
 <h3 id="generate-create-sample-files-for-testing"><code>generate</code> — Create sample files for testing<a class="anchor" href="#generate-create-sample-files-for-testing" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-nslogger generate sample.rawnsloggerdata --count 50</code></pre>
 <h3 id="read-display-messages-from-a-file"><code>read</code> — Display messages from a file<a class="anchor" href="#read-display-messages-from-a-file" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># All messages
-cli-anything-nslogger read session.rawnsloggerdata
+<pre><code class="language-bash"><span class="hljs-comment"># All messages</span>
+cli-anything-nslogger <span class="hljs-built_in">read</span> session.rawnsloggerdata
 
-# Errors only (level 0)
-cli-anything-nslogger read session.rawnsloggerdata --level 0
+<span class="hljs-comment"># Errors only (level 0)</span>
+cli-anything-nslogger <span class="hljs-built_in">read</span> session.rawnsloggerdata --level 0
 
-# Filter by tag and text search
-cli-anything-nslogger read session.rawnsloggerdata --tag Network --search &quot;timeout&quot;
+<span class="hljs-comment"># Filter by tag and text search</span>
+cli-anything-nslogger <span class="hljs-built_in">read</span> session.rawnsloggerdata --tag Network --search <span class="hljs-string">&quot;timeout&quot;</span>
 
-# First 20 messages as JSON
-cli-anything-nslogger read session.rawnsloggerdata --limit 20 --json</code></pre>
+<span class="hljs-comment"># First 20 messages as JSON</span>
+cli-anything-nslogger <span class="hljs-built_in">read</span> session.rawnsloggerdata --<span class="hljs-built_in">limit</span> 20 --json</code></pre>
 <h3 id="filter-advanced-filtering"><code>filter</code> — Advanced filtering<a class="anchor" href="#filter-advanced-filtering" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Errors and warnings only
+<pre><code class="language-bash"><span class="hljs-comment"># Errors and warnings only</span>
 cli-anything-nslogger filter session.rawnsloggerdata --level 1
 
-# By tag
+<span class="hljs-comment"># By tag</span>
 cli-anything-nslogger filter session.rawnsloggerdata --tag Auth --tag Network
 
-# Regex search
-cli-anything-nslogger filter session.rawnsloggerdata --regex &quot;(timeout|failed|error)&quot;
+<span class="hljs-comment"># Regex search</span>
+cli-anything-nslogger filter session.rawnsloggerdata --regex <span class="hljs-string">&quot;(timeout|failed|error)&quot;</span>
 
-# By thread
-cli-anything-nslogger filter session.rawnsloggerdata --thread &quot;main&quot;
+<span class="hljs-comment"># By thread</span>
+cli-anything-nslogger filter session.rawnsloggerdata --thread <span class="hljs-string">&quot;main&quot;</span>
 
-# JSON output
+<span class="hljs-comment"># JSON output</span>
 cli-anything-nslogger filter session.rawnsloggerdata --level 0 --json</code></pre>
 <h3 id="export-export-to-text-json-csv"><code>export</code> — Export to text/JSON/CSV<a class="anchor" href="#export-export-to-text-json-csv" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># JSON to stdout
-cli-anything-nslogger export session.rawnsloggerdata --format json
+<pre><code class="language-bash"><span class="hljs-comment"># JSON to stdout</span>
+cli-anything-nslogger <span class="hljs-built_in">export</span> session.rawnsloggerdata --format json
 
-# CSV to file
-cli-anything-nslogger export session.rawnsloggerdata --format csv --output logs.csv
+<span class="hljs-comment"># CSV to file</span>
+cli-anything-nslogger <span class="hljs-built_in">export</span> session.rawnsloggerdata --format csv --output logs.csv
 
-# Filtered text export
-cli-anything-nslogger export session.rawnsloggerdata --format text --level 1 --tag Network</code></pre>
+<span class="hljs-comment"># Filtered text export</span>
+cli-anything-nslogger <span class="hljs-built_in">export</span> session.rawnsloggerdata --format text --level 1 --tag Network</code></pre>
 <h3 id="stats-summary-statistics"><code>stats</code> — Summary statistics<a class="anchor" href="#stats-summary-statistics" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Human-readable summary
+<pre><code class="language-bash"><span class="hljs-comment"># Human-readable summary</span>
 cli-anything-nslogger stats session.rawnsloggerdata
 
-# JSON for agent consumption
+<span class="hljs-comment"># JSON for agent consumption</span>
 cli-anything-nslogger stats session.rawnsloggerdata --json</code></pre>
 <p>JSON output shape:</p>
-<pre><code class="language-json">{
-  &quot;total&quot;: 342,
-  &quot;by_level&quot;: {&quot;ERROR&quot;: 12, &quot;WARNING&quot;: 34, &quot;INFO&quot;: 200, &quot;DEBUG&quot;: 96},
-  &quot;by_tag&quot;: {&quot;Network&quot;: 89, &quot;Auth&quot;: 45, &quot;UI&quot;: 120},
-  &quot;by_thread&quot;: {&quot;main&quot;: 200, &quot;bg-queue&quot;: 142},
-  &quot;by_type&quot;: {&quot;text&quot;: 340, &quot;client_info&quot;: 1, &quot;disconnect&quot;: 1},
-  &quot;clients&quot;: [&quot;MyApp&quot;],
-  &quot;first_timestamp&quot;: &quot;2024-01-01T10:00:00+00:00&quot;,
-  &quot;last_timestamp&quot;: &quot;2024-01-01T10:05:30+00:00&quot;,
-  &quot;duration_seconds&quot;: 330.0
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;total&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">342</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;by_level&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-attr">&quot;ERROR&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">12</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;WARNING&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">34</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;INFO&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">200</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;DEBUG&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">96</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;by_tag&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-attr">&quot;Network&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">89</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;Auth&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">45</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;UI&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">120</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;by_thread&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-attr">&quot;main&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">200</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;bg-queue&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">142</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;by_type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-attr">&quot;text&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">340</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;client_info&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;disconnect&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;clients&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;MyApp&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;first_timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2024-01-01T10:00:00+00:00&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;last_timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2024-01-01T10:05:30+00:00&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;duration_seconds&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">330.0</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <h3 id="listen-receive-live-connections"><code>listen</code> — Receive live connections<a class="anchor" href="#listen-receive-live-connections" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Match the NSLogger.app GUI Bonjour behavior for iOS auto-discovery
+<pre><code class="language-bash"><span class="hljs-comment"># Match the NSLogger.app GUI Bonjour behavior for iOS auto-discovery</span>
 cli-anything-nslogger listen --bonjour --name bazinga --debug
 
-# Mirror live logs to a text file while still printing stdout
+<span class="hljs-comment"># Mirror live logs to a text file while still printing stdout</span>
 cli-anything-nslogger listen --bonjour --name bazinga --output app.log
 
-# Write machine-readable JSON Lines
+<span class="hljs-comment"># Write machine-readable JSON Lines</span>
 cli-anything-nslogger listen --bonjour --name bazinga --output app.jsonl --output-format jsonl
 
-# Direct TCP/TLS mode for manually configured clients
+<span class="hljs-comment"># Direct TCP/TLS mode for manually configured clients</span>
 cli-anything-nslogger listen --port 50000 --ssl --debug
 
-# Show only errors while listening, output as JSON stream
+<span class="hljs-comment"># Show only errors while listening, output as JSON stream</span>
 cli-anything-nslogger listen --bonjour --name bazinga --level 0 --json
 
-# Run until Ctrl-C
+<span class="hljs-comment"># Run until Ctrl-C</span>
 cli-anything-nslogger listen --bonjour --name bazinga</code></pre>
 <p>Use Bonjour mode first for iOS apps because it matches the desktop NSLogger GUI:<br>the CLI publishes a native macOS <code>NetService</code> with <code>_nslogger-ssl._tcp</code> and<br>accepts TLS NSLogger frames. Use direct TCP/TLS only when the app is manually<br>configured with the Mac host and port.</p>
 <h3 id="repl-interactive-command-repl"><code>repl</code> — Interactive Command REPL<a class="anchor" href="#repl-interactive-command-repl" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-nslogger repl session.rawnsloggerdata
-# Or launch it by running cli-anything-nslogger with no subcommand.</code></pre>
+<span class="hljs-comment"># Or launch it by running cli-anything-nslogger with no subcommand.</span></code></pre>
 <h2 id="log-levels">Log Levels<a class="anchor" href="#log-levels" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>Value</th><th>Name</th><th>Use for</th></tr></thead><tbody><tr><td>0</td><td>ERROR</td><td>Unrecoverable failures</td></tr><tr><td>1</td><td>WARNING</td><td>Recoverable issues</td></tr><tr><td>2</td><td>INFO</td><td>Normal operation</td></tr><tr><td>3</td><td>DEBUG</td><td>Developer details</td></tr><tr><td>4</td><td>VERBOSE</td><td>Trace-level noise</td></tr></tbody></table>
 <h2 id="message-json-shape">Message JSON Shape<a class="anchor" href="#message-json-shape" aria-label="锚点">#</a></h2>
-<pre><code class="language-json">{
-  &quot;sequence&quot;: 42,
-  &quot;timestamp&quot;: &quot;2024-01-01T10:01:23+00:00&quot;,
-  &quot;timestamp_ms&quot;: 456,
-  &quot;thread_id&quot;: &quot;main&quot;,
-  &quot;tag&quot;: &quot;Network&quot;,
-  &quot;level&quot;: 0,
-  &quot;level_name&quot;: &quot;ERROR&quot;,
-  &quot;type&quot;: &quot;text&quot;,
-  &quot;text&quot;: &quot;Connection timed out after 30s&quot;,
-  &quot;image_width&quot;: 0,
-  &quot;image_height&quot;: 0,
-  &quot;client_name&quot;: &quot;MyApp&quot;,
-  &quot;client_version&quot;: &quot;2.1.0&quot;,
-  &quot;os_name&quot;: &quot;iOS&quot;,
-  &quot;os_version&quot;: &quot;17.0&quot;,
-  &quot;machine&quot;: &quot;iPhone15,2&quot;
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;sequence&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">42</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;timestamp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2024-01-01T10:01:23+00:00&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;timestamp_ms&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">456</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;thread_id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;main&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;tag&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Network&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;level&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;level_name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ERROR&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;text&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;text&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Connection timed out after 30s&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;image_width&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;image_height&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;client_name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;MyApp&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;client_version&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2.1.0&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;os_name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;iOS&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;os_version&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;17.0&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;machine&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;iPhone15,2&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <h2 id="agent-workflow-examples">Agent Workflow Examples<a class="anchor" href="#agent-workflow-examples" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># 1. Inspect a captured crash session
+<pre><code class="language-bash"><span class="hljs-comment"># 1. Inspect a captured crash session</span>
 cli-anything-nslogger stats crash.rawnsloggerdata --json
 
-# 2. Find all errors in the 5 minutes before crash
+<span class="hljs-comment"># 2. Find all errors in the 5 minutes before crash</span>
 cli-anything-nslogger filter crash.rawnsloggerdata --level 0 --json
 
-# 3. Get network failures only
-cli-anything-nslogger filter crash.rawnsloggerdata --tag Network --regex &quot;fail|timeout|error&quot; --json
+<span class="hljs-comment"># 3. Get network failures only</span>
+cli-anything-nslogger filter crash.rawnsloggerdata --tag Network --regex <span class="hljs-string">&quot;fail|timeout|error&quot;</span> --json
 
-# 4. Export full log for offline analysis
-cli-anything-nslogger export crash.rawnsloggerdata --format json --output crash_log.json
+<span class="hljs-comment"># 4. Export full log for offline analysis</span>
+cli-anything-nslogger <span class="hljs-built_in">export</span> crash.rawnsloggerdata --format json --output crash_log.json
 
-# 5. Monitor an iOS app live and keep a local copy
+<span class="hljs-comment"># 5. Monitor an iOS app live and keep a local copy</span>
 cli-anything-nslogger listen --bonjour --name bazinga --output app.log --debug</code></pre>
       </article>
       <nav class="pager"><a class="prev" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-nsight-graphics/SKILL.html"><div class="dir">← 上一篇</div><div class="ttl">Nsight Graphics CLI Skill</div></a><a class="next" href="../../../../../../../services/backend/src/data/cliAnythingRegistry/skills/cli-anything-obs-studio/SKILL.html"><div class="dir">下一篇 →</div><div class="ttl">cli-anything-obsstudio</div></a></nav>

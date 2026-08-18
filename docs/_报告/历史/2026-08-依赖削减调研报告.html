@@ -31,13 +31,13 @@
 <h2 id="1-范围与方法">1. 范围与方法<a class="anchor" href="#1-范围与方法" aria-label="锚点">#</a></h2>
 <p>覆盖 Python 启动层、Node.js 后端、两个 Vue 前端，以及 C/ASM + MoonBit 内核。</p>
 <p>证据命令：</p>
-<pre><code class="language-bash">npm ls --all --json
+<pre><code class="language-bash">npm <span class="hljs-built_in">ls</span> --all --json
 npm dedupe --dry-run --workspace=services/backend
 npm explain &lt;package&gt;
-du -sb node_modules apps/ai-frontend/node_modules apps/ai-frontend/dist kernel/build
-grep -rE &quot;require\(|from |import\(&quot; &lt;source trees&gt;
+<span class="hljs-built_in">du</span> -sb node_modules apps/ai-frontend/node_modules apps/ai-frontend/dist kernel/build
+grep -rE <span class="hljs-string">&quot;require\(|from |import\(&quot;</span> &lt;<span class="hljs-built_in">source</span> trees&gt;
 npm run build --prefix apps/ai-frontend
-npm test -- --runInBand</code></pre>
+npm <span class="hljs-built_in">test</span> -- --runInBand</code></pre>
 <p>Python 环境只有 Microsoft Store redirector，不是真实解释器；因此本轮只能审计 manifest 和源码 import，不能生成 wheel/sdist 或测安装体积。<code>software/khyquant/frontend</code> 初始 lockfile 与 manifest 不同步；阶段二已修复 lockfile 并建立 clean-install/build 基线。</p>
 <h2 id="2-基线">2. 基线<a class="anchor" href="#2-基线" aria-label="锚点">#</a></h2>
 <h3 id="2-1-依赖与静态体积">2.1 依赖与静态体积<a class="anchor" href="#2-1-依赖与静态体积" aria-label="锚点">#</a></h3>

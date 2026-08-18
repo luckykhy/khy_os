@@ -83,11 +83,15 @@ async function startInkApp(options = {}) {
   const scrollbackPreserve = require('./scrollbackPreserve');
   const sidebarRail = require('./runtime/sidebarRail');
   const _realOut = process.stdout;
+  const _clearNormalizer = scrollbackPreserve.createClearTerminalNormalizer(
+    process.env,
+    process.platform
+  );
   const _tuiStdout = new Proxy(_realOut, {
     get(target, prop) {
       if (prop === 'write') {
         return function (chunk, ...rest) {
-          const normalized = scrollbackPreserve.normalizeClearTerminal(chunk, process.env, process.platform);
+          const normalized = _clearNormalizer.write(chunk);
           const frame = typeof normalized === 'string' ? normalized : String(normalized || '');
           const forceRailPaint = /\n|\r|\x1b\[2J|\x1b\[3J/.test(frame);
           let pre = '';
@@ -102,13 +106,11 @@ async function startInkApp(options = {}) {
     },
   });
 
-  // Anchor the first frame to the screen BOTTOM (gate KHY_TUI_ANCHOR_BOTTOM,
-  // default on): pad the REAL stdout with rows-1 newlines so existing shell
-  // output scrolls into native scrollback and the prompt + footer hug the
-  // bottom edge from frame 1 (the「下面留下了大量的空白」report). This also
-  // makes the rail board's bottom-anchor assumption (footer flush with the
-  // screen bottom) true at startup — see startupAnchor.js. Pure leaf builds
-  // the bytes ('' on non-TTY / gate off); the write itself is best-effort.
+  // Optional legacy bottom anchor (KHY_TUI_ANCHOR_BOTTOM, default off). The
+  // default renders the first Ink frame immediately after pre-TUI output, so
+  // the login line and welcome/version banner stay contiguous. Explicitly
+  // enabling the gate restores the old bottom-aligned first frame. The pure
+  // leaf returns '' on non-TTY / gate off; the write is best-effort.
   try {
     const _pad = require('./startupAnchor').anchorBottomPad(_realOut, process.env);
     if (_pad) _realOut.write(_pad);
@@ -154,6 +156,13 @@ async function startInkApp(options = {}) {
   inkRuntime.setRenderStdout(_tuiStdout);
 
   await app.waitUntilExit();
+
+  // A stream wrapper may split an ANSI token across writes. Do not strand the
+  // final incomplete suffix when Ink exits before another frame completes it.
+  try {
+    const _pendingClearBytes = _clearNormalizer.flush();
+    if (_pendingClearBytes) _realOut.write(_pendingClearBytes);
+  } catch { /* terminal already gone */ }
 
   // Ink has released the terminal — clear the active-surface flag so any later
   // classic-mode work in this process can use inquirer normally again.

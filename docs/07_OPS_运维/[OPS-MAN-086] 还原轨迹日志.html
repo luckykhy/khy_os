@@ -32,9 +32,9 @@
 <pre><code>verifyConvergence({ before, after, move, stallCount })</code></pre>
 <p>其中 <code>stallCount</code>（连续无进展次数）<strong>必须由调用方自己维护</strong>。可 restore 的真实场景<br>是陌生机器上<strong>一次次独立的 CLI 调用</strong>——每次进程「起 → 判 → 退」。跨进程 <code>stallCount</code><br>每回都从 0 起，于是 agent 在同一卡点空转 100 次、每次都被判「第 1/2 次 stall」，<br><strong>防死循环在进程边界上根本不生效</strong>：永远升不了级、交不了人。这正是 khy 自己反复修的<br>「卡住 / idle-watchdog 自续命」同一类自驱失败，只是搬到了还原层、此前无人守。</p>
 <p>本层用一条<strong>追加式、可推导</strong>的事件流消灭这道缝：每尝试一步就 append 一个事件；下次<br>进程起来先回放整条轨迹 <code>deriveJournalState</code>，派生出<strong>真实的跨进程 stallCount</strong>，再喂回<br><code>verifyConvergence({ stallCount })</code>——循环计数终于跨进程连上了。</p>
-<pre><code class="language-bash">node scripts/restore-trace.js record        # 跑一次判定并落轨迹
-node scripts/restore-trace.js --stall-count  # 下次 converge 该带的 stallCount
-node scripts/restore-trace.js --json         # 恢复中的 agent 读它接着干</code></pre>
+<pre><code class="language-bash">node scripts/restore-trace.js record        <span class="hljs-comment"># 跑一次判定并落轨迹</span>
+node scripts/restore-trace.js --stall-count  <span class="hljs-comment"># 下次 converge 该带的 stallCount</span>
+node scripts/restore-trace.js --json         <span class="hljs-comment"># 恢复中的 agent 读它接着干</span></code></pre>
 <h2 id="stallcount-回放规则-与-restore-converge-逐字对齐">stallCount 回放规则（与 restore-converge 逐字对齐）<a class="anchor" href="#stallcount-回放规则-与-restore-converge-逐字对齐" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>verdict</th><th>对 stallCount 的贡献</th></tr></thead><tbody><tr><td><code>advanced</code></td><td>清零（0）</td></tr><tr><td><code>converged</code></td><td>清零（0）</td></tr><tr><td><code>regressed</code></td><td>保持不变</td></tr><tr><td><code>stalled</code></td><td>累加（+1）</td></tr></tbody></table>
 <blockquote><p>终结（terminal）= 见到 <code>converged</code>，或任一 <code>escalate-human</code>（regressed / stalled 达阈值）。<br>未知 verdict 保守保持 stallCount 不变——<strong>绝不虚增、亦不假报收敛</strong>。</p></blockquote>

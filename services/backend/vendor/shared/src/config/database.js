@@ -217,7 +217,7 @@ function createSQLiteSequelize() {
   if (!dialectModule) {
     dialectModule = tryLoadDialectModule(
       'backend sqliteCompat',
-      () => require('../../../../../services/backend/src/config/sqliteCompat')
+      () => require('../../../../src/config/sqliteCompat')
     );
   }
   if (!dialectModule) {

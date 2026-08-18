@@ -54,26 +54,26 @@
 <p>Simplification that breaks project consistency is not simplification — it's churn.</p>
 <h3 id="3-prefer-clarity-over-cleverness">3. Prefer Clarity Over Cleverness<a class="anchor" href="#3-prefer-clarity-over-cleverness" aria-label="锚点">#</a></h3>
 <p>Explicit code is better than compact code when the compact version requires a mental pause to parse.</p>
-<pre><code class="language-typescript">// UNCLEAR: Dense ternary chain
-const label = isNew ? 'New' : isUpdated ? 'Updated' : isArchived ? 'Archived' : 'Active';
+<pre><code class="language-typescript"><span class="hljs-comment">// UNCLEAR: Dense ternary chain</span>
+<span class="hljs-keyword">const</span> label = isNew ? <span class="hljs-string">&#x27;New&#x27;</span> : isUpdated ? <span class="hljs-string">&#x27;Updated&#x27;</span> : isArchived ? <span class="hljs-string">&#x27;Archived&#x27;</span> : <span class="hljs-string">&#x27;Active&#x27;</span>;
 
-// CLEAR: Readable mapping
-function getStatusLabel(item: Item): string {
-  if (item.isNew) return 'New';
-  if (item.isUpdated) return 'Updated';
-  if (item.isArchived) return 'Archived';
-  return 'Active';
+<span class="hljs-comment">// CLEAR: Readable mapping</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">getStatusLabel</span>(<span class="hljs-params"><span class="hljs-attr">item</span>: <span class="hljs-title class_">Item</span></span>): <span class="hljs-built_in">string</span> {
+  <span class="hljs-keyword">if</span> (item.<span class="hljs-property">isNew</span>) <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;New&#x27;</span>;
+  <span class="hljs-keyword">if</span> (item.<span class="hljs-property">isUpdated</span>) <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;Updated&#x27;</span>;
+  <span class="hljs-keyword">if</span> (item.<span class="hljs-property">isArchived</span>) <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;Archived&#x27;</span>;
+  <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;Active&#x27;</span>;
 }</code></pre>
-<pre><code class="language-typescript">// UNCLEAR: Chained reduces with inline logic
-const result = items.reduce((acc, item) =&gt; ({
+<pre><code class="language-typescript"><span class="hljs-comment">// UNCLEAR: Chained reduces with inline logic</span>
+<span class="hljs-keyword">const</span> result = items.<span class="hljs-title function_">reduce</span>(<span class="hljs-function">(<span class="hljs-params">acc, item</span>) =&gt;</span> ({
   ...acc,
-  [item.id]: { ...acc[item.id], count: (acc[item.id]?.count ?? 0) + 1 }
+  [item.<span class="hljs-property">id</span>]: { ...acc[item.<span class="hljs-property">id</span>], <span class="hljs-attr">count</span>: (acc[item.<span class="hljs-property">id</span>]?.<span class="hljs-property">count</span> ?? <span class="hljs-number">0</span>) + <span class="hljs-number">1</span> }
 }), {});
 
-// CLEAR: Named intermediate step
-const countById = new Map&lt;string, number&gt;();
-for (const item of items) {
-  countById.set(item.id, (countById.get(item.id) ?? 0) + 1);
+<span class="hljs-comment">// CLEAR: Named intermediate step</span>
+<span class="hljs-keyword">const</span> countById = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Map</span>&lt;<span class="hljs-built_in">string</span>, <span class="hljs-built_in">number</span>&gt;();
+<span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> item <span class="hljs-keyword">of</span> items) {
+  countById.<span class="hljs-title function_">set</span>(item.<span class="hljs-property">id</span>, (countById.<span class="hljs-title function_">get</span>(item.<span class="hljs-property">id</span>) ?? <span class="hljs-number">0</span>) + <span class="hljs-number">1</span>);
 }</code></pre>
 <h3 id="4-maintain-balance">4. Maintain Balance<a class="anchor" href="#4-maintain-balance" aria-label="锚点">#</a></h3>
 <p>Simplification has a failure mode: over-simplification. Watch for these traps:</p>
@@ -118,101 +118,101 @@ for (const item of items) {
 <p>If the &quot;simplified&quot; version is harder to understand or review, revert. Not every simplification attempt succeeds.</p>
 <h2 id="language-specific-guidance">Language-Specific Guidance<a class="anchor" href="#language-specific-guidance" aria-label="锚点">#</a></h2>
 <h3 id="typescript-javascript">TypeScript / JavaScript<a class="anchor" href="#typescript-javascript" aria-label="锚点">#</a></h3>
-<pre><code class="language-typescript">// SIMPLIFY: Unnecessary async wrapper
-// Before
-async function getUser(id: string): Promise&lt;User&gt; {
-  return await userService.findById(id);
+<pre><code class="language-typescript"><span class="hljs-comment">// SIMPLIFY: Unnecessary async wrapper</span>
+<span class="hljs-comment">// Before</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">getUser</span>(<span class="hljs-params"><span class="hljs-attr">id</span>: <span class="hljs-built_in">string</span></span>): <span class="hljs-title class_">Promise</span>&lt;<span class="hljs-title class_">User</span>&gt; {
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">await</span> userService.<span class="hljs-title function_">findById</span>(id);
 }
-// After
-function getUser(id: string): Promise&lt;User&gt; {
-  return userService.findById(id);
+<span class="hljs-comment">// After</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">getUser</span>(<span class="hljs-params"><span class="hljs-attr">id</span>: <span class="hljs-built_in">string</span></span>): <span class="hljs-title class_">Promise</span>&lt;<span class="hljs-title class_">User</span>&gt; {
+  <span class="hljs-keyword">return</span> userService.<span class="hljs-title function_">findById</span>(id);
 }
 
-// SIMPLIFY: Verbose conditional assignment
-// Before
-let displayName: string;
-if (user.nickname) {
-  displayName = user.nickname;
-} else {
-  displayName = user.fullName;
+<span class="hljs-comment">// SIMPLIFY: Verbose conditional assignment</span>
+<span class="hljs-comment">// Before</span>
+<span class="hljs-keyword">let</span> <span class="hljs-attr">displayName</span>: <span class="hljs-built_in">string</span>;
+<span class="hljs-keyword">if</span> (user.<span class="hljs-property">nickname</span>) {
+  displayName = user.<span class="hljs-property">nickname</span>;
+} <span class="hljs-keyword">else</span> {
+  displayName = user.<span class="hljs-property">fullName</span>;
 }
-// After
-const displayName = user.nickname || user.fullName;
+<span class="hljs-comment">// After</span>
+<span class="hljs-keyword">const</span> displayName = user.<span class="hljs-property">nickname</span> || user.<span class="hljs-property">fullName</span>;
 
-// SIMPLIFY: Manual array building
-// Before
-const activeUsers: User[] = [];
-for (const user of users) {
-  if (user.isActive) {
-    activeUsers.push(user);
+<span class="hljs-comment">// SIMPLIFY: Manual array building</span>
+<span class="hljs-comment">// Before</span>
+<span class="hljs-keyword">const</span> <span class="hljs-attr">activeUsers</span>: <span class="hljs-title class_">User</span>[] = [];
+<span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> user <span class="hljs-keyword">of</span> users) {
+  <span class="hljs-keyword">if</span> (user.<span class="hljs-property">isActive</span>) {
+    activeUsers.<span class="hljs-title function_">push</span>(user);
   }
 }
-// After
-const activeUsers = users.filter((user) =&gt; user.isActive);
+<span class="hljs-comment">// After</span>
+<span class="hljs-keyword">const</span> activeUsers = users.<span class="hljs-title function_">filter</span>(<span class="hljs-function">(<span class="hljs-params">user</span>) =&gt;</span> user.<span class="hljs-property">isActive</span>);
 
-// SIMPLIFY: Redundant boolean return
-// Before
-function isValid(input: string): boolean {
-  if (input.length &gt; 0 &amp;&amp; input.length &lt; 100) {
-    return true;
+<span class="hljs-comment">// SIMPLIFY: Redundant boolean return</span>
+<span class="hljs-comment">// Before</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">isValid</span>(<span class="hljs-params"><span class="hljs-attr">input</span>: <span class="hljs-built_in">string</span></span>): <span class="hljs-built_in">boolean</span> {
+  <span class="hljs-keyword">if</span> (input.<span class="hljs-property">length</span> &gt; <span class="hljs-number">0</span> &amp;&amp; input.<span class="hljs-property">length</span> &lt; <span class="hljs-number">100</span>) {
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
   }
-  return false;
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
 }
-// After
-function isValid(input: string): boolean {
-  return input.length &gt; 0 &amp;&amp; input.length &lt; 100;
+<span class="hljs-comment">// After</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">isValid</span>(<span class="hljs-params"><span class="hljs-attr">input</span>: <span class="hljs-built_in">string</span></span>): <span class="hljs-built_in">boolean</span> {
+  <span class="hljs-keyword">return</span> input.<span class="hljs-property">length</span> &gt; <span class="hljs-number">0</span> &amp;&amp; input.<span class="hljs-property">length</span> &lt; <span class="hljs-number">100</span>;
 }</code></pre>
 <h3 id="python">Python<a class="anchor" href="#python" aria-label="锚点">#</a></h3>
-<pre><code class="language-python"># SIMPLIFY: Verbose dictionary building
-# Before
+<pre><code class="language-python"><span class="hljs-comment"># SIMPLIFY: Verbose dictionary building</span>
+<span class="hljs-comment"># Before</span>
 result = {}
-for item in items:
-    result[item.id] = item.name
-# After
-result = {item.id: item.name for item in items}
+<span class="hljs-keyword">for</span> item <span class="hljs-keyword">in</span> items:
+    result[item.<span class="hljs-built_in">id</span>] = item.name
+<span class="hljs-comment"># After</span>
+result = {item.<span class="hljs-built_in">id</span>: item.name <span class="hljs-keyword">for</span> item <span class="hljs-keyword">in</span> items}
 
-# SIMPLIFY: Nested conditionals with early return
-# Before
-def process(data):
-    if data is not None:
-        if data.is_valid():
-            if data.has_permission():
-                return do_work(data)
-            else:
-                raise PermissionError(&quot;No permission&quot;)
-        else:
-            raise ValueError(&quot;Invalid data&quot;)
-    else:
-        raise TypeError(&quot;Data is None&quot;)
-# After
-def process(data):
-    if data is None:
-        raise TypeError(&quot;Data is None&quot;)
-    if not data.is_valid():
-        raise ValueError(&quot;Invalid data&quot;)
-    if not data.has_permission():
-        raise PermissionError(&quot;No permission&quot;)
-    return do_work(data)</code></pre>
+<span class="hljs-comment"># SIMPLIFY: Nested conditionals with early return</span>
+<span class="hljs-comment"># Before</span>
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">process</span>(<span class="hljs-params">data</span>):
+    <span class="hljs-keyword">if</span> data <span class="hljs-keyword">is</span> <span class="hljs-keyword">not</span> <span class="hljs-literal">None</span>:
+        <span class="hljs-keyword">if</span> data.is_valid():
+            <span class="hljs-keyword">if</span> data.has_permission():
+                <span class="hljs-keyword">return</span> do_work(data)
+            <span class="hljs-keyword">else</span>:
+                <span class="hljs-keyword">raise</span> PermissionError(<span class="hljs-string">&quot;No permission&quot;</span>)
+        <span class="hljs-keyword">else</span>:
+            <span class="hljs-keyword">raise</span> ValueError(<span class="hljs-string">&quot;Invalid data&quot;</span>)
+    <span class="hljs-keyword">else</span>:
+        <span class="hljs-keyword">raise</span> TypeError(<span class="hljs-string">&quot;Data is None&quot;</span>)
+<span class="hljs-comment"># After</span>
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">process</span>(<span class="hljs-params">data</span>):
+    <span class="hljs-keyword">if</span> data <span class="hljs-keyword">is</span> <span class="hljs-literal">None</span>:
+        <span class="hljs-keyword">raise</span> TypeError(<span class="hljs-string">&quot;Data is None&quot;</span>)
+    <span class="hljs-keyword">if</span> <span class="hljs-keyword">not</span> data.is_valid():
+        <span class="hljs-keyword">raise</span> ValueError(<span class="hljs-string">&quot;Invalid data&quot;</span>)
+    <span class="hljs-keyword">if</span> <span class="hljs-keyword">not</span> data.has_permission():
+        <span class="hljs-keyword">raise</span> PermissionError(<span class="hljs-string">&quot;No permission&quot;</span>)
+    <span class="hljs-keyword">return</span> do_work(data)</code></pre>
 <h3 id="react-jsx">React / JSX<a class="anchor" href="#react-jsx" aria-label="锚点">#</a></h3>
-<pre><code class="language-tsx">// SIMPLIFY: Verbose conditional rendering
-// Before
-function UserBadge({ user }: Props) {
-  if (user.isAdmin) {
-    return &lt;Badge variant=&quot;admin&quot;&gt;Admin&lt;/Badge&gt;;
-  } else {
-    return &lt;Badge variant=&quot;default&quot;&gt;User&lt;/Badge&gt;;
+<pre><code class="language-tsx"><span class="hljs-comment">// SIMPLIFY: Verbose conditional rendering</span>
+<span class="hljs-comment">// Before</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">UserBadge</span>(<span class="hljs-params">{ user }: <span class="hljs-title class_">Props</span></span>) {
+  <span class="hljs-keyword">if</span> (user.<span class="hljs-property">isAdmin</span>) {
+    <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">Badge</span> <span class="hljs-attr">variant</span>=<span class="hljs-string">&quot;admin&quot;</span>&gt;</span>Admin<span class="hljs-tag">&lt;/<span class="hljs-name">Badge</span>&gt;</span></span>;
+  } <span class="hljs-keyword">else</span> {
+    <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">Badge</span> <span class="hljs-attr">variant</span>=<span class="hljs-string">&quot;default&quot;</span>&gt;</span>User<span class="hljs-tag">&lt;/<span class="hljs-name">Badge</span>&gt;</span></span>;
   }
 }
-// After
-function UserBadge({ user }: Props) {
-  const variant = user.isAdmin ? 'admin' : 'default';
-  const label = user.isAdmin ? 'Admin' : 'User';
-  return &lt;Badge variant={variant}&gt;{label}&lt;/Badge&gt;;
+<span class="hljs-comment">// After</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">UserBadge</span>(<span class="hljs-params">{ user }: <span class="hljs-title class_">Props</span></span>) {
+  <span class="hljs-keyword">const</span> variant = user.<span class="hljs-property">isAdmin</span> ? <span class="hljs-string">&#x27;admin&#x27;</span> : <span class="hljs-string">&#x27;default&#x27;</span>;
+  <span class="hljs-keyword">const</span> label = user.<span class="hljs-property">isAdmin</span> ? <span class="hljs-string">&#x27;Admin&#x27;</span> : <span class="hljs-string">&#x27;User&#x27;</span>;
+  <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">Badge</span> <span class="hljs-attr">variant</span>=<span class="hljs-string">{variant}</span>&gt;</span>{label}<span class="hljs-tag">&lt;/<span class="hljs-name">Badge</span>&gt;</span></span>;
 }
 
-// SIMPLIFY: Prop drilling through intermediate components
-// Before — consider whether context or composition solves this better.
-// This is a judgment call — flag it, don't auto-refactor.</code></pre>
+<span class="hljs-comment">// SIMPLIFY: Prop drilling through intermediate components</span>
+<span class="hljs-comment">// Before — consider whether context or composition solves this better.</span>
+<span class="hljs-comment">// This is a judgment call — flag it, don&#x27;t auto-refactor.</span></code></pre>
 <h2 id="common-rationalizations">Common Rationalizations<a class="anchor" href="#common-rationalizations" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>Rationalization</th><th>Reality</th></tr></thead><tbody><tr><td>&quot;It's working, no need to touch it&quot;</td><td>Working code that's hard to read will be hard to fix when it breaks. Simplifying now saves time on every future change.</td></tr><tr><td>&quot;Fewer lines is always simpler&quot;</td><td>A 1-line nested ternary is not simpler than a 5-line if/else. Simplicity is about comprehension speed, not line count.</td></tr><tr><td>&quot;I'll just quickly simplify this unrelated code too&quot;</td><td>Unscoped simplification creates noisy diffs and risks regressions in code you didn't intend to change. Stay focused.</td></tr><tr><td>&quot;The types make it self-documenting&quot;</td><td>Types document structure, not intent. A well-named function explains <em>why</em> better than a type signature explains <em>what</em>.</td></tr><tr><td>&quot;This abstraction might be useful later&quot;</td><td>Don't preserve speculative abstractions. If it's not used now, it's complexity without value. Remove it and re-add when needed.</td></tr><tr><td>&quot;The original author must have had a reason&quot;</td><td>Maybe. Check git blame — apply Chesterton's Fence. But accumulated complexity often has no reason; it's just the residue of iteration under pressure.</td></tr><tr><td>&quot;I'll refactor while adding this feature&quot;</td><td>Separate refactoring from feature work. Mixed changes are harder to review, revert, and understand in history.</td></tr></tbody></table>
 <h2 id="red-flags">Red Flags<a class="anchor" href="#red-flags" aria-label="锚点">#</a></h2>

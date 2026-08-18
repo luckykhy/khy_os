@@ -30,6 +30,9 @@ describe('aiGateway stability regressions', () => {
   let originalBeforeRequest;
   let originalAfterResponse;
   let originalOnStream;
+  let originalProcessFailoverCandidates;
+  let originalNetworkResume;
+  let originalManualRelayNoAutoFallback;
 
   beforeEach(() => {
     jest.resetModules();
@@ -43,6 +46,9 @@ describe('aiGateway stability regressions', () => {
     originalBeforeRequest = pluginChain.executeBeforeRequest;
     originalAfterResponse = pluginChain.executeAfterResponse;
     originalOnStream = pluginChain.executeOnStream;
+    originalProcessFailoverCandidates = process.env.GATEWAY_PROCESS_FAILOVER_CANDIDATES;
+    originalNetworkResume = process.env.KHY_GATEWAY_NETWORK_RESUME;
+    originalManualRelayNoAutoFallback = process.env.KHY_MANUAL_RELAY_NO_AUTO_FALLBACK;
 
     pluginChain.executeBeforeRequest = async (ctx) => ctx;
     pluginChain.executeAfterResponse = async (ctx) => ctx;
@@ -61,6 +67,9 @@ describe('aiGateway stability regressions', () => {
 
     delete process.env.GATEWAY_PREFERRED_ADAPTER;
     delete process.env.GATEWAY_PREFERRED_STRICT;
+    delete process.env.GATEWAY_PROCESS_FAILOVER_CANDIDATES;
+    delete process.env.KHY_MANUAL_RELAY_NO_AUTO_FALLBACK;
+    process.env.KHY_GATEWAY_NETWORK_RESUME = 'false';
   });
 
   afterEach(() => {
@@ -82,6 +91,21 @@ describe('aiGateway stability regressions', () => {
 
     delete process.env.GATEWAY_PREFERRED_ADAPTER;
     delete process.env.GATEWAY_PREFERRED_STRICT;
+    if (originalProcessFailoverCandidates === undefined) {
+      delete process.env.GATEWAY_PROCESS_FAILOVER_CANDIDATES;
+    } else {
+      process.env.GATEWAY_PROCESS_FAILOVER_CANDIDATES = originalProcessFailoverCandidates;
+    }
+    if (originalNetworkResume === undefined) {
+      delete process.env.KHY_GATEWAY_NETWORK_RESUME;
+    } else {
+      process.env.KHY_GATEWAY_NETWORK_RESUME = originalNetworkResume;
+    }
+    if (originalManualRelayNoAutoFallback === undefined) {
+      delete process.env.KHY_MANUAL_RELAY_NO_AUTO_FALLBACK;
+    } else {
+      process.env.KHY_MANUAL_RELAY_NO_AUTO_FALLBACK = originalManualRelayNoAutoFallback;
+    }
     delete process.env.KHY_GATEWAY_DEBUG_PROMPT_FILE;
 
     jest.restoreAllMocks();
@@ -434,6 +458,17 @@ describe('aiGateway stability regressions', () => {
       'process',
       'cli backend reconnecting/channel closed'
     );
+    process.env.GATEWAY_PROCESS_FAILOVER_CANDIDATES = 'relay_api,api,relay,ollama';
+    // This regression exercises failover promotion order, so retain the historical
+    // automatic relay behavior instead of the default manual-relay exclusion.
+    process.env.KHY_MANUAL_RELAY_NO_AUTO_FALLBACK = 'false';
+    const getRecentFastFail = gateway._getRecentFastFail.bind(gateway);
+    gateway._getRecentFastFail = (key) =>
+      String(key || '').toLowerCase() === 'cli' ? getRecentFastFail(key) : null;
+    // Keep this adapter-order regression independent from persisted API-key pools.
+    jest.spyOn(require('../src/services/apiKeyPool'), 'init').mockImplementation(() => {
+      throw new Error('API key pool disabled for adapter-order regression');
+    });
 
     const chunks = [];
     const result = await gateway.generate('hello', {

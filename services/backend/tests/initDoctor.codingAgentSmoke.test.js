@@ -1,5 +1,8 @@
 'use strict';
 
+const os = require('os');
+const path = require('path');
+
 describe('doctor coding agent smoke test', () => {
   let originalHome;
 
@@ -58,6 +61,17 @@ describe('doctor coding agent smoke test', () => {
       const actual = jest.requireActual('fs');
       return {
         ...actual,
+        existsSync: jest.fn((targetPath) => {
+          const basename = path.basename(String(targetPath || ''));
+          if (basename === '.env' || basename === 'node_modules') return true;
+          return actual.existsSync(targetPath);
+        }),
+        readFileSync: jest.fn((targetPath, ...rest) => {
+          if (path.basename(String(targetPath || '')) === '.env') {
+            return 'DB_TYPE=auto\nOPENAI_API_KEY=fixture-key\n';
+          }
+          return actual.readFileSync(targetPath, ...rest);
+        }),
         writeFileSync: jest.fn((targetPath, data, ...rest) => {
           if (tempWriteBlocked && String(targetPath || '').includes('coding-agent-smoke.txt')) {
             const err = new Error('permission denied');
@@ -267,7 +281,8 @@ describe('doctor coding agent smoke test', () => {
   });
 
   test('warns when codex uses a temporary HOME directory', () => {
-    process.env.HOME = '/tmp/khy-doctor-codex-home';
+    const tempHome = path.join(os.tmpdir(), 'khy-doctor-codex-home');
+    process.env.HOME = tempHome;
     mockDoctorDependencies();
     const { runDoctorChecks } = require('../src/cli/handlers/init');
     const checks = runDoctorChecks();
@@ -276,7 +291,7 @@ describe('doctor coding agent smoke test', () => {
     expect(homeCheck).toBeTruthy();
     expect(homeCheck.ok).toBe(false);
     expect(homeCheck.level).toBe('warn');
-    expect(homeCheck.detail).toContain('HOME=/tmp/khy-doctor-codex-home 位于临时目录');
+    expect(homeCheck.detail).toContain(`HOME=${tempHome} 位于临时目录`);
     expect(homeCheck.detail).toContain('建议改回真实用户主目录后重试');
   });
 

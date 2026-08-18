@@ -48,8 +48,8 @@
 <ul><li>Linux/macOS 路径:<code>~/.khy/.env</code></li><li>Windows 路径:<code>%USERPROFILE%\.khy\.env</code></li></ul>
 <h3 id="更省事-一键导出到桌面-方便拷到新电脑">更省事:一键导出到桌面(方便拷到新电脑)<a class="anchor" href="#更省事-一键导出到桌面-方便拷到新电脑" aria-label="锚点">#</a></h3>
 <p>如果你想要一个<strong>放在桌面、随手就能拷走</strong>的迁移文件:</p>
-<pre><code class="language-bash">khy claude export-env                 # 默认写到 ~/Desktop/khy-cc-env.env
-khy claude export-env &quot;D:\\khy-cc.env&quot;  # 也可指定任意路径</code></pre>
+<pre><code class="language-bash">khy claude export-env                 <span class="hljs-comment"># 默认写到 ~/Desktop/khy-cc-env.env</span>
+khy claude export-env <span class="hljs-string">&quot;D:\\khy-cc.env&quot;</span>  <span class="hljs-comment"># 也可指定任意路径</span></code></pre>
 <p>它优先读当前 shell 的 CC env;若 shell 没有,就回退导出你已经 <code>adopt-env</code> 存过的<br><code>~/.khy/.env</code>。<strong>屏幕只显打码 token,文件里是明文</strong>(权限 600)。</p>
 <pre><code>✓ 已导出凭据迁移文件: /home/you/Desktop/khy-cc-env.env
   凭据类型: ANTHROPIC_AUTH_TOKEN
@@ -64,23 +64,23 @@ khy claude export-env &quot;D:\\khy-cc.env&quot;  # 也可指定任意路径</co
 <p>然后<strong>任选一种</strong>方式还原(从最省事到最手动):</p>
 <h3 id="方式-1-推荐-直接把凭据文件拷过去">方式 1（推荐）：直接把凭据文件拷过去<a class="anchor" href="#方式-1-推荐-直接把凭据文件拷过去" aria-label="锚点">#</a></h3>
 <p>把 A 电脑的 <code>~/.khy/.env</code> 安全复制到 B 电脑的同一路径即可,khy 每次启动会自动加载。</p>
-<pre><code class="language-bash"># 在 B 电脑上,通过 SSH 从 A 拉取（示例;换成你的主机名/用户）
-mkdir -p ~/.khy
+<pre><code class="language-bash"><span class="hljs-comment"># 在 B 电脑上,通过 SSH 从 A 拉取（示例;换成你的主机名/用户）</span>
+<span class="hljs-built_in">mkdir</span> -p ~/.khy
 scp userA@A-host:~/.khy/.env ~/.khy/.env
-chmod 600 ~/.khy/.env</code></pre>
+<span class="hljs-built_in">chmod</span> 600 ~/.khy/.env</code></pre>
 <p>Windows(PowerShell)对应:</p>
-<pre><code class="language-powershell">New-Item -ItemType Directory -Force &quot;$env:USERPROFILE\.khy&quot; | Out-Null
-# 用 scp / U 盘把 .env 放到:
-#   %USERPROFILE%\.khy\.env</code></pre>
+<pre><code class="language-powershell"><span class="hljs-built_in">New-Item</span> <span class="hljs-literal">-ItemType</span> Directory <span class="hljs-literal">-Force</span> <span class="hljs-string">&quot;<span class="hljs-variable">$env:USERPROFILE</span>\.khy&quot;</span> | <span class="hljs-built_in">Out-Null</span>
+<span class="hljs-comment"># 用 scp / U 盘把 .env 放到:</span>
+<span class="hljs-comment">#   %USERPROFILE%\.khy\.env</span></code></pre>
 <blockquote><p>只需拷这<strong>一个文件</strong>。里面就是第一章那三行 <code>KEY=VALUE</code>,没有别的依赖。</p></blockquote>
 <h3 id="方式-2-在-b-电脑先设好同样的-env-再-adopt">方式 2：在 B 电脑先设好同样的 env,再 adopt<a class="anchor" href="#方式-2-在-b-电脑先设好同样的-env-再-adopt" aria-label="锚点">#</a></h3>
 <p>如果你不想拷文件,而是手动把同一套变量配到 B 的 shell(比如 B 上也装了 Claude Code、<br>env 已经有了),那就直接:</p>
-<pre><code class="language-bash"># 例:临时在当前 shell 设置（换成你真实的中转与 token）
-export ANTHROPIC_BASE_URL=&quot;https://ai.mindflow.com.cn&quot;
-export ANTHROPIC_AUTH_TOKEN=&quot;sk-你的token&quot;
-export ANTHROPIC_MODEL=&quot;claude-opus-4-8&quot;
+<pre><code class="language-bash"><span class="hljs-comment"># 例:临时在当前 shell 设置（换成你真实的中转与 token）</span>
+<span class="hljs-built_in">export</span> ANTHROPIC_BASE_URL=<span class="hljs-string">&quot;https://ai.mindflow.com.cn&quot;</span>
+<span class="hljs-built_in">export</span> ANTHROPIC_AUTH_TOKEN=<span class="hljs-string">&quot;sk-你的token&quot;</span>
+<span class="hljs-built_in">export</span> ANTHROPIC_MODEL=<span class="hljs-string">&quot;claude-opus-4-8&quot;</span>
 
-# 固化到 ~/.khy/.env,之后不用每次 export
+<span class="hljs-comment"># 固化到 ~/.khy/.env,之后不用每次 export</span>
 khy claude adopt-env</code></pre>
 <h3 id="方式-3-只手写文件">方式 3：只手写文件<a class="anchor" href="#方式-3-只手写文件" aria-label="锚点">#</a></h3>
 <p>直接在 B 电脑创建 <code>~/.khy/.env</code>,内容就是:</p>
@@ -90,26 +90,26 @@ ANTHROPIC_MODEL=claude-opus-4-8</code></pre>
 <p>保存后 <code>chmod 600 ~/.khy/.env</code>。</p>
 <h3 id="方式-4-用随包内置的-中转预设-只带-token-不用记端点">方式 4：用随包内置的“中转预设”(只带 token,不用记端点)<a class="anchor" href="#方式-4-用随包内置的-中转预设-只带-token-不用记端点" aria-label="锚点">#</a></h3>
 <p>中转端点(如 <code>https://ai.mindflow.com.cn</code>)<strong>不是机密</strong>,已作为<strong>可选预设</strong>随包内置。<br>所以在 B 电脑你<strong>只需要自带 token</strong>,端点由预设提供,不用记不用抄:</p>
-<pre><code class="language-bash"># 1) 只把 token 放进当前 shell(端点来自预设,绝不随包发布 token)
-export ANTHROPIC_AUTH_TOKEN=&quot;sk-你的token&quot;
+<pre><code class="language-bash"><span class="hljs-comment"># 1) 只把 token 放进当前 shell(端点来自预设,绝不随包发布 token)</span>
+<span class="hljs-built_in">export</span> ANTHROPIC_AUTH_TOKEN=<span class="hljs-string">&quot;sk-你的token&quot;</span>
 
-# 2) 启用预设并固化到 ~/.khy/.env
+<span class="hljs-comment"># 2) 启用预设并固化到 ~/.khy/.env</span>
 khy claude use-relay mindflow
 
-# 不带名字可列出所有可用预设:
+<span class="hljs-comment"># 不带名字可列出所有可用预设:</span>
 khy claude use-relay</code></pre>
 <blockquote><p>为什么端点能进包、token 不能:端点是公开 URL,预设只是<strong>你显式选中才生效</strong>的可选项,<br>不会变成所有人的默认(否则会把别人的官方 key 悄悄发到这个中转)。token 是机密,<br>任何进公开包的 token 都会被爬走——所以它永远只来自你本机的 shell/文件。</p></blockquote>
 <hr>
 <h2 id="四-验证还原成功">四、验证还原成功<a class="anchor" href="#四-验证还原成功" aria-label="锚点">#</a></h2>
 <ol><li><strong>连通性</strong>（打中转端点应返回 HTTP 200/401 之类的真实响应,而非连不上）:</li></ol>
-<pre><code class="language-bash">   # Linux/macOS
-   curl -sS -o /dev/null -w &quot;%{http_code}\n&quot; \
-     -H &quot;Authorization: Bearer $ANTHROPIC_AUTH_TOKEN&quot; \
-     &quot;$ANTHROPIC_BASE_URL/v1/models&quot;</code></pre>
-<pre><code class="language-powershell">   # Windows PowerShell（注意整条不要换行拆断参数）
-   Invoke-WebRequest -Uri &quot;$env:ANTHROPIC_BASE_URL/v1/models&quot; -Headers @{ Authorization = &quot;Bearer $env:ANTHROPIC_AUTH_TOKEN&quot; } | Select-Object -ExpandProperty StatusCode</code></pre>
+<pre><code class="language-bash">   <span class="hljs-comment"># Linux/macOS</span>
+   curl -sS -o /dev/null -w <span class="hljs-string">&quot;%{http_code}\n&quot;</span> \
+     -H <span class="hljs-string">&quot;Authorization: Bearer <span class="hljs-variable">$ANTHROPIC_AUTH_TOKEN</span>&quot;</span> \
+     <span class="hljs-string">&quot;<span class="hljs-variable">$ANTHROPIC_BASE_URL</span>/v1/models&quot;</span></code></pre>
+<pre><code class="language-powershell">   <span class="hljs-comment"># Windows PowerShell（注意整条不要换行拆断参数）</span>
+   <span class="hljs-built_in">Invoke-WebRequest</span> <span class="hljs-literal">-Uri</span> <span class="hljs-string">&quot;<span class="hljs-variable">$env:ANTHROPIC_BASE_URL</span>/v1/models&quot;</span> <span class="hljs-literal">-Headers</span> <span class="hljs-selector-tag">@</span>{ Authorization = <span class="hljs-string">&quot;Bearer <span class="hljs-variable">$env:ANTHROPIC_AUTH_TOKEN</span>&quot;</span> } | <span class="hljs-built_in">Select-Object</span> <span class="hljs-literal">-ExpandProperty</span> StatusCode</code></pre>
 <ol><li><strong>让 khy 打一次 CC 模型</strong>（正常返回内容即还原成功）:</li></ol>
-<pre><code class="language-bash">   khy &quot;用一句话自我介绍&quot;</code></pre>
+<pre><code class="language-bash">   khy <span class="hljs-string">&quot;用一句话自我介绍&quot;</span></code></pre>
 <hr>
 <h2 id="五-工作原理-为什么升级也不丢">五、工作原理（为什么升级也不丢）<a class="anchor" href="#五-工作原理-为什么升级也不丢" aria-label="锚点">#</a></h2>
 <ul><li>khy 启动时会额外加载 <code>~/.khy/.env</code>（<code>dotenv</code>,<code>override:false</code>）。<ul><li><strong>真实 shell 环境变量优先级更高</strong>:如果 B 电脑的 shell 里已经 <code>export</code> 了这几项,那以 shell 为准;</li></ul></li></ul>

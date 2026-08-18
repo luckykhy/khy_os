@@ -167,8 +167,47 @@ def _bin_dir_for(extracted_root: Path) -> Path:
     return extracted_root if os.name == "nt" else extracted_root / "bin"
 
 
+def _npm_shim_names() -> tuple[str, ...]:
+    """Launcher shims a portable build ships next to the node executable."""
+    return ("npm.cmd", "npm") if os.name == "nt" else ("npm",)
+
+
+def _npm_cli_js(bin_dir: Path) -> Path:
+    """Path of the bundled npm entry script inside an extracted build.
+
+    Windows zips keep ``node_modules/npm`` at the archive root (next to
+    ``node.exe``); unix tarballs keep it under ``lib/`` one level above ``bin/``.
+    """
+    root = bin_dir if os.name == "nt" else bin_dir.parent
+    lib = root if os.name == "nt" else root / "lib"
+    return lib / "node_modules" / "npm" / "bin" / "npm-cli.js"
+
+
+def _probe_bundled_npm(node_exe: Path) -> bool:
+    """Return True if the build next to ``node_exe`` carries a usable npm.
+
+    An interrupted download / partial unzip can leave ``node.exe`` on disk while
+    ``node_modules/npm`` (and the ``npm`` shims) never landed. Such a tree passes
+    a node-only probe, gets accepted as "already provisioned", and then surfaces
+    much later as ``khy doctor`` reporting *npm not found* — with no path back to
+    a re-provision, because discovery keeps saying the build is fine. Validating
+    npm here makes the incomplete extract fail discovery instead, so
+    ``ensure_node`` falls through to ``provision_node`` and re-extracts over it.
+
+    Structural check only (no subprocess): both the launcher shim and the npm
+    entry script must exist. Fail-soft — any error means "not usable".
+    """
+    try:
+        bin_dir = node_exe.parent
+        if not any((bin_dir / name).exists() for name in _npm_shim_names()):
+            return False
+        return _npm_cli_js(bin_dir).is_file()
+    except Exception:
+        return False
+
+
 def _probe_node(node_exe: Path) -> bool:
-    """Return True if ``node_exe`` runs and reports major >= _MIN_MAJOR."""
+    """Return True if ``node_exe`` runs, reports major >= _MIN_MAJOR, has npm."""
     try:
         result = subprocess.run(
             [str(node_exe), "--version"],
@@ -178,7 +217,11 @@ def _probe_node(node_exe: Path) -> bool:
         if result.returncode != 0:
             return False
         major = int(result.stdout.strip().lstrip("v").split(".")[0])
-        return major >= _MIN_MAJOR
+        if major < _MIN_MAJOR:
+            return False
+        # A node without its bundled npm is a half-extracted build, not a
+        # runtime: reject it so it gets re-provisioned rather than cached.
+        return _probe_bundled_npm(node_exe)
     except Exception:
         return False
 
@@ -187,9 +230,10 @@ def find_provisioned_node() -> Optional[str]:
     """Return the bin dir of a usable already-provisioned Node, or None.
 
     Idempotent fast path: scans ``node_home()`` for any extracted build whose
-    node executable runs and satisfies the minimum version. Never touches the
-    network. Returns the **directory** containing the executable (so callers can
-    prepend it to PATH), as a string.
+    node executable runs, satisfies the minimum version **and** carries its
+    bundled npm (a half-extracted build is rejected here so ``ensure_node``
+    re-provisions it). Never touches the network. Returns the **directory**
+    containing the executable (so callers can prepend it to PATH), as a string.
     """
     try:
         root = node_home()

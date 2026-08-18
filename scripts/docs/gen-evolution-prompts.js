@@ -325,7 +325,25 @@ function build() {
     );
   }
 
-  const sliced = pool.slice(0, TARGET_COUNT);
+  // 各篇按轮次公平取样，避免路径较多的前篇在截断点前吃满全部名额，
+  // 导致后续进化配方永远无法进入手册。最后仍按篇章顺序输出，便于阅读。
+  const sectionOrder = [...new Set(pool.map((p) => p.section))];
+  const sectionPools = sectionOrder.map((section) => pool.filter((p) => p.section === section));
+  const selectedBySection = sectionPools.map(() => []);
+  let selectedCount = 0;
+  for (let row = 0; selectedCount < TARGET_COUNT; row += 1) {
+    let added = false;
+    for (let i = 0; i < sectionPools.length; i += 1) {
+      const candidate = sectionPools[i][row];
+      if (!candidate) continue;
+      selectedBySection[i].push(candidate);
+      selectedCount += 1;
+      added = true;
+      if (selectedCount === TARGET_COUNT) break;
+    }
+    if (!added) break;
+  }
+  const sliced = selectedBySection.flat();
   const prompts = sliced.map((p, i) => ({ n: i + 1, ...p }));
   const sections = [];
   for (const p of prompts) {

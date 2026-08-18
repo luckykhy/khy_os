@@ -50,14 +50,14 @@
 <p>修复后 <code>maxTokensPolicy</code> 决议结果统一收敛到 <code>maxTokens=65536</code>（source=<code>model_output_limit</code>），不再超过任何服务端上限。</p>
 <h3 id="3-2-代码层-元数据自动提取">3.2 代码层（元数据自动提取）<a class="anchor" href="#3-2-代码层-元数据自动提取" aria-label="锚点">#</a></h3>
 <p><strong><code>services/backend/src/services/gateway/upstreamModelProbe.js</code></strong>：远端 <code>/models</code> 探测的输出上限字段列表新增 <code>max_output_length</code>（sensenova 等国内厂商的字段名）：</p>
-<pre><code class="language-javascript">const maxOut = m.max_output_tokens || m.max_completion_tokens
-  || m.max_output_length || m.output_token_limit || m.max_output || m.max_tokens || 0;</code></pre>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> maxOut = m.<span class="hljs-property">max_output_tokens</span> || m.<span class="hljs-property">max_completion_tokens</span>
+  || m.<span class="hljs-property">max_output_length</span> || m.<span class="hljs-property">output_token_limit</span> || m.<span class="hljs-property">max_output</span> || m.<span class="hljs-property">max_tokens</span> || <span class="hljs-number">0</span>;</code></pre>
 <p>这样即使配置层没写 defaults，只要 provider 的 <code>/models</code> 返回该字段，系统也能自动获得真实输出上限。</p>
 <h3 id="3-3-无感接续-续写锚点">3.3 无感接续（续写锚点）<a class="anchor" href="#3-3-无感接续-续写锚点" aria-label="锚点">#</a></h3>
 <p><strong><code>services/backend/src/services/query/maxTokensRecovery.js</code></strong>：<code>buildContinuationPrompt(partialText)</code> 新增锚点能力：</p>
 <ul><li><strong>有已输出文本</strong>（≥ <code>MIN_CONTINUATION_CHARS</code> 40 字符）→ 回显其尾部 <code>CONTINUATION_ANCHOR_TAIL_CHARS</code>（320）字符作断点锚点，指令明确&quot;从断点无缝继续、不要重复这段内容、不要重新打招呼/重写开头、不要输出前言&quot;。</li><li><strong>无文本 / 文本过短</strong> → 逐字返回原英文指令，行为完全不变（向后兼容）。</li></ul>
 <p><strong><code>services/backend/src/services/toolUseLoopCore.js</code></strong>：截断恢复（s11）调用处把累积的已输出文本传入：</p>
-<pre><code class="language-javascript">currentMessage = _maxTokensRecovery.buildContinuationPrompt(_truncationAccumulator);</code></pre>
+<pre><code class="language-javascript">currentMessage = _maxTokensRecovery.<span class="hljs-title function_">buildContinuationPrompt</span>(_truncationAccumulator);</code></pre>
 <p>续写从&quot;从零开始的弱指令&quot;升级为&quot;带断点锚点的精确接续&quot;，模型不会重复开头或跑偏，接缝在用户感知层面几乎无感。</p>
 <h2 id="四-测试与验证">四、测试与验证<a class="anchor" href="#四-测试与验证" aria-label="锚点">#</a></h2>
 <ul><li><code>tests/maxTokensRecovery.test.js</code>（jest，29 用例）：新增 <code>buildContinuationPrompt</code> 锚点行为 4 用例——无参字节兼容、短文本回退、锚点内容、超长截断到锚窗。</li><li><code>test/upstreamModelProbe.test.js</code>（jest，13 用例）：新增 <code>max_output_length</code> 识别用例。</li><li>修复后 preflight 决议验证：agnes/sensenova/stepfun 全部 <code>maxTokens=65536</code>，不超服务端上限。</li><li>实测：<code>max_tokens=65536</code> 对 agnes 返回 200 <code>finish_reason=stop</code>，无截断。</li><li><code>node scripts/check-agent-rules.js --changed</code>：0 error（39 warning 为既有 khyquant 其他文件）。</li></ul>
@@ -69,14 +69,14 @@
 <p>为校准本方案的取舍，对 opencode（开源 AI 编码 CLI，TypeScript）的实际源码做了对照分析。结论：<strong>opencode 几乎不防截断，而是让截断&quot;无关紧要&quot;</strong>——通过三个设计与 khy 的&quot;续写补救&quot;路线形成互补。</p>
 <h3 id="7-1-opencode-的三个关键设计">7.1 opencode 的三个关键设计<a class="anchor" href="#7-1-opencode-的三个关键设计" aria-label="锚点">#</a></h3>
 <p><strong>① max_tokens 每次拉满到合法上限</strong>（<code>packages/opencode/src/provider/transform.ts</code>）：</p>
-<pre><code class="language-typescript">const OUTPUT_TOKEN_MAX = 32_000
-export function maxOutputTokens(model, outputTokenMax = OUTPUT_TOKEN_MAX) {
-  return Math.min(model.limit.output, outputTokenMax) || outputTokenMax
+<pre><code class="language-typescript"><span class="hljs-keyword">const</span> <span class="hljs-variable constant_">OUTPUT_TOKEN_MAX</span> = <span class="hljs-number">32_000</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">maxOutputTokens</span>(<span class="hljs-params">model, outputTokenMax = OUTPUT_TOKEN_MAX</span>) {
+  <span class="hljs-keyword">return</span> <span class="hljs-title class_">Math</span>.<span class="hljs-title function_">min</span>(model.<span class="hljs-property">limit</span>.<span class="hljs-property">output</span>, outputTokenMax) || outputTokenMax
 }</code></pre>
 <p>每次请求都把 <code>max_tokens</code> 设为 <code>min(模型声明输出上限, 32K)</code>——永远发一个<strong>恰好合法且尽量大</strong>的值，从根上杜绝&quot;请求超服务端上限被拒&quot;这类截断。这与 khy 修复前&quot;max_tokens 撞服务端上限&quot;的故障模式正好相反。</p>
 <p><strong>② 截断后静默接受，不续写</strong>（<code>packages/opencode/src/session/prompt.ts</code>）：</p>
-<pre><code class="language-typescript">if (lastAssistant?.finish &amp;&amp; ![&quot;tool-calls&quot;].includes(lastAssistant.finish) &amp;&amp; !hasToolCalls) {
-  break  // finish=&quot;length&quot; 时直接退出循环，截断文本被当作最终答案
+<pre><code class="language-typescript"><span class="hljs-keyword">if</span> (lastAssistant?.<span class="hljs-property">finish</span> &amp;&amp; ![<span class="hljs-string">&quot;tool-calls&quot;</span>].<span class="hljs-title function_">includes</span>(lastAssistant.<span class="hljs-property">finish</span>) &amp;&amp; !hasToolCalls) {
+  <span class="hljs-keyword">break</span>  <span class="hljs-comment">// finish=&quot;length&quot; 时直接退出循环，截断文本被当作最终答案</span>
 }</code></pre>
 <p>检测到 <code>finish === &quot;length&quot;</code> 时<strong>不续写、不报错</strong>，直接把已产出文本交付。截断信息经 AI SDK 归一化为 <code>step-finish.reason</code> 落盘到 <code>assistantMessage.finish</code>，但主循环只把 <code>content-filter</code> 与 <code>json_schema</code> 失败当错误处理，<code>length</code> 不触发任何补救。</p>
 <p><strong>③ 主循环天然&quot;多轮拆分&quot;</strong>：<code>runLoop</code> 每轮重读 DB，有工具调用就继续下一轮（工具结果回喂再生成）。长任务被拆成多轮短输出，单轮截断概率低；加上 <code>max_tokens</code> 大预算（~32K）兜底，纯文本几乎到不了截断点。上下文溢出走 compaction（输入侧压缩），防的是输入溢出而非输出截断。</p>
@@ -89,10 +89,10 @@ export function maxOutputTokens(model, outputTokenMax = OUTPUT_TOKEN_MAX) {
 <p>对照 opencode&quot;给模型完整合法输出预算&quot;的哲学，定位到 khy 一处让截断更容易复发的边界 bug 并修复：</p>
 <p><strong>问题</strong>：<code>maxTokensRecovery.shouldRecover()</code> 的升级判定要求 <code>effectiveMax &lt;= CAPPED_DEFAULT_MAX_TOKENS (8000)</code> 才允许升级。但修复配置后 preflight 的常见取值是 <code>8192</code>（适配器兜底/preflight 下限）——<code>8192 &gt; 8000</code>，导致<strong>首次在 8192 截断后，续写仍用 8192，再次截断</strong>，恢复循环空转。</p>
 <p><strong>修复</strong>（<code>maxTokensRecovery.js:125</code>）：</p>
-<pre><code class="language-javascript">// 旧：只在 cap ≤ 8000 时升级（冻结了 8192，截断复发）
-const shouldEscalate = effectiveMax &lt;= CAPPED_DEFAULT_MAX_TOKENS &amp;&amp; ceiling &gt; effectiveMax;
-// 新：只要 ceiling 真正更大就升级（给续写更多余量，opencode 哲学）
-const shouldEscalate = ceiling &gt; effectiveMax;</code></pre>
+<pre><code class="language-javascript"><span class="hljs-comment">// 旧：只在 cap ≤ 8000 时升级（冻结了 8192，截断复发）</span>
+<span class="hljs-keyword">const</span> shouldEscalate = effectiveMax &lt;= <span class="hljs-variable constant_">CAPPED_DEFAULT_MAX_TOKENS</span> &amp;&amp; ceiling &gt; effectiveMax;
+<span class="hljs-comment">// 新：只要 ceiling 真正更大就升级（给续写更多余量，opencode 哲学）</span>
+<span class="hljs-keyword">const</span> shouldEscalate = ceiling &gt; effectiveMax;</code></pre>
 <p>调用侧 <code>toolUseLoopCore.js:3747</code> 同步放宽，删除重复的 <code>&lt;= CAPPED_DEFAULT_MAX_TOKENS</code> 闸门。</p>
 <p><strong>验证矩阵</strong>（修复后）：</p>
 <table><thead><tr><th>currentMax</th><th>动态上限</th><th>行为</th></tr></thead><tbody><tr><td>8192</td><td>65536</td><td>升级到 65536 ✅</td></tr><tr><td>16384</td><td>65536</td><td>升级到 65536 ✅</td></tr><tr><td>65536</td><td>65536</td><td>不升级（已到顶，正确）</td></tr><tr><td>8192</td><td>8192</td><td>不升级（无提升空间，正确）</td></tr><tr><td>8192</td><td>无元数据</td><td>升级到静态 64000</td></tr></tbody></table>
@@ -142,17 +142,17 @@ const shouldEscalate = ceiling &gt; effectiveMax;</code></pre>
 <p><strong>现象</strong>：khy OS 启动时，「登录成功」信息（TUI 前的普通输出）与 WelcomeBanner 版本号之间有<strong>大量空白行</strong>——滚动回看时尤其明显。</p>
 <p><strong>根因</strong>：<code>startupAnchor.js</code> 的 <code>anchorBottomPad</code> 为把 TUI 首帧&quot;贴底&quot;（prompt+footer 紧贴屏幕底部），向真实 stdout 写 <code>'\n'.repeat(rows-1)</code> 个换行（默认 24 行 → 23 个空行）。这些换行<strong>原样进入原生 scrollback</strong>，落在登录行与 banner 之间，形成空白块。放大因素：Windows conpty 下 <code>process.stdout.rows</code> 常为 undefined → fallback 24 行，与实际屏幕高度错配。</p>
 <p><strong>修复</strong>（<code>startupAnchor.js</code>）：换行 pad 改为 <strong>CUP 光标定位</strong>（<code>\x1b[&lt;rows&gt;;1H</code>）：</p>
-<pre><code class="language-javascript">// 旧：'\n'.repeat(rows-1) → rows-1 个换行进入 scrollback（空白块）
-// 新：`\x1b[${rows};1H` → 光标定位到底行，不进 scrollback
-return `\x1b[${target};1H`;</code></pre>
+<pre><code class="language-javascript"><span class="hljs-comment">// 旧：&#x27;\n&#x27;.repeat(rows-1) → rows-1 个换行进入 scrollback（空白块）</span>
+<span class="hljs-comment">// 新：`\x1b[${rows};1H` → 光标定位到底行，不进 scrollback</span>
+<span class="hljs-keyword">return</span> <span class="hljs-string">`\x1b[<span class="hljs-subst">${target}</span>;1H`</span>;</code></pre>
 <p><strong>效果</strong>：贴底效果保持（光标到底行后 ink 写内容照常滚动占底），但<strong>不产生 scrollback 空行</strong>——登录行与 banner 之间无空白块。写入 <code>_realOut</code>（真实 stdout，非 <code>_tuiStdout</code> proxy），不经 scrollbackPreserve/sidebarRail 处理，无交互干扰。</p>
 <p><strong>验证</strong>：<code>startupAnchor.test.js</code> 重写为断言 CUP 序列 + 无换行（8 用例）；railLayout/sidebarLayout 相关 159 用例全过；规则检查 0 errors。门控 <code>KHY_TUI_ANCHOR_BOTTOM</code>（默认开）保留，可一键回退。</p>
 <h3 id="8-9-网络抖动不重试修复-tooluseloop-istransientlooperrortype">8.9 网络抖动不重试修复（toolUseLoop <code>_isTransientLoopErrorType</code>）<a class="anchor" href="#8-9-网络抖动不重试修复-tooluseloop-istransientlooperrortype" aria-label="锚点">#</a></h3>
 <p><strong>现象</strong>：khy 一旦出现网络抖动（如 agnes 上游 502/503/504）即失败，<strong>不会重试</strong>，当前任务永久中断、不可恢复。</p>
 <p><strong>根因</strong>：<code>toolUseLoopCore.js</code> 的 <code>_isTransientLoopErrorType</code> 集合只含 <code>timeout/cancelled/network/process/empty/unknown</code>，<strong>不含 <code>server_error</code>（5xx）和 <code>retry_budget_exceeded</code></strong>。网络抖动在网关层表现为 502 → <code>server_error</code>：网关已有冷却（15s）+ 网络抖动重试预算增强（<code>_isNetworkJitterLikeFailure</code> 识别 502/503/504 → 提升 attempts/delay），<strong>但预算最终耗尽后把 <code>server_error</code> 原样返回给工具循环</strong>——工具循环因类型不在瞬态集合而<strong>不触发第二层重试</strong>，任务直接中断。</p>
 <p><strong>修复</strong>（<code>toolUseLoopCore.js</code>）：把 <code>server_error</code> 与 <code>retry_budget_exceeded</code> 加入瞬态集合：</p>
-<pre><code class="language-javascript">|| t === 'server_error'           // 5xx 上游/代理瞬时故障,非冷却时工具循环有界二次重试
-|| t === 'retry_budget_exceeded'  // 网关抖动预算耗尽 ≠ 通道永久失败,延迟后可再试</code></pre>
+<pre><code class="language-javascript">|| t === <span class="hljs-string">&#x27;server_error&#x27;</span>           <span class="hljs-comment">// 5xx 上游/代理瞬时故障,非冷却时工具循环有界二次重试</span>
+|| t === <span class="hljs-string">&#x27;retry_budget_exceeded&#x27;</span>  <span class="hljs-comment">// 网关抖动预算耗尽 ≠ 通道永久失败,延迟后可再试</span></code></pre>
 <p><strong>安全性</strong>：<code>_isCooldownFailure</code>（先于瞬态判断）会挡住 cooldown 缓存错误——只有<strong>真 server_error</strong>（非冷却）才触发工具循环重试，不会无脑撞同一堵墙。瞬态预算 <code>transientRecoveryMax</code> 有界（small≤3 / normal≤4 / large≤6），跨层重试不会失控。</p>
 <p><strong>验证矩阵</strong>：</p>
 <table><thead><tr><th>错误类型</th><th>修复前</th><th>修复后</th></tr></thead><tbody><tr><td>server_error (502/503/504)</td><td>不重试 → 永久中断</td><td>有界重试（非冷却时）✅</td></tr><tr><td>retry_budget_exceeded</td><td>不重试 → 永久中断</td><td>有界重试 ✅</td></tr><tr><td>network / timeout</td><td>重试</td><td>重试（不变）</td></tr><tr><td>auth / permission / refusal</td><td>不重试</td><td>不重试（不变，安全红线）</td></tr></tbody></table>

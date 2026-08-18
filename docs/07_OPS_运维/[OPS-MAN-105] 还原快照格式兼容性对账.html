@@ -36,9 +36,9 @@
 <ul><li>或者 <code>snapshot.json</code> 根本不是 khy 快照（复制错目录 / 第三方 tar）→ 没有任何一层</li></ul>
 <p>先问一句「这是我认识的格式吗」，直接进解密。</p>
 <p><code>format</code> / <code>formatVersion</code> 上游花心思盖章、跨渠道送达、下游能读，却<strong>在还原前无人据此把关</strong><br>= 死字段（断桥）。本层就是那个缺失的<strong>前置</strong>消费者：在完整性对账（第十二层 095）之前，<br>先回答最基础的一问——「这个快照的格式，本机 khy 的还原代码到底看不看得懂？」</p>
-<pre><code class="language-bash">node scripts/restore-check-format.js ./Khy-OS --json    # ① 先判格式：本机看得懂吗？
-khy restore ./Khy-OS                                    # ② 格式兼容才敢解密还原
-node scripts/restore-verify-complete.js ./Khy-OS --json # ③ 再对账数量：真完整吗？（095）</code></pre>
+<pre><code class="language-bash">node scripts/restore-check-format.js ./Khy-OS --json    <span class="hljs-comment"># ① 先判格式：本机看得懂吗？</span>
+khy restore ./Khy-OS                                    <span class="hljs-comment"># ② 格式兼容才敢解密还原</span>
+node scripts/restore-verify-complete.js ./Khy-OS --json <span class="hljs-comment"># ③ 再对账数量：真完整吗？（095）</span></code></pre>
 <h2 id="判定档-格式契约门-最保守优先">判定档：格式契约门（最保守优先）<a class="anchor" href="#判定档-格式契约门-最保守优先" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>档</th><th>条件</th><th>裁决</th><th>ok</th></tr></thead><tbody><tr><td>1</td><td>头非对象 / <code>format</code> 非串 / <code>formatVersion</code> 非有限数</td><td><code>unverifiable</code>：证据不足，绝不谎报 supported</td><td>✗</td></tr><tr><td>2</td><td><code>format !== &quot;khy-source-snapshot&quot;</code></td><td><code>alien</code>：这不是 khy 源码快照，别信别解密</td><td>✗</td></tr><tr><td>3</td><td><code>formatVersion &gt; MAX</code></td><td><code>too-new</code>：快照比本机还原代码更新，<strong>先升级 khy</strong></td><td>✗</td></tr><tr><td>4</td><td><code>formatVersion &lt; MIN</code></td><td><code>too-old</code>：格式过旧，勿用当前解析误读</td><td>✗</td></tr><tr><td>5</td><td><code>MIN ≤ formatVersion ≤ MAX</code> 且档 2 通过</td><td><code>supported</code>：唯一可安心继续还原的档</td><td>✓</td></tr></tbody></table>
 <ul><li>本机能理解的区间由叶子常量 <code>MIN_FORMAT_VERSION</code> / <code>MAX_FORMAT_VERSION</code> 定义</li></ul>

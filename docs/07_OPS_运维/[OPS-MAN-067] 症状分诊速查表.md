@@ -77,7 +77,6 @@ npm run docs:verify
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run check:maintainer:bootstrap
 npm run check:manifest-sync
 bash scripts/release/build-and-audit-pip-purity.sh
 ```
@@ -108,7 +107,7 @@ bash scripts/release/build-and-audit-pip-purity.sh
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:maintainer:cli-routing
+npm run test:one -- services/backend/tests/cli/router.test.js services/backend/tests/cli/repl.tasks.interaction.test.js
 node -e "require('./services/backend/src/cli/router')"
 ```
 
@@ -168,7 +167,7 @@ npx jest services/backend/tests/gatewayDebugPrompt.test.js --runInBand
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:maintainer:gateway
+npm run test:one -- services/backend/tests/aiGateway.stability.test.js services/backend/tests/gateway/transportResilience.test.js services/backend/tests/gatewayAdapters.stability.test.js
 node -e "require('./services/backend/src/services/gateway/aiGateway')"
 khy doctor
 ```
@@ -200,7 +199,7 @@ khy doctor
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:maintainer:runtime
+npm run test:one -- services/backend/tests/daemonManager.runtimePort.test.js services/backend/tests/gatewayManage.portDrift.integration.test.js services/backend/tests/services/proxyBaseUrl.test.js services/backend/tests/services/serviceDefaults.test.js
 khy doctor
 ```
 
@@ -230,7 +229,7 @@ khy doctor
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:maintainer:ai-management
+npm run test:one -- services/backend/tests/routes/aiGatewayAdmin.modelSlots.test.js services/backend/tests/gatewayManage.apiDisplay.test.js
 npm run build --prefix apps/ai-frontend
 ```
 
@@ -260,7 +259,7 @@ npm run build --prefix apps/ai-frontend
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:maintainer:projects
+npm run test:one -- services/backend/tests/projectStore.test.js apps/ai-frontend/src/composables/useProjects.wiring.test.js
 npm run build --prefix apps/ai-frontend
 ```
 
@@ -287,7 +286,7 @@ npm run build --prefix apps/ai-frontend
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:maintainer:publish
+npm run test:one -- services/backend/tests/publish.sourceReleaseMode.test.js services/backend/tests/publish.dbPreflight.test.js
 ```
 
 ---
@@ -302,9 +301,9 @@ npm run test:maintainer:publish
 **先读这些文件：**
 - `AGENTS.md`
 - `CONTRIBUTING.md`
-- `scripts/check-agent-rules.js`
-- `scripts/check-change-safety.js`
-- `scripts/install-git-hooks.js`
+- `scripts/ci/check-agent-rules.js`
+- `scripts/ci/check-change-safety.js`
+- `scripts/install/install-git-hooks.js`
 - `scripts/ci/check-version-sync.js`
 - `scripts/ci/check-node-syntax.js`
 - `scripts/ci/check-python-syntax.py`
@@ -316,7 +315,7 @@ npm run test:maintainer:publish
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run check:maintainer:safety
+npm run check:changed
 npm run check:quality-gates
 ```
 
@@ -331,23 +330,18 @@ npm run check:quality-gates
 - release artifacts or the post-release check regressed
 
 **先读这些文件：**
-- `maintenance/stable-release.json`
-- `maintenance/lib/ops.js`
-- `maintenance/lib/ops-lib.js`
 - `services/backend/src/cli/handlers/publish.js`
 - `scripts/release/build-and-audit-pip-purity.sh`
 - `scripts/ci/check-version-sync.js`
-- `maintenance/tests/ops-lib.test.js`
 
 **参考文档：**
 - docs/_传承/KHY-OS-传承书.md
 - docs/06_DEPLOY_部署/[DEPLOY-MAN-011] pip-docker-打包部署.md
-- maintenance/README.md
 
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-node --test maintenance/tests/ops-lib.test.js maintenance/tests/ops.integration.test.js
+npm run test:one -- services/backend/tests/publish.sourceReleaseMode.test.js services/backend/tests/publish.dbPreflight.test.js
 npm run check:version-sync
 ```
 
@@ -379,7 +373,7 @@ npm run check:version-sync
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:maintainer:env-optimize
+npm run test:one -- services/backend/tests/services/localBrainEnvOptimize.test.js services/backend/tests/services/envProbes.test.js services/backend/tests/services/envRepair.test.js services/backend/tests/services/envPlatform.test.js
 ```
 
 ---
@@ -403,7 +397,7 @@ npm run test:maintainer:env-optimize
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:evolution-prompts
+npm run test:one -- scripts/tests/gen-evolution-prompts.test.js
 ```
 
 ---
@@ -428,7 +422,7 @@ npm run test:evolution-prompts
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:triage
+npm run test:one -- scripts/tests/maintainerTriage.test.js
 ```
 
 ---
@@ -452,7 +446,7 @@ npm run test:triage
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:restore-readiness
+npm run test:one -- scripts/tests/restoreReadiness.test.js
 ```
 
 ---
@@ -476,7 +470,7 @@ npm run test:restore-readiness
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:install-integrity
+npm run test:one -- scripts/tests/installIntegrity.test.js
 ```
 
 ---
@@ -501,7 +495,7 @@ npm run test:install-integrity
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:hydration-health
+npm run test:one -- scripts/tests/hydrationHealth.test.js
 ```
 
 ---
@@ -526,7 +520,7 @@ npm run test:hydration-health
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:agent-restore-plan
+npm run test:one -- scripts/tests/agentRestorePlan.test.js
 ```
 
 ---
@@ -552,7 +546,7 @@ npm run test:agent-restore-plan
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:restore-conflicts
+npm run test:one -- scripts/tests/restoreConflictDetector.test.js
 ```
 
 ---
@@ -578,7 +572,7 @@ npm run test:restore-conflicts
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:restore-conflict-resolve
+npm run test:one -- scripts/tests/restoreConflictResolver.test.js
 ```
 
 ---
@@ -603,7 +597,7 @@ npm run test:restore-conflict-resolve
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:bundle-launch-contract
+npm run test:one -- scripts/tests/bundleLaunchContract.test.js
 ```
 
 ---
@@ -636,7 +630,7 @@ npm run test:bundle-launch-contract
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:maintainer:proxy-egress
+npm run test:one -- services/backend/tests/proxyCoreConfigGen.test.js services/backend/tests/proxyCoreManager.test.js services/backend/tests/proxyConfigService.egress.test.js services/backend/tests/aiManagementProxyEgress.wiring.test.js apps/ai-frontend/src/composables/useProxies.egress.wiring.test.js services/backend/tests/bootstrap/ensureProxyCoreEnv.test.js services/backend/tests/services/proxyCoreInstaller.test.js
 npm run build --prefix apps/ai-frontend
 ```
 
@@ -793,7 +787,7 @@ npm run build --prefix apps/ai-frontend
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:startup-failure-explain
+npm run test:one -- services/backend/tests/bootstrap/startupFailureExplain.test.js
 ```
 
 ---
@@ -819,7 +813,7 @@ npm run test:startup-failure-explain
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:md-suggested-apps
+npm run test:one -- services/backend/tests/services/mdSuggestedAppsPlan.test.js
 ```
 
 ---
@@ -843,7 +837,7 @@ npm run test:md-suggested-apps
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:fresh-install-doctor
+npm run test:one -- services/backend/tests/services/freshInstallDoctor.test.js
 ```
 
 ---
@@ -868,7 +862,7 @@ npm run test:fresh-install-doctor
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:recap-cjk
+npm run test:one -- services/backend/tests/services/sessionRecapCjk.test.js services/backend/tests/services/sessionRecapService.cjk.test.js
 ```
 
 ---
@@ -892,7 +886,7 @@ npm run test:recap-cjk
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:node-preflight
+npm run test:one -- packaging/npm/test/nodeVersionPreflight.test.js
 ```
 
 ---
@@ -919,7 +913,7 @@ npm run test:node-preflight
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:restore-converge
+npm run test:one -- scripts/tests/restoreConvergenceVerifier.test.js
 ```
 
 ---
@@ -966,13 +960,13 @@ npm run test:restore-converge
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:dep-wave-schedule
-npm run test:merge-skip-distinct
-npm run test:seq-chain-decompose
-npm run test:role-tool-scope
-npm run test:merge-file-conflict
-npm run test:merge-empty-success
-npm run test:merge-role-attribution
+npm run test:one -- services/backend/tests/services/orchestrator/dependencyWaveScheduler.test.js services/backend/tests/services/mergeResultsSkipDistinct.test.js services/backend/tests/services/sequentialChainDecompose.test.js services/backend/tests/services/orchestrator/roleToolScope.test.js services/backend/tests/services/orchestrator/mergeFileConflicts.test.js services/backend/tests/services/orchestrator/mergeEmptySuccess.test.js services/backend/tests/services/orchestrator/mergeRoleAttribution.test.js
+npm run test:one -- services/backend/tests/services/orchestrator/dependencyWaveScheduler.test.js services/backend/tests/services/mergeResultsSkipDistinct.test.js services/backend/tests/services/sequentialChainDecompose.test.js services/backend/tests/services/orchestrator/roleToolScope.test.js services/backend/tests/services/orchestrator/mergeFileConflicts.test.js services/backend/tests/services/orchestrator/mergeEmptySuccess.test.js services/backend/tests/services/orchestrator/mergeRoleAttribution.test.js
+npm run test:one -- services/backend/tests/services/orchestrator/dependencyWaveScheduler.test.js services/backend/tests/services/mergeResultsSkipDistinct.test.js services/backend/tests/services/sequentialChainDecompose.test.js services/backend/tests/services/orchestrator/roleToolScope.test.js services/backend/tests/services/orchestrator/mergeFileConflicts.test.js services/backend/tests/services/orchestrator/mergeEmptySuccess.test.js services/backend/tests/services/orchestrator/mergeRoleAttribution.test.js
+npm run test:one -- services/backend/tests/services/orchestrator/dependencyWaveScheduler.test.js services/backend/tests/services/mergeResultsSkipDistinct.test.js services/backend/tests/services/sequentialChainDecompose.test.js services/backend/tests/services/orchestrator/roleToolScope.test.js services/backend/tests/services/orchestrator/mergeFileConflicts.test.js services/backend/tests/services/orchestrator/mergeEmptySuccess.test.js services/backend/tests/services/orchestrator/mergeRoleAttribution.test.js
+npm run test:one -- services/backend/tests/services/orchestrator/dependencyWaveScheduler.test.js services/backend/tests/services/mergeResultsSkipDistinct.test.js services/backend/tests/services/sequentialChainDecompose.test.js services/backend/tests/services/orchestrator/roleToolScope.test.js services/backend/tests/services/orchestrator/mergeFileConflicts.test.js services/backend/tests/services/orchestrator/mergeEmptySuccess.test.js services/backend/tests/services/orchestrator/mergeRoleAttribution.test.js
+npm run test:one -- services/backend/tests/services/orchestrator/dependencyWaveScheduler.test.js services/backend/tests/services/mergeResultsSkipDistinct.test.js services/backend/tests/services/sequentialChainDecompose.test.js services/backend/tests/services/orchestrator/roleToolScope.test.js services/backend/tests/services/orchestrator/mergeFileConflicts.test.js services/backend/tests/services/orchestrator/mergeEmptySuccess.test.js services/backend/tests/services/orchestrator/mergeRoleAttribution.test.js
+npm run test:one -- services/backend/tests/services/orchestrator/dependencyWaveScheduler.test.js services/backend/tests/services/mergeResultsSkipDistinct.test.js services/backend/tests/services/sequentialChainDecompose.test.js services/backend/tests/services/orchestrator/roleToolScope.test.js services/backend/tests/services/orchestrator/mergeFileConflicts.test.js services/backend/tests/services/orchestrator/mergeEmptySuccess.test.js services/backend/tests/services/orchestrator/mergeRoleAttribution.test.js
 ```
 
 ---
@@ -999,7 +993,7 @@ npm run test:merge-role-attribution
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:restore-authorize
+npm run test:one -- scripts/tests/restoreAutonomyGate.test.js
 ```
 
 ---
@@ -1026,7 +1020,7 @@ npm run test:restore-authorize
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:restore-recourse
+npm run test:one -- scripts/tests/restoreRecoursePlan.test.js
 ```
 
 ---
@@ -1052,7 +1046,7 @@ npm run test:restore-recourse
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:restore-trace
+npm run test:one -- scripts/tests/restoreTraceJournal.test.js
 ```
 
 ---
@@ -1078,7 +1072,7 @@ npm run test:restore-trace
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:restore-ledger
+npm run test:one -- scripts/tests/restoreStrategyLedger.test.js
 ```
 
 ---
@@ -1105,7 +1099,7 @@ npm run test:restore-ledger
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:restore-apply
+npm run test:one -- scripts/tests/restoreSkipApplier.test.js
 ```
 
 ---
@@ -1133,7 +1127,7 @@ npm run test:restore-apply
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:restore-navigate
+npm run test:one -- scripts/tests/restoreNavigator.test.js
 ```
 
 ---
@@ -1160,7 +1154,7 @@ npm run test:restore-navigate
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:restore-verify-complete
+npm run test:one -- scripts/tests/restoreCompletenessVerifier.test.js
 ```
 
 ---
@@ -1188,7 +1182,7 @@ npm run test:restore-verify-complete
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:restore-check-format
+npm run test:one -- scripts/tests/snapshotFormatCompat.test.js
 ```
 
 ---
@@ -1214,7 +1208,7 @@ npm run test:restore-check-format
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:restore-provenance
+npm run test:one -- scripts/tests/restoreProvenance.test.js
 ```
 
 ---
@@ -1242,7 +1236,7 @@ npm run test:restore-provenance
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:restore-check-archive
+npm run test:one -- scripts/tests/archiveExtractCompat.test.js
 ```
 
 ---
@@ -1271,7 +1265,7 @@ npm run test:restore-check-archive
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:restore-check-crypto
+npm run test:one -- scripts/tests/cryptoSuiteCompat.test.js
 ```
 
 ---
@@ -1300,7 +1294,7 @@ npm run test:restore-check-crypto
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:restore-effect-probe
+npm run test:one -- scripts/tests/restoreEffectProbe.test.js
 ```
 
 ---
@@ -1326,7 +1320,7 @@ npm run test:restore-effect-probe
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:restore-field-attribution
+npm run test:one -- scripts/tests/restoreFieldAttribution.test.js
 ```
 
 ---
@@ -1352,7 +1346,7 @@ npm run test:restore-field-attribution
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:restore-completeness-check
+npm run test:one -- services/backend/tests/services/restoreCompletenessCheck.test.js
 ```
 
 ---
@@ -1379,7 +1373,7 @@ npm run test:restore-completeness-check
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:restore-preflight
+npm run test:one -- services/backend/tests/services/restorePreflightCheck.test.js
 ```
 
 ---
@@ -1405,7 +1399,7 @@ npm run test:restore-preflight
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:restore-archive-check
+npm run test:one -- services/backend/tests/services/restoreArchiveExtractCheck.test.js
 ```
 
 ---
@@ -1431,7 +1425,7 @@ npm run test:restore-archive-check
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:restore-provenance-check
+npm run test:one -- services/backend/tests/services/restoreProvenanceCheck.test.js
 ```
 
 ---
@@ -1457,7 +1451,7 @@ npm run test:restore-provenance-check
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:restore-path-portability
+npm run test:one -- services/backend/tests/services/restorePathPortabilityCheck.test.js
 ```
 
 ---
@@ -1482,7 +1476,7 @@ npm run test:restore-path-portability
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:first-response-ack
+npm run test:one -- services/backend/tests/cli/firstResponseAckVoice.test.js
 ```
 
 ---
@@ -1508,7 +1502,7 @@ npm run test:first-response-ack
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:readfile-binary-guard
+npm run test:one -- services/backend/tests/tools/readBinaryGuard.test.js
 ```
 
 ---
@@ -1534,7 +1528,7 @@ npm run test:readfile-binary-guard
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:readfile-format-route
+npm run test:one -- services/backend/tests/tools/readFileFormatRouter.test.js
 ```
 
 ---
@@ -1560,7 +1554,7 @@ npm run test:readfile-format-route
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:readfile-special-guard
+npm run test:one -- services/backend/tests/tools/specialFileReadGuard.test.js
 ```
 
 ---
@@ -1587,7 +1581,7 @@ npm run test:readfile-special-guard
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:readfile-pseudo-guard
+npm run test:one -- services/backend/tests/tools/pseudoFileReadGuard.test.js
 ```
 
 ---
@@ -1645,7 +1639,7 @@ node --test services/backend/tests/tools/filePreReadHangGuard.test.js
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:model-type-providers
+npm run test:one -- scripts/tests/modelTypeProviderPlan.test.js
 ```
 
 ---
@@ -1671,7 +1665,7 @@ npm run test:model-type-providers
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:busy-interrupt-escalation
+npm run test:one -- services/backend/tests/services/cli/repl/busyInterruptEscalation.test.js
 ```
 
 ---
@@ -1702,7 +1696,7 @@ npm run test:busy-interrupt-escalation
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:portable-cli
+npm run test:one -- services/backend/tests/services/gateway/adapters/portableCli.test.js
 ```
 
 ---
@@ -1728,7 +1722,7 @@ npm run test:portable-cli
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:memory-notice
+npm run test:one -- services/backend/tests/services/memoryOpsNotice.test.js
 ```
 
 ---
@@ -1758,7 +1752,7 @@ npm run test:memory-notice
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:ocr-confidence-caveat
+npm run test:one -- services/backend/tests/gateway/ocrConfidenceCaveat.test.js services/backend/tests/gateway/imageOcrFallbackWiring.test.js services/backend/tests/gateway/imageOcrFallbackRealImage.test.js
 node --test services/backend/tests/gateway/imageOcrFallbackRealImage.test.js
 python3 -m unittest tests.unit.test_dochelper_ocr_confidence
 ```
@@ -1786,7 +1780,7 @@ python3 -m unittest tests.unit.test_dochelper_ocr_confidence
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:ocr-coverage-notice
+npm run test:one -- services/backend/tests/gateway/ocrCoverageNotice.test.js services/backend/tests/gateway/imageOcrCoverageWiring.test.js
 node --check services/backend/src/services/gateway/ocrCoverageNotice.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 ```
@@ -1815,7 +1809,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:ocr-truncation-notice
+npm run test:one -- services/backend/tests/gateway/ocrTruncationNotice.test.js services/backend/tests/gateway/imageOcrTruncationWiring.test.js
 node --check services/backend/src/services/gateway/ocrTruncationNotice.js
 node --check services/backend/src/services/ocrSnippetService.js
 ```
@@ -1846,7 +1840,7 @@ node --check services/backend/src/services/ocrSnippetService.js
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:ocr-language-notice
+npm run test:one -- services/backend/tests/gateway/ocrLanguageNotice.test.js services/backend/tests/gateway/imageOcrLanguageWiring.test.js services/backend/tests/gateway/ocrLanguageNarrowing.test.js
 node --check services/backend/src/services/gateway/ocrLanguageNotice.js
 python3 -m py_compile services/backend/src/services/docHelper.py
 ```
@@ -1877,7 +1871,7 @@ python3 -m py_compile services/backend/src/services/docHelper.py
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:ocr-orientation-notice
+npm run test:one -- services/backend/tests/gateway/ocrOrientationNotice.test.js services/backend/tests/gateway/imageOcrOrientationWiring.test.js services/backend/tests/gateway/ocrOrientationRecovery.test.js
 node --check services/backend/src/services/gateway/ocrOrientationNotice.js
 python3 -m py_compile services/backend/src/services/docHelper.py
 ```
@@ -1908,7 +1902,7 @@ python3 -m py_compile services/backend/src/services/docHelper.py
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:ocr-resolution-notice
+npm run test:one -- services/backend/tests/gateway/ocrResolutionNotice.test.js services/backend/tests/gateway/imageOcrResolutionWiring.test.js services/backend/tests/gateway/ocrResolutionRecovery.test.js
 node --check services/backend/src/services/gateway/ocrResolutionNotice.js
 python3 -m py_compile services/backend/src/services/docHelper.py
 ```
@@ -1935,7 +1929,7 @@ python3 -m py_compile services/backend/src/services/docHelper.py
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:unpack-generic
+npm run test:one -- services/backend/tests/tools/unpackGeneric.test.js services/backend/tests/tools/unpackAsar.test.js
 node --check services/backend/src/services/reverseEngineer/genericExtractor.js
 node --check services/backend/src/tools/unpackTool.js
 ```
@@ -1964,7 +1958,7 @@ node --check services/backend/src/tools/unpackTool.js
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:vision-describe-fail-floor
+npm run test:one -- services/backend/tests/visionOcrFallback.test.js services/backend/tests/gateway/visionDescribeFailFloorWiring.test.js services/backend/tests/gateway/visionDescribeFailFloorRealImage.test.js
 node --check services/backend/src/services/gateway/visionOcrFallback.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 ```
@@ -1992,7 +1986,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:vision-strip-image-floor
+npm run test:one -- services/backend/tests/gateway/visionStripImageFloorWiring.test.js services/backend/tests/gateway/visionStripImageFloorRealImage.test.js
 node --check services/backend/src/services/gateway/visionOcrFallback.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 ```
@@ -2020,7 +2014,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:vision-rescue-strip-floor
+npm run test:one -- services/backend/tests/gateway/visionRescueStripFloorWiring.test.js services/backend/tests/gateway/visionRescueStripFloorRealImage.test.js
 node --check services/backend/src/services/gateway/visionOcrFallback.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 ```
@@ -2049,7 +2043,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:ocr-usage-disclosure
+npm run test:one -- services/backend/tests/gateway/ocrUsageNotice.test.js services/backend/tests/gateway/ocrUsageDisclosureWiring.test.js services/backend/tests/gateway/ocrUsageDisclosureRealImage.test.js
 node --check services/backend/src/services/gateway/ocrUsageNotice.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 ```
@@ -2078,7 +2072,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:ocr-usage-footnote
+npm run test:one -- services/backend/tests/gateway/ocrUsageFootnote.test.js services/backend/tests/gateway/ocrUsageFootnoteWiring.test.js services/backend/tests/gateway/ocrUsageFootnoteRealImage.test.js
 node --check services/backend/src/services/gateway/ocrUsageFootnote.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 ```
@@ -2109,7 +2103,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:vision-denial-correction
+npm run test:one -- services/backend/tests/gateway/visionDenialCorrection.test.js services/backend/tests/gateway/visionDenialCorrectionWiring.test.js services/backend/tests/gateway/visionDenialCorrectionRealImage.test.js
 node --check services/backend/src/services/gateway/visionDenialCorrection.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 ```
@@ -2138,7 +2132,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:vision-failure-summary-ocr-suppress
+npm run test:one -- services/backend/tests/services/gateway/visionFailureSummary.test.js services/backend/tests/gateway/visionFailureSummaryOcrSuppressWiring.test.js services/backend/tests/gateway/visionFailureSummaryOcrSuppressRealImage.test.js
 node --check services/backend/src/services/gateway/visionFailureSummary.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 ```
@@ -2167,7 +2161,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:vision-ocr-success-closure
+npm run test:one -- services/backend/tests/services/gateway/visionOcrSuccessClosure.test.js services/backend/tests/gateway/visionOcrSuccessClosureWiring.test.js services/backend/tests/gateway/visionOcrSuccessClosureRealImage.test.js
 node --check services/backend/src/services/gateway/visionOcrSuccessClosure.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 ```
@@ -2196,7 +2190,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:vision-cascade-attempt-notice
+npm run test:one -- services/backend/tests/services/gateway/visionCascadeAttemptNotice.test.js services/backend/tests/gateway/visionCascadeAttemptNoticeWiring.test.js services/backend/tests/gateway/visionCascadeAttemptNoticeRealImage.test.js
 node --check services/backend/src/services/gateway/visionCascadeAttemptNotice.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 ```
@@ -2219,7 +2213,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:vision-model-display-name
+npm run test:one -- services/backend/tests/services/gateway/visionModelDisplayName.test.js services/backend/tests/gateway/visionModelDisplayNameWiring.test.js services/backend/tests/gateway/visionModelDisplayNameRealImage.test.js
 node --check services/backend/src/services/gateway/visionModelDisplayName.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 ```
@@ -2239,7 +2233,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:vision-failure-summary-display-name
+npm run test:one -- services/backend/tests/gateway/visionFailureSummaryDisplayName.test.js
 node --check services/backend/src/services/gateway/visionFailureSummary.js
 ```
 
@@ -2258,7 +2252,7 @@ node --check services/backend/src/services/gateway/visionFailureSummary.js
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:vision-failure-cause-dedup
+npm run test:one -- services/backend/tests/gateway/visionFailureCauseDedup.test.js
 node --check services/backend/src/services/gateway/visionFailureSummary.js
 ```
 
@@ -2278,7 +2272,7 @@ node --check services/backend/src/services/gateway/visionFailureSummary.js
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:vision-pool-fail-status-humanize
+npm run test:one -- services/backend/tests/gateway/visionPoolFailStatusHumanize.test.js
 node --check services/backend/src/services/gateway/visionPoolFailStatus.js
 ```
 
@@ -2305,7 +2299,7 @@ node --check services/backend/src/services/gateway/visionPoolFailStatus.js
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:ocr-rescue-status
+npm run test:one -- services/backend/tests/gateway/ocrRescueStatusNotice.test.js services/backend/tests/gateway/ocrRescueStatusNoticeWiring.test.js services/backend/tests/gateway/ocrRescueStatusNoticeRealImage.test.js
 node --check services/backend/src/services/gateway/ocrRescueStatusNotice.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 ```
@@ -2334,7 +2328,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:maintainer:duplication
+npm run test:one -- scripts/tests/duplicationGuard.test.js scripts/tests/check-duplication.test.js
 npm run check:duplication
 node --check scripts/lib/duplicationGuard.js scripts/check-duplication.js
 ```
@@ -2362,7 +2356,7 @@ node --check scripts/lib/duplicationGuard.js scripts/check-duplication.js
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:ocr-rescue-status-prep
+npm run test:one -- services/backend/tests/gateway/ocrRescueStatusPrep.test.js services/backend/tests/gateway/ocrRescueStatusPrepWiring.test.js services/backend/tests/gateway/ocrRescueStatusPrepRealImage.test.js
 node --check services/backend/src/services/gateway/ocrRescueStatusNotice.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 ```
@@ -2391,7 +2385,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:ocr-rescue-prep-closure-dedup
+npm run test:one -- services/backend/tests/gateway/ocrRescueStatusNotice.test.js services/backend/tests/gateway/ocrRescuePrepClosureDedupWiring.test.js services/backend/tests/gateway/ocrRescuePrepClosureDedupRealImage.test.js
 node --check services/backend/src/services/gateway/ocrRescueStatusNotice.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 ```
@@ -2417,7 +2411,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:vision-network-exhaustion
+npm run test:one -- services/backend/tests/services/visionExhaustionDiagnostic.test.js services/backend/tests/gateway/visionNetworkExhaustionRealImage.test.js
 node --check services/backend/src/services/gateway/visionExhaustionDiagnostic.js
 ```
 
@@ -2441,7 +2435,7 @@ node --check services/backend/src/services/gateway/visionExhaustionDiagnostic.js
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-npm run test:workflow-list-degraded
+npm run test:one -- apps/ai-frontend/src/composables/useWorkflow.wiring.test.js
 node --check apps/ai-frontend/src/composables/useWorkflow.js
 ```
 
@@ -2494,7 +2488,7 @@ node --check services/backend/src/cli/cacheWarning.js
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-node services/backend/tests/services/deliveryGateReporter.test.js
+node --test services/backend/tests/services/deliveryGateReporter.test.js
 node --check services/backend/src/services/agenticHarnessService.js
 node --check services/backend/src/services/flagRegistry.js
 ```
@@ -2520,7 +2514,7 @@ node --check services/backend/src/services/flagRegistry.js
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-node services/backend/tests/services/sessionFileRepairWiring.test.js
+node --test services/backend/tests/services/sessionFileRepairWiring.test.js
 node --check services/backend/src/services/sessionPersistence.js
 node --check services/backend/src/services/flagRegistry.js
 ```
@@ -2546,7 +2540,7 @@ node --check services/backend/src/services/flagRegistry.js
 **跑这些验证命令（绿灯＝这块没坏）：**
 
 ```bash
-node services/backend/tests/services/taskTemplateHintWiring.test.js
+node --test services/backend/tests/services/taskTemplateHintWiring.test.js
 node --check services/backend/src/services/agenticHarnessService.js
 node --check services/backend/src/services/flagRegistry.js
 ```

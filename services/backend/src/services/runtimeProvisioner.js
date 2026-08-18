@@ -344,7 +344,47 @@ function _recordRuntimeLedger(name, targetDir) {
   }
 }
 
+async function _ensureRuntimeFromResourceStore(name, opts) {
+  try {
+    const { createResourceManager } = require('./resources/resourceManager');
+    const manager = createResourceManager();
+    const resource = manager.manifest.resources.find(
+      item => item.id === name && item.kind === 'runtime'
+    );
+    const platform = manager.platform;
+    if (!resource || !resource.platforms[platform]) {
+      return null;
+    }
+    const { createResourceTaskAdapter } = require('./resources/resourceTask');
+    const fetched = await createResourceTaskAdapter({ manager }).fetch(name, opts);
+    const result = fetched.result;
+    const statusMap = {
+      present: 'present',
+      provisioned: 'provisioned',
+      'unsupported-platform': 'unsupported-platform',
+      failed: 'failed',
+      busy: 'failed',
+    };
+    return {
+      name,
+      status: statusMap[result.status] || result.status,
+      path: result.path,
+      platform: result.platform,
+      source: result.source,
+      error: result.error,
+    };
+  } catch (err) {
+    log(`${name}: resource store unavailable (${err.message}); using legacy manifest`);
+    return null;
+  }
+}
+
 async function _ensureRuntimeImpl(name, opts) {
+  const resourceResult = await _ensureRuntimeFromResourceStore(name, opts);
+  if (resourceResult) {
+    return resourceResult;
+  }
+
   let manifest;
   try {
     manifest = loadManifest();

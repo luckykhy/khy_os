@@ -119,6 +119,18 @@ test('buildSidebarLines: 无任务 → 灰色「暂无任务」提示(看板不�
   assert.equal(empty.dim, true);
 });
 
+test('buildSidebarLines: hideTaskSection → 不渲染任务或空态,但保留工具活动', () => {
+  const lines = buildSidebarLines({
+    width: 30,
+    hideTaskSection: true,
+    taskLines: ['→ 不应出现在右栏'],
+    streaming: { tools: [{}] },
+  });
+  assert.equal(findLine(lines, '暂无任务'), undefined);
+  assert.equal(findLine(lines, '不应出现在右栏'), undefined);
+  assert.ok(findLine(lines, '工具 · 运行中 1/共 1'));
+});
+
 // ── 移除的三个区块:主题/模型+强度/上下文用量 ────────────────────────────────
 test('buildSidebarLines: topic/model/effort/context props 不再产生任何行', () => {
   const lines = buildSidebarLines({

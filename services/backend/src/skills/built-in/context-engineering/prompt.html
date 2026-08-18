@@ -46,33 +46,33 @@
 <h3 id="level-1-rules-files">Level 1: Rules Files<a class="anchor" href="#level-1-rules-files" aria-label="锚点">#</a></h3>
 <p>Create a rules file that persists across sessions. This is the highest-leverage context you can provide.</p>
 <p><strong>CLAUDE.md</strong> (for Claude Code):</p>
-<pre><code class="language-markdown"># Project: [Name]
+<pre><code class="language-markdown"><span class="hljs-section"># Project: [Name]</span>
 
-## Tech Stack
-- React 18, TypeScript 5, Vite, Tailwind CSS 4
-- Node.js 22, Express, PostgreSQL, Prisma
+<span class="hljs-section">## Tech Stack</span>
+<span class="hljs-bullet">-</span> React 18, TypeScript 5, Vite, Tailwind CSS 4
+<span class="hljs-bullet">-</span> Node.js 22, Express, PostgreSQL, Prisma
 
-## Commands
-- Build: `npm run build`
-- Test: `npm test`
-- Lint: `npm run lint --fix`
-- Dev: `npm run dev`
-- Type check: `npx tsc --noEmit`
+<span class="hljs-section">## Commands</span>
+<span class="hljs-bullet">-</span> Build: <span class="hljs-code">`npm run build`</span>
+<span class="hljs-bullet">-</span> Test: <span class="hljs-code">`npm test`</span>
+<span class="hljs-bullet">-</span> Lint: <span class="hljs-code">`npm run lint --fix`</span>
+<span class="hljs-bullet">-</span> Dev: <span class="hljs-code">`npm run dev`</span>
+<span class="hljs-bullet">-</span> Type check: <span class="hljs-code">`npx tsc --noEmit`</span>
 
-## Code Conventions
-- Functional components with hooks (no class components)
-- Named exports (no default exports)
-- colocate tests next to source: `Button.tsx` → `Button.test.tsx`
-- Use `cn()` utility for conditional classNames
-- Error boundaries at route level
+<span class="hljs-section">## Code Conventions</span>
+<span class="hljs-bullet">-</span> Functional components with hooks (no class components)
+<span class="hljs-bullet">-</span> Named exports (no default exports)
+<span class="hljs-bullet">-</span> colocate tests next to source: <span class="hljs-code">`Button.tsx`</span> → <span class="hljs-code">`Button.test.tsx`</span>
+<span class="hljs-bullet">-</span> Use <span class="hljs-code">`cn()`</span> utility for conditional classNames
+<span class="hljs-bullet">-</span> Error boundaries at route level
 
-## Boundaries
-- Never commit .env files or secrets
-- Never add dependencies without checking bundle size impact
-- Ask before modifying database schema
-- Always run tests before committing
+<span class="hljs-section">## Boundaries</span>
+<span class="hljs-bullet">-</span> Never commit .env files or secrets
+<span class="hljs-bullet">-</span> Never add dependencies without checking bundle size impact
+<span class="hljs-bullet">-</span> Ask before modifying database schema
+<span class="hljs-bullet">-</span> Always run tests before committing
 
-## Patterns
+<span class="hljs-section">## Patterns</span>
 [One short example of a well-written component in your style]</code></pre>
 <p><strong>Equivalent files for other tools:</strong></p>
 <ul><li><code>.cursorrules</code> or <code>.cursor/rules/*.md</code> (Cursor)</li><li><code>.windsurfrules</code> (Windsurf)</li><li><code>.github/copilot-instructions.md</code> (GitHub Copilot)</li><li><code>AGENTS.md</code> (OpenAI Codex)</li></ul>
@@ -120,19 +120,19 @@ CONSTRAINT:
 - Must use the existing ValidationError class, not throw raw errors</code></pre>
 <h3 id="the-hierarchical-summary">The Hierarchical Summary<a class="anchor" href="#the-hierarchical-summary" aria-label="锚点">#</a></h3>
 <p>For large projects, maintain a summary index:</p>
-<pre><code class="language-markdown"># Project Map
+<pre><code class="language-markdown"><span class="hljs-section"># Project Map</span>
 
-## Authentication (src/auth/)
+<span class="hljs-section">## Authentication (src/auth/)</span>
 Handles registration, login, password reset.
 Key files: auth.routes.ts, auth.service.ts, auth.middleware.ts
 Pattern: All routes use authMiddleware, errors use AuthError class
 
-## Tasks (src/tasks/)
+<span class="hljs-section">## Tasks (src/tasks/)</span>
 CRUD for user tasks with real-time updates.
 Key files: task.routes.ts, task.service.ts, task.socket.ts
 Pattern: Optimistic updates via WebSocket, server reconciliation
 
-## Shared (src/lib/)
+<span class="hljs-section">## Shared (src/lib/)</span>
 Validation, error handling, database utilities.
 Key files: validation.ts, errors.ts, db.ts</code></pre>
 <p>Load only the relevant section when working on a specific area.</p>

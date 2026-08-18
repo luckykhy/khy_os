@@ -53,16 +53,16 @@ RELAY_API_COMPATIBILITY=openai</code></pre>
 建议运行 'khy config reset' 重置网关配置</code></pre>
 <h3 id="关闭自动修复">关闭自动修复<a class="anchor" href="#关闭自动修复" aria-label="锚点">#</a></h3>
 <p>如果需要关闭自动修复功能：</p>
-<pre><code class="language-bash"># 关闭配置修复
-export KHY_CONFIG_REPAIR=off
+<pre><code class="language-bash"><span class="hljs-comment"># 关闭配置修复</span>
+<span class="hljs-built_in">export</span> KHY_CONFIG_REPAIR=off
 
-# 关闭网关重置检测
-export KHY_GATEWAY_RESET=off</code></pre>
+<span class="hljs-comment"># 关闭网关重置检测</span>
+<span class="hljs-built_in">export</span> KHY_GATEWAY_RESET=off</code></pre>
 <h2 id="常见场景">常见场景<a class="anchor" href="#常见场景" aria-label="锚点">#</a></h2>
 <h3 id="场景-1-手动编辑配置后出错">场景 1：手动编辑配置后出错<a class="anchor" href="#场景-1-手动编辑配置后出错" aria-label="锚点">#</a></h3>
 <p><strong>问题</strong>：编辑 <code>.env</code> 文件时不小心删除了 <code>=</code> 符号</p>
-<pre><code class="language-bash"># 错误的配置
-GATEWAY_PREFERRED_ADAPTER relay_api  # 缺少 =
+<pre><code class="language-bash"><span class="hljs-comment"># 错误的配置</span>
+GATEWAY_PREFERRED_ADAPTER relay_api  <span class="hljs-comment"># 缺少 =</span>
 RELAY_API_KEY=sk-test</code></pre>
 <p><strong>解决</strong>：重新启动 khy，会自动检测并修复：</p>
 <ul><li>移除畸形行</li><li>创建备份文件</li><li>显示修复信息</li></ul>

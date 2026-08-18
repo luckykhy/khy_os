@@ -557,6 +557,7 @@ async function generate(prompt, options = {}) {
       adapter: 'cursor',
       provider: `Cursor (${model})`,
       model,
+      tokenUsage: chatResult.tokenUsage || { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
       toolUseBlocks: chatResult.toolUseBlocks || [],
       stopReason: chatResult.stopReason || 'end_turn',
       attempts: [{ provider: 'Cursor', success: true }],

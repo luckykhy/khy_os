@@ -44,89 +44,89 @@ cli-anything-sbox --json project info
 cli-anything-sbox project config --max-players 32 --tick-rate 64
 cli-anything-sbox --json --project ./MyGame project add-package facepunch.libsdf
 cli-anything-sbox --json --project ./MyGame project remove-package facepunch.libsdf
-# Lint: broken asset refs, duplicate GUIDs, malformed Input.config
+<span class="hljs-comment"># Lint: broken asset refs, duplicate GUIDs, malformed Input.config</span>
 cli-anything-sbox --json --project ./MyGame project validate
 cli-anything-sbox --project ./MyGame project validate --no-inputs --no-guids</code></pre>
 <h3 id="scene-manipulate-scene-files">scene - Manipulate <code>.scene</code> files<a class="anchor" href="#scene-manipulate-scene-files" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-sbox scene new --name gameplay -o ./Assets/scenes/gameplay.scene
 cli-anything-sbox --json scene info ./scene.scene
 cli-anything-sbox --json scene list ./scene.scene
-cli-anything-sbox scene add-object ./scene.scene Enemy --position &quot;100,0,0&quot; --components &quot;model,box_collider,rigidbody&quot; --tags &quot;enemy&quot;
+cli-anything-sbox scene add-object ./scene.scene Enemy --position <span class="hljs-string">&quot;100,0,0&quot;</span> --components <span class="hljs-string">&quot;model,box_collider,rigidbody&quot;</span> --tags <span class="hljs-string">&quot;enemy&quot;</span>
 cli-anything-sbox scene remove-object ./scene.scene --name Enemy
 cli-anything-sbox scene add-component ./scene.scene &lt;object-guid&gt; Sandbox.PointLight
 cli-anything-sbox scene remove-component ./scene.scene &lt;object-guid&gt; --component-type Sandbox.Rigidbody
-cli-anything-sbox --json scene modify-object ./scene.scene --guid &lt;guid&gt; --name NewName --position &quot;200,0,0&quot;
-cli-anything-sbox --json scene clone-object ./scene.scene --name Enemy --new-name EnemyCopy --position &quot;300,0,0&quot;
+cli-anything-sbox --json scene modify-object ./scene.scene --guid &lt;guid&gt; --name NewName --position <span class="hljs-string">&quot;200,0,0&quot;</span>
+cli-anything-sbox --json scene clone-object ./scene.scene --name Enemy --new-name EnemyCopy --position <span class="hljs-string">&quot;300,0,0&quot;</span>
 cli-anything-sbox --json scene get-object ./scene.scene --name Sun
 cli-anything-sbox scene set-property ./scene.scene --fixed-update-freq 64 --timescale 0.5
 cli-anything-sbox scene set-navmesh ./scene.scene --enabled --agent-height 72 --agent-radius 16
 cli-anything-sbox --json scene list-presets
-cli-anything-sbox --json scene modify-component ./scene.scene &lt;object-guid&gt; &lt;component-guid&gt; --properties '{&quot;Damage&quot;:50}'
+cli-anything-sbox --json scene modify-component ./scene.scene &lt;object-guid&gt; &lt;component-guid&gt; --properties <span class="hljs-string">&#x27;{&quot;Damage&quot;:50}&#x27;</span>
 
-# Find objects matching one or more filters (AND-combined)
+<span class="hljs-comment"># Find objects matching one or more filters (AND-combined)</span>
 cli-anything-sbox --json scene query ./scene.scene --has-component rigidbody --has-tag tower
-cli-anything-sbox --json scene query ./scene.scene --name-regex &quot;^Tower\d$&quot; --in-bounds &quot;0,-500,-50,1000,500,50&quot;
+cli-anything-sbox --json scene query ./scene.scene --name-regex <span class="hljs-string">&quot;^Tower\d$&quot;</span> --in-bounds <span class="hljs-string">&quot;0,-500,-50,1000,500,50&quot;</span>
 
-# Extract every asset reference (.vmdl, .vmat, .vsnd, .vtex, .vpcf, .prefab) from a scene
+<span class="hljs-comment"># Extract every asset reference (.vmdl, .vmat, .vsnd, .vtex, .vpcf, .prefab) from a scene</span>
 cli-anything-sbox --json scene refs ./scene.scene
 
-# Apply the same modification to every object that matches a query
-cli-anything-sbox --json scene bulk-modify ./scene.scene --has-tag tower --position &quot;0,0,100&quot; --enable
+<span class="hljs-comment"># Apply the same modification to every object that matches a query</span>
+cli-anything-sbox --json scene bulk-modify ./scene.scene --has-tag tower --position <span class="hljs-string">&quot;0,0,100&quot;</span> --<span class="hljs-built_in">enable</span>
 
-# Structural diff between two scenes (added/removed/modified GameObjects + SceneProperties)
+<span class="hljs-comment"># Structural diff between two scenes (added/removed/modified GameObjects + SceneProperties)</span>
 cli-anything-sbox --json scene diff ./old.scene ./new.scene
 
-# Insert a prefab as a GameObject in a scene
-cli-anything-sbox --json scene instantiate-prefab ./level.scene ./Assets/prefabs/bullet.prefab --position &quot;10,0,0&quot;</code></pre>
+<span class="hljs-comment"># Insert a prefab as a GameObject in a scene</span>
+cli-anything-sbox --json scene instantiate-prefab ./level.scene ./Assets/prefabs/bullet.prefab --position <span class="hljs-string">&quot;10,0,0&quot;</span></code></pre>
 <h3 id="prefab-manage-prefab-files">prefab - Manage <code>.prefab</code> files<a class="anchor" href="#prefab-manage-prefab-files" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-sbox prefab new --name Bullet -o ./Assets/prefabs/bullet.prefab --components &quot;model,sphere_collider,rigidbody&quot;
+<pre><code class="language-bash">cli-anything-sbox prefab new --name Bullet -o ./Assets/prefabs/bullet.prefab --components <span class="hljs-string">&quot;model,sphere_collider,rigidbody&quot;</span>
 cli-anything-sbox --json prefab info ./Assets/prefabs/bullet.prefab
 cli-anything-sbox prefab from-scene ./scene.scene &lt;object-guid&gt; -o ./Assets/prefabs/extracted.prefab
 cli-anything-sbox --json prefab add-component ./prefab.prefab rigidbody
 cli-anything-sbox prefab remove-component ./prefab.prefab --component-type Sandbox.Rigidbody
 cli-anything-sbox --json prefab list
 
-# Asset references inside a prefab
+<span class="hljs-comment"># Asset references inside a prefab</span>
 cli-anything-sbox --json prefab refs ./prefab.prefab
 
-# Modify component properties on a prefab (by component type or component GUID)
-cli-anything-sbox --json prefab modify-component ./prefab.prefab --component-type Sandbox.Rigidbody --properties '{&quot;Gravity&quot;:false,&quot;MassOverride&quot;:50}'
+<span class="hljs-comment"># Modify component properties on a prefab (by component type or component GUID)</span>
+cli-anything-sbox --json prefab modify-component ./prefab.prefab --component-type Sandbox.Rigidbody --properties <span class="hljs-string">&#x27;{&quot;Gravity&quot;:false,&quot;MassOverride&quot;:50}&#x27;</span>
 
-# Structural diff between two prefabs (root + named children)
+<span class="hljs-comment"># Structural diff between two prefabs (root + named children)</span>
 cli-anything-sbox --json prefab diff ./old.prefab ./new.prefab</code></pre>
 <h3 id="codegen-generate-c-code">codegen - Generate C# code<a class="anchor" href="#codegen-generate-c-code" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Plain Component
+<pre><code class="language-bash"><span class="hljs-comment"># Plain Component</span>
 cli-anything-sbox codegen component --name PlayerController --methods OnUpdate,OnFixedUpdate -o ./Code/PlayerController.cs
 
-# Component with [Property] fields
-cli-anything-sbox --json codegen component --name Tower --properties '[{&quot;name&quot;:&quot;Damage&quot;,&quot;type&quot;:&quot;float&quot;,&quot;default&quot;:&quot;25f&quot;},{&quot;name&quot;:&quot;Range&quot;,&quot;type&quot;:&quot;float&quot;,&quot;default&quot;:&quot;500f&quot;}]'
+<span class="hljs-comment"># Component with [Property] fields</span>
+cli-anything-sbox --json codegen component --name Tower --properties <span class="hljs-string">&#x27;[{&quot;name&quot;:&quot;Damage&quot;,&quot;type&quot;:&quot;float&quot;,&quot;default&quot;:&quot;25f&quot;},{&quot;name&quot;:&quot;Range&quot;,&quot;type&quot;:&quot;float&quot;,&quot;default&quot;:&quot;500f&quot;}]&#x27;</span>
 
-# Networked component (partial class) with RPC method stubs
-cli-anything-sbox codegen component --name NetPlayer --networked --methods OnUpdate,OnFixedUpdate --rpc-methods &quot;Fire:Broadcast,TakeDamage:Host&quot; -o ./Code/NetPlayer.cs
+<span class="hljs-comment"># Networked component (partial class) with RPC method stubs</span>
+cli-anything-sbox codegen component --name NetPlayer --networked --methods OnUpdate,OnFixedUpdate --rpc-methods <span class="hljs-string">&quot;Fire:Broadcast,TakeDamage:Host&quot;</span> -o ./Code/NetPlayer.cs
 
-# GameResource
-cli-anything-sbox codegen gameresource --name TowerData --display-name &quot;Tower Data&quot; --extension tower -o ./Code/TowerData.cs
+<span class="hljs-comment"># GameResource</span>
+cli-anything-sbox codegen gameresource --name TowerData --display-name <span class="hljs-string">&quot;Tower Data&quot;</span> --extension tower -o ./Code/TowerData.cs
 
-# Editor menu (Editor/ assembly)
-cli-anything-sbox codegen editor-menu --name MyTools --menu-path &quot;Editor/My Tools/Open&quot; -o ./Editor/MyTools.cs
+<span class="hljs-comment"># Editor menu (Editor/ assembly)</span>
+cli-anything-sbox codegen editor-menu --name MyTools --menu-path <span class="hljs-string">&quot;Editor/My Tools/Open&quot;</span> -o ./Editor/MyTools.cs
 
-# Plain Razor UI component (.razor + .razor.scss)
-cli-anything-sbox codegen razor --name HudPanel --properties '[{&quot;name&quot;:&quot;Score&quot;,&quot;type&quot;:&quot;int&quot;,&quot;default&quot;:&quot;0&quot;}]' -o ./UI/HudPanel.razor
+<span class="hljs-comment"># Plain Razor UI component (.razor + .razor.scss)</span>
+cli-anything-sbox codegen razor --name HudPanel --properties <span class="hljs-string">&#x27;[{&quot;name&quot;:&quot;Score&quot;,&quot;type&quot;:&quot;int&quot;,&quot;default&quot;:&quot;0&quot;}]&#x27;</span> -o ./UI/HudPanel.razor
 
-# Static or base-derived class
+<span class="hljs-comment"># Static or base-derived class</span>
 cli-anything-sbox codegen class --name Math2 --static -o ./Code/Math2.cs
 
-# PanelComponent + sibling ScreenPanel scaffold (handles the s&amp;box quirk where
-# PanelComponent input only works when both are on the same GameObject).
-# Emits .razor + .razor.scss + a paste-ready GameObject snippet, or appends
-# directly to a scene with --scene.
+<span class="hljs-comment"># PanelComponent + sibling ScreenPanel scaffold (handles the s&amp;box quirk where</span>
+<span class="hljs-comment"># PanelComponent input only works when both are on the same GameObject).</span>
+<span class="hljs-comment"># Emits .razor + .razor.scss + a paste-ready GameObject snippet, or appends</span>
+<span class="hljs-comment"># directly to a scene with --scene.</span>
 cli-anything-sbox --json codegen panel-component --name HudBar -o ./UI/HudBar.razor
 cli-anything-sbox codegen panel-component --name Crosshair -o ./UI/Crosshair.razor --scene ./Assets/scenes/game.scene</code></pre>
 <h3 id="input-manage-input-config">input - Manage <code>Input.config</code><a class="anchor" href="#input-manage-input-config" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-sbox --json input list
 cli-anything-sbox input add --name PlaceTower --group Gameplay --keyboard mouse1 --gamepad RightTrigger
 cli-anything-sbox input remove --name PlaceTower
-cli-anything-sbox input set --name Attack1 --keyboard mouse1</code></pre>
+cli-anything-sbox input <span class="hljs-built_in">set</span> --name Attack1 --keyboard mouse1</code></pre>
 <h3 id="collision-manage-collision-config">collision - Manage <code>Collision.config</code><a class="anchor" href="#collision-manage-collision-config" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-sbox --json collision list
 cli-anything-sbox collision add-layer --name projectile --default Collide
@@ -134,50 +134,50 @@ cli-anything-sbox collision add-rule --layer-a projectile --layer-b solid --resu
 cli-anything-sbox collision remove-rule --layer-a projectile --layer-b solid
 cli-anything-sbox collision remove-layer --name projectile</code></pre>
 <h3 id="material-manage-vmat-materials">material - Manage <code>.vmat</code> materials<a class="anchor" href="#material-manage-vmat-materials" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-sbox --json material new --name floor --shader complex --color-texture &quot;textures/floor.tga&quot; --metalness 0.3 -o ./Assets/materials/floor.vmat
+<pre><code class="language-bash">cli-anything-sbox --json material new --name floor --shader complex --color-texture <span class="hljs-string">&quot;textures/floor.tga&quot;</span> --metalness 0.3 -o ./Assets/materials/floor.vmat
 cli-anything-sbox --json material info ./Assets/materials/floor.vmat
 cli-anything-sbox --json material list
-cli-anything-sbox --json material set ./Assets/materials/floor.vmat --metalness 0.8</code></pre>
+cli-anything-sbox --json material <span class="hljs-built_in">set</span> ./Assets/materials/floor.vmat --metalness 0.8</code></pre>
 <h3 id="sound-manage-sound-events">sound - Manage <code>.sound</code> events<a class="anchor" href="#sound-manage-sound-events" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-sbox --json sound new --name gunshot --sounds &quot;sounds/gun1.vsnd,sounds/gun2.vsnd&quot; --volume 0.8 -o ./Assets/sounds/gunshot.sound
+<pre><code class="language-bash">cli-anything-sbox --json sound new --name gunshot --sounds <span class="hljs-string">&quot;sounds/gun1.vsnd,sounds/gun2.vsnd&quot;</span> --volume 0.8 -o ./Assets/sounds/gunshot.sound
 cli-anything-sbox --json sound info ./Assets/sounds/gunshot.sound
 cli-anything-sbox --json sound list
-cli-anything-sbox --json sound set ./Assets/sounds/gunshot.sound --volume 0.5</code></pre>
+cli-anything-sbox --json sound <span class="hljs-built_in">set</span> ./Assets/sounds/gunshot.sound --volume 0.5</code></pre>
 <h3 id="localization-manage-translations">localization - Manage translations<a class="anchor" href="#localization-manage-translations" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-sbox localization new --lang en -o ./Localization/en.json
-cli-anything-sbox localization set ./Localization/en.json --key &quot;game.title&quot; --value &quot;My Game&quot;
+cli-anything-sbox localization <span class="hljs-built_in">set</span> ./Localization/en.json --key <span class="hljs-string">&quot;game.title&quot;</span> --value <span class="hljs-string">&quot;My Game&quot;</span>
 cli-anything-sbox --json localization list ./Localization/en.json
-cli-anything-sbox localization get ./Localization/en.json --key &quot;game.title&quot;
-cli-anything-sbox localization remove ./Localization/en.json --key &quot;game.title&quot;
-cli-anything-sbox localization bulk-set ./Localization/en.json --keys '{&quot;ui.start&quot;:&quot;Start&quot;,&quot;ui.quit&quot;:&quot;Quit&quot;}'</code></pre>
+cli-anything-sbox localization get ./Localization/en.json --key <span class="hljs-string">&quot;game.title&quot;</span>
+cli-anything-sbox localization remove ./Localization/en.json --key <span class="hljs-string">&quot;game.title&quot;</span>
+cli-anything-sbox localization bulk-set ./Localization/en.json --keys <span class="hljs-string">&#x27;{&quot;ui.start&quot;:&quot;Start&quot;,&quot;ui.quit&quot;:&quot;Quit&quot;}&#x27;</span></code></pre>
 <h3 id="server-dedicated-server">server - Dedicated server<a class="anchor" href="#server-dedicated-server" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-sbox server info
 cli-anything-sbox server start --game my_game --map facepunch.flatgrass</code></pre>
 <h3 id="asset-asset-management-reverse-lookups">asset - Asset management &amp; reverse lookups<a class="anchor" href="#asset-asset-management-reverse-lookups" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-sbox --json asset list --type scene
+<pre><code class="language-bash">cli-anything-sbox --json asset list --<span class="hljs-built_in">type</span> scene
 cli-anything-sbox --json asset info ./Assets/scenes/minimal.scene
 cli-anything-sbox asset compile ./Assets/materials/floor.vmat
 
-# Which scenes/prefabs reference this asset?
+<span class="hljs-comment"># Which scenes/prefabs reference this asset?</span>
 cli-anything-sbox --json --project ./MyGame asset find-refs models/myteam/widget.vmdl
 
-# Find unreferenced assets (per type, or across all referenceable types)
+<span class="hljs-comment"># Find unreferenced assets (per type, or across all referenceable types)</span>
 cli-anything-sbox --json --project ./MyGame asset find-unused
-cli-anything-sbox --json --project ./MyGame asset find-unused --type model --type material
+cli-anything-sbox --json --project ./MyGame asset find-unused --<span class="hljs-built_in">type</span> model --<span class="hljs-built_in">type</span> material
 
-# Rename an asset and update every scene/prefab reference (extension preserved if omitted)
+<span class="hljs-comment"># Rename an asset and update every scene/prefab reference (extension preserved if omitted)</span>
 cli-anything-sbox --json --project ./MyGame asset rename models/team/widget.vmdl gizmo
 cli-anything-sbox --project ./MyGame asset rename models/team/widget.vmdl gizmo --dry-run
 
-# Move an asset across directories and update every reference
+<span class="hljs-comment"># Move an asset across directories and update every reference</span>
 cli-anything-sbox --json --project ./MyGame asset move models/team/widget.vmdl models/shared/widget.vmdl</code></pre>
 <h3 id="session-state-management">session - State management<a class="anchor" href="#session-state-management" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-sbox session status
 cli-anything-sbox session undo
 cli-anything-sbox session redo</code></pre>
 <h3 id="test-automated-map-scene-generation-harness">test - Automated map/scene generation harness<a class="anchor" href="#test-automated-map-scene-generation-harness" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-sbox test setup
-cli-anything-sbox --json test run</code></pre>
+<pre><code class="language-bash">cli-anything-sbox <span class="hljs-built_in">test</span> setup
+cli-anything-sbox --json <span class="hljs-built_in">test</span> run</code></pre>
 <h3 id="launch-open-project-in-s-box-editor">launch - Open project in s&amp;box editor<a class="anchor" href="#launch-open-project-in-s-box-editor" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-sbox launch</code></pre>
 <h2 id="component-presets">Component Presets<a class="anchor" href="#component-presets" aria-label="锚点">#</a></h2>
@@ -186,25 +186,25 @@ cli-anything-sbox --json test run</code></pre>
 <p><code>scene list-presets</code> returns the live preset registry as JSON.</p>
 <h2 id="agent-usage-pattern">Agent Usage Pattern<a class="anchor" href="#agent-usage-pattern" aria-label="锚点">#</a></h2>
 <p>Pass <code>--json</code> for every agent-driven invocation. Pipe through <code>jq</code> to thread GUIDs and paths between commands:</p>
-<pre><code class="language-bash"># Bootstrap a project
-sbproj=$(cli-anything-sbox --json project new --name MyGame --output-dir /tmp/MyGame | jq -r '.sbproj')
-cd /tmp/MyGame
+<pre><code class="language-bash"><span class="hljs-comment"># Bootstrap a project</span>
+sbproj=$(cli-anything-sbox --json project new --name MyGame --output-dir /tmp/MyGame | jq -r <span class="hljs-string">&#x27;.sbproj&#x27;</span>)
+<span class="hljs-built_in">cd</span> /tmp/MyGame
 
-# Add a tower with a specific component layout, capture its GUID
+<span class="hljs-comment"># Add a tower with a specific component layout, capture its GUID</span>
 guid=$(cli-anything-sbox --json scene add-object ./Assets/scenes/main.scene Tower \
-    --components &quot;model,box_collider,rigidbody&quot; --tags &quot;tower&quot; \
-    | jq -r '.guid')
+    --components <span class="hljs-string">&quot;model,box_collider,rigidbody&quot;</span> --tags <span class="hljs-string">&quot;tower&quot;</span> \
+    | jq -r <span class="hljs-string">&#x27;.guid&#x27;</span>)
 
-# Generate the corresponding C# component, networked
+<span class="hljs-comment"># Generate the corresponding C# component, networked</span>
 cli-anything-sbox --json codegen component --name Tower --networked \
-    --rpc-methods &quot;Fire:Host&quot; --properties '[{&quot;name&quot;:&quot;Damage&quot;,&quot;type&quot;:&quot;float&quot;,&quot;default&quot;:&quot;25f&quot;}]' \
+    --rpc-methods <span class="hljs-string">&quot;Fire:Host&quot;</span> --properties <span class="hljs-string">&#x27;[{&quot;name&quot;:&quot;Damage&quot;,&quot;type&quot;:&quot;float&quot;,&quot;default&quot;:&quot;25f&quot;}]&#x27;</span> \
     -o ./Code/Tower.cs
 
-# Bulk-tweak every tower in the scene
+<span class="hljs-comment"># Bulk-tweak every tower in the scene</span>
 cli-anything-sbox --json scene bulk-modify ./Assets/scenes/main.scene \
-    --has-tag tower --enable --position-y-add 50
+    --has-tag tower --<span class="hljs-built_in">enable</span> --position-y-add 50
 
-# Validate before committing
+<span class="hljs-comment"># Validate before committing</span>
 cli-anything-sbox --json project validate</code></pre>
 <h2 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h2>
 <p><code>cli-anything-sbox</code> with no arguments enters an interactive REPL with a styled prompt:</p>

@@ -37,6 +37,7 @@ class AKShareDataService {
 
     // Periodic cache cleanup (every 5 min)
     this._cacheGCTimer = setInterval(() => this.clearExpiredCache(), 300_000);
+    this._cacheGCTimer.unref();
 
     this.ensureScriptsDirectory();
   }

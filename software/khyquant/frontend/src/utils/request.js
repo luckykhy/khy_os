@@ -17,6 +17,7 @@
  *   形成完整的"先认证后推送"安全链路（论文第3.3节接口约束）
  */
 import axios from 'axios'
+import { normalizeToken } from '@khy/ui-shared/auth/token'
 import { ElLoading, ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { getFriendlyErrorMessage } from './errorMessage'
@@ -96,7 +97,7 @@ request.interceptors.request.use(
     config.timeout = getRequestTimeoutMs()
     // 从pinia store获取token
     const userStore = useUserStore()
-    const token = typeof userStore.token === 'string' ? userStore.token.replace(/^Bearer\s+/i, '').trim() : ''
+    const token = normalizeToken(userStore.token)
 
     if (token && !isLocalToken(token)) {
       config.headers.Authorization = `Bearer ${token}`

@@ -37,8 +37,8 @@
 <h2 id="二-用法-就这一条">二、用法（就这一条）<a class="anchor" href="#二-用法-就这一条" aria-label="锚点">#</a></h2>
 <pre><code class="language-bash">khy compute</code></pre>
 <p>输出会列出各项检测结果。把它当作 <code>khy train</code> 的<strong>前置体检</strong>：</p>
-<pre><code class="language-bash">khy compute                       # 1) 先看设备
-khy train start --base qwen-3b    # 2) 设备 OK 再开训</code></pre>
+<pre><code class="language-bash">khy compute                       <span class="hljs-comment"># 1) 先看设备</span>
+khy train start --base qwen-3b    <span class="hljs-comment"># 2) 设备 OK 再开训</span></code></pre>
 <hr>
 <h2 id="三-读懂结果">三、读懂结果<a class="anchor" href="#三-读懂结果" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>检测项</th><th>含义 / 你该做什么</th></tr></thead><tbody><tr><td>Python 不可用</td><td>装 Python 3.10+，否则 <code>khy train</code> 无法运行</td></tr><tr><td>PyTorch 未安装</td><td><code>pip install torch</code>（按你的 CUDA 版本选 wheel）</td></tr><tr><td>CUDA 可用</td><td>有 NVIDIA GPU，可大幅加速、通常开 fp16</td></tr><tr><td>MPS 可用</td><td>Apple Silicon（M 系列），可用 GPU 加速</td></tr><tr><td>仅 CPU</td><td>仍可训练但很慢，建议用最小基座（如 qwen-1.5b）+ <code>quick</code> 档</td></tr></tbody></table>

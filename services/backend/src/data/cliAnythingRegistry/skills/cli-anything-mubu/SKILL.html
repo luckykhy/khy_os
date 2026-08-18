@@ -78,11 +78,11 @@ python -m cli_anything.mubu</code></pre>
 <p>| <code>clear-node</code> | Clear the current node reference. |</p>
 <p>| <code>history</code> | Show recent command history stored in session state. |</p>
 <h2 id="recommended-agent-workflow">Recommended Agent Workflow<a class="anchor" href="#recommended-agent-workflow" aria-label="锚点">#</a></h2>
-<pre><code class="language-text">discover daily-current '&lt;daily-folder-ref&gt;' --json
+<pre><code class="language-text">discover daily-current &#x27;&lt;daily-folder-ref&gt;&#x27; --json
         -&gt;
-inspect daily-nodes '&lt;daily-folder-ref&gt;' --query '&lt;anchor&gt;' --json
+inspect daily-nodes &#x27;&lt;daily-folder-ref&gt;&#x27; --query &#x27;&lt;anchor&gt;&#x27; --json
         -&gt;
-session use-doc '&lt;doc_path&gt;'
+session use-doc &#x27;&lt;doc_path&gt;&#x27;
         -&gt;
 mutate update-text / create-child / delete-node --json
         -&gt;
@@ -93,15 +93,15 @@ mutate update-text / create-child / delete-node --json
 <h3 id="interactive-repl-session">Interactive REPL Session<a class="anchor" href="#interactive-repl-session" aria-label="锚点">#</a></h3>
 <p>Start an interactive session with persistent document and node context.</p>
 <pre><code class="language-bash">cli-anything-mubu
-# Enter commands interactively
-# Use 'help' to see builtins
-# Use session commands to persist current-doc/current-node</code></pre>
+<span class="hljs-comment"># Enter commands interactively</span>
+<span class="hljs-comment"># Use &#x27;help&#x27; to see builtins</span>
+<span class="hljs-comment"># Use session commands to persist current-doc/current-node</span></code></pre>
 <h3 id="discover-current-daily-note">Discover Current Daily Note<a class="anchor" href="#discover-current-daily-note" aria-label="锚点">#</a></h3>
 <p>Resolve the current daily note from an explicit folder reference.</p>
-<pre><code class="language-bash">cli-anything-mubu --json discover daily-current '&lt;daily-folder-ref&gt;'</code></pre>
+<pre><code class="language-bash">cli-anything-mubu --json discover daily-current <span class="hljs-string">&#x27;&lt;daily-folder-ref&gt;&#x27;</span></code></pre>
 <h3 id="dry-run-atomic-update">Dry-Run Atomic Update<a class="anchor" href="#dry-run-atomic-update" aria-label="锚点">#</a></h3>
 <p>Inspect the exact outgoing payload before a live mutation.</p>
-<pre><code class="language-bash">cli-anything-mubu mutate update-text '&lt;doc-ref&gt;' --node-id &lt;node-id&gt; --text 'new text' --json</code></pre>
+<pre><code class="language-bash">cli-anything-mubu mutate update-text <span class="hljs-string">&#x27;&lt;doc-ref&gt;&#x27;</span> --node-id &lt;node-id&gt; --text <span class="hljs-string">&#x27;new text&#x27;</span> --json</code></pre>
 <h2 id="session-state">Session State<a class="anchor" href="#session-state" aria-label="锚点">#</a></h2>
 <p>The CLI maintains lightweight session state in JSON:</p>
 <ul><li><code>current_doc</code></li><li><code>current_node</code></li><li>local command history</li></ul>

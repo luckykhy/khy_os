@@ -35,10 +35,10 @@
 <p>它<strong>不重新发明</strong>任何检查——只是把仓库里已经存在、且已被验证的 <code>check:*</code> /<br><code>test:maintainer:*</code> 命令<strong>编排成一条可阻断、分层、可判定的链</strong>。</p>
 <hr>
 <h2 id="用法">用法<a class="anchor" href="#用法" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">npm run gate:release            # tier=must:最小硬门槛(默认)
-npm run gate:release:all        # must + recommended:完整彩排(含测试集 + pip 纯度审计)
-node scripts/release/release-gate.js --json        # 机器可消费 JSON,退出码同上
-node scripts/release/release-gate.js --keep-going  # 不在首个失败停,跑完全部再汇总(诊断用)</code></pre>
+<pre><code class="language-bash">npm run gate:release            <span class="hljs-comment"># tier=must:最小硬门槛(默认)</span>
+npm run gate:release:all        <span class="hljs-comment"># must + recommended:完整彩排(含测试集 + pip 纯度审计)</span>
+node scripts/release/release-gate.js --json        <span class="hljs-comment"># 机器可消费 JSON,退出码同上</span>
+node scripts/release/release-gate.js --keep-going  <span class="hljs-comment"># 不在首个失败停,跑完全部再汇总(诊断用)</span></code></pre>
 <p><strong>退出码</strong>：<code>0</code> = 自动化门禁 GO（确定性检查全过）；<code>1</code> = NO-GO（存在 must 阶段失败）。</p>
 <hr>
 <h2 id="阶段构成">阶段构成<a class="anchor" href="#阶段构成" aria-label="锚点">#</a></h2>

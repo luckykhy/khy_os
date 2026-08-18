@@ -45,11 +45,11 @@
 <hr>
 <h2 id="2-元规划协议-2-constraint-strategy-自决">2. 元规划协议（§2 <code>constraint_strategy</code> 自决）<a class="anchor" href="#2-元规划协议-2-constraint-strategy-自决" aria-label="锚点">#</a></h2>
 <p>模型在任何写入前必须先产出一份元规划 JSON：</p>
-<pre><code class="language-json">{
-  &quot;toolchain&quot;: [&quot;js_babel_writer&quot;],
-  &quot;constraint_strategy&quot;: &quot;Prompt_Soft | Code_Hard | System_Block&quot;,
-  &quot;risk_dissent&quot;: &quot;若选 Prompt_Soft，必填的风险论证&quot;
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;toolchain&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;js_babel_writer&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;constraint_strategy&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Prompt_Soft | Code_Hard | System_Block&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;risk_dissent&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;若选 Prompt_Soft，必填的风险论证&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <ul><li><code>toolchain</code>：从武器库（§4）挑选的执行器组合，按应用顺序。enum 来自<strong>活注册表</strong>。</li><li><code>constraint_strategy</code>：自决约束级别，严格枚举三档。</li><li><code>risk_dissent</code>：<strong>防偷懒关键</strong>。选 <code>Prompt_Soft</code> 必须一句话论证「绝不引发语法崩溃或逻辑污染」。</li></ul>
 <h3 id="2-1-三级约束阶梯-单调升级格">2.1 三级约束阶梯（单调升级格）<a class="anchor" href="#2-1-三级约束阶梯-单调升级格" aria-label="锚点">#</a></h3>
 <pre><code>Prompt_Soft  ⊏  Code_Hard  ⊏  System_Block

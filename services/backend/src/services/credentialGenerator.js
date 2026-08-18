@@ -32,6 +32,7 @@ const path = require('path');
 const CREDENTIALS_DIR_NAME = 'credentials';
 const CREDENTIALS_FILE_NAME = 'default-admin.json';
 const FALLBACK_USERNAME = 'admin';
+const ADMIN_EMAIL_DOMAIN = 'khy-quant.com';
 const PASSWORD_LENGTH = 16;
 
 function _dataHome() {
@@ -106,6 +107,24 @@ function resolveDefaultAdminUsername(env = process.env) {
     osName = '';
   }
   return sanitizeUsername(osName) || FALLBACK_USERNAME;
+}
+
+/**
+ * Derive the default admin email from the resolved admin username.
+ *
+ * 单一事实来源:所有播种路径(seed.js / adminAutoInit / manageDbBootstrap /
+ * create-admin)都由此派生邮箱,不再硬编码 `admin@khy-quant.com`。
+ * 硬编码会与历史遗留的 id=1 `admin` 账号撞 users.email 的 UNIQUE 约束 ——
+ * 新账号用户名按 OS 用户解析(如 qiqiaoban),邮箱却仍是 admin@ → INSERT 必失败,
+ * 播种每次崩溃、`.khy_quant_seeded` 标记写不出来,于是每次启动都重走「首次启动」。
+ *
+ * @param {string} [username] 已解析的用户名;缺省时自行解析(会读凭据文件)
+ * @returns {string} `<sanitized-username>@khy-quant.com`
+ */
+function resolveDefaultAdminEmail(username) {
+  const raw = String(username || '').trim() || resolveDefaultAdminUsername();
+  const local = sanitizeUsername(raw) || FALLBACK_USERNAME;
+  return `${local}@${ADMIN_EMAIL_DOMAIN}`;
 }
 
 /** Best-effort machine fingerprint material (never throws). */
@@ -242,6 +261,7 @@ function loadOrCreateDefaultAdminCredentials(env = process.env) {
 
 module.exports = {
   resolveDefaultAdminUsername,
+  resolveDefaultAdminEmail,
   sanitizeUsername,
   generateMachinePassword,
   readDefaultAdminCredentials,

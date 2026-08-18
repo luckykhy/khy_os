@@ -36,28 +36,28 @@
 <hr>
 <h2 id="独立启动-无需-khy-os">独立启动（无需 khy-os）<a class="anchor" href="#独立启动-无需-khy-os" aria-label="锚点">#</a></h2>
 <h3 id="方式一-qemu-最快">方式一：QEMU（最快）<a class="anchor" href="#方式一-qemu-最快" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">make run          # 串口输出到当前终端，无图形窗口（推荐，直接看 shell）
-make run-vga      # 同时打开 VGA 图形窗口
-make run-disk     # 挂载一块持久化的 16MB ATA 磁盘（首次自动创建 build/khy-disk.img）</code></pre>
+<pre><code class="language-bash">make run          <span class="hljs-comment"># 串口输出到当前终端，无图形窗口（推荐，直接看 shell）</span>
+make run-vga      <span class="hljs-comment"># 同时打开 VGA 图形窗口</span>
+make run-disk     <span class="hljs-comment"># 挂载一块持久化的 16MB ATA 磁盘（首次自动创建 build/khy-disk.img）</span></code></pre>
 <p>启动后会看到横幅与提示符 <code>khy&gt; </code>。</p>
 <h3 id="方式二-任意虚拟机-virtualbox-vmware">方式二：任意虚拟机（VirtualBox / VMware）<a class="anchor" href="#方式二-任意虚拟机-virtualbox-vmware" aria-label="锚点">#</a></h3>
 <p>把 <code>build/khy-os-kernel.iso</code> 作为光驱挂载，CPU 选 x86_64 即可引导。</p>
 <h3 id="方式三-真机-u-盘">方式三：真机（U 盘）<a class="anchor" href="#方式三-真机-u-盘" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># ⚠️ 会清空目标设备，请务必确认 /dev/sdX 是你的 U 盘
-sudo dd if=build/khy-os-kernel.iso of=/dev/sdX bs=4M status=progress &amp;&amp; sync</code></pre>
+<pre><code class="language-bash"><span class="hljs-comment"># ⚠️ 会清空目标设备，请务必确认 /dev/sdX 是你的 U 盘</span>
+<span class="hljs-built_in">sudo</span> <span class="hljs-built_in">dd</span> <span class="hljs-keyword">if</span>=build/khy-os-kernel.iso of=/dev/sdX bs=4M status=progress &amp;&amp; <span class="hljs-built_in">sync</span></code></pre>
 <p>从该 U 盘引导（BIOS/Legacy 模式）。串口控制台可用 <code>-serial</code> 对应的物理串口或<br>USB-TTL 转接线观察。</p>
 <hr>
 <h2 id="从源码构建">从源码构建<a class="anchor" href="#从源码构建" aria-label="锚点">#</a></h2>
 <h3 id="工具链">工具链<a class="anchor" href="#工具链" aria-label="锚点">#</a></h3>
 <table><thead><tr><th>工具</th><th>用途</th></tr></thead><tbody><tr><td><code>nasm</code></td><td>汇编引导/中断代码</td></tr><tr><td><code>gcc</code> + <code>ld</code></td><td>编译/链接 freestanding 内核</td></tr><tr><td><code>grub-mkrescue</code></td><td>生成可引导 ISO</td></tr><tr><td><code>qemu-system-x86_64</code> / <code>qemu-img</code></td><td>运行与磁盘镜像</td></tr><tr><td><code>moon</code>（MoonBit）</td><td><strong>默认构建需要</strong>：生成并编译 MoonBit 模块</td></tr><tr><td><code>xxd</code></td><td>仅在 <code>make userland</code> 重新生成用户态程序时需要</td></tr></tbody></table>
 <h3 id="构建">构建<a class="anchor" href="#构建" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">make            # 完整构建 → build/khy-os-kernel.iso（含 MoonBit 步骤）
-make iso        # 同上，只产出 ISO
-make clean      # 清理 build/ 与 MoonBit 产物</code></pre>
+<pre><code class="language-bash">make            <span class="hljs-comment"># 完整构建 → build/khy-os-kernel.iso（含 MoonBit 步骤）</span>
+make iso        <span class="hljs-comment"># 同上，只产出 ISO</span>
+make clean      <span class="hljs-comment"># 清理 build/ 与 MoonBit 产物</span></code></pre>
 <blockquote><p>默认 <code>make</code> 会先跑 MoonBit（<code>moon build --target native</code>）。若你的环境没有<br>MoonBit 工具链，需先安装，或裁剪 Makefile 中的 <code>MOONBIT_OBJ</code> 依赖。</p></blockquote>
 <h3 id="重新生成-ring-3-用户态程序">重新生成 Ring 3 用户态程序<a class="anchor" href="#重新生成-ring-3-用户态程序" aria-label="锚点">#</a></h3>
 <p>用户态测试程序以 ELF blob 形式内嵌进内核（<code>src/user_*_blob.h</code>，已签入仓库）。<br>仅在修改了 <code>userland/*.asm</code> 后才需要：</p>
-<pre><code class="language-bash">make userland   # 重新汇编 init/filetest/argv/badptr/forktest/exectest/forkwait</code></pre>
+<pre><code class="language-bash">make userland   <span class="hljs-comment"># 重新汇编 init/filetest/argv/badptr/forktest/exectest/forkwait</span></code></pre>
 <hr>
 <h2 id="shell-内建命令">Shell 内建命令<a class="anchor" href="#shell-内建命令" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>命令</th><th>说明</th></tr></thead><tbody><tr><td><code>help</code></td><td>列出命令</td></tr><tr><td><code>ps</code></td><td>查看进程</td></tr><tr><td><code>mem</code></td><td>内存使用</td></tr><tr><td><code>ls</code> / <code>cat &lt;f&gt;</code></td><td>列目录 / 看文件</td></tr><tr><td><code>write &lt;f&gt; &lt;文本&gt;</code> / <code>append &lt;f&gt; &lt;文本&gt;</code> / <code>rm &lt;f&gt;</code></td><td>写 / 追加 / 删</td></tr><tr><td><code>run &lt;prog&gt;</code></td><td>运行 <code>/bin</code> 下的 Ring 3 程序（fork+exec）</td></tr><tr><td><code>sleep &lt;ms&gt;</code></td><td>睡眠</td></tr><tr><td><code>netstat</code> / <code>netsend</code> / <code>netrecv</code></td><td>网络栈雏形</td></tr><tr><td><code>diskinfo</code> / <code>diskread &lt;blk&gt;</code> / <code>diskwrite &lt;blk&gt; &lt;文本&gt;</code></td><td>直接读写 ATA 磁盘块</td></tr><tr><td><code>syscalltest</code></td><td>系统调用自检</td></tr></tbody></table>

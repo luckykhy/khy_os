@@ -62,33 +62,33 @@
 <hr>
 <h2 id="3-agent-循环-核心差异点">3. Agent 循环（核心差异点）<a class="anchor" href="#3-agent-循环-核心差异点" aria-label="锚点">#</a></h2>
 <h3 id="claude-code-异步生成器循环">Claude Code：异步生成器循环<a class="anchor" href="#claude-code-异步生成器循环" aria-label="锚点">#</a></h3>
-<pre><code class="language-typescript">// 简化版: query.ts
-async function* query(messages, options): AsyncGenerator&lt;StreamEvent | Message, Terminal&gt; {
-  while (true) {
-    const response = await callAPI(messages);
-    yield* streamResponse(response);
+<pre><code class="language-typescript"><span class="hljs-comment">// 简化版: query.ts</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span>* <span class="hljs-title function_">query</span>(messages, options): <span class="hljs-title class_">AsyncGenerator</span>&lt;<span class="hljs-title class_">StreamEvent</span> | <span class="hljs-title class_">Message</span>, <span class="hljs-title class_">Terminal</span>&gt; {
+  <span class="hljs-keyword">while</span> (<span class="hljs-literal">true</span>) {
+    <span class="hljs-keyword">const</span> response = <span class="hljs-keyword">await</span> <span class="hljs-title function_">callAPI</span>(messages);
+    <span class="hljs-keyword">yield</span>* <span class="hljs-title function_">streamResponse</span>(response);
 
-    const toolUses = extractToolUses(response);
-    if (toolUses.length === 0) return { type: 'end_turn' };
+    <span class="hljs-keyword">const</span> toolUses = <span class="hljs-title function_">extractToolUses</span>(response);
+    <span class="hljs-keyword">if</span> (toolUses.<span class="hljs-property">length</span> === <span class="hljs-number">0</span>) <span class="hljs-keyword">return</span> { <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;end_turn&#x27;</span> };
 
-    const results = await runTools(toolUses); // 只读工具并行，写入工具串行
-    messages.push(...results);
+    <span class="hljs-keyword">const</span> results = <span class="hljs-keyword">await</span> <span class="hljs-title function_">runTools</span>(toolUses); <span class="hljs-comment">// 只读工具并行，写入工具串行</span>
+    messages.<span class="hljs-title function_">push</span>(...results);
   }
 }</code></pre>
 <ul><li><strong>单一执行路径</strong>（一个 API 供应商，一种循环形态）。</li><li><strong>工具并发</strong>：分为并发安全（只读，最多 10 并行）和非安全（串行）。</li><li><strong>恢复策略</strong>：max_output_tokens 升级、413 时响应式压缩。</li><li><strong>流式输出</strong>：异步生成器 yield 事件 — 消费者（UI 或 SDK）按自身节奏拉取。</li></ul>
 <h3 id="khy-os-多路径状态机">KHY OS：多路径状态机<a class="anchor" href="#khy-os-多路径状态机" aria-label="锚点">#</a></h3>
-<pre><code class="language-javascript">// 简化版: queryEngine.js (V2 路径)
-class QueryEngine {
-  async *run(prompt) {
-    let state = 'NEXT_TURN';
-    while (state !== 'DONE') {
-      switch (state) {
-        case 'NEXT_TURN': state = await this._executeTurn(); break;
-        case 'COMPACT_RETRY': state = await this._compact(); break;
-        case 'MAX_OUTPUT_RECOVERY': state = await this._escalateTokens(); break;
-        case 'MODEL_FALLBACK': state = await this._fallbackModel(); break;
+<pre><code class="language-javascript"><span class="hljs-comment">// 简化版: queryEngine.js (V2 路径)</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">QueryEngine</span> {
+  <span class="hljs-keyword">async</span> *<span class="hljs-title function_">run</span>(<span class="hljs-params">prompt</span>) {
+    <span class="hljs-keyword">let</span> state = <span class="hljs-string">&#x27;NEXT_TURN&#x27;</span>;
+    <span class="hljs-keyword">while</span> (state !== <span class="hljs-string">&#x27;DONE&#x27;</span>) {
+      <span class="hljs-keyword">switch</span> (state) {
+        <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;NEXT_TURN&#x27;</span>: state = <span class="hljs-keyword">await</span> <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">_executeTurn</span>(); <span class="hljs-keyword">break</span>;
+        <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;COMPACT_RETRY&#x27;</span>: state = <span class="hljs-keyword">await</span> <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">_compact</span>(); <span class="hljs-keyword">break</span>;
+        <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;MAX_OUTPUT_RECOVERY&#x27;</span>: state = <span class="hljs-keyword">await</span> <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">_escalateTokens</span>(); <span class="hljs-keyword">break</span>;
+        <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;MODEL_FALLBACK&#x27;</span>: state = <span class="hljs-keyword">await</span> <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">_fallbackModel</span>(); <span class="hljs-keyword">break</span>;
       }
-      yield* this._drainEvents();
+      <span class="hljs-keyword">yield</span>* <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">_drainEvents</span>();
     }
   }
 }</code></pre>
@@ -98,23 +98,23 @@ class QueryEngine {
 <hr>
 <h2 id="4-工具系统">4. 工具系统<a class="anchor" href="#4-工具系统" aria-label="锚点">#</a></h2>
 <h3 id="claude-code-2">Claude Code<a class="anchor" href="#claude-code-2" aria-label="锚点">#</a></h3>
-<pre><code class="language-typescript">interface Tool&lt;Input, Output, Progress&gt; {
-  name: string;
-  inputSchema: ZodType&lt;Input&gt;;
-  call(args: Input, context: ToolUseContext): Promise&lt;ToolResult&lt;Output&gt;&gt;;
-  isReadOnly(input: Input): boolean;
-  isConcurrencySafe(input: Input): boolean;
-  interruptBehavior(): 'cancel' | 'block';
-  isEnabled(): boolean;
+<pre><code class="language-typescript"><span class="hljs-keyword">interface</span> <span class="hljs-title class_">Tool</span>&lt;<span class="hljs-title class_">Input</span>, <span class="hljs-title class_">Output</span>, <span class="hljs-title class_">Progress</span>&gt; {
+  <span class="hljs-attr">name</span>: <span class="hljs-built_in">string</span>;
+  <span class="hljs-attr">inputSchema</span>: <span class="hljs-title class_">ZodType</span>&lt;<span class="hljs-title class_">Input</span>&gt;;
+  <span class="hljs-title function_">call</span>(<span class="hljs-attr">args</span>: <span class="hljs-title class_">Input</span>, <span class="hljs-attr">context</span>: <span class="hljs-title class_">ToolUseContext</span>): <span class="hljs-title class_">Promise</span>&lt;<span class="hljs-title class_">ToolResult</span>&lt;<span class="hljs-title class_">Output</span>&gt;&gt;;
+  <span class="hljs-title function_">isReadOnly</span>(<span class="hljs-attr">input</span>: <span class="hljs-title class_">Input</span>): <span class="hljs-built_in">boolean</span>;
+  <span class="hljs-title function_">isConcurrencySafe</span>(<span class="hljs-attr">input</span>: <span class="hljs-title class_">Input</span>): <span class="hljs-built_in">boolean</span>;
+  <span class="hljs-title function_">interruptBehavior</span>(): <span class="hljs-string">&#x27;cancel&#x27;</span> | <span class="hljs-string">&#x27;block&#x27;</span>;
+  <span class="hljs-title function_">isEnabled</span>(): <span class="hljs-built_in">boolean</span>;
 }</code></pre>
 <ul><li><strong>注册方式</strong>：<code>tools.ts</code> 中静态导入，feature 门控。</li><li><strong>约 30 个工具</strong>：Bash、FileRead/Write/Edit、Glob、Grep、Agent、WebFetch/Search、MCP、Cron、Todo、Notebook、Plan、Worktree、Task、Team、Skill、LSP、Config 等。</li><li><strong>Schema</strong>：Zod 做校验，JSON Schema 做 API 定义。</li><li><strong>并发控制</strong>：显式 <code>isConcurrencySafe()</code> 分类。</li></ul>
 <h3 id="khy-os-2">KHY OS<a class="anchor" href="#khy-os-2" aria-label="锚点">#</a></h3>
-<pre><code class="language-javascript">// 约定式加载
-// 1. 子目录: tools/FileReadTool/index.js (class BaseTool)
-// 2. 扁平文件: tools/shellCommand.js (defineTool() 格式)
-// 3. MCP 桥接: 从连接的服务器自动导入
+<pre><code class="language-javascript"><span class="hljs-comment">// 约定式加载</span>
+<span class="hljs-comment">// 1. 子目录: tools/FileReadTool/index.js (class BaseTool)</span>
+<span class="hljs-comment">// 2. 扁平文件: tools/shellCommand.js (defineTool() 格式)</span>
+<span class="hljs-comment">// 3. MCP 桥接: 从连接的服务器自动导入</span>
 
-const registry = new Map(); // name -&gt; { execute, definition, profile }</code></pre>
+<span class="hljs-keyword">const</span> registry = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Map</span>(); <span class="hljs-comment">// name -&gt; { execute, definition, profile }</span></code></pre>
 <ul><li><strong>注册方式</strong>：启动时扫描 <code>src/tools/</code> 自动发现。</li><li><strong>50+ 工具</strong>：CC 全部等价物 + PowerShell、REPL、PDF、OCR、多终端、剪贴板图片、代理工具。</li><li><strong>Schema</strong>：纯 JSON Schema 对象（无 Zod）。</li><li><strong>Profile</strong>：<code>toolProfile.js</code> 提供按能力过滤（coding/minimal/verification/explorer），每种 agent 角色看到不同工具子集。</li><li><strong>平台工具</strong>：<code>platformUtils.js</code>（28K）处理 Windows/Linux/macOS 跨平台差异。</li></ul>
 <h3 id="关键差异-2">关键差异<a class="anchor" href="#关键差异-2" aria-label="锚点">#</a></h3>
 <ul><li>CC 工具<strong>端到端静态类型</strong>（input -&gt; output -&gt; progress）；KHY 使用运行时鸭子类型。</li><li>KHY 有<strong>工具 Profile</strong> — 不同 agent 看到不同工具子集（CC 对所有 agent 暴露全部工具）。</li><li>KHY 有<strong>延迟工具加载</strong>（<code>KHY_DEFER_TOOLS</code>）— 根据上下文动态揭示工具。</li><li>CC 的工具执行上下文（<code>ToolUseContext</code>）是类型化的包；KHY 传递松散的 options 对象。</li></ul>

@@ -31,18 +31,18 @@
 <h2 id="核心职责">核心职责<a class="anchor" href="#核心职责" aria-label="锚点">#</a></h2>
 <ol><li><strong>任务解析</strong>: 解析用户请求，提取目标平台、内容格式、优先级等参数</li><li><strong>适配器选择</strong>: 根据平台要求选择正确的适配器</li><li><strong>并行调度</strong>: 对多个平台的投递任务进行并行调度</li><li><strong>结果聚合</strong>: 收集所有适配器的投递结果</li><li><strong>一致性校验</strong>: 调用 DiffEngine 校验跨平台一致性</li><li><strong>决策执行</strong>: 根据校验结果决定继续、重试还是中止</li><li><strong>日志记录</strong>: 记录完整投递链路</li></ol>
 <h2 id="输入格式">输入格式<a class="anchor" href="#输入格式" aria-label="锚点">#</a></h2>
-<pre><code class="language-json">{
-  &quot;task_id&quot;: &quot;唯一任务 ID&quot;,
-  &quot;content&quot;: &quot;要投递的原始内容（Markdown 字符串）&quot;,
-  &quot;format&quot;: &quot;markdown | json | text&quot;,
-  &quot;platforms&quot;: [&quot;slack&quot;, &quot;notion&quot;, &quot;markdown&quot;],
-  &quot;priority&quot;: 1-10,
-  &quot;metadata&quot;: {
-    &quot;author&quot;: &quot;xxx&quot;,
-    &quot;tags&quot;: [&quot;release&quot;, &quot;v2&quot;],
-    &quot;created_at&quot;: &quot;ISO timestamp&quot;
-  }
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;task_id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;唯一任务 ID&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;content&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;要投递的原始内容（Markdown 字符串）&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;format&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;markdown | json | text&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;platforms&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;slack&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;notion&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;markdown&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;priority&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1</span><span class="hljs-number">-10</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;metadata&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;author&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;xxx&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;tags&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;release&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;v2&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;created_at&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ISO timestamp&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <h2 id="执行流程">执行流程<a class="anchor" href="#执行流程" aria-label="锚点">#</a></h2>
 <pre><code>Step 1: 验证输入完整性
   ↓
@@ -71,22 +71,22 @@ Step 8: 返回投递报告</code></pre>
 <p>当用户未指定平台时，按以下默认顺序投递：</p>
 <ol><li><code>markdown</code> — 最可靠，作为基准</li><li><code>notion</code> — 结构化存储</li><li><code>slack</code> — 即时通知</li><li><code>webhook</code> — 外部集成</li><li><code>email</code> — 正式通知</li><li><code>api</code> — 程序化调用</li></ol>
 <h2 id="输出格式">输出格式<a class="anchor" href="#输出格式" aria-label="锚点">#</a></h2>
-<pre><code class="language-json">{
-  &quot;task_id&quot;: &quot;xxx&quot;,
-  &quot;orchestrator_status&quot;: &quot;completed | partial | failed&quot;,
-  &quot;execution_time_ms&quot;: 1234,
-  &quot;deliveries&quot;: [
-    {
-      &quot;platform&quot;: &quot;slack&quot;,
-      &quot;success&quot;: true,
-      &quot;result&quot;: { &quot;message_ts&quot;: &quot;...&quot;, &quot;url&quot;: &quot;...&quot; },
-      &quot;duration_ms&quot;: 234
-    }
-  ],
-  &quot;diff_report&quot;: { &quot;overall_status&quot;: &quot;pass&quot;, &quot;issues&quot;: [] },
-  &quot;final_decision&quot;: &quot;delivered | delivered_with_warnings | aborted&quot;,
-  &quot;next_actions&quot;: []
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;task_id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;xxx&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;orchestrator_status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;completed | partial | failed&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;execution_time_ms&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1234</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;deliveries&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+    <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;platform&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;slack&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;result&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;message_ts&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;...&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;url&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;...&quot;</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;duration_ms&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">234</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;diff_report&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;overall_status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;pass&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;issues&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-punctuation">]</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;final_decision&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;delivered | delivered_with_warnings | aborted&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;next_actions&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-punctuation">]</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <h2 id="错误处理">错误处理<a class="anchor" href="#错误处理" aria-label="锚点">#</a></h2>
 <ul><li>所有适配器失败 → 返回 <code>failed</code>，建议检查配置</li><li>部分失败 → 返回 <code>partial</code>，列出失败平台</li><li>DiffEngine 发现 CRITICAL 问题 → 返回 <code>aborted</code>，附带问题详情</li></ul>
 <h2 id="日志要求">日志要求<a class="anchor" href="#日志要求" aria-label="锚点">#</a></h2>

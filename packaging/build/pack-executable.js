@@ -89,7 +89,7 @@ function getPkgInvocation() {
  */
 function buildPkgConfig(moduleConfig, platform) {
   const moduleId = moduleConfig.id;
-  const bundlePath = path.join(DIST_MODULES, moduleId, 'bundle.cjs');
+  const bundlePath = path.join(DIST_MODULES, moduleId, 'bundle.mjs');
 
   if (!fs.existsSync(bundlePath)) {
     throw new Error(`Bundle not found: ${bundlePath}. Run esbuild-modules.js first.`);

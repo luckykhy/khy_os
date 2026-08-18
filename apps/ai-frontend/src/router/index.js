@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import { resolveAuthGuard } from '@khy/ui-shared/auth/guard';
 import { useUserStore } from '@/stores/user';
 import { routeStart, routeDone } from '@/composables/useGlobalLoading';
 import { viewLoaders } from '@/composables/useRoutePrefetch';
@@ -267,22 +268,23 @@ router.beforeEach(async (to, from, next) => {
   routeStart();
   const userStore = useUserStore();
   const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
+  const authenticated = userStore.isAuthenticated();
   if (requiresAuth) {
-    if (!userStore.isAuthenticated()) return next('/login');
+    if (!authenticated) return next('/login');
     const ok = await userStore.ensureSession();
     if (!ok) return next('/login');
   }
 
-  if (to.path === '/login' && userStore.isAuthenticated()) {
-    return next(userStore.preferredHome);
-  }
-
-  const requiresAdmin = to.matched.some((record) => record.meta.requiresAdmin);
-  if (requiresAdmin && !userStore.isAdmin) {
-    return next('/home');
-  }
-
-  return next();
+  const redirect = resolveAuthGuard({
+    requiresAdmin: to.matched.some((record) => record.meta.requiresAdmin),
+    isAuthenticated: authenticated,
+    isAdmin: userStore.isAdmin,
+    isGuestRoute: to.path === '/login',
+    authenticatedRedirect: userStore.preferredHome,
+    adminRedirect: '/home',
+    order: ['guest', 'admin'],
+  });
+  return redirect ? next(redirect) : next();
 });
 
 // Clear the bar once navigation settles (success or error). afterEach fires

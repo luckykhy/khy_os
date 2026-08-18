@@ -114,19 +114,19 @@
 <hr>
 <h2 id="六-感觉一下-harness-就是那段-主程序">六、感觉一下：Harness 就是那段&quot;主程序&quot;<a class="anchor" href="#六-感觉一下-harness-就是那段-主程序" aria-label="锚点">#</a></h2>
 <p><strong>⚠️ 郑重提醒：下面这段极简伪代码你完全不用会写、不用看懂每一行。</strong> 放它在这，只是让你<strong>亲眼看一下</strong>——harness 的核心，其实就是一个&quot;转圈&quot;的主程序。请你只体会一件事：<strong>模型（<code>ask_model</code>）只被&quot;问&quot;、只负责&quot;出主意&quot;；真正&quot;动手&quot;（<code>run_tool</code>）和&quot;转圈&quot;（<code>while</code>）的，全是 harness 这段程序。</strong></p>
-<pre><code class="language-python"># 这就是一个 harness 最核心的骨架——一个&quot;转圈&quot;的主程序
-history = [你的目标]                      # ① 一开始，历史里只有你的目标
+<pre><code class="language-python"><span class="hljs-comment"># 这就是一个 harness 最核心的骨架——一个&quot;转圈&quot;的主程序</span>
+history = [你的目标]                      <span class="hljs-comment"># ① 一开始，历史里只有你的目标</span>
 
-while True:                              # 🔁 转圈：一轮一轮来
-    reply = ask_model(history)          # ② 把历史发给大模型，收它的回话
+<span class="hljs-keyword">while</span> <span class="hljs-literal">True</span>:                              <span class="hljs-comment"># 🔁 转圈：一轮一轮来</span>
+    reply = ask_model(history)          <span class="hljs-comment"># ② 把历史发给大模型，收它的回话</span>
     history.append(reply)
 
-    if reply.想用工具:                    # ③ 模型说它想用某个工具？
-        result = run_tool(reply.工具)    #    ← harness 真的去执行！（模型碰不到这一步）
-        history.append(result)          # ④ 把结果塞回历史，喂给模型
-        # 回到 while 顶部，再转一圈
-    else:                               # ⑤ 模型不再要工具了 = 任务做完
-        break                           #    收工，把 reply 回给你
+    <span class="hljs-keyword">if</span> reply.想用工具:                    <span class="hljs-comment"># ③ 模型说它想用某个工具？</span>
+        result = run_tool(reply.工具)    <span class="hljs-comment">#    ← harness 真的去执行！（模型碰不到这一步）</span>
+        history.append(result)          <span class="hljs-comment"># ④ 把结果塞回历史，喂给模型</span>
+        <span class="hljs-comment"># 回到 while 顶部，再转一圈</span>
+    <span class="hljs-keyword">else</span>:                               <span class="hljs-comment"># ⑤ 模型不再要工具了 = 任务做完</span>
+        <span class="hljs-keyword">break</span>                           <span class="hljs-comment">#    收工，把 reply 回给你</span>
 
 回给你(reply)</code></pre>
 <p>看到那个 <code>while True</code> 了吗？<strong>那就是 <a href="./[CONCEPT-03]%20什么是ToolLoop-工具循环.html">Tool Loop</a> 的真身</strong>——harness 靠这个圈，推着模型&quot;用工具→看结果→再决定&quot;，一圈圈直到任务完成。而 <code>run_tool(...)</code> 那一行，就是 harness 那双&quot;真的会动手&quot;的手。</p>

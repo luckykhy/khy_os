@@ -646,7 +646,12 @@ async function generate(prompt, options = {}) {
       //    key 永不降级,网关反复重试同一 key)。markFailure 对 429/401/403 加 cooldown;
       //    502/server_error 记失败计数 + lastError(连续失败由网关级 fast-fail 熔断)。
       const statusCode = Number(lastAttempt && lastAttempt.statusCode) || 0;
-      _poolMark(poolKey, 'markFailure', statusCode, resolvedError);
+      // 'no_provider' = 一把 key 都没被用上(env 无裸 key 且没解析出 pool provider)。
+      // 把它记到某把 key 的 totalFailures 上是错误归因:那把 key 这一轮根本没出手,
+      // 之后 `khy key list` 会显示一堆莫名失败,排障时把人引向错误方向。
+      if (resolvedErrorType !== 'no_provider') {
+        _poolMark(poolKey, 'markFailure', statusCode, resolvedError);
+      }
     }
 
     return {

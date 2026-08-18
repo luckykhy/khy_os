@@ -46,16 +46,8 @@ test('source filter excludes state, secrets and generated databases', () => {
   assert.equal(isExcludedSource('node_modules/pkg/index.js', dirent('index.js', 'file')), false);
 });
 
-test('runtime source filter keeps application dependencies and excludes developer trees', () => {
-  assert.equal(runtimeSourceFilter('node_modules/express/index.js', dirent('index.js', 'file')), true);
+test('runtime source filter is retained only for legacy callers and excludes generated state', () => {
   assert.equal(runtimeSourceFilter('services/backend/bin/khy.js', dirent('khy.js', 'file')), true);
-  assert.equal(runtimeSourceFilter('platform/packages/shared/src/index.js', dirent('index.js', 'file')), true);
-  assert.equal(runtimeSourceFilter('software/khyquant/services/market.js', dirent('market.js', 'file')), true);
-  assert.equal(runtimeSourceFilter('software/khyquant/frontend/node_modules/vue/index.js', dirent('index.js', 'file')), false);
-  assert.equal(runtimeSourceFilter('services/backend/node_modules/express/index.js', dirent('index.js', 'file')), false);
-  assert.equal(runtimeSourceFilter('services/backend/tests/cli.test.js', dirent('cli.test.js', 'file')), false);
-  assert.equal(runtimeSourceFilter('apps', dirent('apps', 'dir')), false);
-  assert.equal(runtimeSourceFilter('docs', dirent('docs', 'dir')), false);
   assert.equal(runtimeSourceFilter('services/backend/data/live.db', dirent('live.db', 'file')), false);
 });
 
@@ -86,7 +78,7 @@ test('launchers derive all state from their own artifact directory', t => {
   assert.match(batch, /set "PYTHONNOUSERSITE=1"/);
   assert.match(batch, /set "PYTHONUSERBASE=%ROOT%state\\\.khy\\python-user"/);
   assert.match(batch, /set "PIP_CACHE_DIR=%ROOT%state\\\.khy\\cache\\pip"/);
-  assert.match(batch, /"%ROOT%runtime\\node\\node\.exe" "%ROOT%services\\backend\\bin\\khy\.js" %\*/);
+  assert.match(batch, /"%ROOT%runtime\\node\\node\.exe" "%ROOT%runtime\\khy\\bundle\.mjs" %\*/);
   assert.doesNotMatch(batch, /C:\\/);
 
   writeLaunchers(root, 'portable-dev', { platform: 'linux', arch: 'x64' });

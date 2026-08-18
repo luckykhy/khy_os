@@ -60,9 +60,9 @@
 <ul><li><code>runRouted()</code>：在释放输入前<ul><li>拦截 <code>login</code> / <code>register</code> / <code>passwd</code> → <code>runAuthForm</code>；</li><li>调用 <code>tuiUnsupportedReason(parsed)</code>，命中则推送经典模式提示并返回。</li></ul></li><li>顶层 <code>useInput</code>：<code>if (formFlow) return;</code> 让出输入给 overlay。</li><li>模块级 <code>tuiUnsupportedReason(parsed)</code> + <code>_learnNeedsClassic()</code> 守卫函数。</li></ul>
 <h3 id="backend-src-cli-repl-js"><code>backend/src/cli/repl.js</code><a class="anchor" href="#backend-src-cli-repl-js" aria-label="锚点">#</a></h3>
 <p>门控由 opt-in 改为 default-on：</p>
-<pre><code class="language-javascript">const tuiOptOut = process.env.KHY_FULL_TUI === '0' || options.fullTui === false;
-const tuiRequested = !tuiOptOut &amp;&amp; (options.fullTui || process.stdout.isTTY);
-if (tuiRequested &amp;&amp; process.stdout.isTTY) { /* startInkApp */ }</code></pre>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> tuiOptOut = process.<span class="hljs-property">env</span>.<span class="hljs-property">KHY_FULL_TUI</span> === <span class="hljs-string">&#x27;0&#x27;</span> || options.<span class="hljs-property">fullTui</span> === <span class="hljs-literal">false</span>;
+<span class="hljs-keyword">const</span> tuiRequested = !tuiOptOut &amp;&amp; (options.<span class="hljs-property">fullTui</span> || process.<span class="hljs-property">stdout</span>.<span class="hljs-property">isTTY</span>);
+<span class="hljs-keyword">if</span> (tuiRequested &amp;&amp; process.<span class="hljs-property">stdout</span>.<span class="hljs-property">isTTY</span>) { <span class="hljs-comment">/* startInkApp */</span> }</code></pre>
 <hr>
 <h2 id="四-命令覆盖">四、命令覆盖<a class="anchor" href="#四-命令覆盖" aria-label="锚点">#</a></h2>
 <h3 id="已原生化-tui-内正常工作">已原生化（TUI 内正常工作）<a class="anchor" href="#已原生化-tui-内正常工作" aria-label="锚点">#</a></h3>

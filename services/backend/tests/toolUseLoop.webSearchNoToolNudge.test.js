@@ -3,6 +3,10 @@
 describe('toolUseLoop auto web-search injection', () => {
   const originalEnv = { ...process.env };
 
+  beforeEach(() => {
+    process.env.KHY_MCP_AUTOCONNECT = 'false';
+  });
+
   afterEach(() => {
     process.env = { ...originalEnv };
     jest.resetModules();
@@ -70,6 +74,7 @@ describe('toolUseLoop auto web-search injection', () => {
     const toolUseLoop = require('../src/services/toolUseLoop');
     const chat = jest
       .fn()
+      .mockResolvedValue({ reply: 'done' })
       .mockResolvedValueOnce({
         reply: '搜索一下。<tool_call>{"name":"web_search","params":{"query":"latest ai news"}}</tool_call>',
       })
@@ -145,6 +150,7 @@ describe('toolUseLoop auto web-search injection', () => {
     const toolUseLoop = require('../src/services/toolUseLoop');
     const chat = jest
       .fn()
+      .mockResolvedValue({ reply: 'done' })
       .mockResolvedValueOnce({ reply: '我先查文档。' })
       .mockResolvedValueOnce({ reply: 'done' });
 
@@ -225,6 +231,7 @@ describe('toolUseLoop auto web-search injection', () => {
     const toolUseLoop = require('../src/services/toolUseLoop');
     const chat = jest
       .fn()
+      .mockResolvedValue({ reply: '链路闭环验证完成。' })
       .mockResolvedValueOnce({
         reply: '先搜一下。<tool_call>{"name":"web_search","params":{"query":"latest ai news"}}</tool_call>',
       })
@@ -259,6 +266,7 @@ describe('toolUseLoop auto web-search injection', () => {
     const toolUseLoop = require('../src/services/toolUseLoop');
     const chat = jest
       .fn()
+      .mockResolvedValue({ reply: 'done' })
       .mockResolvedValueOnce({ reply: '我先整理一下目录结构。' })
       .mockResolvedValueOnce({ reply: 'done' });
 
@@ -307,8 +315,8 @@ describe('toolUseLoop auto web-search injection', () => {
     const toolUseLoop = require('../src/services/toolUseLoop');
     const chat = jest
       .fn()
-      .mockResolvedValueOnce({ reply: '我先准备一下项目结构。' })
-      .mockResolvedValueOnce({ reply: 'done' });
+      .mockResolvedValue({ reply: 'done' })
+      .mockResolvedValueOnce({ reply: '我先准备一下项目结构。' });
 
     await toolUseLoop.runToolUseLoop(`请创建项目结构：
 - src/

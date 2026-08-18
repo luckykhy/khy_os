@@ -98,24 +98,24 @@
 <h2 id="5-代码改造示例">5. 代码改造示例<a class="anchor" href="#5-代码改造示例" aria-label="锚点">#</a></h2>
 <h3 id="5-1-文件工具加锁装饰器-单一执行漏斗-零侵入调度器">5.1 文件工具加锁装饰器（单一执行漏斗，零侵入调度器）<a class="anchor" href="#5-1-文件工具加锁装饰器-单一执行漏斗-零侵入调度器" aria-label="锚点">#</a></h3>
 <p>挂接点选在<strong>唯一的工具执行漏斗</strong> <code>executeTool</code>（<code>src/services/toolCalling.js</code>），而非 12+ 个<br>单独写入点——它<strong>横跨整个 <code>execute()</code></strong>（这对读-改-写编辑工具是正确的：锁必须罩住&quot;读+改+写&quot;全程），<br>且锁逻辑全在 <code>../tools/_fileLock</code> 模块内，<strong>调度器一行未动</strong>（满足防呆②）。</p>
-<pre><code class="language-js">// services/backend/src/services/toolCalling.js  （executeTool 内）
-let _fileLockHandle = null;
-try {
-  try {
-    _fileLockHandle = await require('../tools/_fileLock')
-      .acquireForToolCall(permissionKey, normalizedParams);
-  } catch (lockErr) {
-    if (lockErr &amp;&amp; lockErr.code === 'EFILELOCKTIMEOUT') throw lockErr; // → ToolError → Agent
-    _fileLockHandle = null; // 任何其它锁故障：防呆——绝不困住写
+<pre><code class="language-js"><span class="hljs-comment">// services/backend/src/services/toolCalling.js  （executeTool 内）</span>
+<span class="hljs-keyword">let</span> _fileLockHandle = <span class="hljs-literal">null</span>;
+<span class="hljs-keyword">try</span> {
+  <span class="hljs-keyword">try</span> {
+    _fileLockHandle = <span class="hljs-keyword">await</span> <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../tools/_fileLock&#x27;</span>)
+      .<span class="hljs-title function_">acquireForToolCall</span>(permissionKey, normalizedParams);
+  } <span class="hljs-keyword">catch</span> (lockErr) {
+    <span class="hljs-keyword">if</span> (lockErr &amp;&amp; lockErr.<span class="hljs-property">code</span> === <span class="hljs-string">&#x27;EFILELOCKTIMEOUT&#x27;</span>) <span class="hljs-keyword">throw</span> lockErr; <span class="hljs-comment">// → ToolError → Agent</span>
+    _fileLockHandle = <span class="hljs-literal">null</span>; <span class="hljs-comment">// 任何其它锁故障：防呆——绝不困住写</span>
   }
 
-  // …原有工具分发（builtin.handler / registry.execute / compat）原样不动…
-  // …原有 diff 输出（Goal 7 红绿 ±）原样保留（防呆③）…
-  return structuredResult;
+  <span class="hljs-comment">// …原有工具分发（builtin.handler / registry.execute / compat）原样不动…</span>
+  <span class="hljs-comment">// …原有 diff 输出（Goal 7 红绿 ±）原样保留（防呆③）…</span>
+  <span class="hljs-keyword">return</span> structuredResult;
 
-} finally {
-  if (_fileLockHandle) {
-    try { _fileLockHandle.release(); } catch { /* best-effort */ }
+} <span class="hljs-keyword">finally</span> {
+  <span class="hljs-keyword">if</span> (_fileLockHandle) {
+    <span class="hljs-keyword">try</span> { _fileLockHandle.<span class="hljs-title function_">release</span>(); } <span class="hljs-keyword">catch</span> { <span class="hljs-comment">/* best-effort */</span> }
   }
 }</code></pre>
 <p>要点：</p>

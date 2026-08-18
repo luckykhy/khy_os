@@ -37,6 +37,50 @@ test('resolveToolsDir:KHY_MD_TOOLS_DIR 覆盖优先', () => {
   }
 });
 
+test('resolveVendorDir:完整本地 vendor 零网络复用', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mdvendor-local-'));
+  const vendor = path.join(tmp, 'vendor');
+  fs.mkdirSync(vendor);
+  for (const name of ['MANIFEST.json', 'khyos-muya.js', 'khyos-muya.css']) {
+    fs.writeFileSync(path.join(vendor, name), name);
+  }
+  try {
+    assert.equal(await HANDLER.resolveVendorDir(tmp, () => {}, () => {}), vendor);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test('resolveVendorDir:离线时打印手动路径并返回 null 触发内联降级', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mdvendor-offline-'));
+  const provisionerPath = require.resolve('../../src/services/payloadProvisioner');
+  const saved = require.cache[provisionerPath];
+  const lines = [];
+  require.cache[provisionerPath] = {
+    id: provisionerPath,
+    filename: provisionerPath,
+    loaded: true,
+    exports: {
+      ensurePayload: async () => ({
+        ok: false,
+        reason: 'offline',
+        manualUrl: 'https://release.test/khy-payload-manifest.json',
+        targetDir: path.join(tmp, 'payload'),
+      }),
+    },
+  };
+  try {
+    const result = await HANDLER.resolveVendorDir(tmp, line => lines.push(line), line => lines.push(line));
+    assert.equal(result, null);
+    assert.match(lines.join('\n'), /本次使用内联引擎/);
+    assert.match(lines.join('\n'), /https:\/\/release\.test\/khy-payload-manifest\.json/);
+    assert.match(lines.join('\n'), /放置目录/);
+  } finally {
+    if (saved) require.cache[provisionerPath] = saved; else delete require.cache[provisionerPath];
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
 // ── md handler:门控 ───────────────────────────────────────────────────────
 test('handleMd:KHY_MD_EDITOR=0 → 直接返回 true 不做任何事', async () => {
   const saved = process.env.KHY_MD_EDITOR;

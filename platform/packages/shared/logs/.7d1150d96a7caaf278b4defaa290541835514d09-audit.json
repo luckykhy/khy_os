@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 7
+    },
+    "auditLog": "C:\\khy-os\\platform\\packages\\shared\\logs\\.7d1150d96a7caaf278b4defaa290541835514d09-audit.json",
+    "files": [
+        {
+            "date": 1786670404741,
+            "name": "C:\\khy-os\\platform\\packages\\shared\\logs\\app-2026-08-14.log",
+            "hash": "e1e357b85991dac43439ec7b84c72913cf8f7153706c2bdd18158f2bf9754ec1"
+        }
+    ],
+    "hashType": "sha256"
+}

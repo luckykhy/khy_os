@@ -312,14 +312,21 @@ async function dispatchTailCommand(command, _ctx) {
       }
 
       const instructionSvc = require('../services/instructionFileService');
-      const summary = instructionSvc.getInstructionSummary();
-      const compatSummary = instructionSvc.getCompatInstructionSummary();
-      const LEVEL_LABELS = { global: '全局', project: '项目', directory: '目录' };
+      const fullSummary = instructionSvc.getInstructionSummary();
+      // 生态层(蹭来的第三方规则)单独成段:混在 [KHY] 里会让人以为是自己写的。
+      const summary = fullSummary.filter((f) => f.level !== 'ecosystem');
+      const ecoSummary = fullSummary.filter((f) => f.level === 'ecosystem');
+      const ecoPaths = new Set(ecoSummary.map((f) => require('path').resolve(f.path)));
+      // 已经被生态层真正注入的文件,不要再在 [兼容指令] 里重复列一遍(那段只是「发现了但没注入」)。
+      const compatSummary = instructionSvc
+        .getCompatInstructionSummary()
+        .filter((f) => !ecoPaths.has(require('path').resolve(f.path)));
+      const LEVEL_LABELS = { global: '全局', project: '项目', rules: '规则', directory: '目录' };
       const TYPE_LABELS = { claude: 'CLAUDE', agents: 'AGENTS' };
 
       console.log(chalk.bold('\n  📋 协作指令文件\n'));
       console.log(chalk.dim('  冲突优先级: khy > claude > agents\n'));
-      if (summary.length === 0 && compatSummary.length === 0) {
+      if (summary.length === 0 && compatSummary.length === 0 && ecoSummary.length === 0) {
         printInfo('未找到任何指令文件');
         console.log(chalk.dim(`\n  创建指令文件以定制 AI 行为:`));
         console.log(chalk.dim(`    ~/.khyquant/khy.md    — 全局指令 (所有项目通用)`));
@@ -337,6 +344,17 @@ async function dispatchTailCommand(command, _ctx) {
               `    ${chalk.cyan(`[${label}]`)} ${file.path} ${chalk.dim(`(${file.size} 字符)`)}${truncWarning}`
             );
           }
+        }
+        if (ecoSummary.length > 0) {
+          console.log(chalk.cyan('\n  [生态指令]') + chalk.dim(' — 蹭其他 agent 已写好的规则,只读'));
+          for (const file of ecoSummary) {
+            const truncWarning = file.truncated ? chalk.yellow(' (截断)') : '';
+            console.log(
+              `    ${chalk.green(`[${file.label || '生态'}]`)} ${file.path} ` +
+                `${chalk.dim(`(${file.size} 字符)`)}${truncWarning}`
+            );
+          }
+          console.log(chalk.dim('    关闭: KHY_RULES_ECOSYSTEM=0 (或单家 KHY_RULES_ECO_<ID>=0)'));
         }
         if (compatSummary.length > 0) {
           console.log(chalk.cyan('\n  [兼容指令]'));

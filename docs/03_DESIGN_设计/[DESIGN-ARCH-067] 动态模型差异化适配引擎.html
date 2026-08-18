@@ -64,62 +64,62 @@
 <ul><li><code>GET /api/model-adaptation/status</code></li><li><code>POST /api/model-adaptation/reload</code></li></ul>
 <p>重载只清除注册表缓存并增加 generation。正在执行的请求继续使用其已经取得的画像；后续请求读取新 generation。</p>
 <h2 id="4-接口">4. 接口<a class="anchor" href="#4-接口" aria-label="锚点">#</a></h2>
-<pre><code class="language-ts">type PromptPreference = 'concise' | 'detailed' | 'structured';
-type ResponseStyle = 'direct' | 'elaborated' | 'explainer';
-type ToolTendency = 'aggressive' | 'conservative' | 'balanced';
-type Confidence = 'prior' | 'low' | 'measured';
+<pre><code class="language-ts"><span class="hljs-keyword">type</span> <span class="hljs-title class_">PromptPreference</span> = <span class="hljs-string">&#x27;concise&#x27;</span> | <span class="hljs-string">&#x27;detailed&#x27;</span> | <span class="hljs-string">&#x27;structured&#x27;</span>;
+<span class="hljs-keyword">type</span> <span class="hljs-title class_">ResponseStyle</span> = <span class="hljs-string">&#x27;direct&#x27;</span> | <span class="hljs-string">&#x27;elaborated&#x27;</span> | <span class="hljs-string">&#x27;explainer&#x27;</span>;
+<span class="hljs-keyword">type</span> <span class="hljs-title class_">ToolTendency</span> = <span class="hljs-string">&#x27;aggressive&#x27;</span> | <span class="hljs-string">&#x27;conservative&#x27;</span> | <span class="hljs-string">&#x27;balanced&#x27;</span>;
+<span class="hljs-keyword">type</span> <span class="hljs-title class_">Confidence</span> = <span class="hljs-string">&#x27;prior&#x27;</span> | <span class="hljs-string">&#x27;low&#x27;</span> | <span class="hljs-string">&#x27;measured&#x27;</span>;
 
-type CapabilityDimension =
-  | 'text' | 'code' | 'reasoning' | 'tool_use' | 'vision'
-  | 'long_context' | 'instruction_following' | 'structured_output'
-  | 'multilingual' | 'speed' | 'cost_efficiency';
+<span class="hljs-keyword">type</span> <span class="hljs-title class_">CapabilityDimension</span> =
+  | <span class="hljs-string">&#x27;text&#x27;</span> | <span class="hljs-string">&#x27;code&#x27;</span> | <span class="hljs-string">&#x27;reasoning&#x27;</span> | <span class="hljs-string">&#x27;tool_use&#x27;</span> | <span class="hljs-string">&#x27;vision&#x27;</span>
+  | <span class="hljs-string">&#x27;long_context&#x27;</span> | <span class="hljs-string">&#x27;instruction_following&#x27;</span> | <span class="hljs-string">&#x27;structured_output&#x27;</span>
+  | <span class="hljs-string">&#x27;multilingual&#x27;</span> | <span class="hljs-string">&#x27;speed&#x27;</span> | <span class="hljs-string">&#x27;cost_efficiency&#x27;</span>;
 
-interface ModelFeatureProfile {
-  confidence: Confidence;
-  source: string;
-  capability_matrix: Record&lt;CapabilityDimension, 0 | 1 | 2 | 3 | 4 | 5&gt;;
-  style_profile: {
-    prompt_preference: PromptPreference;
-    response_style: ResponseStyle;
-    tool_usage_tendency: ToolTendency;
-    scaffolding_comfort_level: number; // 1..10，越高越需要脚手架
+<span class="hljs-keyword">interface</span> <span class="hljs-title class_">ModelFeatureProfile</span> {
+  <span class="hljs-attr">confidence</span>: <span class="hljs-title class_">Confidence</span>;
+  <span class="hljs-attr">source</span>: <span class="hljs-built_in">string</span>;
+  <span class="hljs-attr">capability_matrix</span>: <span class="hljs-title class_">Record</span>&lt;<span class="hljs-title class_">CapabilityDimension</span>, <span class="hljs-number">0</span> | <span class="hljs-number">1</span> | <span class="hljs-number">2</span> | <span class="hljs-number">3</span> | <span class="hljs-number">4</span> | <span class="hljs-number">5</span>&gt;;
+  <span class="hljs-attr">style_profile</span>: {
+    <span class="hljs-attr">prompt_preference</span>: <span class="hljs-title class_">PromptPreference</span>;
+    <span class="hljs-attr">response_style</span>: <span class="hljs-title class_">ResponseStyle</span>;
+    <span class="hljs-attr">tool_usage_tendency</span>: <span class="hljs-title class_">ToolTendency</span>;
+    <span class="hljs-attr">scaffolding_comfort_level</span>: <span class="hljs-built_in">number</span>; <span class="hljs-comment">// 1..10，越高越需要脚手架</span>
   };
-  specialty_areas: { strengths: string[]; weaknesses: string[] };
-  routing_priority: {
-    always_prefer_for: string[];
-    default_choice_for: string[];
-    avoid_when_budget_is: 'low' | 'medium' | 'high' | null;
+  <span class="hljs-attr">specialty_areas</span>: { <span class="hljs-attr">strengths</span>: <span class="hljs-built_in">string</span>[]; <span class="hljs-attr">weaknesses</span>: <span class="hljs-built_in">string</span>[] };
+  <span class="hljs-attr">routing_priority</span>: {
+    <span class="hljs-attr">always_prefer_for</span>: <span class="hljs-built_in">string</span>[];
+    <span class="hljs-attr">default_choice_for</span>: <span class="hljs-built_in">string</span>[];
+    <span class="hljs-attr">avoid_when_budget_is</span>: <span class="hljs-string">&#x27;low&#x27;</span> | <span class="hljs-string">&#x27;medium&#x27;</span> | <span class="hljs-string">&#x27;high&#x27;</span> | <span class="hljs-literal">null</span>;
   };
-  prompt_templates: {
-    system_overview: { concise_version: string; detailed_version: string };
-    section_boost_rules: SectionBoostRule[];
-    nudge_preferences: Array&lt;string | object&gt;;
+  <span class="hljs-attr">prompt_templates</span>: {
+    <span class="hljs-attr">system_overview</span>: { <span class="hljs-attr">concise_version</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">detailed_version</span>: <span class="hljs-built_in">string</span> };
+    <span class="hljs-attr">section_boost_rules</span>: <span class="hljs-title class_">SectionBoostRule</span>[];
+    <span class="hljs-attr">nudge_preferences</span>: <span class="hljs-title class_">Array</span>&lt;<span class="hljs-built_in">string</span> | <span class="hljs-built_in">object</span>&gt;;
   };
-  dynamic_params: {
-    preferred_timeout_ms: number;
-    max_tools_per_turn: number;
-    parallel_tool_allowance: number;
+  <span class="hljs-attr">dynamic_params</span>: {
+    <span class="hljs-attr">preferred_timeout_ms</span>: <span class="hljs-built_in">number</span>;
+    <span class="hljs-attr">max_tools_per_turn</span>: <span class="hljs-built_in">number</span>;
+    <span class="hljs-attr">parallel_tool_allowance</span>: <span class="hljs-built_in">number</span>;
   };
 }
 
-interface DynamicPromptResult {
-  sections: Array&lt;{ id: string; title: string; body: string; reason: string }&gt;;
-  scaffoldingLevel: number | null;
-  tailoredNudges: string[];
-  appendix: string;
-  dynamicParams: ModelFeatureProfile['dynamic_params'];
-  meta: object;
+<span class="hljs-keyword">interface</span> <span class="hljs-title class_">DynamicPromptResult</span> {
+  <span class="hljs-attr">sections</span>: <span class="hljs-title class_">Array</span>&lt;{ <span class="hljs-attr">id</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">title</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">body</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">reason</span>: <span class="hljs-built_in">string</span> }&gt;;
+  <span class="hljs-attr">scaffoldingLevel</span>: <span class="hljs-built_in">number</span> | <span class="hljs-literal">null</span>;
+  <span class="hljs-attr">tailoredNudges</span>: <span class="hljs-built_in">string</span>[];
+  <span class="hljs-attr">appendix</span>: <span class="hljs-built_in">string</span>;
+  <span class="hljs-attr">dynamicParams</span>: <span class="hljs-title class_">ModelFeatureProfile</span>[<span class="hljs-string">&#x27;dynamic_params&#x27;</span>];
+  <span class="hljs-attr">meta</span>: <span class="hljs-built_in">object</span>;
 }</code></pre>
 <p>JSON 配置的结构约束：</p>
-<pre><code class="language-json">{
-  &quot;$schemaVersion&quot;: 1,
-  &quot;defaults&quot;: { &quot;...ModelFeatureProfile&quot;: &quot;...&quot; },
-  &quot;tierDefaults&quot;: { &quot;T0&quot;: {}, &quot;T1&quot;: {}, &quot;T2&quot;: {}, &quot;T3&quot;: {} },
-  &quot;patterns&quot;: [
-    { &quot;id&quot;: &quot;family&quot;, &quot;match&quot;: &quot;^family-&quot;, &quot;profile&quot;: {} }
-  ],
-  &quot;models&quot;: { &quot;exact-model-id&quot;: {} }
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;$schemaVersion&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;defaults&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;...ModelFeatureProfile&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;...&quot;</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;tierDefaults&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;T0&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;T1&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;T2&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;T3&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;patterns&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+    <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;family&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;match&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;^family-&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;profile&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span> <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;models&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;exact-model-id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span> <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <p>运行时使用手写宽进严出校验，不依赖开发期 JSON Schema 库。非法字段退回默认值，未知 section id 被忽略，未知模型仍得到完整画像。</p>
 <h2 id="5-动态组装算法">5. 动态组装算法<a class="anchor" href="#5-动态组装算法" aria-label="锚点">#</a></h2>
 <p><code>assemblePromptForModel(requestContext)</code> 每次执行：</p>
@@ -134,80 +134,80 @@ blended        = normalizedUcb*0.3 + overallScore*0.7</code></pre>
 <p><code>always_prefer_for</code>、<code>default_choice_for</code> 和 <code>avoid_when_budget_is</code> 在 overall 阶段施加可解释加减分。UCB arm 的实际粒度是 adapter，不是 model；同一 adapter 下的模型共享探索信号。未拉取 arm 的 <code>+Infinity</code> 归一为 1，有限值 min-max 归一，全相等为 0.5；没有 adapter 的候选也使用中性 0.5。</p>
 <h2 id="7-快速开始">7. 快速开始<a class="anchor" href="#7-快速开始" aria-label="锚点">#</a></h2>
 <p>不需要构建。后端进程环境中打开总闸：</p>
-<pre><code class="language-powershell">$env:KHY_MODEL_ADAPT = '1'</code></pre>
+<pre><code class="language-powershell"><span class="hljs-variable">$env:KHY_MODEL_ADAPT</span> = <span class="hljs-string">&#x27;1&#x27;</span></code></pre>
 <p>子能力默认随总闸打开，可单独回退：</p>
-<pre><code class="language-powershell">$env:KHY_DYNAMIC_PROMPT = '0'
-$env:KHY_ENHANCED_MODEL_SELECT = '0'
-$env:KHY_MODEL_ADAPT_PIPELINE = '0'</code></pre>
+<pre><code class="language-powershell"><span class="hljs-variable">$env:KHY_DYNAMIC_PROMPT</span> = <span class="hljs-string">&#x27;0&#x27;</span>
+<span class="hljs-variable">$env:KHY_ENHANCED_MODEL_SELECT</span> = <span class="hljs-string">&#x27;0&#x27;</span>
+<span class="hljs-variable">$env:KHY_MODEL_ADAPT_PIPELINE</span> = <span class="hljs-string">&#x27;0&#x27;</span></code></pre>
 <p>未知模型探测会产生真实模型调用，因此需要单独打开：</p>
-<pre><code class="language-powershell">$env:KHY_MODEL_DISCOVERY = '1'</code></pre>
+<pre><code class="language-powershell"><span class="hljs-variable">$env:KHY_MODEL_DISCOVERY</span> = <span class="hljs-string">&#x27;1&#x27;</span></code></pre>
 <p>本地验证：</p>
-<pre><code class="language-powershell">cd services/backend
+<pre><code class="language-powershell"><span class="hljs-built_in">cd</span> services/backend
 npx jest tests/modelFeatureRegistry.test.js tests/dynamicPromptAssembler.test.js tests/enhancedModelSelector.test.js tests/perRequestAdaptationPipeline.test.js tests/modelDiscoveryEngine.test.js tests/modelAdaptationHttp.test.js</code></pre>
 <h2 id="8-添加模型">8. 添加模型<a class="anchor" href="#8-添加模型" aria-label="锚点">#</a></h2>
 <p>精确模型模板：</p>
-<pre><code class="language-json">{
-  &quot;models&quot;: {
-    &quot;new-model-id&quot;: {
-      &quot;confidence&quot;: &quot;prior&quot;,
-      &quot;source&quot;: &quot;manual&quot;,
-      &quot;capability_matrix&quot;: {
-        &quot;text&quot;: 4,
-        &quot;code&quot;: 4,
-        &quot;reasoning&quot;: 4,
-        &quot;tool_use&quot;: 3,
-        &quot;vision&quot;: 0,
-        &quot;long_context&quot;: 4,
-        &quot;instruction_following&quot;: 4,
-        &quot;structured_output&quot;: 4,
-        &quot;multilingual&quot;: 4,
-        &quot;speed&quot;: 3,
-        &quot;cost_efficiency&quot;: 3
-      },
-      &quot;style_profile&quot;: {
-        &quot;prompt_preference&quot;: &quot;structured&quot;,
-        &quot;response_style&quot;: &quot;direct&quot;,
-        &quot;tool_usage_tendency&quot;: &quot;balanced&quot;,
-        &quot;scaffolding_comfort_level&quot;: 4
-      },
-      &quot;specialty_areas&quot;: {
-        &quot;strengths&quot;: [&quot;code&quot;],
-        &quot;weaknesses&quot;: []
-      },
-      &quot;dynamic_params&quot;: {
-        &quot;preferred_timeout_ms&quot;: 180000,
-        &quot;max_tools_per_turn&quot;: 8,
-        &quot;parallel_tool_allowance&quot;: 3
-      }
-    }
-  }
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;models&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;new-model-id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;confidence&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;prior&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;source&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;manual&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;capability_matrix&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;text&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">4</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">4</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;reasoning&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">4</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;tool_use&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">3</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;vision&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;long_context&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">4</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;instruction_following&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">4</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;structured_output&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">4</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;multilingual&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">4</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;speed&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">3</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;cost_efficiency&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">3</span>
+      <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;style_profile&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;prompt_preference&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;structured&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;response_style&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;direct&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;tool_usage_tendency&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;balanced&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;scaffolding_comfort_level&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">4</span>
+      <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;specialty_areas&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;strengths&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;code&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;weaknesses&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-punctuation">]</span>
+      <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;dynamic_params&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;preferred_timeout_ms&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">180000</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;max_tools_per_turn&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">8</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;parallel_tool_allowance&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">3</span>
+      <span class="hljs-punctuation">}</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <p>新版本通常应加家族 pattern，而不是逐版本复制：</p>
-<pre><code class="language-json">{
-  &quot;id&quot;: &quot;new-family&quot;,
-  &quot;match&quot;: &quot;^new-family(?:-|$)&quot;,
-  &quot;profile&quot;: {
-    &quot;style_profile&quot;: { &quot;prompt_preference&quot;: &quot;structured&quot; }
-  }
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;new-family&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;match&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;^new-family(?:-|$)&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;profile&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;style_profile&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;prompt_preference&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;structured&quot;</span> <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <p>保存文件后，下一次 <code>registry.get()</code> 即看到新画像；不需要编译或重启。</p>
 <h2 id="9-自定义-boost-规则">9. 自定义 boost 规则<a class="anchor" href="#9-自定义-boost-规则" aria-label="锚点">#</a></h2>
-<pre><code class="language-json">{
-  &quot;prompt_templates&quot;: {
-    &quot;section_boost_rules&quot;: [
-      {
-        &quot;id&quot;: &quot;code-needs-self-check&quot;,
-        &quot;when&quot;: { &quot;task_type&quot;: &quot;code&quot; },
-        &quot;boost&quot;: [&quot;self_check&quot;, &quot;tool_protocol&quot;]
-      },
-      {
-        &quot;id&quot;: &quot;creative-drop-tools&quot;,
-        &quot;when&quot;: { &quot;task_type&quot;: &quot;creative&quot; },
-        &quot;suppress&quot;: [&quot;tool_protocol&quot;]
-      }
-    ]
-  }
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;prompt_templates&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;section_boost_rules&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+      <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;code-needs-self-check&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;when&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;task_type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;code&quot;</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;boost&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;self_check&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;tool_protocol&quot;</span><span class="hljs-punctuation">]</span>
+      <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-punctuation">{</span>
+        <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;creative-drop-tools&quot;</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;when&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;task_type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;creative&quot;</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+        <span class="hljs-attr">&quot;suppress&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;tool_protocol&quot;</span><span class="hljs-punctuation">]</span>
+      <span class="hljs-punctuation">}</span>
+    <span class="hljs-punctuation">]</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <p>支持条件：<code>task_type</code>、<code>tier</code>、<code>has_tools</code>、<code>context_tokens_gt</code>、<code>context_tokens_lt</code>、<code>user_preference</code>、<code>min_capability</code>、<code>max_capability</code>。</p>
 <h2 id="10-监控字段">10. 监控字段<a class="anchor" href="#10-监控字段" aria-label="锚点">#</a></h2>
 <p><code>registry.getStatus()</code>：</p>

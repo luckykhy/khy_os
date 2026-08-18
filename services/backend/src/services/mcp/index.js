@@ -983,6 +983,51 @@ function loadConfig(projectDir) {
     /* bridge unavailable: OpenClaw MCP not merged */
   }
 
+  // Generic ecosystem bridge (gate KHY_MCP_ECOSYSTEM, default ON): reuse MCP
+  // servers that ANY other installed agent/IDE has already configured — Claude
+  // Desktop, Cursor, Windsurf, VS Code, Codex CLI, Gemini CLI, Qwen, Kiro,
+  // Amazon Q, Copilot CLI, Continue, Zed, Cline, Roo. Where each stores its
+  // config, in what format, under which key, and in what entry shape is
+  // declared in mcpEcosystemRegistry — adding a new ecosystem is a one-line
+  // table entry there, NOT another merge block here (that is the whole point).
+  // Claude Code / OpenClaw stay on their dedicated bridges above.
+  // Merged at LOWEST priority: fill-if-absent only, so a CC-bridged server
+  // above and any khy-configured server below always win. Missing/malformed
+  // files are silently skipped. Gate OFF → sources are [] and this loop is a
+  // no-op, leaving the merge byte-identical to the two-bridge behavior.
+  try {
+    const ecoReg = require('./mcpEcosystemRegistry');
+    for (const src of ecoReg.mcpEcosystemSources({
+      homedir: os.homedir(),
+      projectDir,
+      platform: process.platform,
+      env: process.env,
+    })) {
+      try {
+        if (!fs.existsSync(src.path)) {
+          continue;
+        }
+        const parsed = ecoReg.parseEcosystemConfig(fs.readFileSync(src.path, 'utf-8'), src.format);
+        const servers = ecoReg.extractEcosystemServers(parsed, src);
+        for (const [name, cfg] of Object.entries(servers)) {
+          if (Object.prototype.hasOwnProperty.call(merged.mcpServers, name)) {
+            continue;
+          }
+          merged.mcpServers[name] = {
+            ...cfg,
+            _scope: ConfigScope.USER,
+            _configPath: src.path,
+            _ecoBridged: src.ecosystem,
+          };
+        }
+      } catch {
+        /* skip unreadable/malformed ecosystem config */
+      }
+    }
+  } catch {
+    /* registry unavailable → only the CC/OpenClaw bridges above apply */
+  }
+
   // Load order: user < project (project overrides user)
   const paths = [
     { path: CONFIG_PATHS.user, scope: ConfigScope.USER },

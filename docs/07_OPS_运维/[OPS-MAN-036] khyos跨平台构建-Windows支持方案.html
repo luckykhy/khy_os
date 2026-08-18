@@ -63,74 +63,74 @@
 <p>ISO 始终落在 <code>kernel/build/khy-os-kernel.iso</code>（与 isoProvisioner 契约一致）：WSL2/Docker<br>均通过把内核目录映射到同一磁盘/挂载点，写回 Windows 侧可见的同一 <code>build/</code>。</p>
 <h3 id="3-2-构建脚本改动-保留原逻辑-仅加-windows-兼容">3.2 构建脚本改动（保留原逻辑，仅加 Windows 兼容）<a class="anchor" href="#3-2-构建脚本改动-保留原逻辑-仅加-windows-兼容" aria-label="锚点">#</a></h3>
 <h4 id="a-kernel-makefile-工具链可移植化-additive">(a) <code>kernel/Makefile</code> — 工具链可移植化（additive）<a class="anchor" href="#a-kernel-makefile-工具链可移植化-additive" aria-label="锚点">#</a></h4>
-<pre><code class="language-makefile"># 默认仍强制已知良好的 GNU/Linux 工具链（不可用 ?=：make 内建 CC=cc 会让 ?= 失效
-# 并在 macOS/BSD 误用 clang）。覆盖统一走命令行 make VAR=val（优先级最高）。
+<pre><code class="language-makefile"><span class="hljs-comment"># 默认仍强制已知良好的 GNU/Linux 工具链（不可用 ?=：make 内建 CC=cc 会让 ?= 失效</span>
+<span class="hljs-comment"># 并在 macOS/BSD 误用 clang）。覆盖统一走命令行 make VAR=val（优先级最高）。</span>
 ASM           = nasm
 CC            = gcc
 LD            = ld
 GRUB_MKRESCUE = grub-mkrescue
 
-# 用编译器自身解析其 freestanding include 目录，替代硬编码 Debian 路径。
-# Debian/Ubuntu 上解析到同一 /usr/lib/gcc/x86_64-linux-gnu/&lt;ver&gt;/include（行为等价），
-# 其它发行版/MSYS2/交叉工具链各自正确。
-GCC_INCLUDE ?= $(shell $(CC) -print-file-name=include)
-CFLAGS = ... -isystem $(GCC_INCLUDE)
+<span class="hljs-comment"># 用编译器自身解析其 freestanding include 目录，替代硬编码 Debian 路径。</span>
+<span class="hljs-comment"># Debian/Ubuntu 上解析到同一 /usr/lib/gcc/x86_64-linux-gnu/&lt;ver&gt;/include（行为等价），</span>
+<span class="hljs-comment"># 其它发行版/MSYS2/交叉工具链各自正确。</span>
+GCC_INCLUDE ?= <span class="hljs-variable">$(<span class="hljs-built_in">shell</span> <span class="hljs-variable">$(CC)</span> -print-<span class="hljs-built_in">file</span>-name=include)</span>
+CFLAGS = ... -isystem <span class="hljs-variable">$(GCC_INCLUDE)</span>
 ...
-$(ISO): $(KERNEL)
+<span class="hljs-variable">$(ISO)</span>: <span class="hljs-variable">$(KERNEL)</span>
 	...
-	$(GRUB_MKRESCUE) -o $(ISO) $(BUILD)/isofiles 2&gt;/dev/null</code></pre>
+	<span class="hljs-variable">$(GRUB_MKRESCUE)</span> -o <span class="hljs-variable">$(ISO)</span> <span class="hljs-variable">$(BUILD)</span>/isofiles 2&gt;/dev/null</code></pre>
 <blockquote><p>实测：本机 <code>gcc -print-file-name=include</code> == 原硬编码路径；改后 <code>make iso</code> 产物<br>字节数不变（零回归）。命令行 <code>make CC=… GCC_INCLUDE=… GRUB_MKRESCUE=…</code> 覆盖均生效。</p></blockquote>
 <h4 id="b-khyos-js-kernelbuild-windows-委派层-替换硬拒绝">(b) <code>khyos.js kernelBuild</code> — Windows 委派层（替换硬拒绝）<a class="anchor" href="#b-khyos-js-kernelbuild-windows-委派层-替换硬拒绝" aria-label="锚点">#</a></h4>
 <p>原逻辑（Linux 探测 + <code>make iso</code>）抽取为 <code>_unixToolchainBuild</code>，Linux/macOS 与<br>「Windows 强制原生」共用，<strong>行为不变</strong>。新增 <code>_windowsKernelBuild</code> 分发 +<br><code>_buildViaWsl</code> / <code>_buildViaDocker</code>。<code>KHY_*</code> 工具链覆盖经 <code>_toolchainMakeVars()</code><br>转发为 <code>make VAR=val</code>（无覆盖时参数与原来完全一致）：</p>
-<pre><code class="language-js">function _toolchainMakeVars() {
-  const vars = [];
-  if (process.env.KHY_CC) vars.push(`CC=${process.env.KHY_CC}`);
-  if (process.env.KHY_NASM) vars.push(`ASM=${process.env.KHY_NASM}`);
-  if (process.env.KHY_LD) vars.push(`LD=${process.env.KHY_LD}`);
-  if (process.env.KHY_GRUB_MKRESCUE) vars.push(`GRUB_MKRESCUE=${process.env.KHY_GRUB_MKRESCUE}`);
-  if (process.env.KHY_GCC_INCLUDE) vars.push(`GCC_INCLUDE=${process.env.KHY_GCC_INCLUDE}`);
-  return vars;
+<pre><code class="language-js"><span class="hljs-keyword">function</span> <span class="hljs-title function_">_toolchainMakeVars</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> vars = [];
+  <span class="hljs-keyword">if</span> (process.<span class="hljs-property">env</span>.<span class="hljs-property">KHY_CC</span>) vars.<span class="hljs-title function_">push</span>(<span class="hljs-string">`CC=<span class="hljs-subst">${process.env.KHY_CC}</span>`</span>);
+  <span class="hljs-keyword">if</span> (process.<span class="hljs-property">env</span>.<span class="hljs-property">KHY_NASM</span>) vars.<span class="hljs-title function_">push</span>(<span class="hljs-string">`ASM=<span class="hljs-subst">${process.env.KHY_NASM}</span>`</span>);
+  <span class="hljs-keyword">if</span> (process.<span class="hljs-property">env</span>.<span class="hljs-property">KHY_LD</span>) vars.<span class="hljs-title function_">push</span>(<span class="hljs-string">`LD=<span class="hljs-subst">${process.env.KHY_LD}</span>`</span>);
+  <span class="hljs-keyword">if</span> (process.<span class="hljs-property">env</span>.<span class="hljs-property">KHY_GRUB_MKRESCUE</span>) vars.<span class="hljs-title function_">push</span>(<span class="hljs-string">`GRUB_MKRESCUE=<span class="hljs-subst">${process.env.KHY_GRUB_MKRESCUE}</span>`</span>);
+  <span class="hljs-keyword">if</span> (process.<span class="hljs-property">env</span>.<span class="hljs-property">KHY_GCC_INCLUDE</span>) vars.<span class="hljs-title function_">push</span>(<span class="hljs-string">`GCC_INCLUDE=<span class="hljs-subst">${process.env.KHY_GCC_INCLUDE}</span>`</span>);
+  <span class="hljs-keyword">return</span> vars;
 }
 
-// WSL2：转译路径后跑未改动的 Makefile
-function _buildViaWsl(ctx) {
-  const wp = spawnSync('wsl', ['wslpath', '-u', kernelDir], { encoding: 'utf-8', env: childEnv });
-  const unixDir = String(wp.stdout).trim();
-  const r = spawnSync('wsl', ['make', '-C', unixDir, ..._toolchainMakeVars(), 'iso'],
-                      { stdio: 'inherit', env: childEnv });
-  return _verifyIso(ctx); // 检查 kernel/build/khy-os-kernel.iso
+<span class="hljs-comment">// WSL2：转译路径后跑未改动的 Makefile</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">_buildViaWsl</span>(<span class="hljs-params">ctx</span>) {
+  <span class="hljs-keyword">const</span> wp = <span class="hljs-title function_">spawnSync</span>(<span class="hljs-string">&#x27;wsl&#x27;</span>, [<span class="hljs-string">&#x27;wslpath&#x27;</span>, <span class="hljs-string">&#x27;-u&#x27;</span>, kernelDir], { <span class="hljs-attr">encoding</span>: <span class="hljs-string">&#x27;utf-8&#x27;</span>, <span class="hljs-attr">env</span>: childEnv });
+  <span class="hljs-keyword">const</span> unixDir = <span class="hljs-title class_">String</span>(wp.<span class="hljs-property">stdout</span>).<span class="hljs-title function_">trim</span>();
+  <span class="hljs-keyword">const</span> r = <span class="hljs-title function_">spawnSync</span>(<span class="hljs-string">&#x27;wsl&#x27;</span>, [<span class="hljs-string">&#x27;make&#x27;</span>, <span class="hljs-string">&#x27;-C&#x27;</span>, unixDir, ...<span class="hljs-title function_">_toolchainMakeVars</span>(), <span class="hljs-string">&#x27;iso&#x27;</span>],
+                      { <span class="hljs-attr">stdio</span>: <span class="hljs-string">&#x27;inherit&#x27;</span>, <span class="hljs-attr">env</span>: childEnv });
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">_verifyIso</span>(ctx); <span class="hljs-comment">// 检查 kernel/build/khy-os-kernel.iso</span>
 }</code></pre>
 <h4 id="c-setup-py-修复-grub-cfg-打包缺口">(c) <code>setup.py</code> — 修复 <code>grub.cfg</code> 打包缺口<a class="anchor" href="#c-setup-py-修复-grub-cfg-打包缺口" aria-label="锚点">#</a></h4>
-<pre><code class="language-python"># 不再排除 &quot;iso&quot; 目录：kernel/iso/boot/grub/grub.cfg 是构建输入；构建产物仍由
-# *.iso/*.img 排除，且只会出现在 kernel/build/（已排除），不会落到 kernel/iso/。
+<pre><code class="language-python"><span class="hljs-comment"># 不再排除 &quot;iso&quot; 目录：kernel/iso/boot/grub/grub.cfg 是构建输入；构建产物仍由</span>
+<span class="hljs-comment"># *.iso/*.img 排除，且只会出现在 kernel/build/（已排除），不会落到 kernel/iso/。</span>
 ignore=shutil.ignore_patterns(
-    *EXCLUDE_PATTERNS, &quot;build&quot;, &quot;_build&quot;, &quot;target&quot;,
-    &quot;*.o&quot;, &quot;*.bin&quot;, &quot;*.elf&quot;, &quot;*.efi&quot;, &quot;*.iso&quot;, &quot;*.img&quot;, &quot;*.lock&quot;,
+    *EXCLUDE_PATTERNS, <span class="hljs-string">&quot;build&quot;</span>, <span class="hljs-string">&quot;_build&quot;</span>, <span class="hljs-string">&quot;target&quot;</span>,
+    <span class="hljs-string">&quot;*.o&quot;</span>, <span class="hljs-string">&quot;*.bin&quot;</span>, <span class="hljs-string">&quot;*.elf&quot;</span>, <span class="hljs-string">&quot;*.efi&quot;</span>, <span class="hljs-string">&quot;*.iso&quot;</span>, <span class="hljs-string">&quot;*.img&quot;</span>, <span class="hljs-string">&quot;*.lock&quot;</span>,
 )</code></pre>
 <h4 id="d-kernel-dockerfile-kernel-build-docker-后端镜像">(d) <code>kernel/Dockerfile.kernel-build</code> — Docker 后端镜像<a class="anchor" href="#d-kernel-dockerfile-kernel-build-docker-后端镜像" aria-label="锚点">#</a></h4>
 <p><code>debian:bookworm-slim</code> + <code>build-essential nasm binutils grub-pc-bin grub-common<br>xorriso mtools</code> + MoonBit；内核源码运行时 bind-mount 到 <code>/kernel</code>，镜像 source-agnostic<br>利于缓存。不装 QEMU（运行是宿主的事）。</p>
 <h2 id="4-依赖安装指南-windows-用户">4. 依赖安装指南（Windows 用户）<a class="anchor" href="#4-依赖安装指南-windows-用户" aria-label="锚点">#</a></h2>
 <p><code>khy os build</code> 在无可用后端时会打印以下指南；三条路径任选其一，均可全自动：</p>
 <h3 id="4-1-路线-a-wsl2-推荐">4.1 路线 A：WSL2（推荐）<a class="anchor" href="#4-1-路线-a-wsl2-推荐" aria-label="锚点">#</a></h3>
-<pre><code class="language-powershell">wsl --install -d Ubuntu          # 安装 WSL2 + Ubuntu（首次需重启）
-# 在 Ubuntu 内一次性装内核工具链：
+<pre><code class="language-powershell">wsl <span class="hljs-literal">--install</span> <span class="hljs-literal">-d</span> Ubuntu          <span class="hljs-comment"># 安装 WSL2 + Ubuntu（首次需重启）</span>
+<span class="hljs-comment"># 在 Ubuntu 内一次性装内核工具链：</span>
 wsl sudo apt update
-wsl sudo apt install -y build-essential nasm grub-pc-bin grub-common xorriso
-wsl bash -c &quot;curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash&quot;
-# 回到 Windows，直接：
-khy os build                     # 自动检测 WSL2 并经其构建，ISO 落在 kernel\build\</code></pre>
+wsl sudo apt install <span class="hljs-literal">-y</span> <span class="hljs-built_in">build-essential</span> nasm grub<span class="hljs-literal">-pc-bin</span> grub<span class="hljs-literal">-common</span> xorriso
+wsl bash <span class="hljs-literal">-c</span> <span class="hljs-string">&quot;curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash&quot;</span>
+<span class="hljs-comment"># 回到 Windows，直接：</span>
+khy os build                     <span class="hljs-comment"># 自动检测 WSL2 并经其构建，ISO 落在 kernel\build\</span></code></pre>
 <h3 id="4-2-路线-b-docker-desktop">4.2 路线 B：Docker Desktop<a class="anchor" href="#4-2-路线-b-docker-desktop" aria-label="锚点">#</a></h3>
-<pre><code class="language-powershell"># 安装并启动 Docker Desktop（对内核源码所在盘启用文件共享）
-set KHY_KERNEL_BUILD_BACKEND=docker
-khy os build                     # 首次构镜像较慢，之后走缓存
-# 可选：用预构镜像跳过本地构镜像
-set KHY_KERNEL_BUILD_IMAGE=&lt;your-registry&gt;/khyos-kernel-build:latest</code></pre>
+<pre><code class="language-powershell"><span class="hljs-comment"># 安装并启动 Docker Desktop（对内核源码所在盘启用文件共享）</span>
+<span class="hljs-built_in">set</span> KHY_KERNEL_BUILD_BACKEND=docker
+khy os build                     <span class="hljs-comment"># 首次构镜像较慢，之后走缓存</span>
+<span class="hljs-comment"># 可选：用预构镜像跳过本地构镜像</span>
+<span class="hljs-built_in">set</span> KHY_KERNEL_BUILD_IMAGE=&lt;your<span class="hljs-literal">-registry</span>&gt;/khyos<span class="hljs-literal">-kernel-build</span>:latest</code></pre>
 <h3 id="4-3-路线-c-msys2-llvm-原生-进阶">4.3 路线 C：MSYS2 / LLVM 原生（进阶）<a class="anchor" href="#4-3-路线-c-msys2-llvm-原生-进阶" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># MSYS2 UCRT64 shell：
+<pre><code class="language-bash"><span class="hljs-comment"># MSYS2 UCRT64 shell：</span>
 pacman -S --needed mingw-w64-ucrt-x86_64-gcc nasm make binutils
-# 安装 grub + xorriso（或用 LLVM clang --target=x86_64-elf + ld.lld）
-# 然后在 Windows：
-set KHY_FORCE_KERNEL_BUILD=1
+<span class="hljs-comment"># 安装 grub + xorriso（或用 LLVM clang --target=x86_64-elf + ld.lld）</span>
+<span class="hljs-comment"># 然后在 Windows：</span>
+<span class="hljs-built_in">set</span> KHY_FORCE_KERNEL_BUILD=1
 khy os build</code></pre>
 <h3 id="4-4-环境开关一览">4.4 环境开关一览<a class="anchor" href="#4-4-环境开关一览" aria-label="锚点">#</a></h3>
 <table><thead><tr><th>变量</th><th>默认</th><th>作用</th></tr></thead><tbody><tr><td><code>KHY_KERNEL_BUILD_BACKEND</code></td><td><code>auto</code></td><td><code>native-llvm</code>/<code>wsl</code>/<code>docker</code>/<code>qemu</code>/<code>native</code> 强制后端</td></tr><tr><td><code>KHY_FORCE_KERNEL_BUILD</code></td><td>未设</td><td><code>=1</code> 在 Windows 走宿主原生（等价 <code>backend=native</code>，要求宿主已装工具链）</td></tr><tr><td><code>KHY_KERNEL_BUILD_IMAGE</code></td><td>未设</td><td>Docker 预构镜像名，跳过本地构镜像</td></tr><tr><td><code>KHY_CC</code>/<code>KHY_NASM</code>/<code>KHY_LD</code>/<code>KHY_GRUB_MKRESCUE</code>/<code>KHY_GCC_INCLUDE</code></td><td>未设</td><td>转发为 <code>make VAR=val</code> 覆盖工具链</td></tr><tr><td><code>KHY_XORRISO</code>/<code>KHY_LIMINE</code>/<code>KHY_LIMINE_DIR</code>/<code>KHY_MAKE</code>/<code>KHY_MAKE_SHELL</code></td><td>未设</td><td>原生 Limine 路径工具链覆盖（§8）；转发为 <code>make VAR=val</code></td></tr><tr><td><code>KHY_KHYOS_CACHE_DIR</code></td><td><code>~/.khyos/cache</code></td><td>缓存根（ISO/builder/qemu/toolchain 共用）；旧 <code>~/.khyquant/khyos</code> 非空则续用（§8.5）</td></tr><tr><td><code>KHY_KERNEL_SRC_DIR</code></td><td>bundle/repo</td><td>覆盖内核源码目录</td></tr></tbody></table>
@@ -143,10 +143,10 @@ khy os build</code></pre>
 <p>GitHub Actions Windows runner（自带 WSL2）跑端到端内核构建——见<br><code>.github/workflows/kernel-build-windows.yml</code>（本方案新增）：</p>
 <ol><li><code>windows-latest</code> runner；</li><li>启用 WSL2 + 安装 Ubuntu 与内核工具链（apt + MoonBit）；</li><li><code>khy os build</code>（或直接 <code>wsl make -C &lt;path&gt; iso</code>）；</li><li>断言 <code>kernel/build/khy-os-kernel.iso</code> 存在且非空。</li></ol>
 <p>本地 Windows 自测清单：</p>
-<pre><code class="language-powershell">khy os doctor          # 体检 QEMU/ISO（Windows QEMU: https://qemu.weilnetz.de/w64/）
-khy os build           # 构建（自动选后端）
-dir kernel\build\khy-os-kernel.iso   # 确认产物
-khy os                 # 启动内核终端（需 QEMU）</code></pre>
+<pre><code class="language-powershell">khy os doctor          <span class="hljs-comment"># 体检 QEMU/ISO（Windows QEMU: https://qemu.weilnetz.de/w64/）</span>
+khy os build           <span class="hljs-comment"># 构建（自动选后端）</span>
+<span class="hljs-built_in">dir</span> kernel\build\khy<span class="hljs-literal">-os-kernel</span>.iso   <span class="hljs-comment"># 确认产物</span>
+khy os                 <span class="hljs-comment"># 启动内核终端（需 QEMU）</span></code></pre>
 <h2 id="6-防呆规则落地对照">6. 防呆规则落地对照<a class="anchor" href="#6-防呆规则落地对照" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>防呆要求</th><th>落地</th></tr></thead><tbody><tr><td><strong>构建脚本修改需保留原逻辑，仅添加 Windows 兼容配置</strong></td><td>Makefile 默认工具链与产物字节不变（实测）；Linux/macOS 构建路径抽取后行为不变；Windows 由「硬拒绝」改为「委派」纯属新增分支；<code>_toolchainMakeVars()</code> 无覆盖时 make 参数与原来完全一致。</td></tr><tr><td><strong>依赖处理需提供清晰的安装指南（vcpkg 集成或预编译库下载）</strong></td><td>§4 给出 WSL2 / Docker / MSYS2 三条可复制指南；<code>khy os build</code> 无后端时<strong>运行时</strong>打印同款指南；Docker 路径用自带 <code>Dockerfile.kernel-build</code> 预装全部依赖（等价「预编译环境」）。</td></tr><tr><td><strong>只修改构建相关文件，不破坏现有内核代码或业务逻辑</strong></td><td>改动仅限：<code>kernel/Makefile</code>、<code>kernel/Dockerfile.kernel-build</code>（新增）、<code>khyos.js kernelBuild</code>（构建编排）、<code>setup.py</code>（打包）、<code>khyosBuild.test.js</code>（测试）、CI 工作流。<strong>未触碰任何内核 <code>.c/.asm/.ld</code> 源码与业务逻辑</strong>。</td></tr></tbody></table>
 <blockquote><p>说明：本方案诚实地不承诺「MSVC 原生编译 ELF 内核」——那需要重写引导/链接/启动路径，<br>等于更换内核，违反「不破坏现有内核代码」。「Windows 一条命令构建」由透明委派达成，<br>这是尊重技术现实的真·跨平台。</p></blockquote>
@@ -165,15 +165,15 @@ khy os                 # 启动内核终端（需 QEMU）</code></pre>
 <ol><li>环境变量 <code>KHY_KERNEL_BUILD_VM=&lt;qcow2 路径&gt;</code>（优先）；</li><li><code>&lt;khyosCacheDir&gt;/builder/khyos-builder.qcow2</code>（默认，如 <code>~/.khyquant/khyos/builder/</code>）；</li><li>都没有→<strong>该能力不存在</strong>，打印 provision 指引（符合需求语义）。</li></ol>
 <h3 id="7-4-制作-appliance-一次性-在有-libguestfs-的-linux-机器上">7.4 制作 appliance（一次性，在有 libguestfs 的 Linux 机器上）<a class="anchor" href="#7-4-制作-appliance-一次性-在有-libguestfs-的-linux-机器上" aria-label="锚点">#</a></h3>
 <p><code>kernel/tools/provision-builder-vm.sh</code> 用 <code>virt-builder</code> 产出<strong>真·可启动</strong>镜像（自带内核+引导，<br>区别于裸 rootfs tar——后者无法 <code>-drive</code> 启动），内含与 <code>Dockerfile.kernel-build</code> 等同的工具链<br>（build-essential/nasm/binutils/grub-pc-bin/xorriso/mtools + MoonBit），并装入每启动运行的<br><code>khy-builder.service</code>：</p>
-<pre><code class="language-bash"># 在 Linux 机器（需 libguestfs-tools）：
-kernel/tools/provision-builder-vm.sh                      # 输出到默认 builder/ 路径
+<pre><code class="language-bash"><span class="hljs-comment"># 在 Linux 机器（需 libguestfs-tools）：</span>
+kernel/tools/provision-builder-vm.sh                      <span class="hljs-comment"># 输出到默认 builder/ 路径</span>
 kernel/tools/provision-builder-vm.sh /path/out.qcow2 debian-12
 
-# 把产物拷到目标 Windows 机器：
-#   &lt;khyosCacheDir&gt;\builder\khyos-builder.qcow2
-# 或在目标机：set KHY_KERNEL_BUILD_VM=D:\path\khyos-builder.qcow2
-# 然后：
-khy os build                                              # 自动走 QEMU 后端</code></pre>
+<span class="hljs-comment"># 把产物拷到目标 Windows 机器：</span>
+<span class="hljs-comment">#   &lt;khyosCacheDir&gt;\builder\khyos-builder.qcow2</span>
+<span class="hljs-comment"># 或在目标机：set KHY_KERNEL_BUILD_VM=D:\path\khyos-builder.qcow2</span>
+<span class="hljs-comment"># 然后：</span>
+khy os build                                              <span class="hljs-comment"># 自动走 QEMU 后端</span></code></pre>
 <h3 id="7-5-环境开关-补充-4-4">7.5 环境开关（补充 §4.4）<a class="anchor" href="#7-5-环境开关-补充-4-4" aria-label="锚点">#</a></h3>
 <table><thead><tr><th>变量</th><th>默认</th><th>作用</th></tr></thead><tbody><tr><td><code>KHY_KERNEL_BUILD_VM</code></td><td>未设</td><td>appliance qcow2 路径（覆盖默认缓存路径）</td></tr><tr><td><code>KHY_QEMU</code></td><td><code>qemu-system-x86_64</code></td><td>QEMU 可执行名</td></tr><tr><td><code>KHY_KERNEL_BUILD_VM_CPUS</code></td><td><code>2</code></td><td>VM <code>-smp</code></td></tr><tr><td><code>KHY_KERNEL_BUILD_VM_MEM</code></td><td><code>2048</code></td><td>VM <code>-m</code>（MB）</td></tr><tr><td><code>KHY_KERNEL_BUILD_VM_TIMEOUT_MS</code></td><td><code>600000</code></td><td>构建超时（兜底，VM 卡死不挂死宿主）</td></tr></tbody></table>
 <h3 id="7-6-防呆与诚实边界">7.6 防呆与诚实边界<a class="anchor" href="#7-6-防呆与诚实边界" aria-label="锚点">#</a></h3>
@@ -194,11 +194,11 @@ khy os build                                              # 自动走 QEMU 后�
 <table><thead><tr><th>key</th><th>上游</th><th>取出物</th></tr></thead><tbody><tr><td><code>llvm</code></td><td>llvm-mingw（mstorsjo）</td><td><code>clang.exe</code>（<code>--target=x86_64-elf</code>）+ <code>ld.lld.exe</code></td></tr><tr><td><code>nasm</code></td><td>nasm.us 官方</td><td><code>nasm.exe</code>（<code>-f elf64</code>）</td></tr><tr><td><code>limine</code></td><td>limine-bootloader binary-release</td><td><code>limine.exe</code> + <code>limine-bios.sys</code>/<code>limine-bios-cd.bin</code>/<code>limine-uefi-cd.bin</code></td></tr><tr><td><code>xorriso</code></td><td>PeyTy/xorriso-exe-for-windows</td><td><code>xorriso.exe</code>（+随包 cygwin DLL）</td></tr><tr><td><code>make</code></td><td>ezwinports</td><td><code>make.exe</code>（独立无 DLL）</td></tr><tr><td><code>busybox</code></td><td>busybox-w64-FRP</td><td>复制成 <code>sh.exe</code> 喂 make 的 POSIX recipe</td></tr></tbody></table>
 <p><strong>防呆（all-or-nothing）</strong>：离线 / manifest 缺失 / 任一工具 url|sha256 为空 / 校验失败 / 解出的<br>二进制不存在 → 返回 <code>null</code>，<strong>绝不半置备、绝不 throw</strong>。auto 级联拿到 <code>null</code> 即在探 PATH 前<br>跳过本后端，继续往下（保住空 manifest 下的级联测试与离线行为）。</p>
 <h3 id="8-3-makefile-新目标-iso-limine">8.3 Makefile 新目标 <code>iso-limine</code><a class="anchor" href="#8-3-makefile-新目标-iso-limine" aria-label="锚点">#</a></h3>
-<pre><code class="language-makefile">LIMINE_DIR ?= vendor/limine     # 置备出的 Limine 引导块所在目录
-LIMINE     ?= limine            # limine 宿主工具
-XORRISO    ?= xorriso           # ISO 制作器
-iso-limine: $(KERNEL)
-	# 拷内核 + limine.conf + 三个引导块到 isofiles/，xorriso 制 ISO，最后 limine bios-install</code></pre>
+<pre><code class="language-makefile">LIMINE_DIR ?= vendor/limine     <span class="hljs-comment"># 置备出的 Limine 引导块所在目录</span>
+LIMINE     ?= limine            <span class="hljs-comment"># limine 宿主工具</span>
+XORRISO    ?= xorriso           <span class="hljs-comment"># ISO 制作器</span>
+<span class="hljs-section">iso-limine: <span class="hljs-variable">$(KERNEL)</span></span>
+	<span class="hljs-comment"># 拷内核 + limine.conf + 三个引导块到 isofiles/，xorriso 制 ISO，最后 limine bios-install</span></code></pre>
 <p><code>khy os build</code> 把置备出的路径经 <code>make VAR=val</code> 转发：<code>CC</code>/<code>LD</code>/<code>ASM</code>/<code>XORRISO</code>/<code>LIMINE</code>/<br><code>LIMINE_DIR</code>/<code>SHELL</code>(=BusyBox <code>sh.exe</code>)/<code>MOONBIT_PREBUILT=1</code>。无覆盖时与原构建参数完全一致。</p>
 <h3 id="8-4-manifest-已全量-pin-khyos-manifest-json-toolchain-win32-x64">8.4 manifest 已全量 pin（<code>khyos-manifest.json</code> → <code>toolchain.win32-x64</code>）<a class="anchor" href="#8-4-manifest-已全量-pin-khyos-manifest-json-toolchain-win32-x64" aria-label="锚点">#</a></h3>
 <p>6 个工具的 <code>url</code> + <code>sha256</code> + 归档内 <code>binRelPath</code>/<code>dirRelPath</code> 均已填入并端到端验证下载-解包-定位<br>全链路（<code>limine</code> 取 <strong>binary-release</strong> 资产，非源码 tar）。升级上游版本时<strong>只改 manifest</strong>，<br>不改代码。</p>
@@ -209,13 +209,13 @@ iso-limine: $(KERNEL)
 <ol><li>默认 canonical <code>~/.khyos/cache</code>。</li></ol>
 <p>工具链落 <code>&lt;缓存根&gt;/toolchain/</code>，ISO/builder/qemu 缓存同根。</p>
 <h3 id="8-6-使用-windows-用户">8.6 使用（Windows 用户）<a class="anchor" href="#8-6-使用-windows-用户" aria-label="锚点">#</a></h3>
-<pre><code class="language-powershell">pip install khy-os
-khy os build          # auto 级联：缓存无 ISO → 走原生 LLVM+Limine 后端，
-                      #   首次自动下载钉死工具链到 %USERPROFILE%\.khyos\cache\toolchain\，
-                      #   就地 make iso-limine，产物落 kernel\build\khy-os-kernel.iso
-khy os doctor         # 体检 QEMU（运行内核仍需 QEMU）
-khy os                # 启动内核终端
-# 强制本后端：set KHY_KERNEL_BUILD_BACKEND=native-llvm</code></pre>
+<pre><code class="language-powershell">pip install khy<span class="hljs-literal">-os</span>
+khy os build          <span class="hljs-comment"># auto 级联：缓存无 ISO → 走原生 LLVM+Limine 后端，</span>
+                      <span class="hljs-comment">#   首次自动下载钉死工具链到 %USERPROFILE%\.khyos\cache\toolchain\，</span>
+                      <span class="hljs-comment">#   就地 make iso-limine，产物落 kernel\build\khy-os-kernel.iso</span>
+khy os doctor         <span class="hljs-comment"># 体检 QEMU（运行内核仍需 QEMU）</span>
+khy os                <span class="hljs-comment"># 启动内核终端</span>
+<span class="hljs-comment"># 强制本后端：set KHY_KERNEL_BUILD_BACKEND=native-llvm</span></code></pre>
 <h3 id="8-7-防呆与诚实边界">8.7 防呆与诚实边界<a class="anchor" href="#8-7-防呆与诚实边界" aria-label="锚点">#</a></h3>
 <ul><li><strong>provisioner 返 <code>null</code> 不崩</strong>：离线/未钉/校验失败 → 跳过本后端，级联继续探 WSL/Docker/QEMU。</li><li><strong>默认路径零回归</strong>：<code>MOONBIT_PREBUILT</code> 空 = Makefile 逐字节不变；Linux/grub 路径完全不受影响。</li><li><strong>不改任何内核源码</strong>：仅靠既有 <code>CC</code>/<code>LD</code>/<code>ASM</code> make 变量覆盖 + 新 <code>iso-limine</code> 目标；</li></ul>
 <p>Limine 引导的是同一份未改动的 Multiboot2 内核。</p>

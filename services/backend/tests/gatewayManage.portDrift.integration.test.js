@@ -61,7 +61,9 @@ async function stopRuntimeProcess(dataHome) {
 }
 
 describe('gateway manage port drift integration', () => {
-  jest.setTimeout(30000);
+  // The lifecycle can legitimately consume 20s for daemon readiness, 3s for
+  // health confirmation, and 10s for shutdown escalation under suite load.
+  jest.setTimeout(45000);
 
   const ORIGINAL_ENV = { ...process.env };
   const chalk = createChalk();

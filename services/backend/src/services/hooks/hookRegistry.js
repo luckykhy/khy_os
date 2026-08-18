@@ -26,6 +26,11 @@ const HOOK_EVENTS = [
   'Stop',
   'SubAgentStart',
   'SubAgentEnd',
+  // 插件注册点(Block B):插件在明确接缝上注册能力,而非散写进调用点。
+  // ToolPermission 的 handler 只能**收紧**裁决(单调性由 hookContribSeams.tighten 强制,
+  // 见该文件);PromptSection 只能**追加**段落,永不改写既有指令。
+  'ToolPermission',
+  'PromptSection',
 ];
 
 // Lazily resolve the global hooks file (portable-aware); fallback to legacy.

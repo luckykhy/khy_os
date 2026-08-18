@@ -31,7 +31,7 @@
 <p>khyos 只有两条离机渠道，二者缺一不可、互为冗余：</p>
 <ul><li><strong>pip</strong>：<code>pip install khy-os</code></li><li><strong>npm</strong>：<code>npm install -g @khy-os/khy-os</code></li></ul>
 <p>在<strong>任意新机器</strong>上装好后，跑一句自检就知道能不能完整还原：</p>
-<pre><code class="language-bash">node scripts/restore-check.js      # 或 npm run restore-check</code></pre>
+<pre><code class="language-bash">node scripts/restore-check.js      <span class="hljs-comment"># 或 npm run restore-check</span></code></pre>
 <p>它会探测本机事实（Node/npm/tar/bundled/版本同步/目录可写……），<br>给出「就绪 / 未就绪」+ 每条拦路项与提醒的<strong>照抄即用修法</strong>。</p>
 <h2 id="一句话真相-包里有什么-没有什么">一句话真相：包里有什么、没有什么<a class="anchor" href="#一句话真相-包里有什么-没有什么" aria-label="锚点">#</a></h2>
 <ul><li>两条渠道的包都自带 <strong>bundled 后端源码 + 加密全量源码快照</strong>（<code>khy restore</code> 可解）。</li><li>两条渠道都<strong>不打包 <code>node_modules</code></strong>：后端 44 个依赖在<strong>首次运行时联网</strong> <code>npm install</code> 补齐。</li><li>Node.js 运行时<strong>不打包</strong>：缺失时 khy 首启自动下载便携版（<code>KHY_AUTO_INSTALL_NODE</code> 默认开）。</li><li>结论：<strong>装好包 + 首次联网跑一次 = 完整还原</strong>。想离线还原，须在有网机器先跑通一次再整目录拷走。</li></ul>

@@ -260,7 +260,7 @@ async function probeArtifact(artifactRoot) {
     expected.push(process.platform === 'win32'
       ? 'runtime/python/python.exe'
       : 'runtime/python/bin/python3');
-    expected.push('services/backend/bin/khy.js');
+    expected.push('runtime/khy/bundle.mjs');
     expected.push('web/ai/index.html', 'web/quant/index.html');
   } else if (manifest && manifest.kind === 'portable-dev') {
     expected.push(process.platform === 'win32' ? 'launch.bat' : 'launch.sh');

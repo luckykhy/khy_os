@@ -392,6 +392,22 @@ const ALIAS_MAP = {
   resume: { command: 'history', subCommand: 'resume' },
   上下文: { command: 'history', subCommand: 'resume' },
 
+  // ── 数据备份与恢复 ──
+  // 「恢复」已归 history resume、「还原」已归 restore(源码包),故数据侧一律带「数据」
+  // 二字消歧:恢复数据 / 数据恢复 / 还原数据 → backup restore。
+  beifen: { command: 'backup', subCommand: 'create' },
+  备份: { command: 'backup', subCommand: 'create' },
+  数据备份: { command: 'backup', subCommand: 'create' },
+  备份列表: { command: 'backup', subCommand: 'list' },
+  备份状态: { command: 'backup', subCommand: 'status' },
+  备份检查: { command: 'backup', subCommand: 'verify' },
+  校验备份: { command: 'backup', subCommand: 'verify' },
+  恢复数据: { command: 'backup', subCommand: 'restore' },
+  数据恢复: { command: 'backup', subCommand: 'restore' },
+  还原数据: { command: 'backup', subCommand: 'restore' },
+  清理备份: { command: 'backup', subCommand: 'prune' },
+  备份清理: { command: 'backup', subCommand: 'prune' },
+
   // ── 费用 ──
   feiyong: { command: 'cost' },
   费用: { command: 'cost' },
@@ -408,6 +424,9 @@ const ALIAS_MAP = {
   gengxin: { command: 'update' },
   更新: { command: 'update' },
   upgrade: { command: 'update' },
+  级联更新: { command: 'update' },
+  jiliangengxin: { command: 'update' },
+  'cascade-update': { command: 'update' },
 
   // ── 成长 ──
   cz: { command: 'growth' },
@@ -691,6 +710,13 @@ const ALIAS_MAP = {
   绑定: { command: 'wx', subCommand: 'bind' }, // 策略二:把账号收信绑定到工作空间/Agent
   绑定列表: { command: 'wx', subCommand: 'bindings' }, // 账号→工作空间/Agent 路由一览
   解绑: { command: 'wx', subCommand: 'unbind' }, // 解除账号的路由绑定
+
+  // 指向 feishu(两种传输都由该命令统管:群机器人 webhook 与长连接)。注意 `khy msg set feishu`
+  // 只管 webhook 那一半,`khy feishu` 才是包含长连接的完整入口。
+  lark: { command: 'feishu' },
+  飞书: { command: 'feishu' },
+  飞书状态: { command: 'feishu', subCommand: 'status' },
+  飞书连接: { command: 'feishu', subCommand: 'connect' }, // 直达 `khy feishu connect`(开长连接门 + 拉起守护进程)
 };
 
 /**

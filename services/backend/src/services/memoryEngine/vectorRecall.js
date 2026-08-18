@@ -1,29 +1,42 @@
 'use strict';
 
 /**
- * memoryEngine/vectorRecall.js — optional vector-similarity boost for proactive memory recall.
+ * memoryEngine/vectorRecall.js — 记忆的语义（向量）召回层。
  *
- * When an embedding endpoint is reachable (same env knobs as learningRetrieval.js:
- * KHY_LEARN_EMBED_URL, KHY_LEARN_EMBED_MODEL, KHY_LEARN_EMBED_TIMEOUT_MS),
- * this module embeds the user query and candidate memory snippets and re-ranks
- * by cosine similarity on top of the keyword × recency score.
+ * ## 这个文件修的是什么缺陷
  *
- * Fail-soft: if the embedding service is unreachable or any call throws, the
- * module returns null so callers fall back to pure keyword scoring with zero
- * behavior change.
+ * 改造前它是一个**后置重排器**：`scoring.rankMemories` 先按关键词重叠过滤
+ * （`minScore = 1`）、再截断到 `limit = 5`，**然后**才拿这 5 条去算余弦相似度。
+ * 于是余弦相似度只能给「已经词法命中」的 5 条重新排序，**永远救不回一条
+ * 改述查询下语义相关、但用词不重叠的记忆** —— 而那恰恰是向量检索唯一真正
+ * 不可替代的价值。这是 Top-3 命中率上不去的根因，跟有没有 embedding 客户端无关。
+ *
+ * 改造后本模块变成**召回器**：对全量记忆算相似度，交给 `scoring` 与词法召回池
+ * 取并集，再一起打分排序。截断发生在并集之后。
+ *
+ * ## 另外两处改动
+ *
+ * - **F2**：删掉了本模块自己的 `http.request` 实现（它直连 embedding 端点，绕过
+ *   aiGateway，且没有 Ollama / 网关回退）。现在一律走 `services/embeddingClient`
+ *   这一个真源。
+ * - **持久化**：向量经 `vectorStore` 侧车落盘，按内容 hash 失效。改造前每次查询都要
+ *   把候选重嵌一遍。
+ *
+ * ## 有界与降级
+ *
+ * - 冷启动不一次嵌完：单回合最多嵌 `KHY_MEMORY_VECTOR_EMBED_PER_TURN`（默认 32）条
+ *   新记忆，其余留给后续回合。已缓存的立即参与召回，所以覆盖率是渐进上升而不是
+ *   「第一回合卡住十几秒」。
+ * - 查询向量嵌不出来（服务不可达/模型没装）即返回 null，调用方**逐字节**退回纯词法路径（F4）。
  *
  * @module memoryEngine/vectorRecall
  */
 
-const http = require('http');
-const https = require('https');
+const embeddingClient = require('../embeddingClient');
 
-// ── Env knobs (mirror learningRetrieval.js SSOT) ────────────────────────────
+const vectorStore = require('./vectorStore');
 
-function _envStr(name, def) {
-  const v = process.env[name];
-  return v == null || String(v).trim() === '' ? def : String(v).trim();
-}
+const OFF = /^(0|false|no|off)$/i;
 
 function _envInt(name, def, min, max) {
   const n = parseInt(process.env[name], 10);
@@ -40,234 +53,219 @@ function _envInt(name, def, min, max) {
   return r;
 }
 
-function _envBool(name, def) {
-  const v = process.env[name];
-  if (v == null || v === '') {
-    return def;
-  }
-  return !/^(0|false|no|off)$/i.test(String(v).trim());
-}
-
-const EMBED_URL = _envStr('KHY_LEARN_EMBED_URL', '');
-const EMBED_MODEL = _envStr('KHY_LEARN_EMBED_MODEL', '');
-const EMBED_TIMEOUT_MS = _envInt('KHY_LEARN_EMBED_TIMEOUT_MS', 4000, 500, 60000);
-const EMBED_MAX_TEXTS = _envInt('KHY_LEARN_EMBED_MAX_TEXTS', 16, 2, 64);
-const VECTOR_RECALL_ENABLED = _envBool('KHY_MEMORY_VECTOR_RECALL', true);
-
-// ── HTTP helper (minimal, fail-soft) ─────────────────────────────────────────
-
-function _httpPostJson(urlStr, obj, timeoutMs) {
-  return new Promise((resolve) => {
-    let done = false;
-    const finish = (v) => {
-      if (!done) {
-        done = true;
-        resolve(v);
-      }
-    };
-    let req;
-    let payload, h;
-    try {
-      const mod = urlStr.startsWith('https') ? https : http;
-      payload = Buffer.from(JSON.stringify(obj), 'utf-8');
-      h = {
-        'Content-Type': 'application/json',
-        'Content-Length': payload.length,
-      };
-      req = mod.request(urlStr, { method: 'POST', headers: h }, (res) => {
-        const bufs = [];
-        res.on('data', (d) => bufs.push(d));
-        res.on('end', () => {
-          let json = null;
-          try {
-            json = JSON.parse(Buffer.concat(bufs).toString('utf-8'));
-          } catch {
-            json = null;
-          }
-          finish({ status: res.statusCode || 0, json });
-        });
-      });
-    } catch {
-      return finish(null);
-    }
-    req.on('error', () => finish(null));
-    req.setTimeout(timeoutMs, () => {
-      try {
-        req.destroy();
-      } catch {}
-      finish(null);
-    });
-    if (payload) {
-      req.write(payload);
-    }
-    req.end();
-  });
-}
-
-// ── Embedding ───────────────────────────────────────────────────────────────
-
 /**
- * Embed an array of texts. Returns array of float[] aligned to `texts`,
- * or null if no endpoint produced usable vectors.
- */
-async function _embedTexts(texts) {
-  if (!EMBED_URL || !EMBED_MODEL) {
-    return null;
-  }
-  const slice = texts.slice(0, EMBED_MAX_TEXTS);
-
-  // OpenAI-compatible endpoint
-  try {
-    const r = await _httpPostJson(
-      EMBED_URL,
-      { model: EMBED_MODEL, input: slice },
-      EMBED_TIMEOUT_MS
-    );
-    const data = r && r.json && Array.isArray(r.json.data) ? r.json.data : null;
-    if (data && data.length === slice.length && data.every((d) => Array.isArray(d.embedding))) {
-      return data.map((d) => d.embedding);
-    }
-  } catch {
-    /* try next */
-  }
-
-  // Ollama-style endpoint (derive from EMBED_URL by stripping /v1/embeddings)
-  try {
-    const ollamaUrl = EMBED_URL.replace(/\/v\d+\/embeddings?/, '/api/embeddings');
-    const vecs = [];
-    let ok = true;
-    for (const t of slice) {
-      const r = await _httpPostJson(ollamaUrl, { model: EMBED_MODEL, prompt: t }, EMBED_TIMEOUT_MS);
-      const emb = r && r.json && Array.isArray(r.json.embedding) ? r.json.embedding : null;
-      if (!emb) {
-        ok = false;
-        break;
-      }
-      vecs.push(emb);
-    }
-    if (ok && vecs.length === slice.length) {
-      return vecs;
-    }
-  } catch {
-    /* fail */
-  }
-
-  return null;
-}
-
-// ── Cosine similarity ───────────────────────────────────────────────────────
-
-function _cosine(a, b) {
-  if (!a || !b || a.length !== b.length) {
-    return 0;
-  }
-  let dot = 0,
-    na = 0,
-    nb = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i];
-    na += a[i] * a[i];
-    nb += b[i] * b[i];
-  }
-  if (na === 0 || nb === 0) {
-    return 0;
-  }
-  return dot / (Math.sqrt(na) * Math.sqrt(nb));
-}
-
-// ── Public API ──────────────────────────────────────────────────────────────
-
-/**
- * Embed a single text. Returns float[] or null on failure.
- */
-async function embedText(text) {
-  if (!text) {
-    return null;
-  }
-  const results = await _embedTexts([String(text)]);
-  return results && results.length > 0 ? results[0] : null;
-}
-
-/**
- * Compute vector-enhanced scores for a set of scored memories.
+ * 向量召回总开关。默认开；`KHY_MEMORY_VECTOR_RECALL ∈ {0,false,no,off}` 关。
  *
- * Takes the already-keyword-scored array from scoring.rankMemories, embeds
- * the query + each memory's body snippet, computes cosine similarity, and
- * returns a new array with `vectorScore` and updated `score` fields.
+ * 读**活** env（不是模块加载期常量）—— 改造前它是加载期 const，导致测试必须
+ * `jest.resetModules()` 才能改，而且运行期改环境变量无效。
  *
- * If the embedding service is unreachable, returns null so callers keep
- * the original keyword-only scores.
+ * @returns {boolean}
+ */
+function isEnabled() {
+  const v = process.env.KHY_MEMORY_VECTOR_RECALL;
+  if (v == null || String(v).trim() === '') {
+    return true;
+  }
+  return !OFF.test(String(v).trim());
+}
+
+/** 单回合最多为多少条「尚无缓存向量」的记忆做嵌入（有界，防冷启动卡顿）。 */
+function embedBudget() {
+  return _envInt('KHY_MEMORY_VECTOR_EMBED_PER_TURN', 32, 1, 512);
+}
+
+/** 参与嵌入的正文截断长度（embedding 模型的上下文有限，且长尾对语义贡献递减）。 */
+function _snippetChars() {
+  return _envInt('KHY_MEMORY_VECTOR_SNIPPET_CHARS', 500, 80, 8000);
+}
+
+/**
+ * 把一条记忆压成待嵌入文本。标题与摘要一起进去 —— 它们是人写的最凝练的语义标签，
+ * 只嵌正文会丢掉这部分信号（与 `keywordScore` 给 name×3 / description×2 加权同理）。
+ *
+ * @param {object} frontmatter
+ * @param {string} body
+ * @returns {string}
+ */
+function memoryText(frontmatter, body) {
+  const fm = frontmatter || {};
+  const head = [String(fm.name || ''), String(fm.description || '')].filter(Boolean).join(' — ');
+  const text = String(body || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, _snippetChars());
+  return [head, text].filter(Boolean).join('\n');
+}
+
+/**
+ * 语义召回：对全量记忆算与 query 的余弦相似度。
+ *
+ * 走缓存优先：只为「侧车里没有、或 hash 已变」的记忆调 embedding，且单回合嵌入条数有界。
  *
  * @param {string} query
- * @param {Array<{body:string, keywordScore:number, score:number, ...}>} scored
+ * @param {Array<{filename:string, frontmatter:object, body:string}>} entries
+ *        全量候选（**不是**词法过滤后的子集 —— 那正是改造前的缺陷）
  * @param {object} [opts]
- * @param {number} [opts.vectorWeight=0.5]  - weight of vector sim in combined score
- * @returns {Array|null} enhanced scored array, or null if vector unavailable
+ * @param {number} [opts.nowMs]        - 可注入时钟（测试用）
+ * @param {number} [opts.embedBudget]  - 覆盖单回合嵌入预算
+ * @returns {Promise<Map<string, number>|null>}
+ *          filename → 余弦相似度；embedding 不可用时返回 null（调用方据此逐字节降级）
  */
-async function enhanceWithVectors(query, scored, opts = {}) {
-  if (!VECTOR_RECALL_ENABLED) {
-    return null;
-  }
-  if (!scored || scored.length === 0) {
+async function recall(query, entries, opts = {}) {
+  if (!isEnabled()) {
     return null;
   }
   if (!query || !String(query).trim()) {
     return null;
   }
-
-  const vectorWeight = Number.isFinite(opts.vectorWeight) ? opts.vectorWeight : 0.5;
-
-  // Build text list: [query, ...memory snippets]
-  const texts = [String(query)];
-  for (const m of scored) {
-    const body = String(m.body || '')
-      .replace(/\s+/g, ' ')
-      .trim();
-    const snippet = body.slice(0, 500);
-    texts.push(snippet);
-  }
-
-  let vectors;
-  try {
-    vectors = await _embedTexts(texts);
-  } catch {
-    return null; // fail-soft
-  }
-  if (!vectors || vectors.length !== texts.length) {
+  if (!Array.isArray(entries) || entries.length === 0) {
     return null;
   }
 
-  const queryVec = vectors[0];
+  // 1) 先嵌查询。失败即判定 embedding 不可用 —— 这一步同时充当探活，
+  //    比先去嵌一堆记忆再发现打不通要省得多。
+  let queryVec;
+  try {
+    queryVec = await embeddingClient.embedText(String(query));
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(queryVec) || queryVec.length === 0) {
+    return null;
+  }
 
-  // Enhance each memory with vector similarity (clone to avoid mutating caller's data)
-  const enhanced = scored.map((m, i) => {
-    const memVec = vectors[i + 1];
-    const cosSim = _cosine(queryVec, memVec);
-    const kw = Math.max(0, m.keywordScore || 0);
-    // Combined score: keyword baseline + vector-modulated boost.
-    // vectorBoost = kw * vectorWeight * max(0, cosSim - 0.3) / 0.7
-    //   → cosSim >= 0.3 gives positive boost (linear 0→1 over [0.3, 1.0])
-    //   → cosSim <  0.3 gives zero boost (no penalty for weak vector match)
-    //   → high kw × high cosSim yields the biggest boost
-    //   → low kw caps the boost (no random low-keyword results promoted)
-    const normalizedSim = Math.max(0, (cosSim - 0.3) / 0.7);
-    const vectorBoost = kw * vectorWeight * normalizedSim;
-    return {
-      ...m,
-      vectorScore: cosSim,
-      score: kw + vectorBoost,
-    };
-  });
+  const model = embeddingClient.embedModel();
+  const nowMs = Number.isFinite(opts.nowMs) ? opts.nowMs : Date.now();
 
-  enhanced.sort(
-    (a, b) =>
-      b.score - a.score || b.modifiedAt - a.modifiedAt || a.filename.localeCompare(b.filename)
-  );
-  return enhanced;
+  // 2) 读侧车（模型不符会自动拿到空表 ⇒ 整表重建）。
+  let table;
+  try {
+    table = vectorStore.load({ model });
+  } catch {
+    table = null;
+  }
+  if (!table) {
+    return null;
+  }
+  if (!table.model) {
+    table.model = model;
+  }
+
+  // 3) 分出命中与待嵌。
+  const hashes = new Map();
+  const cached = new Map();
+  const pending = [];
+  for (const e of entries) {
+    if (!e || !e.filename) {
+      continue;
+    }
+    const h = vectorStore.contentHash(e.frontmatter, e.body);
+    hashes.set(e.filename, h);
+    const vec = vectorStore.get(table, e.filename, h);
+    if (vec) {
+      cached.set(e.filename, vec);
+    } else {
+      pending.push(e);
+    }
+  }
+
+  // 4) 为待嵌的记忆补向量，有界：单回合最多 budget 条，且按 embeddingClient 的
+  //    批量上限分批。任一批失败就停下 —— 已经拿到的照样入库，下回合继续补。
+  const budget = Number.isFinite(opts.embedBudget) ? opts.embedBudget : embedBudget();
+  const todo = pending.slice(0, Math.max(0, budget));
+  const fresh = [];
+  if (todo.length > 0) {
+    const batchSize = Math.max(1, embeddingClient.maxTexts());
+    for (let i = 0; i < todo.length; i += batchSize) {
+      const batch = todo.slice(i, i + batchSize);
+      let vecs = null;
+      try {
+        vecs = await embeddingClient.embedTexts(
+          batch.map((e) => memoryText(e.frontmatter, e.body))
+        );
+      } catch {
+        vecs = null;
+      }
+      if (!vecs || vecs.length !== batch.length) {
+        break; // 端点中途不稳:保住已得的，剩下的下回合再来
+      }
+      for (let k = 0; k < batch.length; k++) {
+        fresh.push({
+          filename: batch[k].filename,
+          hash: hashes.get(batch[k].filename),
+          vec: vecs[k],
+        });
+        cached.set(batch[k].filename, vecs[k]);
+      }
+    }
+  }
+
+  // 5) 落盘：写入新向量 + 清掉已删除记忆的残留。写失败只是「下回合再嵌一遍」，不影响本回合结果。
+  if (fresh.length > 0) {
+    try {
+      vectorStore.put(table, fresh, nowMs);
+      vectorStore.prune(table, new Set(hashes.keys()));
+      vectorStore.save(table);
+    } catch {
+      /* 侧车不可写 ⇒ 退化为每回合重嵌，功能不受影响 */
+    }
+  }
+
+  // 6) 算相似度。维度不符的（换过模型的残留）由 cosine 自然返回 0，不会污染排序。
+  const sims = new Map();
+  for (const [filename, vec] of cached) {
+    sims.set(filename, embeddingClient.cosine(queryVec, vec));
+  }
+  return sims.size > 0 ? sims : null;
+}
+
+/**
+ * 命中统计开关。默认**关** —— 见下方 noteHits 的说明：这批数据目前没有读者，
+ * 而每回合多读写一遍侧车是实打实的 IO。想为将来的冷落降权攒数据时打开它
+ * （`KHY_MEMORY_VECTOR_HITS=1`）。
+ *
+ * @returns {boolean}
+ */
+function hitsEnabled() {
+  const v = process.env.KHY_MEMORY_VECTOR_HITS;
+  return v != null && /^(1|true|yes|on)$/i.test(String(v).trim());
+}
+
+/**
+ * 记一次召回命中（写进侧车的 hits/lastHitAt）。
+ *
+ * 本轮**只写不读**：衰减立法第 3 档（冷落降权）明确不实施，先积累数据。
+ * 因此默认关闭（见 hitsEnabled）—— 一个没有读者的字段不该让每个回合都多付一次
+ * 侧车读写。失败静默：统计字段绝不该影响检索。
+ *
+ * @param {string[]} filenames
+ * @param {number} [nowMs]
+ */
+function noteHits(filenames, nowMs) {
+  if (!hitsEnabled()) {
+    return;
+  }
+  if (!Array.isArray(filenames) || filenames.length === 0) {
+    return;
+  }
+  try {
+    const table = vectorStore.load({ model: embeddingClient.embedModel() });
+    if (vectorStore.recordHits(table, filenames, nowMs) > 0) {
+      vectorStore.save(table);
+    }
+  } catch {
+    /* 统计失败不影响任何检索行为 */
+  }
 }
 
 module.exports = {
-  embedText,
-  enhanceWithVectors,
-  VECTOR_RECALL_ENABLED,
+  isEnabled,
+  hitsEnabled,
+  embedBudget,
+  memoryText,
+  recall,
+  noteHits,
+  // embedding 的唯一真源在 services/embeddingClient；此处只做转发，方便记忆侧调用。
+  embedText: (text) => embeddingClient.embedText(text),
+  cosine: (a, b) => embeddingClient.cosine(a, b),
 };

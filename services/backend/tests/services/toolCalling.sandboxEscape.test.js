@@ -55,7 +55,10 @@ beforeAll(() => {
   });
 });
 
-afterAll(() => { tc.setPermissionMode('default'); });
+afterAll(() => {
+  tc.setPermissionMode('default');
+  require('../../src/services/toolExecutionMetrics').reset();
+});
 
 describe('defineTool 透传逃逸声明', () => {
   test('静态 sandboxEscape 落到注册描述符', () => {

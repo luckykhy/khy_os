@@ -87,6 +87,30 @@ const ORPHAN_FRAG_LINE_RE =
 const BARE_JSON_RE =
   /^\{?\s*"name"\s*:\s*"[^"]+"\s*,\s*"(?:params|arguments|input)"\s*:[\s\S]*\}\s*>?\s*$/;
 
+// Claude Code can echo a Read payload as ordinary text after the structured
+// tool event. Restrict this detector to KHY's generated image bridge paths;
+// arbitrary file_path JSON remains visible.
+const KHY_IMAGE_PATH_RE = /(?:^|[\\/])khy-cli-img-[^\\/]+[\\/]image-\d+-[0-9a-f]+\.(?:png|jpe?g|webp|gif|bmp|svg|tiff?)$/i;
+function _isGeneratedImageReadJson(line) {
+  const trimmed = String(line || '').trim();
+  if (!trimmed.startsWith('{') || !trimmed.endsWith('}')) {
+    return false;
+  }
+  try {
+    const value = JSON.parse(trimmed);
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return false;
+    }
+    const keys = Object.keys(value);
+    if (keys.length !== 1 || keys[0] !== 'file_path' || typeof value.file_path !== 'string') {
+      return false;
+    }
+    return KHY_IMAGE_PATH_RE.test(value.file_path.trim());
+  } catch {
+    return false;
+  }
+}
+
 // Head of a bare tool-call JSON at line start, tolerating a swallowed leading
 // `{` and a glued (possibly truncated) `<tool_call>` wrapper. Requires the
 // params object opener so balanced-brace scanning can find where the JSON ends.
@@ -285,7 +309,7 @@ function stripInlineToolCallNoise(text, env) {
       continue;
     } // stray dialect fragment
     const trimmed = line.trim();
-    if (BARE_JSON_RE.test(trimmed)) {
+    if (BARE_JSON_RE.test(trimmed) || _isGeneratedImageReadJson(trimmed)) {
       continue;
     }
     // Mixed-line leak: tool-call JSON glued to narration on the same line

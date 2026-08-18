@@ -382,6 +382,17 @@ if (metrics.enabled) {
   });
 }
 
+// 事件循环延迟连续监测（profiling 方案 B）。默认关闭；KHY_PROFILING_ENABLED=1
+// 时才创建直方图与定时器，定时器已 unref，不阻止进程退出。
+try {
+  const { eventLoopMonitor } = require('./src/observability');
+  if (eventLoopMonitor.start({ logger })) {
+    logger.info('事件循环延迟监测已挂载 采样在 C++ 侧维护，稳态开销可忽略');
+  }
+} catch {
+  /* profiling is optional — never block startup */
+}
+
 app.use((req, res, next) => {
   // Only set JSON content-type for API routes, not static files
   if (req.path.startsWith('/api') || req.path === '/health') {
@@ -1768,6 +1779,17 @@ try {
     try {
       await shutdownOpenTelemetry(logger);
     } catch {}
+  });
+  // 停掉事件循环直方图，并把缓冲中的慢请求明细冲刷到 .khy/monitor/。
+  // 两者都是同步且永不抛的，放在关停链上只是为了不丢最后几条明细。
+  addShutdownHook('observability', async () => {
+    try {
+      const obs = require('./src/observability');
+      obs.eventLoopMonitor.stop();
+      obs.slowRequest.flush();
+    } catch {
+      /* 可观测性是尽力而为的:关停路径上宁可丢几条明细,也不能拖住退出 */
+    }
   });
   addShutdownHook('startupFsm', async () => {
     if (_serverStartupFsm) _serverStartupFsm.fire('shutdown', { step: 'graceful_shutdown' });

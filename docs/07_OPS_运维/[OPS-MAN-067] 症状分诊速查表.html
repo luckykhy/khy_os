@@ -28,9 +28,9 @@
 <h1 id="ops-man-067-khy-os-症状分诊速查表">[OPS-MAN-067] Khy-OS 症状分诊速查表<a class="anchor" href="#ops-man-067-khy-os-症状分诊速查表" aria-label="锚点">#</a></h1>
 <blockquote><p>出问题时的第一站：用 <code>Ctrl-F</code> 搜你看到的现象/报错词，跳到对应子系统，照着「先读文件」和「跑这条验证」做。<br>本表由 <code>docs/_维护者/维护映射表.json</code> 确定性生成，子系统长大后重跑 <code>npm run maintenance:triage-doc</code> 即自动覆盖。</p></blockquote>
 <h2 id="更快的用法-直接问分诊器">更快的用法：直接问分诊器<a class="anchor" href="#更快的用法-直接问分诊器" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">npm run maintainer:triage -- &quot;识图老是404还落剪贴板&quot;     # 症状 → 子系统 + 读哪些文件 + 跑哪条命令
-npm run maintainer:triage -- &quot;守护进程端口漂移连不上&quot;
-npm run maintainer:triage -- &quot;slash command missing&quot;</code></pre>
+<pre><code class="language-bash">npm run maintainer:triage -- <span class="hljs-string">&quot;识图老是404还落剪贴板&quot;</span>     <span class="hljs-comment"># 症状 → 子系统 + 读哪些文件 + 跑哪条命令</span>
+npm run maintainer:triage -- <span class="hljs-string">&quot;守护进程端口漂移连不上&quot;</span>
+npm run maintainer:triage -- <span class="hljs-string">&quot;slash command missing&quot;</span></code></pre>
 <h2 id="通用纪律-改动前必读">通用纪律（改动前必读）<a class="anchor" href="#通用纪律-改动前必读" aria-label="锚点">#</a></h2>
 <ul><li><strong>B1 先想再写</strong>：动手前一句话说清「改什么 / 为什么 / 影响面」。</li><li><strong>B2 验证到绿</strong>：改完必须跑本表给的验证命令，<strong>没跑过验证不许说「修好了」</strong>。</li><li><strong>B3 外科手术式改动</strong>：只动该动的，不顺手重构。</li><li><strong>红线</strong>：不 AI 自动 commit/push；真 key/token 绝不进源码/包/提交/对话。</li></ul>
 <hr>
@@ -44,7 +44,7 @@ npm run maintainer:triage -- &quot;slash command missing&quot;</code></pre>
 <ul><li>docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.md</li><li>docs/09_STORY_修仙学AI/00_INDEX_修仙学AI-总目录.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
 <pre><code class="language-bash">npm run docs:check-beginner
-node --test scripts/docs/check_beginner_docs.test.js
+node --<span class="hljs-built_in">test</span> scripts/docs/check_beginner_docs.test.js
 npm run docs:build
 npm run docs:verify</code></pre>
 <hr>
@@ -56,8 +56,7 @@ npm run docs:verify</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>README.md</li><li>docs/07_OPS_运维/[OPS-MAN-022] pip-安装布局参考.md</li><li>docs/07_OPS_运维/[OPS-MAN-013] khy-os-开发者指南.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run check:maintainer:bootstrap
-npm run check:manifest-sync
+<pre><code class="language-bash">npm run check:manifest-sync
 bash scripts/release/build-and-audit-pip-purity.sh</code></pre>
 <hr>
 <h3 id="cli-routing-and-help-surface-cli-routing">CLI Routing and Help Surface  <code>cli-routing</code><a class="anchor" href="#cli-routing-and-help-surface-cli-routing" aria-label="锚点">#</a></h3>
@@ -68,8 +67,8 @@ bash scripts/release/build-and-audit-pip-purity.sh</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-013] khy-os-开发者指南.md</li><li>docs/07_OPS_运维/[OPS-MAN-011] khy-os-学习指南.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:maintainer:cli-routing
-node -e &quot;require('./services/backend/src/cli/router')&quot;</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/cli/router.test.js services/backend/tests/cli/repl.tasks.interaction.test.js
+node -e <span class="hljs-string">&quot;require(&#x27;./services/backend/src/cli/router&#x27;)&quot;</span></code></pre>
 <hr>
 <h3 id="prompt-capsule-and-debug-prompt-system-prompt-capsule-system">Prompt Capsule and Debug Prompt System  <code>prompt-capsule-system</code><a class="anchor" href="#prompt-capsule-and-debug-prompt-system-prompt-capsule-system" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -79,8 +78,8 @@ node -e &quot;require('./services/backend/src/cli/router')&quot;</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/03_DESIGN_设计/[DESIGN-OTHER-004] 特性访问-提示词胶囊-2026-06-01.md</li><li>AGENTS.md</li><li>CONTRIBUTING.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">node --test services/backend/tests/promptOnDemandSections.test.js
-node --test services/backend/tests/promptLearningRules.test.js
+<pre><code class="language-bash">node --<span class="hljs-built_in">test</span> services/backend/tests/promptOnDemandSections.test.js
+node --<span class="hljs-built_in">test</span> services/backend/tests/promptLearningRules.test.js
 npx jest services/backend/tests/gatewayDebugPrompt.test.js --runInBand</code></pre>
 <hr>
 <h3 id="ai-gateway-and-adapter-layer-gateway-adapters">AI Gateway and Adapter Layer  <code>gateway-adapters</code><a class="anchor" href="#ai-gateway-and-adapter-layer-gateway-adapters" aria-label="锚点">#</a></h3>
@@ -91,8 +90,8 @@ npx jest services/backend/tests/gatewayDebugPrompt.test.js --runInBand</code></p
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/04_IMPL_实现/[IMPL-RPT-020] 网关传输韧性修复-2026-05-29.md</li><li>docs/08_MGMT_项目管理/[MGMT-RPT-014] khy-qwen-差距修复清单.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:maintainer:gateway
-node -e &quot;require('./services/backend/src/services/gateway/aiGateway')&quot;
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/aiGateway.stability.test.js services/backend/tests/gateway/transportResilience.test.js services/backend/tests/gatewayAdapters.stability.test.js
+node -e <span class="hljs-string">&quot;require(&#x27;./services/backend/src/services/gateway/aiGateway&#x27;)&quot;</span>
 khy doctor</code></pre>
 <hr>
 <h3 id="proxy-daemon-and-runtime-port-discovery-proxy-daemon-runtime">Proxy, Daemon, and Runtime Port Discovery  <code>proxy-daemon-runtime</code><a class="anchor" href="#proxy-daemon-and-runtime-port-discovery-proxy-daemon-runtime" aria-label="锚点">#</a></h3>
@@ -103,7 +102,7 @@ khy doctor</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/04_IMPL_实现/[IMPL-RPT-017] 守护进程端口发现修复.md</li><li>docs/04_IMPL_实现/[IMPL-RPT-020] 网关传输韧性修复-2026-05-29.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:maintainer:runtime
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/daemonManager.runtimePort.test.js services/backend/tests/gatewayManage.portDrift.integration.test.js services/backend/tests/services/proxyBaseUrl.test.js services/backend/tests/services/serviceDefaults.test.js
 khy doctor</code></pre>
 <hr>
 <h3 id="ai-management-ui-and-api-ai-management-surface">AI Management UI and API  <code>ai-management-surface</code><a class="anchor" href="#ai-management-ui-and-api-ai-management-surface" aria-label="锚点">#</a></h3>
@@ -114,7 +113,7 @@ khy doctor</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-003] ai-管理-访问与登录.md</li><li>docs/07_OPS_运维/[OPS-MAN-002] ai-管理-新api对齐.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:maintainer:ai-management
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/routes/aiGatewayAdmin.modelSlots.test.js services/backend/tests/gatewayManage.apiDisplay.test.js
 npm run build --prefix apps/ai-frontend</code></pre>
 <hr>
 <h3 id="coding-projects-named-workspaces-chat-linkage-coding-projects">Coding Projects (named workspaces + chat linkage)  <code>coding-projects</code><a class="anchor" href="#coding-projects-named-workspaces-chat-linkage-coding-projects" aria-label="锚点">#</a></h3>
@@ -125,7 +124,7 @@ npm run build --prefix apps/ai-frontend</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/03_DESIGN_设计/[DESIGN-ARCH-026] khyos系统级服务调用审批网关规范.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:maintainer:projects
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/projectStore.test.js apps/ai-frontend/src/composables/useProjects.wiring.test.js
 npm run build --prefix apps/ai-frontend</code></pre>
 <hr>
 <h3 id="workspace-publish-and-verification-commands-workspace-publish-verify">Workspace, Publish, and Verification Commands  <code>workspace-publish-verify</code><a class="anchor" href="#workspace-publish-and-verification-commands-workspace-publish-verify" aria-label="锚点">#</a></h3>
@@ -136,7 +135,7 @@ npm run build --prefix apps/ai-frontend</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/06_DEPLOY_部署/[DEPLOY-MAN-011] pip-docker-打包部署.md</li><li>docs/07_OPS_运维/[OPS-MAN-022] pip-安装布局参考.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:maintainer:publish</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/publish.sourceReleaseMode.test.js services/backend/tests/publish.dbPreflight.test.js</code></pre>
 <hr>
 <h3 id="maintenance-safety-and-rule-gates-maintenance-safety">Maintenance Safety and Rule Gates  <code>maintenance-safety</code><a class="anchor" href="#maintenance-safety-and-rule-gates-maintenance-safety" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -146,7 +145,7 @@ npm run build --prefix apps/ai-frontend</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>AGENTS.md</li><li>CONTRIBUTING.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run check:maintainer:safety
+<pre><code class="language-bash">npm run check:changed
 npm run check:quality-gates</code></pre>
 <hr>
 <h3 id="release-and-rollback-release-rollback">Release and Rollback  <code>release-rollback</code><a class="anchor" href="#release-and-rollback-release-rollback" aria-label="锚点">#</a></h3>
@@ -157,7 +156,7 @@ npm run check:quality-gates</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/_传承/KHY-OS-传承书.md</li><li>docs/06_DEPLOY_部署/[DEPLOY-MAN-011] pip-docker-打包部署.md</li><li>maintenance/README.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">node --test maintenance/tests/ops-lib.test.js maintenance/tests/ops.integration.test.js
+<pre><code class="language-bash">node --<span class="hljs-built_in">test</span> maintenance/tests/ops-lib.test.js maintenance/tests/ops.integration.test.js
 npm run check:version-sync</code></pre>
 <hr>
 <h3 id="build-best-environment-self-check-repair-probes-env-optimize">Build Best Environment (Self-check / Repair / Probes)  <code>env-optimize</code><a class="anchor" href="#build-best-environment-self-check-repair-probes-env-optimize" aria-label="锚点">#</a></h3>
@@ -168,7 +167,7 @@ npm run check:version-sync</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-064] 打造最佳环境-如何扩展.md</li><li>docs/03_DESIGN_设计/[DESIGN-ARCH-026] khyos系统级服务调用审批网关规范.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:maintainer:env-optimize</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/services/localBrainEnvOptimize.test.js services/backend/tests/services/envProbes.test.js services/backend/tests/services/envRepair.test.js services/backend/tests/services/envPlatform.test.js</code></pre>
 <hr>
 <h3 id="evolution-prompt-playbook-1000-preset-prompts-evolution-prompts">Evolution Prompt Playbook (1000 preset prompts)  <code>evolution-prompts</code><a class="anchor" href="#evolution-prompt-playbook-1000-preset-prompts-evolution-prompts" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -178,7 +177,7 @@ npm run check:version-sync</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-066] khyos进化提示词手册-1000条.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:evolution-prompts</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- scripts/tests/gen-evolution-prompts.test.js</code></pre>
 <hr>
 <h3 id="symptom-triage-route-a-symptom-to-its-subsystem-triage">Symptom Triage (route a symptom to its subsystem)  <code>triage</code><a class="anchor" href="#symptom-triage-route-a-symptom-to-its-subsystem-triage" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -188,7 +187,7 @@ npm run check:version-sync</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-067] 症状分诊速查表.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:triage</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- scripts/tests/maintainerTriage.test.js</code></pre>
 <hr>
 <h3 id="off-machine-restore-readiness-can-a-fresh-machine-restore-khyos-restore-readiness">Off-machine Restore Readiness (can a fresh machine restore khyos?)  <code>restore-readiness</code><a class="anchor" href="#off-machine-restore-readiness-can-a-fresh-machine-restore-khyos-restore-readiness" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -198,7 +197,7 @@ npm run check:version-sync</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-068] 离机还原自检清单.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:restore-readiness</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- scripts/tests/restoreReadiness.test.js</code></pre>
 <hr>
 <h3 id="installed-copy-integrity-is-the-on-disk-bundle-actually-complete-install-integrity">Installed-copy Integrity (is the on-disk bundle actually complete?)  <code>install-integrity</code><a class="anchor" href="#installed-copy-integrity-is-the-on-disk-bundle-actually-complete-install-integrity" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -208,7 +207,7 @@ npm run check:version-sync</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-069] 已装副本完整性自检清单.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:install-integrity</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- scripts/tests/installIntegrity.test.js</code></pre>
 <hr>
 <h3 id="first-run-hydration-health-did-the-online-dependency-hydrate-actually-succeed-hydration-health">First-run Hydration Health (did the online dependency hydrate actually succeed?)  <code>hydration-health</code><a class="anchor" href="#first-run-hydration-health-did-the-online-dependency-hydrate-actually-succeed-hydration-health" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -218,7 +217,7 @@ npm run check:version-sync</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-070] 首启依赖hydration自检清单.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:hydration-health</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- scripts/tests/hydrationHealth.test.js</code></pre>
 <hr>
 <h3 id="agent-restore-plan-synthesizer-one-ordered-autonomy-classified-restore-plan-a-landing-agent-can-drive-agent-restore-plan">Agent Restore Plan Synthesizer (one ordered, autonomy-classified restore plan a landing agent can drive)  <code>agent-restore-plan</code><a class="anchor" href="#agent-restore-plan-synthesizer-one-ordered-autonomy-classified-restore-plan-a-landing-agent-can-drive-agent-restore-plan" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -228,7 +227,7 @@ npm run check:version-sync</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-075] Agent 还原方案合成器.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:agent-restore-plan</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- scripts/tests/agentRestorePlan.test.js</code></pre>
 <hr>
 <h3 id="cross-mirror-restore-conflict-detector-do-the-three-restore-self-checks-contradict-each-other-before-an-agent-auto-drives-restore-conflict-detector">Cross-mirror Restore Conflict Detector (do the three restore self-checks contradict each other before an agent auto-drives?)  <code>restore-conflict-detector</code><a class="anchor" href="#cross-mirror-restore-conflict-detector-do-the-three-restore-self-checks-contradict-each-other-before-an-agent-auto-drives-restore-conflict-detector" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -238,7 +237,7 @@ npm run check:version-sync</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-076] 三面镜子矛盾冲突检测.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:restore-conflicts</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- scripts/tests/restoreConflictDetector.test.js</code></pre>
 <hr>
 <h3 id="cross-mirror-restore-conflict-resolver-given-a-detected-contradiction-how-does-an-agent-safely-resolve-it-step-by-step-and-where-must-it-hand-off-to-a-human-restore-conflict-resolver">Cross-mirror Restore Conflict Resolver (given a detected contradiction, how does an agent safely resolve it step-by-step, and where must it hand off to a human?)  <code>restore-conflict-resolver</code><a class="anchor" href="#cross-mirror-restore-conflict-resolver-given-a-detected-contradiction-how-does-an-agent-safely-resolve-it-step-by-step-and-where-must-it-hand-off-to-a-human-restore-conflict-resolver" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -248,7 +247,7 @@ npm run check:version-sync</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-079] 三面镜子矛盾冲突消解.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:restore-conflict-resolve</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- scripts/tests/restoreConflictResolver.test.js</code></pre>
 <hr>
 <h3 id="off-machine-launch-entry-contract-does-each-channel-pin-the-launch-script-it-execs-bundle-launch-contract">Off-machine Launch-entry Contract (does each channel pin the launch script it execs?)  <code>bundle-launch-contract</code><a class="anchor" href="#off-machine-launch-entry-contract-does-each-channel-pin-the-launch-script-it-execs-bundle-launch-contract" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -258,7 +257,7 @@ npm run check:version-sync</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-073] 离机渠道启动入口契约自检清单.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:bundle-launch-contract</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- scripts/tests/bundleLaunchContract.test.js</code></pre>
 <hr>
 <h3 id="proxy-egress-bridge-select-node-enable-disable-proxy-egress">Proxy Egress Bridge (select node + enable/disable)  <code>proxy-egress</code><a class="anchor" href="#proxy-egress-bridge-select-node-enable-disable-proxy-egress" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -268,7 +267,7 @@ npm run check:version-sync</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/03_DESIGN_设计/[DESIGN-ARCH-066] 前端代理出站桥-选节点实际路由与启用停用开关.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:maintainer:proxy-egress
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/proxyCoreConfigGen.test.js services/backend/tests/proxyCoreManager.test.js services/backend/tests/proxyConfigService.egress.test.js services/backend/tests/aiManagementProxyEgress.wiring.test.js apps/ai-frontend/src/composables/useProxies.egress.wiring.test.js services/backend/tests/bootstrap/ensureProxyCoreEnv.test.js services/backend/tests/services/proxyCoreInstaller.test.js
 npm run build --prefix apps/ai-frontend</code></pre>
 <hr>
 <h3 id="斜杠命令菜单单一真源-经典repl-tui-slash-menu-ssot">斜杠命令菜单单一真源(经典REPL⇄TUI)  <code>slash-menu-ssot</code><a class="anchor" href="#斜杠命令菜单单一真源-经典repl-tui-slash-menu-ssot" aria-label="锚点">#</a></h3>
@@ -327,7 +326,7 @@ npm run build --prefix apps/ai-frontend</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-074] 首启崩溃真实原因加方法归因.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:startup-failure-explain</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/bootstrap/startupFailureExplain.test.js</code></pre>
 <hr>
 <h3 id="windows-md-suggested-app-registration-does-khy-show-in-the-open-with-建议的应用-list-md-suggested-apps">Windows .md Suggested-app Registration (does khy show in the Open-With '建议的应用' list?)  <code>md-suggested-apps</code><a class="anchor" href="#windows-md-suggested-app-registration-does-khy-show-in-the-open-with-建议的应用-list-md-suggested-apps" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -337,7 +336,7 @@ npm run build --prefix apps/ai-frontend</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-077] Windows md 文件建议的应用注册.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:md-suggested-apps</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/services/mdSuggestedAppsPlan.test.js</code></pre>
 <hr>
 <h3 id="fresh-machine-off-machine-restore-self-check-in-khy-doctor-真实原因-解决方法-for-a-fresh-pip-npm-install-fresh-install-doctor">Fresh-machine Off-machine-restore Self-check in <code>khy doctor</code> (真实原因+解决方法 for a fresh pip/npm install)  <code>fresh-install-doctor</code><a class="anchor" href="#fresh-machine-off-machine-restore-self-check-in-khy-doctor-真实原因-解决方法-for-a-fresh-pip-npm-install-fresh-install-doctor" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -347,7 +346,7 @@ npm run build --prefix apps/ai-frontend</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-078] khy doctor 离机还原自检.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:fresh-install-doctor</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/services/freshInstallDoctor.test.js</code></pre>
 <hr>
 <h3 id="cjk-ize-recap-so-session-recap-produces-content-on-chinese-sessions-session-recap-cjk">CJK-ize /recap so session recap produces content on Chinese sessions  <code>session-recap-cjk</code><a class="anchor" href="#cjk-ize-recap-so-session-recap-produces-content-on-chinese-sessions-session-recap-cjk" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -357,7 +356,7 @@ npm run build --prefix apps/ai-frontend</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-080] recap 的 CJK 化.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:recap-cjk</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/services/sessionRecapCjk.test.js services/backend/tests/services/sessionRecapService.cjk.test.js</code></pre>
 <hr>
 <h3 id="npm-channel-node-version-preflight-parity-with-pip-check-node-kills-the-cross-channel-off-machine-restore-contradiction-npm-node-preflight">npm-channel Node version preflight (parity with pip check_node; kills the cross-channel off-machine-restore contradiction)  <code>npm-node-preflight</code><a class="anchor" href="#npm-channel-node-version-preflight-parity-with-pip-check-node-kills-the-cross-channel-off-machine-restore-contradiction-npm-node-preflight" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -367,7 +366,7 @@ npm run build --prefix apps/ai-frontend</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-081] npm 渠道 Node 版本预检.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:node-preflight</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- packaging/npm/test/nodeVersionPreflight.test.js</code></pre>
 <hr>
 <h3 id="restore-convergence-loop-guard-verifier-after-an-agent-executes-a-restore-move-and-re-probes-did-it-actually-advance-stop-continue-or-escalate-restore-convergence-verifier">Restore Convergence &amp; Loop-Guard Verifier (after an agent executes a restore move and re-probes, did it actually advance? stop, continue, or escalate?)  <code>restore-convergence-verifier</code><a class="anchor" href="#restore-convergence-loop-guard-verifier-after-an-agent-executes-a-restore-move-and-re-probes-did-it-actually-advance-stop-continue-or-escalate-restore-convergence-verifier" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -377,7 +376,7 @@ npm run build --prefix apps/ai-frontend</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-082] 三面镜子还原收敛与防循环.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:restore-converge</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- scripts/tests/restoreConvergenceVerifier.test.js</code></pre>
 <hr>
 <h3 id="dependency-aware-wave-scheduling-fault-aware-execution-predecessor-result-injection-for-auto-decomposed-subtasks-拆任务-有序并行-依赖失败则跳过下游并如实汇报-前驱结果注入下游不再盲跑-跳过与失败在最终报告分列-确定性顺序链拆解让整条-arc-在默认离机路径活起来-按角色收窄子智能体工具集-只读角色不给写工具-多个并行子任务改同一文件时如实告警可能的写-写覆盖-成功但零产出的子任务如实标注不折进完成-最终报告按角色标注每个子任务并把失败按类型分布-让失败的验证子任务不被匿名折进失败-dependency-wave-scheduler">Dependency-aware WAVE scheduling + fault-aware execution + predecessor-result injection for auto-decomposed subtasks (拆任务 → 有序并行 → 依赖失败则跳过下游并如实汇报 → 前驱结果注入下游不再盲跑 → 跳过与失败在最终报告分列 → 确定性顺序链拆解让整条 arc 在默认离机路径活起来 → 按角色收窄子智能体工具集,只读角色不给写工具 → 多个并行子任务改同一文件时如实告警可能的写-写覆盖 → 成功但零产出的子任务如实标注不折进完成 → 最终报告按角色标注每个子任务并把失败按类型分布,让失败的验证子任务不被匿名折进失败)  <code>dependency-wave-scheduler</code><a class="anchor" href="#dependency-aware-wave-scheduling-fault-aware-execution-predecessor-result-injection-for-auto-decomposed-subtasks-拆任务-有序并行-依赖失败则跳过下游并如实汇报-前驱结果注入下游不再盲跑-跳过与失败在最终报告分列-确定性顺序链拆解让整条-arc-在默认离机路径活起来-按角色收窄子智能体工具集-只读角色不给写工具-多个并行子任务改同一文件时如实告警可能的写-写覆盖-成功但零产出的子任务如实标注不折进完成-最终报告按角色标注每个子任务并把失败按类型分布-让失败的验证子任务不被匿名折进失败-dependency-wave-scheduler" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -387,13 +386,13 @@ npm run build --prefix apps/ai-frontend</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-083] 依赖感知波次调度.md</li><li>docs/07_OPS_运维/[OPS-MAN-087] 波次执行故障感知.md</li><li>docs/07_OPS_运维/[OPS-MAN-091] 波次前驱结果注入.md</li><li>docs/07_OPS_运维/[OPS-MAN-092] 跳过与失败在最终报告分列.md</li><li>docs/07_OPS_运维/[OPS-MAN-093] 确定性顺序链拆解.md</li><li>docs/07_OPS_运维/[OPS-MAN-094] 角色工具作用域.md</li><li>docs/07_OPS_运维/[OPS-MAN-097] 角色工具作用域接线.md</li><li>docs/07_OPS_运维/[OPS-MAN-098] 并行写冲突检测.md</li><li>docs/07_OPS_运维/[OPS-MAN-099] 空产出成功检测.md</li><li>docs/07_OPS_运维/[OPS-MAN-101] 角色归属诚实.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:dep-wave-schedule
-npm run test:merge-skip-distinct
-npm run test:seq-chain-decompose
-npm run test:role-tool-scope
-npm run test:merge-file-conflict
-npm run test:merge-empty-success
-npm run test:merge-role-attribution</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/services/orchestrator/dependencyWaveScheduler.test.js services/backend/tests/services/mergeResultsSkipDistinct.test.js services/backend/tests/services/sequentialChainDecompose.test.js services/backend/tests/services/orchestrator/roleToolScope.test.js services/backend/tests/services/orchestrator/mergeFileConflicts.test.js services/backend/tests/services/orchestrator/mergeEmptySuccess.test.js services/backend/tests/services/orchestrator/mergeRoleAttribution.test.js
+npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/services/orchestrator/dependencyWaveScheduler.test.js services/backend/tests/services/mergeResultsSkipDistinct.test.js services/backend/tests/services/sequentialChainDecompose.test.js services/backend/tests/services/orchestrator/roleToolScope.test.js services/backend/tests/services/orchestrator/mergeFileConflicts.test.js services/backend/tests/services/orchestrator/mergeEmptySuccess.test.js services/backend/tests/services/orchestrator/mergeRoleAttribution.test.js
+npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/services/orchestrator/dependencyWaveScheduler.test.js services/backend/tests/services/mergeResultsSkipDistinct.test.js services/backend/tests/services/sequentialChainDecompose.test.js services/backend/tests/services/orchestrator/roleToolScope.test.js services/backend/tests/services/orchestrator/mergeFileConflicts.test.js services/backend/tests/services/orchestrator/mergeEmptySuccess.test.js services/backend/tests/services/orchestrator/mergeRoleAttribution.test.js
+npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/services/orchestrator/dependencyWaveScheduler.test.js services/backend/tests/services/mergeResultsSkipDistinct.test.js services/backend/tests/services/sequentialChainDecompose.test.js services/backend/tests/services/orchestrator/roleToolScope.test.js services/backend/tests/services/orchestrator/mergeFileConflicts.test.js services/backend/tests/services/orchestrator/mergeEmptySuccess.test.js services/backend/tests/services/orchestrator/mergeRoleAttribution.test.js
+npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/services/orchestrator/dependencyWaveScheduler.test.js services/backend/tests/services/mergeResultsSkipDistinct.test.js services/backend/tests/services/sequentialChainDecompose.test.js services/backend/tests/services/orchestrator/roleToolScope.test.js services/backend/tests/services/orchestrator/mergeFileConflicts.test.js services/backend/tests/services/orchestrator/mergeEmptySuccess.test.js services/backend/tests/services/orchestrator/mergeRoleAttribution.test.js
+npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/services/orchestrator/dependencyWaveScheduler.test.js services/backend/tests/services/mergeResultsSkipDistinct.test.js services/backend/tests/services/sequentialChainDecompose.test.js services/backend/tests/services/orchestrator/roleToolScope.test.js services/backend/tests/services/orchestrator/mergeFileConflicts.test.js services/backend/tests/services/orchestrator/mergeEmptySuccess.test.js services/backend/tests/services/orchestrator/mergeRoleAttribution.test.js
+npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/services/orchestrator/dependencyWaveScheduler.test.js services/backend/tests/services/mergeResultsSkipDistinct.test.js services/backend/tests/services/sequentialChainDecompose.test.js services/backend/tests/services/orchestrator/roleToolScope.test.js services/backend/tests/services/orchestrator/mergeFileConflicts.test.js services/backend/tests/services/orchestrator/mergeEmptySuccess.test.js services/backend/tests/services/orchestrator/mergeRoleAttribution.test.js</code></pre>
 <hr>
 <h3 id="restore-self-drive-authorization-gate-before-executing-any-restore-move-should-the-agent-auto-drive-on-this-machine-at-all-authorized-ask-first-forbidden-restore-autonomy-gate">Restore Self-Drive Authorization Gate (before executing any restore move, should the agent auto-drive on THIS machine at all? authorized / ask-first / forbidden)  <code>restore-autonomy-gate</code><a class="anchor" href="#restore-self-drive-authorization-gate-before-executing-any-restore-move-should-the-agent-auto-drive-on-this-machine-at-all-authorized-ask-first-forbidden-restore-autonomy-gate" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -403,7 +402,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-084] 还原自驱授权门.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:restore-authorize</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- scripts/tests/restoreAutonomyGate.test.js</code></pre>
 <hr>
 <h3 id="restore-recourse-actionable-denial-the-inverse-of-the-authorization-gate-if-the-agent-is-denied-what-is-the-minimal-ordered-safe-path-to-yes-restore-recourse-plan">Restore Recourse / Actionable Denial (the inverse of the authorization gate: if the agent is denied, what is the minimal ordered safe path to yes?)  <code>restore-recourse-plan</code><a class="anchor" href="#restore-recourse-actionable-denial-the-inverse-of-the-authorization-gate-if-the-agent-is-denied-what-is-the-minimal-ordered-safe-path-to-yes-restore-recourse-plan" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -413,7 +412,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-085] 还原补救追索.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:restore-recourse</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- scripts/tests/restoreRecoursePlan.test.js</code></pre>
 <hr>
 <h3 id="restore-trace-journal-durable-agent-memory-append-only-event-stream-that-rebuilds-the-cross-process-stallcount-the-convergence-loop-guard-needs-closes-the-real-seam-where-converge-resets-stallcount-to-0-on-every-independent-cli-invocation-restore-trace-journal">Restore Trace Journal / Durable Agent Memory (append-only event stream that rebuilds the cross-process stallCount the convergence loop-guard needs; closes the real seam where converge resets stallCount to 0 on every independent CLI invocation)  <code>restore-trace-journal</code><a class="anchor" href="#restore-trace-journal-durable-agent-memory-append-only-event-stream-that-rebuilds-the-cross-process-stallcount-the-convergence-loop-guard-needs-closes-the-real-seam-where-converge-resets-stallcount-to-0-on-every-independent-cli-invocation-restore-trace-journal" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -423,7 +422,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-086] 还原轨迹日志.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:restore-trace</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- scripts/tests/restoreTraceJournal.test.js</code></pre>
 <hr>
 <h3 id="restore-strategy-ledger-cross-session-learning-learns-across-all-sessions-on-this-machine-which-resolution-strategies-have-been-repeatedly-proven-dead-so-the-next-self-drive-skips-them-instead-of-re-walking-known-dead-ends-the-machine-level-complement-to-the-per-session-trace-journal-restore-strategy-ledger">Restore Strategy Ledger / Cross-Session Learning (learns across ALL sessions on this machine which resolution strategies have been repeatedly proven dead, so the next self-drive skips them instead of re-walking known dead-ends; the machine-level complement to the per-session trace journal)  <code>restore-strategy-ledger</code><a class="anchor" href="#restore-strategy-ledger-cross-session-learning-learns-across-all-sessions-on-this-machine-which-resolution-strategies-have-been-repeatedly-proven-dead-so-the-next-self-drive-skips-them-instead-of-re-walking-known-dead-ends-the-machine-level-complement-to-the-per-session-trace-journal-restore-strategy-ledger" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -433,7 +432,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-088] 还原策略台账.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:restore-ledger</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- scripts/tests/restoreStrategyLedger.test.js</code></pre>
 <hr>
 <h3 id="restore-skip-applier-apply-cross-session-learning-the-missing-consumer-that-closes-the-dead-field-bridge-the-strategy-ledger-produced-recommendedskips-but-nothing-consumed-them-this-annotates-the-resolver-recovery-chain-with-learned-dead-safe-to-skip-markers-without-deleting-or-reordering-restore-skip-applier">Restore Skip Applier / Apply Cross-Session Learning (the missing consumer that closes the dead-field bridge: the strategy ledger produced recommendedSkips but nothing consumed them; this annotates the resolver recovery chain with learned-dead/safe-to-skip markers WITHOUT deleting or reordering)  <code>restore-skip-applier</code><a class="anchor" href="#restore-skip-applier-apply-cross-session-learning-the-missing-consumer-that-closes-the-dead-field-bridge-the-strategy-ledger-produced-recommendedskips-but-nothing-consumed-them-this-annotates-the-resolver-recovery-chain-with-learned-dead-safe-to-skip-markers-without-deleting-or-reordering-restore-skip-applier" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -443,7 +442,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-089] 还原学习应用器.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:restore-apply</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- scripts/tests/restoreSkipApplier.test.js</code></pre>
 <hr>
 <h3 id="restore-navigator-single-next-action-the-missing-aggregator-that-closes-the-complete-but-not-simple-usability-bridge-the-restore-family-is-12-leaves-10-clis-each-answering-one-slice-but-a-fresh-machine-agent-or-human-gets-no-unified-verdict-and-no-single-which-command-do-i-run-now-this-synthesizes-all-family-verdicts-into-one-next-action-restore-navigator">Restore Navigator / Single Next-Action (the missing aggregator that closes the complete-but-not-simple usability bridge: the restore family is 12 leaves / 10 CLIs each answering one slice, but a fresh-machine agent or human gets no unified verdict and no single &quot;which command do I run NOW&quot;; this synthesizes all family verdicts into ONE next-action)  <code>restore-navigator</code><a class="anchor" href="#restore-navigator-single-next-action-the-missing-aggregator-that-closes-the-complete-but-not-simple-usability-bridge-the-restore-family-is-12-leaves-10-clis-each-answering-one-slice-but-a-fresh-machine-agent-or-human-gets-no-unified-verdict-and-no-single-which-command-do-i-run-now-this-synthesizes-all-family-verdicts-into-one-next-action-restore-navigator" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -453,7 +452,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-090] 还原导航器.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:restore-navigate</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- scripts/tests/restoreNavigator.test.js</code></pre>
 <hr>
 <h3 id="restore-extraction-completeness-verifier-consumes-the-dead-snapshot-header-filecount-field-at-restore-time-khy-restore-prints-fully-restored-on-tar-exit-0-alone-and-never-reconciles-the-disk-file-count-against-the-snapshot-filecount-tar-can-exit-0-yet-drop-files-disk-full-max-path-skipped-entry-types-silent-under-extraction-false-green-on-the-user-s-most-important-path-a-complete-and-simple-restore-this-reconciles-expected-vs-actual-and-gives-an-honest-verdict-restore-completeness-verifier">Restore Extraction-Completeness Verifier (consumes the DEAD snapshot header fileCount field at restore time: khy restore prints &quot;fully restored&quot; on tar exit 0 alone and never reconciles the disk file count against the snapshot fileCount; tar can exit 0 yet drop files (disk full / MAX_PATH / skipped entry types) -&gt; silent under-extraction false-GREEN on the user's most important path &quot;a COMPLETE and simple restore&quot;; this reconciles expected vs actual and gives an honest verdict)  <code>restore-completeness-verifier</code><a class="anchor" href="#restore-extraction-completeness-verifier-consumes-the-dead-snapshot-header-filecount-field-at-restore-time-khy-restore-prints-fully-restored-on-tar-exit-0-alone-and-never-reconciles-the-disk-file-count-against-the-snapshot-filecount-tar-can-exit-0-yet-drop-files-disk-full-max-path-skipped-entry-types-silent-under-extraction-false-green-on-the-user-s-most-important-path-a-complete-and-simple-restore-this-reconciles-expected-vs-actual-and-gives-an-honest-verdict-restore-completeness-verifier" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -463,7 +462,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-095] 还原解包完整性对账.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:restore-verify-complete</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- scripts/tests/restoreCompletenessVerifier.test.js</code></pre>
 <hr>
 <h3 id="restore-snapshot-format-compatibility-gate-consumes-the-dead-snapshot-header-format-formatversion-fields-before-decryption-makesourcesnapshot-stamps-format-khy-source-snapshot-formatversion-1-but-the-restore-heal-path-sourcehealservice-decrypt-cli-handlers-publish-js-only-checks-crypto-algo-and-never-checks-format-formatversion-grep-khy-source-snapshot-has-zero-consumers-in-the-restore-codebase-a-strange-machine-running-old-khy-against-a-future-formatversion-2-snapshot-decrypts-blindly-cryptic-auth-error-or-silent-mis-parse-and-a-non-khy-dir-enters-decryption-unchecked-this-is-the-missing-pre-check-answering-does-this-khy-even-understand-this-snapshot-format-snapshot-format-compat">Restore Snapshot-Format Compatibility Gate (consumes the DEAD snapshot header format/formatVersion fields BEFORE decryption: makeSourceSnapshot stamps format='khy-source-snapshot'+formatVersion=1 but the restore/heal path (sourceHealService.decrypt, cli/handlers/publish.js) only checks crypto.algo and NEVER checks format/formatVersion -&gt; grep 'khy-source-snapshot' has zero consumers in the restore codebase; a strange machine running OLD khy against a FUTURE formatVersion=2 snapshot decrypts blindly (cryptic auth error or silent mis-parse), and a non-khy dir enters decryption unchecked; this is the missing PRE-check answering 'does this khy even understand this snapshot format?')  <code>snapshot-format-compat</code><a class="anchor" href="#restore-snapshot-format-compatibility-gate-consumes-the-dead-snapshot-header-format-formatversion-fields-before-decryption-makesourcesnapshot-stamps-format-khy-source-snapshot-formatversion-1-but-the-restore-heal-path-sourcehealservice-decrypt-cli-handlers-publish-js-only-checks-crypto-algo-and-never-checks-format-formatversion-grep-khy-source-snapshot-has-zero-consumers-in-the-restore-codebase-a-strange-machine-running-old-khy-against-a-future-formatversion-2-snapshot-decrypts-blindly-cryptic-auth-error-or-silent-mis-parse-and-a-non-khy-dir-enters-decryption-unchecked-this-is-the-missing-pre-check-answering-does-this-khy-even-understand-this-snapshot-format-snapshot-format-compat" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -473,7 +472,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-105] 还原快照格式兼容性对账.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:restore-check-format</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- scripts/tests/snapshotFormatCompat.test.js</code></pre>
 <hr>
 <h3 id="restore-provenance-reconciler-consumes-the-dead-snapshot-header-capturemode-includesuncommitted-dirty-fields-makesourcesnapshot-stamps-whether-the-git-archive-was-a-clean-head-or-a-dirty-working-tree-capture-but-the-restore-banner-services-backend-src-cli-handlers-publish-js-only-prints-gitcommit-slice-0-12-and-never-reads-capturemode-includesuncommitted-a-fresh-machine-user-reads-commit-44a491fb07f3-and-believes-the-restored-source-equals-that-clean-published-commit-when-it-is-actually-that-commit-plus-uncommitted-deltas-dirty-capture-this-pure-leaf-read-only-cli-answers-which-exact-git-state-does-this-restored-source-equal-so-nobody-mistakes-a-dirty-capture-for-the-published-commit-restore-provenance">Restore Provenance Reconciler (consumes the DEAD snapshot header captureMode/includesUncommitted/dirty fields: makeSourceSnapshot stamps whether the git archive was a clean HEAD or a dirty working-tree capture, but the restore banner (services/backend/src/cli/handlers/publish.js) only prints gitCommit.slice(0,12) and NEVER reads captureMode/includesUncommitted -&gt; a fresh-machine user reads 'commit 44a491fb07f3' and believes the restored source EQUALS that clean published commit, when it is actually that commit PLUS uncommitted deltas (dirty capture); this pure leaf + read-only CLI answers 'which exact git state does this restored source equal?' so nobody mistakes a dirty capture for the published commit)  <code>restore-provenance</code><a class="anchor" href="#restore-provenance-reconciler-consumes-the-dead-snapshot-header-capturemode-includesuncommitted-dirty-fields-makesourcesnapshot-stamps-whether-the-git-archive-was-a-clean-head-or-a-dirty-working-tree-capture-but-the-restore-banner-services-backend-src-cli-handlers-publish-js-only-prints-gitcommit-slice-0-12-and-never-reads-capturemode-includesuncommitted-a-fresh-machine-user-reads-commit-44a491fb07f3-and-believes-the-restored-source-equals-that-clean-published-commit-when-it-is-actually-that-commit-plus-uncommitted-deltas-dirty-capture-this-pure-leaf-read-only-cli-answers-which-exact-git-state-does-this-restored-source-equal-so-nobody-mistakes-a-dirty-capture-for-the-published-commit-restore-provenance" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -483,7 +482,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-107] 还原来源可溯性对账.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:restore-provenance</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- scripts/tests/restoreProvenance.test.js</code></pre>
 <hr>
 <h3 id="restore-archive-extract-compatibility-gate-consumes-the-dead-snapshot-header-plaintextformat-layout-fields-makesourcesnapshot-stamps-plaintextformat-tar-gz-layout-git-archive-describing-the-decrypted-inner-archive-shape-but-the-restore-heal-extractor-sourcehealservice-extracttargz-cli-handlers-publish-js-hard-codes-tar-xzf-and-never-reads-plaintextformat-layout-grep-shows-zero-consumers-in-the-restore-codebase-a-fresh-machine-running-old-khy-against-a-future-plaintextformat-tar-zst-zip-snapshot-blindly-runs-tar-xzf-gzip-header-mismatch-cryptic-extract-error-or-partial-bytes-mis-parsed-into-half-a-tree-this-pure-leaf-read-only-cli-answers-does-this-khy-s-extractor-even-understand-the-decrypted-archive-shape-before-running-tar-xzf-archive-extract-compat">Restore Archive-Extract Compatibility Gate (consumes the DEAD snapshot header plaintextFormat/layout fields: makeSourceSnapshot stamps plaintextFormat='tar.gz'+layout='git-archive' describing the DECRYPTED inner-archive shape, but the restore/heal extractor (sourceHealService._extractTarGz, cli/handlers/publish.js) HARD-CODES <code>tar -xzf</code> and NEVER reads plaintextFormat/layout -&gt; grep shows zero consumers in the restore codebase; a fresh machine running OLD khy against a FUTURE plaintextFormat='tar.zst'/'zip' snapshot blindly runs <code>tar -xzf</code> (gzip header mismatch -&gt; cryptic extract error, or partial bytes mis-parsed into half a tree); this pure leaf + read-only CLI answers 'does this khy's extractor even understand the decrypted archive shape BEFORE running tar -xzf?')  <code>archive-extract-compat</code><a class="anchor" href="#restore-archive-extract-compatibility-gate-consumes-the-dead-snapshot-header-plaintextformat-layout-fields-makesourcesnapshot-stamps-plaintextformat-tar-gz-layout-git-archive-describing-the-decrypted-inner-archive-shape-but-the-restore-heal-extractor-sourcehealservice-extracttargz-cli-handlers-publish-js-hard-codes-tar-xzf-and-never-reads-plaintextformat-layout-grep-shows-zero-consumers-in-the-restore-codebase-a-fresh-machine-running-old-khy-against-a-future-plaintextformat-tar-zst-zip-snapshot-blindly-runs-tar-xzf-gzip-header-mismatch-cryptic-extract-error-or-partial-bytes-mis-parsed-into-half-a-tree-this-pure-leaf-read-only-cli-answers-does-this-khy-s-extractor-even-understand-the-decrypted-archive-shape-before-running-tar-xzf-archive-extract-compat" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -493,7 +492,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-108] 还原归档形制可提取性对账.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:restore-check-archive</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- scripts/tests/archiveExtractCompat.test.js</code></pre>
 <hr>
 <h3 id="restore-crypto-suite-performability-gate-consumes-the-dead-snapshot-header-crypto-kdf-field-and-turns-a-misleading-error-honest-sourcesnapshotcrypto-encrypt-stamps-crypto-algo-kdf-scrypt-but-decrypt-sourcesnapshotcrypto-decrypt-only-validates-crypto-algo-and-never-validates-crypto-kdf-grep-kdf-has-exactly-one-reference-the-encrypt-stamp-zero-consumers-worse-decrypt-reads-scrypt-params-as-c-scrypt-c-scrypt-n-scrypt-n-blind-fallback-to-hard-coded-scrypt-so-a-future-kdf-argon2-snapshot-on-old-khy-silently-mis-derives-the-key-via-scrypt-decipher-final-throws-unable-to-authenticate-data-and-the-caller-maps-that-to-wrong-secret-a-fresh-machine-user-is-told-their-passphrase-is-wrong-when-the-truth-is-this-khy-cannot-perform-the-argon2-kdf-this-pure-leaf-read-only-cli-is-the-missing-pre-decrypt-gate-answering-can-this-khy-actually-perform-the-declared-crypto-suite-algo-kdf-and-is-the-crypto-material-complete-crypto-suite-compat">Restore Crypto-Suite Performability Gate (consumes the DEAD snapshot header crypto.kdf field, and turns a MISLEADING error honest: sourceSnapshotCrypto.encrypt stamps crypto.algo/kdf/scrypt but decrypt (sourceSnapshotCrypto.decrypt) ONLY validates crypto.algo and NEVER validates crypto.kdf -&gt; grep 'kdf' has exactly one reference (the encrypt stamp), zero consumers; worse, decrypt reads scrypt params as <code>(c.scrypt &amp;&amp; c.scrypt.N) || SCRYPT.N</code> (blind fallback to hard-coded scrypt), so a FUTURE kdf='argon2' snapshot on OLD khy silently mis-derives the key via scrypt, decipher.final() throws 'unable to authenticate data', and the caller MAPS THAT TO 'wrong secret' -&gt; a fresh-machine user is told their passphrase is wrong when the truth is 'this khy cannot perform the argon2 KDF'; this pure leaf + read-only CLI is the missing PRE-decrypt gate answering 'can this khy actually perform the declared crypto suite (algo+kdf) and is the crypto material complete?')  <code>crypto-suite-compat</code><a class="anchor" href="#restore-crypto-suite-performability-gate-consumes-the-dead-snapshot-header-crypto-kdf-field-and-turns-a-misleading-error-honest-sourcesnapshotcrypto-encrypt-stamps-crypto-algo-kdf-scrypt-but-decrypt-sourcesnapshotcrypto-decrypt-only-validates-crypto-algo-and-never-validates-crypto-kdf-grep-kdf-has-exactly-one-reference-the-encrypt-stamp-zero-consumers-worse-decrypt-reads-scrypt-params-as-c-scrypt-c-scrypt-n-scrypt-n-blind-fallback-to-hard-coded-scrypt-so-a-future-kdf-argon2-snapshot-on-old-khy-silently-mis-derives-the-key-via-scrypt-decipher-final-throws-unable-to-authenticate-data-and-the-caller-maps-that-to-wrong-secret-a-fresh-machine-user-is-told-their-passphrase-is-wrong-when-the-truth-is-this-khy-cannot-perform-the-argon2-kdf-this-pure-leaf-read-only-cli-is-the-missing-pre-decrypt-gate-answering-can-this-khy-actually-perform-the-declared-crypto-suite-algo-kdf-and-is-the-crypto-material-complete-crypto-suite-compat" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -503,7 +502,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-110] 还原解密套件可执行性对账.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:restore-check-crypto</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- scripts/tests/cryptoSuiteCompat.test.js</code></pre>
 <hr>
 <h3 id="restore-field-effect-probe-jacobian-lens-turns-the-static-dead-field-hunt-into-a-dynamic-regression-guard-prior-rounds-wired-each-snapshot-header-field-to-a-restore-family-gate-format-formatversion-105-capturemode-includesuncommitted-dirty-gitcommit-107-plaintextformat-layout-108-crypto-algo-crypto-kdf-110-but-whether-a-field-truly-drives-a-gate-was-only-ever-confirmed-by-hand-grep-which-a-read-but-discarded-fake-consumer-fools-this-pure-leaf-read-only-cli-does-finite-difference-perturbation-perturb-each-contract-field-run-the-gate-panel-measure-the-change-in-status-ok-unioned-over-a-corpus-of-isolating-contexts-a-field-whose-jacobian-is-0-across-all-contexts-behaviorally-dead-regardless-of-whether-it-is-syntactically-read-inspired-by-anthropic-verbalizable-representations-form-a-global-workspace-in-language-models-averaging-over-contexts-is-what-separates-happened-to-be-used-from-load-bearing-restore-effect-probe">Restore Field Effect Probe / Jacobian Lens (turns the STATIC dead-field hunt into a DYNAMIC regression guard: prior rounds wired each snapshot-header field to a restore-family gate -- format/formatVersion(105), captureMode/includesUncommitted/dirty/gitCommit(107), plaintextFormat/layout(108), crypto.algo/crypto.kdf(110) -- but whether a field TRULY drives a gate was only ever confirmed by hand-grep, which a 'read-but-discarded' fake consumer fools; this pure leaf + read-only CLI does finite-difference perturbation: perturb each contract field, run the gate panel, measure the change in (status,ok), UNIONed over a corpus of ISOLATING contexts; a field whose Jacobian is ~0 across all contexts = behaviorally DEAD regardless of whether it is syntactically read; inspired by Anthropic 'Verbalizable Representations Form a Global Workspace in Language Models' -- averaging over contexts is what separates 'happened to be used' from 'load-bearing')  <code>restore-effect-probe</code><a class="anchor" href="#restore-field-effect-probe-jacobian-lens-turns-the-static-dead-field-hunt-into-a-dynamic-regression-guard-prior-rounds-wired-each-snapshot-header-field-to-a-restore-family-gate-format-formatversion-105-capturemode-includesuncommitted-dirty-gitcommit-107-plaintextformat-layout-108-crypto-algo-crypto-kdf-110-but-whether-a-field-truly-drives-a-gate-was-only-ever-confirmed-by-hand-grep-which-a-read-but-discarded-fake-consumer-fools-this-pure-leaf-read-only-cli-does-finite-difference-perturbation-perturb-each-contract-field-run-the-gate-panel-measure-the-change-in-status-ok-unioned-over-a-corpus-of-isolating-contexts-a-field-whose-jacobian-is-0-across-all-contexts-behaviorally-dead-regardless-of-whether-it-is-syntactically-read-inspired-by-anthropic-verbalizable-representations-form-a-global-workspace-in-language-models-averaging-over-contexts-is-what-separates-happened-to-be-used-from-load-bearing-restore-effect-probe" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -513,7 +512,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-113] 还原字段效应探针（雅可比透镜）.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:restore-effect-probe</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- scripts/tests/restoreEffectProbe.test.js</code></pre>
 <hr>
 <h3 id="restore-field-consumer-attribution-probe-label-preservation-the-orthogonal-dual-of-the-ops-113-effect-probe-ops-113-is-breadth-blind-it-only-counts-whether-a-snapshot-header-field-drives-1-restore-gate-so-a-refactor-that-moves-crypto-algo-s-effect-from-crypto-110-onto-provenance-107-keeps-ops-113-fully-green-while-introducing-real-cross-talk-the-git-provenance-verdict-now-depends-on-the-encryption-algorithm-concern-leakage-and-an-encryption-field-steering-a-non-crypto-verdict-is-also-a-security-smell-this-pure-leaf-reads-ops-113-s-proberesult-fields-wiredby-fields-hits-gate-and-checks-each-contract-field-drives-exactly-its-declared-owning-gate-matching-the-field-s-wiredby-ops-number-against-the-gate-name-number-inspired-by-anthropic-verbalizable-representations-form-a-global-workspace-in-language-models-section-4-3-2-a-broadcast-head-must-pass-both-gain-breadth-ops-113-and-label-preservation-map-the-direction-faithfully-back-to-itself-not-scrambled-among-other-directions-this-probe-is-that-second-independent-score-restore-field-attribution">Restore Field-Consumer Attribution Probe / Label Preservation (the orthogonal DUAL of the OPS-113 effect probe: OPS-113 is breadth-blind -- it only counts whether a snapshot-header field drives &gt;=1 restore gate, so a refactor that MOVES crypto.algo's effect from crypto(110) onto provenance(107) keeps OPS-113 fully green while introducing real CROSS-TALK -- the git-provenance verdict now depends on the encryption algorithm = concern leakage, and an encryption field steering a non-crypto verdict is also a security smell; this pure leaf reads OPS-113's probeResult (fields[].wiredBy + fields[].hits[gate]) and checks each contract field drives EXACTLY its declared owning gate, matching the field's wiredBy OPS number against the gate-name number; inspired by Anthropic 'Verbalizable Representations Form a Global Workspace in Language Models' section 4.3.2 -- a broadcast head must pass BOTH gain (breadth, ~ OPS-113) AND label preservation (map the direction faithfully back to itself, not scrambled among other directions); this probe is that second, independent score)  <code>restore-field-attribution</code><a class="anchor" href="#restore-field-consumer-attribution-probe-label-preservation-the-orthogonal-dual-of-the-ops-113-effect-probe-ops-113-is-breadth-blind-it-only-counts-whether-a-snapshot-header-field-drives-1-restore-gate-so-a-refactor-that-moves-crypto-algo-s-effect-from-crypto-110-onto-provenance-107-keeps-ops-113-fully-green-while-introducing-real-cross-talk-the-git-provenance-verdict-now-depends-on-the-encryption-algorithm-concern-leakage-and-an-encryption-field-steering-a-non-crypto-verdict-is-also-a-security-smell-this-pure-leaf-reads-ops-113-s-proberesult-fields-wiredby-fields-hits-gate-and-checks-each-contract-field-drives-exactly-its-declared-owning-gate-matching-the-field-s-wiredby-ops-number-against-the-gate-name-number-inspired-by-anthropic-verbalizable-representations-form-a-global-workspace-in-language-models-section-4-3-2-a-broadcast-head-must-pass-both-gain-breadth-ops-113-and-label-preservation-map-the-direction-faithfully-back-to-itself-not-scrambled-among-other-directions-this-probe-is-that-second-independent-score-restore-field-attribution" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -523,7 +522,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-114] 还原字段归属探针（label preservation）.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:restore-field-attribution</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- scripts/tests/restoreFieldAttribution.test.js</code></pre>
 <hr>
 <h3 id="restore-completeness-reconciliation-runtime-wiring-ops-095-diagnosed-that-the-snapshot-header-filecount-is-a-dead-field-khy-restore-only-prints-it-never-reconciles-it-against-what-tar-actually-wrote-to-disk-and-built-a-dev-only-checker-scripts-restore-verify-complete-js-but-never-wired-it-into-the-runtime-restore-command-so-real-fresh-machine-users-still-saw-green-源码已完整还原-while-files-were-silently-missing-after-a-tar-that-exited-0-on-a-full-disk-max-path-skipped-entry-this-layer-is-the-missing-wiring-a-bundled-runtime-pure-leaf-reconciles-header-filecount-vs-collectrelfiles-dest-length-right-after-extraction-and-makes-handlerestore-s-banner-honest-so-no-separate-command-is-needed-wiring-up-capability-that-existed-but-was-never-connected-restore-completeness-check">Restore Completeness Reconciliation -- RUNTIME wiring (OPS-095 diagnosed that the snapshot header fileCount is a dead field -- khy restore only PRINTS it, never reconciles it against what tar actually wrote to disk -- and built a DEV-only checker scripts/restore-verify-complete.js, but never wired it into the runtime restore command; so real fresh-machine users still saw green 源码已完整还原 while files were silently missing after a tar that exited 0 on a full disk / MAX_PATH / skipped entry; THIS layer is the missing wiring: a bundled runtime pure leaf reconciles header.fileCount vs _collectRelFiles(dest).length right after extraction and makes handleRestore's banner honest, so no separate command is needed = wiring up capability that existed but was never connected)  <code>restore-completeness-check</code><a class="anchor" href="#restore-completeness-reconciliation-runtime-wiring-ops-095-diagnosed-that-the-snapshot-header-filecount-is-a-dead-field-khy-restore-only-prints-it-never-reconciles-it-against-what-tar-actually-wrote-to-disk-and-built-a-dev-only-checker-scripts-restore-verify-complete-js-but-never-wired-it-into-the-runtime-restore-command-so-real-fresh-machine-users-still-saw-green-源码已完整还原-while-files-were-silently-missing-after-a-tar-that-exited-0-on-a-full-disk-max-path-skipped-entry-this-layer-is-the-missing-wiring-a-bundled-runtime-pure-leaf-reconciles-header-filecount-vs-collectrelfiles-dest-length-right-after-extraction-and-makes-handlerestore-s-banner-honest-so-no-separate-command-is-needed-wiring-up-capability-that-existed-but-was-never-connected-restore-completeness-check" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -533,7 +532,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-117] 还原完整性对账·运行时接线.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:restore-completeness-check</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/services/restoreCompletenessCheck.test.js</code></pre>
 <hr>
 <h3 id="restore-pre-decrypt-compatibility-preflight-runtime-wiring-ops-105-format-compat-ops-110-crypto-suite-decryptability-were-built-as-dev-only-leaves-scripts-lib-snapshotformatcompat-js-scripts-lib-cryptosuitecompat-js-and-never-wired-into-the-runtime-restore-runtime-restorefromsnapshot-s-only-pre-decrypt-guard-was-header-crypto-presence-then-it-blindly-decrypt-s-and-decrypt-only-accepts-algo-aes-256-gcm-and-always-runs-scryptsync-ignoring-crypto-kdf-so-a-future-kdf-argon2-or-unknown-algo-snapshot-on-an-old-machine-derives-a-wrong-key-throws-low-level-garbage-which-publish-js-s-catch-rewrites-into-the-misleading-请用-secret-reporting-a-capability-gap-as-a-password-error-this-layer-is-the-missing-wiring-a-bundled-runtime-pure-leaf-runs-a-preflight-over-the-parsed-header-before-decrypt-and-names-the-true-cause-wiring-up-capability-that-existed-but-was-never-connected-restore-preflight-check">Restore PRE-DECRYPT Compatibility Preflight -- RUNTIME wiring (OPS-105 format-compat + OPS-110 crypto-suite-decryptability were built as DEV-only leaves scripts/lib/snapshotFormatCompat.js + scripts/lib/cryptoSuiteCompat.js and never wired into the runtime restore; runtime _restoreFromSnapshot's only pre-decrypt guard was header.crypto presence, then it blindly decrypt()s -- and decrypt() only accepts algo==='aes-256-gcm' and ALWAYS runs scryptSync ignoring crypto.kdf, so a future kdf:'argon2' or unknown algo snapshot on an old machine derives a WRONG key / throws low-level garbage, which publish.js's catch rewrites into the MISLEADING '请用 --secret &lt;密钥&gt;' = reporting a capability gap as a password error; THIS layer is the missing wiring: a bundled runtime pure leaf runs a preflight over the parsed header BEFORE decrypt and names the true cause = wiring up capability that existed but was never connected)  <code>restore-preflight-check</code><a class="anchor" href="#restore-pre-decrypt-compatibility-preflight-runtime-wiring-ops-105-format-compat-ops-110-crypto-suite-decryptability-were-built-as-dev-only-leaves-scripts-lib-snapshotformatcompat-js-scripts-lib-cryptosuitecompat-js-and-never-wired-into-the-runtime-restore-runtime-restorefromsnapshot-s-only-pre-decrypt-guard-was-header-crypto-presence-then-it-blindly-decrypt-s-and-decrypt-only-accepts-algo-aes-256-gcm-and-always-runs-scryptsync-ignoring-crypto-kdf-so-a-future-kdf-argon2-or-unknown-algo-snapshot-on-an-old-machine-derives-a-wrong-key-throws-low-level-garbage-which-publish-js-s-catch-rewrites-into-the-misleading-请用-secret-reporting-a-capability-gap-as-a-password-error-this-layer-is-the-missing-wiring-a-bundled-runtime-pure-leaf-runs-a-preflight-over-the-parsed-header-before-decrypt-and-names-the-true-cause-wiring-up-capability-that-existed-but-was-never-connected-restore-preflight-check" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -543,7 +542,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-119] 还原解密前兼容性预检·运行时接线.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:restore-preflight</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/services/restorePreflightCheck.test.js</code></pre>
 <hr>
 <h3 id="restore-post-decrypt-pre-extract-inner-archive-shape-check-runtime-wiring-the-snapshot-header-s-plaintextformat-layout-stamps-makesourcesnapshot-js-emits-plaintextformat-tar-gz-at-244-and-layout-git-archive-at-239-were-dead-fields-in-the-runtime-the-dev-leaf-scripts-lib-archiveextractcompat-js-could-judge-does-this-machine-s-tar-xzf-understand-this-decrypted-archive-but-was-consumed-only-by-dev-cli-restore-check-archive-js-restore-effect-probe-js-never-wired-into-the-runtime-restore-runtime-restorefromsnapshot-decrypts-sha256-verifies-then-hardcodes-tar-xzf-via-extracttargz-without-ever-reading-plaintextformat-layout-so-a-future-tar-zst-zip-snapshot-on-an-old-khy-gets-blindly-tar-xzf-d-into-garbage-half-a-directory-while-the-banner-still-says-目录布局原样-this-layer-is-the-missing-pre-extract-consumer-a-bundled-runtime-pure-leaf-checks-the-header-after-decrypt-sha256-before-creating-the-dest-dir-unpacking-wiring-up-capability-that-existed-but-was-never-connected-restore-archive-extract-check">Restore POST-DECRYPT PRE-EXTRACT inner-archive-shape check -- RUNTIME wiring (the snapshot header's plaintextFormat + layout stamps -- makeSourceSnapshot.js emits plaintextFormat:'tar.gz' at :244 and layout:'git-archive' at :239 -- were DEAD FIELDS in the runtime: the dev leaf scripts/lib/archiveExtractCompat.js could judge 'does this machine's tar -xzf understand this decrypted archive' but was consumed ONLY by dev CLI (restore-check-archive.js / restore-effect-probe.js), never wired into the runtime restore; runtime _restoreFromSnapshot decrypts + sha256-verifies then hardcodes <code>tar -xzf</code> via _extractTarGz WITHOUT ever reading plaintextFormat/layout, so a future tar.zst/zip snapshot on an old khy gets blindly tar -xzf'd into garbage / half a directory while the banner still says '目录布局原样'; THIS layer is the missing pre-extract consumer: a bundled runtime pure leaf checks the header AFTER decrypt+sha256, BEFORE creating the dest dir / unpacking = wiring up capability that existed but was never connected)  <code>restore-archive-extract-check</code><a class="anchor" href="#restore-post-decrypt-pre-extract-inner-archive-shape-check-runtime-wiring-the-snapshot-header-s-plaintextformat-layout-stamps-makesourcesnapshot-js-emits-plaintextformat-tar-gz-at-244-and-layout-git-archive-at-239-were-dead-fields-in-the-runtime-the-dev-leaf-scripts-lib-archiveextractcompat-js-could-judge-does-this-machine-s-tar-xzf-understand-this-decrypted-archive-but-was-consumed-only-by-dev-cli-restore-check-archive-js-restore-effect-probe-js-never-wired-into-the-runtime-restore-runtime-restorefromsnapshot-decrypts-sha256-verifies-then-hardcodes-tar-xzf-via-extracttargz-without-ever-reading-plaintextformat-layout-so-a-future-tar-zst-zip-snapshot-on-an-old-khy-gets-blindly-tar-xzf-d-into-garbage-half-a-directory-while-the-banner-still-says-目录布局原样-this-layer-is-the-missing-pre-extract-consumer-a-bundled-runtime-pure-leaf-checks-the-header-after-decrypt-sha256-before-creating-the-dest-dir-unpacking-wiring-up-capability-that-existed-but-was-never-connected-restore-archive-extract-check" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -553,7 +552,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-128] restore解密后归档形制解包前把关·接线.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:restore-archive-check</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/services/restoreArchiveExtractCheck.test.js</code></pre>
 <hr>
 <h3 id="restore-on-success-provenance-honesty-runtime-banner-wiring-the-snapshot-header-s-capturemode-includesuncommitted-dirty-stamps-makesourcesnapshot-js-records-how-the-snapshot-was-captured-working-tree-default-head-includesuncommitted-dirty-gitcommit-were-dead-fields-in-the-runtime-banner-the-dev-leaf-scripts-lib-restoreprovenance-js-ops-107-assessrestoreprovenance-could-judge-which-git-state-does-this-restored-source-actually-equal-but-was-consumed-only-by-dev-cli-restore-provenance-js-restore-effect-probe-js-never-wired-into-the-runtime-restore-runtime-handlerestore-s-success-banner-printed-only-gitcommit-共-n-个文件-commit-44a491fb-目录布局原样-and-never-read-capturemode-includesuncommitted-dirty-grep-finds-zero-runtime-consumers-dead-triplet-most-toxic-on-a-fresh-machine-the-shipped-snapshot-is-by-default-a-dirty-capture-capturemode-working-tree-includesuncommitted-true-so-the-restored-source-commit-44a491fb-plus-uncommitted-deltas-not-the-clean-commit-yet-the-maintainer-sees-commit-44a491fb-目录布局原样-and-mis-trusts-it-as-exactly-that-commit-this-layer-is-the-missing-on-success-banner-consumer-a-bundled-runtime-pure-leaf-assesses-the-header-and-appends-one-honest-banner-line-saying-which-git-state-the-source-really-equals-restore-provenance-check">Restore ON-SUCCESS provenance honesty -- RUNTIME banner wiring (the snapshot header's captureMode + includesUncommitted + dirty stamps -- makeSourceSnapshot.js records how the snapshot was captured: working-tree(default)/head, includesUncommitted, dirty, gitCommit -- were DEAD FIELDS in the runtime banner: the dev leaf scripts/lib/restoreProvenance.js (OPS-107 assessRestoreProvenance) could judge 'which git state does this restored source actually equal' but was consumed ONLY by dev CLI (restore-provenance.js / restore-effect-probe.js), never wired into the runtime restore; runtime handleRestore's success banner printed ONLY gitCommit ('共 N 个文件 · commit 44a491fb · 目录布局原样') and NEVER read captureMode/includesUncommitted/dirty -- grep finds zero runtime consumers = dead triplet; MOST TOXIC on a fresh machine: the shipped snapshot is BY DEFAULT a dirty capture (captureMode='working-tree' includesUncommitted=true), so the restored source = commit 44a491fb PLUS uncommitted deltas, NOT the clean commit -- yet the maintainer sees 'commit 44a491fb · 目录布局原样' and mis-trusts it as exactly that commit; THIS layer is the missing on-success banner consumer: a bundled runtime pure leaf assesses the header and appends one honest banner line saying which git state the source really equals)  <code>restore-provenance-check</code><a class="anchor" href="#restore-on-success-provenance-honesty-runtime-banner-wiring-the-snapshot-header-s-capturemode-includesuncommitted-dirty-stamps-makesourcesnapshot-js-records-how-the-snapshot-was-captured-working-tree-default-head-includesuncommitted-dirty-gitcommit-were-dead-fields-in-the-runtime-banner-the-dev-leaf-scripts-lib-restoreprovenance-js-ops-107-assessrestoreprovenance-could-judge-which-git-state-does-this-restored-source-actually-equal-but-was-consumed-only-by-dev-cli-restore-provenance-js-restore-effect-probe-js-never-wired-into-the-runtime-restore-runtime-handlerestore-s-success-banner-printed-only-gitcommit-共-n-个文件-commit-44a491fb-目录布局原样-and-never-read-capturemode-includesuncommitted-dirty-grep-finds-zero-runtime-consumers-dead-triplet-most-toxic-on-a-fresh-machine-the-shipped-snapshot-is-by-default-a-dirty-capture-capturemode-working-tree-includesuncommitted-true-so-the-restored-source-commit-44a491fb-plus-uncommitted-deltas-not-the-clean-commit-yet-the-maintainer-sees-commit-44a491fb-目录布局原样-and-mis-trusts-it-as-exactly-that-commit-this-layer-is-the-missing-on-success-banner-consumer-a-bundled-runtime-pure-leaf-assesses-the-header-and-appends-one-honest-banner-line-saying-which-git-state-the-source-really-equals-restore-provenance-check" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -563,7 +562,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-130] 还原来源可溯性·接线运行时横幅.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:restore-provenance-check</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/services/restoreProvenanceCheck.test.js</code></pre>
 <hr>
 <h3 id="restore-post-decrypt-pre-extract-cross-os-path-portability-pre-scan-runtime-wiring-the-snapshot-is-path-blind-at-restore-makesourcesnapshot-packs-the-source-tree-into-one-tar-gz-whose-entry-names-were-minted-on-linux-then-pip-npm-ship-it-to-stranger-machines-and-oses-runtime-handlerestore-decrypts-blindly-tar-xzf-s-without-ever-looking-at-whether-the-entry-names-can-land-on-the-target-filesystem-on-windows-macos-a-real-fraction-of-linux-valid-names-silently-fail-or-get-rewritten-windows-reserved-device-names-con-prn-aux-nul-com1-9-lpt1-9-case-ext-insensitive-can-t-be-created-illegal-chars-and-control-0x00-0x1f-fail-extraction-trailing-dot-space-segments-get-silently-stripped-paths-over-259-chars-max-path-get-skipped-and-case-insensitive-collisions-foo-js-vs-foo-js-overwrite-each-other-on-ntfs-apfs-default-volumes-so-files-land-fewer-than-the-archive-holds-the-only-cross-os-signal-today-is-the-reactive-post-hoc-completeness-hint-可能路径过长-windows-max-path-tar-跳过条目-after-a-count-shortfall-a-guess-that-knows-neither-which-paths-nor-why-this-layer-is-the-missing-pre-extract-consumer-enumerate-the-archive-entry-names-with-tar-tzf-before-tar-xzf-classify-each-into-the-five-hazard-buckets-and-emit-a-proactive-name-naming-host-aware-honest-banner-wiring-up-a-cross-os-restore-honesty-pre-scan-the-runtime-never-had-restore-path-portability-check">Restore POST-DECRYPT PRE-EXTRACT cross-OS path-portability pre-scan -- RUNTIME wiring (the snapshot is PATH-BLIND at restore: makeSourceSnapshot packs the source tree into one tar.gz whose entry names were minted on Linux, then pip/npm ship it to STRANGER machines AND OSes; runtime handleRestore decrypts + blindly <code>tar -xzf</code>s WITHOUT ever looking at whether the entry names can land on the target filesystem -- on Windows/macOS a real fraction of Linux-valid names SILENTLY fail or get rewritten: Windows reserved device names (CON/PRN/AUX/NUL/COM1-9/LPT1-9, case+ext insensitive) can't be created, illegal chars (&lt; &gt; : &quot; | ? * and control 0x00-0x1F) fail extraction, trailing dot/space segments get silently stripped, paths over 259 chars (MAX_PATH) get skipped, and case-insensitive collisions (Foo.js vs foo.js) overwrite each other on NTFS/APFS default volumes -- so files land FEWER than the archive holds; the ONLY cross-OS signal today is the reactive post-hoc completeness hint ('可能路径过长(Windows MAX_PATH) / tar 跳过条目…') AFTER a count shortfall = a guess that knows neither WHICH paths nor WHY; THIS layer is the missing pre-extract consumer: enumerate the archive entry names with <code>tar -tzf</code> BEFORE <code>tar -xzf</code>, classify each into the five hazard buckets, and emit a PROACTIVE, name-naming, host-aware honest banner = wiring up a cross-OS restore-honesty pre-scan the runtime never had)  <code>restore-path-portability-check</code><a class="anchor" href="#restore-post-decrypt-pre-extract-cross-os-path-portability-pre-scan-runtime-wiring-the-snapshot-is-path-blind-at-restore-makesourcesnapshot-packs-the-source-tree-into-one-tar-gz-whose-entry-names-were-minted-on-linux-then-pip-npm-ship-it-to-stranger-machines-and-oses-runtime-handlerestore-decrypts-blindly-tar-xzf-s-without-ever-looking-at-whether-the-entry-names-can-land-on-the-target-filesystem-on-windows-macos-a-real-fraction-of-linux-valid-names-silently-fail-or-get-rewritten-windows-reserved-device-names-con-prn-aux-nul-com1-9-lpt1-9-case-ext-insensitive-can-t-be-created-illegal-chars-and-control-0x00-0x1f-fail-extraction-trailing-dot-space-segments-get-silently-stripped-paths-over-259-chars-max-path-get-skipped-and-case-insensitive-collisions-foo-js-vs-foo-js-overwrite-each-other-on-ntfs-apfs-default-volumes-so-files-land-fewer-than-the-archive-holds-the-only-cross-os-signal-today-is-the-reactive-post-hoc-completeness-hint-可能路径过长-windows-max-path-tar-跳过条目-after-a-count-shortfall-a-guess-that-knows-neither-which-paths-nor-why-this-layer-is-the-missing-pre-extract-consumer-enumerate-the-archive-entry-names-with-tar-tzf-before-tar-xzf-classify-each-into-the-five-hazard-buckets-and-emit-a-proactive-name-naming-host-aware-honest-banner-wiring-up-a-cross-os-restore-honesty-pre-scan-the-runtime-never-had-restore-path-portability-check" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -573,7 +572,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-133] restore跨OS路径可移植性解包前把关·接线.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:restore-path-portability</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/services/restorePathPortabilityCheck.test.js</code></pre>
 <hr>
 <h3 id="first-response-silent-window-guard-wiring-an-interactive-responsiveness-capability-the-repl-never-had-user-goal-当我向khy输入提示词时-khy要及时回应-there-is-a-silent-window-between-the-user-hitting-enter-and-the-first-model-chunk-in-raw-mode-tty-the-dynamic-spinner-is-render-suppressed-spinner-js-122-if-israw-blockinrawmode-return-so-nothing-spins-types-and-the-existing-turnackvoice-ack-only-fires-at-first-tool-dispatch-which-is-after-the-model-has-already-produced-chunks-so-if-the-first-token-is-slow-model-network-latency-the-user-stares-at-a-frozen-terminal-with-no-way-to-tell-whether-khy-is-thinking-or-hung-this-layer-is-the-missing-consumer-a-di-timer-scheduler-armed-at-request-send-that-if-no-chunk-arrives-within-khy-first-response-ack-ms-default-1200ms-emits-a-wait-aware-line-so-the-user-knows-khy-received-the-prompt-and-is-working-first-chunk-cancels-it-finally-disarms-it-first-response-ack-voice">First-response silent-window guard -- WIRING an interactive responsiveness capability the REPL never had (user /goal: '当我向Khy输入提示词时，khy要及时回应' -- there is a SILENT window between the user hitting enter and the first model chunk: in raw-mode TTY the dynamic spinner is render-suppressed (spinner.js:122 <code>if (isRaw &amp;&amp; blockInRawMode) return</code>) so nothing spins/types, and the existing turnAckVoice ack only fires at FIRST-TOOL-DISPATCH which is AFTER the model has already produced chunks -- so if the first token is slow (model/network latency), the user stares at a frozen terminal with no way to tell whether khy is thinking or hung; THIS layer is the missing consumer: a DI-timer scheduler armed at request send that, if NO chunk arrives within KHY_FIRST_RESPONSE_ACK_MS (default 1200ms), emits a wait-aware line so the user knows khy received the prompt and is working -- first chunk cancels it, finally disarms it)  <code>first-response-ack-voice</code><a class="anchor" href="#first-response-silent-window-guard-wiring-an-interactive-responsiveness-capability-the-repl-never-had-user-goal-当我向khy输入提示词时-khy要及时回应-there-is-a-silent-window-between-the-user-hitting-enter-and-the-first-model-chunk-in-raw-mode-tty-the-dynamic-spinner-is-render-suppressed-spinner-js-122-if-israw-blockinrawmode-return-so-nothing-spins-types-and-the-existing-turnackvoice-ack-only-fires-at-first-tool-dispatch-which-is-after-the-model-has-already-produced-chunks-so-if-the-first-token-is-slow-model-network-latency-the-user-stares-at-a-frozen-terminal-with-no-way-to-tell-whether-khy-is-thinking-or-hung-this-layer-is-the-missing-consumer-a-di-timer-scheduler-armed-at-request-send-that-if-no-chunk-arrives-within-khy-first-response-ack-ms-default-1200ms-emits-a-wait-aware-line-so-the-user-knows-khy-received-the-prompt-and-is-working-first-chunk-cancels-it-finally-disarms-it-first-response-ack-voice" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -583,7 +582,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-136] 首响应静默窗口守护·提交到首token及时回应·接线.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:first-response-ack</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/cli/firstResponseAckVoice.test.js</code></pre>
 <hr>
 <h3 id="readfile-pre-read-binary-guard-wiring-an-existing-capability-services-backend-src-services-formatinspect-fileformatdetector-js-s-detectfile-abspath-isbinary-was-consumed-by-the-write-side-tools-replaceatlocation-js-79-and-inspectdocument-js-161-but-was-never-wired-into-the-read-tool-readfile-js-which-only-had-a-size-guard-and-no-binary-detection-so-pointing-khy-at-a-project-dir-containing-a-binary-tar-gz-made-readfile-inject-the-raw-binary-bytes-as-text-mojibake-laced-with-nul-bytes-success-true-into-the-model-api-request-poisoning-it-and-hanging-the-request-for-over-an-hour-observed-d-moonbit-linux-moonbit-linux-x86-64-tar-gz-stuck-1h2m34s-等待响应-this-is-the-missing-wiring-run-detectfile-before-reading-and-refuse-binary-files-fast-with-an-informative-redirect-instead-of-poisoning-the-context-readfile-binary-guard">readFile PRE-READ binary guard -- WIRING an existing capability (services/backend/src/services/formatInspect/fileFormatDetector.js's detectFile(absPath).isBinary was consumed by the WRITE-side tools replaceAtLocation.js:79 and inspectDocument.js:161 but was NEVER wired into the READ tool readFile.js, which only had a size guard and no binary detection; so pointing khy at a project dir containing a binary .tar.gz made readFile inject the raw binary bytes as text -- mojibake laced with NUL bytes, success:true -- into the model API request, poisoning it and hanging the request for over an hour (observed: D:\moonbit-linux\moonbit-linux-x86_64.tar.gz stuck 1h2m34s '等待响应…'); THIS is the missing wiring: run detectFile BEFORE reading and refuse binary files fast with an informative redirect instead of poisoning the context)  <code>readfile-binary-guard</code><a class="anchor" href="#readfile-pre-read-binary-guard-wiring-an-existing-capability-services-backend-src-services-formatinspect-fileformatdetector-js-s-detectfile-abspath-isbinary-was-consumed-by-the-write-side-tools-replaceatlocation-js-79-and-inspectdocument-js-161-but-was-never-wired-into-the-read-tool-readfile-js-which-only-had-a-size-guard-and-no-binary-detection-so-pointing-khy-at-a-project-dir-containing-a-binary-tar-gz-made-readfile-inject-the-raw-binary-bytes-as-text-mojibake-laced-with-nul-bytes-success-true-into-the-model-api-request-poisoning-it-and-hanging-the-request-for-over-an-hour-observed-d-moonbit-linux-moonbit-linux-x86-64-tar-gz-stuck-1h2m34s-等待响应-this-is-the-missing-wiring-run-detectfile-before-reading-and-refuse-binary-files-fast-with-an-informative-redirect-instead-of-poisoning-the-context-readfile-binary-guard" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -593,7 +592,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-121] readFile二进制文件读前防护·接线.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:readfile-binary-guard</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/tools/readBinaryGuard.test.js</code></pre>
 <hr>
 <h3 id="readfile-format-aware-routing-to-existing-extractors-wiring-existing-capabilities-ops-121-made-readfile-refuse-binary-files-to-stop-the-1h-hang-but-the-user-s-real-requirement-is-that-khy-should-read-every-format-not-refuse-it-the-repo-already-had-bounded-extractors-for-pdf-documentsnippetservice-extractdocumentsnippetasync-pdftotext-pypdf-strings-image-ocr-ocrsnippetservice-extractimageocrsnippetasync-dochelper-py-tesseract-archives-archiveinspectservice-inspectarchive-list-only-no-extract-archivemanifestpolicy-buildarchivemanifest-for-listing-text-peek-and-docx-dochelper-py-docx-to-text-all-consumed-only-by-the-multimodal-upload-upstreamstudy-paths-never-by-the-read-tool-this-layer-wires-them-on-binary-detect-readfile-first-routes-to-the-matching-extractor-and-returns-readable-content-falling-back-to-the-ops-121-refusal-only-for-formats-with-no-extractor-elf-pe-xlsx-pptx-unknown-or-when-extraction-fails-because-every-extractor-is-self-bounded-timeout-size-cap-the-routing-can-never-hang-readfile-format-route">readFile FORMAT-AWARE routing to existing extractors -- WIRING existing capabilities (OPS-121 made readFile REFUSE binary files to stop the 1h hang, but the user's real requirement is that khy should READ every format, not refuse it; the repo already had bounded extractors for PDF (documentSnippetService.extractDocumentSnippetAsync: pdftotext-&gt;pypdf-&gt;strings), image OCR (ocrSnippetService.extractImageOcrSnippetAsync: docHelper.py tesseract), archives (archiveInspectService.inspectArchive list-only-no-extract + archiveManifestPolicy.buildArchiveManifest for listing+text-peek), and docx (docHelper.py docx_to_text) -- all consumed only by the multimodal/upload/UpstreamStudy paths, NEVER by the read tool; THIS layer wires them: on binary detect, readFile first routes to the matching extractor and returns readable content, falling back to the OPS-121 refusal only for formats with no extractor (ELF/PE/xlsx/pptx/unknown) or when extraction fails; because every extractor is self-bounded (timeout+size cap) the routing can never hang)  <code>readfile-format-route</code><a class="anchor" href="#readfile-format-aware-routing-to-existing-extractors-wiring-existing-capabilities-ops-121-made-readfile-refuse-binary-files-to-stop-the-1h-hang-but-the-user-s-real-requirement-is-that-khy-should-read-every-format-not-refuse-it-the-repo-already-had-bounded-extractors-for-pdf-documentsnippetservice-extractdocumentsnippetasync-pdftotext-pypdf-strings-image-ocr-ocrsnippetservice-extractimageocrsnippetasync-dochelper-py-tesseract-archives-archiveinspectservice-inspectarchive-list-only-no-extract-archivemanifestpolicy-buildarchivemanifest-for-listing-text-peek-and-docx-dochelper-py-docx-to-text-all-consumed-only-by-the-multimodal-upload-upstreamstudy-paths-never-by-the-read-tool-this-layer-wires-them-on-binary-detect-readfile-first-routes-to-the-matching-extractor-and-returns-readable-content-falling-back-to-the-ops-121-refusal-only-for-formats-with-no-extractor-elf-pe-xlsx-pptx-unknown-or-when-extraction-fails-because-every-extractor-is-self-bounded-timeout-size-cap-the-routing-can-never-hang-readfile-format-route" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -603,7 +602,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-123] readFile按格式路由到提取器·接线.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:readfile-format-route</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/tools/readFileFormatRouter.test.js</code></pre>
 <hr>
 <h3 id="readfile-special-file-fifo-socket-char-or-block-device-pre-read-guard-wiring-a-type-based-block-against-permanent-hangs-ops-121-ops-123-covered-binary-content-and-format-routing-but-non-regular-files-still-slipped-through-every-guard-a-fifo-socket-device-has-size-0-and-is-not-a-binary-format-so-it-passes-the-size-check-and-is-not-caught-by-the-binary-guard-worse-detectfile-reads-magic-bytes-and-readtextfilesmart-opens-reads-it-and-reading-the-first-byte-of-a-fifo-with-no-writer-blocks-forever-detectfile-itself-hangs-reproduced-mkfifo-then-readfile-execute-did-not-return-after-a-6s-timeout-exit-124-wired-same-fifo-returns-in-4ms-with-success-false-inputvalidators-validatenotdevicepath-is-only-a-path-exact-denylist-dev-zero-dev-stdin-and-cannot-catch-a-fifo-socket-self-made-device-node-at-an-arbitrary-path-this-layer-blocks-by-fs-statsync-type-predicate-which-returns-metadata-instantly-and-never-blocks-on-a-fifo-device-measured-0ms-so-the-check-is-safe-before-any-blocking-open-read-readfile-special-guard">readFile special-file (FIFO/socket/char-or-block-device) pre-read guard -- WIRING a type-based block against permanent hangs (OPS-121/OPS-123 covered binary content and format routing, but non-regular files still slipped through EVERY guard: a FIFO/socket/device has size:0 and is not a binary format, so it passes the size check and is not caught by the binary guard; worse, detectFile() reads magic bytes and readTextFileSmart opens+reads it, and reading the first byte of a FIFO with no writer BLOCKS FOREVER -- detectFile itself hangs; reproduced: mkfifo then readFile.execute did not return after a 6s timeout (EXIT=124); wired: same FIFO returns in 4ms with success:false; inputValidators.validateNotDevicePath is only a path-exact denylist (/dev/zero,/dev/stdin...) and cannot catch a FIFO/socket/self-made device node at an arbitrary path -- THIS layer blocks by fs.statSync TYPE predicate, which returns metadata instantly and never blocks on a FIFO/device (measured 0ms), so the check is safe BEFORE any blocking open/read)  <code>readfile-special-guard</code><a class="anchor" href="#readfile-special-file-fifo-socket-char-or-block-device-pre-read-guard-wiring-a-type-based-block-against-permanent-hangs-ops-121-ops-123-covered-binary-content-and-format-routing-but-non-regular-files-still-slipped-through-every-guard-a-fifo-socket-device-has-size-0-and-is-not-a-binary-format-so-it-passes-the-size-check-and-is-not-caught-by-the-binary-guard-worse-detectfile-reads-magic-bytes-and-readtextfilesmart-opens-reads-it-and-reading-the-first-byte-of-a-fifo-with-no-writer-blocks-forever-detectfile-itself-hangs-reproduced-mkfifo-then-readfile-execute-did-not-return-after-a-6s-timeout-exit-124-wired-same-fifo-returns-in-4ms-with-success-false-inputvalidators-validatenotdevicepath-is-only-a-path-exact-denylist-dev-zero-dev-stdin-and-cannot-catch-a-fifo-socket-self-made-device-node-at-an-arbitrary-path-this-layer-blocks-by-fs-statsync-type-predicate-which-returns-metadata-instantly-and-never-blocks-on-a-fifo-device-measured-0ms-so-the-check-is-safe-before-any-blocking-open-read-readfile-special-guard" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -613,7 +612,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-125] readFile特殊文件读前防护·接线.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:readfile-special-guard</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/tools/specialFileReadGuard.test.js</code></pre>
 <hr>
 <h3 id="readfile-pseudo-filesystem-proc-sys-bounded-timeout-read-wiring-a-location-based-no-hang-guard-the-4th-orthogonal-reading-hang-vector-ops-121-binary-content-ops-123-format-routing-ops-125-file-type-fifo-socket-device-this-keys-off-file-location-linux-proc-sys-entries-are-regular-files-stat-isfile-true-size-0-content-generated-on-read-some-proc-kmsg-certain-sys-poll-attrs-block-forever-on-the-first-byte-they-slip-every-prior-guard-regular-file-passes-ops-125-type-predicates-isfifo-issocket-all-false-size-0-passes-the-oversize-check-0-maxbytes-false-mostly-non-binary-detectfile-reads-magic-bytes-and-hangs-right-there-measured-proc-cpuinfo-is-a-size-0-regular-file-with-all-four-special-predicates-false-per-the-ops-123-lesson-route-to-a-bounded-reader-don-t-blanket-refuse-most-proc-sys-files-are-finite-cpuinfo-uptime-self-status-read-instantly-only-a-few-block-so-this-layer-does-a-bounded-read-not-a-refuse-key-architecture-point-ops-125-blood-lesson-extended-a-sync-blocking-read-cannot-be-timed-out-in-process-readtextfilesmart-locks-the-event-loop-so-promise-race-settimeout-never-fire-the-only-sync-safe-fix-is-to-move-the-blocking-read-into-a-child-process-head-c-that-spawnsync-s-timeout-option-can-kill-finite-pseudo-file-head-exits-0-content-returned-blocking-pseudo-file-head-killed-at-timeout-bounded-return-never-an-infinite-hang-live-verified-real-proc-cpuinfo-via-readfile-execute-success-true-format-pseudo-fs-proc-33ms-a-real-no-writer-fifo-via-real-spawnsync-timeout-1500-killed-at-1502ms-timedout-true-not-a-hang-readfile-pseudo-guard">readFile pseudo-filesystem (/proc·/sys) bounded-timeout read -- WIRING a location-based no-hang guard, the 4th orthogonal reading-hang vector (OPS-121 binary-content, OPS-123 format-routing, OPS-125 file-type FIFO/socket/device; THIS keys off file LOCATION). Linux /proc·/sys entries are REGULAR files (stat.isFile()===true), size:0, content generated-on-read; some (/proc/kmsg, certain /sys poll attrs) BLOCK FOREVER on the first byte. They slip EVERY prior guard: regular file -&gt; passes OPS-125 type predicates (isFIFO/isSocket/... all false); size:0 -&gt; passes the oversize check (0&gt;maxBytes false); mostly non-binary -&gt; detectFile() reads magic bytes and HANGS right there. Measured: /proc/cpuinfo is a size:0 regular file with all four special predicates false. Per the OPS-123 lesson (route to a bounded reader, don't blanket-refuse): most /proc·/sys files are FINITE (cpuinfo/uptime/self-status read instantly), only a few block -- so this layer does a BOUNDED read, not a refuse. Key architecture point (OPS-125 blood lesson extended): a SYNC blocking read cannot be timed out in-process (readTextFileSmart locks the event loop so Promise.race/setTimeout never fire); the ONLY sync-safe fix is to move the blocking read into a CHILD process (head -c &lt;maxBytes&gt; &lt;path&gt;) that spawnSync's timeout option can KILL. Finite pseudo-file -&gt; head exits 0 -&gt; content returned; blocking pseudo-file -&gt; head killed at timeout -&gt; bounded return, never an infinite hang. LIVE-verified: real /proc/cpuinfo via readFile.execute -&gt; success:true format=pseudo-fs-proc 33ms; a real no-writer FIFO via real spawnSync timeout=1500 -&gt; killed at 1502ms timedOut:true (not a hang)  <code>readfile-pseudo-guard</code><a class="anchor" href="#readfile-pseudo-filesystem-proc-sys-bounded-timeout-read-wiring-a-location-based-no-hang-guard-the-4th-orthogonal-reading-hang-vector-ops-121-binary-content-ops-123-format-routing-ops-125-file-type-fifo-socket-device-this-keys-off-file-location-linux-proc-sys-entries-are-regular-files-stat-isfile-true-size-0-content-generated-on-read-some-proc-kmsg-certain-sys-poll-attrs-block-forever-on-the-first-byte-they-slip-every-prior-guard-regular-file-passes-ops-125-type-predicates-isfifo-issocket-all-false-size-0-passes-the-oversize-check-0-maxbytes-false-mostly-non-binary-detectfile-reads-magic-bytes-and-hangs-right-there-measured-proc-cpuinfo-is-a-size-0-regular-file-with-all-four-special-predicates-false-per-the-ops-123-lesson-route-to-a-bounded-reader-don-t-blanket-refuse-most-proc-sys-files-are-finite-cpuinfo-uptime-self-status-read-instantly-only-a-few-block-so-this-layer-does-a-bounded-read-not-a-refuse-key-architecture-point-ops-125-blood-lesson-extended-a-sync-blocking-read-cannot-be-timed-out-in-process-readtextfilesmart-locks-the-event-loop-so-promise-race-settimeout-never-fire-the-only-sync-safe-fix-is-to-move-the-blocking-read-into-a-child-process-head-c-that-spawnsync-s-timeout-option-can-kill-finite-pseudo-file-head-exits-0-content-returned-blocking-pseudo-file-head-killed-at-timeout-bounded-return-never-an-infinite-hang-live-verified-real-proc-cpuinfo-via-readfile-execute-success-true-format-pseudo-fs-proc-33ms-a-real-no-writer-fifo-via-real-spawnsync-timeout-1500-killed-at-1502ms-timedout-true-not-a-hang-readfile-pseudo-guard" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -623,7 +622,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-129] readFile伪文件系统有界超时读·接线.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:readfile-pseudo-guard</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/tools/pseudoFileReadGuard.test.js</code></pre>
 <hr>
 <h3 id="shared-pre-read-hang-guard-for-secondary-file-reading-tools-inspectdocument-replaceatlocation-wiring-the-anti-hang-read-guard-family-onto-the-other-model-facing-tools-that-touch-bytes-ops-121-123-125-129-hardened-readfile-js-and-ops-146-brought-filereadtool-to-parity-but-inspectdocument-js-aliases-read-format-inspect-format-and-replaceatlocation-js-replace-at-also-read-files-and-had-zero-anti-hang-guards-both-call-detectfile-abspath-right-after-existssync-detectfile-reads-magic-bytes-hangs-forever-on-a-fifo-blocking-pseudo-and-both-then-readfilesync-utf-8-which-blocks-too-a-single-composed-pure-leaf-classifyprereadhang-abspath-stat-env-unifies-the-three-infinite-hang-vectors-windows-reserved-device-name-path-check-fifo-socket-device-stat-type-check-linux-proc-sys-blocking-pseudo-detect-so-every-refuse-only-read-tool-closes-the-whole-class-with-one-call-before-touching-bytes-live-verified-fifo-proc-through-inspectdocument-execute-replaceatlocation-execute-return-in-0-3ms-with-success-false-previously-infinite-hang-file-preread-hang-guard">Shared pre-read hang guard for secondary file-reading tools (inspectDocument/replaceAtLocation) -- WIRING the anti-hang read-guard family onto the OTHER model-facing tools that touch bytes. OPS-121/123/125/129 hardened readFile.js and OPS-146 brought FileReadTool to parity, but inspectDocument.js (aliases read_format/inspect_format) and replaceAtLocation.js (replace_at) ALSO read files and had ZERO anti-hang guards: both call detectFile(absPath) right after existsSync (detectFile reads magic bytes -&gt; HANGS FOREVER on a FIFO/blocking-pseudo), and both then readFileSync(...,'utf-8') which blocks too. A single composed pure leaf classifyPreReadHang({absPath,stat,env}) unifies the three infinite-hang vectors (Windows reserved device name path-check + FIFO/socket/device stat-type-check + Linux /proc·/sys blocking-pseudo detect) so every 'refuse-only' read tool closes the whole class with one call before touching bytes. LIVE-verified: FIFO/proc through inspectDocument.execute + replaceAtLocation.execute return in 0-3ms with success:false (previously infinite hang)  <code>file-preread-hang-guard</code><a class="anchor" href="#shared-pre-read-hang-guard-for-secondary-file-reading-tools-inspectdocument-replaceatlocation-wiring-the-anti-hang-read-guard-family-onto-the-other-model-facing-tools-that-touch-bytes-ops-121-123-125-129-hardened-readfile-js-and-ops-146-brought-filereadtool-to-parity-but-inspectdocument-js-aliases-read-format-inspect-format-and-replaceatlocation-js-replace-at-also-read-files-and-had-zero-anti-hang-guards-both-call-detectfile-abspath-right-after-existssync-detectfile-reads-magic-bytes-hangs-forever-on-a-fifo-blocking-pseudo-and-both-then-readfilesync-utf-8-which-blocks-too-a-single-composed-pure-leaf-classifyprereadhang-abspath-stat-env-unifies-the-three-infinite-hang-vectors-windows-reserved-device-name-path-check-fifo-socket-device-stat-type-check-linux-proc-sys-blocking-pseudo-detect-so-every-refuse-only-read-tool-closes-the-whole-class-with-one-call-before-touching-bytes-live-verified-fifo-proc-through-inspectdocument-execute-replaceatlocation-execute-return-in-0-3ms-with-success-false-previously-infinite-hang-file-preread-hang-guard" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -633,7 +632,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-147] 次级读取工具统一读前防卡死前检.md</li><li>docs/07_OPS_运维/[OPS-MAN-149] 编辑与探索读取工具接入统一读前防卡死前检.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">node --test services/backend/tests/tools/filePreReadHangGuard.test.js</code></pre>
+<pre><code class="language-bash">node --<span class="hljs-built_in">test</span> services/backend/tests/tools/filePreReadHangGuard.test.js</code></pre>
 <hr>
 <h3 id="multi-model-type-provider-config-reconciler-the-four-user-facing-model-types-each-resolve-a-provider-through-disconnected-env-namespaces-text-via-apikeypool-providerpresets-gateway-video-via-khy-video-gen-outside-the-registry-vector-via-embed-url-ollama-gateway-embeddings-role-via-subagentmodelselect-reusing-the-text-pool-the-capability-taxonomy-names-these-buckets-but-nothing-reconciles-per-type-whether-a-user-supplied-a-working-api-and-whether-it-is-a-relay-中转站-direct-直连-local-endpoint-this-pure-leaf-read-only-cli-answers-which-types-are-ready-and-how-is-each-wired-for-a-fresh-machine-user-configuring-different-apis-per-type-model-type-provider-plan">Multi-Model-Type Provider Config Reconciler (the four user-facing model TYPES each resolve a provider through DISCONNECTED env namespaces: text via apiKeyPool/providerPresets/gateway, video via KHY_VIDEO_GEN_* outside the registry, vector via EMBED_URL/ollama/gateway embeddings, role via subAgentModelSelect reusing the text pool; the capability taxonomy names these buckets but NOTHING reconciles per-type whether a user supplied a working API and whether it is a relay(中转站)/direct(直连)/local endpoint; this pure leaf + read-only CLI answers &quot;which types are ready and how is each wired&quot; for a fresh-machine user configuring different APIs per type)  <code>model-type-provider-plan</code><a class="anchor" href="#multi-model-type-provider-config-reconciler-the-four-user-facing-model-types-each-resolve-a-provider-through-disconnected-env-namespaces-text-via-apikeypool-providerpresets-gateway-video-via-khy-video-gen-outside-the-registry-vector-via-embed-url-ollama-gateway-embeddings-role-via-subagentmodelselect-reusing-the-text-pool-the-capability-taxonomy-names-these-buckets-but-nothing-reconciles-per-type-whether-a-user-supplied-a-working-api-and-whether-it-is-a-relay-中转站-direct-直连-local-endpoint-this-pure-leaf-read-only-cli-answers-which-types-are-ready-and-how-is-each-wired-for-a-fresh-machine-user-configuring-different-apis-per-type-model-type-provider-plan" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -643,7 +642,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-096] 多模型类型 Provider 配置对账.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:model-type-providers</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- scripts/tests/modelTypeProviderPlan.test.js</code></pre>
 <hr>
 <h3 id="卡住任务的强制结束会话逃生舱-repl-busy-分支-ctrl-c-esc-三次升级结束会话-事件循环仍活-转圈动画在转-setinterval-在跑-js-处理器仍执行-但优雅取消没落地时-busy-分支的-ctrl-c-replsession-sigint-处理-与-esc-busy-输入分支-原本恒做优雅取消-return-永不升级-导致-wedged-回合按几次都杀不掉-此纯叶把-同窗口内累计第-3-次-busy-中断-强制结束会话-的判定逻辑抽出-零-io-绝不抛-replsession-在优雅取消前先问它是否该-force-exit-exit-130-前两次先走优雅取消打断卡住的任务-第-3-次才强制结束会话-无论底层-adapter-是否兑现-abort-信号-只要事件循环还活着就能杀掉卡住的回合-busy-interrupt-escalation">卡住任务的强制结束会话逃生舱(REPL busy 分支 Ctrl+C/Esc 三次升级结束会话)。事件循环仍活(转圈动画在转=setInterval 在跑=JS 处理器仍执行)但优雅取消没落地时,busy 分支的 Ctrl+C(replSession SIGINT 处理)与 Esc(busy 输入分支)原本恒做优雅取消+return、永不升级,导致 wedged 回合按几次都杀不掉。此纯叶把「同窗口内累计第 3 次 busy 中断→强制结束会话」的判定逻辑抽出(零 IO、绝不抛),replSession 在优雅取消前先问它是否该 force-exit(exit 130),前两次先走优雅取消打断卡住的任务,第 3 次才强制结束会话;无论底层 adapter 是否兑现 abort 信号,只要事件循环还活着就能杀掉卡住的回合  <code>busy-interrupt-escalation</code><a class="anchor" href="#卡住任务的强制结束会话逃生舱-repl-busy-分支-ctrl-c-esc-三次升级结束会话-事件循环仍活-转圈动画在转-setinterval-在跑-js-处理器仍执行-但优雅取消没落地时-busy-分支的-ctrl-c-replsession-sigint-处理-与-esc-busy-输入分支-原本恒做优雅取消-return-永不升级-导致-wedged-回合按几次都杀不掉-此纯叶把-同窗口内累计第-3-次-busy-中断-强制结束会话-的判定逻辑抽出-零-io-绝不抛-replsession-在优雅取消前先问它是否该-force-exit-exit-130-前两次先走优雅取消打断卡住的任务-第-3-次才强制结束会话-无论底层-adapter-是否兑现-abort-信号-只要事件循环还活着就能杀掉卡住的回合-busy-interrupt-escalation" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -653,7 +652,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-102] 卡住任务的强制终止逃生舱.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:busy-interrupt-escalation</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/services/cli/repl/busyInterruptEscalation.test.js</code></pre>
 <hr>
 <h3 id="把-claude-codex-opencode-做成装进-khy-数据家-khy-tools-开箱即用且可更新的便携-cli-纯叶解析-package-json-bin-字段-用当前-node-直接跑-js-入口-绕开-windows-cmd-ps1-shim-与-path-依赖-根治-spawn-enoent-claude-anthropic-ai-claude-code-与-codex-openai-codex-npm-包发布的是带-node-shebang-的-js-入口-直接-spawn-裸名依赖系统-path-用户没全局装-恒-enoent-本子系统读已安装包-package-json-的-bin-定位真实-js-入口-返回-command-process-execpath-argsprefix-entryabs-跨平台一致不碰-path-cmd-原生二进制入口-shebang-嗅探-回退直接执行-opencode-保留其既有专用解析器-opencodebinresolver-泛化解析器对它返回-null-并为-opencode-补数据家候选让-khy-tools-install-opencode-也能被解析-khy-claude-codex-启动前若不可用-交互确认-是否现在安装便携版-y-n-点头即装-装完-detect-true-复检直接继续本次启动-portable-cli">把 claude/codex/opencode 做成装进 khy 数据家(~/.khy/tools)、开箱即用且可更新的便携 CLI(纯叶解析 package.json bin 字段→用当前 node 直接跑 JS 入口,绕开 Windows .cmd/.ps1 shim 与 PATH 依赖=根治 spawn ENOENT)。claude(@anthropic-ai/claude-code)与 codex(@openai/codex)npm 包发布的是带 node shebang 的 JS 入口,直接 spawn 裸名依赖系统 PATH→用户没全局装→恒 ENOENT。本子系统读已安装包 package.json 的 bin→定位真实 JS 入口→返回 {command:process.execPath,argsPrefix:[entryAbs]},跨平台一致不碰 PATH/.cmd;原生二进制入口(shebang 嗅探)回退直接执行。opencode 保留其既有专用解析器 opencodeBinResolver,泛化解析器对它返回 null;并为 opencode 补数据家候选让 khy tools install opencode 也能被解析。khy claude/codex 启动前若不可用→交互确认「是否现在安装便携版?[Y/n]」→点头即装、装完 detect(true) 复检直接继续本次启动  <code>portable-cli</code><a class="anchor" href="#把-claude-codex-opencode-做成装进-khy-数据家-khy-tools-开箱即用且可更新的便携-cli-纯叶解析-package-json-bin-字段-用当前-node-直接跑-js-入口-绕开-windows-cmd-ps1-shim-与-path-依赖-根治-spawn-enoent-claude-anthropic-ai-claude-code-与-codex-openai-codex-npm-包发布的是带-node-shebang-的-js-入口-直接-spawn-裸名依赖系统-path-用户没全局装-恒-enoent-本子系统读已安装包-package-json-的-bin-定位真实-js-入口-返回-command-process-execpath-argsprefix-entryabs-跨平台一致不碰-path-cmd-原生二进制入口-shebang-嗅探-回退直接执行-opencode-保留其既有专用解析器-opencodebinresolver-泛化解析器对它返回-null-并为-opencode-补数据家候选让-khy-tools-install-opencode-也能被解析-khy-claude-codex-启动前若不可用-交互确认-是否现在安装便携版-y-n-点头即装-装完-detect-true-复检直接继续本次启动-portable-cli" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -663,7 +662,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-100] 便携 CLI 子系统.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:portable-cli</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/services/gateway/adapters/portableCli.test.js</code></pre>
 <hr>
 <h3 id="写记忆-召回记忆时明确告知用户-记忆操作可见化纯叶-khy-早已自动写记忆-maybeautosavememory-与自动召回记忆-memory-engine-surface-relevant-memory-注入-但两条路径都静默执行-用户看不到-刚记住了什么-或-这轮召回了哪些记忆-本子系统抽纯叶-memoryopsnotice-js-把这两个已有动作渲染成用户可见的状态提示-经既有-onstatus-状态通道推出-写入成功-已写入记忆-已落盘-本会话-召回命名记忆-召回-n-条相关记忆-a-b-c-等-n-条-零-io-绝不抛-门控-default-on-直接回应-goal-需求-写记忆和回忆时明确告知用户-memory-ops-notice">写记忆/召回记忆时明确告知用户(记忆操作可见化纯叶)。khy 早已自动写记忆(_maybeAutoSaveMemory)与自动召回记忆(memory engine surface + [RELEVANT_MEMORY] 注入),但两条路径都静默执行——用户看不到「刚记住了什么」或「这轮召回了哪些记忆」。本子系统抽纯叶 memoryOpsNotice.js 把这两个已有动作渲染成用户可见的状态提示,经既有 onStatus 状态通道推出:写入成功→🧠 已写入&lt;类型&gt;记忆(已落盘/本会话):&lt;name&gt;,召回命名记忆→🧠 召回 N 条相关记忆:a、b、c 等 N 条。零 IO、绝不抛、门控 default-on。直接回应 /goal 需求「写记忆和回忆时明确告知用户」  <code>memory-ops-notice</code><a class="anchor" href="#写记忆-召回记忆时明确告知用户-记忆操作可见化纯叶-khy-早已自动写记忆-maybeautosavememory-与自动召回记忆-memory-engine-surface-relevant-memory-注入-但两条路径都静默执行-用户看不到-刚记住了什么-或-这轮召回了哪些记忆-本子系统抽纯叶-memoryopsnotice-js-把这两个已有动作渲染成用户可见的状态提示-经既有-onstatus-状态通道推出-写入成功-已写入记忆-已落盘-本会话-召回命名记忆-召回-n-条相关记忆-a-b-c-等-n-条-零-io-绝不抛-门控-default-on-直接回应-goal-需求-写记忆和回忆时明确告知用户-memory-ops-notice" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -673,7 +672,7 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-103] 写记忆·召回记忆明确告知用户.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:memory-notice</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/services/memoryOpsNotice.test.js</code></pre>
 <hr>
 <h3 id="text-only-model-image-ocr-fallback-honest-confidence-caveat-when-the-running-model-is-text-only-non-multimodal-and-no-vision-model-is-reachable-khy-must-strip-the-raw-image-and-inject-locally-extracted-ocr-text-as-the-answer-basis-this-area-also-closes-the-dead-field-gap-where-tesseract-s-per-word-confidence-needsaifallback-was-computed-but-dropped-at-every-js-layer-so-low-confidence-ocr-was-injected-as-authoritative-请据此作答-with-no-warning-the-sibling-recognizeimage-tool-path-already-honored-needsaifallback-the-gateway-did-not-ocr-fallback-confidence">Text-only-model Image OCR Fallback + Honest Confidence Caveat (when the running model is text-only/non-multimodal and NO vision model is reachable, khy must strip the raw image and inject locally-extracted OCR text as the answer basis; this area also closes the DEAD-FIELD gap where tesseract's per-word confidence/needsAiFallback was computed but dropped at every JS layer, so low-confidence OCR was injected as authoritative '请据此作答' with no warning — the sibling RecognizeImage tool path already honored needsAiFallback; the gateway did not)  <code>ocr-fallback-confidence</code><a class="anchor" href="#text-only-model-image-ocr-fallback-honest-confidence-caveat-when-the-running-model-is-text-only-non-multimodal-and-no-vision-model-is-reachable-khy-must-strip-the-raw-image-and-inject-locally-extracted-ocr-text-as-the-answer-basis-this-area-also-closes-the-dead-field-gap-where-tesseract-s-per-word-confidence-needsaifallback-was-computed-but-dropped-at-every-js-layer-so-low-confidence-ocr-was-injected-as-authoritative-请据此作答-with-no-warning-the-sibling-recognizeimage-tool-path-already-honored-needsaifallback-the-gateway-did-not-ocr-fallback-confidence" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -683,8 +682,8 @@ npm run test:merge-role-attribution</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-104] 纯文本模型图片 OCR 兜底与低置信诚实告诫.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:ocr-confidence-caveat
-node --test services/backend/tests/gateway/imageOcrFallbackRealImage.test.js
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/gateway/ocrConfidenceCaveat.test.js services/backend/tests/gateway/imageOcrFallbackWiring.test.js services/backend/tests/gateway/imageOcrFallbackRealImage.test.js
+node --<span class="hljs-built_in">test</span> services/backend/tests/gateway/imageOcrFallbackRealImage.test.js
 python3 -m unittest tests.unit.test_dochelper_ocr_confidence</code></pre>
 <hr>
 <h3 id="text-only-model-image-ocr-fallback-honest-coverage-caveat-orthogonal-to-ocr-fallback-confidence-confidence-is-about-accuracy-of-the-recognized-words-coverage-is-about-completeness-whether-the-injected-ocr-text-actually-covers-all-input-images-closes-the-missing-dimension-gap-where-extractimageocrdetails-does-images-slice-0-maximages-and-silently-drops-images-beyond-the-cap-and-where-some-attempted-images-produce-no-text-so-a-text-only-model-is-told-请据此作答-as-if-it-saw-everything-when-n-3-images-and-unreadable-images-vanished-with-zero-trace-the-textbook-silent-truncation-reads-as-covered-everything-anti-pattern-ocr-fallback-coverage">Text-only-model Image OCR Fallback — Honest COVERAGE Caveat (orthogonal to ocr-fallback-confidence: confidence is about ACCURACY of the recognized words; coverage is about COMPLETENESS — whether the injected OCR text actually covers ALL input images; closes the MISSING-DIMENSION gap where extractImageOcrDetails does images.slice(0,maxImages) and silently drops images beyond the cap, and where some attempted images produce no text — so a text-only model is told '请据此作答' as if it saw everything when N-3 images and unreadable images vanished with zero trace: the textbook 'silent truncation reads as covered everything' anti-pattern)  <code>ocr-fallback-coverage</code><a class="anchor" href="#text-only-model-image-ocr-fallback-honest-coverage-caveat-orthogonal-to-ocr-fallback-confidence-confidence-is-about-accuracy-of-the-recognized-words-coverage-is-about-completeness-whether-the-injected-ocr-text-actually-covers-all-input-images-closes-the-missing-dimension-gap-where-extractimageocrdetails-does-images-slice-0-maximages-and-silently-drops-images-beyond-the-cap-and-where-some-attempted-images-produce-no-text-so-a-text-only-model-is-told-请据此作答-as-if-it-saw-everything-when-n-3-images-and-unreadable-images-vanished-with-zero-trace-the-textbook-silent-truncation-reads-as-covered-everything-anti-pattern-ocr-fallback-coverage" aria-label="锚点">#</a></h3>
@@ -695,7 +694,7 @@ python3 -m unittest tests.unit.test_dochelper_ocr_confidence</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-109] 纯文本模型图片 OCR 兜底覆盖率诚实告诫.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:ocr-coverage-notice
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/gateway/ocrCoverageNotice.test.js services/backend/tests/gateway/imageOcrCoverageWiring.test.js
 node --check services/backend/src/services/gateway/ocrCoverageNotice.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</code></pre>
 <hr>
@@ -707,7 +706,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</c
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-111] 纯文本模型图片 OCR 兜底截断诚实告诫.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:ocr-truncation-notice
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/gateway/ocrTruncationNotice.test.js services/backend/tests/gateway/imageOcrTruncationWiring.test.js
 node --check services/backend/src/services/gateway/ocrTruncationNotice.js
 node --check services/backend/src/services/ocrSnippetService.js</code></pre>
 <hr>
@@ -719,7 +718,7 @@ node --check services/backend/src/services/ocrSnippetService.js</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-112] 纯文本模型图片 OCR 兜底语言包可用性诚实告诫.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:ocr-language-notice
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/gateway/ocrLanguageNotice.test.js services/backend/tests/gateway/imageOcrLanguageWiring.test.js services/backend/tests/gateway/ocrLanguageNarrowing.test.js
 node --check services/backend/src/services/gateway/ocrLanguageNotice.js
 python3 -m py_compile services/backend/src/services/docHelper.py</code></pre>
 <hr>
@@ -731,7 +730,7 @@ python3 -m py_compile services/backend/src/services/docHelper.py</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-115] 纯文本模型图片 OCR 兜底方向自动校正.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:ocr-orientation-notice
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/gateway/ocrOrientationNotice.test.js services/backend/tests/gateway/imageOcrOrientationWiring.test.js services/backend/tests/gateway/ocrOrientationRecovery.test.js
 node --check services/backend/src/services/gateway/ocrOrientationNotice.js
 python3 -m py_compile services/backend/src/services/docHelper.py</code></pre>
 <hr>
@@ -743,7 +742,7 @@ python3 -m py_compile services/backend/src/services/docHelper.py</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-116] 纯文本模型图片 OCR 兜底低分辨率自动放大.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:ocr-resolution-notice
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/gateway/ocrResolutionNotice.test.js services/backend/tests/gateway/imageOcrResolutionWiring.test.js services/backend/tests/gateway/ocrResolutionRecovery.test.js
 node --check services/backend/src/services/gateway/ocrResolutionNotice.js
 python3 -m py_compile services/backend/src/services/docHelper.py</code></pre>
 <hr>
@@ -755,7 +754,7 @@ python3 -m py_compile services/backend/src/services/docHelper.py</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-106] unpack 未知格式自救.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:unpack-generic
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/tools/unpackGeneric.test.js services/backend/tests/tools/unpackAsar.test.js
 node --check services/backend/src/services/reverseEngineer/genericExtractor.js
 node --check services/backend/src/tools/unpackTool.js</code></pre>
 <hr>
@@ -767,7 +766,7 @@ node --check services/backend/src/tools/unpackTool.js</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-118] 视觉描述级联全失败 OCR 兜底底线解耦.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:vision-describe-fail-floor
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/visionOcrFallback.test.js services/backend/tests/gateway/visionDescribeFailFloorWiring.test.js services/backend/tests/gateway/visionDescribeFailFloorRealImage.test.js
 node --check services/backend/src/services/gateway/visionOcrFallback.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</code></pre>
 <hr>
@@ -779,7 +778,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</c
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-120] 剥图必留痕最小底线与OCR功能门解耦.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:vision-strip-image-floor
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/gateway/visionStripImageFloorWiring.test.js services/backend/tests/gateway/visionStripImageFloorRealImage.test.js
 node --check services/backend/src/services/gateway/visionOcrFallback.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</code></pre>
 <hr>
@@ -791,7 +790,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</c
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-122] post-failure救援网剥图必留痕解耦.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:vision-rescue-strip-floor
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/gateway/visionRescueStripFloorWiring.test.js services/backend/tests/gateway/visionRescueStripFloorRealImage.test.js
 node --check services/backend/src/services/gateway/visionOcrFallback.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</code></pre>
 <hr>
@@ -803,7 +802,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</c
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-124] OCR成功路径向用户透明告知用了OCR.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:ocr-usage-disclosure
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/gateway/ocrUsageNotice.test.js services/backend/tests/gateway/ocrUsageDisclosureWiring.test.js services/backend/tests/gateway/ocrUsageDisclosureRealImage.test.js
 node --check services/backend/src/services/gateway/ocrUsageNotice.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</code></pre>
 <hr>
@@ -815,7 +814,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</c
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-126] OCR成功路径确定性脚注兜底告知用了OCR.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:ocr-usage-footnote
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/gateway/ocrUsageFootnote.test.js services/backend/tests/gateway/ocrUsageFootnoteWiring.test.js services/backend/tests/gateway/ocrUsageFootnoteRealImage.test.js
 node --check services/backend/src/services/gateway/ocrUsageFootnote.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</code></pre>
 <hr>
@@ -827,7 +826,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</c
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-138] 空OCR剥图路径模型仍谎称没收到图的确定性纠正脚注.md</li><li>docs/07_OPS_运维/[OPS-MAN-140] OCR成功读出但模型仍谎称没收到图的确定性纠正脚注.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:vision-denial-correction
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/gateway/visionDenialCorrection.test.js services/backend/tests/gateway/visionDenialCorrectionWiring.test.js services/backend/tests/gateway/visionDenialCorrectionRealImage.test.js
 node --check services/backend/src/services/gateway/visionDenialCorrection.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</code></pre>
 <hr>
@@ -839,7 +838,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</c
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-142] 失败墙推迟到OCR结果已知后减少心灵噪音.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:vision-failure-summary-ocr-suppress
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/services/gateway/visionFailureSummary.test.js services/backend/tests/gateway/visionFailureSummaryOcrSuppressWiring.test.js services/backend/tests/gateway/visionFailureSummaryOcrSuppressRealImage.test.js
 node --check services/backend/src/services/gateway/visionFailureSummary.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</code></pre>
 <hr>
@@ -851,7 +850,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</c
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-144] describe-fail到OCR成功的用户可见闭合减少心灵噪音.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:vision-ocr-success-closure
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/services/gateway/visionOcrSuccessClosure.test.js services/backend/tests/gateway/visionOcrSuccessClosureWiring.test.js services/backend/tests/gateway/visionOcrSuccessClosureRealImage.test.js
 node --check services/backend/src/services/gateway/visionOcrSuccessClosure.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</code></pre>
 <hr>
@@ -863,7 +862,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</c
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-145] 级联逐候选请稍候提示减冗余减少心灵噪音.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:vision-cascade-attempt-notice
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/services/gateway/visionCascadeAttemptNotice.test.js services/backend/tests/gateway/visionCascadeAttemptNoticeWiring.test.js services/backend/tests/gateway/visionCascadeAttemptNoticeRealImage.test.js
 node --check services/backend/src/services/gateway/visionCascadeAttemptNotice.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</code></pre>
 <hr>
@@ -873,7 +872,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</c
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-150] 级联中间提示显示归一去provider前缀减少心灵噪音.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:vision-model-display-name
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/services/gateway/visionModelDisplayName.test.js services/backend/tests/gateway/visionModelDisplayNameWiring.test.js services/backend/tests/gateway/visionModelDisplayNameRealImage.test.js
 node --check services/backend/src/services/gateway/visionModelDisplayName.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</code></pre>
 <hr>
@@ -883,7 +882,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</c
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-159] 失败墙视觉模型名显示归一去provider前缀减少心灵噪音.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:vision-failure-summary-display-name
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/gateway/visionFailureSummaryDisplayName.test.js
 node --check services/backend/src/services/gateway/visionFailureSummary.js</code></pre>
 <hr>
 <h3 id="text-only-model-image-ocr-fallback-dedup-the-真实失败原因-label-on-the-failure-summary-wall-ops-man-161-承-ops-159-directly-serving-减少显示的心灵噪音-this-is-the-gap-flagged-in-the-ops-159-area-s-whentouse-when-a-describe-sub-call-fails-gateway-s-aigateway-buildfailurereasonsection-prepends-真实失败原因-n-that-string-becomes-lastrawerror-fed-to-buildvisionfailuremessage-as-rawerror-cause-sanitizecause-rawerror-preserves-the-self-carried-真实失败原因-label-the-wall-s-cause-push-真实失败原因-cause-prepends-it-a-second-time-真实失败原因-真实失败原因-stutter-aigateway-prependfailurereason-already-has-the-same-intent-guard-if-真实失败原因-test-body-return-body-the-wall-historically-missed-the-equivalent-fix-gate-khy-vision-failure-cause-dedup-default-on-if-cause-already-begins-with-the-label-half-or-full-width-colon-strip-the-self-carried-label-so-it-appears-exactly-once-gate-off-exception-byte-revert-to-the-doubled-behavior-orthogonal-to-ops-159-model-name-prefix-and-khy-vision-failure-summary-whether-the-wall-exists-at-all-on-the-same-wall-vision-failure-cause-dedup">Text-only-model Image OCR Fallback — dedup the '真实失败原因:' LABEL on the failure-summary wall (OPS-MAN-161; 承 OPS-159, directly serving '减少显示的心灵噪音'). This is the GAP flagged in the OPS-159 area's whenToUse: when a describe sub-call fails, gateway's aiGateway._buildFailureReasonSection prepends '真实失败原因:\n&lt;真因…&gt;', that string becomes _lastRawError → fed to buildVisionFailureMessage as rawError → cause = sanitizeCause(rawError) preserves the self-carried '真实失败原因:' label → the wall's cause push (真实失败原因:${cause}) prepends it a SECOND time = '真实失败原因:真实失败原因:…' stutter. aiGateway._prependFailureReason already has the same-intent guard <code>if(/真实失败原因/.test(body)) return body</code>; the wall historically missed the equivalent. FIX: gate KHY_VISION_FAILURE_CAUSE_DEDUP (default-on) — if cause already begins with the label (half- or full-width colon), strip the self-carried label so it appears exactly once; gate-off / exception → byte-revert to the doubled behavior. Orthogonal to OPS-159 (model-name prefix) and KHY_VISION_FAILURE_SUMMARY (whether the wall exists at all) on the SAME wall.  <code>vision-failure-cause-dedup</code><a class="anchor" href="#text-only-model-image-ocr-fallback-dedup-the-真实失败原因-label-on-the-failure-summary-wall-ops-man-161-承-ops-159-directly-serving-减少显示的心灵噪音-this-is-the-gap-flagged-in-the-ops-159-area-s-whentouse-when-a-describe-sub-call-fails-gateway-s-aigateway-buildfailurereasonsection-prepends-真实失败原因-n-that-string-becomes-lastrawerror-fed-to-buildvisionfailuremessage-as-rawerror-cause-sanitizecause-rawerror-preserves-the-self-carried-真实失败原因-label-the-wall-s-cause-push-真实失败原因-cause-prepends-it-a-second-time-真实失败原因-真实失败原因-stutter-aigateway-prependfailurereason-already-has-the-same-intent-guard-if-真实失败原因-test-body-return-body-the-wall-historically-missed-the-equivalent-fix-gate-khy-vision-failure-cause-dedup-default-on-if-cause-already-begins-with-the-label-half-or-full-width-colon-strip-the-self-carried-label-so-it-appears-exactly-once-gate-off-exception-byte-revert-to-the-doubled-behavior-orthogonal-to-ops-159-model-name-prefix-and-khy-vision-failure-summary-whether-the-wall-exists-at-all-on-the-same-wall-vision-failure-cause-dedup" aria-label="锚点">#</a></h3>
@@ -892,7 +891,7 @@ node --check services/backend/src/services/gateway/visionFailureSummary.js</code
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-161] 失败墙真实失败原因标签去重减少心灵噪音.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:vision-failure-cause-dedup
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/gateway/visionFailureCauseDedup.test.js
 node --check services/backend/src/services/gateway/visionFailureSummary.js</code></pre>
 <hr>
 <h3 id="text-only-model-image-ocr-fallback-humanize-the-vision-pool-adapter-failure-status-on-the-ocr-rescued-path-ops-man-164-directly-serving-减少显示的心灵噪音-gap-on-the-vision-local-ocr-success-path-the-final-generation-loop-still-attempts-the-vision-pool-adapter-and-404s-aigatewaygeneratemethod-s-two-adapter-failure-emit-sites-2589-3202-print-the-raw-diagnostic-status-visionpool-失败-openai-404-model-not-found-in-real-time-but-the-image-was-already-read-by-ocr-and-answered-so-that-404-line-is-secondary-mental-noise-fix-pure-leaf-visionpoolfailstatus-buildvisionpoolfailstatus-poolname-ocrrescued-env-gated-by-khy-vision-pool-fail-status-humanize-default-on-when-gate-on-ocrrescued-options-ocrimagetextread-true-poolname-matches-vision-i-return-视觉通道当前不可用-已用本地-ocr-兜底-else-null-caller-keeps-its-raw-name-失败-errmsg-line-byte-revert-genuine-failures-no-ocr-rescue-and-non-vision-pools-keep-the-actionable-root-cause-diagnostic-strict-predicate-ocrrescued-true-never-truthy-but-not-true-and-vision-i-name-match-vision-pool-fail-status-humanize">Text-only-model Image OCR Fallback — humanize the vision-pool adapter-failure STATUS on the OCR-rescued path (OPS-MAN-164, directly serving '减少显示的心灵噪音'). GAP: on the vision→local-OCR-success path, the final generation loop still attempts the vision-pool adapter and 404s; aiGatewayGenerateMethod's two adapter-failure emit sites (~2589 / ~3202) print the raw diagnostic status <code>visionpool 失败: OpenAI: 404 model_not_found</code> in real time — but the image was already read by OCR and answered, so that 404 line is SECONDARY mental noise. FIX: pure leaf visionPoolFailStatus.buildVisionPoolFailStatus({poolName, ocrRescued, env}) gated by KHY_VISION_POOL_FAIL_STATUS_HUMANIZE (default-on): when gate on &amp;&amp; ocrRescued (options._ocrImageTextRead===true) &amp;&amp; poolName matches /vision/i → return '视觉通道当前不可用，已用本地 OCR 兜底'; else null → caller keeps its raw <code>${name} 失败: ${errMsg}</code> line (byte-revert). Genuine failures (no OCR rescue) and non-vision pools keep the actionable root-cause diagnostic. Strict predicate: ocrRescued===true (never truthy-but-not-true) and /vision/i name match.  <code>vision-pool-fail-status-humanize</code><a class="anchor" href="#text-only-model-image-ocr-fallback-humanize-the-vision-pool-adapter-failure-status-on-the-ocr-rescued-path-ops-man-164-directly-serving-减少显示的心灵噪音-gap-on-the-vision-local-ocr-success-path-the-final-generation-loop-still-attempts-the-vision-pool-adapter-and-404s-aigatewaygeneratemethod-s-two-adapter-failure-emit-sites-2589-3202-print-the-raw-diagnostic-status-visionpool-失败-openai-404-model-not-found-in-real-time-but-the-image-was-already-read-by-ocr-and-answered-so-that-404-line-is-secondary-mental-noise-fix-pure-leaf-visionpoolfailstatus-buildvisionpoolfailstatus-poolname-ocrrescued-env-gated-by-khy-vision-pool-fail-status-humanize-default-on-when-gate-on-ocrrescued-options-ocrimagetextread-true-poolname-matches-vision-i-return-视觉通道当前不可用-已用本地-ocr-兜底-else-null-caller-keeps-its-raw-name-失败-errmsg-line-byte-revert-genuine-failures-no-ocr-rescue-and-non-vision-pools-keep-the-actionable-root-cause-diagnostic-strict-predicate-ocrrescued-true-never-truthy-but-not-true-and-vision-i-name-match-vision-pool-fail-status-humanize" aria-label="锚点">#</a></h3>
@@ -901,7 +900,7 @@ node --check services/backend/src/services/gateway/visionFailureSummary.js</code
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-164] 视觉池失败状态人话化减少心灵噪音.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:vision-pool-fail-status-humanize
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/gateway/visionPoolFailStatusHumanize.test.js
 node --check services/backend/src/services/gateway/visionPoolFailStatus.js</code></pre>
 <hr>
 <h3 id="text-only-model-image-ocr-fallback-deterministic-live-status-downgraded-to-ocr-notice-at-the-post-failure-rescue-net-ops-man-127-承-ops-124-126-ops-124-prompt-instruction-and-ops-126-answer-footnote-cover-the-answer-layer-s-ocr-was-used-disclosure-this-area-covers-the-live-progress-layer-prep-time-site1-1619-and-site2-1693-both-emit-an-ocr-success-emitstatus-telling-the-user-ocr-was-used-only-site3-the-post-failure-rescue-net-the-exact-reported-path-gpt-4o-keep-runtime-404-rescue-net-ocr-success-branch-never-emitted-a-status-its-emitstatus-calls-covered-only-ocr-failure-no-text-so-on-the-exact-reproduced-path-the-live-progress-layer-stayed-silent-about-the-ocr-downgrade-this-area-adds-the-missing-rescue-net-success-status-aligned-with-site1-site2-ocr-rescue-status">Text-only-model Image OCR Fallback — DETERMINISTIC live-STATUS 'downgraded to OCR' notice at the post-failure rescue net (OPS-MAN-127; 承 OPS-124/126). OPS-124 (prompt instruction) and OPS-126 (answer footnote) cover the ANSWER layer's 'OCR was used' disclosure; this area covers the LIVE-PROGRESS layer. prep-time Site1 (~1619) and Site2 (~1693) both emit an OCR-success emitStatus telling the user OCR was used; ONLY Site3 (the post-failure rescue net — the EXACT reported path gpt-4o keep → runtime 404 → rescue net) OCR-SUCCESS branch never emitted a status (its emitStatus calls covered only OCR failure/no-text). So on the exact reproduced path the live-progress layer stayed silent about the OCR downgrade. This area adds the missing rescue-net success status, aligned with Site1/Site2.  <code>ocr-rescue-status</code><a class="anchor" href="#text-only-model-image-ocr-fallback-deterministic-live-status-downgraded-to-ocr-notice-at-the-post-failure-rescue-net-ops-man-127-承-ops-124-126-ops-124-prompt-instruction-and-ops-126-answer-footnote-cover-the-answer-layer-s-ocr-was-used-disclosure-this-area-covers-the-live-progress-layer-prep-time-site1-1619-and-site2-1693-both-emit-an-ocr-success-emitstatus-telling-the-user-ocr-was-used-only-site3-the-post-failure-rescue-net-the-exact-reported-path-gpt-4o-keep-runtime-404-rescue-net-ocr-success-branch-never-emitted-a-status-its-emitstatus-calls-covered-only-ocr-failure-no-text-so-on-the-exact-reproduced-path-the-live-progress-layer-stayed-silent-about-the-ocr-downgrade-this-area-adds-the-missing-rescue-net-success-status-aligned-with-site1-site2-ocr-rescue-status" aria-label="锚点">#</a></h3>
@@ -912,7 +911,7 @@ node --check services/backend/src/services/gateway/visionPoolFailStatus.js</code
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-127] OCR救援网成功实时状态告知已降级到OCR.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:ocr-rescue-status
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/gateway/ocrRescueStatusNotice.test.js services/backend/tests/gateway/ocrRescueStatusNoticeWiring.test.js services/backend/tests/gateway/ocrRescueStatusNoticeRealImage.test.js
 node --check services/backend/src/services/gateway/ocrRescueStatusNotice.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</code></pre>
 <hr>
@@ -924,7 +923,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</c
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-131] 重复代码检测门与公共测试脚手架.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:maintainer:duplication
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- scripts/tests/duplicationGuard.test.js scripts/tests/check-duplication.test.js
 npm run check:duplication
 node --check scripts/lib/duplicationGuard.js scripts/check-duplication.js</code></pre>
 <hr>
@@ -936,7 +935,7 @@ node --check scripts/lib/duplicationGuard.js scripts/check-duplication.js</code>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-132] prep期OCR兜底非verbose实时状态告知已降级到OCR.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:ocr-rescue-status-prep
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/gateway/ocrRescueStatusPrep.test.js services/backend/tests/gateway/ocrRescueStatusPrepWiring.test.js services/backend/tests/gateway/ocrRescueStatusPrepRealImage.test.js
 node --check services/backend/src/services/gateway/ocrRescueStatusNotice.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</code></pre>
 <hr>
@@ -948,7 +947,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</c
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-148] Site1-prep状态与OCR成功闭合跨层去重减少心灵噪音.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:ocr-rescue-prep-closure-dedup
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/gateway/ocrRescueStatusNotice.test.js services/backend/tests/gateway/ocrRescuePrepClosureDedupWiring.test.js services/backend/tests/gateway/ocrRescuePrepClosureDedupRealImage.test.js
 node --check services/backend/src/services/gateway/ocrRescueStatusNotice.js
 node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</code></pre>
 <hr>
@@ -960,7 +959,7 @@ node --check services/backend/src/services/gateway/aiGatewayGenerateMethod.js</c
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-134] 视觉级联网络不可达终局诊断.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:vision-network-exhaustion
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/services/visionExhaustionDiagnostic.test.js services/backend/tests/gateway/visionNetworkExhaustionRealImage.test.js
 node --check services/backend/src/services/gateway/visionExhaustionDiagnostic.js</code></pre>
 <hr>
 <h3 id="workflow-list-load-page-scoped-degraded-ui-silent-request-no-cross-page-banner-fixes-the-reported-bug-where-a-red-网络连接异常-无法访问-api-workflow-请确认-ai-backend-服务可用后重试-banner-appeared-on-the-unrelated-代理管理-proxy-management-page-root-cause-the-workflow-list-fetch-workflows-vue-onmounted-useworkflow-listworkflows-get-api-workflow-was-not-marked-silent-and-had-no-local-error-ui-so-request-js-s-interceptor-fired-a-global-body-mounted-elmessage-notifyerror-on-network-failure-a-navigation-orphaned-backend-unreachable-failure-leaked-that-global-toast-onto-whatever-page-the-user-had-moved-to-fix-per-request-js-88-94-convention-mark-the-list-get-silent-true-and-render-the-failure-in-page-inline-el-alert-重试-via-a-loaderror-ref-so-the-failure-stays-scoped-to-the-workflows-page-and-never-bleeds-cross-page-workflow-frontend-degraded-load">Workflow list load — page-scoped degraded UI (silent request, no cross-page banner). Fixes the reported bug where a red 「网络连接异常:无法访问 /api/workflow。请确认 ai-backend 服务可用后重试。」 banner appeared on the UNRELATED 代理管理 (Proxy Management) page. Root cause: the workflow list fetch (Workflows.vue onMounted → useWorkflow.listWorkflows → GET /api/workflow) was NOT marked silent and had no local error UI, so request.js's interceptor fired a GLOBAL body-mounted ElMessage (notifyError) on network failure; a navigation-orphaned / backend-unreachable failure leaked that global toast onto whatever page the user had moved to. Fix (per request.js:88-94 convention): mark the list GET { silent: true } and render the failure IN-PAGE (inline el-alert + 重试) via a loadError ref, so the failure stays scoped to the Workflows page and never bleeds cross-page.  <code>workflow-frontend-degraded-load</code><a class="anchor" href="#workflow-list-load-page-scoped-degraded-ui-silent-request-no-cross-page-banner-fixes-the-reported-bug-where-a-red-网络连接异常-无法访问-api-workflow-请确认-ai-backend-服务可用后重试-banner-appeared-on-the-unrelated-代理管理-proxy-management-page-root-cause-the-workflow-list-fetch-workflows-vue-onmounted-useworkflow-listworkflows-get-api-workflow-was-not-marked-silent-and-had-no-local-error-ui-so-request-js-s-interceptor-fired-a-global-body-mounted-elmessage-notifyerror-on-network-failure-a-navigation-orphaned-backend-unreachable-failure-leaked-that-global-toast-onto-whatever-page-the-user-had-moved-to-fix-per-request-js-88-94-convention-mark-the-list-get-silent-true-and-render-the-failure-in-page-inline-el-alert-重试-via-a-loaderror-ref-so-the-failure-stays-scoped-to-the-workflows-page-and-never-bleeds-cross-page-workflow-frontend-degraded-load" aria-label="锚点">#</a></h3>
@@ -971,7 +970,7 @@ node --check services/backend/src/services/gateway/visionExhaustionDiagnostic.js
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-135] 工作流列表载入本页降级不泄漏全局横幅.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">npm run test:workflow-list-degraded
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- apps/ai-frontend/src/composables/useWorkflow.wiring.test.js
 node --check apps/ai-frontend/src/composables/useWorkflow.js</code></pre>
 <hr>
 <h3 id="缓存前缀击穿归因-prompt-cache-prefix-bust-attribution-命中率低时定位是谁击穿了前缀-系统提示-工具集-工具顺序-cache-prefix-shape-attribution">缓存前缀击穿归因 (prompt-cache prefix bust attribution — 命中率低时定位是谁击穿了前缀：系统提示/工具集/工具顺序)  <code>cache-prefix-shape-attribution</code><a class="anchor" href="#缓存前缀击穿归因-prompt-cache-prefix-bust-attribution-命中率低时定位是谁击穿了前缀-系统提示-工具集-工具顺序-cache-prefix-shape-attribution" aria-label="锚点">#</a></h3>
@@ -982,7 +981,7 @@ node --check apps/ai-frontend/src/composables/useWorkflow.js</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-151] 缓存前缀击穿归因接线.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">node --test services/backend/tests/cli/cacheWarning.test.js services/backend/tests/constants/promptPrefixShape.test.js
+<pre><code class="language-bash">node --<span class="hljs-built_in">test</span> services/backend/tests/cli/cacheWarning.test.js services/backend/tests/constants/promptPrefixShape.test.js
 node --check services/backend/src/constants/promptPrefixShape.js
 node --check services/backend/src/cli/cacheWarning.js</code></pre>
 <hr>
@@ -1030,7 +1029,7 @@ node --check services/backend/src/services/flagRegistry.js</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-155] 指令注册表编译期收敛守卫接线.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">node --test services/backend/tests/services/directiveRegistryAudit.guard.test.js
+<pre><code class="language-bash">node --<span class="hljs-built_in">test</span> services/backend/tests/services/directiveRegistryAudit.guard.test.js
 node --check services/backend/src/services/directiveRegistryAudit.js</code></pre>
 <hr>
 <h3 id="取来即执行安全守卫接线-fetchexecuteguard-把-curl-sh-base64-d-bash-bash-c-curl-这类下载-解码-执行供应链签名接进-shellsafetyvalidator-analyzecommand-fail-closed-升为-critical-拦截-fetch-execute-guard-shell-safety">取来即执行安全守卫接线 (fetchExecuteGuard — 把 curl…|sh / base64 -d|bash / bash -c &quot;$(curl…)&quot; 这类下载-解码-执行供应链签名接进 shellSafetyValidator.analyzeCommand，fail-closed 升为 critical 拦截)  <code>fetch-execute-guard-shell-safety</code><a class="anchor" href="#取来即执行安全守卫接线-fetchexecuteguard-把-curl-sh-base64-d-bash-bash-c-curl-这类下载-解码-执行供应链签名接进-shellsafetyvalidator-analyzecommand-fail-closed-升为-critical-拦截-fetch-execute-guard-shell-safety" aria-label="锚点">#</a></h3>
@@ -1041,7 +1040,7 @@ node --check services/backend/src/services/directiveRegistryAudit.js</code></pre
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-156] 取来即执行安全守卫接线.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">node --test services/backend/tests/security/fetchExecuteGuardWiring.test.js
+<pre><code class="language-bash">node --<span class="hljs-built_in">test</span> services/backend/tests/security/fetchExecuteGuardWiring.test.js
 node --check services/backend/src/services/shellSafetyValidator.js</code></pre>
 <hr>
 <h3 id="用户显式-git-init-白名单覆盖接线-gittrackwhitelist-让用户对自动判定会-软拒绝-的精确系统-共享根显式声明-我确实要-git-化-接进-workspacegitinit-ensureworkspacerepo-硬安全约束永不覆盖-git-track-whitelist-init-override">用户显式 git-init 白名单覆盖接线 (gitTrackWhitelist — 让用户对自动判定会「软拒绝」的精确系统/共享根显式声明「我确实要 git 化」，接进 workspaceGitInit.ensureWorkspaceRepo；硬安全约束永不覆盖)  <code>git-track-whitelist-init-override</code><a class="anchor" href="#用户显式-git-init-白名单覆盖接线-gittrackwhitelist-让用户对自动判定会-软拒绝-的精确系统-共享根显式声明-我确实要-git-化-接进-workspacegitinit-ensureworkspacerepo-硬安全约束永不覆盖-git-track-whitelist-init-override" aria-label="锚点">#</a></h3>
@@ -1052,7 +1051,7 @@ node --check services/backend/src/services/shellSafetyValidator.js</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-157] 用户显式 git-init 白名单覆盖接线.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">node --test services/backend/tests/services/gitTrackWhitelistWiring.test.js
+<pre><code class="language-bash">node --<span class="hljs-built_in">test</span> services/backend/tests/services/gitTrackWhitelistWiring.test.js
 node --check services/backend/src/services/workspaceGitInit.js</code></pre>
 <hr>
 <h3 id="本地-ollama-模型并入统一目录接线-localollamaprobe-把本地正在服务的模型作-source-local-边接进-modelcataloggraph-buildcataloggraph-第-4-源-仅-live-发现时-never-throw-非阻塞-local-model-catalog-graph">本地 Ollama 模型并入统一目录接线 (localOllamaProbe — 把本地正在服务的模型作 source:local 边接进 modelCatalogGraph.buildCatalogGraph 第 4 源，仅 live 发现时；never-throw 非阻塞)  <code>local-model-catalog-graph</code><a class="anchor" href="#本地-ollama-模型并入统一目录接线-localollamaprobe-把本地正在服务的模型作-source-local-边接进-modelcataloggraph-buildcataloggraph-第-4-源-仅-live-发现时-never-throw-非阻塞-local-model-catalog-graph" aria-label="锚点">#</a></h3>
@@ -1063,7 +1062,7 @@ node --check services/backend/src/services/workspaceGitInit.js</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-158] 本地模型并入统一目录接线.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">node --test services/backend/tests/gateway/localOllamaProbeCatalogWiring.test.js
+<pre><code class="language-bash">node --<span class="hljs-built_in">test</span> services/backend/tests/gateway/localOllamaProbeCatalogWiring.test.js
 node --check services/backend/src/services/gateway/modelCatalogGraph.js</code></pre>
 <hr>
 <h3 id="行为特征化并入误报收口裁决接线-characterizationsnapshot-falsepositivefixguard-finalize-就地用回归门-baseline-current-快照差分-未覆盖文件上的静默行为漂移-并入裁决-agenticharnessservice-透传快照-characterization-silent-drift-fpf">行为特征化并入误报收口裁决接线 (characterizationSnapshot — falsePositiveFixGuard.finalize 就地用回归门 baseline/current 快照差分「未覆盖文件上的静默行为漂移」并入裁决；agenticHarnessService 透传快照)  <code>characterization-silent-drift-fpf</code><a class="anchor" href="#行为特征化并入误报收口裁决接线-characterizationsnapshot-falsepositivefixguard-finalize-就地用回归门-baseline-current-快照差分-未覆盖文件上的静默行为漂移-并入裁决-agenticharnessservice-透传快照-characterization-silent-drift-fpf" aria-label="锚点">#</a></h3>
@@ -1074,7 +1073,7 @@ node --check services/backend/src/services/gateway/modelCatalogGraph.js</code></
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-160] 行为特征化并入误报收口裁决接线.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">node --test services/backend/tests/services/characterizationFpfWiring.test.js
+<pre><code class="language-bash">node --<span class="hljs-built_in">test</span> services/backend/tests/services/characterizationFpfWiring.test.js
 node --check services/backend/src/services/falsePositiveFixGuard.js</code></pre>
 <hr>
 <h3 id="cli-web-管理面平价守卫-parityguard-checkparity-证明-cli-与-web-通过同一-registry-漏斗管理同一批资源-两个面永不矛盾-锁成-ci-提交期不变量-parity-guard-cli-web">CLI/Web 管理面平价守卫 (parityGuard.checkParity — 证明 CLI 与 Web 通过同一 registry 漏斗管理同一批资源，两个面永不矛盾，锁成 CI/提交期不变量)  <code>parity-guard-cli-web</code><a class="anchor" href="#cli-web-管理面平价守卫-parityguard-checkparity-证明-cli-与-web-通过同一-registry-漏斗管理同一批资源-两个面永不矛盾-锁成-ci-提交期不变量-parity-guard-cli-web" aria-label="锚点">#</a></h3>
@@ -1085,7 +1084,7 @@ node --check services/backend/src/services/falsePositiveFixGuard.js</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-162] CLI-Web管理面平价守卫接线.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">node --test services/backend/tests/services/management/parityGuardWiring.test.js
+<pre><code class="language-bash">node --<span class="hljs-built_in">test</span> services/backend/tests/services/management/parityGuardWiring.test.js
 node --check services/backend/src/services/management/parityGuard.js</code></pre>
 <hr>
 <h3 id="动作契约极小核验器-v-的-ci-强制-actioncontractverifier-模型无关可证明不变量层的-fail-closed-谓词核验器-把-p1-p8-投毒抵抗-谓词-hoare-逻辑锁成发布门禁-action-contract-verifier-ci-guard">动作契约极小核验器 V 的 CI 强制 (actionContractVerifier — 模型无关可证明不变量层的 fail-closed 谓词核验器,把 P1-P8 投毒抵抗+谓词/Hoare 逻辑锁成发布门禁)  <code>action-contract-verifier-ci-guard</code><a class="anchor" href="#动作契约极小核验器-v-的-ci-强制-actioncontractverifier-模型无关可证明不变量层的-fail-closed-谓词核验器-把-p1-p8-投毒抵抗-谓词-hoare-逻辑锁成发布门禁-action-contract-verifier-ci-guard" aria-label="锚点">#</a></h3>
@@ -1096,7 +1095,7 @@ node --check services/backend/src/services/management/parityGuard.js</code></pre
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-163] 动作契约核验器CI强制接线.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">node --test services/backend/tests/actionContractVerifier.test.js
+<pre><code class="language-bash">node --<span class="hljs-built_in">test</span> services/backend/tests/actionContractVerifier.test.js
 node --check services/backend/src/services/syscallGateway/actionContractVerifier.js</code></pre>
 <hr>
 <h3 id="离线文档站生成器-build-docs-site-js-把每个-md-确定性渲染成同名-html-套统一模板-顶栏-侧边栏全站导航-面包屑-目录-上下一页-mermaid-图-构建期代码高亮-滚动动画-并把-md-链接改写成-html-实现站内跳转-verify-docs-site-js-是-b2-验证门-docs-site-generator">离线文档站生成器 (build_docs_site.js：把每个 .md 确定性渲染成同名 .html，套统一模板=顶栏/侧边栏全站导航/面包屑/目录/上下一页/mermaid 图/构建期代码高亮/滚动动画，并把 .md 链接改写成 .html 实现站内跳转；verify_docs_site.js 是 B2 验证门)  <code>docs-site-generator</code><a class="anchor" href="#离线文档站生成器-build-docs-site-js-把每个-md-确定性渲染成同名-html-套统一模板-顶栏-侧边栏全站导航-面包屑-目录-上下一页-mermaid-图-构建期代码高亮-滚动动画-并把-md-链接改写成-html-实现站内跳转-verify-docs-site-js-是-b2-验证门-docs-site-generator" aria-label="锚点">#</a></h3>
@@ -1112,8 +1111,8 @@ npm run docs:lint
 npm run docs:verify
 node --check scripts/docs/build_docs_site.js
 node --check scripts/docs/lint_docs_widgets.js
-node --test scripts/docs/build_docs_site.test.js
-node --test scripts/docs/lint_docs_widgets.test.js
+node --<span class="hljs-built_in">test</span> scripts/docs/build_docs_site.test.js
+node --<span class="hljs-built_in">test</span> scripts/docs/lint_docs_widgets.test.js
 python3 -m unittest tests.unit.test_docs_site_build
 python3 -m py_compile setup.py scripts/release/docs_bundle_regen.py platform/khy_platform/docs_site.py</code></pre>
 <hr>
@@ -1128,8 +1127,8 @@ python3 -m py_compile setup.py scripts/release/docs_bundle_regen.py platform/khy
 <pre><code class="language-bash">node --check services/backend/src/services/gateway/vertexRequestShaping.js
 node --check services/backend/src/cli/handlers/gateway.js
 node --check services/backend/src/cli/router.js
-node --test services/backend/tests/services/gateway/vertexRequestShaping.test.js
-node --test services/backend/tests/services/gateway/vertexHandlerWiring.test.js</code></pre>
+node --<span class="hljs-built_in">test</span> services/backend/tests/services/gateway/vertexRequestShaping.test.js
+node --<span class="hljs-built_in">test</span> services/backend/tests/services/gateway/vertexHandlerWiring.test.js</code></pre>
 <hr>
 <h3 id="khy-msg-多平台消息收发-钉钉-飞书-企业微信-群机器人-webhook-填-webhook-即可发送-把-webhooks-配到平台后台可接收-验签-解密-解析-messaging-channels">khy msg 多平台消息收发 (钉钉/飞书/企业微信 群机器人 webhook：填 webhook 即可发送；把 /webhooks/&lt;平台&gt; 配到平台后台可接收——验签+解密+解析)  <code>messaging-channels</code><a class="anchor" href="#khy-msg-多平台消息收发-钉钉-飞书-企业微信-群机器人-webhook-填-webhook-即可发送-把-webhooks-配到平台后台可接收-验签-解密-解析-messaging-channels" aria-label="锚点">#</a></h3>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
@@ -1142,12 +1141,12 @@ node --test services/backend/tests/services/gateway/vertexHandlerWiring.test.js<
 <pre><code class="language-bash">node --check services/backend/src/services/messaging/msgChannelCore.js
 node --check services/backend/src/services/messaging/msgInboundCore.js
 node --check services/backend/src/cli/handlers/msg.js
-node --test services/backend/tests/services/messaging/msgChannelCore.test.js
-node --test services/backend/tests/services/messaging/msgInboundCore.test.js
-node --test services/backend/tests/services/messaging/msgReplyBridge.test.js
-node --test services/backend/tests/services/messaging/msgReplyRoundtrip.test.js
-node --test services/backend/tests/services/messaging/msgSenderRetry.test.js
-node --test services/backend/tests/cli/handlers/msgHandler.test.js</code></pre>
+node --<span class="hljs-built_in">test</span> services/backend/tests/services/messaging/msgChannelCore.test.js
+node --<span class="hljs-built_in">test</span> services/backend/tests/services/messaging/msgInboundCore.test.js
+node --<span class="hljs-built_in">test</span> services/backend/tests/services/messaging/msgReplyBridge.test.js
+node --<span class="hljs-built_in">test</span> services/backend/tests/services/messaging/msgReplyRoundtrip.test.js
+node --<span class="hljs-built_in">test</span> services/backend/tests/services/messaging/msgSenderRetry.test.js
+node --<span class="hljs-built_in">test</span> services/backend/tests/cli/handlers/msgHandler.test.js</code></pre>
 <hr>
 <h3 id="弱模型护栏引擎-弱-陌生模型改-khyos-前先查这里-高危位点-照抄范例-看似bug实为刻意设计清单-weak-model-guidance">弱模型护栏引擎(弱/陌生模型改 khyos 前先查这里:高危位点+照抄范例+看似bug实为刻意设计清单)  <code>weak-model-guidance</code><a class="anchor" href="#弱模型护栏引擎-弱-陌生模型改-khyos-前先查这里-高危位点-照抄范例-看似bug实为刻意设计清单-weak-model-guidance" aria-label="锚点">#</a></h3>
 <p><strong>先读这些文件：</strong></p>
@@ -1186,7 +1185,7 @@ node --test services/backend/tests/cli/handlers/msgHandler.test.js</code></pre>
 <ul><li>docs/03_DESIGN_设计/[DESIGN-ARCH-068] 仓库层级板块规范.md</li><li>docs/07_OPS_运维/[OPS-MAN-174] 任务入口总表.md</li><li>docs/08_MGMT_项目管理/[MGMT-STD-001] 项目文档结构与索引铁律规范.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
 <pre><code class="language-bash">npm run check:layout
-node --test scripts/tests/check-repo-layout.test.js</code></pre>
+node --<span class="hljs-built_in">test</span> scripts/tests/check-repo-layout.test.js</code></pre>
 <hr>
 <h2 id="都不对">都不对？<a class="anchor" href="#都不对" aria-label="锚点">#</a></h2>
 <ul><li>把报错原文完整贴给分诊器：<code>npm run maintainer:triage -- &quot;&lt;把报错粘这里&gt;&quot;</code>。</li><li>仍无匹配就查总入口 <code>docs/00_INDEX_文档索引.md</code>，或读 <code>.ai/MAP.md</code> 了解全局骨架。</li><li>新子系统请先登记进 <code>docs/_维护者/维护映射表.json</code>，本表下次重生会自动收录它。</li></ul>

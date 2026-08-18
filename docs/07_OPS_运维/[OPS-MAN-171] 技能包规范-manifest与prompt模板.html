@@ -47,12 +47,12 @@
 <p>字段命名与归一逻辑核实自 <code>index.js._buildSkill</code>（同时兼容 <code>snake_case</code> / <code>kebab-case</code> / <code>camelCase</code> 若干写法）。</p>
 <table><thead><tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr></thead><tbody><tr><td><code>name</code></td><td>string</td><td><strong>必填</strong></td><td>技能唯一标识；缺失则该技能被跳过（<code>_buildSkill</code> 返回 null）。落盘目录名也优先取它。</td></tr><tr><td><code>description</code></td><td>string</td><td>建议</td><td>简短描述，出现在技能目录列表里。</td></tr><tr><td><code>trigger</code> / <code>command</code></td><td>string</td><td>可选</td><td>斜杠命令；不带 <code>/</code> 会自动补。缺省为 <code>/&lt;name&gt;</code>。</td></tr><tr><td><code>user_invocable</code> / <code>userInvocable</code></td><td>boolean</td><td>可选</td><td>是否对用户可见可调用。默认 <code>true</code>。</td></tr><tr><td><code>aliases</code></td><td>string[]</td><td>可选</td><td>备用触发词（如 <code>[&quot;/dl-video&quot;]</code>）。</td></tr><tr><td><code>category</code></td><td>string</td><td>可选</td><td>分类，默认 <code>others</code>。</td></tr><tr><td><code>tags</code></td><td>string[]</td><td>可选</td><td>搜索标签。</td></tr><tr><td><code>platforms</code></td><td>string[]</td><td>可选</td><td>适配平台（如 <code>cosh</code>、<code>claude-code</code>、<code>khy-quant</code>）；空视为通用。</td></tr><tr><td><code>paths</code></td><td>string[]</td><td>可选</td><td>glob 条件激活；命中 cwd/最近文件才激活。<code>null</code>/缺省 = 始终激活。</td></tr><tr><td><code>when_to_use</code> / <code>whenToUse</code></td><td>string</td><td>可选</td><td>「何时使用」提示，注入目录时作为 use-when 提示。</td></tr><tr><td><code>allowed-tools</code> / <code>allowed_tools</code> / <code>allowedTools</code></td><td>string[] 或逗号/空格分隔字符串</td><td>可选</td><td>handler 运行时的工具白名单。缺省 = 不限制。</td></tr><tr><td><code>disable-model-invocation</code> 等写法</td><td>boolean</td><td>可选</td><td>为真时模型不能通过 SkillTool 调用（人类 CLI 仍可）。默认 <code>false</code>。</td></tr><tr><td><code>context</code></td><td><code>&quot;inline&quot;</code> \</td><td><code>&quot;fork&quot;</code></td><td>可选</td></tr><tr><td><code>model</code></td><td>string</td><td>可选</td><td>指定模型；缺省 <code>null</code>。</td></tr></tbody></table>
 <p>最小可用 <code>manifest.json</code>：</p>
-<pre><code class="language-json">{
-  &quot;name&quot;: &quot;my-skill&quot;,
-  &quot;description&quot;: &quot;One-line description shown in the skill catalog.&quot;,
-  &quot;trigger&quot;: &quot;/my-skill&quot;,
-  &quot;user_invocable&quot;: true
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;my-skill&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;description&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;One-line description shown in the skill catalog.&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;trigger&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;/my-skill&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;user_invocable&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span>
+<span class="hljs-punctuation">}</span></code></pre>
 <hr>
 <h2 id="三-skill-md-frontmatter-规范">三、<code>SKILL.md</code> frontmatter 规范<a class="anchor" href="#三-skill-md-frontmatter-规范" aria-label="锚点">#</a></h2>
 <p>单文件式用 YAML frontmatter 描述元数据，正文是注入给 AI 的指令。字段核实自 <code>skillLoader.validateSkill</code> 的告警项与 <code>_parseYamlSimple</code> 的解析能力。</p>
@@ -64,10 +64,10 @@ layer: system              # system | application | domain
 lifecycle: operations      # development | testing | deployment | operations | maintenance
 tags: [linux, sysadmin]
 platforms: [cosh, claude-code, khy-quant]
-dependencies: [shell-scripting]
----
+<span class="hljs-section">dependencies: [shell-scripting]
+---</span>
 
-# Skill Title
+<span class="hljs-section"># Skill Title</span>
 
 ... markdown body: instructions for the AI ...</code></pre>
 <ul><li><code>validateSkill</code> 会对缺失 <code>name</code>/<code>version</code>/<code>description</code>/<code>layer</code>/<code>tags</code>/<code>platforms</code> 给出告警（非致命）。</li><li><code>_parseYamlSimple</code> 支持：标量、内联数组 <code>[a, b]</code>、块状列表（<code>key:</code> 后跟 <code>- item</code>）、布尔、数字、带引号字符串。<strong>不支持</strong>嵌套对象等复杂 YAML，请保持扁平。</li><li>无 frontmatter 时，整个文件作为正文，<code>name</code> 兜底取所在目录名。</li></ul>
@@ -77,14 +77,14 @@ dependencies: [shell-scripting]
 <p>纯 Markdown，作为提示词模板在技能被调用时注入。可在正文里描述该技能要做什么、如何使用参数（参数以字符串形式随调用传入）。</p>
 <h3 id="handler-js-可选"><code>handler.js</code>（可选）<a class="anchor" href="#handler-js-可选" aria-label="锚点">#</a></h3>
 <p>导出 <code>execute(args, context)</code> 或本身是函数，返回字符串或可序列化对象（核实自 <code>index.js.executeSkill</code>）：</p>
-<pre><code class="language-javascript">'use strict';
+<pre><code class="language-javascript"><span class="hljs-meta">&#x27;use strict&#x27;</span>;
 
-// args: string passed after the trigger; context: { cwd, ... }
-async function execute(args, context) {
-  return `handled: ${args || ''}`;
+<span class="hljs-comment">// args: string passed after the trigger; context: { cwd, ... }</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">execute</span>(<span class="hljs-params">args, context</span>) {
+  <span class="hljs-keyword">return</span> <span class="hljs-string">`handled: <span class="hljs-subst">${args || <span class="hljs-string">&#x27;&#x27;</span>}</span>`</span>;
 }
 
-module.exports = { execute };</code></pre>
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = { execute };</code></pre>
 <ul><li>有 <code>handler.js</code> 时优先于 <code>prompt.md</code> 执行。</li><li>若 manifest 声明了 <code>allowed-tools</code>，handler 运行期间该白名单会被强制生效。</li></ul>
 <hr>
 <h2 id="五-可复制模板与示范技能包">五、可复制模板与示范技能包<a class="anchor" href="#五-可复制模板与示范技能包" aria-label="锚点">#</a></h2>

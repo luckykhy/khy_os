@@ -35,19 +35,19 @@
 <p><strong><code>run</code> 选项</strong>：位置参数 <code>k=v</code>、<code>--input k=v</code>（显式输入）、<code>--json</code>（机读输出）、<code>--quantum &lt;N&gt;</code>（步进/配额）、<code>--userId &lt;id&gt;</code>。校验不通过的图会被<strong>拒绝运行</strong>。</p>
 <hr>
 <h2 id="二-典型用法">二、典型用法<a class="anchor" href="#二-典型用法" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># 1) 从 Coze 导出工作流文件，导入并命名
+<pre><code class="language-bash"><span class="hljs-comment"># 1) 从 Coze 导出工作流文件，导入并命名</span>
 khy workflow import ./my-coze-flow.json --name my-flow
 
-# 2) 看看长什么样
+<span class="hljs-comment"># 2) 看看长什么样</span>
 khy workflow list
-khy workflow show my-flow --mermaid       # 出 Mermaid 流程图
-khy workflow validate my-flow             # 严格校验
+khy workflow show my-flow --mermaid       <span class="hljs-comment"># 出 Mermaid 流程图</span>
+khy workflow validate my-flow             <span class="hljs-comment"># 严格校验</span>
 
-# 3) 运行（传入参数）
-khy workflow run my-flow topic=&quot;发布说明&quot; --input lang=zh --json
+<span class="hljs-comment"># 3) 运行（传入参数）</span>
+khy workflow run my-flow topic=<span class="hljs-string">&quot;发布说明&quot;</span> --input lang=zh --json
 
-# 4) 删除
-khy workflow rm my-flow</code></pre>
+<span class="hljs-comment"># 4) 删除</span>
+khy workflow <span class="hljs-built_in">rm</span> my-flow</code></pre>
 <hr>
 <h2 id="三-存储与边界">三、存储与边界<a class="anchor" href="#三-存储与边界" aria-label="锚点">#</a></h2>
 <ul><li>工作流存于 <code>&lt;dataHome&gt;/workflows/&lt;slug&gt;.json</code>（slug 由名称生成）。</li><li><code>run</code> 会调用<strong>真实的 LLM / 工具</strong>，所以确保网关已配好（见 [OPS-MAN-003]）。</li><li><strong>CLI 不批量枚举 Coze</strong>：命令行这条路只处理「单个导出文件的导入/执行」，并不去 Coze 平台批量拉取工作流列表——批量编辑请用 Coze 的 Web 编辑器，再逐个导出导入。</li></ul>

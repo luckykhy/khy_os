@@ -57,25 +57,25 @@
 <h2 id="measurement-commands">Measurement Commands<a class="anchor" href="#measurement-commands" aria-label="锚点">#</a></h2>
 <h3 id="inp-field-data-and-devtools-workflow">INP field data and DevTools workflow<a class="anchor" href="#inp-field-data-and-devtools-workflow" aria-label="锚点">#</a></h3>
 <ol><li><strong>Field data first</strong> — check <a href="https://developer.chrome.com/docs/crux/vis" target="_blank" rel="noopener">CrUX Vis</a> or your RUM tool for real-user INP before optimising</li><li><strong>Identify slow interactions</strong> — open DevTools → Performance panel → record while interacting; look for long tasks triggered by clicks/keystrokes</li><li><strong>Test on mid-range Android</strong> — INP issues often only surface on slower hardware; use a real device or DevTools CPU throttling (4×–6× slowdown)</li></ol>
-<pre><code class="language-bash"># Lighthouse CLI
+<pre><code class="language-bash"><span class="hljs-comment"># Lighthouse CLI</span>
 npx lighthouse https://localhost:3000 --output json --output-path ./report.json
 
-# Bundle analysis
+<span class="hljs-comment"># Bundle analysis</span>
 npx webpack-bundle-analyzer stats.json
-# or for Vite:
+<span class="hljs-comment"># or for Vite:</span>
 npx vite-bundle-visualizer
 
-# Check bundle size
+<span class="hljs-comment"># Check bundle size</span>
 npx bundlesize
 
-# Web Vitals in code
-import { onLCP, onINP, onCLS } from 'web-vitals';
+<span class="hljs-comment"># Web Vitals in code</span>
+import { onLCP, onINP, onCLS } from <span class="hljs-string">&#x27;web-vitals&#x27;</span>;
 onLCP(console.log);
 onINP(console.log);
 onCLS(console.log);
 
-# INP with interaction-level detail (attribution build)
-import { onINP } from 'web-vitals/attribution';
+<span class="hljs-comment"># INP with interaction-level detail (attribution build)</span>
+import { onINP } from <span class="hljs-string">&#x27;web-vitals/attribution&#x27;</span>;
 onINP(({ value, attribution }) =&gt; {
   const { interactionTarget, inputDelay, processingDuration, presentationDelay } = attribution;
   console.log({ value, interactionTarget, inputDelay, processingDuration, presentationDelay });

@@ -32,25 +32,25 @@
 <h2 id="what-it-is">What It Is<a class="anchor" href="#what-it-is" aria-label="锚点">#</a></h2>
 <p>The MacroCLI converts valuable GUI workflows into parameterized,<br>CLI-callable macros. Agents <strong>never touch the GUI directly</strong> — they call macros<br>through this stable CLI, and the runtime routes execution to the best available<br>backend (native plugin/API, file transformation, semantic UI control, or<br>precompiled GUI macro replay).</p>
 <h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">cd macrocli/agent-harness
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> macrocli/agent-harness
 pip install -e .</code></pre>
 <p><strong>Requirements:</strong> Python 3.10+, PyYAML, click, prompt-toolkit.</p>
 <h2 id="quick-start-for-agents">Quick Start (for agents)<a class="anchor" href="#quick-start-for-agents" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># 1. See what macros are available
+<pre><code class="language-bash"><span class="hljs-comment"># 1. See what macros are available</span>
 cli-anything-macrocli macro list --json
 
-# 2. Inspect a macro's parameters
+<span class="hljs-comment"># 2. Inspect a macro&#x27;s parameters</span>
 cli-anything-macrocli macro info export_file --json
 
-# 3. Dry-run to check params without side effects
+<span class="hljs-comment"># 3. Dry-run to check params without side effects</span>
 cli-anything-macrocli --dry-run macro run export_file \
     --param output=/tmp/test.txt --json
 
-# 4. Execute a macro
+<span class="hljs-comment"># 4. Execute a macro</span>
 cli-anything-macrocli macro run export_file \
     --param output=/tmp/result.txt --json
 
-# 5. See what backends are available
+<span class="hljs-comment"># 5. See what backends are available</span>
 cli-anything-macrocli backends --json</code></pre>
 <h2 id="command-reference">Command Reference<a class="anchor" href="#command-reference" aria-label="锚点">#</a></h2>
 <h3 id="global-flags">Global Flags<a class="anchor" href="#global-flags" aria-label="锚点">#</a></h3>
@@ -61,8 +61,8 @@ cli-anything-macrocli backends --json</code></pre>
 <table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>session status</code></td><td>Show session statistics</td></tr><tr><td><code>session history</code></td><td>Show recent run history</td></tr><tr><td><code>session save</code></td><td>Persist session to disk</td></tr><tr><td><code>session list</code></td><td>List all saved sessions</td></tr></tbody></table>
 <h3 id="backends"><code>backends</code><a class="anchor" href="#backends" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-macrocli backends --json
-# Shows: native_api, file_transform, semantic_ui, gui_macro, recovery
-# and whether each is available in the current environment.</code></pre>
+<span class="hljs-comment"># Shows: native_api, file_transform, semantic_ui, gui_macro, recovery</span>
+<span class="hljs-comment"># and whether each is available in the current environment.</span></code></pre>
 <h2 id="macro-parameters">Macro Parameters<a class="anchor" href="#macro-parameters" aria-label="锚点">#</a></h2>
 <p>Pass parameters with <code>--param key=value</code>. Repeat for multiple:</p>
 <pre><code class="language-bash">cli-anything-macrocli macro run transform_json \
@@ -72,21 +72,21 @@ cli-anything-macrocli backends --json</code></pre>
     --json</code></pre>
 <h2 id="output-format-json">Output Format (--json)<a class="anchor" href="#output-format-json" aria-label="锚点">#</a></h2>
 <p>All commands output JSON when <code>--json</code> is set:</p>
-<pre><code class="language-json">{
-  &quot;success&quot;: true,
-  &quot;macro_name&quot;: &quot;export_file&quot;,
-  &quot;output&quot;: {
-    &quot;exported_file&quot;: &quot;/tmp/result.txt&quot;
-  },
-  &quot;error&quot;: &quot;&quot;,
-  &quot;telemetry&quot;: {
-    &quot;duration_ms&quot;: 312,
-    &quot;steps_total&quot;: 2,
-    &quot;steps_run&quot;: 2,
-    &quot;backends_used&quot;: [&quot;native_api&quot;],
-    &quot;dry_run&quot;: false
-  }
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;macro_name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;export_file&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;output&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;exported_file&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;/tmp/result.txt&quot;</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;error&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;telemetry&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;duration_ms&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">312</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;steps_total&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">2</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;steps_run&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">2</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;backends_used&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;native_api&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;dry_run&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <p>On failure (<code>&quot;success&quot;: false</code>), read the <code>&quot;error&quot;</code> field for the reason.<br>Exit code is 1 on failure.</p>
 <h2 id="execution-backends">Execution Backends<a class="anchor" href="#execution-backends" aria-label="锚点">#</a></h2>
 <p>Backends are selected automatically based on the macro step definition:</p>
@@ -96,57 +96,57 @@ cli-anything-macrocli backends --json</code></pre>
 <pre><code class="language-bash">cli-anything-macrocli macro define my_macro --output \
     cli_anything/macrocli/macro_definitions/examples/my_macro.yaml</code></pre>
 <p>Minimal schema:</p>
-<pre><code class="language-yaml">name: my_macro
-version: &quot;1.0&quot;
-description: What this macro does.
+<pre><code class="language-yaml"><span class="hljs-attr">name:</span> <span class="hljs-string">my_macro</span>
+<span class="hljs-attr">version:</span> <span class="hljs-string">&quot;1.0&quot;</span>
+<span class="hljs-attr">description:</span> <span class="hljs-string">What</span> <span class="hljs-string">this</span> <span class="hljs-string">macro</span> <span class="hljs-string">does.</span>
 
-parameters:
-  output:
-    type: string
-    required: true
-    description: Where to write results.
-    example: /tmp/result.txt
+<span class="hljs-attr">parameters:</span>
+  <span class="hljs-attr">output:</span>
+    <span class="hljs-attr">type:</span> <span class="hljs-string">string</span>
+    <span class="hljs-attr">required:</span> <span class="hljs-literal">true</span>
+    <span class="hljs-attr">description:</span> <span class="hljs-string">Where</span> <span class="hljs-string">to</span> <span class="hljs-string">write</span> <span class="hljs-string">results.</span>
+    <span class="hljs-attr">example:</span> <span class="hljs-string">/tmp/result.txt</span>
 
-preconditions:
-  - file_exists: /path/to/input
+<span class="hljs-attr">preconditions:</span>
+  <span class="hljs-bullet">-</span> <span class="hljs-attr">file_exists:</span> <span class="hljs-string">/path/to/input</span>
 
-steps:
-  - id: step1
-    backend: native_api
-    action: run_command
-    params:
-      command: [my-app, --export, &quot;${output}&quot;]
-    timeout_ms: 30000
-    on_failure: fail  # or: skip, continue
+<span class="hljs-attr">steps:</span>
+  <span class="hljs-bullet">-</span> <span class="hljs-attr">id:</span> <span class="hljs-string">step1</span>
+    <span class="hljs-attr">backend:</span> <span class="hljs-string">native_api</span>
+    <span class="hljs-attr">action:</span> <span class="hljs-string">run_command</span>
+    <span class="hljs-attr">params:</span>
+      <span class="hljs-attr">command:</span> [<span class="hljs-string">my-app</span>, <span class="hljs-string">--export</span>, <span class="hljs-string">&quot;${output}&quot;</span>]
+    <span class="hljs-attr">timeout_ms:</span> <span class="hljs-number">30000</span>
+    <span class="hljs-attr">on_failure:</span> <span class="hljs-string">fail</span>  <span class="hljs-comment"># or: skip, continue</span>
 
-postconditions:
-  - file_exists: ${output}
-  - file_size_gt: [${output}, 100]
+<span class="hljs-attr">postconditions:</span>
+  <span class="hljs-bullet">-</span> <span class="hljs-attr">file_exists:</span> <span class="hljs-string">${output}</span>
+  <span class="hljs-bullet">-</span> <span class="hljs-attr">file_size_gt:</span> [<span class="hljs-string">$</span>{<span class="hljs-string">output</span>}, <span class="hljs-number">100</span>]
 
-outputs:
-  - name: result_file
-    path: ${output}
+<span class="hljs-attr">outputs:</span>
+  <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">result_file</span>
+    <span class="hljs-attr">path:</span> <span class="hljs-string">${output}</span>
 
-agent_hints:
-  danger_level: safe  # safe | moderate | dangerous
-  side_effects: [creates_file]
-  reversible: true</code></pre>
+<span class="hljs-attr">agent_hints:</span>
+  <span class="hljs-attr">danger_level:</span> <span class="hljs-string">safe</span>  <span class="hljs-comment"># safe | moderate | dangerous</span>
+  <span class="hljs-attr">side_effects:</span> [<span class="hljs-string">creates_file</span>]
+  <span class="hljs-attr">reversible:</span> <span class="hljs-literal">true</span></code></pre>
 <h2 id="agent-usage-rules">Agent Usage Rules<a class="anchor" href="#agent-usage-rules" aria-label="锚点">#</a></h2>
 <ol><li><strong>Always use <code>--json</code></strong> for programmatic output.</li><li><strong>Use <code>--dry-run</code> to validate params</strong> before executing side-effectful macros.</li><li><strong>Check <code>success</code> field</strong> — do not assume success from exit code alone.</li><li><strong>Read <code>error</code> field</strong> when <code>success</code> is false — it explains what failed.</li><li><strong>Use <code>macro info &lt;name&gt;</code> to discover params</strong> before calling <code>macro run</code>.</li><li><strong>Use absolute paths</strong> for all file parameters.</li></ol>
 <h2 id="example-workflow">Example Workflow<a class="anchor" href="#example-workflow" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># Step 1: What's available?
+<pre><code class="language-bash"><span class="hljs-comment"># Step 1: What&#x27;s available?</span>
 cli-anything-macrocli macro list --json
 
-# Step 2: What params does transform_json need?
+<span class="hljs-comment"># Step 2: What params does transform_json need?</span>
 cli-anything-macrocli macro info transform_json --json
 
-# Step 3: Test safely
+<span class="hljs-comment"># Step 3: Test safely</span>
 cli-anything-macrocli --dry-run macro run transform_json \
     --param file=/tmp/config.json \
     --param key=theme \
     --param value=dark --json
 
-# Step 4: Execute for real
+<span class="hljs-comment"># Step 4: Execute for real</span>
 cli-anything-macrocli macro run transform_json \
     --param file=/tmp/config.json \
     --param key=theme \

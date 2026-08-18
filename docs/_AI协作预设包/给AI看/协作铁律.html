@@ -64,35 +64,35 @@
 做每一步前先说你要改哪个文件、加哪个 KHY_ 门控、关掉后怎么回退，我确认后再改。</code></pre>
 <hr>
 <h2 id="r1-r2-展开-纯叶子模块长什么样">R1–R2 展开 · 纯叶子模块长什么样<a class="anchor" href="#r1-r2-展开-纯叶子模块长什么样" aria-label="锚点">#</a></h2>
-<pre><code class="language-js">'use strict';
-/**
+<pre><code class="language-js"><span class="hljs-meta">&#x27;use strict&#x27;</span>;
+<span class="hljs-comment">/**
  * xxxGuard.js — 一句话职责。纯叶子：零 IO、确定性、绝不抛、可单测。
  * 门控：KHY_XXX（默认开；仅显式 0/false/off/no 关）。
- */
-function isEnabled(env = process.env) {
-  try {
-    const v = env &amp;&amp; env.KHY_XXX;
-    if (v === undefined || v === null) return true;      // 默认开
-    return !['0', 'false', 'off', 'no'].includes(String(v).trim().toLowerCase());
-  } catch { return true; }
+ */</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">isEnabled</span>(<span class="hljs-params">env = process.env</span>) {
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">const</span> v = env &amp;&amp; env.<span class="hljs-property">KHY_XXX</span>;
+    <span class="hljs-keyword">if</span> (v === <span class="hljs-literal">undefined</span> || v === <span class="hljs-literal">null</span>) <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;      <span class="hljs-comment">// 默认开</span>
+    <span class="hljs-keyword">return</span> ![<span class="hljs-string">&#x27;0&#x27;</span>, <span class="hljs-string">&#x27;false&#x27;</span>, <span class="hljs-string">&#x27;off&#x27;</span>, <span class="hljs-string">&#x27;no&#x27;</span>].<span class="hljs-title function_">includes</span>(<span class="hljs-title class_">String</span>(v).<span class="hljs-title function_">trim</span>().<span class="hljs-title function_">toLowerCase</span>());
+  } <span class="hljs-keyword">catch</span> { <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>; }
 }
-function decide(input) {
-  try {
-    // ...纯计算，输入坏也返回安全默认...
-    return { ok: true, value: /* ... */ };
-  } catch { return null; }   // 绝不抛
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">decide</span>(<span class="hljs-params">input</span>) {
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-comment">// ...纯计算，输入坏也返回安全默认...</span>
+    <span class="hljs-keyword">return</span> { <span class="hljs-attr">ok</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">value</span>: <span class="hljs-comment">/* ... */</span> };
+  } <span class="hljs-keyword">catch</span> { <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>; }   <span class="hljs-comment">// 绝不抛</span>
 }
-module.exports = { isEnabled, decide };</code></pre>
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = { isEnabled, decide };</code></pre>
 <p>要点：零 IO（IO 留在接线处）；绝不抛（坏输入返 null/安全默认）；<code>env</code> 作参数可注入便于单测；登记 flagRegistry。</p>
 <h2 id="r3-r4-展开-门控接线与逐字节回退">R3–R4 展开 · 门控接线与逐字节回退<a class="anchor" href="#r3-r4-展开-门控接线与逐字节回退" aria-label="锚点">#</a></h2>
-<pre><code class="language-js">let result = legacyValue;              // 旧行为基准
-try {
-  const leaf = require('./xxxGuard');
-  if (leaf.isEnabled(process.env)) {
-    const d = leaf.decide(input);
-    if (d) result = d.value;           // 门开且叶子给出结果才覆盖
+<pre><code class="language-js"><span class="hljs-keyword">let</span> result = legacyValue;              <span class="hljs-comment">// 旧行为基准</span>
+<span class="hljs-keyword">try</span> {
+  <span class="hljs-keyword">const</span> leaf = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./xxxGuard&#x27;</span>);
+  <span class="hljs-keyword">if</span> (leaf.<span class="hljs-title function_">isEnabled</span>(process.<span class="hljs-property">env</span>)) {
+    <span class="hljs-keyword">const</span> d = leaf.<span class="hljs-title function_">decide</span>(input);
+    <span class="hljs-keyword">if</span> (d) result = d.<span class="hljs-property">value</span>;           <span class="hljs-comment">// 门开且叶子给出结果才覆盖</span>
   }
-} catch { /* fail-soft：保持 legacyValue */ }</code></pre>
+} <span class="hljs-keyword">catch</span> { <span class="hljs-comment">/* fail-soft：保持 legacyValue */</span> }</code></pre>
 <p>验证回退：临时 <code>KHY_XXX=off</code> 跑同一输入，输出应与改动前逐字节相同。</p>
 <h2 id="r5-展开-严格超集判据">R5 展开 · 严格超集判据<a class="anchor" href="#r5-展开-严格超集判据" aria-label="锚点">#</a></h2>
 <ul><li>✅ 旧代码只拦小写 <code>.ssh</code>，你补大小写折叠——只多拦不少拦。</li><li>✅ token 计数边界错档，你只修错那档——旧正确值不变。</li><li>❌ 为「更简洁」重写整个函数导致既有正确输出也变了——这是替换，不是超集。</li></ul>

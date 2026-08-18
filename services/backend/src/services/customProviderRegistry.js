@@ -8,6 +8,9 @@ const fs = require('fs');
 const path = require('path');
 
 const { getDataHome, getLegacyDataHome } = require('../utils/dataHome');
+const atomicWriteJson = require('../utils/atomicWriteJson');
+const { atomicWriteText } = require('../utils/atomicWriteJson');
+const { safeReadJsonSync } = require('./configGuard');
 
 const DATA_DIR = getDataHome();
 const REGISTRY_FILE = path.join(DATA_DIR, 'custom_providers.json');
@@ -23,7 +26,8 @@ function _migrateLegacy() {
     ) {
       const legacy = fs.readFileSync(LEGACY_REGISTRY_FILE, 'utf-8');
       fs.mkdirSync(DATA_DIR, { recursive: true });
-      fs.writeFileSync(REGISTRY_FILE, legacy, 'utf-8');
+      // 逐字节搬运:重新序列化会改变格式与键序,迁移不该动内容。
+      atomicWriteText(REGISTRY_FILE, legacy, { mode: 0o666 });
     }
   } catch {
     /* migration is best-effort */
@@ -53,13 +57,8 @@ function _load() {
     return _cache;
   }
   _migrateLegacy();
-  try {
-    const raw = fs.readFileSync(REGISTRY_FILE, 'utf-8');
-    const parsed = JSON.parse(raw);
-    _cache = Array.isArray(parsed) ? parsed : [];
-  } catch {
-    _cache = [];
-  }
+  const { data } = safeReadJsonSync(REGISTRY_FILE, { schema: [] });
+  _cache = Array.isArray(data) ? data : [];
   return _cache;
 }
 
@@ -67,7 +66,7 @@ function _save(providers) {
   _cache = providers;
   try {
     fs.mkdirSync(DATA_DIR, { recursive: true });
-    fs.writeFileSync(REGISTRY_FILE, JSON.stringify(providers, null, 2), 'utf-8');
+    atomicWriteJson(REGISTRY_FILE, providers, { mode: 0o666 });
   } catch {
     /* best effort */
   }

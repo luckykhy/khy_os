@@ -35,14 +35,14 @@
 <p><strong>Prerequisites:</strong></p>
 <ul><li>Python 3.10+</li><li>Rekordbox 6 or 7 installed (<code>master.db</code> must exist)</li><li>Virtual MIDI driver for live-deck control:<ul><li>Windows: loopMIDI / LoopBe / teVirtualMIDI</li><li>macOS: IAC Driver</li><li>Linux: ALSA virtual MIDI (<code>snd-virmidi</code>)</li></ul></li></ul>
 <h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># Status check
+<pre><code class="language-bash"><span class="hljs-comment"># Status check</span>
 cli-anything-rekordbox status
 
-# REPL mode
+<span class="hljs-comment"># REPL mode</span>
 cli-anything-rekordbox
 
-# JSON output for agents
-cli-anything-rekordbox --json library search &quot;Daft Punk&quot;</code></pre>
+<span class="hljs-comment"># JSON output for agents</span>
+cli-anything-rekordbox --json library search <span class="hljs-string">&quot;Daft Punk&quot;</span></code></pre>
 <h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
 <h3 id="library">Library<a class="anchor" href="#library" aria-label="锚点">#</a></h3>
 <table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>count</code></td><td>Total track count</td></tr><tr><td><code>search QUERY</code></td><td>Find tracks by title/artist substring</td></tr><tr><td><code>info TRACK_ID</code></td><td>Full track metadata</td></tr><tr><td><code>dump --out FILE.json</code></td><td>Export full library as JSON</td></tr></tbody></table>
@@ -80,7 +80,7 @@ cli-anything-rekordbox --json library search &quot;Daft Punk&quot;</code></pre>
 <h2 id="json-output">JSON output<a class="anchor" href="#json-output" aria-label="锚点">#</a></h2>
 <p>Every command supports <code>--json</code>:</p>
 <pre><code class="language-bash">$ cli-anything-rekordbox --json library count
-{&quot;track_count&quot;: 30344}</code></pre>
+{<span class="hljs-string">&quot;track_count&quot;</span>: 30344}</code></pre>
 <h2 id="license">License<a class="anchor" href="#license" aria-label="锚点">#</a></h2>
 <p>MIT</p>
       </article>

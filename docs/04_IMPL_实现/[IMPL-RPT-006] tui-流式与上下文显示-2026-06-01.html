@@ -46,33 +46,33 @@
 <p>三处协同修复，消除竞争条件：</p>
 <p><strong>a) replStore.js — 终态保护</strong></p>
 <p><code>CHUNK_RECEIVED</code> 和 <code>STREAMING_BLOCK_START</code> 不再覆盖 <code>done</code> 状态：</p>
-<pre><code class="language-javascript">// before
-activity: { ...state.activity, state: 'streaming' },
+<pre><code class="language-javascript"><span class="hljs-comment">// before</span>
+<span class="hljs-attr">activity</span>: { ...state.<span class="hljs-property">activity</span>, <span class="hljs-attr">state</span>: <span class="hljs-string">&#x27;streaming&#x27;</span> },
 
-// after
-activity: {
-  ...state.activity,
-  state: state.activity.state === 'done' ? 'done' : 'streaming',
+<span class="hljs-comment">// after</span>
+<span class="hljs-attr">activity</span>: {
+  ...state.<span class="hljs-property">activity</span>,
+  <span class="hljs-attr">state</span>: state.<span class="hljs-property">activity</span>.<span class="hljs-property">state</span> === <span class="hljs-string">&#x27;done&#x27;</span> ? <span class="hljs-string">&#x27;done&#x27;</span> : <span class="hljs-string">&#x27;streaming&#x27;</span>,
 },</code></pre>
 <p><strong>b) tuiShell.js — 同步 drain</strong></p>
 <p><code>chat()</code> 返回后、<code>streamingBlockEnd</code> 之前，同步清空 chunker 残留队列：</p>
-<pre><code class="language-javascript">const result = await ai().chat(text, { onChunk, onStatus });
-chunker.drain();   // ← 新增：同步 flush 残留 chunk
-// Finalize any open streaming block ...</code></pre>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> <span class="hljs-title function_">ai</span>().<span class="hljs-title function_">chat</span>(text, { onChunk, onStatus });
+chunker.<span class="hljs-title function_">drain</span>();   <span class="hljs-comment">// ← 新增：同步 flush 残留 chunk</span>
+<span class="hljs-comment">// Finalize any open streaming block ...</span></code></pre>
 <p><strong>c) StreamingChunker — 新增 <code>drain()</code> 方法</strong></p>
-<pre><code class="language-javascript">drain() {
-  if (this._queue.length === 0) return;
-  const coalesced = this._coalesce();
-  for (const item of coalesced) this._dispatch(item);
-  this._queue.length = 0;
-  this._scheduled = false;
+<pre><code class="language-javascript"><span class="hljs-title function_">drain</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">if</span> (<span class="hljs-variable language_">this</span>.<span class="hljs-property">_queue</span>.<span class="hljs-property">length</span> === <span class="hljs-number">0</span>) <span class="hljs-keyword">return</span>;
+  <span class="hljs-keyword">const</span> coalesced = <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">_coalesce</span>();
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> item <span class="hljs-keyword">of</span> coalesced) <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">_dispatch</span>(item);
+  <span class="hljs-variable language_">this</span>.<span class="hljs-property">_queue</span>.<span class="hljs-property">length</span> = <span class="hljs-number">0</span>;
+  <span class="hljs-variable language_">this</span>.<span class="hljs-property">_scheduled</span> = <span class="hljs-literal">false</span>;
 }</code></pre>
 <p><strong>d) tuiShell.js — turnComplete 后强制渲染</strong></p>
-<pre><code class="language-javascript">processInput(trimmed).finally(() =&gt; {
-  _setBusy(false);
-  store.dispatch(actions.turnComplete({}));
-  _renderScheduled = false;
-  setImmediate(_doRenderAndTrack);  // 绕过 debounce，立即渲染 done 态
+<pre><code class="language-javascript"><span class="hljs-title function_">processInput</span>(trimmed).<span class="hljs-title function_">finally</span>(<span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-title function_">_setBusy</span>(<span class="hljs-literal">false</span>);
+  store.<span class="hljs-title function_">dispatch</span>(actions.<span class="hljs-title function_">turnComplete</span>({}));
+  _renderScheduled = <span class="hljs-literal">false</span>;
+  <span class="hljs-title function_">setImmediate</span>(_doRenderAndTrack);  <span class="hljs-comment">// 绕过 debounce，立即渲染 done 态</span>
 });</code></pre>
 <h3 id="涉及文件">涉及文件<a class="anchor" href="#涉及文件" aria-label="锚点">#</a></h3>
 <table><thead><tr><th>文件</th><th>修改内容</th></tr></thead><tbody><tr><td><code>backend/src/cli/tui/store/replStore.js</code></td><td><code>CHUNK_RECEIVED</code>、<code>STREAMING_BLOCK_START</code> 终态保护</td></tr><tr><td><code>backend/src/cli/tui/tuiShell.js</code></td><td><code>StreamingChunker.drain()</code>、同步 drain 调用、强制渲染</td></tr></tbody></table>
@@ -86,10 +86,10 @@ chunker.drain();   // ← 新增：同步 flush 残留 chunk
 <p><code>wrapText</code> 按 <code>\n</code> 切分后，&quot;今&quot; 和 &quot;天&quot; 被分到不同的行/段落。</p>
 <h3 id="修复-2">修复<a class="anchor" href="#修复-2" aria-label="锚点">#</a></h3>
 <p>在 <code>wrapText</code> 入口添加正则预处理，将 CJK 字符间的孤立 <code>\n</code> 合并为连续文本：</p>
-<pre><code class="language-javascript">// TranscriptViewport.js — wrapText 入口
-let cleaned = String(text).replace(
-  /(?&lt;=[\u2e80-\u9fff\uf900-\ufaff\ufe30-\ufe6f\uff01-\uff60])\n(?=[\u2e80-\u9fff\uf900-\ufaff\ufe30-\ufe6f\uff01-\uff60])/g,
-  ''
+<pre><code class="language-javascript"><span class="hljs-comment">// TranscriptViewport.js — wrapText 入口</span>
+<span class="hljs-keyword">let</span> cleaned = <span class="hljs-title class_">String</span>(text).<span class="hljs-title function_">replace</span>(
+  <span class="hljs-regexp">/(?&lt;=[\u2e80-\u9fff\uf900-\ufaff\ufe30-\ufe6f\uff01-\uff60])\n(?=[\u2e80-\u9fff\uf900-\ufaff\ufe30-\ufe6f\uff01-\uff60])/g</span>,
+  <span class="hljs-string">&#x27;&#x27;</span>
 );</code></pre>
 <p>规则：</p>
 <ul><li><code>CJK字\nCJK字</code> → 合并（<code>今\n天</code> → <code>今天</code>）</li><li><code>CJK字\n\nCJK字</code> → 保留段落分隔（<code>。\n\n第</code> 不变）</li><li><code>English\nEnglish</code> → 保留（不影响英文换行）</li></ul>
@@ -101,27 +101,27 @@ let cleaned = String(text).replace(
 <p>欢迎页和 footer 显示 <code>上下文: 200k</code>，但 Claude Opus 4.6 实际支持 1M。</p>
 <h3 id="根因-3">根因<a class="anchor" href="#根因-3" aria-label="锚点">#</a></h3>
 <p><code>ai.js</code> 中 <code>MODEL_CAPABILITIES</code> 静态表记录了错误值：</p>
-<pre><code class="language-javascript">'claude-opus-4': { ..., context: 200000, ... },  // 应为 1000000
-'claude-sonnet-4': { ..., context: 200000, ... }, // 应为 1000000</code></pre>
+<pre><code class="language-javascript"><span class="hljs-string">&#x27;claude-opus-4&#x27;</span>: { ..., <span class="hljs-attr">context</span>: <span class="hljs-number">200000</span>, ... },  <span class="hljs-comment">// 应为 1000000</span>
+<span class="hljs-string">&#x27;claude-sonnet-4&#x27;</span>: { ..., <span class="hljs-attr">context</span>: <span class="hljs-number">200000</span>, ... }, <span class="hljs-comment">// 应为 1000000</span></code></pre>
 <p>且 <code>_resolveModelContextLimit()</code> 完全依赖硬编码表，不查询 gateway 实测数据。</p>
 <h3 id="修复-3">修复<a class="anchor" href="#修复-3" aria-label="锚点">#</a></h3>
 <p><strong>a) 修正 MODEL_CAPABILITIES 中的 Claude 4 系列 context 值</strong></p>
-<pre><code class="language-javascript">'claude-opus-4':   { ..., context: 1000000, ... },
-'claude-sonnet-4': { ..., context: 1000000, ... },</code></pre>
+<pre><code class="language-javascript"><span class="hljs-string">&#x27;claude-opus-4&#x27;</span>:   { ..., <span class="hljs-attr">context</span>: <span class="hljs-number">1000000</span>, ... },
+<span class="hljs-string">&#x27;claude-sonnet-4&#x27;</span>: { ..., <span class="hljs-attr">context</span>: <span class="hljs-number">1000000</span>, ... },</code></pre>
 <p><strong>b) <code>_resolveModelContextLimit()</code> 优先查 gateway 实测数据</strong></p>
-<pre><code class="language-javascript">function _resolveModelContextLimit(modelHint = '') {
-  // 1. Gateway adapter-reported real data (single source of truth)
-  try {
-    const gw = require('../services/gateway/aiGateway');
-    const instance = typeof gw.getInstance === 'function' ? gw.getInstance() : gw;
-    if (instance?.getModelContextWindow) {
-      const dynamic = instance.getModelContextWindow(lower);
-      if (dynamic &gt; 0) return dynamic;
+<pre><code class="language-javascript"><span class="hljs-keyword">function</span> <span class="hljs-title function_">_resolveModelContextLimit</span>(<span class="hljs-params">modelHint = <span class="hljs-string">&#x27;&#x27;</span></span>) {
+  <span class="hljs-comment">// 1. Gateway adapter-reported real data (single source of truth)</span>
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">const</span> gw = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../services/gateway/aiGateway&#x27;</span>);
+    <span class="hljs-keyword">const</span> instance = <span class="hljs-keyword">typeof</span> gw.<span class="hljs-property">getInstance</span> === <span class="hljs-string">&#x27;function&#x27;</span> ? gw.<span class="hljs-title function_">getInstance</span>() : gw;
+    <span class="hljs-keyword">if</span> (instance?.<span class="hljs-property">getModelContextWindow</span>) {
+      <span class="hljs-keyword">const</span> dynamic = instance.<span class="hljs-title function_">getModelContextWindow</span>(lower);
+      <span class="hljs-keyword">if</span> (dynamic &gt; <span class="hljs-number">0</span>) <span class="hljs-keyword">return</span> dynamic;
     }
-  } catch { /* gateway not ready yet */ }
+  } <span class="hljs-keyword">catch</span> { <span class="hljs-comment">/* gateway not ready yet */</span> }
 
-  // 2. Fallback: MODEL_CAPABILITIES static table
-  // 3. Unknown model → 128000
+  <span class="hljs-comment">// 2. Fallback: MODEL_CAPABILITIES static table</span>
+  <span class="hljs-comment">// 3. Unknown model → 128000</span>
 }</code></pre>
 <h3 id="涉及文件-3">涉及文件<a class="anchor" href="#涉及文件-3" aria-label="锚点">#</a></h3>
 <table><thead><tr><th>文件</th><th>修改内容</th></tr></thead><tbody><tr><td><code>backend/src/cli/ai.js</code></td><td><code>MODEL_CAPABILITIES</code> context 值修正 + <code>_resolveModelContextLimit</code> gateway 优先</td></tr></tbody></table>
@@ -133,37 +133,37 @@ let cleaned = String(text).replace(
 <p>建立单一数据源架构：<strong>适配器实测 → gateway 缓存 → UI 显示</strong>。</p>
 <p><strong>a) 删除 <code>hudRenderer.js</code> 的 <code>MODEL_CONTEXT_LIMITS</code> 硬编码表</strong></p>
 <p><code>getContextLimit()</code> 完全委托给 gateway：</p>
-<pre><code class="language-javascript">function getContextLimit(model) {
-  if (!model) return 0;
-  try {
-    const gw = require('../services/gateway/aiGateway');
-    const instance = typeof gw.getInstance === 'function' ? gw.getInstance() : gw;
-    if (instance?.getModelContextWindow) {
-      return instance.getModelContextWindow(model);
+<pre><code class="language-javascript"><span class="hljs-keyword">function</span> <span class="hljs-title function_">getContextLimit</span>(<span class="hljs-params">model</span>) {
+  <span class="hljs-keyword">if</span> (!model) <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">const</span> gw = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../services/gateway/aiGateway&#x27;</span>);
+    <span class="hljs-keyword">const</span> instance = <span class="hljs-keyword">typeof</span> gw.<span class="hljs-property">getInstance</span> === <span class="hljs-string">&#x27;function&#x27;</span> ? gw.<span class="hljs-title function_">getInstance</span>() : gw;
+    <span class="hljs-keyword">if</span> (instance?.<span class="hljs-property">getModelContextWindow</span>) {
+      <span class="hljs-keyword">return</span> instance.<span class="hljs-title function_">getModelContextWindow</span>(model);
     }
-  } catch { /* gateway not ready */ }
-  return 0;
+  } <span class="hljs-keyword">catch</span> { <span class="hljs-comment">/* gateway not ready */</span> }
+  <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
 }</code></pre>
 <p><strong>b) <code>aiGateway.js</code> — 未知模型异步查询</strong></p>
-<pre><code class="language-javascript">getModelContextWindow(modelId) {
-  // 1. 精确缓存命中
-  // 2. 部分匹配（版本后缀）
-  // 3. 环境变量 KHY_CONTEXT_WINDOW
-  // 4. 未命中 → 触发后台异步查询，返回 0
-  this._resolveContextWindowAsync(modelId);
-  return 0;
+<pre><code class="language-javascript"><span class="hljs-title function_">getModelContextWindow</span>(<span class="hljs-params">modelId</span>) {
+  <span class="hljs-comment">// 1. 精确缓存命中</span>
+  <span class="hljs-comment">// 2. 部分匹配（版本后缀）</span>
+  <span class="hljs-comment">// 3. 环境变量 KHY_CONTEXT_WINDOW</span>
+  <span class="hljs-comment">// 4. 未命中 → 触发后台异步查询，返回 0</span>
+  <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">_resolveContextWindowAsync</span>(modelId);
+  <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
 }
 
-_resolveContextWindowAsync(modelId) {
-  // 去重 + 遍历可用适配器的 listModels()
-  // 找到后写入 _contextWindowCache，下次查询命中
+<span class="hljs-title function_">_resolveContextWindowAsync</span>(<span class="hljs-params">modelId</span>) {
+  <span class="hljs-comment">// 去重 + 遍历可用适配器的 listModels()</span>
+  <span class="hljs-comment">// 找到后写入 _contextWindowCache，下次查询命中</span>
 }</code></pre>
 <p><strong>c) generate 成功后自动缓存</strong></p>
-<pre><code class="language-javascript">// finishResult 中
-if (result?.success) {
-  const usedModel = result.model || response?.model || options.model;
-  if (usedModel &amp;&amp; !this._contextWindowCache.has(usedModel)) {
-    this._resolveContextWindowAsync(usedModel);
+<pre><code class="language-javascript"><span class="hljs-comment">// finishResult 中</span>
+<span class="hljs-keyword">if</span> (result?.<span class="hljs-property">success</span>) {
+  <span class="hljs-keyword">const</span> usedModel = result.<span class="hljs-property">model</span> || response?.<span class="hljs-property">model</span> || options.<span class="hljs-property">model</span>;
+  <span class="hljs-keyword">if</span> (usedModel &amp;&amp; !<span class="hljs-variable language_">this</span>.<span class="hljs-property">_contextWindowCache</span>.<span class="hljs-title function_">has</span>(usedModel)) {
+    <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">_resolveContextWindowAsync</span>(usedModel);
   }
 }</code></pre>
 <p><strong>d) 数据流向</strong></p>
@@ -184,16 +184,16 @@ FooterBar / 欢迎页            → 显示真实值，0 时隐藏</code></pre>
 <p>行末刚好只剩一个 CJK 字符位置时，会出现孤字（如 &quot;今&quot; 独占行末，后续内容换行）。</p>
 <h3 id="修复-5">修复<a class="anchor" href="#修复-5" aria-label="锚点">#</a></h3>
 <p>在 <code>wrapText</code> 的 greedy wrap 中添加孤字检测：</p>
-<pre><code class="language-javascript">const widthAfter = currentWidth + tok.cw;
-const remaining = maxWidth - widthAfter;
-// 如果当前 CJK 字符放入后，剩余空间不足以容纳下一个 CJK 字符
-// 且下一个字符不是避头标点 → 提前换行，避免孤字
-if (tok.cw === 2 &amp;&amp; remaining &gt;= 0 &amp;&amp; remaining &lt; 2 &amp;&amp; ti + 1 &lt; tokens.length) {
-  const next = tokens[ti + 1];
-  if (next.cw === 2 &amp;&amp; !_NO_LINE_START.has(next.ch)) {
-    lines.push(current + '\x1b[0m');
-    current = ''; currentWidth = 0;
-    continue;
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> widthAfter = currentWidth + tok.<span class="hljs-property">cw</span>;
+<span class="hljs-keyword">const</span> remaining = maxWidth - widthAfter;
+<span class="hljs-comment">// 如果当前 CJK 字符放入后，剩余空间不足以容纳下一个 CJK 字符</span>
+<span class="hljs-comment">// 且下一个字符不是避头标点 → 提前换行，避免孤字</span>
+<span class="hljs-keyword">if</span> (tok.<span class="hljs-property">cw</span> === <span class="hljs-number">2</span> &amp;&amp; remaining &gt;= <span class="hljs-number">0</span> &amp;&amp; remaining &lt; <span class="hljs-number">2</span> &amp;&amp; ti + <span class="hljs-number">1</span> &lt; tokens.<span class="hljs-property">length</span>) {
+  <span class="hljs-keyword">const</span> next = tokens[ti + <span class="hljs-number">1</span>];
+  <span class="hljs-keyword">if</span> (next.<span class="hljs-property">cw</span> === <span class="hljs-number">2</span> &amp;&amp; !_NO_LINE_START.<span class="hljs-title function_">has</span>(next.<span class="hljs-property">ch</span>)) {
+    lines.<span class="hljs-title function_">push</span>(current + <span class="hljs-string">&#x27;\x1b[0m&#x27;</span>);
+    current = <span class="hljs-string">&#x27;&#x27;</span>; currentWidth = <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">continue</span>;
   }
 }</code></pre>
 <h3 id="涉及文件-5">涉及文件<a class="anchor" href="#涉及文件-5" aria-label="锚点">#</a></h3>

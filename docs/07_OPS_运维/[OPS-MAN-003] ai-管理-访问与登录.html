@@ -33,7 +33,7 @@
 <ul><li><code>khyguanli</code></li><li><code>guanli</code></li><li><code>aiguanli</code></li><li><code>/login</code>（先登录 CLI，会用于管理页免登录桥接）</li></ul>
 <p>在系统 Shell 中，推荐：</p>
 <pre><code class="language-bash">khy guanli
-# 或
+<span class="hljs-comment"># 或</span>
 khy gateway manage open</code></pre>
 <h2 id="2-打开逻辑-已统一">2. 打开逻辑（已统一）<a class="anchor" href="#2-打开逻辑-已统一" aria-label="锚点">#</a></h2>
 <p><code>gateway manage open</code>（含 <code>khyguanli</code>）按以下顺序执行：</p>
@@ -50,15 +50,15 @@ khy gateway manage open</code></pre>
 <h3 id="3-1-用户名-密码模式-jwt">3.1 用户名/密码模式（JWT）<a class="anchor" href="#3-1-用户名-密码模式-jwt" aria-label="锚点">#</a></h3>
 <ul><li>默认管理员账号：由后端自动初始化（幂等，已存在则跳过）</li><li>用户名解析顺序：<code>KHY_ADMIN_USERNAME</code> 环境变量 → 已存在的凭据文件 → 当前 OS 用户名（小写化 + 过滤非法字符）→ 兜底 <code>admin</code></li><li><strong>默认密码没有固定值</strong>：由机器指纹 + 随机熵生成（约 16 位混合字符强密码），首次启动时保存于数据目录 <code>.khy/credentials/default-admin.json</code>（<code>KHY_DATA_HOME</code> 覆盖时在其下）。请打开该文件查看初始密码。</li><li>若设置 <code>KHY_ADMIN_PASSWORD</code> / <code>DEFAULT_ADMIN_PASSWORD</code>：使用该密码，不写凭据文件，也不打印到日志。</li></ul>
 <p>若忘记密码，执行（<strong>密码必须显式提供，脚本无内置默认</strong>）：</p>
-<pre><code class="language-bash"># 在源码目录直接重置（推荐）
+<pre><code class="language-bash"><span class="hljs-comment"># 在源码目录直接重置（推荐）</span>
 node services/ai-backend/scripts/reset-admin-password.js --password &lt;你的新密码&gt;
-# 或 npm 脚本（需提供密码）
+<span class="hljs-comment"># 或 npm 脚本（需提供密码）</span>
 npm --prefix services/ai-backend run reset-admin -- --password &lt;你的新密码&gt;</code></pre>
 <p>如果你是 Docker 部署，执行：</p>
-<pre><code class="language-bash">docker compose exec ai-backend node scripts/reset-admin-password.js --password &lt;你的新密码&gt;
+<pre><code class="language-bash">docker compose <span class="hljs-built_in">exec</span> ai-backend node scripts/reset-admin-password.js --password &lt;你的新密码&gt;
 
-# 若使用自定义 compose project 名称（例如 khy-os）
-docker compose -p khy-os exec ai-backend node scripts/reset-admin-password.js --password &lt;你的新密码&gt;</code></pre>
+<span class="hljs-comment"># 若使用自定义 compose project 名称（例如 khy-os）</span>
+docker compose -p khy-os <span class="hljs-built_in">exec</span> ai-backend node scripts/reset-admin-password.js --password &lt;你的新密码&gt;</code></pre>
 <blockquote><p>历史安装的 <code>admin123</code> / <code>admin123.</code> / <code>admin05 / 012003</code> 等固定默认账号均已被动态凭据机制取代，不再作为默认口令。</p></blockquote>
 <h3 id="3-2-token-模式-ai-mgmt-auth-token">3.2 Token 模式（AI_MGMT_AUTH_TOKEN）<a class="anchor" href="#3-2-token-模式-ai-mgmt-auth-token" aria-label="锚点">#</a></h3>
 <p>如果设置了 <code>AI_MGMT_AUTH_TOKEN</code>，登录口只接受 token：</p>
@@ -74,10 +74,10 @@ docker compose -p khy-os exec ai-backend node scripts/reset-admin-password.js --
 <pre><code class="language-bash">khy gateway manage stop
 khy gateway manage start --daemon</code></pre>
 <p>如需手动指定前端来源：</p>
-<pre><code class="language-bash"># 开发目录（会尝试 npm run dev）
+<pre><code class="language-bash"><span class="hljs-comment"># 开发目录（会尝试 npm run dev）</span>
 khy gateway manage open --daemon --frontend-dir /absolute/path/to/ai-frontend
 
-# 静态目录（直接由 API 服务托管页面）
+<span class="hljs-comment"># 静态目录（直接由 API 服务托管页面）</span>
 khy gateway manage open --daemon --frontend-dist-dir /absolute/path/to/dist</code></pre>
 <p>并检查日志：</p>
 <ul><li><code>~/.khy/logs/ai_manage_daemon.log</code></li><li><code>~/.khy/logs/ai_frontend_dev.log</code></li></ul>
@@ -114,20 +114,20 @@ khy gateway manage status</code></pre>
 <table><thead><tr><th>模式</th><th>适配器</th><th>怎么配</th><th>入口命令</th></tr></thead><tbody><tr><td><strong>① 登录态导入</strong></td><td>kiro / cursor / trae（含别名 antigravity / nirvana）/ windsurf / warp</td><td>复用这些 IDE/CLI 本地已有的登录态，导入账号池</td><td><code>khy pool import &lt;provider&gt;</code></td></tr><tr><td><strong>② 订阅登录态</strong></td><td>claude / codex / vscode</td><td>走各自的本地订阅登录；Claude 可一键拉起</td><td>本地登录 / <code>khy claude</code></td></tr><tr><td><strong>③ API-Key 直连</strong></td><td>api / relay_api（及自定义 OpenAI 兼容 provider）</td><td>填 API Key，可用内置预设 prefill</td><td><code>khy gateway config</code> / <code>khy gateway add</code></td></tr><tr><td><strong>④ 本地 / 中继</strong></td><td>ollama / localLLM / cli / relay / clipboard</td><td>本地模型自动探测；中继/剪贴板按需启用</td><td><code>khy gateway detect</code>（本地）</td></tr></tbody></table>
 <p>各模式的深入配置路径：</p>
 <ul><li><strong>模式 ①（登录态导入）</strong>——把 Kiro/Cursor/Trae/Windsurf/Warp 的本地登录态汇成账号池，支持多账号自动调度与多租户分享，详见 [OPS-MAN-045] 账号池与多租户-深度指南。最常用：</li></ul>
-<pre><code class="language-bash">  khy pool import kiro      # 从本地 Kiro 登录态导入
-  khy pool status           # 看池子整体状态</code></pre>
+<pre><code class="language-bash">  khy pool import kiro      <span class="hljs-comment"># 从本地 Kiro 登录态导入</span>
+  khy pool status           <span class="hljs-comment"># 看池子整体状态</span></code></pre>
 <ul><li><strong>模式 ②（订阅登录态）</strong>——claude / codex / vscode 用各自的本地订阅登录态。Claude Code 可用 <code>khy claude</code> 一键零残留拉起（混合模式见 [OPS-MAN-004] claude-code-代理配置）：</li></ul>
-<pre><code class="language-bash">  khy claude --list         # 列出当前可用模型后退出
-  khy claude                # 用 KHY 网关拉起 Claude Code</code></pre>
+<pre><code class="language-bash">  khy claude --list         <span class="hljs-comment"># 列出当前可用模型后退出</span>
+  khy claude                <span class="hljs-comment"># 用 KHY 网关拉起 Claude Code</span></code></pre>
 <ul><li><strong>模式 ③（API-Key 直连）</strong>——任意 OpenAI 兼容服务（DeepSeek / Qwen / GLM / Agnes 等）填 API Key 接入。内置预设可自动 prefill base URL/模型，自定义 preset 机制详见 [OPS-MAN-032] 网关-自定义provider配置-agnes：</li></ul>
-<pre><code class="language-bash">  khy gateway add           # 选预设或手动填，交互式接入
-  khy gateway config        # 改已有池的 key / endpoint</code></pre>
+<pre><code class="language-bash">  khy gateway add           <span class="hljs-comment"># 选预设或手动填，交互式接入</span>
+  khy gateway config        <span class="hljs-comment"># 改已有池的 key / endpoint</span></code></pre>
 <ul><li><strong>模式 ④（本地 / 中继）</strong>——本地 Ollama / localLLM 由 <code>gateway detect</code> 自动探测；relay（手动中转）/ clipboard（剪贴板桥接）按需启用：</li></ul>
-<pre><code class="language-bash">  khy gateway detect        # 探测本地可用模型（Ollama 等）</code></pre>
+<pre><code class="language-bash">  khy gateway detect        <span class="hljs-comment"># 探测本地可用模型（Ollama 等）</span></code></pre>
 <blockquote><p>统一查看与测试（与上面四类无关，任何时候都可用）：</p>
-<pre><code class="language-bash">khy gateway status                 # 适配器总览（支持 --json / --provider &lt;name&gt;）
-khy gateway test &lt;adapter&gt;         # 对某个适配器做一次连通性探活
-khy gateway model                  # 切换当前模型</code></pre></blockquote>
+<pre><code class="language-bash">khy gateway status                 <span class="hljs-comment"># 适配器总览（支持 --json / --provider &lt;name&gt;）</span>
+khy gateway <span class="hljs-built_in">test</span> &lt;adapter&gt;         <span class="hljs-comment"># 对某个适配器做一次连通性探活</span>
+khy gateway model                  <span class="hljs-comment"># 切换当前模型</span></code></pre></blockquote>
 <p>实现出处：<code>services/backend/src/cli/handlers/gateway.js</code>（<code>config</code> <code>:2457</code> / <code>detect</code> <code>:4063</code> / <code>status</code> <code>:1654</code> / <code>test</code> <code>:4164</code>）；适配器分类来源 <code>pool.js:23</code>、<code>builtinProviderConfig.js:33-43</code>、<code>providerPresets.js:49-62</code>。</p>
       </article>
       <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-002] ai-管理-新api对齐.html"><div class="dir">← 上一篇</div><div class="ttl">AI 管理页 NewAPI 对齐说明（对比度 + 配置能力）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-004] claude-code-代理配置.html"><div class="dir">下一篇 →</div><div class="ttl">通过 KHY 代理接入 Claude Code</div></a></nav>

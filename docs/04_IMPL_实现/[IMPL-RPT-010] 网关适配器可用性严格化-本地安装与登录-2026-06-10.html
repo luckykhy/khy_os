@@ -64,9 +64,9 @@
 <p><code>isNativeLoginToken(token) || (allowImportedCredentials() &amp;&amp; isLikelyCredentialToken(accessToken))</code>。</p>
 <blockquote><p><strong>设计要点</strong>：从 IDE <strong>自身原生存储</strong>读到的 token 即「真实登录」凭据——它本身<br>已是「安装 + 登录」的权威证明，故 <code>isNativeLoginToken</code> 命中时短路为可用，无需再<br>二次 <code>ideDetector</code> 校验。导入 / 池凭证则必须额外满足开关。</p></blockquote>
 <h3 id="四个-ide-适配器套用同一模式-cursor-windsurf-trae-kiro">四个 IDE 适配器套用同一模式（cursor / windsurf / trae / kiro）<a class="anchor" href="#四个-ide-适配器套用同一模式-cursor-windsurf-trae-kiro" aria-label="锚点">#</a></h3>
-<pre><code class="language-js">function _computeAvailable(token) {
-  if (isNativeLoginToken(token)) return true;          // 原生登录=权威证明
-  return _installed() &amp;&amp; countsTowardAvailability(token); // 否则须本地安装+开关
+<pre><code class="language-js"><span class="hljs-keyword">function</span> <span class="hljs-title function_">_computeAvailable</span>(<span class="hljs-params">token</span>) {
+  <span class="hljs-keyword">if</span> (<span class="hljs-title function_">isNativeLoginToken</span>(token)) <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;          <span class="hljs-comment">// 原生登录=权威证明</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">_installed</span>() &amp;&amp; <span class="hljs-title function_">countsTowardAvailability</span>(token); <span class="hljs-comment">// 否则须本地安装+开关</span>
 }</code></pre>
 <ul><li><code>_installed()</code> → <code>ideDetector.findInstallation(name) || findDataPath(name)</code>。</li><li>收紧「纯 pool 来源即可用」分支；<strong>保留</strong> <code>_token</code> 赋值供 <code>generate()</code> / 请求使用。</li><li><code>detectAsync()</code> 仍可用 pool token 路由，但其上报的<strong>可用布尔值</strong>必须过</li></ul>
 <p><code>countsTowardAvailability</code>。</p>

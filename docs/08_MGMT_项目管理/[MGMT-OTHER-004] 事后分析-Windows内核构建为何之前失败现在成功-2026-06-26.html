@@ -44,13 +44,13 @@
 <pre><code>vendor/moonbit/runtime.c:298: fatal error: 'windows.h' file not found
 make: *** [Makefile:116: build/moonbit_runtime.o] Error 1</code></pre>
 <p><strong>根因</strong>：内核用 <code>-ffreestanding -nostdlib -nostdinc</code> 编（裸机,无系统头），<br><strong>根本不该 include 宿主 <code>windows.h</code></strong>。但 <code>runtime.c</code> 里 MoonBit 运行时的 host 栈回溯设施有一段：</p>
-<pre><code class="language-c">#ifdef _WIN32
-#include &lt;windows.h&gt;      // + DbgHelp / CaptureStackBackTrace / SymInitialize
-#endif</code></pre>
+<pre><code class="language-c"><span class="hljs-meta">#<span class="hljs-keyword">ifdef</span> _WIN32</span>
+<span class="hljs-meta">#<span class="hljs-keyword">include</span> <span class="hljs-string">&lt;windows.h&gt;</span>      <span class="hljs-comment">// + DbgHelp / CaptureStackBackTrace / SymInitialize</span></span>
+<span class="hljs-meta">#<span class="hljs-keyword">endif</span></span></code></pre>
 <p>这段<strong>没有</strong>被本文件其它地方都在用的 <code>MOONBIT_NATIVE_NO_SYS_HEADER</code>（“无 libc / 无系统头”闸）守卫。</p>
 <p><strong>为何只在 Windows 炸</strong>：Linux 原生 gcc <strong>从不定义</strong> <code>_WIN32</code>，整段被预处理跳过,所以这个洞<br>在 Linux 上<strong>永远不可见</strong>。而 llvm-mingw 的 clang 是 Windows-targeting 工具链,<strong>即便在编内核也定义<br><code>_WIN32</code></strong> → 走进 windows.h 分支 → <code>-nostdinc</code> 下找不到 → fatal。</p>
 <p><strong>修复</strong>：两处加守卫——</p>
-<pre><code class="language-c">#if defined(_WIN32) &amp;&amp; !defined(MOONBIT_NATIVE_NO_SYS_HEADER)</code></pre>
+<pre><code class="language-c"><span class="hljs-meta">#<span class="hljs-keyword">if</span> defined(_WIN32) &amp;&amp; !defined(MOONBIT_NATIVE_NO_SYS_HEADER)</span></code></pre>
 <p>（<code>#ifdef _WIN32</code> 的 include 块 + <code>moonbit_panic</code> 内 <code>#ifdef _MSC_VER</code> 块）。<br>freestanding 下该 <code>#if</code> 为假,整块编译掉,与 Linux 行为一致。</p>
 <h3 id="2-2-轮二-0-1-134-同类第二处-控制台-utf-8-设码块">2.2 轮二（→ 0.1.134）：同类第二处——控制台 UTF-8 设码块<a class="anchor" href="#2-2-轮二-0-1-134-同类第二处-控制台-utf-8-设码块" aria-label="锚点">#</a></h3>
 <p>0.1.133 发布后用户复跑,clang 编过更多文件,<strong>又</strong>在 <code>runtime.c</code> 后段炸。<br>原因：<code>moonbit_println</code> 里另有<strong>一对仅 <code>#ifdef _WIN32</code></strong> 的 Win32 控制台设码块<br>（<code>GetConsoleOutputCP</code> / <code>SetConsoleOutputCP(CP_UTF8)</code>，皆 windows.h 符号）,<br><strong>同样裸露未守卫</strong>。第一处修好后它才暴露出来。</p>
@@ -91,10 +91,10 @@ make: *** [Makefile:116: build/moonbit_runtime.o] Error 1</code></pre>
 <ol><li><strong>别凭「应该都对」断言,要 grep 全树 + 预处理/链接实证</strong>（轮二就是吃了这个亏）。</li><li><strong>一层报错可能掩盖更深的真根因</strong>——windows.h（编译）修完才看见 COFF/ELF（链接）。修到「行为与已知良好路径一致」才算到底。</li><li><strong>诚实区分首选路径与兜底噪声</strong>：日志里一堆失败,只有原生路径那条才是真问题。</li><li><strong>构建通 ≠ 能用</strong>：构建期与运行期是两套依赖,要分别置备。</li></ol>
 <hr>
 <h2 id="5-用户怎么验证">5. 用户怎么验证<a class="anchor" href="#5-用户怎么验证" aria-label="锚点">#</a></h2>
-<pre><code class="language-powershell">pip install --upgrade khy-os
-khy os build          # 应产出 khy-os-kernel.iso（0.1.135 已实机验证通过）
-khy os doctor         # 体检：QEMU 缺失会给出真实的安装指引（见下方 2026-06-28 更新）
-khy os                # 运行内核；无 QEMU 时给出装 QEMU+PATH / 设 KHY_QEMU 的真实步骤</code></pre>
+<pre><code class="language-powershell">pip install <span class="hljs-literal">--upgrade</span> khy<span class="hljs-literal">-os</span>
+khy os build          <span class="hljs-comment"># 应产出 khy-os-kernel.iso（0.1.135 已实机验证通过）</span>
+khy os doctor         <span class="hljs-comment"># 体检：QEMU 缺失会给出真实的安装指引（见下方 2026-06-28 更新）</span>
+khy os                <span class="hljs-comment"># 运行内核；无 QEMU 时给出装 QEMU+PATH / 设 KHY_QEMU 的真实步骤</span></code></pre>
 <blockquote><p>内核源码改动经 <code>setup.py</code> 打包进 wheel 的 <code>bundled/</code> 副本,<strong>用户须升级 wheel 重装才生效</strong>。<br>临时绕过本地构建：设 <code>KHY_KERNEL_ISO=&lt;现成iso&gt;</code> 或 <code>KHY_KERNEL_ISO_URL</code> + <code>KHY_KERNEL_ISO_SHA256</code>。</p></blockquote>
 <hr>
 <h2 id="6-更新-2026-06-28-便携-qemu-仍未固定-提示绝不虚假承诺-自动下载">6. 更新（2026-06-28）：便携 QEMU 仍未固定，提示绝不虚假承诺&quot;自动下载&quot;<a class="anchor" href="#6-更新-2026-06-28-便携-qemu-仍未固定-提示绝不虚假承诺-自动下载" aria-label="锚点">#</a></h2>

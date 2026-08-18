@@ -20,24 +20,24 @@
  *     插进输入框/发送给内核。
  *
  * ── 命中测试坐标(关键)─────────────────────────────────────────────────────
- * ink 的 live 区恒贴屏幕底部(log-update 原地擦写 + startupAnchor 首帧锚底)。
+ * ink 的 live 区在 legacy startupAnchor 开启时贴屏幕底部；默认启动则从当前
+ * 光标位置连续渲染。
  * 树里 `<Static>` 渲染成 `position: absolute` 的 ink-box(ink Static.js:21-25),
  * **不参与流式布局**:它不占高度、也不把 live 子节点往下推 —— 因此 root 的 yoga
  * 高度 = live 区高度,节点相对 root 原点的累计瑜伽 Y(y)就是它在 live 区内的行。
  * 映射到屏幕行:
- *   screenRow = (rows - rootHeight) + y      (anchorBottom 模式,默认开)
- *   screenRow = y                            (锚顶模式,仅 KHY_TUI_ANCHOR_BOTTOM=off)
+ *   screenRow = (rows - rootHeight) + y      (anchorBottom 模式,显式开启)
+ *   screenRow = y                            (默认连续渲染模式)
  * X 无偏移:screenCol = 累计瑜伽 X。
  * 这个映射与 renderer/render-node-to-output 的 offset 累加完全一致(该文件 82 行),
  * 与 caretGeometry.js 的 parentNode 链累加同源;命中测试只需跳过 internal_static
  * 子树(静态区早已滚入 scrollback,不可点)。
  *
  * ── 门控 ───────────────────────────────────────────────────────────────────
- *   KHY_MOUSE_BUTTONS  默认 win32 开、其他平台关(仅显式 env 可跨平台打开):
- *                     Win+H 语音输入是 Windows 专属,且 SGR 1006 在
- *                     macOS Terminal.app / 部分 legacy 终端缺失,默认关更安全。
- *   KHY_MOUSE_HOVER   默认开:额外启用 1003(任意移动)实现 onMouseOver/Out 悬停;
- *                     1003 事件量大,关掉则只剩 1000+1006 的点击。
+ *   KHY_MOUSE_BUTTONS  默认 win32 开、其他平台关；显式 env 可跨平台覆盖。
+ *                     Windows 下滚轮事件由 dispatcher 临时切回终端原生模式。
+ *   KHY_MOUSE_HOVER   默认关:只启用 1000+1006 的点击，避免 1003 任意移动事件
+ *                     持续占用终端输入；显式设为 1/true/on/yes 才启用悬停。
  * 两者都沿用 0/false/off/no 关闭口径(sidebarLayout/railLayout 同款)。
  */
 
@@ -46,11 +46,11 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 /** SGR 鼠标序列(ink 剥掉 ESC 后的形态)。`M`=按下,`m`=松开。 */
 const SGR_MOUSE_RE = /^\[<(\d+);(\d+);(\d+)([Mm])$/;
 
-function _off(env, name) {
+function _on(env, name) {
   const v = String((env && env[name]) || '')
     .trim()
     .toLowerCase();
-  return OFF_VALUES.includes(v);
+  return ['1', 'true', 'on', 'yes'].includes(v);
 }
 
 /**
@@ -99,8 +99,7 @@ function parseSgrMouse(input) {
 }
 
 /**
- * 鼠标按钮层总闸。默认 win32 开(语音按钮是 Windows 专属),其他平台关;
- * 显式 env(任意非 off 值)→ 强制开(跨平台 opt-in),显式 off → 关。
+ * 鼠标按钮层总闸。默认 win32 开、其他平台关；显式 env 覆盖默认值。
  * @param {NodeJS.ProcessEnv} [env]
  * @param {string} [platform]
  * @returns {boolean}
@@ -114,12 +113,12 @@ function mouseButtonsEnabled(env = process.env, platform = process.platform) {
 }
 
 /**
- * 悬停追踪(1003)门控:默认开,仅显式 falsy 关闭。
+ * 悬停追踪(1003)门控:默认关，仅显式 truthy 开启。
  * @param {NodeJS.ProcessEnv} [env]
  * @returns {boolean}
  */
 function mouseHoverEnabled(env = process.env) {
-  return !_off(env, 'KHY_MOUSE_HOVER');
+  return _on(env, 'KHY_MOUSE_HOVER');
 }
 
 /**
@@ -221,7 +220,7 @@ function collectLayout(rootNode) {
  */
 function screenOffset(rootHeight, ctx = {}) {
   const rows = Number(ctx.rows) > 0 ? Number(ctx.rows) : 24;
-  if (ctx.anchorBottom !== false) {
+  if (ctx.anchorBottom === true) {
     return rows - rootHeight;
   }
   return 0;
@@ -259,7 +258,7 @@ function hitTest(layout, col, row, offset) {
  * ctx 形如 `{ rootNode, rows, anchorBottom }`:
  *   rootNode    = inkRuntime.getInkInstance().rootNode
  *   rows        = 物理终端行数(process.stdout.rows 或 fallback)
- *   anchorBottom = startupAnchor.anchorBottomEnabled(process.env)(默认 true)
+ *   anchorBottom = startupAnchor.anchorBottomEnabled(process.env)(默认 false)
  *
  * 语义对齐 opencode:在**松开**(onMouseUp)触发点击(命中松开点);
  * 悬停开时在位移事件上做 onMouseOver/onMouseOut 高亮状态机。

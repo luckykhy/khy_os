@@ -37,21 +37,21 @@
 <ul><li>Python 3.10+</li><li>No external software required (rendering uses mermaid.ink cloud service)</li></ul>
 <h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
 <h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Show help
-cli-anything-mermaid --help
+<pre><code class="language-bash"><span class="hljs-comment"># Show help</span>
+cli-anything-mermaid --<span class="hljs-built_in">help</span>
 
-# Start interactive REPL mode
+<span class="hljs-comment"># Start interactive REPL mode</span>
 cli-anything-mermaid
 
-# Create a new project
+<span class="hljs-comment"># Create a new project</span>
 cli-anything-mermaid project new -o diagram.json
 
-# Run with JSON output (for agent consumption)
+<span class="hljs-comment"># Run with JSON output (for agent consumption)</span>
 cli-anything-mermaid --json project info</code></pre>
 <h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
 <p>When invoked without a subcommand, the CLI enters an interactive REPL session:</p>
 <pre><code class="language-bash">cli-anything-mermaid
-# Enter commands interactively with tab-completion and history</code></pre>
+<span class="hljs-comment"># Enter commands interactively with tab-completion and history</span></code></pre>
 <h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
 <h3 id="project">Project<a class="anchor" href="#project" aria-label="锚点">#</a></h3>
 <p>Project lifecycle commands.</p>
@@ -67,46 +67,46 @@ cli-anything-mermaid --json project info</code></pre>
 <table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>status</code></td><td>Show current session state</td></tr><tr><td><code>undo</code></td><td>Undo the last diagram source change</td></tr><tr><td><code>redo</code></td><td>Redo the last undone change</td></tr></tbody></table>
 <h2 id="examples">Examples<a class="anchor" href="#examples" aria-label="锚点">#</a></h2>
 <h3 id="create-and-render-a-flowchart">Create and Render a Flowchart<a class="anchor" href="#create-and-render-a-flowchart" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Create a project with flowchart sample
+<pre><code class="language-bash"><span class="hljs-comment"># Create a project with flowchart sample</span>
 cli-anything-mermaid project new --sample flowchart -o flow.json
 
-# Replace diagram source
-cli-anything-mermaid --project flow.json diagram set --text &quot;graph TD; A--&gt;B; B--&gt;C;&quot;
+<span class="hljs-comment"># Replace diagram source</span>
+cli-anything-mermaid --project flow.json diagram <span class="hljs-built_in">set</span> --text <span class="hljs-string">&quot;graph TD; A--&gt;B; B--&gt;C;&quot;</span>
 
-# Render to SVG
-cli-anything-mermaid --project flow.json export render output.svg --format svg</code></pre>
+<span class="hljs-comment"># Render to SVG</span>
+cli-anything-mermaid --project flow.json <span class="hljs-built_in">export</span> render output.svg --format svg</code></pre>
 <h3 id="create-a-sequence-diagram">Create a Sequence Diagram<a class="anchor" href="#create-a-sequence-diagram" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Create project with sequence sample
+<pre><code class="language-bash"><span class="hljs-comment"># Create project with sequence sample</span>
 cli-anything-mermaid project new --sample sequence -o seq.json
 
-# Set diagram from file
-cli-anything-mermaid --project seq.json diagram set --file my_diagram.mmd
+<span class="hljs-comment"># Set diagram from file</span>
+cli-anything-mermaid --project seq.json diagram <span class="hljs-built_in">set</span> --file my_diagram.mmd
 
-# Render to PNG
-cli-anything-mermaid --project seq.json export render output.png --format png</code></pre>
+<span class="hljs-comment"># Render to PNG</span>
+cli-anything-mermaid --project seq.json <span class="hljs-built_in">export</span> render output.png --format png</code></pre>
 <h3 id="share-a-diagram">Share a Diagram<a class="anchor" href="#share-a-diagram" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Generate an editable Mermaid Live URL
-cli-anything-mermaid --project flow.json export share --mode edit
+<pre><code class="language-bash"><span class="hljs-comment"># Generate an editable Mermaid Live URL</span>
+cli-anything-mermaid --project flow.json <span class="hljs-built_in">export</span> share --mode edit
 
-# Generate a view-only URL
-cli-anything-mermaid --project flow.json export share --mode view</code></pre>
+<span class="hljs-comment"># Generate a view-only URL</span>
+cli-anything-mermaid --project flow.json <span class="hljs-built_in">export</span> share --mode view</code></pre>
 <h3 id="interactive-repl-session">Interactive REPL Session<a class="anchor" href="#interactive-repl-session" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-mermaid
-# new flowchart
-# set graph TD; A--&gt;B; B--&gt;C;
-# render output.svg
-# share
-# quit</code></pre>
+<span class="hljs-comment"># new flowchart</span>
+<span class="hljs-comment"># set graph TD; A--&gt;B; B--&gt;C;</span>
+<span class="hljs-comment"># render output.svg</span>
+<span class="hljs-comment"># share</span>
+<span class="hljs-comment"># quit</span></code></pre>
 <h2 id="state-management">State Management<a class="anchor" href="#state-management" aria-label="锚点">#</a></h2>
 <p>The CLI maintains session state with:</p>
 <ul><li><strong>Undo/Redo</strong>: Revert or replay diagram source changes</li><li><strong>Project persistence</strong>: Save/load project state as JSON</li><li><strong>Session tracking</strong>: Track modifications and changes</li></ul>
 <h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
 <p>All commands support dual output modes:</p>
 <ul><li><strong>Human-readable</strong> (default): Tables, colors, formatted text</li><li><strong>Machine-readable</strong> (<code>--json</code> flag): Structured JSON for agent consumption</li></ul>
-<pre><code class="language-bash"># Human output
+<pre><code class="language-bash"><span class="hljs-comment"># Human output</span>
 cli-anything-mermaid project info
 
-# JSON output for agents
+<span class="hljs-comment"># JSON output for agents</span>
 cli-anything-mermaid --json project info</code></pre>
 <h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
 <p>When using this CLI programmatically:</p>

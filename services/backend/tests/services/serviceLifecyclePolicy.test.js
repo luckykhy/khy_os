@@ -114,9 +114,9 @@ test('listStartupSchedule:完整模式条目/顺序/延迟与 prefetch 现值逐
   ]);
 });
 
-test('listStartupSchedule:轻量模式只含 gatewayWarmup@300', () => {
+test('listStartupSchedule:轻量模式包含 gateway 预热和后台更新检查', () => {
   const light = policy.listStartupSchedule({}, 'khy').map((e) => `${e.id}@${e.delayMs}`);
-  assert.deepStrictEqual(light, ['gatewayWarmup@300']);
+  assert.deepStrictEqual(light, ['gatewayWarmup@300', 'versionUpdateNotice@5000']);
 });
 
 test('listStartupSchedule:主门开时 per-id 覆盖剔除条目', () => {

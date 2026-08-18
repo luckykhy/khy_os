@@ -1,6 +1,7 @@
 'use strict';
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const {
@@ -11,9 +12,18 @@ const {
 
 describe('repl intent assurance debug toggle', () => {
   const activeReadlines = [];
-  const settingsFile = path.join('/tmp', '.khy', 'settings.json');
+  let testHome;
+  let settingsFile;
+  let previousHome;
+  let previousUserProfile;
 
   beforeEach(() => {
+    testHome = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-intent-settings-'));
+    settingsFile = path.join(testHome, '.khy', 'settings.json');
+    previousHome = process.env.HOME;
+    previousUserProfile = process.env.USERPROFILE;
+    process.env.HOME = testHome;
+    process.env.USERPROFILE = testHome;
     jest.useFakeTimers();
     jest.spyOn(console, 'log').mockImplementation(() => {});
     jest.spyOn(process, 'exit').mockImplementation(() => undefined);
@@ -25,7 +35,11 @@ describe('repl intent assurance debug toggle', () => {
       const rl = activeReadlines.pop();
       try { rl.close(); } catch { /* ignore */ }
     }
-    try { fs.rmSync(path.dirname(settingsFile), { recursive: true, force: true }); } catch { /* ignore */ }
+    try { fs.rmSync(testHome, { recursive: true, force: true }); } catch { /* ignore */ }
+    if (previousHome === undefined) delete process.env.HOME;
+    else process.env.HOME = previousHome;
+    if (previousUserProfile === undefined) delete process.env.USERPROFILE;
+    else process.env.USERPROFILE = previousUserProfile;
     jest.useRealTimers();
     jest.restoreAllMocks();
   });

@@ -39,17 +39,17 @@
 <h3 id="doctor">doctor<a class="anchor" href="#doctor" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-nsight-graphics --json doctor info
 cli-anything-nsight-graphics --json doctor versions
-cli-anything-nsight-graphics --nsight-path &quot;C:\Path\To\Nsight Graphics 2024.2\host\windows-desktop-nomad-x64&quot; --json doctor info</code></pre>
+cli-anything-nsight-graphics --nsight-path <span class="hljs-string">&quot;C:\Path\To\Nsight Graphics 2024.2\host\windows-desktop-nomad-x64&quot;</span> --json doctor info</code></pre>
 <h3 id="launch">launch<a class="anchor" href="#launch" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-nsight-graphics launch detached --activity &quot;Graphics Capture&quot; --exe &quot;C:\Path\To\App.exe&quot;
-cli-anything-nsight-graphics launch attach --activity &quot;Graphics Capture&quot; --pid 12345</code></pre>
+<pre><code class="language-bash">cli-anything-nsight-graphics launch detached --activity <span class="hljs-string">&quot;Graphics Capture&quot;</span> --exe <span class="hljs-string">&quot;C:\Path\To\App.exe&quot;</span>
+cli-anything-nsight-graphics launch attach --activity <span class="hljs-string">&quot;Graphics Capture&quot;</span> --pid 12345</code></pre>
 <h3 id="frame-capture">frame capture<a class="anchor" href="#frame-capture" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-nsight-graphics --output-dir D:\captures frame capture ^
-  --exe &quot;C:\Path\To\App.exe&quot; ^
+  --exe <span class="hljs-string">&quot;C:\Path\To\App.exe&quot;</span> ^
   --wait-frames 10</code></pre>
 <h3 id="gpu-trace">GPU Trace<a class="anchor" href="#gpu-trace" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-nsight-graphics --output-dir D:\traces gpu-trace capture ^
-  --exe &quot;C:\Path\To\App.exe&quot; ^
+  --exe <span class="hljs-string">&quot;C:\Path\To\App.exe&quot;</span> ^
   --start-after-ms 1000 ^
   --limit-to-frames 1 ^
   --auto-export ^
@@ -63,7 +63,7 @@ cli-anything-nsight-graphics gpu-trace summarize ^
   --output-dir D:\analysis</code></pre>
 <h3 id="generate-c-capture">Generate C++ Capture<a class="anchor" href="#generate-c-capture" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-nsight-graphics --output-dir D:\cpp cpp capture ^
-  --exe &quot;C:\Path\To\App.exe&quot; ^
+  --exe <span class="hljs-string">&quot;C:\Path\To\App.exe&quot;</span> ^
   --wait-seconds 5</code></pre>
 <h2 id="agent-notes">Agent Notes<a class="anchor" href="#agent-notes" aria-label="锚点">#</a></h2>
 <ul><li>Prefer <code>doctor info</code> first to discover the available compatibility mode.</li><li>Use <code>doctor versions</code> to list detected installs when multiple Nsight Graphics versions exist.</li><li>Use <code>--nsight-path</code> to force a specific install directory or <code>ngfx.exe</code>.</li><li>Use <code>--json</code> for programmatic workflows.</li><li>Prefer <code>gpu-trace capture --auto-export --summarize</code> for one-step performance</li></ul>

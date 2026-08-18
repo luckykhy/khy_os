@@ -285,6 +285,51 @@ function _isImageFile(fileName) {
 }
 
 /**
+ * 清洗 image_generate 成功后最终回复中的临时文件路径行。仅微信 dispatcher 调用,
+ * CLI 仍保留工具返回的本地路径。
+ * @param {string|null} reply
+ * @param {*} out
+ * @returns {string|null}
+ */
+function _sanitizeGeneratedImageReply(reply, out) {
+  if (!defaults.ILINK_SANITIZE_PATHS || typeof reply !== 'string') {
+    return reply;
+  }
+  const logArr = out && Array.isArray(out.toolCallLog) ? out.toolCallLog : [];
+  const generatedPaths = [];
+  const hasSuccessfulImage = logArr.some((entry) => {
+    if (!entry || entry.tool !== 'image_generate' || !entry.result || entry.result.success !== true) {
+      return false;
+    }
+    const paths = entry.result.meta && entry.result.meta.paths;
+    if (Array.isArray(paths)) {
+      generatedPaths.push(...paths.filter((value) => typeof value === 'string' && value.trim()));
+    }
+    return true;
+  });
+  if (!hasSuccessfulImage) {
+    return reply;
+  }
+
+  const escapedPaths = generatedPaths.map((filePath) =>
+    filePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  );
+  const knownPathPattern = escapedPaths.length ? new RegExp(escapedPaths.join('|'), 'i') : null;
+  const tempPathPattern = /(?:^|\s)(?:\/tmp\/\S+|[a-z]:\\[^\r\n]*?\\temp\\\S+)/i;
+  const cleaned = reply
+    .split(/\r?\n/)
+    .map((line) =>
+      (knownPathPattern && knownPathPattern.test(line)) || tempPathPattern.test(line)
+        ? '（图片已发送）'
+        : line
+    )
+    .filter((line, index, lines) => line !== '（图片已发送）' || lines.indexOf(line) === index)
+    .join('\n')
+    .trim();
+  return cleaned || '（图片已发送）';
+}
+
+/**
  * Build the live-session scope key for an inbound message.
  *
  * Pure function: no side effects, never throws. An unknown/invalid scope
@@ -814,10 +859,11 @@ class IlinkDispatcher {
           restoreWorkspace();
         }
       });
-      const reply = normalizeReply(out);
-      // 先投递本轮工具产出的文件(SendUserFile),再发文本回复。内部 fail-soft,
+      let reply = normalizeReply(out);
+      // 先投递本轮工具产出的文件,再发文本回复。内部 fail-soft,
       // 绝不因发文件失败而影响后面的文本回复。
       await this._deliverFiles(msg, out);
+      reply = _sanitizeGeneratedImageReply(reply, out);
       await this._say(msg, reply || '(没有产生可发送的回答)');
       // 断点续接「写」侧修复:微信路从不触发 clearHistory/eofExit,自动检查点
       // (maybeAutoCheckpointProgress)只在那些路径被调 → PROGRESS.md 永不落盘 →

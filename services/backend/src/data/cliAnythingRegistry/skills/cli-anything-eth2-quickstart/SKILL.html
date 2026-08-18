@@ -34,10 +34,10 @@
 <p>Use this skill when the task involves:</p>
 <ul><li>bootstrapping a fresh Ethereum node host</li><li>installing execution and consensus clients with explicit client diversity</li><li>enabling MEV-Boost or Commit-Boost workflows</li><li>exposing RPC through Nginx or Caddy</li><li>updating validator fee recipient or graffiti settings without handling secrets</li><li>checking machine-readable health with <code>--json</code></li></ul>
 <h2 id="core-commands">Core Commands<a class="anchor" href="#core-commands" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># Canonical machine-readable health
+<pre><code class="language-bash"><span class="hljs-comment"># Canonical machine-readable health</span>
 cli-anything-eth2-quickstart --json health-check
 
-# Phase 2 install with explicit client choices
+<span class="hljs-comment"># Phase 2 install with explicit client choices</span>
 cli-anything-eth2-quickstart --json install-clients \
   --network mainnet \
   --execution-client geth \
@@ -45,7 +45,7 @@ cli-anything-eth2-quickstart --json install-clients \
   --mev mev-boost \
   --confirm
 
-# Guided node setup
+<span class="hljs-comment"># Guided node setup</span>
 cli-anything-eth2-quickstart --json setup-node \
   --phase auto \
   --execution-client geth \
@@ -53,13 +53,13 @@ cli-anything-eth2-quickstart --json setup-node \
   --mev commit-boost \
   --confirm
 
-# Validator metadata only; no key import
+<span class="hljs-comment"># Validator metadata only; no key import</span>
 cli-anything-eth2-quickstart --json configure-validator \
   --consensus-client prysm \
   --fee-recipient 0x1111111111111111111111111111111111111111 \
-  --graffiti &quot;CLI-Anything&quot;
+  --graffiti <span class="hljs-string">&quot;CLI-Anything&quot;</span>
 
-# Install nginx-backed RPC exposure
+<span class="hljs-comment"># Install nginx-backed RPC exposure</span>
 cli-anything-eth2-quickstart --json start-rpc \
   --web-stack nginx \
   --server-name rpc.example.org \

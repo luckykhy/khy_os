@@ -126,6 +126,12 @@ function attachAuthContext(req, authResult, method = 'jwt') {
   req.authSession = authResult.session || null;
 }
 
+function extractBearerToken(req) {
+  const header = String(req.headers.authorization || '').trim();
+  const match = header.match(/^Bearer\s+([^\s]+)$/i);
+  return match ? match[1] : '';
+}
+
 function sendAuthFailure(res, authResult) {
   if (authResult?.code === 'user_inactive') {
     return res.status(403).json({
@@ -167,7 +173,7 @@ function sendAuthFailure(res, authResult) {
 }
 
 const authMiddleware = async (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
+  const token = extractBearerToken(req);
 
   if (!token) {
     return res.status(401).json({
@@ -209,7 +215,7 @@ const adminMiddleware = (req, res, next) => {
 };
 
 const flexibleAuth = async (req, res, next) => {
-  const bearerToken = req.headers.authorization?.split(' ')[1];
+  const bearerToken = extractBearerToken(req);
   if (bearerToken) {
     try {
       const authResult = await authSessionService.authenticateAccessToken(bearerToken);

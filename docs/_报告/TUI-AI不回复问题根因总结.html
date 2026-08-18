@@ -45,9 +45,9 @@
 <h2 id="诊断日志">诊断日志<a class="anchor" href="#诊断日志" aria-label="锚点">#</a></h2>
 <p>useQueryBridge.js 中保留了 13 个 <code>[TUI-DIAG]</code> 诊断点（<code>process.stderr.write</code>），覆盖从 submit 入口到 AI 首个 token 的完整路径。可通过观察相邻阶段的时间差精确定位未来的延迟问题。</p>
 <p>环境变量快速诊断：</p>
-<pre><code class="language-bash">KHY_TUI_TURN_CHECKPOINT=0 khy    # 禁用 checkpoint 排除其阻塞
-KHY_TUI_NATIVE_LOOP=0 khy        # 禁用 toolUseLoop 走纯 ai().chat()
-KHY_LOOP_DEBUG=1 khy              # 开启 toolUseLoop 文件日志</code></pre>
+<pre><code class="language-bash">KHY_TUI_TURN_CHECKPOINT=0 khy    <span class="hljs-comment"># 禁用 checkpoint 排除其阻塞</span>
+KHY_TUI_NATIVE_LOOP=0 khy        <span class="hljs-comment"># 禁用 toolUseLoop 走纯 ai().chat()</span>
+KHY_LOOP_DEBUG=1 khy              <span class="hljs-comment"># 开启 toolUseLoop 文件日志</span></code></pre>
       </article>
       <nav class="pager"><a class="prev" href="../../docs/_报告/历史/2026-08-依赖削减调研报告.html"><div class="dir">← 上一篇</div><div class="ttl">Khy-OS 依赖削减调研报告</div></a><span></span></nav>
       <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>

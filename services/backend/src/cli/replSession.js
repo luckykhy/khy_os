@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Interactive REPL — the heart of the CLI.
  * Combines command mode, menu mode, and AI conversation mode.
  *
@@ -6,6 +6,7 @@
  */
 const readline = require('readline');
 const fs = require('fs');
+const { safeReadJsonSync } = require('../services/configGuard');
 
 // Load the permission dialog at cli startup so it self-registers its interactive
 // prompter into the service-layer permissionPromptPort (DESIGN-ARCH-057). The
@@ -614,7 +615,7 @@ async function startRepl(options = {}) {
       } catch {
         /* non-critical on unsupported environments */
       }
-      const { startInkApp } = require('./tui/app.jsx');
+      const { startInkApp } = require('./tui/app.js');
       await startInkApp(options);
       return;
     } catch (err) {
@@ -5155,7 +5156,12 @@ async function startRepl(options = {}) {
         const _cand = _getSlashCommands().find(
           (sc) => sc && typeof sc.cmd === 'string' && sc.cmd.toLowerCase() === _tok
         );
-        if (_cand && _cand.flag && !_cand.route) {
+        if (
+          _cand &&
+          _cand.flag &&
+          !_cand.route &&
+          new Set(['thinking', 'plan']).has(_cand.flag)
+        ) {
           _flagArgEntry = _cand;
         }
       }
@@ -6055,11 +6061,7 @@ async function startRepl(options = {}) {
                 } catch {
                   _sf = path.join(os.homedir(), '.khy', 'settings.json');
                 }
-                try {
-                  return JSON.parse(fs.readFileSync(_sf, 'utf-8'));
-                } catch {
-                  return {};
-                }
+                return safeReadJsonSync(_sf, { schema: {}, silent: true }).data;
               })();
               console.log(c.bold('\n  配置'));
               for (const [k, v] of Object.entries(settings)) {
@@ -12857,16 +12859,6 @@ async function startRepl(options = {}) {
       _lastAiReply = aiResult.reply || '';
       _lastAiErrorType = aiResult.errorType || '';
 
-      // ═══ Safety net: verify dedup flag correctness ═══════════════════════════
-      // If responseAlreadyRendered was set by the dedup heuristic but the chunker
-      // never actually flushed text to stdout, the flag is a false positive.
-      // Reset it so the main render branch fires and the user sees the reply.
-      if (responseAlreadyRendered && aiResult.reply && !aiResult.errorType) {
-        if (!_streamFlushedToTerminal) {
-          responseAlreadyRendered = false; // Dedup was a false positive — nothing reached stdout
-        }
-      }
-
       if (aiResult.reply && !responseAlreadyRendered) {
         if (aiResult.errorType) {
           // ── 模型失败 → 尝试本地降级（附失败原因）─────────────────
@@ -13269,7 +13261,7 @@ async function startRepl(options = {}) {
       // but text never actually reached stdout, the user never saw any AI output.
       // Force-render aiResult.reply so the turn is never silent.
       // Removed !aiResult.errorType restriction — error replies must also be shown.
-      if (aiResult.reply && responseAlreadyRendered) {
+      if (aiResult.reply && !responseAlreadyRendered) {
         const _visibleStreamed = (_turnStreamedText || '').replace(/\s/g, '').length;
         // Fire if: (a) _turnStreamedText is trivial, OR (b) chunker never flushed to stdout
         if (_visibleStreamed < 2 || !_streamFlushedToTerminal) {

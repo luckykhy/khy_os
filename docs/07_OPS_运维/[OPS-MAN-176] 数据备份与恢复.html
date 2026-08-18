@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>数据备份与恢复 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>07_OPS_运维<span class="sep">›</span>数据备份与恢复</div>
+      <header class="hero reveal"><h1>数据备份与恢复</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#数据备份与恢复">数据备份与恢复</a></li><li class="lvl-2"><a href="#一-五分钟上手">一、五分钟上手</a></li><li class="lvl-2"><a href="#二-备份集长什么样">二、备份集长什么样</a></li><li class="lvl-2"><a href="#三-备份什么-不备份什么">三、备份什么、不备份什么</a></li><li class="lvl-3"><a href="#3-1-三条最关键的判定">3.1 三条最关键的判定</a></li><li class="lvl-3"><a href="#3-2-为什么用-排除清单-而不是-收录清单">3.2 为什么用「排除清单」而不是「收录清单」</a></li><li class="lvl-3"><a href="#3-3-分级-core-默认-与-full">3.3 分级：core（默认）与 full</a></li><li class="lvl-2"><a href="#四-域边界-备份-不-负责的三件事">四、域边界：备份**不**负责的三件事</a></li><li class="lvl-2"><a href="#五-f1-sqlite-只能热备-绝不复制正在写入的-db">五、F1：SQLite 只能热备，绝不复制正在写入的 `.db`</a></li><li class="lvl-2"><a href="#六-恢复-顺序本身就是安全机制">六、恢复：顺序本身就是安全机制</a></li><li class="lvl-2"><a href="#七-保留策略-唯一会删用户备份的地方">七、保留策略（唯一会删用户备份的地方）</a></li><li class="lvl-2"><a href="#八-配置项一览-f5-默认值只在-servicedefaults-js-的-backup">八、配置项一览（F5：默认值只在 `serviceDefaults.js` 的 `BACKUP`）</a></li><li class="lvl-2"><a href="#九-已知问题-幽灵-json-目录">九、已知问题：幽灵 `*.json` 目录</a></li><li class="lvl-2"><a href="#十-json-原子写-与备份同源的一条加固">十、JSON 原子写（与备份同源的一条加固）</a></li><li class="lvl-2"><a href="#十一-验证方式">十一、验证方式</a></li><li class="lvl-2"><a href="#十二-已冻结的立法决定-2026-08-16">十二、已冻结的立法决定（2026-08-16）</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: OPS-MAN-176 | 阶段: 运维 | 原路径: 新建（备份恢复子系统落地） --&gt;</p>
+<h1 id="数据备份与恢复">数据备份与恢复<a class="anchor" href="#数据备份与恢复" aria-label="锚点">#</a></h1>
+<blockquote><p><code>khy backup</code> 是 Khy-OS 的统一数据备份/恢复入口。本文讲清四件事：<strong>备份集里有什么、没有什么、为什么</strong>；<strong>怎么恢复、恢复前会挡你什么</strong>；<strong>保留策略的确切语义</strong>；以及 <strong>SQLite 为什么绝不允许直接复制 <code>.db</code> 文件</strong>。</p>
+<p>实现依据（每条结论都可回到代码）：</p>
+<ul><li>资产规则单一真源（纯叶子，零 IO）：<code>services/backend/src/services/backup/backupAssetPlan.js</code></li><li>SQLite 热备唯一出口：<code>services/backend/src/services/backup/sqliteHotCopy.js</code></li><li>清单格式与保留策略：<code>services/backend/src/services/backup/backupManifest.js</code></li><li>备份/恢复执行：<code>services/backend/src/services/backup/backupService.js</code>、<code>restoreService.js</code></li><li>默认值与阈值（F5：不许散落硬编码）：<code>services/backend/src/constants/serviceDefaults.js</code> 的 <code>BACKUP</code></li><li>CLI 层：<code>services/backend/src/cli/handlers/backup.js</code></li><li>演练测试：<code>services/backend/tests/backupRestoreDrill.test.js</code>（备份 → 破坏 → 恢复 → 校验）</li></ul></blockquote>
+<hr>
+<h2 id="一-五分钟上手">一、五分钟上手<a class="anchor" href="#一-五分钟上手" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash">khy backup                    <span class="hljs-comment"># 创建备份（core 级，默认子命令）</span>
+khy backup list               <span class="hljs-comment"># 列出所有备份</span>
+khy backup status             <span class="hljs-comment"># 概览：备份根、数据家目录、待热备的库、最近一份的年龄</span>
+khy backup verify             <span class="hljs-comment"># 校验最近一份（逐项比对字节数与 sha256）</span>
+khy backup restore --dry-run  <span class="hljs-comment"># 预演恢复：只检查，不改任何文件</span>
+khy daemon stop               <span class="hljs-comment"># 恢复前必须先停守护进程</span>
+khy backup restore            <span class="hljs-comment"># 真正恢复最近一份</span>
+khy backup prune              <span class="hljs-comment"># 按保留策略清理</span></code></pre>
+<p>中文直达（<code>cli/aliases.js</code>）：<code>khy 备份</code> / <code>数据备份</code>、<code>备份列表</code>、<code>备份状态</code>、<code>备份检查</code> / <code>校验备份</code>、<code>恢复数据</code> / <code>数据恢复</code> / <code>还原数据</code>、<code>清理备份</code> / <code>备份清理</code>。</p>
+<p><strong>⚠️ <code>khy restore</code> 不是数据恢复。</strong> 顶层 <code>khy restore</code> / <code>khy restore-source</code>（中文 <code>还原</code> / <code>完整还原</code> / <code>还原项目</code>）恢复的是<strong>加密源码包</strong>，归 <code>cli/handlers/publish.js</code>，早于本子系统存在。数据恢复只有一条路：<code>khy backup restore</code>。这个命名不是偏好，是既有命令占位的结果。</p>
+<hr>
+<h2 id="二-备份集长什么样">二、备份集长什么样<a class="anchor" href="#二-备份集长什么样" aria-label="锚点">#</a></h2>
+<p>备份根默认 <code>&lt;数据家目录&gt;/backups</code>（<code>KHY_BACKUP_ROOT</code> 或 <code>--root</code> 可覆盖）。每份备份是一个目录，目录名即 id：</p>
+<pre><code>&lt;备份根&gt;/20260816T081500Z-a1b2c3/     ← id = UTC 时间戳 + 6 位随机后缀
+├── manifest.json                    ← 清单：每一项的来源、目标、字节数、sha256
+├── .complete                        ← 完成标记。没有它 = 写到一半，恢复时直接拒绝
+├── db/
+│   ├── user-khy-quant.db            ← VACUUM INTO 产出的一致性快照（前缀 = 家目录角色）
+│   ├── project-taskboard.db
+│   └── postgres.dump                ← 仅 DB_MODE=postgres 时存在（pg_dump 产物）
+├── home-user/                       ← ~/.khy 下收录的 JSON/JSONL 状态文件，保持原相对路径
+├── home-project/                    ← &lt;appRoot&gt;/.khy
+└── home-app/                        ← 传统 ~/.khyquant（仅当它确实已建立）</code></pre>
+<p><strong>id 里的时间戳是权威的</strong>。保留策略按 id 解析出的创建时刻算天数，<strong>不看文件 mtime</strong> —— 拷贝/搬迁会改 mtime，而 id 里的时间是「这份备份被创建」的事实（<code>backupManifest.parseBackupId</code>）。副作用之一：id 的字典序 = 时间序，<code>ls</code> 出来就是有序的。</p>
+<p><strong>目录权限 0700、文件 0600</strong>（<code>BACKUP.DIR_MODE</code> / <code>FILE_MODE</code>）。备份集包含 <code>khy-quant.db</code> 的 <code>api_keys</code> / <code>auth_sessions</code> 表和各消息通道的 token；按表裁剪会破坏引用完整性，所以<strong>不裁</strong>，改用文件权限兜底，并在 <code>manifest.containsSecrets</code> 里显式标记。<strong>不要把备份集放进版本库或公共存储。</strong></p>
+<hr>
+<h2 id="三-备份什么-不备份什么">三、备份什么、不备份什么<a class="anchor" href="#三-备份什么-不备份什么" aria-label="锚点">#</a></h2>
+<p>判定标准只有一条：<strong>「状态」= 权威且不可重建，丢了要人重配或永久损失；「缓存/派生物」= 能由状态或环境重新算出来。只备份状态。</strong></p>
+<h3 id="3-1-三条最关键的判定">3.1 三条最关键的判定<a class="anchor" href="#3-1-三条最关键的判定" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>资产</th><th>备不备</th><th>为什么</th></tr></thead><tbody><tr><td><code>khyquant/data/khy-quant.db</code>（Sequelize 主库，41 张表）</td><td><strong>备</strong></td><td>用户/交易/策略/回测/密钥，权威状态。只能走热备原语。</td></tr><tr><td><code>taskboard.db</code></td><td><strong>备</strong></td><td><code>coordinator/taskBoard.js</code> 头部记载它已从 JSON 迁到 SQLite，<strong>没有 JSON 源可回放</strong>，是权威状态。</td></tr><tr><td><code>sessions.db</code>（含 <code>-wal</code>/<code>-shm</code>）</td><td><strong>不备</strong></td><td>它只是会话 JSON 的 FTS5 <strong>搜索索引副本</strong>，<code>sessionSearchIndex.reindexAll()</code> 能从 <code>sessionPersistence</code> 的会话 JSON 全量重建。现场实测 <code>sessions.db-wal</code>（1.2 MB）比库本体（1.1 MB）还大 —— 直接拷贝必然得到不一致副本，正是 F1 明令禁止的行为。恢复收尾时按 <code>manifest.restoreHints</code> 重建索引。</td></tr></tbody></table>
+<h3 id="3-2-为什么用-排除清单-而不是-收录清单">3.2 为什么用「排除清单」而不是「收录清单」<a class="anchor" href="#3-2-为什么用-排除清单-而不是-收录清单" aria-label="锚点">#</a></h3>
+<p>数据家目录会随功能增长长出新目录。若用收录白名单，<strong>新增的状态目录会静默漏备</strong>，而漏备直到用户需要恢复的那一刻才暴露。用排除黑名单，最坏情况只是多备一个小的未知目录。代价完全不对称，所以：<strong>默认收录，已确证的缓存/派生物逐条排除并写明理由</strong>（<code>EXCLUDED_DIR_REASONS</code> / <code>EXCLUDED_FILE_REASONS</code> / <code>EXCLUDED_FILE_PATTERNS</code>）。</p>
+<p>排除的典型条目（每条都带理由，<code>khy backup</code> 输出里会汇总排除项数）：</p>
+<ul><li><strong>缓存/运行期目录</strong>：<code>logs</code>、<code>cache</code>、<code>tmp</code>/<code>.tmp</code>、<code>gateway</code>、<code>node_modules</code>、<code>clipboard-img2file</code>、<code>backups</code>（防递归）</li><li><strong>派生物文件</strong>：<code>integrity_manifest.json</code>（安装完整性清单，可重生成）、<code>hw_probe_cache.json</code>、<code>version_cache.json</code>、<code>node_check.json</code>、<code>last_verified_model.json</code>、<code>bootstrap_version.json</code>、<code>ai_manage_runtime.json</code>（守护进程端口，重启即变）</li><li><strong>进程/运行期</strong>：<code>daemon.pid</code>、<code>*.pid</code>、<code>*.lock</code>、<code>*.log</code>、<code>.tmp-*</code>、<code>.restore-tmp-*</code></li><li><strong>幽灵 <code>*.json</code> 目录</strong>：<code>.khy/</code> 下存在几个名字带 <code>.json</code> 的<strong>空目录</strong>（<code>custom_providers.json/</code>、<code>search_engines.json/</code>），是 <code>getDataDir()</code> / <code>getAppDataDir()</code> 被传入完整文件名后 mkdir 出来的产物。它们不是状态，整棵剪掉。<strong>这是一个已发现但未修复的上游 bug</strong>，见第八节。</li></ul>
+<h3 id="3-3-分级-core-默认-与-full">3.3 分级：core（默认）与 full<a class="anchor" href="#3-3-分级-core-默认-与-full" aria-label="锚点">#</a></h3>
+<p><code>core</code> 收权威且体积可控的东西；<code>full</code> 额外收「体积大但不可重建的历史流水」：<code>audit</code>（实测 10 MB / 1300+ 文件）、<code>receipts</code>、<code>events</code>、<code>telemetry</code>、<code>training</code>、<code>cognitive_snapshots</code>、<code>audit.jsonl</code>。</p>
+<pre><code class="language-bash">khy backup --tier full     <span class="hljs-comment"># 或 khy backup full</span></code></pre>
+<p><strong>分级不能成为绕过 F1 的后门</strong>：<code>.db</code>/<code>.sqlite</code>/<code>-wal</code>/<code>-shm</code>/<code>-journal</code> 在 <strong>core 和 full 两级都</strong>被文件遍历排除，理由固定为 <code>sqlite:hot-copy-only</code>。测试 <code>backupAssetPlan.test.js</code> 对两级分别断言这一点。</p>
+<hr>
+<h2 id="四-域边界-备份-不-负责的三件事">四、域边界：备份<strong>不</strong>负责的三件事<a class="anchor" href="#四-域边界-备份-不-负责的三件事" aria-label="锚点">#</a></h2>
+<p>备份集刻意不去覆盖别的子系统的领地。搞混会导致「恢复」把另一件事弄坏：</p>
+<table><thead><tr><th>不收</th><th>归谁</th><th>为什么不能混</th></tr></thead><tbody><tr><td><code>.install-ledger.jsonl</code></td><td><code>khy uninstall</code> 的安装副作用台账</td><td>它记录的是<strong>这一次安装</strong>在系统里留下了什么。把 A 次安装的台账恢复进 B 次安装，卸载就会去删不属于自己的东西。</td></tr><tr><td><code>~/.khyos/vault</code></td><td><code>khy vault</code>（独立机密域）</td><td>默认 <code>BACKUP.INCLUDE_VAULT = false</code>。vault 有自己的加密与解锁模型，混进一份 0600 的普通备份集会降低它的保护等级。</td></tr><tr><td>源码 / 已装副本完整性</td><td><code>khy restore</code>（加密源码包）、<code>integrity_manifest.json</code></td><td>那是「程序」不是「数据」。完整性清单是派生物，恢复后<strong>主动丢弃</strong>并让它重新生成，而不是把旧清单盖回去。</td></tr></tbody></table>
+<hr>
+<h2 id="五-f1-sqlite-只能热备-绝不复制正在写入的-db">五、F1：SQLite 只能热备，绝不复制正在写入的 <code>.db</code><a class="anchor" href="#五-f1-sqlite-只能热备-绝不复制正在写入的-db" aria-label="锚点">#</a></h2>
+<p>这是整个子系统最硬的一条约束，<strong>且已经机器化，不靠人自觉</strong>：</p>
+<ol><li><strong>规则层</strong>：任何 <code>.db</code>/<code>.sqlite</code>/<code>-wal</code>/<code>-shm</code>/<code>-journal</code> 都被 <code>backupAssetPlan.classifyFile</code> 排除，理由 <code>sqlite:hot-copy-only</code>。规则本身不允许它们进文件遍历。</li><li><strong>执行层</strong>：SQLite 进备份集的<strong>唯一出口</strong>是 <code>sqliteHotCopy.hotCopySqlite()</code>，实现为 <code>VACUUM INTO</code> —— WAL 兼容，产出的是一个<strong>一致性快照</strong>，不带 <code>-wal</code>/<code>-shm</code> 边车。</li><li><strong>静态守卫</strong>：<code>tests/backupNoRawDbCopy.test.js</code> 扫描 <code>services/backup/*.js</code> 与 <code>cli/handlers/backup.js</code>，禁止除 <code>sqliteHotCopy.js</code> 之外的任何文件打开数据库连接、执行 <code>VACUUM</code>，或把 <code>copyFileSync</code>/<code>createReadStream</code>/<code>renameSync</code> 用在和 <code>.db</code>/<code>sqlite</code>/<code>-wal</code> 相关的路径上。想绕过 F1 必须先改掉这个测试 —— 那就是一次显式的、能被 review 看见的决定。</li></ol>
+<p><strong>为什么不用 better-sqlite3 的 <code>.backup()</code> API</strong>：本仓的 SQLite 走双驱动适配器（<code>config/sqlite-adapter.js</code>），当前生效的驱动是 <strong>node:sqlite</strong>（better-sqlite3 只是回退），它<strong>没有</strong> <code>.backup()</code> 方法。<code>VACUUM INTO</code> 是唯一对两个驱动都可用、且 WAL 兼容的热备原语。</p>
+<p>演练测试里有一条专门证明这件事的用例：备份进行中由<strong>另一个进程</strong>持续写入，已提交但仍在 WAL 里的行照样出现在快照中 —— 而裸拷 <code>.db</code> 会丢掉它们。</p>
+<p><strong>PostgreSQL</strong>：<code>DB_MODE=postgres</code> 时走 <code>pg_dump</code>（<code>KHY_PG_DUMP_BIN</code> 指定二进制，默认 <code>pg_dump</code>；空闲超时 <code>KHY_BACKUP_PG_DUMP_IDLE_TIMEOUT_MS</code>，默认 120 s，用 <code>spawnWithIdleTimeout</code> 而非硬杀）。恢复端<strong>不自动 <code>pg_restore</code></strong> —— 它需要先 drop/create 数据库对象，破坏性远超「放回文件」，还要凭据与停机窗口。备份集里有 dump，恢复时把命令原样打印给人执行（<code>manualSteps</code>）。</p>
+<hr>
+<h2 id="六-恢复-顺序本身就是安全机制">六、恢复：顺序本身就是安全机制<a class="anchor" href="#六-恢复-顺序本身就是安全机制" aria-label="锚点">#</a></h2>
+<p><code>khy backup restore [&lt;id&gt;]</code>（缺省 <code>--latest</code>）。执行顺序刻意如此，每一步都是一道闸：</p>
+<ol><li><strong>先校验</strong>。缺 <code>.complete</code> → <strong>直接拒绝</strong>，<code>--force</code> 也不放行（那是一份写到一半的备份）。逐项 sha256 不符 → 拒绝，除非显式 <code>--force</code>。用一份坏备份覆盖现有数据 = 两份都没了。</li><li><strong>守护进程存活 → 拒绝</strong>。它持有 SQLite 连接与内存态，换掉库文件会得到「进程内旧状态 + 盘上新状态」的分裂。请自己 <code>khy daemon stop</code>；<strong>恢复流程绝不代为 kill</strong>（AGENTS 规则 3：不硬杀进程）。</li><li><strong>先给现状拍一份回退备份</strong>，再动手。恢复本身可能选错 id；没有这一步就没有回头路。输出里会给出这份回退备份的 id。<code>--skip-pre-backup</code> 可跳过，<strong>不可撤销，不建议</strong>。</li><li><strong>家目录一致性检查</strong>。manifest 记录了备份时数据家目录的绝对路径。路径变了（换机、换用户、portable 迁移）<strong>默认拒绝</strong>，需要 <code>--remap</code> 明确表示「就恢复到当前家目录」。</li><li><strong>逐项落盘</strong>走 <code>.restore-tmp-&lt;pid&gt;</code> + rename；SQLite 走 <code>restoreSqliteInPlace</code>，<strong>连带删除旧的 <code>-wal</code>/<code>-shm</code>/<code>-journal</code></strong> —— 否则旧 WAL 会重放，污染刚换上的库。</li><li><strong>收尾按 <code>manifest.restoreHints</code></strong>：丢弃 <code>integrity_manifest.json</code>（派生物，让它重新生成）、重建 <code>sessions.db</code> 的 FTS5 索引（会话 JSON 才是主副本）。</li><li>完成后如果之前跑着守护进程，<code>khy daemon start</code> 重新拉起以加载新数据。</li></ol>
+<p><strong>恢复是叠加，不是镜像同步。</strong> 「备份集里没有、现状里有」的文件<strong>不会被删除</strong>。core 级本就刻意少收，删除现有文件的语义太危险，需要另一个显式命令来表达。</p>
+<p><strong>先预演</strong>：<code>khy backup restore --dry-run</code> 走完全部校验与规划，一个文件都不动。养成先 dry-run 的习惯。</p>
+<hr>
+<h2 id="七-保留策略-唯一会删用户备份的地方">七、保留策略（唯一会删用户备份的地方）<a class="anchor" href="#七-保留策略-唯一会删用户备份的地方" aria-label="锚点">#</a></h2>
+<p>语义<strong>明确定义，无歧义</strong>（<code>BACKUP</code> 注释 + <code>backupManifest.planRetention</code>）：</p>
+<blockquote><p>一份备份被删，当且仅当<strong>同时</strong>满足「按时间倒序排在 <code>KEEP_COUNT</code> 之外」<strong>且</strong>「早于 <code>KEEP_DAYS</code>」。<strong>最新一份永不删除</strong>（即使 <code>keepCount: 0</code>）。缺 <code>.complete</code> 的残破备份不受这两条保护，优先清理，且<strong>不占用份数配额</strong>。</p></blockquote>
+<p>&quot;且&quot;是刻意的：只超份数不超天数 → 一份都不删（可能是你今天连备了 20 次）；只超天数不超份数 → 一份都不删（可能是你半年只备了 3 次）。任何一条单独成立都不足以删除用户数据。</p>
+<pre><code class="language-bash">khy backup prune --dry-run                     <span class="hljs-comment"># 先看会删哪些、理由是什么</span>
+khy backup prune --keep-count 30 --keep-days 90</code></pre>
+<h2 id="八-配置项一览-f5-默认值只在-servicedefaults-js-的-backup">八、配置项一览（F5：默认值只在 <code>serviceDefaults.js</code> 的 <code>BACKUP</code>）<a class="anchor" href="#八-配置项一览-f5-默认值只在-servicedefaults-js-的-backup" aria-label="锚点">#</a></h2>
+<table><thead><tr><th>环境变量</th><th>默认</th><th>说明</th></tr></thead><tbody><tr><td><code>KHY_BACKUP</code></td><td>开</td><td>总闸（<code>flagRegistry</code>，default-on）。关掉后命令仍可被发现，但<strong>明确拒绝执行</strong>并告知 —— 绝不静默空跑。</td></tr><tr><td><code>KHY_BACKUP_ROOT</code></td><td><code>&lt;数据家目录&gt;/backups</code></td><td>备份根。<code>--root</code> 可临时覆盖。</td></tr><tr><td><code>KHY_BACKUP_TIER</code></td><td><code>core</code></td><td>默认分级。<code>--tier</code> 覆盖。</td></tr><tr><td><code>KHY_BACKUP_KEEP_COUNT</code></td><td><code>10</code></td><td>保留份数。</td></tr><tr><td><code>KHY_BACKUP_KEEP_DAYS</code></td><td><code>30</code></td><td>保留天数。</td></tr><tr><td><code>KHY_BACKUP_MIN_FREE_BYTES</code></td><td><code>512 MB</code></td><td>起备前的最小可用空间。宁可拒绝开始，也不要写一半把盘撑爆。</td></tr><tr><td><code>KHY_PG_DUMP_BIN</code></td><td><code>pg_dump</code></td><td>PostgreSQL 分支的二进制。</td></tr><tr><td><code>KHY_BACKUP_PG_DUMP_IDLE_TIMEOUT_MS</code></td><td><code>120000</code></td><td><code>pg_dump</code> 空闲超时（idle，非硬超时）。</td></tr></tbody></table>
+<p>命令行选项见 <code>khy backup help</code>：<code>--tier</code>、<code>--note</code>、<code>--root</code>、<code>--allow-partial</code>、<code>--dry-run</code>/<code>-n</code>、<code>--remap</code>、<code>--force</code>、<code>--skip-pre-backup</code>、<code>--skip-reindex</code>、<code>--keep-count</code>、<code>--keep-days</code>、<code>--quiet</code>/<code>-q</code>。</p>
+<hr>
+<h2 id="九-已知问题-幽灵-json-目录">九、已知问题：幽灵 <code>*.json</code> 目录<a class="anchor" href="#九-已知问题-幽灵-json-目录" aria-label="锚点">#</a></h2>
+<p><code>.khy/</code> 下会出现名字带 <code>.json</code> 的<strong>空目录</strong>：</p>
+<ul><li><code>custom_providers.json/</code> — <code>cli/handlers/health.js</code> 调 <code>getDataDir('custom_providers.json')</code></li><li><code>search_engines.json/</code> — <code>services/webSearchService.js</code>、<code>services/webToolsService.js</code> 调 <code>getAppDataDir('search_engines.json')</code></li></ul>
+<p><code>getDataDir()</code> / <code>getAppDataDir()</code> 会 <strong>mkdir 传入的完整拼接路径</strong>，所以传文件名进去就得到一个同名目录。真正的文件由别处正常写在旁边（<code>custom_providers.json</code> 文件与 <code>custom_providers.json/</code> 目录可以同时存在）。</p>
+<p><strong>备份侧已经绕开</strong>：<code>backupAssetPlan.isPhantomJsonDir</code> 把这类<strong>目录</strong>整棵剪掉，同名<strong>文件</strong>照常收录。但上游调用点仍在制造它们 —— <strong>这是待修的 bug，不属于备份子系统的职责</strong>，修它要改那三个调用点的 <code>getDataDir</code> 用法（本次未改，避免把两件事混进一个变更）。</p>
+<hr>
+<h2 id="十-json-原子写-与备份同源的一条加固">十、JSON 原子写（与备份同源的一条加固）<a class="anchor" href="#十-json-原子写-与备份同源的一条加固" aria-label="锚点">#</a></h2>
+<p>备份能救「盘上文件坏了」，但救不了「文件被写坏的那一刻」。裸 <code>fs.writeFileSync</code> 写到一半断电/被 kill，留下的是一个<strong>截断的 JSON</strong>，下次启动读到畸形内容，状态直接归零 —— 而这时最近一份备份可能已经是几天前的了。</p>
+<p>所以 <code>utils/atomicWriteJson.js</code> 是「原子写 JSON」的单一真源：同目录临时文件 + 可选 fsync + <code>rename</code>。原子性来自 <code>rename</code>（POSIX 与 Windows 的 ReplaceFile 语义都是原子替换），读者永远看到「旧的完整内容」或「新的完整内容」，不存在中间态；fsync 只决定断电后能否保住<strong>新</strong>内容，因此可经 <code>KHY_ATOMIC_FSYNC</code> 门控关闭而不破坏原子性。同时导出 <code>atomicWriteText</code>：原子性属于「写文件」这件事，JSON 只是最常见的载荷。</p>
+<p><strong>第一批已迁移的调用点</strong>（全部只换写入原语，<strong>盘上字节与文件权限一字不改</strong>）：</p>
+<p><code>services/permissionStore.js</code>、<code>tokenUsageService.js</code>、<code>proxyConfigService.js</code>、<code>toolCallingPermissions.js</code>、<code>growthService.js</code>（5 处）、<code>apiKeyPool.js</code>、<code>customProviderRegistry.js</code>、<code>mcp/mcpConfigStore.js</code>、<code>messaging/msgConfigStore.js</code>、<code>meshStore.js</code>、<code>evoEngine/evoLedger.js</code>、<code>sessionPersistence.js</code>、<code>trajectoryProvenance/traceChain.js</code>。</p>
+<p>迁移期有三个坑，都已在 <code>tests/atomicWriteMigration.test.js</code> 里钉住：</p>
+<ol><li><strong>权限</strong>：<code>atomicWriteJson</code> 默认 <code>0o600</code>，而 <code>fs.writeFileSync</code> 默认 <code>0o666</code>（实际权限由 umask 定，通常 0644）。直接替换会<strong>静默收紧</strong>权限 —— 若有人把 <code>KHY_DATA_HOME</code> 指向多用户共享目录，另一个用户会读不到文件，而写入方一切正常、毫无报错。所以迁移点一律<strong>显式传 <code>mode: 0o666</code></strong>；本来就是凭据文件的（<code>msg.json</code>、会话快照）保持既有的 <code>0o600</code>。「换写入原语」和「改权限」是两件事，必须分批做。</li><li><strong>字节</strong>：legacy 迁移（<code>apiKeyPool</code> / <code>customProviderRegistry</code> 把旧文件搬到新路径）必须<strong>逐字节</strong>搬运 —— 重新序列化会改变缩进与键序，那就不再是「搬运」而是「改写用户数据」，故走 <code>atomicWriteText</code>。<code>mcp.json</code> 原本以换行结尾（project 作用域的 <code>.khy/mcp.json</code> 常被提交进仓库），故用 <code>trailingNewline: true</code> 保住那个换行。</li><li><strong>失败可见</strong>：<code>atomicWriteJson</code> 返回 <code>false</code> 而<strong>不抛</strong>。原先靠 <code>writeFileSync</code> 抛异常让上层感知失败的调用点（<code>mcpConfigStore</code> / <code>msgConfigStore</code> / <code>evoLedger</code> / <code>traceChain</code> / <code>sessionPersistence._writeAtomic</code>）必须把 <code>false</code> 变回异常；<code>meshStore</code> 必须变回 <code>{ok:false, error}</code>。漏掉这一步 = 静默丢数据，比不迁移更糟。</li></ol>
+<p>未迁移的其余裸写点（<code>goalStore</code> / <code>vaultStore</code> / <code>learningProfile</code> / <code>dataHome._writePointer</code> 等）留待后续批次；改 <code>dataHome</code> 会牵动路径解析的启动顺序，单独成批。</p>
+<hr>
+<h2 id="十一-验证方式">十一、验证方式<a class="anchor" href="#十一-验证方式" aria-label="锚点">#</a></h2>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> services/backend
+node --<span class="hljs-built_in">test</span> tests/backupRestoreDrill.test.js      <span class="hljs-comment"># 备份 → 破坏 → 恢复 → 校验（含跨进程并发写入的热备）</span>
+node --<span class="hljs-built_in">test</span> tests/backupNoRawDbCopy.test.js       <span class="hljs-comment"># F1 静态守卫</span>
+node --<span class="hljs-built_in">test</span> tests/backupAssetPlan.test.js         <span class="hljs-comment"># 资产规则（分级 / 排除 / 幽灵目录）</span>
+node --<span class="hljs-built_in">test</span> tests/backupManifest.test.js          <span class="hljs-comment"># 清单格式 + 保留策略</span>
+node --<span class="hljs-built_in">test</span> tests/sqliteHotCopy.test.js           <span class="hljs-comment"># VACUUM INTO 与 restoreSqliteInPlace</span>
+node --<span class="hljs-built_in">test</span> tests/atomicWriteJson.test.js         <span class="hljs-comment"># 原子写原语</span>
+node --<span class="hljs-built_in">test</span> tests/atomicWriteMigration.test.js    <span class="hljs-comment"># 迁移批次的字节/权限/失败语义回归</span></code></pre>
+<p>演练测试是 F3「恢复必须可演练」的落点：它真的建库、真的备份、真的删数据、真的恢复、再逐项校验 —— 不是 mock。</p>
+<hr>
+<h2 id="十二-已冻结的立法决定-2026-08-16">十二、已冻结的立法决定（2026-08-16）<a class="anchor" href="#十二-已冻结的立法决定-2026-08-16" aria-label="锚点">#</a></h2>
+<p>本子系统的设计决定经用户<strong>逐项审阅后整体冻结</strong>。记在这里的目的不是留档好看，而是：<strong>下次有人想改其中任何一条，先要知道它当初为什么这么定，以及改它会踩到什么。</strong> 每条都带「代价」而非只带「理由」——只写理由的记录会让后来人以为这是唯一选择。</p>
+<table><thead><tr><th>#</th><th>冻结的决定</th><th>为什么 / 放弃了什么</th></tr></thead><tbody><tr><td>1</td><td>数据恢复入口是 <code>khy backup restore</code>，<strong>不抢占顶层 <code>khy restore</code></strong></td><td>顶层 <code>khy restore</code> / <code>restore-source</code>（中文 <code>还原</code>）早于本子系统存在，语义是「恢复加密源码包」，归 <code>cli/handlers/publish.js</code>。抢占它会静默改变既有行为，断掉依赖它的脚本与肌肉记忆。代价：数据恢复要多打一个词。<strong>这不是偏好，是既有命令占位的结果。</strong></td></tr><tr><td>2</td><td>默认分级 <code>core</code>；<code>full</code> 必须显式指定</td><td><code>full</code> 额外收 <code>audit</code>（实测 10 MB / 1300+ 文件）等历史流水。默认给「小而权威」，让 <code>khy backup</code> 随手可跑。代价：不看文档的人不会自动备到历史流水。</td></tr><tr><td>3</td><td>备份集<strong>不加密</strong>，改用目录 0700 / 文件 0600 + <code>manifest.containsSecrets</code> 显式标记</td><td>备份集含 <code>api_keys</code> / <code>auth_sessions</code> 表与各消息通道 token；按表裁剪会破坏引用完整性，故不裁。加密会引入「口令丢了备份就废了」这个新的<strong>单点失效</strong>，且恢复流程要多一道解密闸。放弃的是静态保护强度，换来的是恢复路径不增加失败模式。<strong>推论：备份集绝不能进版本库或公共存储。</strong></td></tr><tr><td>4</td><td>用<strong>排除清单</strong>（黑名单）而非收录清单（白名单）</td><td>数据家目录会随功能增长长出新目录。白名单会让新增状态目录<strong>静默漏备</strong>，而漏备直到用户需要恢复那一刻才暴露；黑名单最坏只是多备一个小的未知目录。<strong>代价完全不对称</strong>，所以选黑名单，并要求每条排除都写明理由。</td></tr><tr><td>5</td><td><code>sessions.db</code>（含 <code>-wal</code>/<code>-shm</code>）<strong>不进备份集</strong></td><td>它只是会话 JSON 的 FTS5 索引副本，<code>sessionSearchIndex.reindexAll()</code> 可全量重建；且现场实测 <code>sessions.db-wal</code>（1.2 MB）比库本体（1.1 MB）还大 —— 裸拷必然得到不一致副本，正是 F1 禁止的行为。恢复收尾按 <code>manifest.restoreHints</code> 重建索引。</td></tr><tr><td>6</td><td>SQLite 热备用 <code>VACUUM INTO</code>，<strong>不用</strong> better-sqlite3 的 <code>.backup()</code></td><td>本仓 SQLite 走双驱动适配器，<strong>当前生效的驱动是 node:sqlite，它没有 <code>.backup()</code></strong>（better-sqlite3 只是回退）。<code>VACUUM INTO</code> 是唯一对两个驱动都可用且 WAL 兼容的原语。F1 已机器化成三层（规则层排除 / 执行层唯一出口 / <code>backupNoRawDbCopy.test.js</code> 静态守卫），见第五节。</td></tr><tr><td>7</td><td>恢复前<strong>强制</strong>给现状拍一份回退备份；守护进程存活则<strong>直接拒绝</strong>，且绝不代为 kill</td><td>恢复本身可能选错 id，没有回退备份就没有回头路。不硬杀进程遵 AGENTS 规则 3。<code>--skip-pre-backup</code> 保留但标注「不可撤销，不建议」。</td></tr><tr><td>8</td><td>恢复是<strong>叠加</strong>，不是镜像同步：「备份集里没有、现状里有」的文件<strong>不删除</strong></td><td>core 级本就刻意少收，若做镜像同步，一次 core 恢复会删掉大量没被收录的现存文件。删除语义太危险，需要另一个显式命令来表达。</td></tr><tr><td>9</td><td>保留策略 = 超份数 <strong>AND</strong> 超天数；最新一份<strong>永不删除</strong></td><td>任何一条单独成立都不足以删用户数据（今天连备 20 次 / 半年只备 3 次）。残破备份（缺 <code>.complete</code>）不受这两条保护，优先清理且不占份数配额。</td></tr><tr><td>10</td><td>PostgreSQL <strong>只备不自动恢复</strong>，把 <code>pg_restore</code> 命令原样打印给人执行</td><td><code>pg_restore</code> 要先 drop/create 数据库对象，破坏性远超「放回文件」，还需凭据与停机窗口。备份集里有 dump，决定权留给人。</td></tr><tr><td>11</td><td>原子写迁移点一律<strong>显式传 <code>mode: 0o666</code></strong>，保持权限不变而非收紧到 0600</td><td><code>atomicWriteJson</code> 默认 0600，<code>fs.writeFileSync</code> 默认 0666（实际由 umask 定）。直接替换会<strong>静默收紧</strong>权限：若有人把 <code>KHY_DATA_HOME</code> 指向多用户共享目录，另一个用户会读不到文件，而写入方一切正常、毫无报错。「换写入原语」和「改权限」是两件事，必须分批。</td></tr><tr><td>12</td><td>第一批只迁 13 个调用点；<code>dataHome._writePointer</code> 单独成批</td><td>见第十节的清单。改 <code>dataHome</code> 会牵动路径解析的启动顺序，混进这一批会让「原子写迁移」和「启动顺序变更」两类风险无法分别回滚。</td></tr></tbody></table>
+<p><strong>已知缺陷，刻意未在本次修复</strong>：第九节的幽灵 <code>*.json</code> 目录（<code>health.js</code> / <code>webSearchService.js</code> / <code>webToolsService.js</code> 三个 <code>getDataDir</code> 调用点）。备份侧已绕开，但制造它们的上游仍在。</p>
+<p><strong>工具链遗留问题（与本子系统无关，但会误导后来人）</strong>：<code>services/backend</code> 的 <code>npm run test:node</code> 脚本 glob 为 <code>tests/**/*.test.js</code>，覆盖了约 636 个<strong>只能在 jest 下运行</strong>的套件，必然报 <code>global.describe is not a function</code>（在本子系统之前的提交上即可复现）。<strong>该脚本在本仓不可能变绿</strong>，请勿把它的失败当成回归；本子系统的验证方式见第十一节。</p>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-175] 首次运行自动登录与凭据.html"><div class="dir">← 上一篇</div><div class="ttl">首次运行自动登录与凭据</div></a><a class="next" href="../../docs/07_OPS_运维/00_INDEX_运维-分类索引.html"><div class="dir">下一篇 →</div><div class="ttl">00INDEX 运维分类索引</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/07_OPS_运维/[OPS-MAN-176] 数据备份与恢复.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

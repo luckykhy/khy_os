@@ -31,17 +31,17 @@
 <table><thead><tr><th>脚本</th><th>渠道</th><th>仓库地址</th><th>凭据环境变量（优先级从高到低）</th></tr></thead><tbody><tr><td><code>publish-pip.sh</code></td><td>PyPI（khy-os）</td><td><strong>默认原仓库</strong>，无需设置</td><td><code>TWINE_PASSWORD</code> / <code>PYPI_TOKEN</code> / <code>PYPI_API_TOKEN</code></td></tr><tr><td><code>publish-npm.sh</code></td><td>npm（@khy-os/khy-os）</td><td>引导（默认 npmjs.org）</td><td><code>NPM_TOKEN</code> / <code>NODE_AUTH_TOKEN</code> / <code>NPM_AUTH_TOKEN</code></td></tr><tr><td><code>publish-github.sh</code></td><td>GitHub 源码</td><td>引导 <code>owner/repo</code></td><td><code>GITHUB_TOKEN</code> / <code>GH_TOKEN</code></td></tr><tr><td><code>publish-gitlab.sh</code></td><td>GitLab 源码</td><td>引导 <code>owner/repo</code></td><td><code>GITLAB_TOKEN</code> / <code>GL_TOKEN</code> / <code>CI_JOB_TOKEN</code></td></tr><tr><td><code>publish-gitee.sh</code></td><td>Gitee 源码</td><td>引导 <code>owner/repo</code>（+用户名）</td><td><code>GITEE_TOKEN</code></td></tr></tbody></table>
 <blockquote><p>pip 与其它渠道的区别：<strong>pip 默认发到 khy-os 的原始 PyPI 仓库</strong>，只要 token；<br>其它渠道只需引导设置仓库地址 + 输入 token，即可还原源码并发布。</p></blockquote>
 <h2 id="快速开始">快速开始<a class="anchor" href="#快速开始" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># pip —— 默认原仓库，只需 token
+<pre><code class="language-bash"><span class="hljs-comment"># pip —— 默认原仓库，只需 token</span>
 PYPI_TOKEN=pypi-xxxx bash scripts/release/publish/publish-pip.sh
 
-# npm —— 引导 registry + token
+<span class="hljs-comment"># npm —— 引导 registry + token</span>
 NPM_TOKEN=npm_xxxx bash scripts/release/publish/publish-npm.sh
 
-# GitHub / GitLab —— owner/repo + token
+<span class="hljs-comment"># GitHub / GitLab —— owner/repo + token</span>
 GITHUB_TOKEN=ghp_xxxx bash scripts/release/publish/publish-github.sh --repo kodehu03/khy-os
 GITLAB_TOKEN=glpat_xx bash scripts/release/publish/publish-gitlab.sh --repo kodehu03/khy-os
 
-# Gitee —— 需要账号用户名
+<span class="hljs-comment"># Gitee —— 需要账号用户名</span>
 GITEE_TOKEN=xxxx bash scripts/release/publish/publish-gitee.sh --repo kodehu03/khy-os --user kodehu03</code></pre>
 <p>不带凭据环境变量运行时，脚本会<strong>隐藏输入</strong>（不回显）提示你键入 token。</p>
 <h2 id="通用参数">通用参数<a class="anchor" href="#通用参数" aria-label="锚点">#</a></h2>

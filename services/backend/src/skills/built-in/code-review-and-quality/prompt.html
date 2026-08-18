@@ -137,47 +137,47 @@ Flag any issues as Critical, Important, or Suggestion.</code></pre>
 <ol><li>Does the existing stack solve this? (Often it does.)</li><li>How large is the dependency? (Check bundle impact.)</li><li>Is it actively maintained? (Check last commit, open issues.)</li><li>Does it have known vulnerabilities? (<code>npm audit</code>)</li><li>What's the license? (Must be compatible with the project.)</li></ol>
 <p><strong>Rule:</strong> Prefer standard library and existing utilities over new dependencies. Every dependency is a liability.</p>
 <h2 id="the-review-checklist">The Review Checklist<a class="anchor" href="#the-review-checklist" aria-label="锚点">#</a></h2>
-<pre><code class="language-markdown">## Review: [PR/Change title]
+<pre><code class="language-markdown"><span class="hljs-section">## Review: [PR/Change title]</span>
 
-### Context
-- [ ] I understand what this change does and why
+<span class="hljs-section">### Context</span>
+<span class="hljs-bullet">-</span> [ ] I understand what this change does and why
 
-### Correctness
-- [ ] Change matches spec/task requirements
-- [ ] Edge cases handled
-- [ ] Error paths handled
-- [ ] Tests cover the change adequately
+<span class="hljs-section">### Correctness</span>
+<span class="hljs-bullet">-</span> [ ] Change matches spec/task requirements
+<span class="hljs-bullet">-</span> [ ] Edge cases handled
+<span class="hljs-bullet">-</span> [ ] Error paths handled
+<span class="hljs-bullet">-</span> [ ] Tests cover the change adequately
 
-### Readability
-- [ ] Names are clear and consistent
-- [ ] Logic is straightforward
-- [ ] No unnecessary complexity
+<span class="hljs-section">### Readability</span>
+<span class="hljs-bullet">-</span> [ ] Names are clear and consistent
+<span class="hljs-bullet">-</span> [ ] Logic is straightforward
+<span class="hljs-bullet">-</span> [ ] No unnecessary complexity
 
-### Architecture
-- [ ] Follows existing patterns
-- [ ] No unnecessary coupling or dependencies
-- [ ] Appropriate abstraction level
+<span class="hljs-section">### Architecture</span>
+<span class="hljs-bullet">-</span> [ ] Follows existing patterns
+<span class="hljs-bullet">-</span> [ ] No unnecessary coupling or dependencies
+<span class="hljs-bullet">-</span> [ ] Appropriate abstraction level
 
-### Security
-- [ ] No secrets in code
-- [ ] Input validated at boundaries
-- [ ] No injection vulnerabilities
-- [ ] Auth checks in place
-- [ ] External data sources treated as untrusted
+<span class="hljs-section">### Security</span>
+<span class="hljs-bullet">-</span> [ ] No secrets in code
+<span class="hljs-bullet">-</span> [ ] Input validated at boundaries
+<span class="hljs-bullet">-</span> [ ] No injection vulnerabilities
+<span class="hljs-bullet">-</span> [ ] Auth checks in place
+<span class="hljs-bullet">-</span> [ ] External data sources treated as untrusted
 
-### Performance
-- [ ] No N+1 patterns
-- [ ] No unbounded operations
-- [ ] Pagination on list endpoints
+<span class="hljs-section">### Performance</span>
+<span class="hljs-bullet">-</span> [ ] No N+1 patterns
+<span class="hljs-bullet">-</span> [ ] No unbounded operations
+<span class="hljs-bullet">-</span> [ ] Pagination on list endpoints
 
-### Verification
-- [ ] Tests pass
-- [ ] Build succeeds
-- [ ] Manual verification done (if applicable)
+<span class="hljs-section">### Verification</span>
+<span class="hljs-bullet">-</span> [ ] Tests pass
+<span class="hljs-bullet">-</span> [ ] Build succeeds
+<span class="hljs-bullet">-</span> [ ] Manual verification done (if applicable)
 
-### Verdict
-- [ ] **Approve** — Ready to merge
-- [ ] **Request changes** — Issues must be addressed</code></pre>
+<span class="hljs-section">### Verdict</span>
+<span class="hljs-bullet">-</span> [ ] <span class="hljs-strong">**Approve**</span> — Ready to merge
+<span class="hljs-bullet">-</span> [ ] <span class="hljs-strong">**Request changes**</span> — Issues must be addressed</code></pre>
 <h2 id="see-also">See Also<a class="anchor" href="#see-also" aria-label="锚点">#</a></h2>
 <ul><li>For detailed security review guidance, see <code>references/security-checklist.md</code></li><li>For performance review checks, see <code>references/performance-checklist.md</code></li></ul>
 <h2 id="common-rationalizations">Common Rationalizations<a class="anchor" href="#common-rationalizations" aria-label="锚点">#</a></h2>

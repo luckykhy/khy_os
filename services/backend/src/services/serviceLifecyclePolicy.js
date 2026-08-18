@@ -133,7 +133,7 @@ const LIFECYCLE = Object.freeze([
     unref: false,
     shutdownHook: true,
     startSymbol: null,
-    note: 'getUpdateNotice 取更新提示一次',
+    note: '协调器后台检查并预取校验更新，空闲后发送结构化确认事件',
   }),
   Object.freeze({
     id: 'ideAdapterRecovery',
@@ -192,6 +192,20 @@ const LIFECYCLE = Object.freeze([
     shutdownHook: true,
     startSymbol: null,
     note: '轻量模式 +300ms 触发 aiGateway.init() 预热一次(门判定仍在 runner 体内,逐字节保留原 !==false 语义)',
+  }),
+  Object.freeze({
+    id: 'versionUpdateNotice',
+    tier: 'startup-oneshot',
+    process: 'cli-startup',
+    mode: 'khy',
+    gate: null,
+    gateInverted: false,
+    delayMs: 5000,
+    immediate: false,
+    unref: false,
+    shutdownHook: true,
+    startSymbol: null,
+    note: '主 CLI 后台检查并预取校验更新，空闲后发送结构化确认事件',
   }),
 
   // ── daemon 常驻(daemonEntry.js 独立进程)──────────────────────────────────

@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { normalizeToken } from '@khy/ui-shared/auth/token'
 import { useUserStore } from '@/stores/user'
 import { ElLoading, ElMessage } from 'element-plus'
 import router from '@/router'
@@ -56,7 +57,7 @@ request.interceptors.request.use(
     config.timeout = getRequestTimeoutMs()
 
     const userStore = useUserStore()
-    const token = typeof userStore.token === 'string' ? userStore.token.replace(/^Bearer\s+/i, '').trim() : ''
+    const token = normalizeToken(userStore.token)
     if (token && !isLocalToken(token)) {
       config.headers.Authorization = `Bearer ${token}`
     } else if (config.headers?.Authorization) {

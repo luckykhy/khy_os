@@ -6,12 +6,11 @@
  * Provides AI chat REPL without database or full server dependencies.
  */
 
-// Set module identity before any other require
-process.env.KHY_MODULE = 'khy-ai';
 process.env.KHY_MODE = 'standalone';
 
 const path = require('path');
 const fs = require('fs');
+const { handleStandaloneInfo } = require('./standalone-info');
 
 // Resolve backend root (works both in dev and bundled mode)
 const BACKEND_ROOT = process.env.KHY_BACKEND_ROOT
@@ -33,23 +32,29 @@ function bootstrap() {
 }
 
 async function main() {
+  const args = process.argv.slice(2);
+  if (handleStandaloneInfo(
+    'khy-ai',
+    'Interactive AI chat REPL with one-shot prompt support.',
+    'khy-ai [prompt]',
+    args
+  )) return;
+
   bootstrap();
 
   try {
     // Windows spawn hardening (best effort)
     try {
-      require(path.join(BACKEND_ROOT, 'src/bootstrap/windowsSpawnHardening')).installWindowsSpawnHardening();
+      require('../../../services/backend/src/bootstrap/windowsSpawnHardening').installWindowsSpawnHardening();
     } catch { /* best effort */ }
 
     // Start AI REPL
-    const replPath = path.join(BACKEND_ROOT, 'src/cli/repl');
-    const repl = require(replPath);
+    const repl = require('../../../services/backend/src/cli/repl');
 
     // Check for one-shot mode (khy-ai "prompt here")
-    const args = process.argv.slice(2);
     if (args.length > 0 && !args[0].startsWith('-')) {
       // One-shot AI query
-      const aiChat = require(path.join(BACKEND_ROOT, 'src/cli/aiChatCore'));
+      const aiChat = require('../../../services/backend/src/cli/aiChatCore');
       await aiChat.handleSingleQuery(args.join(' '));
     } else {
       // Interactive REPL mode

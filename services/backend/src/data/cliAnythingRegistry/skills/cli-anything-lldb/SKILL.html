@@ -38,14 +38,14 @@
 <h2 id="quick-commands">Quick Commands<a class="anchor" href="#quick-commands" aria-label="锚点">#</a></h2>
 <pre><code class="language-bash">cli-anything-lldb --json target create --exe /path/to/exe
 cli-anything-lldb --json process launch --arg foo --arg bar
-cli-anything-lldb --json breakpoint set --function main
-cli-anything-lldb --json breakpoint set --function PluginEntry --allow-pending
-cli-anything-lldb --json process continue
+cli-anything-lldb --json breakpoint <span class="hljs-built_in">set</span> --<span class="hljs-keyword">function</span> main
+cli-anything-lldb --json breakpoint <span class="hljs-built_in">set</span> --<span class="hljs-keyword">function</span> PluginEntry --allow-pending
+cli-anything-lldb --json process <span class="hljs-built_in">continue</span>
 cli-anything-lldb --json process interrupt
-cli-anything-lldb --json thread backtrace --limit 20
+cli-anything-lldb --json thread backtrace --<span class="hljs-built_in">limit</span> 20
 cli-anything-lldb --json frame locals
-cli-anything-lldb --json expr &quot;myVar&quot;
-cli-anything-lldb --json memory read --address 0x1000 --size 64
+cli-anything-lldb --json <span class="hljs-built_in">expr</span> <span class="hljs-string">&quot;myVar&quot;</span>
+cli-anything-lldb --json memory <span class="hljs-built_in">read</span> --address 0x1000 --size 64
 cli-anything-lldb --json session close</code></pre>
 <h2 id="debug-adapter-protocol">Debug Adapter Protocol<a class="anchor" href="#debug-adapter-protocol" aria-label="锚点">#</a></h2>
 <p>Use the DAP entry point when an AI client needs a real debug adapter lifecycle<br>instead of shelling out separate CLI commands:</p>
@@ -61,38 +61,38 @@ cli-anything-lldb dap --profile /path/to/stop-rules.json</code></pre>
 <p>DAP <code>stopped</code> events include <code>body.cliAnythingStop.origin</code>: <code>manualPause</code> for a<br>client pause request, <code>internalTrap</code> for a matched internal rule, and <code>debuggee</code><br>for ordinary program stops. Existing <code>cli-anything-lldb-dap</code> processes do not<br>hot-load new code or profile contents; restart the adapter and re-attach or<br>re-launch before expecting new rules to apply.</p>
 <h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
 <h3 id="target">target<a class="anchor" href="#target" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-lldb --json target create --exe /path/to/exe [--arch x86_64]
+<pre><code class="language-bash">cli-anything-lldb --json target create --exe /path/to/exe [--<span class="hljs-built_in">arch</span> x86_64]
 cli-anything-lldb --json target info</code></pre>
 <h3 id="process">process<a class="anchor" href="#process" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-lldb --json process launch [--arg ARG ...] [--env KEY=VALUE ...] [--cwd DIR] [--stop-at-entry]
+<pre><code class="language-bash">cli-anything-lldb --json process launch [--arg ARG ...] [--<span class="hljs-built_in">env</span> KEY=VALUE ...] [--cwd DIR] [--stop-at-entry]
 cli-anything-lldb --json process attach --pid 1234
 cli-anything-lldb --json process attach --name myapp --wait-for
-cli-anything-lldb --json process continue
+cli-anything-lldb --json process <span class="hljs-built_in">continue</span>
 cli-anything-lldb --json process interrupt
 cli-anything-lldb --json process detach
 cli-anything-lldb --json process info</code></pre>
 <h3 id="breakpoint">breakpoint<a class="anchor" href="#breakpoint" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-lldb --json breakpoint set --function main
-cli-anything-lldb --json breakpoint set --file main.c --line 42 --condition &quot;i &gt; 10&quot;
-cli-anything-lldb --json breakpoint set --function LateLoadedSymbol --allow-pending
+<pre><code class="language-bash">cli-anything-lldb --json breakpoint <span class="hljs-built_in">set</span> --<span class="hljs-keyword">function</span> main
+cli-anything-lldb --json breakpoint <span class="hljs-built_in">set</span> --file main.c --line 42 --condition <span class="hljs-string">&quot;i &gt; 10&quot;</span>
+cli-anything-lldb --json breakpoint <span class="hljs-built_in">set</span> --<span class="hljs-keyword">function</span> LateLoadedSymbol --allow-pending
 cli-anything-lldb --json breakpoint list
-cli-anything-lldb --json breakpoint delete --id 1
-cli-anything-lldb --json breakpoint enable --id 1
-cli-anything-lldb --json breakpoint disable --id 1</code></pre>
+cli-anything-lldb --json breakpoint delete --<span class="hljs-built_in">id</span> 1
+cli-anything-lldb --json breakpoint <span class="hljs-built_in">enable</span> --<span class="hljs-built_in">id</span> 1
+cli-anything-lldb --json breakpoint <span class="hljs-built_in">disable</span> --<span class="hljs-built_in">id</span> 1</code></pre>
 <h3 id="thread-frame-step">thread / frame / step<a class="anchor" href="#thread-frame-step" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-lldb --json thread list
-cli-anything-lldb --json thread select --id 11111
-cli-anything-lldb --json thread backtrace --limit 50
-cli-anything-lldb --json frame select --index 0
+cli-anything-lldb --json thread <span class="hljs-keyword">select</span> --<span class="hljs-built_in">id</span> 11111
+cli-anything-lldb --json thread backtrace --<span class="hljs-built_in">limit</span> 50
+cli-anything-lldb --json frame <span class="hljs-keyword">select</span> --index 0
 cli-anything-lldb --json frame info
 cli-anything-lldb --json frame locals
 cli-anything-lldb --json step over
 cli-anything-lldb --json step into
 cli-anything-lldb --json step out</code></pre>
 <h3 id="expr-memory-core">expr / memory / core<a class="anchor" href="#expr-memory-core" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-lldb --json expr &quot;argc&quot;
-cli-anything-lldb --json memory read --address 0x1000 --size 128
-cli-anything-lldb --json memory find &quot;needle&quot; --start 0x1000 --size 4096
+<pre><code class="language-bash">cli-anything-lldb --json <span class="hljs-built_in">expr</span> <span class="hljs-string">&quot;argc&quot;</span>
+cli-anything-lldb --json memory <span class="hljs-built_in">read</span> --address 0x1000 --size 128
+cli-anything-lldb --json memory find <span class="hljs-string">&quot;needle&quot;</span> --start 0x1000 --size 4096
 cli-anything-lldb --json core load --path /path/to/core</code></pre>
 <h2 id="agent-usage-notes">Agent Usage Notes<a class="anchor" href="#agent-usage-notes" aria-label="锚点">#</a></h2>
 <ul><li>Prefer <code>--json</code> for all automated flows.</li><li>Separate non-REPL invocations share a persistent session daemon by default.</li><li>Use <code>--session-file PATH</code> or <code>CLI_ANYTHING_LLDB_SESSION_FILE</code> to pin an explicit session for a task.</li><li>Run <code>cli-anything-lldb --json session close</code> when finished so attached processes detach and launched debuggees are cleaned up.</li><li>Use REPL when a human-like interactive shell is more convenient, not because persistence requires it.</li><li>Unresolved CLI breakpoints fail by default; pass <code>--allow-pending</code> only when a future module/symbol load is expected.</li><li>DAP unresolved breakpoints use protocol semantics: <code>verified: false</code> until resolved.</li><li>DAP <code>continue</code> is non-blocking for long-running GUI processes, and DAP <code>pause</code> uses async interrupt.</li><li>DAP breakpoint changes during an active continue first interrupt and wait for a stopped state before mutating LLDB.</li><li>Use DAP stop-rule profiles for app-specific internal traps; restart and re-attach/re-launch after profile changes.</li><li><code>memory find</code> uses a chunked scan capped at 1 MiB per call.</li><li>Call <code>target create</code> before process or core commands.</li><li>Expect structured errors: <code>{&quot;error&quot;: &quot;...&quot;, &quot;type&quot;: &quot;...&quot;}</code></li></ul>

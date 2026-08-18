@@ -14,9 +14,9 @@
  * draft is stashed and restored when ↓ walks past the newest entry (the draft
  * stash already lives in useTextInput, so forwarding here loses nothing).
  *
- * A multiline buffer must still forward so the cursor can move interiorly
- * line-by-line (useTextInput only browses history once the cursor is on the
- * boundary line); that path was never broken and is unconditional here.
+ * A multiline buffer also forwards unconditionally. useTextInput treats every
+ * submitted value, including embedded newlines, as one history entry, so each
+ * forwarded ↑/↓ moves exactly one submitted entry rather than one text line.
  *
  * Gate KHY_HISTORY_BROWSE_EDITING ∈ {0,false,off,no} (case-insensitive) restores
  * the legacy "swallow single-line vertical arrows while text is present"

@@ -36,63 +36,63 @@
 <ul><li>Optional explicit env vars:<ul><li><code>UNREALINSIGHTS_EXE</code></li><li><code>UNREAL_TRACE_SERVER_EXE</code></li><li><code>UNREALINSIGHTS_TRACE</code></li></ul></li></ul>
 <h2 id="core-commands">Core Commands<a class="anchor" href="#core-commands" aria-label="锚点">#</a></h2>
 <h3 id="backend-discovery">Backend discovery<a class="anchor" href="#backend-discovery" aria-label="锚点">#</a></h3>
-<pre><code class="language-powershell">cli-anything-unrealinsights --json backend info</code></pre>
+<pre><code class="language-powershell"><span class="hljs-built_in">cli</span><span class="hljs-literal">-anything-unrealinsights</span> <span class="hljs-literal">--json</span> backend info</code></pre>
 <p>To use a source-built engine's matching <code>UnrealInsights.exe</code>:</p>
-<pre><code class="language-powershell">cli-anything-unrealinsights --json backend ensure-insights `
-  --engine-root 'D:\code\D5\d5render-ue5_3'</code></pre>
+<pre><code class="language-powershell"><span class="hljs-built_in">cli</span><span class="hljs-literal">-anything-unrealinsights</span> <span class="hljs-literal">--json</span> backend ensure<span class="hljs-literal">-insights</span> `
+  <span class="hljs-literal">--engine-root</span> <span class="hljs-string">&#x27;D:\code\D5\d5render-ue5_3&#x27;</span></code></pre>
 <p>This first looks for <code>Engine\Binaries\Win64\UnrealInsights.exe</code> under the<br>specified engine root, then builds it with that engine's <code>Build.bat</code> if needed.</p>
 <h3 id="trace-session-state">Trace session state<a class="anchor" href="#trace-session-state" aria-label="锚点">#</a></h3>
-<pre><code class="language-powershell">cli-anything-unrealinsights trace set D:\captures\session.utrace
-cli-anything-unrealinsights --json trace info</code></pre>
+<pre><code class="language-powershell"><span class="hljs-built_in">cli</span><span class="hljs-literal">-anything-unrealinsights</span> trace <span class="hljs-built_in">set</span> D:\captures\session.utrace
+<span class="hljs-built_in">cli</span><span class="hljs-literal">-anything-unrealinsights</span> <span class="hljs-literal">--json</span> trace info</code></pre>
 <h3 id="trace-store-discovery">Trace Store discovery<a class="anchor" href="#trace-store-discovery" aria-label="锚点">#</a></h3>
-<pre><code class="language-powershell">cli-anything-unrealinsights --json store info
-cli-anything-unrealinsights --json store list --live-only
-cli-anything-unrealinsights --json store latest --set-current</code></pre>
+<pre><code class="language-powershell"><span class="hljs-built_in">cli</span><span class="hljs-literal">-anything-unrealinsights</span> <span class="hljs-literal">--json</span> store info
+<span class="hljs-built_in">cli</span><span class="hljs-literal">-anything-unrealinsights</span> <span class="hljs-literal">--json</span> store list <span class="hljs-literal">--live-only</span>
+<span class="hljs-built_in">cli</span><span class="hljs-literal">-anything-unrealinsights</span> <span class="hljs-literal">--json</span> store latest <span class="hljs-literal">--set-current</span></code></pre>
 <h3 id="capture-orchestration">Capture orchestration<a class="anchor" href="#capture-orchestration" aria-label="锚点">#</a></h3>
-<pre><code class="language-powershell">cli-anything-unrealinsights --json capture run `
-  --project 'D:\Projects\MyGame\MyGame.uproject' `
-  --engine-root 'D:\Program Files\Epic Games\UE_5.5' `
-  --output-trace D:\captures\boot.utrace `
-  --channels &quot;default,bookmark&quot; `
-  --exec-cmd &quot;Trace.Bookmark BootStart&quot; `
-  --wait --timeout 300</code></pre>
+<pre><code class="language-powershell"><span class="hljs-built_in">cli</span><span class="hljs-literal">-anything-unrealinsights</span> <span class="hljs-literal">--json</span> capture run `
+  <span class="hljs-literal">--project</span> <span class="hljs-string">&#x27;D:\Projects\MyGame\MyGame.uproject&#x27;</span> `
+  <span class="hljs-literal">--engine-root</span> <span class="hljs-string">&#x27;D:\Program Files\Epic Games\UE_5.5&#x27;</span> `
+  <span class="hljs-literal">--output-trace</span> D:\captures\boot.utrace `
+  <span class="hljs-literal">--channels</span> <span class="hljs-string">&quot;default,bookmark&quot;</span> `
+  <span class="hljs-literal">--exec-cmd</span> <span class="hljs-string">&quot;Trace.Bookmark BootStart&quot;</span> `
+  <span class="hljs-literal">--wait</span> <span class="hljs-literal">--timeout</span> <span class="hljs-number">300</span></code></pre>
 <p>You can also keep using the explicit form:</p>
-<pre><code class="language-powershell">cli-anything-unrealinsights --json capture run `
-  'D:\Program Files\Epic Games\UE_5.5\Engine\Binaries\Win64\UnrealEditor.exe' `
-  --target-arg 'D:\Projects\MyGame\MyGame.uproject'</code></pre>
+<pre><code class="language-powershell"><span class="hljs-built_in">cli</span><span class="hljs-literal">-anything-unrealinsights</span> <span class="hljs-literal">--json</span> capture run `
+  <span class="hljs-string">&#x27;D:\Program Files\Epic Games\UE_5.5\Engine\Binaries\Win64\UnrealEditor.exe&#x27;</span> `
+  <span class="hljs-literal">--target-arg</span> <span class="hljs-string">&#x27;D:\Projects\MyGame\MyGame.uproject&#x27;</span></code></pre>
 <h3 id="continuous-capture-session-control">Continuous capture session control<a class="anchor" href="#continuous-capture-session-control" aria-label="锚点">#</a></h3>
-<pre><code class="language-powershell">cli-anything-unrealinsights --json capture start `
-  --project 'D:\Projects\MyGame\MyGame.uproject' `
-  --engine-root 'D:\Program Files\Epic Games\UE_5.5' `
-  --output-trace D:\captures\live_session.utrace
+<pre><code class="language-powershell"><span class="hljs-built_in">cli</span><span class="hljs-literal">-anything-unrealinsights</span> <span class="hljs-literal">--json</span> capture <span class="hljs-built_in">start</span> `
+  <span class="hljs-literal">--project</span> <span class="hljs-string">&#x27;D:\Projects\MyGame\MyGame.uproject&#x27;</span> `
+  <span class="hljs-literal">--engine-root</span> <span class="hljs-string">&#x27;D:\Program Files\Epic Games\UE_5.5&#x27;</span> `
+  <span class="hljs-literal">--output-trace</span> D:\captures\live_session.utrace
 
-cli-anything-unrealinsights --json capture status
-cli-anything-unrealinsights --json capture snapshot D:\captures\live_snapshot.utrace
-cli-anything-unrealinsights --json capture stop</code></pre>
+<span class="hljs-built_in">cli</span><span class="hljs-literal">-anything-unrealinsights</span> <span class="hljs-literal">--json</span> capture status
+<span class="hljs-built_in">cli</span><span class="hljs-literal">-anything-unrealinsights</span> <span class="hljs-literal">--json</span> capture snapshot D:\captures\live_snapshot.utrace
+<span class="hljs-built_in">cli</span><span class="hljs-literal">-anything-unrealinsights</span> <span class="hljs-literal">--json</span> capture stop</code></pre>
 <p>This is the preferred flow when an agent needs to start profiling now and stop<br>or snapshot later in a follow-up turn.</p>
 <p>If a tracked capture session is still running, <code>capture start</code> now requires<br><code>--replace</code> so the previous process is stopped before a new one is launched.</p>
 <h3 id="live-trace-control-backend">Live trace control backend<a class="anchor" href="#live-trace-control-backend" aria-label="锚点">#</a></h3>
-<pre><code class="language-powershell">$env:UNREALINSIGHTS_LIVE_EXEC='ushell-wrapper --pid {pid} --cmd &quot;{cmd}&quot;'
-cli-anything-unrealinsights --json live processes
-cli-anything-unrealinsights --json live trace-status --pid 1234
-cli-anything-unrealinsights --json live bookmark --pid 1234 &quot;BeforeExport&quot;
-cli-anything-unrealinsights --json live stop-trace --pid 1234</code></pre>
+<pre><code class="language-powershell"><span class="hljs-variable">$env:UNREALINSIGHTS_LIVE_EXEC</span>=<span class="hljs-string">&#x27;ushell-wrapper --pid {pid} --cmd &quot;{cmd}&quot;&#x27;</span>
+<span class="hljs-built_in">cli</span><span class="hljs-literal">-anything-unrealinsights</span> <span class="hljs-literal">--json</span> live processes
+<span class="hljs-built_in">cli</span><span class="hljs-literal">-anything-unrealinsights</span> <span class="hljs-literal">--json</span> live <span class="hljs-built_in">trace-status</span> <span class="hljs-literal">--pid</span> <span class="hljs-number">1234</span>
+<span class="hljs-built_in">cli</span><span class="hljs-literal">-anything-unrealinsights</span> <span class="hljs-literal">--json</span> live bookmark <span class="hljs-literal">--pid</span> <span class="hljs-number">1234</span> <span class="hljs-string">&quot;BeforeExport&quot;</span>
+<span class="hljs-built_in">cli</span><span class="hljs-literal">-anything-unrealinsights</span> <span class="hljs-literal">--json</span> live <span class="hljs-built_in">stop-trace</span> <span class="hljs-literal">--pid</span> <span class="hljs-number">1234</span></code></pre>
 <p>Live command delivery requires <code>UNREALINSIGHTS_LIVE_EXEC</code> or <code>--backend-command</code>.<br>If no backend is configured, live commands return a JSON error and do not claim<br>success. <code>live stop-trace</code> stops trace collection without killing the UE process;<br><code>capture stop</code> still terminates the harness-launched process tree.</p>
 <h3 id="gui-co-pilot">GUI co-pilot<a class="anchor" href="#gui-co-pilot" aria-label="锚点">#</a></h3>
-<pre><code class="language-powershell">cli-anything-unrealinsights --json gui status
-cli-anything-unrealinsights --json gui open --trace D:\captures\session.utrace
-cli-anything-unrealinsights --json gui open-latest</code></pre>
+<pre><code class="language-powershell"><span class="hljs-built_in">cli</span><span class="hljs-literal">-anything-unrealinsights</span> <span class="hljs-literal">--json</span> gui status
+<span class="hljs-built_in">cli</span><span class="hljs-literal">-anything-unrealinsights</span> <span class="hljs-literal">--json</span> gui open <span class="hljs-literal">--trace</span> D:\captures\session.utrace
+<span class="hljs-built_in">cli</span><span class="hljs-literal">-anything-unrealinsights</span> <span class="hljs-literal">--json</span> gui <span class="hljs-built_in">open-latest</span></code></pre>
 <p>GUI commands omit <code>-NoUI</code> and <code>-AutoQuit</code> so Unreal Insights remains open.</p>
 <h3 id="offline-exporters">Offline exporters<a class="anchor" href="#offline-exporters" aria-label="锚点">#</a></h3>
-<pre><code class="language-powershell">cli-anything-unrealinsights --json -t D:\captures\session.utrace export threads D:\out\threads.csv
-cli-anything-unrealinsights --json -t D:\captures\session.utrace export timer-stats D:\out\stats.csv --region=EXPORT_CAPTURE
-cli-anything-unrealinsights --json -t D:\captures\session.utrace export counter-values D:\out\counter_values.csv --counter=*</code></pre>
+<pre><code class="language-powershell"><span class="hljs-built_in">cli</span><span class="hljs-literal">-anything-unrealinsights</span> <span class="hljs-literal">--json</span> <span class="hljs-literal">-t</span> D:\captures\session.utrace export threads D:\out\threads.csv
+<span class="hljs-built_in">cli</span><span class="hljs-literal">-anything-unrealinsights</span> <span class="hljs-literal">--json</span> <span class="hljs-literal">-t</span> D:\captures\session.utrace export timer<span class="hljs-literal">-stats</span> D:\out\stats.csv <span class="hljs-literal">--region</span>=EXPORT_CAPTURE
+<span class="hljs-built_in">cli</span><span class="hljs-literal">-anything-unrealinsights</span> <span class="hljs-literal">--json</span> <span class="hljs-literal">-t</span> D:\captures\session.utrace export counter<span class="hljs-literal">-values</span> D:\out\counter_values.csv <span class="hljs-literal">--counter</span>=*</code></pre>
 <p>Prefer equals-form wildcard filters such as <code>--timers=*</code> and <code>--counter=*</code>.<br>The harness passes simple values to UnrealInsights without inner quotes so<br>wildcards remain usable inside <code>-ExecOnAnalysisCompleteCmd</code>.</p>
 <h3 id="batch-response-files">Batch response files<a class="anchor" href="#batch-response-files" aria-label="锚点">#</a></h3>
-<pre><code class="language-powershell">cli-anything-unrealinsights --json -t D:\captures\session.utrace batch run-rsp D:\out\exports.rsp</code></pre>
+<pre><code class="language-powershell"><span class="hljs-built_in">cli</span><span class="hljs-literal">-anything-unrealinsights</span> <span class="hljs-literal">--json</span> <span class="hljs-literal">-t</span> D:\captures\session.utrace batch run<span class="hljs-literal">-rsp</span> D:\out\exports.rsp</code></pre>
 <h3 id="analyze-summaries">Analyze summaries<a class="anchor" href="#analyze-summaries" aria-label="锚点">#</a></h3>
-<pre><code class="language-powershell">cli-anything-unrealinsights --json -t D:\captures\session.utrace analyze summary --out D:\out\summary
-cli-anything-unrealinsights --json analyze summary --skip-export --out D:\out\summary</code></pre>
+<pre><code class="language-powershell"><span class="hljs-built_in">cli</span><span class="hljs-literal">-anything-unrealinsights</span> <span class="hljs-literal">--json</span> <span class="hljs-literal">-t</span> D:\captures\session.utrace analyze summary <span class="hljs-literal">--out</span> D:\out\summary
+<span class="hljs-built_in">cli</span><span class="hljs-literal">-anything-unrealinsights</span> <span class="hljs-literal">--json</span> analyze summary <span class="hljs-literal">--skip-export</span> <span class="hljs-literal">--out</span> D:\out\summary</code></pre>
 <p>The summary reports top timers, focused GameThread/RenderThread/RHIThread<br>hotspots, wait/task-related timers, counter peaks, and uncovered domains for<br>future Memory/Network/Slate/Asset/Cooking analysis.</p>
 <p><code>analyze summary</code> also returns <code>export_status</code> and<br><code>summary.diagnostics.export_status_counts</code> so agents can distinguish successful<br>exports from trace/filter combinations that completed but produced no rows.</p>
 <h2 id="json-output-guidance">JSON Output Guidance<a class="anchor" href="#json-output-guidance" aria-label="锚点">#</a></h2>

@@ -28,6 +28,7 @@ describe('toolUseLoop — weak local model on the unified text protocol', () => 
 
   test('text <tool_call> from a local model reaches executeTool and the result feeds back', async () => {
     process.env.KHY_TASK_CAPABILITY_GATE = 'false';
+    process.env.KHY_AUDIT_FIX_LOOP = 'false';
 
     const executeTool = jest.fn(async (name, params) => ({
       success: true,

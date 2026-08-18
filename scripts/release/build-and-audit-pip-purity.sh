@@ -67,6 +67,9 @@ if [[ "$SKIP_BUILD" == '0' ]]; then
   python3 -c 'import build' 2>/dev/null || fail \
     "python 'build' module missing — run: python3 -m pip install build"
 
+  info "Assembling standalone zero-dependency runtime..."
+  node scripts/release/assemble-pip-runtime.js
+
   info "Verifying MANIFEST.in sync..."
   python3 scripts/release/check_manifest_sync.py
 

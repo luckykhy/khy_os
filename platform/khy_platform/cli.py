@@ -350,18 +350,16 @@ def _self_install_cleanup() -> None:
 
 
 def _bundled_payload_candidates() -> list[Path]:
-    """Candidate locations of the bundled payload root: pip-install layout first,
-    then the legacy in-package layout. Single source shared by _find_bundled_root
-    and run_install_cleanup so the two never drift on where the payload lives."""
+    """Candidate payload roots: current standalone layout, then legacy layout."""
     package_dir = Path(__file__).resolve().parent
     return [
+        package_dir / "bundled",
         package_dir.parent / "khy_os" / "bundled",
-        package_dir / "bundled",  # legacy compatibility
     ]
 
 
 def _find_bundled_root() -> Path | None:
-    """Locate bundled payload root, preferring khy_os/bundled.
+    """Locate the standalone payload root, with legacy wheel compatibility.
 
     Warm-path fast return: when the per-version ``.khy_orphan_sweep`` marker
     beside the payload already records the current installed version, every
@@ -436,6 +434,15 @@ def run_install_cleanup() -> int:
     except Exception:  # pragma: no cover — cleanup must never break post-install
         pass  # fail-soft
     return total
+
+
+def _source_checkout_backend() -> Path | None:
+    """Return the editable backend when this module lives inside a Git checkout."""
+    project_root = Path(__file__).resolve().parent.parent.parent
+    backend = project_root / "services" / "backend"
+    if (project_root / ".git").exists() and (backend / "bin" / "khy.js").is_file():
+        return backend
+    return None
 
 
 def get_bundle_dir() -> Path:
@@ -2494,10 +2501,24 @@ def main():
             _dim_print(f"  └─ 你是不是想输入: khy {suggestion}")
 
     node = check_node()
-    backend_dir = get_bundle_dir()
+    source_backend = _source_checkout_backend()
+    bundled_root = _find_bundled_root()
+    bundled_cli = (
+        bundled_root / "runtime" / "khy" / "bundle.mjs"
+        if bundled_root else None
+    )
+    # In an editable Git checkout the source tree is authoritative. The bundled
+    # artifact is reserved for installed wheels, where the source tree is absent.
+    is_standalone_bundle = source_backend is None and bool(
+        bundled_cli and bundled_cli.is_file()
+    )
+    backend_dir = source_backend if source_backend is not None else (
+        None if is_standalone_bundle else get_bundle_dir()
+    )
 
-    # 定位 Node CLI 入口脚本
-    cli_script = backend_dir / "bin" / "khy.js"
+    # Installed wheels execute the standalone bundle. Source checkouts retain
+    # the backend entrypoint for development and self-edit workflows.
+    cli_script = bundled_cli if is_standalone_bundle else backend_dir / "bin" / "khy.js"
     if not cli_script.exists():
         # 红线：不止报"找不到"，要说清真实原因 + 怎么解决。
         print(f"错误：找不到 CLI 入口脚本 {cli_script}", file=sys.stderr)
@@ -2546,7 +2567,7 @@ def main():
     )
 
     # 快速路径：help/version 不触发首次初始化
-    if not (is_help or is_version):
+    if not (is_help or is_version or is_standalone_bundle):
         from khy_platform._bootstrap import ensure_bootstrapped
         _run_with_spinner(
             "正在初始化运行环境",
@@ -2560,25 +2581,24 @@ def main():
 
     # 传递环境变量给 Node 进程
     env = os.environ.copy()
-    env["KHYQUANT_ROOT"] = str(backend_dir)  # 告诉后端自己的目录
+    env["KHYQUANT_ROOT"] = str(backend_dir or bundled_root)  # 告诉后端自己的目录
     # Ensure wrapper behavior matches direct Node CLI:
     # prefer the selected adapter and avoid relay bind fallback loops by default.
     env.setdefault("GATEWAY_PREFERRED_STRICT", "true")
     env.setdefault("GATEWAY_RELAY_ENABLED", "false")
 
-    # Fix module resolution for @khy/shared (file: dependency).
-    # When npm links a file: dep, Node resolves require() relative to the
-    # *real* path (packages/shared/) which has no node_modules.
-    # Setting NODE_PATH lets those requires fall back to backend/node_modules.
-    node_modules_dir = str(backend_dir / "node_modules")
-    existing_node_path = env.get("NODE_PATH", "")
-    env["NODE_PATH"] = (
-        f"{node_modules_dir}{os.pathsep}{existing_node_path}"
-        if existing_node_path
-        else node_modules_dir
-    )
+    # Source mode still needs workspace module resolution. Standalone bundles
+    # carry ordinary JavaScript dependencies internally.
+    if backend_dir is not None:
+        node_modules_dir = str(backend_dir / "node_modules")
+        existing_node_path = env.get("NODE_PATH", "")
+        env["NODE_PATH"] = (
+            f"{node_modules_dir}{os.pathsep}{existing_node_path}"
+            if existing_node_path
+            else node_modules_dir
+        )
     pkg_version = get_installed_version()
-    printed_install_notice = _print_install_location_notice(backend_dir, pkg_version)
+    printed_install_notice = _print_install_location_notice(backend_dir, pkg_version) if backend_dir else False
     if pkg_version:
         env["KHYQUANT_PKG_VERSION"] = pkg_version  # 用于版本显示
     if printed_install_notice:
@@ -2647,8 +2667,19 @@ def main():
             _print_fallback_help()
             sys.exit(0)
         if result.stdout:
+            # Windows legacy consoles may use GBK and reject Unicode glyphs
+            # emitted by the standalone bundle. Preserve the output stream and
+            # replace only characters the active console cannot represent.
+            try:
+                sys.stdout.reconfigure(errors="replace")
+            except (AttributeError, OSError):
+                pass
             print(result.stdout, end="")
         if result.stderr:
+            try:
+                sys.stderr.reconfigure(errors="replace")
+            except (AttributeError, OSError):
+                pass
             print(result.stderr, end="", file=sys.stderr)
         if result.returncode == 0:
             sys.exit(0)

@@ -25,6 +25,10 @@ const STATUS = Object.freeze({
   BLOCKED: 'blocked',
   DONE: 'done',
   ARCHIVED: 'archived',
+  // Terminal state for tasks abandoned after exhausting automatic retries
+  // (e.g. repeated zombie-worker reaps). Distinct from BLOCKED, which is
+  // recoverable once the blocking condition clears.
+  DEAD_LETTER: 'dead_letter',
   // Legacy compat
   PENDING: 'pending',
   CLAIMED: 'claimed',
@@ -48,6 +52,7 @@ const CANONICAL_TO_LEGACY = {
   [STATUS.BLOCKED]: 'failed',
   [STATUS.DONE]: 'completed',
   [STATUS.ARCHIVED]: 'completed',
+  [STATUS.DEAD_LETTER]: 'failed',
 };
 
 const DEFAULT_CLAIM_TTL_MS = 300_000; // 5 分钟认领过期
@@ -73,6 +78,25 @@ function _dbPath() {
       /* ok */
     }
     return path.join(dir, 'taskboard.db');
+  }
+}
+
+/**
+ * Add a column to the tasks table when an older database predates it.
+ * Idempotent and fail-soft: a duplicate column error means we are already
+ * migrated, any other failure degrades to the pre-migration behaviour.
+ * @param {string} name
+ * @param {string} ddl - Column definition, e.g. 'INTEGER DEFAULT 0'
+ */
+function _addColumnIfMissing(name, ddl) {
+  try {
+    const cols = _db.prepare('PRAGMA table_info(tasks)').all();
+    if (cols.some((c) => c.name === name)) {
+      return;
+    }
+    _db.exec(`ALTER TABLE tasks ADD COLUMN ${name} ${ddl}`);
+  } catch {
+    /* best-effort migration */
   }
 }
 
@@ -110,6 +134,8 @@ function _initDb() {
         claim_expires REAL,
         consecutive_failures INTEGER DEFAULT 0,
         max_retries INTEGER DEFAULT ${DEFAULT_MAX_RETRIES},
+        retry_count INTEGER DEFAULT 0,
+        retry_after INTEGER,
         result TEXT,
         skills TEXT DEFAULT '[]',
         created_at INTEGER NOT NULL,
@@ -134,6 +160,10 @@ function _initDb() {
       );
     `);
 
+    // Migrate boards created before the auto-retry columns existed.
+    _addColumnIfMissing('retry_count', 'INTEGER DEFAULT 0');
+    _addColumnIfMissing('retry_after', 'INTEGER');
+
     // Prepare statements
     _stmts.insert = _db.prepare(`
       INSERT INTO tasks (id, title, description, status, assignee, priority, parent_id,
@@ -154,11 +184,31 @@ function _initDb() {
     `);
 
     // CAS 认领: BEGIN IMMEDIATE + WHERE status='ready' AND claim_lock IS NULL
+    // retry_after 是重试抖动窗口——刚被 zombie reap 重新入队的任务在窗口内不可认领，
+    // 避免立刻撞上同一个阻塞源。
     _stmts.claim = _db.prepare(`
       UPDATE tasks
       SET status='running', claim_lock=@claimLock, claim_expires=@claimExpires,
           assignee=@assignee, started_at=COALESCE(started_at, @now), updated_at=@now
       WHERE id=@id AND status='ready' AND claim_lock IS NULL
+        AND (retry_after IS NULL OR retry_after <= @now)
+    `);
+
+    // Zombie reap → 重新入队 (retry_count+1，retry_after 抖动窗口)
+    _stmts.requeue = _db.prepare(`
+      UPDATE tasks
+      SET status='ready', claim_lock=NULL, claim_expires=NULL, assignee=NULL,
+          retry_count=COALESCE(retry_count,0)+1, retry_after=@retryAfter,
+          result=@result, completed_at=NULL, updated_at=@now
+      WHERE id=@id
+    `);
+
+    // 放弃任务 (重试次数耗尽) → dead_letter 终态
+    _stmts.deadLetterOne = _db.prepare(`
+      UPDATE tasks
+      SET status='dead_letter', claim_lock=NULL, claim_expires=NULL,
+          result=@result, completed_at=@now, updated_at=@now
+      WHERE id=@id
     `);
 
     _stmts.insertRun = _db.prepare(`
@@ -247,6 +297,8 @@ function _toRecord(row) {
     claimExpires: row.claim_expires,
     consecutiveFailures: row.consecutive_failures,
     maxRetries: row.max_retries,
+    retryCount: row.retry_count || 0,
+    retryAfter: row.retry_after || null,
     result: row.result,
     skills: _parseJson(row.skills, []),
     createdAt: row.created_at,
@@ -494,6 +546,82 @@ function failTask(id, error) {
 }
 
 /**
+ * 重新入队一个被自动回收的任务 (zombie worker reap / 崩溃恢复)。
+ * retry_count 自增，retry_after 设为抖动窗口末端——窗口内 claimTask 拒绝认领，
+ * 避免重试立刻撞上同一个阻塞源。
+ *
+ * @param {string} id
+ * @param {object} [opts]
+ * @param {string} [opts.reason] - 重新入队原因 (写入 result 供排查)
+ * @param {number} [opts.delayMs=0] - 抖动延迟，任务在此之后才可被认领
+ * @returns {object|null} 更新后的任务，任务不存在时返回 null
+ */
+function requeueTask(id, opts = {}) {
+  const delayMs = Number(opts.delayMs) > 0 ? Number(opts.delayMs) : 0;
+  const now = Date.now();
+  const retryAfter = delayMs > 0 ? now + delayMs : null;
+
+  if (!_initDb()) {
+    const task = _getTaskFile(id);
+    if (!task) {
+      return null;
+    }
+    const rec = _updateTaskFile(id, {
+      status: 'pending',
+      assignee: null,
+      result: opts.reason || null,
+      completedAt: null,
+      retryCount: (task.retryCount || 0) + 1,
+      retryAfter,
+    });
+    _emitTaskEvent('task.requeued', rec || { id, retryAfter });
+    return rec;
+  }
+
+  if (!_stmts.get.get(id)) {
+    return null;
+  }
+  _stmts.requeue.run({ id, retryAfter, result: opts.reason || null, now });
+
+  const rec = _toRecord(_stmts.get.get(id));
+  _emitTaskEvent('task.requeued', rec || { id, retryAfter });
+  return rec;
+}
+
+/**
+ * 将任务标记为 dead_letter 终态 (自动重试次数耗尽，放弃)。
+ * @param {string} id
+ * @param {string} [reason] - 放弃原因，写入 result
+ * @returns {object|null} 更新后的任务，任务不存在时返回 null
+ */
+function deadLetterTask(id, reason) {
+  const now = Date.now();
+
+  if (!_initDb()) {
+    const task = _getTaskFile(id);
+    if (!task) {
+      return null;
+    }
+    const rec = _updateTaskFile(id, {
+      status: STATUS.DEAD_LETTER,
+      result: reason || null,
+      completedAt: now,
+    });
+    _emitTaskEvent('task.dead_letter', rec || { id, reason });
+    return rec;
+  }
+
+  if (!_stmts.get.get(id)) {
+    return null;
+  }
+  _stmts.deadLetterOne.run({ id, result: reason || null, now });
+
+  const rec = _toRecord(_stmts.get.get(id));
+  _emitTaskEvent('task.dead_letter', rec || { id, reason });
+  return rec;
+}
+
+/**
  * 获取子任务列表.
  * @param {string} parentId
  * @returns {object[]}
@@ -536,6 +664,8 @@ function _createTaskFile(task) {
     dependencies: task.dependencies || [],
     priority: task.priority || 'medium',
     result: null,
+    retryCount: 0,
+    retryAfter: null,
     createdAt: Date.now(),
     updatedAt: Date.now(),
     completedAt: null,
@@ -598,6 +728,10 @@ function _claimTaskFile(id, workerId, opts = {}) {
   if (!task || task.status !== 'pending') {
     return false;
   }
+  // Retry jitter window: a just-requeued task is not claimable yet.
+  if (task.retryAfter && Date.now() < task.retryAfter) {
+    return false;
+  }
   if (task.dependencies && task.dependencies.length > 0) {
     for (const depId of task.dependencies) {
       const dep = _getTaskFile(depId);
@@ -640,6 +774,8 @@ module.exports = {
   claimTask,
   completeTask,
   failTask,
+  requeueTask,
+  deadLetterTask,
   cleanup,
   getChildTasks,
   STATUS,

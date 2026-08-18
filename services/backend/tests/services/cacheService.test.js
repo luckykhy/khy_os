@@ -27,7 +27,7 @@ beforeAll(() => {
     // If import chain fails (missing @khy/shared symlink), try shared directly.
     if (e.code === 'MODULE_NOT_FOUND') {
       try {
-        cacheService = require('../../../platform/packages/shared/src/services/cacheService');
+        cacheService = require('@khy/shared/services/cacheService');
       } catch {
         // Will be handled in tests via null checks
       }

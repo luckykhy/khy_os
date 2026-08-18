@@ -69,7 +69,7 @@ function RewindPicker({ targets = [], onResolve, title }) {
     // scope stage; otherwise resolve immediately (single-stage, today's behavior).
     let choices = null;
     try {
-      choices = require('../../rewindScope').buildRewindScopeChoices(t, process.env);
+      choices = require('../rewindScope').buildRewindScopeChoices(t, process.env);
     } catch {
       choices = null;
     }

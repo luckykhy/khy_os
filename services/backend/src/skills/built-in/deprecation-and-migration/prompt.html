@@ -62,18 +62,18 @@
 <p>Don't deprecate without a working alternative. The replacement must:</p>
 <ul><li>Cover all critical use cases of the old system</li><li>Have documentation and migration guides</li><li>Be proven in production (not just &quot;theoretically better&quot;)</li></ul>
 <h3 id="step-2-announce-and-document">Step 2: Announce and Document<a class="anchor" href="#step-2-announce-and-document" aria-label="锚点">#</a></h3>
-<pre><code class="language-markdown">## Deprecation Notice: OldService
+<pre><code class="language-markdown"><span class="hljs-section">## Deprecation Notice: OldService</span>
 
-**Status:** Deprecated as of 2025-03-01
-**Replacement:** NewService (see migration guide below)
-**Removal date:** Advisory — no hard deadline yet
-**Reason:** OldService requires manual scaling and lacks observability.
-            NewService handles both automatically.
-
-### Migration Guide
-1. Replace `import { client } from 'old-service'` with `import { client } from 'new-service'`
-2. Update configuration (see examples below)
-3. Run the migration verification script: `npx migrate-check`</code></pre>
+<span class="hljs-strong">**Status:**</span> Deprecated as of 2025-03-01
+<span class="hljs-strong">**Replacement:**</span> NewService (see migration guide below)
+<span class="hljs-strong">**Removal date:**</span> Advisory — no hard deadline yet
+<span class="hljs-strong">**Reason:**</span> OldService requires manual scaling and lacks observability.
+<span class="hljs-code">            NewService handles both automatically.
+</span>
+<span class="hljs-section">### Migration Guide</span>
+<span class="hljs-bullet">1.</span> Replace <span class="hljs-code">`import { client } from &#x27;old-service&#x27;`</span> with <span class="hljs-code">`import { client } from &#x27;new-service&#x27;`</span>
+<span class="hljs-bullet">2.</span> Update configuration (see examples below)
+<span class="hljs-bullet">3.</span> Run the migration verification script: <span class="hljs-code">`npx migrate-check`</span></code></pre>
 <h3 id="step-3-migrate-incrementally">Step 3: Migrate Incrementally<a class="anchor" href="#step-3-migrate-incrementally" aria-label="锚点">#</a></h3>
 <p>Migrate consumers one at a time, not all at once. For each consumer:</p>
 <pre><code>1. Identify all touchpoints with the deprecated system
@@ -99,23 +99,23 @@ Phase 4: New system handles 100%, old system idle
 Phase 5: Remove old system</code></pre>
 <h3 id="adapter-pattern">Adapter Pattern<a class="anchor" href="#adapter-pattern" aria-label="锚点">#</a></h3>
 <p>Create an adapter that translates calls from the old interface to the new implementation. Consumers keep using the old interface while you migrate the backend.</p>
-<pre><code class="language-typescript">// Adapter: old interface, new implementation
-class LegacyTaskService implements OldTaskAPI {
-  constructor(private newService: NewTaskService) {}
+<pre><code class="language-typescript"><span class="hljs-comment">// Adapter: old interface, new implementation</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">LegacyTaskService</span> <span class="hljs-keyword">implements</span> <span class="hljs-title class_">OldTaskAPI</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params"><span class="hljs-keyword">private</span> <span class="hljs-attr">newService</span>: <span class="hljs-title class_">NewTaskService</span></span>) {}
 
-  // Old method signature, delegates to new implementation
-  getTask(id: number): OldTask {
-    const task = this.newService.findById(String(id));
-    return this.toOldFormat(task);
+  <span class="hljs-comment">// Old method signature, delegates to new implementation</span>
+  <span class="hljs-title function_">getTask</span>(<span class="hljs-attr">id</span>: <span class="hljs-built_in">number</span>): <span class="hljs-title class_">OldTask</span> {
+    <span class="hljs-keyword">const</span> task = <span class="hljs-variable language_">this</span>.<span class="hljs-property">newService</span>.<span class="hljs-title function_">findById</span>(<span class="hljs-title class_">String</span>(id));
+    <span class="hljs-keyword">return</span> <span class="hljs-variable language_">this</span>.<span class="hljs-title function_">toOldFormat</span>(task);
   }
 }</code></pre>
 <h3 id="feature-flag-migration">Feature Flag Migration<a class="anchor" href="#feature-flag-migration" aria-label="锚点">#</a></h3>
 <p>Use feature flags to switch consumers from old to new system one at a time:</p>
-<pre><code class="language-typescript">function getTaskService(userId: string): TaskService {
-  if (featureFlags.isEnabled('new-task-service', { userId })) {
-    return new NewTaskService();
+<pre><code class="language-typescript"><span class="hljs-keyword">function</span> <span class="hljs-title function_">getTaskService</span>(<span class="hljs-params"><span class="hljs-attr">userId</span>: <span class="hljs-built_in">string</span></span>): <span class="hljs-title class_">TaskService</span> {
+  <span class="hljs-keyword">if</span> (featureFlags.<span class="hljs-title function_">isEnabled</span>(<span class="hljs-string">&#x27;new-task-service&#x27;</span>, { userId })) {
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">NewTaskService</span>();
   }
-  return new LegacyTaskService();
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">LegacyTaskService</span>();
 }</code></pre>
 <h2 id="zombie-code">Zombie Code<a class="anchor" href="#zombie-code" aria-label="锚点">#</a></h2>
 <p>Zombie code is code that nobody owns but everybody depends on. It's not actively maintained, has no clear owner, and accumulates security vulnerabilities and compatibility issues. Signs:</p>

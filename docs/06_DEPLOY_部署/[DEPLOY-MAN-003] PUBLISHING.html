@@ -30,20 +30,20 @@
 <h2 id="1-把-github-remote-指向真实仓库">1. 把 <code>github</code> remote 指向真实仓库<a class="anchor" href="#1-把-github-remote-指向真实仓库" aria-label="锚点">#</a></h2>
 <p><code>github</code> remote 目前是占位符（<code>acme/khy-os</code>）。把它设为你的真实仓库，<br>并同步更新 README/徽章里的 slug（整个发布工具包中都用 <code>kodehu03/khy-os</code><br>作占位符）。</p>
 <pre><code class="language-bash">git remote set-url github https://github.com/&lt;your-username&gt;/khy-os.git
-git remote -v   # verify</code></pre>
+git remote -v   <span class="hljs-comment"># verify</span></code></pre>
 <p>然后把 <code>README.md</code>、<code>README.zh-CN.md</code> 以及<br><code>.github/ISSUE_TEMPLATE/config.yml</code> + <code>SECURITY.md</code> 中的 <code>kodehu03/khy-os</code><br>替换为 <code>&lt;your-username&gt;/khy-os</code>。</p>
 <h2 id="2-把-gitlab-token-从-remote-url-里挪走-卫生习惯">2. 把 GitLab token 从 remote URL 里挪走（卫生习惯）<a class="anchor" href="#2-把-gitlab-token-从-remote-url-里挪走-卫生习惯" aria-label="锚点">#</a></h2>
 <p><code>origin</code> remote 把一个 GitLab 个人访问令牌直接嵌进了 URL：</p>
 <pre><code>origin  https://oauth2:glpat-XXXXXXXX@gitlab.mindflow.com.cn/kodehu03/khy-quant.git</code></pre>
 <p>这<strong>不会</strong>随代码发布出去（它只存在于本地未被跟踪的 <code>.git/config</code> 中），<br>所以它不是通过仓库泄露。但 remote URL 里的 token 很容易通过<br><code>git remote -v</code>、屏幕共享或复制出去的 <code>.git/config</code> 泄露。把它挪进凭据存储：</p>
-<pre><code class="language-bash"># 1) strip the token from the URL
+<pre><code class="language-bash"><span class="hljs-comment"># 1) strip the token from the URL</span>
 git remote set-url origin https://gitlab.mindflow.com.cn/kodehu03/khy-quant.git
 
-# 2) store the credential out-of-band (choose one)
-#    a) cache helper (prompts once, remembers for a while)
-git config --global credential.helper 'cache --timeout=3600'
-#    b) or a ~/.netrc entry (chmod 600):
-#       machine gitlab.mindflow.com.cn login oauth2 password glpat-XXXXXXXX</code></pre>
+<span class="hljs-comment"># 2) store the credential out-of-band (choose one)</span>
+<span class="hljs-comment">#    a) cache helper (prompts once, remembers for a while)</span>
+git config --global credential.helper <span class="hljs-string">&#x27;cache --timeout=3600&#x27;</span>
+<span class="hljs-comment">#    b) or a ~/.netrc entry (chmod 600):</span>
+<span class="hljs-comment">#       machine gitlab.mindflow.com.cn login oauth2 password glpat-XXXXXXXX</span></code></pre>
 <p>然后在 GitLab 里<strong>轮换这个已暴露的 token</strong>（Settings → Access Tokens →<br>撤销 + 重新签发），因为它已经以明文出现过。</p>
 <h2 id="3-不要推送密钥">3. 不要推送密钥<a class="anchor" href="#3-不要推送密钥" aria-label="锚点">#</a></h2>
 <ul><li>确认 <code>.env</code> 已被 gitignore（确实如此）且未被 stage：<code>git status --short | grep .env</code></li><li>仓库自带的密钥脱敏正则（<code>glpat-…</code> 等）位于</li></ul>

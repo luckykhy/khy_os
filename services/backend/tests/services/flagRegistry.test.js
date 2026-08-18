@@ -37,7 +37,46 @@ const oPlanBare = (env, name) => {
 
 const VALS = [undefined, '', '0', 'false', 'off', 'no', 'disable', 'disabled', 'OFF', ' off ', 'true', '1', 'x', 'No', 'Off'];
 
-// ── 父→子优先级 ────────────────────────────────────────────────────────
+test('MCP 生态门控:总闸与每家子闸均登记,父关优先', () => {
+  const eco = require('../../src/services/mcp/mcpEcosystemRegistry');
+  assert.strictEqual(reg.isFlagEnabled('KHY_MCP_ECOSYSTEM', {}), true);
+  for (const entry of eco.ECOSYSTEMS) {
+    assert.ok(reg.FLAGS[entry.gate], `${entry.id}: missing ${entry.gate}`);
+    assert.strictEqual(reg.FLAGS[entry.gate].parent, 'KHY_MCP_ECOSYSTEM');
+    assert.strictEqual(reg.isFlagEnabled(entry.gate, {}), true);
+    assert.strictEqual(
+      reg.isFlagEnabled(entry.gate, { [entry.gate]: 'off' }),
+      false,
+      `${entry.id}: own gate should turn it off`
+    );
+    assert.strictEqual(
+      reg.isFlagEnabled(entry.gate, { KHY_MCP_ECOSYSTEM: 'off' }),
+      false,
+      `${entry.id}: parent gate should turn it off`
+    );
+  }
+});
+
+test('规则生态门控:总闸与每家子闸均登记,父关优先', () => {
+  const eco = require('../../src/services/instructionEcosystemRegistry');
+  assert.strictEqual(reg.isFlagEnabled('KHY_RULES_ECOSYSTEM', {}), true);
+  for (const entry of eco.ECOSYSTEMS) {
+    assert.ok(reg.FLAGS[entry.gate], `${entry.id}: missing ${entry.gate}`);
+    assert.strictEqual(reg.FLAGS[entry.gate].parent, 'KHY_RULES_ECOSYSTEM');
+    assert.strictEqual(reg.isFlagEnabled(entry.gate, {}), true);
+    assert.strictEqual(
+      reg.isFlagEnabled(entry.gate, { [entry.gate]: 'off' }),
+      false,
+      `${entry.id}: own gate should turn it off`
+    );
+    assert.strictEqual(
+      reg.isFlagEnabled(entry.gate, { KHY_RULES_ECOSYSTEM: 'off' }),
+      false,
+      `${entry.id}: parent gate should turn it off`
+    );
+  }
+});
+
 test('父→子优先级:KHY_GOAL 关 ⇒ 子 KHY_GOAL_STOP_GATE 恒 false', () => {
   for (const v of ['0', 'false', 'off', 'no']) {
     assert.strictEqual(reg.isFlagEnabled('KHY_GOAL_STOP_GATE', { KHY_GOAL: v }), false, `KHY_GOAL=${v}`);

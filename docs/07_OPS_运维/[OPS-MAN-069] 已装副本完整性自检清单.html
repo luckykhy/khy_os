@@ -29,12 +29,12 @@
 <blockquote><p>本文件由 <code>scripts/verify-install.js --gen-doc</code> 确定性生成，请勿手改；<br>关键路径改在 <code>scripts/lib/installIntegrity.js</code> 的 <code>CRITICAL_BUNDLE_PATHS</code>，再重新生成。</p></blockquote>
 <h2 id="这份清单是干什么的">这份清单是干什么的<a class="anchor" href="#这份清单是干什么的" aria-label="锚点">#</a></h2>
 <p>前面几件送别礼检查「周遭」（环境、版本、依赖）；这一件检查<strong>装进来的东西本身</strong>：<br>你从 pip / npm 装好之后，运行时关键文件是不是齐的？下载有没有被截断？某个文件<br>有没有没被打进 bundle？在<strong>任意新机器上、离线</strong>跑一句就知道：</p>
-<pre><code class="language-bash">node scripts/verify-install.js      # 或 npm run verify-install</code></pre>
+<pre><code class="language-bash">node scripts/verify-install.js      <span class="hljs-comment"># 或 npm run verify-install</span></code></pre>
 <h2 id="为什么必须搬到你的机器上跑">为什么必须搬到你的机器上跑<a class="anchor" href="#为什么必须搬到你的机器上跑" aria-label="锚点">#</a></h2>
 <p>发布侧本就有完整性校验（<code>scripts/release/pip_packaging_rules.py</code> 的<br><code>REQUIRED_WHEEL_PATHS</code>、npm 的 <code>REQUIRED_PATHS</code>），但那是在<strong>构建机</strong>上、对<br><strong>刚构建的产物</strong>跑的。构建机一旦报废，另一台机器上的「装了一半 / 下载截断 /<br>文件缺失」就无人可查。本自检把这份保证搬到<strong>每一台幸存者的机器</strong>，可离线运行。</p>
 <p>本清单的关键路径逐条源自 <code>REQUIRED_WHEEL_PATHS</code>（发布门权威清单，来自真实生产<br>事故——ai-backend 鉴权中间件曾掉出打包，令每条代理/网关路由 500）。两处由测试<br><code>scripts/tests/installIntegrity.test.js</code> 的反漂移断言强制一致，杜绝各说各话。</p>
 <h2 id="它检查这些运行时关键文件-缺任一-khy-可能起不来">它检查这些运行时关键文件（缺任一 = khy 可能起不来）<a class="anchor" href="#它检查这些运行时关键文件-缺任一-khy-可能起不来" aria-label="锚点">#</a></h2>
-<table><thead><tr><th>关键路径（相对 bundle 根）</th><th>缺失意味着</th></tr></thead><tbody><tr><td><code>services/backend/bin/khy.js</code></td><td>后端 CLI 入口缺失——包不完整，khy 无法启动。</td></tr><tr><td><code>services/backend/server.js</code></td><td>后端服务入口缺失——管理后端无法拉起。</td></tr><tr><td><code>services/backend/src/models/index.js</code></td><td>数据层入口缺失——启动即崩。</td></tr><tr><td><code>services/ai-backend/src/middleware/auth.js</code></td><td>AI 后端鉴权中间件缺失——每条代理/网关路由会 500（历史事故点）。</td></tr><tr><td><code>apps/ai-frontend/src/main.js</code></td><td>前端入口缺失——管理页打不开。</td></tr><tr><td><code>kernel/Makefile</code></td><td>内核构建根缺失——workshop 不完整。</td></tr><tr><td><code>scripts/lib/leafContractGuard.js</code></td><td>纯叶子契约守卫缺失——无 AI 维护时的护栏丢了。</td></tr></tbody></table>
+<table><thead><tr><th>关键路径（相对 bundle 根）</th><th>缺失意味着</th></tr></thead><tbody><tr><td><code>runtime/khy/bundle.mjs</code></td><td>独立运行时 bundle 缺失，khy 启动入口不可用。</td></tr></tbody></table>
 <h2 id="结果怎么读">结果怎么读<a class="anchor" href="#结果怎么读" aria-label="锚点">#</a></h2>
 <ul><li><strong>完整</strong>：关键文件全在，已装副本可用——放心跑 khy。</li><li><strong>不完整</strong>：列出缺了哪些文件。统一修法是重装官方包补齐：</li></ul>
 <pre><code class="language-bash">  pip install --force-reinstall khy-os

@@ -407,28 +407,59 @@ const COT_INJECTION_PROMPT = [
 /**
  * Wraps an onChunk callback to intercept <think>...</think> tags from text chunks
  * and re-emit them as { type: 'thinking' } chunks for TUI display.
+ *
+ * The returned function carries a `finalize()` method that MUST be called once the
+ * stream ends. CoT here is prompt-injected (COT_INJECTION_PROMPT), not a native
+ * reasoning channel, so the closing tag is never guaranteed: a model can simply
+ * forget it, or max_tokens can truncate mid-reasoning. Without finalize() such a
+ * turn stays `insideThink` forever and every character lands in the thinking
+ * channel — the user sees only "💭 思考 · N 字" and an empty answer, even though
+ * the model did reply. finalize() fails OPEN: if the tag never closed and the text
+ * channel emitted nothing at all, the buffered content is released as text.
+ * Showing raw reasoning is bad; showing a blank turn is worse.
  */
 function _createThinkTagInterceptor(originalOnChunk) {
   let insideThink = false;
   let tagBuffer = '';
-  const TAG_OPEN = '<think>';
-  const TAG_CLOSE = '</think>';
+  let emittedText = false;
+  let pendingThink = '';
+  let lastChunkMeta = null;
+  // Models honouring COT_INJECTION_PROMPT emit either the short `<think>` form we
+  // ask for or the long `<thinking>` form they were trained on (QWEN does the
+  // latter). Recognising only the short form left the whole reasoning block in the
+  // text channel, so raw tags rendered in the answer. Matching is case-insensitive
+  // because the casing is likewise not guaranteed.
+  const TAGS_OPEN = ['<think>', '<thinking>'];
+  const TAGS_CLOSE = ['</think>', '</thinking>'];
+  const isOpenTag = (s) => TAGS_OPEN.includes(s.toLowerCase());
+  const isCloseTag = (s) => TAGS_CLOSE.includes(s.toLowerCase());
+  const ALL_TAGS = [...TAGS_OPEN, ...TAGS_CLOSE];
+  // No tag is a prefix of another (`<think>` closes with `>` where `<thinking>`
+  // continues with `i`), so a complete match is always unambiguous.
+  const isTagPrefix = (s) => {
+    const low = s.toLowerCase();
+    return ALL_TAGS.some((t) => t.startsWith(low));
+  };
 
-  return function interceptedOnChunk(chunk) {
+  function interceptedOnChunk(chunk) {
     if (!chunk || chunk.type !== 'text' || typeof chunk.text !== 'string') {
       if (originalOnChunk) {
         originalOnChunk(chunk);
       }
       return;
     }
+    // Preserve non-text fields (sessionId, sequence, meta, ...) so
+    // deferred emissions (commit / finalize) look like real chunks.
+    const { text, ...meta } = chunk;
+    lastChunkMeta = meta;
 
-    const text = chunk.text;
     let i = 0;
     let textBuf = '';
     let thinkBuf = '';
 
     function flushText() {
       if (textBuf) {
+        emittedText = true;
         if (originalOnChunk) {
           originalOnChunk({ ...chunk, type: 'text', text: textBuf });
         }
@@ -438,10 +469,17 @@ function _createThinkTagInterceptor(originalOnChunk) {
 
     function flushThink() {
       if (thinkBuf) {
-        if (originalOnChunk) {
-          originalOnChunk({ ...chunk, type: 'thinking', text: thinkBuf });
-        }
+        pendingThink += thinkBuf;
         thinkBuf = '';
+      }
+    }
+
+    function commitThink() {
+      if (pendingThink) {
+        if (originalOnChunk) {
+          originalOnChunk({ ...lastChunkMeta, type: 'thinking', text: pendingThink });
+        }
+        pendingThink = '';
       }
     }
 
@@ -457,7 +495,7 @@ function _createThinkTagInterceptor(originalOnChunk) {
       if (tagBuffer) {
         tagBuffer += ch;
         i++;
-        if (tagBuffer === TAG_OPEN) {
+        if (isOpenTag(tagBuffer)) {
           if (!insideThink) {
             flushText();
           }
@@ -465,15 +503,16 @@ function _createThinkTagInterceptor(originalOnChunk) {
           tagBuffer = '';
           continue;
         }
-        if (tagBuffer === TAG_CLOSE) {
+        if (isCloseTag(tagBuffer)) {
           if (insideThink) {
             flushThink();
+            commitThink();
           }
           insideThink = false;
           tagBuffer = '';
           continue;
         }
-        if (TAG_OPEN.startsWith(tagBuffer) || TAG_CLOSE.startsWith(tagBuffer)) {
+        if (isTagPrefix(tagBuffer)) {
           continue;
         }
         const flushed = tagBuffer;
@@ -498,10 +537,31 @@ function _createThinkTagInterceptor(originalOnChunk) {
 
     if (insideThink) {
       flushThink();
+      pendingThink += textBuf;
     } else {
       flushText();
     }
+  }
+
+  interceptedOnChunk.finalize = function finalize() {
+    if (insideThink && pendingThink) {
+      /**
+       * Stream ended with <think> still open. Fail OPEN: only when the text
+       * channel never emitted anything do we release the buffered reasoning as
+       * text, so the user gets *some* reply. If some text already streamed (the
+       * model answered and then thought again, or emitted partial prose), keep
+       * the reasoning hidden — a blank turn is worse than raw thinking, but
+       * duplicating/interspersing reasoning between real answer text is worse.
+       */
+      if (!emittedText && originalOnChunk) {
+        originalOnChunk({ ...lastChunkMeta, type: 'text', text: pendingThink });
+      }
+      pendingThink = '';
+    }
+    insideThink = false;
   };
+
+  return interceptedOnChunk;
 }
 
 // ── Wire sub-module deps ──
@@ -630,6 +690,7 @@ module.exports = {
   },
   __test__: {
     _createStreamToolInterceptor,
+    _createThinkTagInterceptor,
     _partialToolMarkerTailLen,
     _isContextOverflowFailure,
     _uncommitOrphanTurn: _aiSession._uncommitOrphanTurn,

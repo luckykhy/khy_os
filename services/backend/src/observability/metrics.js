@@ -101,6 +101,74 @@ function createMetrics(options = {}) {
     registers: [register],
   });
 
+  // ── Slow-request alerting ────────────────────────────────────────────────
+  //
+  // Detection rides the histogram timer that is already running for every
+  // request: startTimer() returns the elapsed seconds when stopped, so the
+  // check costs one numeric comparison and zero extra clock reads. All side
+  // effects (aggregation, .khy/monitor/ detail log, eventLog, alert text) live
+  // in observability/slowRequest.js; thresholds come from the SSOT in
+  // constants/serviceDefaults.js via slowRequestCore.resolveConfig().
+  //
+  // Default OFF (F2): when disabled the finish handler does one boolean read.
+  const slowCore = require('./slowRequestCore');
+  const slowConfig = slowCore.resolveConfig(process.env);
+
+  const httpSlowRequestsTotal = new Counter({
+    name: `${metricsPrefix}http_slow_requests_total`,
+    help: 'Total number of HTTP requests slower than the configured threshold',
+    labelNames: ['method', 'path', 'status_code'],
+    registers: [register],
+  });
+
+  // Self-describing threshold so a dashboard never has to guess what "slow"
+  // meant for the scrape it is looking at.
+  new Gauge({
+    name: `${metricsPrefix}http_slow_request_threshold_seconds`,
+    help: 'Configured slow-request threshold in seconds (0 when slow-request tracking is disabled)',
+    registers: [register],
+    collect() {
+      this.set(slowConfig.enabled ? slowConfig.thresholdMs / 1000 : 0);
+    },
+  });
+
+  // ── Profiling signals ────────────────────────────────────────────────────
+  //
+  // Both gauges pull lazily via collect(): nothing is computed unless /metrics
+  // is actually scraped, and both read null/false when profiling is off.
+  new Gauge({
+    name: `${metricsPrefix}profiling_active`,
+    help: 'Whether a CPU profile capture is currently in progress (1) or not (0)',
+    registers: [register],
+    collect() {
+      try {
+        this.set(require('./cpuProfiler').isActive() ? 1 : 0);
+      } catch {
+        this.set(0);
+      }
+    },
+  });
+
+  new Gauge({
+    name: `${metricsPrefix}event_loop_lag_seconds`,
+    help: 'Event loop delay for the current monitoring window (0 when the monitor is off)',
+    labelNames: ['quantile'],
+    registers: [register],
+    collect() {
+      let summary = null;
+      try {
+        summary = require('./eventLoopMonitor').snapshot();
+      } catch {
+        summary = null;
+      }
+      const s = summary || { p50Ms: 0, p95Ms: 0, p99Ms: 0, maxMs: 0 };
+      this.set({ quantile: '0.5' }, (s.p50Ms || 0) / 1000);
+      this.set({ quantile: '0.95' }, (s.p95Ms || 0) / 1000);
+      this.set({ quantile: '0.99' }, (s.p99Ms || 0) / 1000);
+      this.set({ quantile: 'max' }, (s.maxMs || 0) / 1000);
+    },
+  });
+
   const metricsMiddleware = (req, res, next) => {
     const path = String(req.path || req.originalUrl || '/');
     const normalizedMetricsPath = metricsPath.split('?')[0];
@@ -111,14 +179,37 @@ function createMetrics(options = {}) {
     httpRequestsInFlight.inc();
     const stopTimer = httpRequestDurationSeconds.startTimer();
     res.on('finish', () => {
+      const normalizedPath = normalizePath(req.path || req.originalUrl || '/');
       const labels = {
         method: req.method,
-        path: normalizePath(req.path || req.originalUrl || '/'),
+        path: normalizedPath,
         status_code: String(res.statusCode),
       };
       httpRequestsTotal.inc(labels);
-      stopTimer(labels);
+      // stopTimer() observes AND returns the elapsed seconds — reuse it below
+      // instead of taking a second timestamp.
+      const elapsedSeconds = stopTimer(labels);
       httpRequestsInFlight.dec();
+
+      if (!slowConfig.enabled) {
+        return;
+      }
+      const durationMs = Number(elapsedSeconds) * 1000;
+      if (!slowCore.isSlow(durationMs, slowConfig.thresholdMs)) {
+        return;
+      }
+      httpSlowRequestsTotal.inc(labels);
+      // Fires after the response is already flushed — never on request latency.
+      require('./slowRequest').record({
+        method: req.method,
+        path: normalizedPath,
+        durationMs,
+        statusCode: res.statusCode,
+        requestId: req.id || (req.headers && req.headers['x-request-id']) || '',
+        traceId: (req.headers && req.headers['x-trace-id']) || '',
+        logger,
+        config: slowConfig,
+      });
     });
     res.on('close', () => {
       // Ensure gauge does not leak if connection closes before finish.

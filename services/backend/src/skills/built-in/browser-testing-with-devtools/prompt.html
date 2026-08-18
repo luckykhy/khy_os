@@ -33,13 +33,13 @@
 <p><strong>When NOT to use:</strong> Backend-only changes, CLI tools, or code that doesn't run in a browser.</p>
 <h2 id="setting-up-chrome-devtools-mcp">Setting Up Chrome DevTools MCP<a class="anchor" href="#setting-up-chrome-devtools-mcp" aria-label="锚点">#</a></h2>
 <h3 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Add Chrome DevTools MCP server to your Claude Code config
-# In your project's .mcp.json or Claude Code settings:
+<pre><code class="language-bash"><span class="hljs-comment"># Add Chrome DevTools MCP server to your Claude Code config</span>
+<span class="hljs-comment"># In your project&#x27;s .mcp.json or Claude Code settings:</span>
 {
-  &quot;mcpServers&quot;: {
-    &quot;chrome-devtools&quot;: {
-      &quot;command&quot;: &quot;npx&quot;,
-      &quot;args&quot;: [&quot;@anthropic/chrome-devtools-mcp@latest&quot;]
+  <span class="hljs-string">&quot;mcpServers&quot;</span>: {
+    <span class="hljs-string">&quot;chrome-devtools&quot;</span>: {
+      <span class="hljs-string">&quot;command&quot;</span>: <span class="hljs-string">&quot;npx&quot;</span>,
+      <span class="hljs-string">&quot;args&quot;</span>: [<span class="hljs-string">&quot;@anthropic/chrome-devtools-mcp@latest&quot;</span>]
     }
   }
 }</code></pre>
@@ -127,33 +127,33 @@
    └── Record another trace, compare with baseline</code></pre>
 <h2 id="writing-test-plans-for-complex-ui-bugs">Writing Test Plans for Complex UI Bugs<a class="anchor" href="#writing-test-plans-for-complex-ui-bugs" aria-label="锚点">#</a></h2>
 <p>For complex UI issues, write a structured test plan the agent can follow in the browser:</p>
-<pre><code class="language-markdown">## Test Plan: Task completion animation bug
+<pre><code class="language-markdown"><span class="hljs-section">## Test Plan: Task completion animation bug</span>
 
-### Setup
-1. Navigate to http://localhost:3000/tasks
-2. Ensure at least 3 tasks exist
+<span class="hljs-section">### Setup</span>
+<span class="hljs-bullet">1.</span> Navigate to http://localhost:3000/tasks
+<span class="hljs-bullet">2.</span> Ensure at least 3 tasks exist
 
-### Steps
-1. Click the checkbox on the first task
-   - Expected: Task shows strikethrough animation, moves to &quot;completed&quot; section
-   - Check: Console should have no errors
-   - Check: Network should show PATCH /api/tasks/:id with { status: &quot;completed&quot; }
+<span class="hljs-section">### Steps</span>
+<span class="hljs-bullet">1.</span> Click the checkbox on the first task
+<span class="hljs-bullet">   -</span> Expected: Task shows strikethrough animation, moves to &quot;completed&quot; section
+<span class="hljs-bullet">   -</span> Check: Console should have no errors
+<span class="hljs-bullet">   -</span> Check: Network should show PATCH /api/tasks/:id with { status: &quot;completed&quot; }
 
-2. Click undo within 3 seconds
-   - Expected: Task returns to active list with reverse animation
-   - Check: Console should have no errors
-   - Check: Network should show PATCH /api/tasks/:id with { status: &quot;pending&quot; }
+<span class="hljs-bullet">2.</span> Click undo within 3 seconds
+<span class="hljs-bullet">   -</span> Expected: Task returns to active list with reverse animation
+<span class="hljs-bullet">   -</span> Check: Console should have no errors
+<span class="hljs-bullet">   -</span> Check: Network should show PATCH /api/tasks/:id with { status: &quot;pending&quot; }
 
-3. Rapidly toggle the same task 5 times
-   - Expected: No visual glitches, final state is consistent
-   - Check: No console errors, no duplicate network requests
-   - Check: DOM should show exactly one instance of the task
+<span class="hljs-bullet">3.</span> Rapidly toggle the same task 5 times
+<span class="hljs-bullet">   -</span> Expected: No visual glitches, final state is consistent
+<span class="hljs-bullet">   -</span> Check: No console errors, no duplicate network requests
+<span class="hljs-bullet">   -</span> Check: DOM should show exactly one instance of the task
 
-### Verification
-- [ ] All steps completed without console errors
-- [ ] Network requests are correct and not duplicated
-- [ ] Visual state matches expected behavior
-- [ ] Accessibility: task status changes are announced to screen readers</code></pre>
+<span class="hljs-section">### Verification</span>
+<span class="hljs-bullet">-</span> [ ] All steps completed without console errors
+<span class="hljs-bullet">-</span> [ ] Network requests are correct and not duplicated
+<span class="hljs-bullet">-</span> [ ] Visual state matches expected behavior
+<span class="hljs-bullet">-</span> [ ] Accessibility: task status changes are announced to screen readers</code></pre>
 <h2 id="screenshot-based-verification">Screenshot-Based Verification<a class="anchor" href="#screenshot-based-verification" aria-label="锚点">#</a></h2>
 <p>Use screenshots for visual regression testing:</p>
 <pre><code>1. Take a &quot;before&quot; screenshot

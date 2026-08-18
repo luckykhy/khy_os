@@ -21,6 +21,8 @@ const http = require('http');
 const os = require('os');
 const path = require('path');
 
+const { safeReadJsonSync, safeWriteJsonSync } = require('./configGuard');
+
 // Lazily resolve the app home (portable-aware); fallback to legacy path.
 // No local caching: preserves getAppHome() live-resolve semantics.
 function _khyDir() {
@@ -98,14 +100,8 @@ function _saveCredentials(creds) {
 }
 
 function _loadSession() {
-  try {
-    if (fs.existsSync(_sessionFile())) {
-      return JSON.parse(fs.readFileSync(_sessionFile(), 'utf-8'));
-    }
-  } catch {
-    /* ignore */
-  }
-  return null;
+  const { data } = safeReadJsonSync(_sessionFile(), { schema: null, silent: true });
+  return data || null;
 }
 
 function _clearSessionFile() {
@@ -176,12 +172,7 @@ function _saveSession(username, serverToken, role, options = {}) {
   if (options.serverRefreshExpiresAt) {
     session.serverRefreshExpiresAt = options.serverRefreshExpiresAt;
   }
-  fs.writeFileSync(_sessionFile(), JSON.stringify(session, null, 2));
-  try {
-    fs.chmodSync(_sessionFile(), 0o600);
-  } catch {
-    /* Windows */
-  }
+  safeWriteJsonSync(_sessionFile(), session, { mode: 0o600 });
   return session;
 }
 

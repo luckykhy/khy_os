@@ -128,7 +128,7 @@ describe('backendRegistry — inspect 后端单源 + 注入安全', () => {
   test('Windows inspect 用 PowerShell UIAutomation', () => {
     const b = registry.backendsFor('win32', 'inspect')[0];
     expect(b.ops.tree({}).cmd).toBe('powershell');
-    expect(b.ops.tree({}).args.join(' ')).toMatch(/UIAutomation/);
+    expect(b.ops.tree({}).args.join(' ')).toMatch(/win-uia-tree\.ps1/i);
   });
 
   test('_parseJsonElements 容错：数组/单对象/空/垃圾', () => {

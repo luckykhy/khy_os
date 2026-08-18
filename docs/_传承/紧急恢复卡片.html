@@ -37,9 +37,9 @@
 <hr>
 <h2 id="1-cli-坏了-khy-敲了没反应-提示-command-not-found">1. CLI 坏了（<code>khy</code> 敲了没反应 / 提示 command not found）<a class="anchor" href="#1-cli-坏了-khy-敲了没反应-提示-command-not-found" aria-label="锚点">#</a></h2>
 <p><code>khy</code> 这个简写入口可能掉了，但<strong>后备入口几乎总能用</strong>——它直接调后端，不依赖简写：</p>
-<pre><code class="language-bash"># 主路径（简写，可能已坏）：
+<pre><code class="language-bash"><span class="hljs-comment"># 主路径（简写，可能已坏）：</span>
 khy --version
-# 后备路径（直连后端，绕过简写）：
+<span class="hljs-comment"># 后备路径（直连后端，绕过简写）：</span>
 node services/backend/bin/khy.js --version</code></pre>
 <ul><li>后备入口能打印版本 → 简写坏了而已，重装一次：双击 <code>维护-一键重装依赖</code>，或</li></ul>
 <p><code>node maintenance/lib/ops.js reinstall</code>。</p>
@@ -53,16 +53,16 @@ node services/backend/bin/khy.js --version</code></pre>
 <ol><li><strong>依赖坏了</strong>（找不到模块/import 报错）→ 双击 <code>维护-一键重装依赖</code>。</li><li><strong>还不行就回滚</strong>到上一个好版本（见第 4 节）。</li></ol>
 <hr>
 <h2 id="3-发布坏了-构建-上传-pypi-出错">3. 发布坏了（构建/上传 PyPI 出错）<a class="anchor" href="#3-发布坏了-构建-上传-pypi-出错" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">node maintenance/lib/ops.js post-verify   # 发布后验证：版本一致 + dist 产物 + twine check</code></pre>
+<pre><code class="language-bash">node maintenance/lib/ops.js post-verify   <span class="hljs-comment"># 发布后验证：版本一致 + dist 产物 + twine check</span></code></pre>
 <p>或双击 <code>维护-发布后验证</code>。它会逐项告诉你哪不对、怎么修：</p>
 <ul><li><strong>版本号不一致</strong> → 按 <code>AGENTS.md</code> 的「Version Sync」把三处改齐（pyproject / <code>__init__</code> / package.json）。</li><li><strong>dist 下没产物</strong> → 先双击 <code>维护-一键构建发布产物</code>。</li><li><strong>twine check 没过</strong> → 看输出里产物元数据问题。</li></ul>
 <p>全绿之后，<strong>登记这个好版本免去日后记忆</strong>：双击 <code>维护-登记最近稳定版免记忆回滚</code>，或<br><code>node maintenance/lib/ops.js bless</code>。它把当前 version/commit/tag/产物校验值写进<br><code>maintenance/stable-release.json</code>，<strong>以后回滚自动用它</strong>。</p>
 <hr>
 <h2 id="4-回滚到上一个好版本-升级搞砸了的救命操作">4. 回滚到上一个好版本（升级搞砸了的救命操作）<a class="anchor" href="#4-回滚到上一个好版本-升级搞砸了的救命操作" aria-label="锚点">#</a></h2>
 <p>这是设计得<strong>最安全</strong>的一步：工作区不干净会拒绝、未输入 <code>y</code> 绝不改动你的代码<br>（有自动化测试守着这条性质）。</p>
-<pre><code class="language-bash"># 先备份，再回滚：
+<pre><code class="language-bash"><span class="hljs-comment"># 先备份，再回滚：</span>
 node maintenance/lib/ops.js backup
-node maintenance/lib/ops.js rollback           # 交互确认，输入 y 才真的切</code></pre>
+node maintenance/lib/ops.js rollback           <span class="hljs-comment"># 交互确认，输入 y 才真的切</span></code></pre>
 <p>双击版：先 <code>维护-备份关键数据配置</code>，再 <code>维护-回滚到最近稳定版本</code>。</p>
 <ul><li>提示「<strong>工作区有未提交改动</strong>」→ 它在保护你的改动。先 <code>git stash</code>（暂存），再重跑回滚。</li><li>回滚后 → 双击 <code>维护-一键健康体检</code> 确认可用；想回到最新开发线：<code>git checkout &lt;你原来的分支&gt;</code>。</li></ul>
 <p>回滚目标从哪来？优先 <code>maintenance/stable-release.json</code> 登记的版本（见第 3 节的 bless）；<br>没登记就自动退回到仓库里最高的版本标签。<strong>你不必记住版本号。</strong></p>

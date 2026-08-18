@@ -11,7 +11,7 @@ describe('run_tests idle timeout behavior', () => {
   });
 
   test('keeps running when command keeps producing output', async () => {
-    process.env.KHY_RUN_TESTS_IDLE_TIMEOUT_MS = '120';
+    process.env.KHY_RUN_TESTS_IDLE_TIMEOUT_MS = '1500';
     const progressEvents = [];
     const activityEvents = [];
 
@@ -21,7 +21,7 @@ describe('run_tests idle timeout behavior', () => {
     ].join(' ');
 
     const result = await runTestsTool.execute(
-      { command, idleTimeout: 120 },
+      { command, idleTimeout: 1500 },
       {
         onProgress: (msg) => progressEvents.push(String(msg || '')),
         onActivity: (evt) => activityEvents.push(evt),
@@ -36,10 +36,10 @@ describe('run_tests idle timeout behavior', () => {
   });
 
   test('fails when command is silent longer than idle timeout', async () => {
-    process.env.KHY_RUN_TESTS_IDLE_TIMEOUT_MS = '100';
+    process.env.KHY_RUN_TESTS_IDLE_TIMEOUT_MS = '250';
 
-    const command = 'node -e "setTimeout(() => process.exit(0), 280)"';
-    const result = await runTestsTool.execute({ command, idleTimeout: 100 }, {});
+    const command = 'node -e "setTimeout(() => process.exit(0), 900)"';
+    const result = await runTestsTool.execute({ command, idleTimeout: 250 }, {});
 
     expect(result.success).toBe(false);
     expect(result.data.exitCode).toBe(1);

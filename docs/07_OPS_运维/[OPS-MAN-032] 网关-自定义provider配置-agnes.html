@@ -54,14 +54,14 @@
 <hr>
 <h2 id="3-命令行-cli">3. 命令行（CLI）<a class="anchor" href="#3-命令行-cli" aria-label="锚点">#</a></h2>
 <pre><code class="language-bash">khy gateway add
-# 别名同样可用： khy wg add / khy 网关 add</code></pre>
+<span class="hljs-comment"># 别名同样可用： khy wg add / khy 网关 add</span></code></pre>
 <p>交互流程：</p>
 <ol><li><strong>选择预设</strong>：<code>Agnes AI</code> / <code>手动填写</code>。选 Agnes 自动 prefill 显示名 / Provider ID（<code>agnes</code>）/</li></ol>
 <p>Base URL / 默认模型，仅追问 API Key 与可选 tier。</p>
 <ol><li>输入 <strong>API Key</strong>（可多 key）。</li><li>可选 <strong>能力档位（tier）</strong>：自动 / T0 / T1 / T2 / T3。</li><li>注册完成后做一次<strong>连接测试</strong>（用首个 key 探活），成功即落盘。</li></ol>
 <p>完成后验证：</p>
-<pre><code class="language-bash">khy gateway status          # 看到 agnes Provider 与其模型
-curl http://&lt;gateway&gt;/v1/models | grep agnes   # 出现 api:agnes:agnes-2.0-flash</code></pre>
+<pre><code class="language-bash">khy gateway status          <span class="hljs-comment"># 看到 agnes Provider 与其模型</span>
+curl http://&lt;gateway&gt;/v1/models | grep agnes   <span class="hljs-comment"># 出现 api:agnes:agnes-2.0-flash</span></code></pre>
 <p>相关命令：</p>
 <ul><li><code>khy gateway config</code> / <code>khy apikey</code> / <code>khy 密钥配置</code> → 改已有池的 key/endpoint。</li><li><code>khy gateway model</code> → 切模型。</li></ul>
 <hr>
@@ -84,21 +84,21 @@ curl http://&lt;gateway&gt;/v1/models | grep agnes   # 出现 api:agnes:agnes-2.
 <p>预设的来源是两层单一真源：</p>
 <ul><li><strong>内置 provider 目录</strong> <code>services/backend/src/services/builtinProviderConfig.js</code>（<code>BUILTIN_PROVIDERS</code>，<code>:33-43</code>）——决定哪些 provider 默认可被网关识别。</li><li><strong>预设清单</strong> <code>services/backend/src/services/providerPresets.js</code>（<code>:49-62</code>）——为每个预设提供 prefill 字段。Agnes 即其中一条（<code>:55</code>，<code>id:'agnes'</code> / <code>baseUrl: https://apihub.agnes-ai.com/v1</code> / <code>apiFormat:'openai'</code>），同目录还内置了 moonshot、zhipu 等常见服务。选预设时这些字段被自动填好，你只需补 API Key。</li></ul>
 <p><strong>自定义/覆盖预设</strong>：用环境变量 <code>KHY_PROVIDER_PRESETS</code> 注入或覆盖预设（JSON），无需改源码即可让 <code>khy gateway add</code> 的预设下拉出现你自己的服务：</p>
-<pre><code class="language-bash"># 追加一个自定义预设（按目标服务的 id / baseUrl / 默认模型填）
-export KHY_PROVIDER_PRESETS='[{&quot;id&quot;:&quot;myllm&quot;,&quot;displayName&quot;:&quot;My LLM&quot;,&quot;baseUrl&quot;:&quot;https://api.example.com/v1&quot;,&quot;defaultModel&quot;:&quot;my-model-1&quot;,&quot;apiFormat&quot;:&quot;openai&quot;}]'
-khy gateway add     # 预设下拉里就会多出 &quot;My LLM&quot;</code></pre>
+<pre><code class="language-bash"><span class="hljs-comment"># 追加一个自定义预设（按目标服务的 id / baseUrl / 默认模型填）</span>
+<span class="hljs-built_in">export</span> KHY_PROVIDER_PRESETS=<span class="hljs-string">&#x27;[{&quot;id&quot;:&quot;myllm&quot;,&quot;displayName&quot;:&quot;My LLM&quot;,&quot;baseUrl&quot;:&quot;https://api.example.com/v1&quot;,&quot;defaultModel&quot;:&quot;my-model-1&quot;,&quot;apiFormat&quot;:&quot;openai&quot;}]&#x27;</span>
+khy gateway add     <span class="hljs-comment"># 预设下拉里就会多出 &quot;My LLM&quot;</span></code></pre>
 <blockquote><p>即使不写预设也能接入：<code>khy gateway add</code> 选「手动填写」，逐项填 Base URL / 模型 ID / API Key 即可。预设只是把常用服务的字段提前填好，省去手填。</p></blockquote>
 <p>落键流程统一走 <code>khy gateway config</code>（改已有池的 key/endpoint）与 <code>khy gateway add</code>（新接入），三入口（Web / TUI / CLI）共用同一套注册逻辑（<code>customProviderRegistrar.js</code>）。</p>
 <hr>
 <h2 id="5-6-中转站-relay-一分钟接入-同一机制-换个叫法">5.6 中转站 / relay 一分钟接入（同一机制，换个叫法）<a class="anchor" href="#5-6-中转站-relay-一分钟接入-同一机制-换个叫法" aria-label="锚点">#</a></h2>
 <p>很多人把「不是官方直连、而是<strong>代理转发官方模型</strong>的 OpenAI 兼容服务」叫<strong>中转站</strong>（relay / 代理站 / API 中转）。<br>在 KHY 网关里，<strong>中转站不是一种新东西</strong>——它就是本文一路讲的<strong>自定义 Provider（模式 ③ API-Key 直连）</strong>：<br>你从中转站拿到的永远是「一个 Base URL + 一个 API Key + 若干模型名」，接入路径与上面接 Agnes <strong>完全一致</strong>。</p>
 <p><strong>最短接入（任选一入口）</strong>：</p>
-<pre><code class="language-bash"># CLI：一条命令进入交互接入向导
+<pre><code class="language-bash"><span class="hljs-comment"># CLI：一条命令进入交互接入向导</span>
 khy gateway add
-#   预设下拉选「手动填写」
-#   Base URL   ← 中转站给你的地址（形如 https://xxx.example.com/v1，务必带 /v1）
-#   模型 ID    ← 中转站文档里列出的模型名（如 gpt-4o / claude-3-5-sonnet）
-#   API Key    ← 中转站分配的 key（支持一行一个 / 逗号分隔多 key 进池轮询）</code></pre>
+<span class="hljs-comment">#   预设下拉选「手动填写」</span>
+<span class="hljs-comment">#   Base URL   ← 中转站给你的地址（形如 https://xxx.example.com/v1，务必带 /v1）</span>
+<span class="hljs-comment">#   模型 ID    ← 中转站文档里列出的模型名（如 gpt-4o / claude-3-5-sonnet）</span>
+<span class="hljs-comment">#   API Key    ← 中转站分配的 key（支持一行一个 / 逗号分隔多 key 进池轮询）</span></code></pre>
 <p>Web 入口：AIGateway 页 →「API 密钥池」卡片 →「添加自定义 Provider」→ 预设选「手动填写」，同样三项。<br>接入后模型以 <code>api:&lt;poolKey&gt;:&lt;model&gt;</code> 出现在 <code>/v1/models</code>，与官方直连模型并存、可混用。</p>
 <p><strong>常配错的三个点（照着自查）</strong>：</p>
 <table><thead><tr><th>症状</th><th>多半原因</th><th>处理</th></tr></thead><tbody><tr><td>401 / 鉴权失败</td><td>Key 填错，或中转站要求非标准鉴权头</td><td>确认 Key；标准中转站走 <code>Authorization: Bearer</code>，本文机制默认即此</td></tr><tr><td>404 / 路径不对</td><td>Base URL 漏了 <code>/v1</code>，或把网页地址当成了 API 地址</td><td>Base URL 以 <code>/v1</code> 结尾；用中转站<strong>文档里的 API 地址</strong>，不是它的官网</td></tr><tr><td>模型名对不上</td><td>中转站的模型命名与官方不一致（如加了前缀）</td><td>用中转站文档里<strong>原样</strong>的模型名，别自己猜</td></tr></tbody></table>

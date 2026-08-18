@@ -646,6 +646,25 @@ const AIGatewayGenerateMethod = {
    * Returns the same shape as MultiFreeService.generateResponse().
    */
   async generate(prompt, options = {}) {
+    // Optional cross-machine model routing. A forwarded request carries _meshHop,
+    // which keeps the receiving node on its local gateway and prevents loops.
+    if (!Number(options._meshHop || 0)) {
+      try {
+        const remote = await require('../modelMesh').getModelMesh().forward(prompt, options);
+        if (remote) {
+          return remote;
+        }
+      } catch (error) {
+        try {
+          options.onChunk?.({
+            type: 'status',
+            text: `远端模型节点暂不可用，继续本机路由：${String(error?.message || 'unknown').slice(0, 120)}`,
+          });
+        } catch {
+          /* status callback is best effort */
+        }
+      }
+    }
     if (!this._initialized) {
       await this.init();
     }
@@ -1034,8 +1053,9 @@ const AIGatewayGenerateMethod = {
         try {
           const decision = languageChunkGate.handleChunk(chunk);
           if (decision && decision.forward === false) {
+            // Keep the gate object alive until the attempt's finally block reads
+            // mismatchInfo. _attemptAborted already suppresses all later chunks.
             _attemptAborted = true;
-            languageChunkGate = null;
             return;
           }
         } catch {
@@ -2111,9 +2131,9 @@ const AIGatewayGenerateMethod = {
     // 整轮自愈轮次用尽、网络仍未恢复时,挂起请求周期性轻探失败通道,一旦网络恢复即清除
     // 瞬态冷却并自动重跑级联,而不是立刻甩「所有 AI 通道均不可用」墙。门控
     // KHY_GATEWAY_NETWORK_RESUME(默认开);KHY_GATEWAY_NETWORK_RESUME_MAX_MS 等待上限
-    // (默认 120000, clamp[10000, 600000]);KHY_GATEWAY_NETWORK_RESUME_POLL_MS 探活间隔
-    // (默认 5000, clamp[2000, 30000]);KHY_GATEWAY_NETWORK_RESUME_PROBE_TIMEOUT_MS 单次
-    // 探活超时(默认 8000, clamp[3000, 20000])。仅前台用户请求且重试预算 >1 时启用——内部
+    // (默认 300000, clamp[1000, 1800000]);KHY_GATEWAY_NETWORK_RESUME_POLL_MS 探活间隔
+    // (默认 5000, clamp[50, 30000]);KHY_GATEWAY_NETWORK_RESUME_PROBE_TIMEOUT_MS 单次
+    // 探活超时(默认 8000, clamp[100, 20000])。仅前台用户请求且重试预算 >1 时启用——内部
     // 探活/后台任务(maxTotalAttempts=1 / requestSource≠foreground)不参与,避免 status 探活
     // 被自身续传挂死。等待受既有墙钟硬死线与本上限双约束,用户 abort 立即退出。
     const _networkResumeEnabled = (() => {
@@ -2127,16 +2147,16 @@ const AIGatewayGenerateMethod = {
     })();
     const _networkResumeMaxMs = Math.min(
       1800000,
-      Math.max(60000, _parseMs(process.env.KHY_GATEWAY_NETWORK_RESUME_MAX_MS || '300000', 300000))
+      Math.max(1000, _parseMs(process.env.KHY_GATEWAY_NETWORK_RESUME_MAX_MS || '300000', 300000))
     );
     const _networkResumePollMs = Math.min(
       30000,
-      Math.max(2000, _parseMs(process.env.KHY_GATEWAY_NETWORK_RESUME_POLL_MS || '5000', 5000))
+      Math.max(50, _parseMs(process.env.KHY_GATEWAY_NETWORK_RESUME_POLL_MS || '5000', 5000))
     );
     const _networkResumeProbeTimeoutMs = Math.min(
       20000,
       Math.max(
-        3000,
+        100,
         _parseMs(process.env.KHY_GATEWAY_NETWORK_RESUME_PROBE_TIMEOUT_MS || '8000', 8000)
       )
     );
@@ -2594,8 +2614,14 @@ const AIGatewayGenerateMethod = {
           : (orderedAdapters[0] && orderedAdapters[0].key) || '';
       let _nativeVisionAdapter = false;
       try {
+        const _leadAdapterEntry = orderedAdapters.find((entry) => entry && entry.key === _leadAdapterKey);
         _nativeVisionAdapter = require('./adapterVisionCapability').adapterHandlesImagesNatively(
-          _leadAdapterKey
+          _leadAdapterKey,
+          process.env,
+          {
+            adapter: _leadAdapterEntry && _leadAdapterEntry.adapter,
+            options,
+          }
         );
       } catch {
         /* 叶子不可用 → 保持既有视觉路由 */
@@ -3107,25 +3133,39 @@ const AIGatewayGenerateMethod = {
             const mcpServerName = decision.mcpServer || process.env.KHY_MCP_VISION_SERVER;
             let mcpVisionText = '';
             emitStatus(`[MCP] 图片识别中：${mcpServerName}…`);
-            emitAssistantMessage(`🔍 MCP识图（${mcpServerName}）正在识别图片，请稍候…`);
             try {
               const mcpResult = await _callMcpVisionTool(mcpServerName, options.images);
               const _mcpErrors = Array.isArray(mcpResult.errors) ? mcpResult.errors : [];
               if (mcpResult.text && mcpResult.text.trim()) {
                 mcpVisionText = mcpResult.text.trim();
-                prompt = `${prompt || ''}\n\n[用户发送了图片（当前模型不支持直接看图，已由视觉模型识别为以下描述，请据此作答）]\n${mcpVisionText}`;
+                const _mcpImageCount = Array.isArray(options.images) ? options.images.length : 0;
+                let _mcpSuccessNote = '';
+                try {
+                  const _visionFallback = require('./visionOcrFallback');
+                  prompt = _visionFallback.stripConsumedImageBridgeText(prompt || '');
+                  if (Array.isArray(options.messages)) {
+                    options = {
+                      ...options,
+                      messages: _visionFallback.stripConsumedImageBridgeMessages(options.messages),
+                    };
+                  }
+                  _mcpSuccessNote = _visionFallback.buildMcpVisionSuccessNote({
+                    count: _mcpImageCount,
+                  });
+                } catch {
+                  /* helper unavailable: retain the summary-only behavior */
+                }
+                prompt = `${prompt || ''}\n\n${_mcpSuccessNote || '[图片已完成视觉识别] 请依据以下描述直接回答，不要再次读取历史图片路径。'}\n${mcpVisionText}`;
                 options = {
                   ...options,
                   images: undefined,
                   _ocrFallbackApplied: true,
                   _mcpVisionApplied: true,
+                  _imageTransportConsumed: true,
                   _mcpVisionText: mcpVisionText,
                 };
                 hasImageInput = false;
                 emitStatus(`[MCP] ${mcpServerName} 识别完成 ✓`);
-                emitAssistantMessage(
-                  `✅ MCP识图（${mcpServerName}）已完成，正在根据识别结果作答。`
-                );
               } else if (_mcpErrors.length) {
                 const errSummary = _mcpErrors.join('；');
                 emitStatus(
@@ -3163,7 +3203,7 @@ const AIGatewayGenerateMethod = {
                       .toLowerCase()
                 );
               });
-              const picked = pickVisionCandidate(others, { env });
+              const picked = pickVisionCandidate(others, { env: process.env });
               if (picked) {
                 visionModel = String(_candidateModelId(picked) || '').trim();
               }
@@ -3172,7 +3212,7 @@ const AIGatewayGenerateMethod = {
               //    - 具体模型名（如 step-3.7-flash）：直接用
               //    - 'auto'：扫描所有 provider 的模型池，找第一个支持视觉的
               if (!visionModel) {
-                const fallback = String(env.KHY_VISION_FALLBACK_MODEL || '')
+                const fallback = String(process.env.KHY_VISION_FALLBACK_MODEL || '')
                   .trim()
                   .toLowerCase();
                 if (fallback === 'auto') {
@@ -3192,7 +3232,7 @@ const AIGatewayGenerateMethod = {
                         if (!mLower || mLower === currentLower) {
                           continue;
                         }
-                        if (isVisionCapableModel(m, { env })) {
+                        if (isVisionCapableModel(m, { env: process.env })) {
                           visionModel = String(m).trim();
                           poolHint = String(provider.poolKey || '').trim() || null;
                           break;
@@ -3493,11 +3533,21 @@ const AIGatewayGenerateMethod = {
       // unknown/network 一次放行:长空闲后的死 keep-alive 连接错误(socket hang up /
       // ECONNRESET)会被记成 unknown/network 失败,但换新连接即可恢复——用户的新消息
       // 不该被这类瞬时性失败的冷却短路直接落本地兜底。放行状态存在独立的
-      // _fastFailProbeMeta(不被 _recordAdapterFailure 的失败覆写影响):每个冷却
-      // 时长(cooldownMs)窗口内最多放行一次真实探测——即使持续断网下失败记录
-      // 被反复覆写也不会突破该频率,避免真实外网重试风暴。判定与写入同步完成
-      // (JS 单线程下 check+set 即原子):并发请求只有首个能通过,其余仍短路。
-      // 熔断开启(circuitOpen)与 auth/permission/model_not_found 等确定性错误不放行。
+      // _fastFailProbeMeta(不被 _recordAdapterFailure 的失败覆写影响):每个探测
+      // 窗口内最多放行一次真实探测——即使持续断网下失败记录被反复覆写也不会突破该
+      // 频率,避免真实外网重试风暴。判定与写入同步完成(JS 单线程下 check+set 即原子):
+      // 并发请求只有首个能通过,其余仍短路。
+      // auth/permission/model_not_found 等确定性错误不放行(硬撞没有意义)。
+      //
+      // 熔断态(circuitOpen)此前**完全不放行**,这是「一次失败永久失败、无法恢复」的第二个
+      // 死锁点:冷却在熔断后按 2 的幂放大到 300s 上限,而熔断态既关掉这里的放行,又只剩
+      // 自愈探针一条路 —— 而 api/relay 通道的自愈探针是**深探针**(要求 generation 成功),
+      // 只要造成熔断的原因同时让 generation 失败,它就每 15s 返回一次 still_unhealthy,
+      // 永远清不掉。两者叠加 = 没有任何路径能把通道救回来。
+      // 修:熔断态保留 half-open 单请求放行,但探测间隔**不再跟随被指数放大的 cooldownMs**,
+      // 而走有上界的独立间隔(KHY_CIRCUIT_HALF_OPEN_PROBE_MS,默认 30s)。每 30s 最多一次
+      // 真实请求既算不上 hammering,又让「通道必然可恢复」成为结构性保证而非运气。
+      // 门控设 0 → 回到熔断态不放行的旧行为。
       // 真实尝试成功后由既有成功路径 _clearAdapterFailure 清除失败缓存与探测 meta。
       try {
         const _cachedType = String(cached.errorType || '').toLowerCase();
@@ -3507,13 +3557,25 @@ const AIGatewayGenerateMethod = {
           .split(',')
           .map((t) => t.trim().toLowerCase())
           .filter(Boolean);
-        if (_probeTypes.includes(_cachedType) && cached.circuitOpen !== true) {
+        const _circuitOpen = cached.circuitOpen === true;
+        // 熔断态的 half-open 探测间隔。非法值回落默认;显式 0 = 关闭放行(旧行为)。
+        const _halfOpenRaw = String(
+          process.env.KHY_CIRCUIT_HALF_OPEN_PROBE_MS ?? ''
+        ).trim();
+        const _halfOpenParsed = _halfOpenRaw === '' ? 30000 : Number(_halfOpenRaw);
+        const _halfOpenMs =
+          Number.isFinite(_halfOpenParsed) && _halfOpenParsed >= 0 ? _halfOpenParsed : 30000;
+        if (_probeTypes.includes(_cachedType) && (!_circuitOpen || _halfOpenMs > 0)) {
           this._fastFailProbeMeta = this._fastFailProbeMeta || {};
           const _meta =
             this._fastFailProbeMeta[adapterKey] ||
             (this._fastFailProbeMeta[adapterKey] = { lastProbeAt: 0 });
           // cooldownMs 缺失/非法时保守不放行(窗口为 0 会退化成每次都放行)。
-          const _probeWindowMs = Number(cached.cooldownMs);
+          // 熔断态额外把窗口夹到 half-open 间隔:300s 的冷却不该换来 300s 的探测间隔。
+          let _probeWindowMs = Number(cached.cooldownMs);
+          if (_circuitOpen && Number.isFinite(_probeWindowMs) && _probeWindowMs > 0) {
+            _probeWindowMs = Math.min(_probeWindowMs, _halfOpenMs);
+          }
           if (
             Number.isFinite(_probeWindowMs) &&
             _probeWindowMs > 0 &&
@@ -3521,7 +3583,9 @@ const AIGatewayGenerateMethod = {
           ) {
             _meta.lastProbeAt = Date.now(); // 同步写入,封死同窗口并发放行
             emitStatus(
-              `${adapterDisplayName} 冷却期内放行一次真实尝试（${_cachedType} 类失败可能来自已断开的空闲连接，每冷却窗口仅探测1次）`
+              _circuitOpen
+                ? `${adapterDisplayName} 熔断中放行一次真实尝试（half-open 试探，约每 ${Math.max(1, Math.round(_probeWindowMs / 1000))}s 一次；成功即立刻解除熔断）`
+                : `${adapterDisplayName} 冷却期内放行一次真实尝试（${_cachedType} 类失败可能来自已断开的空闲连接，每冷却窗口仅探测1次）`
             );
             return null;
           }
@@ -4928,7 +4992,12 @@ const AIGatewayGenerateMethod = {
             return 'next_adapter';
           };
           try {
-            const cachedFastFail = await inspectCachedFastFail(entry.key, adapterDisplayName);
+            // Fast-fail is a cross-request admission guard. Once this request has
+            // started the adapter, its in-request retries are governed by the
+            // attempt and delay budgets below; the failure recorded by attempt 0
+            // must not virtual-skip attempt 1.
+            const cachedFastFail =
+              attempt === 0 ? await inspectCachedFastFail(entry.key, adapterDisplayName) : null;
             if (cachedFastFail) {
               allAttempts.push({
                 provider: adapterDisplayName,
@@ -5036,6 +5105,9 @@ const AIGatewayGenerateMethod = {
                   },
                   abortSignal: attemptAbort.signal,
                   beforeRun: async () => {
+                    if (attempt > 0) {
+                      return null;
+                    }
                     const cached = await inspectCachedFastFail(entry.key, adapterDisplayName);
                     if (!cached) {
                       return null;
@@ -5624,7 +5696,10 @@ const AIGatewayGenerateMethod = {
             }
             break; // non-exception failure, move to next adapter
           } catch (err) {
-            if (attemptLanguageMismatch && !gatewayAbort.signal.aborted) {
+            // The language gate intentionally aborts the current attempt. Some
+            // linked controllers surface that reason on the request-level signal,
+            // so handle the explicit mismatch evidence before generic cancellation.
+            if (attemptLanguageMismatch) {
               const mismatchAction = resolveAttemptLanguageMismatch();
               if (mismatchAction === 'retry') {
                 _forwardedVisibleTextLen = 0;

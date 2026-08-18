@@ -196,7 +196,7 @@ module.exports = defineTool({
       };
     }
 
-    const linter = detected ? detected.linter : 'custom';
+    const linter = hasCommandOverride ? 'custom' : detected.linter;
     let command = hasCommandOverride ? params.command.trim() : detected.cmd;
     if (!hasCommandOverride && params.files) {
       command += ` ${params.files}`;

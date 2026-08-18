@@ -34,7 +34,7 @@
   Or: brew install node / winget install ... / nodesource ...
   → sys.exit(1)</code></pre>
 <p>但 npm 渠道启动器 <code>packaging/npm/bin/khy.js</code> <strong>没有任何 node 版本预检</strong>，直接：</p>
-<pre><code class="language-js">const res = spawnSync(process.execPath, [BACKEND_CLI, ...argv], { stdio: 'inherit', ... });</code></pre>
+<pre><code class="language-js"><span class="hljs-keyword">const</span> res = <span class="hljs-title function_">spawnSync</span>(process.<span class="hljs-property">execPath</span>, [<span class="hljs-variable constant_">BACKEND_CLI</span>, ...argv], { <span class="hljs-attr">stdio</span>: <span class="hljs-string">&#x27;inherit&#x27;</span>, ... });</code></pre>
 <p>把后端交给<strong>当前 node</strong>。于是 <strong>同一产品</strong>在 node &lt; 20 的机器上给出<strong>两个矛盾</strong>的离机<br>还原体验：</p>
 <table><thead><tr><th>渠道</th><th>node 18 机器上的体验</th></tr></thead><tbody><tr><td>pip</td><td>「Node.js v18 found but &gt;= 20 required」+ 平台化安装提示 + 干净 exit(1)</td></tr><tr><td>npm</td><td>后端深处的现代语法 / 依赖天书崩溃，用户无从判断根因</td></tr></tbody></table>
 <p>npm 的 <code>package.json engines.node=&quot;&gt;=20&quot;</code> 只是<strong>建议性</strong>的——npm 默认只 warn 不拦，<br><code>--ignore-scripts</code> / <code>engine-strict=false</code> 下形同虚设。故这是启动器层的真实缺口。</p>

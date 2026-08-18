@@ -271,6 +271,8 @@ async function generate(prompt, _options = {}) {
         buildSuccess(text, {
           adapter: 'web_relay',
           provider: 'web-relay',
+          model: 'web-relay',
+          tokenUsage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
           attempts: [{ provider: `web-relay (port ${port})`, success: true }],
         })
       );

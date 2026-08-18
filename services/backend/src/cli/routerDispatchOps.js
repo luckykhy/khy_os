@@ -1,5 +1,7 @@
 'use strict';
 
+const path = require('path');
+
 /**
  * Router ops-cluster command dispatch (extracted from cli/router.js).
  *
@@ -42,6 +44,127 @@ function setRouterDispatchOpsDeps(deps = {}) {
   }
 }
 
+async function handleUnifiedUpdateCommand(ctx) {
+  const { subCommand, args = [], printError, printInfo, printSuccess, printWarn } = ctx;
+  const coordinator = require('../services/updateCoordinator');
+  const { UPDATE } = require('../constants/serviceDefaults');
+  const { createProgressRenderer } = require('../services/updateProgressRenderer');
+  const progressEnabled = String((ctx.options && ctx.options.streamProgress) || process.env.KHY_UPDATE_STREAM_PROGRESS || '1') !== '0';
+  const progress = progressEnabled ? createProgressRenderer({
+    isTTY: ctx.isTTY !== undefined ? ctx.isTTY : process.stdout.isTTY,
+    minIntervalMs: UPDATE.PROGRESS_MIN_INTERVAL_MS,
+  }) : null;
+  const onProgress = progress ? event => progress.render({
+    action: '更新',
+    target: event.target || 'KhyOS',
+    phase: '下载',
+    completed: event.size,
+    total: event.total,
+    rate: event.rate,
+  }) : undefined;
+  const onStatus = progress ? event => progress.render({
+    action: event.action || '更新',
+    target: event.target || 'KhyOS',
+    phase: event.phase,
+    progress: event.progress,
+  }) : undefined;
+  const actions = new Set(['check', 'stage', 'apply', 'status', 'skip']);
+  const channels = new Set(coordinator.CHANNELS);
+  const tokens = [subCommand, ...args].filter(Boolean).map(value => String(value).toLowerCase());
+  const action = tokens.find(token => actions.has(token)) || 'interactive';
+  const channel = tokens.find(token => channels.has(token));
+
+  if (action === 'status') {
+    const state = coordinator.readState();
+    printInfo(`更新状态: ${state.state} · 通道: ${state.channel}`);
+    if (state.updateSource) printInfo(`发布源: ${state.updateSource}`);
+    for (const result of state.channelResults || []) {
+      printInfo(`${result.action} · ${result.target} · ${result.progress} · ${result.status}${result.reason ? ` · ${result.reason}` : ''}`);
+    }
+    if (state.target && (state.target.version || state.target.commit)) {
+      printInfo(`目标: ${state.target.version || state.target.commit}`);
+    }
+    return true;
+  }
+  if (action === 'skip') {
+    coordinator.skipUpdate();
+    printSuccess('已跳过当前目标版本。');
+    return true;
+  }
+  if (action === 'apply') {
+    const applied = await coordinator.applyUpdate({ onProgress, onStatus });
+    if (progress) progress.finish({ status: applied.state === 'applied' ? '完成' : '失败', message: applied.state === 'applied' ? '更新已安装 3/3' : '安装未完成 3/3' });
+    if (applied.state === 'applied') printSuccess('KhyOS 更新已接受，请重启以载入新版本。');
+    else printError(`更新失败，当前版本保持运行: ${applied.error || '未知错误'}`);
+    return true;
+  }
+
+  if (onStatus) onStatus({ action: '检查', target: 'GitHub Releases', phase: '检查更新源', progress: '第 1/3 阶段' });
+  const channelRouter = require('../services/updateChannelRouter');
+  const channelCheck = await channelRouter.checkAllChannels({ channel });
+  for (const result of channelCheck.channelResults) {
+    const line = `${result.action} · ${result.target} · ${result.progress} · ${result.status}${result.reason ? ` · ${result.reason}` : ''}`;
+    if (['unavailable', 'failed-validation'].includes(result.status)) printWarn(line);
+    else printInfo(line);
+  }
+  for (const item of channelCheck.degradation) {
+    printWarn(`${channelRouter._channelLabel(item.channel)}: ${item.reason}，降级到下一渠道。`);
+  }
+  if (channelCheck.repaired) {
+    printSuccess('本地副本校验完成，损坏的程序文件已修复。');
+    return true;
+  }
+
+  let state = await coordinator.checkUpdate({ force: true, channel, channelCheck, onProgress, onStatus });
+  if (state.state === 'blocked') {
+    printWarn(`更新已阻止: ${state.blockedReason || state.error || '当前安装状态不适合更新'}`);
+    return true;
+  }
+  if (state.indeterminate) {
+    printWarn(`更新检查未完成: ${state.error || '更新源暂不可用'}`);
+    return true;
+  }
+  if (state.state !== 'available' && state.state !== 'staged') {
+    printSuccess('当前已是所选通道的最新版本。');
+    return true;
+  }
+  if (state.state === 'available') state = await coordinator.stageUpdate({ state, onProgress, onStatus });
+  if (state.state !== 'staged') {
+    printError(`更新预取或校验失败: ${state.error || '暂存失败'}`);
+    return true;
+  }
+  if (action === 'check' || action === 'stage') {
+    printSuccess(`更新已暂存并通过校验: ${state.target.version || state.target.commit}`);
+    return true;
+  }
+
+  const { promptCompat } = require('./uiPrompt');
+  const answer = await promptCompat([{
+    type: 'list',
+    name: 'choice',
+    message: `接受 KhyOS 更新 ${state.target.version || state.target.commit}?`,
+    choices: [
+      { name: '现在安装', value: 'apply' },
+      { name: '稍后', value: 'later' },
+      { name: '跳过此版本', value: 'skip' },
+    ],
+  }]);
+  if (answer.choice === 'skip') {
+    coordinator.skipUpdate({ state });
+    printInfo('已跳过当前目标版本。');
+    return true;
+  }
+  if (answer.choice !== 'apply') {
+    printInfo('更新已暂存，可稍后运行 khy update apply。');
+    return true;
+  }
+  const applied = await coordinator.applyUpdate({ state, onProgress, onStatus });
+  if (progress) progress.finish({ status: applied.state === 'applied' ? '完成' : '失败', message: applied.state === 'applied' ? '更新已安装 3/3' : '安装未完成 3/3' });
+  if (applied.state === 'applied') printSuccess('KhyOS 更新已接受，请重启以载入新版本。');
+  else printError(`更新失败，当前版本保持运行: ${applied.error || '未知错误'}`);
+  return true;
+}
+
 async function dispatchOpsCommand(command, _ctx) {
   const {
     subCommand,
@@ -59,6 +182,7 @@ async function dispatchOpsCommand(command, _ctx) {
     withSpinner,
     chalk,
   } = _ctx;
+  if (command === 'update') return handleUnifiedUpdateCommand(_ctx);
   switch (command) {
     case 'log': {
       await handleLogCommand(subCommand, args, options);
@@ -1913,6 +2037,125 @@ async function dispatchOpsCommand(command, _ctx) {
         } catch {
           printInfo('审计日志不可用');
         }
+        return true;
+      }
+
+      if (subCommand === 'slow') {
+        // 慢请求排行:直接读 telemetryService 的聚合(F1 —— 不另起一套统计)。
+        const telemetry = require('../services/telemetryService');
+        const slowCore = require('../observability/slowRequestCore');
+        const cfg = slowCore.resolveConfig();
+        const summaries = telemetry.getSlowRequestSummaries();
+        console.log('');
+        console.log(`  ${chalk.cyan.bold('慢请求排行')}`);
+        console.log('');
+        console.log(
+          `  ${chalk.gray('状态:')}   ${
+            cfg.enabled
+              ? chalk.green(`已启用,阈值 ${slowCore.formatDuration(cfg.thresholdMs)}`)
+              : chalk.yellow('未启用(设 KHY_SLOW_REQUEST_ENABLED=1 后重启后端)')
+          }`
+        );
+        console.log(
+          `  ${chalk.gray('采样率:')} ${cfg.sampleRate} · ${chalk.gray('告警去抖:')} ${Math.round(cfg.cooldownMs / 1000)}s · ${chalk.gray('明细保留:')} ${cfg.retentionDays} 天`
+        );
+        console.log(`  ${chalk.gray('明细:')}   ${require('../observability/slowRequest').shardPath(slowCore.dayKey(Date.now())) || '(不可用)'}`);
+        console.log('');
+        if (summaries.length === 0) {
+          printInfo('暂无慢请求记录');
+          console.log('');
+          return true;
+        }
+        console.log(
+          `  ${chalk.dim('路由'.padEnd(38))} ${chalk.dim('累计')} ${chalk.dim('今日')} ${chalk.dim('p50')} ${chalk.dim('p95')} ${chalk.dim('最大')}`
+        );
+        for (const s of summaries.slice(0, 20)) {
+          console.log(
+            `  ${chalk.cyan(s.route.slice(0, 38).padEnd(38))} ${String(s.totalSlow).padStart(4)} ${String(s.todayCount).padStart(4)} ` +
+              `${slowCore.formatDuration(s.p50).padStart(7)} ${chalk.yellow(slowCore.formatDuration(s.p95).padStart(7))} ${slowCore.formatDuration(s.maxMs).padStart(7)}`
+          );
+        }
+        if (summaries.length > 20) {
+          console.log(chalk.dim(`  … 另有 ${summaries.length - 20} 个路由未显示`));
+        }
+        console.log('');
+        return true;
+      }
+
+      if (subCommand === 'profile') {
+        // 按需 CPU 采样(方案 A)+ 事件循环延迟现状(方案 B)。
+        const cpuProfiler = require('../observability/cpuProfiler');
+        const eventLoopMonitor = require('../observability/eventLoopMonitor');
+        const profilerCore = require('../observability/profilerCore');
+        const action = String(args[0] || 'capture').toLowerCase();
+
+        if (action === 'list') {
+          const files = cpuProfiler.listProfiles(20);
+          console.log('');
+          console.log(`  ${chalk.cyan.bold('已保存的 CPU profile')}`);
+          console.log(`  ${chalk.gray('目录:')} ${cpuProfiler.getProfilesDir() || '(不可用)'}`);
+          console.log('');
+          if (files.length === 0) {
+            printInfo('暂无 profile');
+          } else {
+            for (const f of files) {
+              console.log(`  ${chalk.cyan(f.name)}  ${chalk.dim((f.sizeBytes / 1024).toFixed(1) + ' KB')}`);
+            }
+          }
+          console.log('');
+          return true;
+        }
+
+        if (action === 'lag' || action === 'eventloop') {
+          const live = eventLoopMonitor.snapshot();
+          const last = eventLoopMonitor.lastSummary();
+          const cfg = profilerCore.resolveConfig();
+          console.log('');
+          console.log(`  ${chalk.cyan.bold('事件循环延迟')}`);
+          console.log('');
+          if (!eventLoopMonitor.isRunning()) {
+            printInfo(
+              cfg.enabled
+                ? '监测未运行(仅后端进程内启用,请在后端进程查看)'
+                : '监测未启用(设 KHY_PROFILING_ENABLED=1 后重启后端)'
+            );
+            console.log('');
+            return true;
+          }
+          const s = live || last || {};
+          console.log(`  ${chalk.gray('p50:')} ${s.p50Ms || 0}ms   ${chalk.gray('p95:')} ${s.p95Ms || 0}ms`);
+          console.log(
+            `  ${chalk.gray('p99:')} ${chalk.yellow((s.p99Ms || 0) + 'ms')}   ${chalk.gray('最大:')} ${s.maxMs || 0}ms   ${chalk.gray('阈值:')} ${cfg.lagThresholdMs}ms`
+          );
+          console.log('');
+          return true;
+        }
+
+        // capture(默认):采一次并落盘。
+        const requestedMs = Number(args[1] || args[0]);
+        const cfg = profilerCore.resolveConfig();
+        if (!cfg.enabled) {
+          console.log('');
+          console.log(profilerCore.formatDisabled());
+          console.log('');
+          return true;
+        }
+        const durationMs = profilerCore.clampDuration(requestedMs, cfg);
+        printInfo(
+          `CPU 采样启动 目标本进程 pid ${process.pid},窗口 ${(durationMs / 1000).toFixed(1)}s @ ${cfg.sampleIntervalUs}μs`
+        );
+        const result = await cpuProfiler.captureProfile({
+          durationMs,
+          trigger: 'cli',
+          onProgress: (text) => printInfo(text),
+        });
+        console.log('');
+        if (result.ok) {
+          console.log(profilerCore.formatResult(result));
+        } else {
+          console.log(result.error || profilerCore.formatError(result.reason));
+        }
+        console.log('');
         return true;
       }
 

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * bulkLines.js — 纯叶子:零 IO 依赖业务层、确定性、绝不抛、可单测。
+ * bulkLines.js — CLI stdout 合并写工具：低调用次数、失败回退、绝不抛、可单测。
  *
  * 修「CLI 大面积刷屏卡顿」的根因之一:多处把 AI 回复/大段动态输出按
  * `text.split('\n').forEach(l => console.log(...))` 逐行打印 —— 千行输出 = 千次同步写

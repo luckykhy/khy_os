@@ -86,17 +86,50 @@ async function parallelPrefetch(options = {}) {
  *   const timers = deferredPrefetch({ ... });
  *   // on exit: timers.forEach(clearTimeout);
  *
- * @param {{ mode?: string, onOutput?: (msg: string) => void, isBusy?: () => boolean }} options
+ * @param {{ mode?: string, onOutput?: (msg: string|object) => void, isBusy?: () => boolean }} options
  * @returns {Array<NodeJS.Timeout>}
  */
 function deferredPrefetch(options = {}) {
   const { mode = 'khyquant', onOutput, isBusy } = options;
   const timers = [];
   const busy = () => (typeof isBusy === 'function' ? isBusy() : false);
-  const emit = (msg) => {
-    if (typeof onOutput === 'function' && !busy()) {
-      onOutput(msg);
+  const pendingOutput = [];
+  let flushTimer = null;
+  const deliver = (value) => {
+    if (typeof onOutput !== 'function') return;
+    try {
+      const handled = onOutput(value);
+      if (handled && typeof handled.catch === 'function') handled.catch(() => {});
+    } catch {
+      /* non-critical output consumer */
     }
+  };
+  const flush = () => {
+    flushTimer = null;
+    if (busy() || pendingOutput.length === 0) {
+      if (pendingOutput.length > 0) {
+        flushTimer = setTimeout(flush, 500);
+        timers.push(flushTimer);
+      }
+      return;
+    }
+    while (!busy() && pendingOutput.length > 0) deliver(pendingOutput.shift());
+    if (pendingOutput.length > 0) {
+      flushTimer = setTimeout(flush, 500);
+      timers.push(flushTimer);
+    }
+  };
+  const emit = (value) => {
+    if (typeof onOutput !== 'function') return;
+    if (busy()) {
+      pendingOutput.push(value);
+      if (!flushTimer) {
+        flushTimer = setTimeout(flush, 500);
+        timers.push(flushTimer);
+      }
+      return;
+    }
+    deliver(value);
   };
 
   // Apply hardware-derived runtime limits SYNCHRONOUSLY up front (idempotent;
@@ -216,18 +249,21 @@ function deferredPrefetch(options = {}) {
       }
     },
 
-    // 5s: Version update notice
-    versionUpdateNotice: () => {
+    // 5s: Unified background update detection. Detection may fetch and stage a
+    // verified artifact, but installation remains behind an explicit choice.
+    versionUpdateNotice: async () => {
       try {
-        const { getUpdateNotice } = require('../services/versionService');
-        const notice = getUpdateNotice();
-        if (notice && !busy()) {
-          try {
-            const chalk = require('chalk').default || require('chalk');
-            emit(chalk.yellow(`  🔄 ${notice}`));
-          } catch {
-            /* chalk not available */
-          }
+        const coordinator = require('../services/updateCoordinator');
+        const state = await coordinator.checkUpdate({
+          mode,
+          cwd: process.cwd(),
+          channel: process.env.KHY_UPDATE_CHANNEL,
+        });
+        if (state && state.state === 'available') {
+          const staged = await coordinator.stageUpdate({ state });
+          emit({ type: 'update-available', state: staged });
+        } else if (state && state.state === 'blocked') {
+          emit({ type: 'update-blocked', state });
         }
       } catch {
         /* non-critical */

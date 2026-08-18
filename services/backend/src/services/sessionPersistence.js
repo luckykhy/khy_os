@@ -17,6 +17,8 @@ const fs = require('fs');
 const path = require('path');
 
 const { getProjectDataDir } = require('../utils/dataHome');
+const atomicWriteJson = require('../utils/atomicWriteJson');
+const { atomicWriteText } = require('../utils/atomicWriteJson');
 
 // ── Constants ──
 
@@ -85,7 +87,9 @@ function _writeProjectMeta(bucketDir, cwd) {
     }
     meta.cwd = cwd;
     meta.updatedAt = Date.now();
-    fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2));
+    // 原子写:这个 marker 是 bucket → 真实 cwd 的唯一映射,写坏了整桶会话都认不回项目。
+    // mode 0o666 = writeFileSync 默认值,本次迁移只换写入原语,不改权限。
+    atomicWriteJson(metaPath, meta, { mode: 0o666 });
   } catch {
     /* best effort */
   }
@@ -222,18 +226,15 @@ function _uuid() {
 /**
  * G6: 原子写入 — tmp 文件 + fsync + rename
  * 从 DeepSeek-TUI session_manager.rs 学习
+ *
+ * 实现已收口到 utils/atomicWriteJson 的 atomicWriteText(同语义:同目录 tmp、0600、fsync、
+ * rename)。**函数名与「失败即抛」的契约刻意保留**:persistSession/checkpoint 等 4 处调用点
+ * 依赖异常向上传播(见 persistSession 注释),而 atomicWriteText 返回 false 从不抛。
  */
 function _writeAtomic(filePath, data) {
-  const dir = path.dirname(filePath);
-  const tmpPath = path.join(dir, `.tmp-${crypto.randomBytes(6).toString('hex')}`);
-  const fd = fs.openSync(tmpPath, 'w', 0o600);
-  try {
-    fs.writeSync(fd, data);
-    fs.fsyncSync(fd);
-  } finally {
-    fs.closeSync(fd);
+  if (!atomicWriteText(filePath, data, { mode: 0o600, fsync: true })) {
+    throw new Error(`原子写失败: ${filePath}`);
   }
-  fs.renameSync(tmpPath, filePath);
 }
 
 // ── 持久化耐久性门控 ──

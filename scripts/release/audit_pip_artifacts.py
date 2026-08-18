@@ -17,7 +17,6 @@ from pip_packaging_rules import (
     AUDIT_FORBIDDEN_DIRS,
     AUDIT_FORBIDDEN_FILE_EXEMPT_DIRS,
     AUDIT_FORBIDDEN_FILE_GLOBS,
-    AUDIT_FORBIDDEN_REQUIRES_SUBSTRINGS,
     REQUIRED_SDIST_PATHS,
     REQUIRED_WHEEL_PATHS,
 )
@@ -62,6 +61,19 @@ def _find_forbidden_files(root: Path):
     return hits
 
 
+def _find_resource_stores(root: Path):
+    required = {"blobs", "installs", "active", "staging", "locks"}
+    hits = []
+    for path in [root, *(candidate for candidate in root.rglob("*") if candidate.is_dir())]:
+        try:
+            names = {child.name for child in path.iterdir() if child.is_dir()}
+        except OSError:
+            continue
+        if required.issubset(names):
+            hits.append(path)
+    return hits
+
+
 def _has_required_path(root: Path, required: str) -> bool:
     return any(path.as_posix().endswith(required) for path in root.rglob("*"))
 
@@ -101,13 +113,11 @@ def _audit_metadata_purity(label: str, root: Path) -> int:
             line = raw_line.strip()
             lowered = line.lower()
             if lowered.startswith("requires-dist:"):
-                for needle in AUDIT_FORBIDDEN_REQUIRES_SUBSTRINGS:
-                    if needle.lower() in lowered:
-                        print(f"  {meta.name}: {line}")
-                        return _fail(
-                            f"{label} metadata declares forbidden cross-package "
-                            f"dependency (matched '{needle}')"
-                        )
+                print(f"  {meta.name}: {line}")
+                return _fail(
+                    f"{label} metadata declares a runtime dependency; "
+                    "published pip artifacts must be install-time dependency-free"
+                )
             elif lowered.startswith("classifier:"):
                 for needle in AUDIT_FORBIDDEN_CLASSIFIER_SUBSTRINGS:
                     if needle.lower() in lowered:
@@ -124,11 +134,17 @@ def _audit_metadata_purity(label: str, root: Path) -> int:
 def _audit_tree(label: str, root: Path, required_paths) -> int:
     _info(f"Auditing {label}")
 
-    bad_dirs = _find_forbidden_dirs(root)
+    bad_dirs = _find_forbidden_dirs(root);
     if bad_dirs:
         for hit in bad_dirs[:20]:
             print(f"  {hit}")
         return _fail(f"{label} contains forbidden third-party/build dirs")
+
+    resource_stores = _find_resource_stores(root)
+    if resource_stores:
+        for hit in resource_stores[:20]:
+            print(f"  {hit}")
+        return _fail(f"{label} contains Resource Store cache/state")
 
     bad_files = _find_forbidden_files(root)
     if bad_files:

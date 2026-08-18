@@ -34,37 +34,37 @@
 <ul><li>User asks about system resource usage (CPU, memory, disk)</li><li>User reports slow performance or high load</li><li>User wants to monitor a specific process</li><li>User asks about network throughput or connections</li><li>User wants to set up alerting thresholds</li></ul>
 <h2 id="monitoring-pipeline">Monitoring Pipeline<a class="anchor" href="#monitoring-pipeline" aria-label="锚点">#</a></h2>
 <h3 id="step-1-quick-health-check">Step 1: Quick Health Check<a class="anchor" href="#step-1-quick-health-check" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># One-liner system overview
-uptime &amp;&amp; free -h &amp;&amp; df -h / &amp;&amp; echo &quot;---&quot; &amp;&amp; ps aux --sort=-%mem | head -6</code></pre>
+<pre><code class="language-bash"><span class="hljs-comment"># One-liner system overview</span>
+<span class="hljs-built_in">uptime</span> &amp;&amp; free -h &amp;&amp; <span class="hljs-built_in">df</span> -h / &amp;&amp; <span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;---&quot;</span> &amp;&amp; ps aux --<span class="hljs-built_in">sort</span>=-%mem | <span class="hljs-built_in">head</span> -6</code></pre>
 <h3 id="step-2-deep-diagnostics">Step 2: Deep Diagnostics<a class="anchor" href="#step-2-deep-diagnostics" aria-label="锚点">#</a></h3>
 <h4 id="cpu-analysis">CPU Analysis<a class="anchor" href="#cpu-analysis" aria-label="锚点">#</a></h4>
-<pre><code class="language-bash"># Per-core utilization
-mpstat -P ALL 1 3 2&gt;/dev/null || top -bn1 | head -5
-# Top CPU consumers
-ps aux --sort=-%cpu | head -10</code></pre>
+<pre><code class="language-bash"><span class="hljs-comment"># Per-core utilization</span>
+mpstat -P ALL 1 3 2&gt;/dev/null || top -bn1 | <span class="hljs-built_in">head</span> -5
+<span class="hljs-comment"># Top CPU consumers</span>
+ps aux --<span class="hljs-built_in">sort</span>=-%cpu | <span class="hljs-built_in">head</span> -10</code></pre>
 <h4 id="memory-analysis">Memory Analysis<a class="anchor" href="#memory-analysis" aria-label="锚点">#</a></h4>
-<pre><code class="language-bash"># Detailed memory breakdown
+<pre><code class="language-bash"><span class="hljs-comment"># Detailed memory breakdown</span>
 free -h
-cat /proc/meminfo | head -20 2&gt;/dev/null
-# Top memory consumers
-ps aux --sort=-%mem | head -10</code></pre>
+<span class="hljs-built_in">cat</span> /proc/meminfo | <span class="hljs-built_in">head</span> -20 2&gt;/dev/null
+<span class="hljs-comment"># Top memory consumers</span>
+ps aux --<span class="hljs-built_in">sort</span>=-%mem | <span class="hljs-built_in">head</span> -10</code></pre>
 <h4 id="disk-i-o">Disk I/O<a class="anchor" href="#disk-i-o" aria-label="锚点">#</a></h4>
-<pre><code class="language-bash"># I/O statistics
-iostat -x 1 3 2&gt;/dev/null || df -h
-# Find large files
-du -sh /home/*/Khy-OS* 2&gt;/dev/null</code></pre>
+<pre><code class="language-bash"><span class="hljs-comment"># I/O statistics</span>
+iostat -x 1 3 2&gt;/dev/null || <span class="hljs-built_in">df</span> -h
+<span class="hljs-comment"># Find large files</span>
+<span class="hljs-built_in">du</span> -sh /home/*/Khy-OS* 2&gt;/dev/null</code></pre>
 <h4 id="network">Network<a class="anchor" href="#network" aria-label="锚点">#</a></h4>
-<pre><code class="language-bash"># Active connections
-ss -tunp | head -20
-# Network interface stats
-ip -s link 2&gt;/dev/null || netstat -i</code></pre>
+<pre><code class="language-bash"><span class="hljs-comment"># Active connections</span>
+ss -tunp | <span class="hljs-built_in">head</span> -20
+<span class="hljs-comment"># Network interface stats</span>
+ip -s <span class="hljs-built_in">link</span> 2&gt;/dev/null || netstat -i</code></pre>
 <h3 id="step-3-khy-quant-specific">Step 3: KHY-Quant Specific<a class="anchor" href="#step-3-khy-quant-specific" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Node.js process health
-pgrep -af &quot;node.*khy&quot; | head -5
-# Backend API response time
-curl -o /dev/null -s -w &quot;%{time_total}s&quot; http://localhost:3000/api/health 2&gt;/dev/null
-# Database connection check
-ls -la ~/.khyquant/data/*.db 2&gt;/dev/null</code></pre>
+<pre><code class="language-bash"><span class="hljs-comment"># Node.js process health</span>
+pgrep -af <span class="hljs-string">&quot;node.*khy&quot;</span> | <span class="hljs-built_in">head</span> -5
+<span class="hljs-comment"># Backend API response time</span>
+curl -o /dev/null -s -w <span class="hljs-string">&quot;%{time_total}s&quot;</span> http://localhost:3000/api/health 2&gt;/dev/null
+<span class="hljs-comment"># Database connection check</span>
+<span class="hljs-built_in">ls</span> -la ~/.khyquant/data/*.db 2&gt;/dev/null</code></pre>
 <h3 id="step-4-recommendations">Step 4: Recommendations<a class="anchor" href="#step-4-recommendations" aria-label="锚点">#</a></h3>
 <p>Based on findings, suggest:</p>
 <ul><li>Resource bottlenecks and fixes</li><li>Process optimization (restart, reconfigure)</li><li>Capacity planning advice</li></ul>

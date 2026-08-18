@@ -90,7 +90,7 @@
 python3 -m unittest unit_tests.test_claude_proxy_bootstrap unit_tests.test_proxy_endpoint_discovery
 node --check backend/src/services/authGuard.js
 node --check backend/src/services/featureKeyBuilder.js
-npm --prefix backend test -- --runTestsByPath \
+npm --prefix backend <span class="hljs-built_in">test</span> -- --runTestsByPath \
   tests/security/featureKeyBuilder.test.js \
   tests/security/authGuard.exports.test.js \
   tests/gateway/relayAccessBoundary.test.js \
@@ -100,7 +100,7 @@ npm --prefix backend test -- --runTestsByPath \
 <p>需要背景时再读下面两份，不要每次都把长文整段注入：</p>
 <ul><li><code>docs/04_IMPL_实现/[IMPL-RPT-009] 特性访问与代理解耦-2026-06-01.md</code></li><li><code>docs/07_OPS_运维/[OPS-MAN-035] 特性访问-维护速查-2026-06-01.md</code></li></ul>
       </article>
-      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-OTHER-003] khy-系统提示词结构图.html"><div class="dir">← 上一篇</div><div class="ttl">KHY 系统提示词结构图</div></a><a class="next" href="../../docs/03_DESIGN_设计/00_INDEX_设计-分类索引.html"><div class="dir">下一篇 →</div><div class="ttl">00INDEX 设计分类索引</div></a></nav>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-OTHER-003] khy-系统提示词结构图.html"><div class="dir">← 上一篇</div><div class="ttl">KHY 系统提示词结构图</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-RESEARCH] 跨Agent技能MCP统一管理-阶段一调研.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-RESEARCH] 跨 Agent 技能/MCP 统一管理 — 阶段一调研报告</div></a></nav>
       <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
     </div>
   </main>

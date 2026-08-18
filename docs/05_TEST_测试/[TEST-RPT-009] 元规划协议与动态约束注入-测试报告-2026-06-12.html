@@ -31,8 +31,8 @@
 <h2 id="1-范围">1. 范围<a class="anchor" href="#1-范围" aria-label="锚点">#</a></h2>
 <p>验证 <code>src/services/metaplan/*</code> 子系统：元规划解析/防偷懒升级、动态约束注入、真实代码拦截器、<br>信任熔断、宪法红线，以及 <code>MetaPlanCoordinator</code> 的端到端闭环。</p>
 <h2 id="2-运行">2. 运行<a class="anchor" href="#2-运行" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">node --test tests/services/metaplan/metaPlanSubsystem.test.js
-# tests 31 / suites 7 / pass 31 / fail 0</code></pre>
+<pre><code class="language-bash">node --<span class="hljs-built_in">test</span> tests/services/metaplan/metaPlanSubsystem.test.js
+<span class="hljs-comment"># tests 31 / suites 7 / pass 31 / fail 0</span></code></pre>
 <h2 id="3-用例矩阵-31-例">3. 用例矩阵（31 例）<a class="anchor" href="#3-用例矩阵-31-例" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>套件</th><th>用例数</th><th>覆盖诉求/防呆</th></tr></thead><tbody><tr><td>constraintStrategy — 单调升级阶梯</td><td>2</td><td>LUB 取严、未知 fail-safe</td></tr><tr><td>executorRegistry — 武器库单一真源</td><td>4</td><td>防呆②（enum==注册表、拒捏造、拒空、裸网识别）</td></tr><tr><td>metaPlanSchema — 解析与防偷懒升级</td><td>4</td><td>防呆①、拒绝偷懒（Soft 缺论证升级）、非法枚举拒绝</td></tr><tr><td>constraintInjection — 按需配发锁具</td><td>4</td><td>Soft 不挂锁、Hard 挂锁、Block 要快照、真校验打回坏 JS</td></tr><tr><td>constitutionalRedLines — 不可覆盖红线</td><td>4</td><td>防呆④（删库/删机密/清 package.json 强制 Block；常规放行）</td></tr><tr><td>trustCircuitBreaker — 信任熔断</td><td>5</td><td>类型级降级、不牵连他型、防呆③连续 2 次锁会话、Hard 失败不扣信任、Soft 成功重置连击</td></tr><tr><td>MetaPlanCoordinator — 端到端</td><td>8</td><td>§6 同任务不同风险→不同策略、防呆①②、拒绝偷懒、红线覆盖、闭环自愈、缺票据兜底</td></tr></tbody></table>
 <h2 id="4-核心验证-6-同一任务不同风险-不同策略">4. 核心验证（§6 同一任务不同风险 → 不同策略）<a class="anchor" href="#4-核心验证-6-同一任务不同风险-不同策略" aria-label="锚点">#</a></h2>

@@ -46,6 +46,7 @@ function _dir() {
 }
 
 const _safe = require('../../utils/slugifyToken'); // 文件名安全化单一真源
+const atomicWriteJson = require('../../utils/atomicWriteJson');
 
 function _file(branch) {
   return path.join(_dir(), `ledger.${_safe(branch || 'main')}.json`);
@@ -85,20 +86,14 @@ function _readRaw(branch) {
 }
 
 function _writeRaw(branch, chain) {
-  const dir = _dir();
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
   const file = _file(branch);
-  const tmp = `${file}.tmp-${process.pid}`;
-  const fd = fs.openSync(tmp, 'w');
-  try {
-    fs.writeFileSync(fd, JSON.stringify(chain, null, 2));
-    fs.fsyncSync(fd);
-  } finally {
-    fs.closeSync(fd);
+  // 原子写收口到 utils/atomicWriteJson。**fsync 显式为 true**:这条哈希链是「进化黑历史」的
+  // 防篡改 evidence,断电丢掉最后一条等于丢证据,所以不跟随 KHY_ATOMIC_FSYNC 的全局默认。
+  // mode 0o666 = writeFileSync 默认值,本次迁移只换写入原语,不改权限。
+  if (!atomicWriteJson(file, chain, { mode: 0o666, fsync: true })) {
+    // atomicWriteJson 不抛;本函数一直靠抛异常让 append() 转成 {ok:false,error},必须补回去。
+    throw new Error(`原子写失败: ${file}`);
   }
-  fs.renameSync(tmp, file);
 }
 
 /**

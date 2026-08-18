@@ -1304,6 +1304,19 @@ function _buildImagePromptBlock(paths) {
   );
 }
 
+function handlesImagesNatively(options = {}) {
+  const target = String(options.cliTool || options.tool || '')
+    .trim()
+    .toLowerCase();
+  const tools = getDetectedTools().filter((tool) => {
+    if (!target) {
+      return true;
+    }
+    return tool.cmd.toLowerCase() === target || tool.name.toLowerCase() === target;
+  });
+  return tools.some((tool) => tool.supportsImageFiles === true);
+}
+
 /**
  * Generate a response using the best available CLI tool.
  * Tries each detected tool in priority order.
@@ -1364,7 +1377,9 @@ async function generate(prompt, options = {}) {
   // files" directive — it would only mislead a tool that cannot act on it.
   // Materialize once; append the block per-tool inside the loop below.
   // Cleaned up in the finally.
-  const _imageMaterial = _materializeImages(options.images);
+  const _imageMaterial = options._imageTransportConsumed
+    ? null
+    : _materializeImages(options.images);
   const _imageBlock = _imageMaterial ? _buildImagePromptBlock(_imageMaterial.paths) : '';
 
   try {
@@ -1405,6 +1420,8 @@ async function generate(prompt, options = {}) {
         return buildSuccess(content, {
           adapter: 'cli',
           provider: tool.name,
+          model: options.model || tool.model || tool.cmd || tool.name,
+          tokenUsage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
           attempts,
         });
       } catch (err) {
@@ -1461,6 +1478,7 @@ module.exports = {
   generate,
   getStatus,
   destroy,
+  handlesImagesNatively,
   TOOLS,
   __test__: {
     classifyAdapterError,

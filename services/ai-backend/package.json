@@ -3,6 +3,15 @@
   "version": "1.6.5",
   "description": "KHY-Quant AI Management Backend — gateway, adapters, monitor, plugins",
   "main": "server.js",
+  "exports": {
+    ".": "./server.js",
+    "./middleware/auth": "./src/middleware/auth.js",
+    "./routes/aiGatewayAdmin": "./src/routes/aiGatewayAdmin.js",
+    "./routes/marketplace": "./src/routes/marketplace.js",
+    "./routes/plugins": "./src/routes/plugins.js",
+    "./routes/userGateway": "./src/routes/userGateway.js",
+    "./routes/workflow": "./src/routes/workflow.js"
+  },
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"

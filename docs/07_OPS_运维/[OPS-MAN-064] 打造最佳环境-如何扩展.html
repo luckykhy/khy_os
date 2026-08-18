@@ -44,33 +44,33 @@
 <h3 id="第-2-步-照抄一个探针函数">第 2 步：照抄一个探针函数<a class="anchor" href="#第-2-步-照抄一个探针函数" aria-label="锚点">#</a></h3>
 <p>在文件里现有的 <code>_probe...</code> 函数旁边，抄一个新的。规则只有三条：</p>
 <ol><li><strong>只看不改</strong>：只能读系统状态（<code>os</code>、<code>fs.statSync</code> 之类），<strong>绝对不能写文件、删文件、开子进程</strong>。</li><li><strong>健康就返回 <code>null</code></strong>：没问题时返回 <code>null</code>，报告里就不会出现这一条。</li><li><strong>有问题就返回一个对象</strong>：<code>{ severity, detail, hint }</code>。</li></ol>
-<pre><code class="language-javascript">/** inode 耗尽检查 —— 示例，照抄改逻辑即可。 */
-function _probeInodeExhaustion() {
-  let free = 0;
-  try {
-    // ……在这里读你的系统指标（只读！）……
-    free = 100; // 占位：换成真实读取
-  } catch { return null; }        // 读不到就当健康，绝不抛异常
-  if (free &lt; 5) {
-    return {
-      severity: 'high',           // critical &gt; high &gt; warning &gt; info
-      detail: `可用 inode 仅剩 ${free}%`,
-      hint: '清理小文件，否则无法再创建文件',
+<pre><code class="language-javascript"><span class="hljs-comment">/** inode 耗尽检查 —— 示例，照抄改逻辑即可。 */</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">_probeInodeExhaustion</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">let</span> free = <span class="hljs-number">0</span>;
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-comment">// ……在这里读你的系统指标（只读！）……</span>
+    free = <span class="hljs-number">100</span>; <span class="hljs-comment">// 占位：换成真实读取</span>
+  } <span class="hljs-keyword">catch</span> { <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>; }        <span class="hljs-comment">// 读不到就当健康，绝不抛异常</span>
+  <span class="hljs-keyword">if</span> (free &lt; <span class="hljs-number">5</span>) {
+    <span class="hljs-keyword">return</span> {
+      <span class="hljs-attr">severity</span>: <span class="hljs-string">&#x27;high&#x27;</span>,           <span class="hljs-comment">// critical &gt; high &gt; warning &gt; info</span>
+      <span class="hljs-attr">detail</span>: <span class="hljs-string">`可用 inode 仅剩 <span class="hljs-subst">${free}</span>%`</span>,
+      <span class="hljs-attr">hint</span>: <span class="hljs-string">&#x27;清理小文件，否则无法再创建文件&#x27;</span>,
     };
   }
-  return null;                     // 健康 → 返回 null
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;                     <span class="hljs-comment">// 健康 → 返回 null</span>
 }</code></pre>
 <p><code>severity</code> 四选一（从重到轻）：<code>critical</code>、<code>high</code>、<code>warning</code>、<code>info</code>。<code>hint</code> 是给用户的一句「怎么办」，可留空字符串。</p>
 <h3 id="第-3-步-在-probes-数组里加一行">第 3 步：在 <code>_PROBES</code> 数组里加一行<a class="anchor" href="#第-3-步-在-probes-数组里加一行" aria-label="锚点">#</a></h3>
 <p>找到文件底部的 <code>const _PROBES = [ ... ]</code>，在数组里加一条：</p>
-<pre><code class="language-javascript">{ key: 'inode-exhaustion', label: 'inode 耗尽', run: _probeInodeExhaustion },</code></pre>
+<pre><code class="language-javascript">{ <span class="hljs-attr">key</span>: <span class="hljs-string">&#x27;inode-exhaustion&#x27;</span>, <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;inode 耗尽&#x27;</span>, <span class="hljs-attr">run</span>: _probeInodeExhaustion },</code></pre>
 <ul><li><code>key</code>：英文短横线命名，全表唯一。</li><li><code>label</code>：中文短标签，会显示在报告里。</li><li><code>run</code>：你刚写的函数名（不要加括号）。</li></ul>
 <h3 id="第-4-步-把函数加进导出-测试要用">第 4 步：把函数加进导出（测试要用）<a class="anchor" href="#第-4-步-把函数加进导出-测试要用" aria-label="锚点">#</a></h3>
 <p>文件底部 <code>module.exports = { ... }</code> 里加一行 <code>_probeInodeExhaustion,</code>。</p>
 <h3 id="第-5-步-验证">第 5 步：验证<a class="anchor" href="#第-5-步-验证" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">npm run test:maintainer:env-optimize</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:maintainer:env-optimize</code></pre>
 <p>全绿就说明你没抄错。想只跑探针测试：</p>
-<pre><code class="language-bash">node --test services/backend/tests/services/envProbes.test.js</code></pre>
+<pre><code class="language-bash">node --<span class="hljs-built_in">test</span> services/backend/tests/services/envProbes.test.js</code></pre>
 <hr>
 <h2 id="配方-b-加一个-安全修复">配方 B：加一个「安全修复」<a class="anchor" href="#配方-b-加一个-安全修复" aria-label="锚点">#</a></h2>
 <p><strong>场景举例</strong>：某个必需的目录缺失了，你想自动把它建出来。</p>
@@ -79,35 +79,35 @@ function _probeInodeExhaustion() {
 <ol><li><strong>只创建缺失的东西</strong>（<code>mkdir</code> 补一个缺失目录）。<strong>绝不删除、绝不覆盖、绝不截断</strong>用户已有的任何文件。</li><li><strong>可重复运行</strong>：跑第二遍必须是「什么都没做」（已经健康就返回 <code>null</code>）。</li><li><strong>失败不抛异常</strong>：修不了就返回 <code>{ ok: false }</code> 说明原因，不能让程序崩。</li><li><strong>遇到损坏不要删</strong>：如果路径存在但类型不对（比如本该是目录却是个文件），<strong>不要删它</strong>——那可能是用户的数据。返回 <code>ok:false</code> 交给人工处理。</li></ol>
 <blockquote><p>⚠️ <strong>要删东西？不要在这里做。</strong> 删除是破坏性操作，必须走 <code>磁盘清理</code> 命令的人工确认闸门（riskGate），一句自然语言绝不能绕过它。这块只做「补缺失」，不做「删多余」。</p></blockquote>
 <h3 id="照抄一个修复函数">照抄一个修复函数<a class="anchor" href="#照抄一个修复函数" aria-label="锚点">#</a></h3>
-<pre><code class="language-javascript">/** 补一个缺失的示例目录 —— 照抄改路径即可。 */
-function _repairExampleDir() {
-  let dir;
-  try { dir = path.join(os.homedir(), '.khy', 'example'); } catch { return null; }
-  if (!dir) return null;
+<pre><code class="language-javascript"><span class="hljs-comment">/** 补一个缺失的示例目录 —— 照抄改路径即可。 */</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">_repairExampleDir</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">let</span> dir;
+  <span class="hljs-keyword">try</span> { dir = path.<span class="hljs-title function_">join</span>(os.<span class="hljs-title function_">homedir</span>(), <span class="hljs-string">&#x27;.khy&#x27;</span>, <span class="hljs-string">&#x27;example&#x27;</span>); } <span class="hljs-keyword">catch</span> { <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>; }
+  <span class="hljs-keyword">if</span> (!dir) <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
 
-  let stat = null;
-  try { stat = fs.statSync(dir); } catch { stat = null; }
+  <span class="hljs-keyword">let</span> stat = <span class="hljs-literal">null</span>;
+  <span class="hljs-keyword">try</span> { stat = fs.<span class="hljs-title function_">statSync</span>(dir); } <span class="hljs-keyword">catch</span> { stat = <span class="hljs-literal">null</span>; }
 
-  if (stat &amp;&amp; stat.isDirectory()) return null;          // 已健康 → 不做事（可重复运行）
-  if (stat &amp;&amp; !stat.isDirectory()) {                    // 存在但类型错 → 不删,交人工
-    return { ok: false, changed: false, detail: `路径被文件占用，需人工处理: ${dir}` };
+  <span class="hljs-keyword">if</span> (stat &amp;&amp; stat.<span class="hljs-title function_">isDirectory</span>()) <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;          <span class="hljs-comment">// 已健康 → 不做事（可重复运行）</span>
+  <span class="hljs-keyword">if</span> (stat &amp;&amp; !stat.<span class="hljs-title function_">isDirectory</span>()) {                    <span class="hljs-comment">// 存在但类型错 → 不删,交人工</span>
+    <span class="hljs-keyword">return</span> { <span class="hljs-attr">ok</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">changed</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">detail</span>: <span class="hljs-string">`路径被文件占用，需人工处理: <span class="hljs-subst">${dir}</span>`</span> };
   }
-  try {
-    fs.mkdirSync(dir, { recursive: true });             // 缺失 → 补上（唯一允许的写操作）
-    return { ok: true, changed: true, detail: `已创建缺失的目录: ${dir}` };
-  } catch (err) {
-    return { ok: false, changed: false, detail: `无法创建 ${dir}（${(err &amp;&amp; err.code) || 'IO error'}）` };
+  <span class="hljs-keyword">try</span> {
+    fs.<span class="hljs-title function_">mkdirSync</span>(dir, { <span class="hljs-attr">recursive</span>: <span class="hljs-literal">true</span> });             <span class="hljs-comment">// 缺失 → 补上（唯一允许的写操作）</span>
+    <span class="hljs-keyword">return</span> { <span class="hljs-attr">ok</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">changed</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">detail</span>: <span class="hljs-string">`已创建缺失的目录: <span class="hljs-subst">${dir}</span>`</span> };
+  } <span class="hljs-keyword">catch</span> (err) {
+    <span class="hljs-keyword">return</span> { <span class="hljs-attr">ok</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">changed</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">detail</span>: <span class="hljs-string">`无法创建 <span class="hljs-subst">${dir}</span>（<span class="hljs-subst">${(err &amp;&amp; err.code) || <span class="hljs-string">&#x27;IO error&#x27;</span>}</span>）`</span> };
   }
 }</code></pre>
 <p>返回值三选一：<code>null</code>（健康）、<code>{ok:true, changed:true, detail}</code>（这次补上了）、<code>{ok:false, changed:false, detail}</code>（没补成，交人工）。</p>
 <h3 id="在-repairs-数组里加一行-导出">在 <code>_REPAIRS</code> 数组里加一行 + 导出<a class="anchor" href="#在-repairs-数组里加一行-导出" aria-label="锚点">#</a></h3>
-<pre><code class="language-javascript">{ key: 'example-dir', label: '示例目录', run: _repairExampleDir, platforms: ['linux', 'windows', 'macos', 'android'] },</code></pre>
+<pre><code class="language-javascript">{ <span class="hljs-attr">key</span>: <span class="hljs-string">&#x27;example-dir&#x27;</span>, <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;示例目录&#x27;</span>, <span class="hljs-attr">run</span>: _repairExampleDir, <span class="hljs-attr">platforms</span>: [<span class="hljs-string">&#x27;linux&#x27;</span>, <span class="hljs-string">&#x27;windows&#x27;</span>, <span class="hljs-string">&#x27;macos&#x27;</span>, <span class="hljs-string">&#x27;android&#x27;</span>] },</code></pre>
 <p>再在 <code>module.exports</code> 里加 <code>_repairExampleDir,</code>。验证同配方 A（<code>npm run test:maintainer:env-optimize</code>）。</p>
 <hr>
 <h2 id="配方-c-让某个检查-修复-只在某些系统跑">配方 C：让某个检查/修复「只在某些系统跑」<a class="anchor" href="#配方-c-让某个检查-修复-只在某些系统跑" aria-label="锚点">#</a></h2>
 <p><strong>场景举例</strong>：Windows 上 PATH 里常有失效目录，但 Linux 不需要查这个。</p>
 <p>这就是「注意 linux/windows/macos/android/ios 系统的区分」那条需求的落地方式。<strong>你不用写任何 <code>if (系统是 Windows)</code> 的判断</strong>——只要在那一条注册项上加一个 <code>platforms</code> 白名单字段：</p>
-<pre><code class="language-javascript">{ key: 'path-integrity', label: 'PATH 完整性', run: _probePathIntegrity, platforms: ['windows'] },</code></pre>
+<pre><code class="language-javascript">{ <span class="hljs-attr">key</span>: <span class="hljs-string">&#x27;path-integrity&#x27;</span>, <span class="hljs-attr">label</span>: <span class="hljs-string">&#x27;PATH 完整性&#x27;</span>, <span class="hljs-attr">run</span>: _probePathIntegrity, <span class="hljs-attr">platforms</span>: [<span class="hljs-string">&#x27;windows&#x27;</span>] },</code></pre>
 <ul><li><strong>不写 <code>platforms</code></strong> = 所有系统都跑（最常见）。</li><li><strong>写了</strong> = 只在列表里的系统跑，其它系统自动跳过。</li></ul>
 <p>合法的系统名（全小写）：<code>linux</code>、<code>windows</code>、<code>macos</code>、<code>android</code>、<code>harmonyos</code>、<code>ios</code>。这张表定义在 <code>envPlatform.js</code> 的 <code>_PLATFORM_META</code> 里，附带每个系统的特征（例如 <code>sandboxed</code>=移动沙盒受限、<code>hasLoadAvg</code>=有没有 CPU 负载均值）。</p>
 <p>几条已经生效的例子，可照着模仿：</p>
@@ -120,7 +120,7 @@ function _repairExampleDir() {
 <hr>
 <h2 id="出错了怎么办-自查清单">出错了怎么办（自查清单）<a class="anchor" href="#出错了怎么办-自查清单" aria-label="锚点">#</a></h2>
 <ol><li><strong>测试报「某某未定义」</strong>：你多半忘了在 <code>module.exports</code> 里加你的函数名。</li><li><strong>报告里没出现你的新检查</strong>：确认你在 <code>_PROBES</code> / <code>_REPAIRS</code> 数组里加了那一行，且 <code>run</code> 写的是函数名、没加括号。</li><li><strong><code>npm run maintainer:check</code> 报 MISSING</strong>：你在维护映射表里写了一个不存在的文件路径，改回真实路径。</li><li><strong>守卫报 leaf-io</strong>：<code>envProbes.js</code>/<code>envRepair.js</code> 允许做 IO（它们在文件头明确声明「不是纯叶子」）。如果你新建了别的文件又写了 IO，要么在文件头同样声明不是纯叶子，要么把 IO 挪到调用方。</li><li><strong>不确定改对没有</strong>：跑这一条，全绿即安全：</li></ol>
-<pre><code class="language-bash">   npm run test:maintainer:env-optimize</code></pre>
+<pre><code class="language-bash">   npm run <span class="hljs-built_in">test</span>:maintainer:env-optimize</code></pre>
 <hr>
 <h2 id="相关文档">相关文档<a class="anchor" href="#相关文档" aria-label="锚点">#</a></h2>
 <ul><li>架构规范：<code>docs/03_DESIGN_设计/[DESIGN-ARCH-026] khyos系统级服务调用审批网关规范.md</code></li><li>维护路由表（哪块坏了改哪里）：<code>docs/_维护者/维护映射表.json</code>（区域 id：<code>env-optimize</code>）</li><li>项目可维护性总入口：仓库根 <code>.ai/</code>（见 <code>CLAUDE.md</code>）</li></ul>

@@ -17,6 +17,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { getBaseDataDir } = require('../../utils/dataHome');
+const atomicWriteJson = require('../../utils/atomicWriteJson');
 
 const core = require('./msgChannelCore');
 
@@ -58,7 +59,6 @@ function _readAll() {
 }
 
 function _writeAll(state) {
-  const dir = _dir();
   const file = _file();
   try {
     if (fs.existsSync(file)) {
@@ -73,9 +73,12 @@ function _writeAll(state) {
     /* best-effort */
   }
   const payload = { platforms: state.platforms || {}, updatedAt: new Date().toISOString() };
-  const tmp = path.join(dir, `.msg.${process.pid}.tmp`);
-  fs.writeFileSync(tmp, JSON.stringify(payload, null, 2), { encoding: 'utf-8', mode: FILE_MODE });
-  fs.renameSync(tmp, file);
+  // 原子写收口到 utils/atomicWriteJson:语义与原来的「同目录 tmp + rename」一致,额外多了
+  // 随机 tmp 后缀(并发写不再互相踩)与可选 fsync。mode 沿用 FILE_MODE(0600,凭据文件)。
+  if (!atomicWriteJson(file, payload, { mode: FILE_MODE })) {
+    // atomicWriteJson 不抛;此处原来靠 writeFileSync 抛出让调用方感知失败,必须补回去。
+    throw new Error(`无法写入消息配置文件:${file}`);
+  }
   try {
     fs.chmodSync(file, FILE_MODE);
   } catch {

@@ -37,21 +37,21 @@
 <ul><li>Python 3.10+</li><li>Obsidian must be installed and running with the <a href="https://github.com/coddingtonbear/obsidian-local-rest-api" target="_blank" rel="noopener">Local REST API plugin</a> enabled</li></ul>
 <h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
 <h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Show help
-cli-anything-obsidian --help
+<pre><code class="language-bash"><span class="hljs-comment"># Show help</span>
+cli-anything-obsidian --<span class="hljs-built_in">help</span>
 
-# Start interactive REPL mode
+<span class="hljs-comment"># Start interactive REPL mode</span>
 cli-anything-obsidian
 
-# List vault files
+<span class="hljs-comment"># List vault files</span>
 cli-anything-obsidian vault list
 
-# Run with JSON output (for agent consumption)
+<span class="hljs-comment"># Run with JSON output (for agent consumption)</span>
 cli-anything-obsidian --json vault list</code></pre>
 <h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
 <p>When invoked without a subcommand, the CLI enters an interactive REPL session:</p>
 <pre><code class="language-bash">cli-anything-obsidian
-# Enter commands interactively with tab-completion and history</code></pre>
+<span class="hljs-comment"># Enter commands interactively with tab-completion and history</span></code></pre>
 <h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
 <h3 id="vault">Vault<a class="anchor" href="#vault" aria-label="锚点">#</a></h3>
 <p>Vault file management commands.</p>
@@ -73,51 +73,51 @@ cli-anything-obsidian --json vault list</code></pre>
 <table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>status</code></td><td>Show current session state</td></tr></tbody></table>
 <h2 id="examples">Examples<a class="anchor" href="#examples" aria-label="锚点">#</a></h2>
 <h3 id="list-and-read-notes">List and Read Notes<a class="anchor" href="#list-and-read-notes" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># List all vault files
+<pre><code class="language-bash"><span class="hljs-comment"># List all vault files</span>
 cli-anything-obsidian vault list
 
-# List files in a subdirectory
-cli-anything-obsidian vault list &quot;Daily Notes&quot;
+<span class="hljs-comment"># List files in a subdirectory</span>
+cli-anything-obsidian vault list <span class="hljs-string">&quot;Daily Notes&quot;</span>
 
-# Read a note
-cli-anything-obsidian vault read &quot;Projects/my-project.md&quot;</code></pre>
+<span class="hljs-comment"># Read a note</span>
+cli-anything-obsidian vault <span class="hljs-built_in">read</span> <span class="hljs-string">&quot;Projects/my-project.md&quot;</span></code></pre>
 <h3 id="create-and-update-notes">Create and Update Notes<a class="anchor" href="#create-and-update-notes" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Create a new note
-cli-anything-obsidian vault create &quot;Projects/new-project.md&quot; --content &quot;# New Project&quot;
+<pre><code class="language-bash"><span class="hljs-comment"># Create a new note</span>
+cli-anything-obsidian vault create <span class="hljs-string">&quot;Projects/new-project.md&quot;</span> --content <span class="hljs-string">&quot;# New Project&quot;</span>
 
-# Update (overwrite) a note
-cli-anything-obsidian vault update &quot;Projects/new-project.md&quot; --content &quot;# Updated Content&quot;
+<span class="hljs-comment"># Update (overwrite) a note</span>
+cli-anything-obsidian vault update <span class="hljs-string">&quot;Projects/new-project.md&quot;</span> --content <span class="hljs-string">&quot;# Updated Content&quot;</span>
 
-# Append to a note
-cli-anything-obsidian vault append &quot;Projects/new-project.md&quot; --content &quot;\n## New Section&quot;</code></pre>
+<span class="hljs-comment"># Append to a note</span>
+cli-anything-obsidian vault append <span class="hljs-string">&quot;Projects/new-project.md&quot;</span> --content <span class="hljs-string">&quot;\n## New Section&quot;</span></code></pre>
 <h3 id="search-2">Search<a class="anchor" href="#search-2" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Plain text search (GET /search/simple/)
-cli-anything-obsidian search simple &quot;meeting notes&quot;
+<pre><code class="language-bash"><span class="hljs-comment"># Plain text search (GET /search/simple/)</span>
+cli-anything-obsidian search simple <span class="hljs-string">&quot;meeting notes&quot;</span>
 
-# Dataview DQL query — default --type dql, sent as
-# application/vnd.olrapi.dataview.dql+txt
-cli-anything-obsidian search query 'TABLE file.link FROM &quot;Projects&quot;'
+<span class="hljs-comment"># Dataview DQL query — default --type dql, sent as</span>
+<span class="hljs-comment"># application/vnd.olrapi.dataview.dql+txt</span>
+cli-anything-obsidian search query <span class="hljs-string">&#x27;TABLE file.link FROM &quot;Projects&quot;&#x27;</span>
 
-# JsonLogic query — application/vnd.olrapi.jsonlogic+json
-cli-anything-obsidian search query --type jsonlogic \
-  '{&quot;==&quot;:[{&quot;var&quot;:&quot;frontmatter.status&quot;},&quot;active&quot;]}'</code></pre>
+<span class="hljs-comment"># JsonLogic query — application/vnd.olrapi.jsonlogic+json</span>
+cli-anything-obsidian search query --<span class="hljs-built_in">type</span> jsonlogic \
+  <span class="hljs-string">&#x27;{&quot;==&quot;:[{&quot;var&quot;:&quot;frontmatter.status&quot;},&quot;active&quot;]}&#x27;</span></code></pre>
 <h3 id="commands">Commands<a class="anchor" href="#commands" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># List available commands
-cli-anything-obsidian command list
+<pre><code class="language-bash"><span class="hljs-comment"># List available commands</span>
+cli-anything-obsidian <span class="hljs-built_in">command</span> list
 
-# Execute a command by ID
-cli-anything-obsidian command execute &quot;editor:toggle-bold&quot;</code></pre>
+<span class="hljs-comment"># Execute a command by ID</span>
+cli-anything-obsidian <span class="hljs-built_in">command</span> execute <span class="hljs-string">&quot;editor:toggle-bold&quot;</span></code></pre>
 <h3 id="interactive-repl-session">Interactive REPL Session<a class="anchor" href="#interactive-repl-session" aria-label="锚点">#</a></h3>
 <p>Start an interactive session for exploratory use.</p>
 <pre><code class="language-bash">cli-anything-obsidian
-# Enter commands interactively
-# Use 'help' to see available commands</code></pre>
+<span class="hljs-comment"># Enter commands interactively</span>
+<span class="hljs-comment"># Use &#x27;help&#x27; to see available commands</span></code></pre>
 <h3 id="api-key-configuration">API Key Configuration<a class="anchor" href="#api-key-configuration" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Via flag
+<pre><code class="language-bash"><span class="hljs-comment"># Via flag</span>
 cli-anything-obsidian --api-key YOUR_KEY vault list
 
-# Via environment variable (recommended for agents)
-export OBSIDIAN_API_KEY=YOUR_KEY
+<span class="hljs-comment"># Via environment variable (recommended for agents)</span>
+<span class="hljs-built_in">export</span> OBSIDIAN_API_KEY=YOUR_KEY
 cli-anything-obsidian vault list</code></pre>
 <h2 id="state-management">State Management<a class="anchor" href="#state-management" aria-label="锚点">#</a></h2>
 <p>The CLI maintains lightweight session state:</p>
@@ -125,10 +125,10 @@ cli-anything-obsidian vault list</code></pre>
 <h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
 <p>All commands support dual output modes:</p>
 <ul><li><strong>Human-readable</strong> (default): Tables, colors, formatted text</li><li><strong>Machine-readable</strong> (<code>--json</code> flag): Structured JSON for agent consumption</li></ul>
-<pre><code class="language-bash"># Human output
+<pre><code class="language-bash"><span class="hljs-comment"># Human output</span>
 cli-anything-obsidian vault list
 
-# JSON output for agents
+<span class="hljs-comment"># JSON output for agents</span>
 cli-anything-obsidian --json vault list</code></pre>
 <h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
 <p>When using this CLI programmatically:</p>

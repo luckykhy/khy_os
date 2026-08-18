@@ -30,6 +30,19 @@ const MIN_COMPRESSION_FRACTION = 0.05;
 const TOOL_ROUND_RETAIN_COUNT = 2;
 const IMAGE_DATA_ESTIMATE_CHARS = 6400;
 const MAX_TOOL_RESULT_CHARS = 5000;
+// Below this many messages there is no foldable history worth summarizing.
+// Named (was a bare `messages.length <= 4`) so the skip notice can state the
+// real bound instead of a hardcoded "5" that could drift away from the branch.
+const MIN_COMPRESSIBLE_MESSAGES = 5;
+// Shortest AI summary worth keeping; below this the reply carries no information
+// a manual extract wouldn't (weak models often answer with a single clause).
+const MIN_AI_SUMMARY_CHARS = 20;
+// Incremental update needs strictly more than this many foldable messages to be
+// worth a model round-trip (was a bare `compressCount <= 2`).
+const MIN_INCREMENTAL_FOLD_COUNT = 2;
+// Char budget for each half of the incremental-update prompt (existing summary
+// and newly-added turns). Was a bare `.slice(0, 12000)` repeated twice.
+const INCREMENTAL_PROMPT_CHARS = 12000;
 
 // A5: 反抖动常量
 const COMPRESSION_COOLDOWN_MS = 30000; // 两次压缩最小间隔 30s
@@ -41,6 +54,132 @@ let _lastCompressionTs = 0;
 let _consecutiveLowEff = 0;
 // A5: session 恢复标记
 let _sessionJustResumed = false;
+
+// ── Transparency layer: audit trail + user-visible notices ──────────────
+//
+// compress() / _incrementalUpdate() together hold a dozen early-return and
+// catch paths. Before this layer, most of them returned `noOp` with nothing
+// written anywhere and nothing shown to anyone — from the outside, "上下文压缩
+// 被跳过" and "上下文压缩成功" looked identical, which is how a session can sit
+// at 99% context with auto-compact silently doing nothing.
+//
+// Two independent channels, both fail-soft, both one-switch disableable:
+//   notice → compactionUiPort (CLI self-registers formatters.print*), falling
+//            back to the injected logger when no renderer is present.
+//   audit  → services/auditLog JSONL, for after-the-fact forensics.
+//
+// Audit tool naming, so `getModuleStats({module:'context-compress'})` stays
+// meaningful instead of counting correct behavior as errors:
+//   context-compress          a real compression attempt (success = 摘要已生成)
+//   context-compress-skip     deliberately did nothing   (success = true)
+//   context-compress-degrade  needed to work, didn't     (success = false)
+const AUDIT_TOOL = 'context-compress';
+const AUDIT_TOOL_SKIP = `${AUDIT_TOOL}-skip`;
+const AUDIT_TOOL_DEGRADE = `${AUDIT_TOOL}-degrade`;
+
+/** Notice lines on/off (default on). `KHY_COMPACT_NOTICE=0` restores silence. */
+function _noticeEnabled() {
+  return require('../utils/envFlagEnabled')(process.env.KHY_COMPACT_NOTICE, true);
+}
+/** Audit rows on/off (default on). `KHY_COMPACT_AUDIT=0` stops writing them. */
+function _auditEnabled() {
+  return require('../utils/envFlagEnabled')(process.env.KHY_COMPACT_AUDIT, true);
+}
+
+/**
+ * Show one line to the user. Returns false only when nobody could be reached.
+ *
+ * @param {'info'|'success'|'warn'|'error'} level
+ * @param {string} text - Must carry 动作 + 目标 + 进度 (AGENTS 规则 2)
+ * @param {object} [logger] - Injected logger, used when no CLI renderer exists
+ * @returns {boolean}
+ */
+function _notice(level, text, logger) {
+  if (!_noticeEnabled() || !text) {
+    return false;
+  }
+  let shown = false;
+  try {
+    shown = require('./compactionUiPort').emitCompactionNotice({ level, text });
+  } catch {
+    shown = false;
+  }
+  if (!shown && logger) {
+    try {
+      const fn =
+        level === 'error' ? logger.error : level === 'warn' ? logger.warn : logger.info;
+      if (typeof fn === 'function') {
+        fn.call(logger, text);
+        shown = true;
+      }
+    } catch {
+      /* a broken logger must never abort the compression it is reporting on */
+    }
+  }
+  return shown;
+}
+
+/**
+ * Append one row to the audit trail. Never throws, never blocks compression.
+ *
+ * @param {string} tool - One of the AUDIT_TOOL* names
+ * @param {object} params - Reason + quantities (sanitized by auditLog)
+ * @param {object} result - { success, error? }
+ * @param {number} elapsed - ms spent before reaching this outcome
+ */
+function _audit(tool, params, result, elapsed) {
+  if (!_auditEnabled()) {
+    return;
+  }
+  try {
+    require('./auditLog').logToolExecution({
+      tool,
+      params,
+      result,
+      permission: 'allow', // system-initiated maintenance, not a user-gated tool
+      elapsed: Math.max(0, elapsed || 0),
+    });
+  } catch {
+    /* audit is evidence, not control flow */
+  }
+}
+
+/**
+ * Report a deliberate skip: one notice line + one audit row.
+ *
+ * @param {string} reason - Stable machine-readable reason code
+ * @param {string} text - 中文 one-liner with 动作 + 目标 + 进度
+ * @param {object} facts - Extra quantities for the audit row
+ * @param {object} [logger]
+ * @param {number} [elapsed]
+ * @param {'info'|'warn'} [level='info']
+ */
+function _reportSkip(reason, text, facts, logger, elapsed, level = 'info') {
+  _notice(level, text, logger);
+  _audit(AUDIT_TOOL_SKIP, { reason, ...facts }, { success: true }, elapsed);
+}
+
+/**
+ * Report a degradation: compression was needed and did not fully work.
+ * `error` carries the reason so `getModuleStats().recentErrors` surfaces it.
+ *
+ * @param {string} reason
+ * @param {string} text - 中文 one-liner with 动作 + 目标 + 进度
+ * @param {object} facts
+ * @param {object} [logger]
+ * @param {number} [elapsed]
+ * @param {'warn'|'error'} [level='warn']
+ */
+function _reportDegrade(reason, text, facts, logger, elapsed, level = 'warn') {
+  _notice(level, text, logger);
+  _audit(AUDIT_TOOL_DEGRADE, { reason, ...facts }, { success: false, error: text }, elapsed);
+}
+
+/** Integer percent, guarded against a zero/NaN denominator. */
+function _pct(part, whole) {
+  return whole > 0 ? Math.round((part / whole) * 100) : 0;
+}
+
 
 // ── Base64 data URL pattern ──────────────────────────────────────────────
 
@@ -377,33 +516,58 @@ async function compress(messages, opts) {
     strippedImages: 0,
   };
 
-  if (!messages || messages.length <= 4) {
+  if (!messages || messages.length < MIN_COMPRESSIBLE_MESSAGES) {
+    _reportSkip(
+      'too-few-messages',
+      `[上下文压缩] 跳过压缩，会话仅 ${messages ? messages.length : 0}/${MIN_COMPRESSIBLE_MESSAGES} 条消息，没有可折叠的历史`,
+      { messageCount: messages ? messages.length : 0, minMessages: MIN_COMPRESSIBLE_MESSAGES },
+      logger,
+      Date.now() - _compressStartedAt
+    );
     return noOp;
   }
 
   // ── A5: 反抖动 — 冷却期内跳过 ─────────────────────────────────────
   const now = Date.now();
   if (_lastCompressionTs && now - _lastCompressionTs < COMPRESSION_COOLDOWN_MS) {
-    if (logger) {
-      logger.info('[contextCompressor] 冷却期内，跳过压缩');
-    }
+    const waitedMs = now - _lastCompressionTs;
+    _reportSkip(
+      'cooldown',
+      `[上下文压缩] 跳过压缩，距上次压缩 ${Math.round(waitedMs / 1000)}s/${Math.round(COMPRESSION_COOLDOWN_MS / 1000)}s，仍在冷却期内`,
+      { waitedMs, cooldownMs: COMPRESSION_COOLDOWN_MS, messageCount: messages.length },
+      logger,
+      Date.now() - _compressStartedAt
+    );
     return noOp;
   }
   // A5: 连续低效跳过
   if (_consecutiveLowEff >= MAX_CONSECUTIVE_LOW_EFF) {
-    if (logger) {
-      logger.info(`[contextCompressor] 连续 ${_consecutiveLowEff} 次低效压缩，跳过`);
-    }
+    const streak = _consecutiveLowEff;
     _consecutiveLowEff = 0; // 重置后下次允许尝试
+    _reportDegrade(
+      'consecutive-low-efficiency',
+      `[上下文压缩] 暂停自动压缩，连续 ${streak}/${MAX_CONSECUTIVE_LOW_EFF} 次压缩效率低于 ${Math.round(LOW_EFFICIENCY_THRESHOLD * 100)}%，已重置计数，下一轮将重试一次`,
+      {
+        consecutiveLowEff: streak,
+        maxConsecutiveLowEff: MAX_CONSECUTIVE_LOW_EFF,
+        messageCount: messages.length,
+      },
+      logger,
+      Date.now() - _compressStartedAt
+    );
     return noOp;
   }
 
   // ── A5: session 恢复后跳过首次压缩 ────────────────────────────────
   if (_sessionJustResumed) {
     _sessionJustResumed = false;
-    if (logger) {
-      logger.info('[contextCompressor] Session 刚恢复，跳过首次压缩');
-    }
+    _reportSkip(
+      'session-just-resumed',
+      `[上下文压缩] 跳过压缩，会话刚恢复（${messages.length} 条消息），本会话第 1 次压缩顺延到下一轮`,
+      { messageCount: messages.length },
+      logger,
+      Date.now() - _compressStartedAt
+    );
     return noOp;
   }
 
@@ -432,6 +596,19 @@ async function compress(messages, opts) {
 
   const usageRatio = totalTokens / contextWindowTokens;
   if (usageRatio < COMPRESSION_TOKEN_THRESHOLD) {
+    _reportSkip(
+      'below-threshold',
+      `[上下文压缩] 跳过压缩，当前占用 ${_pct(totalTokens, contextWindowTokens)}%，未达触发线 ${Math.round(COMPRESSION_TOKEN_THRESHOLD * 100)}%（${messages.length} 条消息）`,
+      {
+        totalTokens,
+        contextWindowTokens,
+        usagePercent: _pct(totalTokens, contextWindowTokens),
+        thresholdPercent: Math.round(COMPRESSION_TOKEN_THRESHOLD * 100),
+        messageCount: messages.length,
+      },
+      logger,
+      Date.now() - _compressStartedAt
+    );
     return noOp;
   }
 
@@ -450,6 +627,18 @@ async function compress(messages, opts) {
       usageRatio,
     });
     if (preHr.blocked) {
+      _reportSkip(
+        'precompact-hook-blocked',
+        `[上下文压缩] 压缩被 PreCompact 钩子拒绝，当前占用 ${_pct(totalTokens, contextWindowTokens)}%（${messages.length} 条消息未折叠）`,
+        {
+          totalTokens,
+          usagePercent: _pct(totalTokens, contextWindowTokens),
+          messageCount: messages.length,
+        },
+        logger,
+        Date.now() - _compressStartedAt,
+        'warn'
+      );
       return noOp;
     }
   } catch {
@@ -469,9 +658,20 @@ async function compress(messages, opts) {
     .slice(0, splitIndex)
     .reduce((sum, m) => sum + estimateTokensFn(m.content || ''), 0);
   if (oldTokens / totalTokens < MIN_COMPRESSION_FRACTION) {
-    if (logger) {
-      logger.info('[contextCompressor] Too little to compress, skipping');
-    }
+    _reportSkip(
+      'too-little-to-compress',
+      `[上下文压缩] 跳过压缩，可折叠历史仅占 ${_pct(oldTokens, totalTokens)}%，低于最小压缩比例 ${Math.round(MIN_COMPRESSION_FRACTION * 100)}%（分割点 ${splitIndex}/${messages.length}）`,
+      {
+        oldTokens,
+        totalTokens,
+        foldablePercent: _pct(oldTokens, totalTokens),
+        minFractionPercent: Math.round(MIN_COMPRESSION_FRACTION * 100),
+        splitIndex,
+        messageCount: messages.length,
+      },
+      logger,
+      Date.now() - _compressStartedAt
+    );
     return noOp;
   }
 
@@ -567,6 +767,7 @@ async function compress(messages, opts) {
   }
 
   let summary;
+  let summarySource = 'ai'; // 'ai' | 'manual-extract' — reported in the audit row
   try {
     const summaryInput = taskAnchorText
       ? `[Original task to preserve]\n${taskAnchorText}\n\n---\n\n${oldTextWithTasks}`
@@ -582,10 +783,38 @@ async function compress(messages, opts) {
     }
     // Fallback: manual extraction of key points
     summary = _manualExtract(slimmed);
+    summarySource = 'manual-extract';
+    const kerr = require('../utils/khyError').toKhyError(err, 'CONTEXT_SUMMARY_FAILED');
+    _reportDegrade(
+      'ai-summary-call-failed',
+      `[上下文压缩] 摘要模型调用失败（${kerr.message.slice(0, 80)}），已降级为本地抽取式摘要，待折叠 ${splitIndex}/${messages.length} 条，占用 ${_pct(totalTokens, contextWindowTokens)}%`,
+      {
+        errorCode: kerr.code,
+        splitIndex,
+        messageCount: messages.length,
+        usagePercent: _pct(totalTokens, contextWindowTokens),
+      },
+      logger,
+      Date.now() - _compressStartedAt
+    );
   }
 
-  if (!summary || summary.length < 20) {
+  if (!summary || summary.length < MIN_AI_SUMMARY_CHARS) {
+    const aiChars = typeof summary === 'string' ? summary.length : 0;
     summary = _manualExtract(slimmed);
+    // Only report when the model actually answered and the answer was unusable.
+    // After a thrown call the degrade line above already said it, and repeating
+    // it would double-count the same failure in the audit trail.
+    if (summarySource === 'ai') {
+      summarySource = 'manual-extract';
+      _reportDegrade(
+        'ai-summary-too-short',
+        `[上下文压缩] 摘要模型输出过短（${aiChars}/${MIN_AI_SUMMARY_CHARS} 字符，弱模型常见），已降级为本地抽取式摘要，待折叠 ${splitIndex}/${messages.length} 条`,
+        { aiChars, minChars: MIN_AI_SUMMARY_CHARS, splitIndex, messageCount: messages.length },
+        logger,
+        Date.now() - _compressStartedAt
+      );
+    }
   }
 
   // ── Step 5: Build conversation bridge ──────────────────────────────
@@ -641,14 +870,46 @@ async function compress(messages, opts) {
   const efficiency = totalTokens > 0 ? freedTokens / totalTokens : 0;
   if (efficiency < LOW_EFFICIENCY_THRESHOLD) {
     _consecutiveLowEff++;
-    if (logger) {
-      logger.info(
-        `[contextCompressor] 低效压缩 (${Math.round(efficiency * 100)}%), 连续 ${_consecutiveLowEff} 次`
-      );
-    }
+    // 低效不是「成功」——再来一次就会触发上面的暂停分支,用户必须提前知道,
+    // 否则下一轮压缩静默停摆时他只能看到占用率一路涨到 99%。
+    _reportDegrade(
+      'low-efficiency',
+      `[上下文压缩] 压缩效率偏低，仅释放 ${_pct(freedTokens, totalTokens)}%（低于 ${Math.round(LOW_EFFICIENCY_THRESHOLD * 100)}% 视为低效），连续第 ${_consecutiveLowEff}/${MAX_CONSECUTIVE_LOW_EFF} 次${_consecutiveLowEff >= MAX_CONSECUTIVE_LOW_EFF ? '，下一轮将暂停自动压缩' : ''}`,
+      {
+        efficiencyPercent: _pct(freedTokens, totalTokens),
+        lowEffThresholdPercent: Math.round(LOW_EFFICIENCY_THRESHOLD * 100),
+        consecutiveLowEff: _consecutiveLowEff,
+        maxConsecutiveLowEff: MAX_CONSECUTIVE_LOW_EFF,
+        summarySource,
+      },
+      logger,
+      Date.now() - _compressStartedAt
+    );
   } else {
     _consecutiveLowEff = 0;
   }
+
+  // Audit the successful pass. `summarySource` is the field that distinguishes a
+  // real AI summary from a silent fall-back to local extraction — the two look
+  // identical in the result line, but only one of them actually understood the
+  // conversation.
+  _audit(
+    AUDIT_TOOL,
+    {
+      beforeTokens: totalTokens,
+      afterTokens: newTokens,
+      freedTokens,
+      efficiencyPercent: _pct(freedTokens, totalTokens),
+      messagesBefore: messages.length,
+      messagesAfter: compressed.length,
+      splitIndex,
+      strippedImages: strippedImageCount,
+      summarySource,
+      mode: 'full',
+    },
+    { success: true },
+    Date.now() - _compressStartedAt
+  );
 
   // Hook: PostCompact — notify after compression completes
   try {
@@ -694,6 +955,7 @@ async function compress(messages, opts) {
  * @returns {Promise<{ compressed, summaryGenerated, freedTokens, splitIndex, strippedImages }>}
  */
 async function _incrementalUpdate(messages, opts) {
+  const _incStartedAt = Date.now();
   const { estimateTokensFn, callModelFn, contextWindowTokens, logger, preserveRatioOverride } =
     opts;
   const _preserveRatio =
@@ -725,12 +987,30 @@ async function _incrementalUpdate(messages, opts) {
   }
 
   if (summaryIdx < 0) {
+    _reportSkip(
+      'incremental-summary-not-found',
+      `[上下文压缩] 跳过增量更新，${messages.length} 条消息中未找到既有摘要标记`,
+      { messageCount: messages.length, mode: 'incremental' },
+      logger,
+      Date.now() - _incStartedAt
+    );
     return noOp;
   }
 
   // 摘要之后的消息
   const afterSummary = messages.slice(summaryIdx + 1);
   if (afterSummary.length <= 4) {
+    _reportSkip(
+      'incremental-too-few-new',
+      `[上下文压缩] 跳过增量更新，摘要之后仅新增 ${afterSummary.length}/${MIN_COMPRESSIBLE_MESSAGES} 条消息，不值得重算摘要`,
+      {
+        newMessageCount: afterSummary.length,
+        minMessages: MIN_COMPRESSIBLE_MESSAGES,
+        mode: 'incremental',
+      },
+      logger,
+      Date.now() - _incStartedAt
+    );
     return noOp;
   } // 太少不值得更新
 
@@ -738,6 +1018,18 @@ async function _incrementalUpdate(messages, opts) {
   const totalTokens = messages.reduce((s, m) => s + estimateTokensFn(m.content || ''), 0);
   const usageRatio = totalTokens / contextWindowTokens;
   if (usageRatio < COMPRESSION_TOKEN_THRESHOLD) {
+    _reportSkip(
+      'incremental-below-threshold',
+      `[上下文压缩] 跳过增量更新，当前占用 ${_pct(totalTokens, contextWindowTokens)}%，未达触发线 ${Math.round(COMPRESSION_TOKEN_THRESHOLD * 100)}%`,
+      {
+        totalTokens,
+        usagePercent: _pct(totalTokens, contextWindowTokens),
+        thresholdPercent: Math.round(COMPRESSION_TOKEN_THRESHOLD * 100),
+        mode: 'incremental',
+      },
+      logger,
+      Date.now() - _incStartedAt
+    );
     return noOp;
   }
 
@@ -745,7 +1037,23 @@ async function _incrementalUpdate(messages, opts) {
   const newMsgTokens = afterSummary.reduce((s, m) => s + estimateTokensFn(m.content || ''), 0);
   const keepCount = Math.max(4, Math.ceil(afterSummary.length * _preserveRatio));
   const compressCount = afterSummary.length - keepCount;
-  if (compressCount <= 2) {
+  if (compressCount <= MIN_INCREMENTAL_FOLD_COUNT) {
+    _reportSkip(
+      'incremental-nothing-to-fold',
+      `[上下文压缩] 跳过增量更新，可折叠 ${compressCount}/${afterSummary.length} 条（需 >${MIN_INCREMENTAL_FOLD_COUNT} 条），占用 ${_pct(totalTokens, contextWindowTokens)}%`,
+      {
+        compressCount,
+        newMessageCount: afterSummary.length,
+        minFoldCount: MIN_INCREMENTAL_FOLD_COUNT,
+        usagePercent: _pct(totalTokens, contextWindowTokens),
+        mode: 'incremental',
+      },
+      logger,
+      Date.now() - _incStartedAt,
+      // 已经越过触发线却还是一条都折不动 —— 这是「压缩看起来在跑、占用却一直涨」
+      // 的真实来源之一,必须按告警级别显示,不能混在普通信息里。
+      'warn'
+    );
     return noOp;
   }
 
@@ -756,21 +1064,51 @@ async function _incrementalUpdate(messages, opts) {
   const newText = toCompress
     .map((m) => `${m.role}: ${typeof m.content === 'string' ? m.content : '[non-text]'}`)
     .join('\n')
-    .slice(0, 12000);
+    .slice(0, INCREMENTAL_PROMPT_CHARS);
 
   let updatedSummary = existingSummary;
+  let incrementalUpdated = false;
   if (typeof callModelFn === 'function') {
     try {
-      const prompt = `以下是已有的上下文摘要和新增的对话内容。请更新摘要，合并新信息，保留关键决策和上下文。不要重写，只增量追加重要内容。\n\n已有摘要:\n${existingSummary.slice(0, 12000)}\n\n新增对话:\n${newText}`;
+      const prompt = `以下是已有的上下文摘要和新增的对话内容。请更新摘要，合并新信息，保留关键决策和上下文。不要重写，只增量追加重要内容。\n\n已有摘要:\n${existingSummary.slice(0, INCREMENTAL_PROMPT_CHARS)}\n\n新增对话:\n${newText}`;
       const result = await callModelFn(prompt, { effort: 'medium', _isFollowUp: true });
       const reply = result?.reply || result?.content || result;
-      if (typeof reply === 'string' && reply.length > 20) {
+      if (typeof reply === 'string' && reply.length > MIN_AI_SUMMARY_CHARS) {
         updatedSummary = `[Compressed context summary]\n${reply}`;
+        incrementalUpdated = true;
+      } else {
+        _reportDegrade(
+          'incremental-summary-too-short',
+          `[上下文压缩] 增量摘要输出过短（${typeof reply === 'string' ? reply.length : 0}/${MIN_AI_SUMMARY_CHARS} 字符），摘要保持原样，${compressCount}/${afterSummary.length} 条新消息仍被折叠但未并入摘要`,
+          {
+            compressCount,
+            newMessageCount: afterSummary.length,
+            usagePercent: _pct(totalTokens, contextWindowTokens),
+            mode: 'incremental',
+          },
+          logger,
+          Date.now() - _incStartedAt
+        );
       }
     } catch (err) {
-      if (logger) {
-        logger.warn('[contextCompressor] 增量摘要失败:', err?.message);
-      }
+      const kerr = require('../utils/khyError').toKhyError(err, 'CONTEXT_SUMMARY_FAILED');
+      // 这里曾经只写一条 logger.warn 就继续,而下游仍收到 summaryGenerated: true ——
+      // 于是「摘要一个字都没变、被折叠的消息内容直接丢失」被当作压缩成功上报。
+      // 折叠行为不在本次改动范围内(属压缩架构),但它绝不能再无声发生。
+      _reportDegrade(
+        'incremental-summary-failed',
+        `[上下文压缩] 增量摘要更新失败（${kerr.message.slice(0, 80)}），摘要保持原样，${compressCount}/${afterSummary.length} 条新消息未并入，占用 ${_pct(totalTokens, contextWindowTokens)}%`,
+        {
+          errorCode: kerr.code,
+          compressCount,
+          newMessageCount: afterSummary.length,
+          usagePercent: _pct(totalTokens, contextWindowTokens),
+          mode: 'incremental',
+        },
+        logger,
+        Date.now() - _incStartedAt,
+        'error'
+      );
     }
   }
 
@@ -801,6 +1139,24 @@ async function _incrementalUpdate(messages, opts) {
         `释放 ${freedTokens} tokens`
     );
   }
+
+  _audit(
+    AUDIT_TOOL,
+    {
+      beforeTokens: totalTokens,
+      afterTokens: newTokens,
+      freedTokens,
+      efficiencyPercent: _pct(freedTokens, totalTokens),
+      messagesBefore: messages.length,
+      messagesAfter: compressed.length,
+      newMessageTokens: newMsgTokens,
+      compressCount,
+      summaryUpdated: incrementalUpdated,
+      mode: 'incremental',
+    },
+    { success: true },
+    Date.now() - _incStartedAt
+  );
 
   return {
     compressed,
@@ -1227,5 +1583,17 @@ module.exports = {
   MAX_TOOL_RESULT_CHARS,
   COMPRESSION_COOLDOWN_MS,
   LOW_EFFICIENCY_THRESHOLD,
+  MAX_CONSECUTIVE_LOW_EFF,
+  MIN_COMPRESSIBLE_MESSAGES,
+  MIN_AI_SUMMARY_CHARS,
   BASE64_DATA_RE,
+  // Transparency layer, shared with khyUpgradeRuntime so the compression chain
+  // reports every skip/degrade through one seam instead of two divergent ones.
+  reportCompactionSkip: _reportSkip,
+  reportCompactionDegrade: _reportDegrade,
+  auditCompaction: _audit,
+  AUDIT_TOOL,
+  AUDIT_TOOL_SKIP,
+  AUDIT_TOOL_DEGRADE,
+  _internals: { _notice, _pct },
 };

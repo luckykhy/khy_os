@@ -1855,7 +1855,7 @@ function buildDirectSystemPrompt(options = {}) {
   const cwd = process.cwd();
   const desktopPath = (() => {
     try {
-      return require('../../utils/dataHome').getDesktopPath();
+      return require('../../../utils/dataHome').getDesktopPath();
     } catch {
       return null;
     }
@@ -2438,7 +2438,7 @@ async function _tryAppLaunchIntent(prompt, options) {
   // Check against APP_ALIAS_MAP to verify this is actually an app
   let toolCalling;
   try {
-    toolCalling = require('../../services/toolCalling');
+    toolCalling = require('../../toolCalling');
   } catch {
     return null;
   }
@@ -2646,6 +2646,8 @@ async function generate(prompt, options = {}) {
     return buildSuccess(execResult.content, {
       adapter: 'codex',
       provider: `Codex (${providerModel})`,
+      model: providerModel,
+      tokenUsage: execResult.tokenUsage || { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
       toolSummary: execResult.toolSummary || { totalCalls: 0, totalDurationMs: 0 },
       attempts: [{ provider: 'Codex', success: true }],
     });

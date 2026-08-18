@@ -30,14 +30,14 @@
 <h2 id="铁事实-先记住">铁事实（先记住）<a class="anchor" href="#铁事实-先记住" aria-label="锚点">#</a></h2>
 <ol><li><strong>改了仓库源码，pip 用户拿不到</strong>——除非重新打包发版。pip 包是打包时的源码快照。</li><li><strong>版本号要多处一致</strong>——别只改一处（历史上出过 backend <code>package.json</code> 与发布版本不一致）。</li></ol>
 <h2 id="发布最小闭环-按顺序-红就停">发布最小闭环（按顺序，红就停）<a class="anchor" href="#发布最小闭环-按顺序-红就停" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># 1) 只读体检无红
+<pre><code class="language-bash"><span class="hljs-comment"># 1) 只读体检无红</span>
 node services/backend/bin/khy.js maintain freshness
 
-# 2) 守卫全绿（做一次提交自动触发 pre-commit 钩子；红了先修，绝不 --no-verify）
-git add -A &amp;&amp; git commit -m &quot;...&quot;        # 钩子自动跑 scripts/check-*.js
+<span class="hljs-comment"># 2) 守卫全绿（做一次提交自动触发 pre-commit 钩子；红了先修，绝不 --no-verify）</span>
+git add -A &amp;&amp; git commit -m <span class="hljs-string">&quot;...&quot;</span>        <span class="hljs-comment"># 钩子自动跑 scripts/check-*.js</span>
 
-# 3) 上帝组件没恶化（单文件 ≤2500 行）
-npm --prefix services/backend run arch:god</code></pre>
+<span class="hljs-comment"># 3) 上帝组件没恶化（单文件 ≤2500 行）</span>
+npm --prefix services/backend run <span class="hljs-built_in">arch</span>:god</code></pre>
 <h2 id="版本号一致性">版本号一致性<a class="anchor" href="#版本号一致性" aria-label="锚点">#</a></h2>
 <p>发布前确认这些地方版本号一致（至少）：</p>
 <ul><li><code>services/backend/package.json</code></li><li>pip 包版本（<code>platform/khy_platform/</code> 相关配置）</li><li>发布 tag / release note</li></ul>

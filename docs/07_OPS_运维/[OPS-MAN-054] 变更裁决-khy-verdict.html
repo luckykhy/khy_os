@@ -39,9 +39,9 @@
 <p><strong><code>emit --format</code></strong>：<code>text</code> / <code>json</code> / <code>claude-hook</code>（生成可被 Claude Code hook 消费的格式）。<code>--consumer</code> 标注消费方，<code>--peek</code> 只看不消费。</p>
 <hr>
 <h2 id="三-典型用法">三、典型用法<a class="anchor" href="#三-典型用法" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">khy verdict                 # 看最近一次变更的裁决
-khy verdict check           # 强制立即重新裁决
-khy verdict --json          # 机读
+<pre><code class="language-bash">khy verdict                 <span class="hljs-comment"># 看最近一次变更的裁决</span>
+khy verdict check           <span class="hljs-comment"># 强制立即重新裁决</span>
+khy verdict --json          <span class="hljs-comment"># 机读</span>
 khy verdict emit --format claude-hook --consumer my-hook --peek</code></pre>
 <hr>
 <h2 id="四-诚实边界-watch">四、诚实边界（<code>watch</code>）<a class="anchor" href="#四-诚实边界-watch" aria-label="锚点">#</a></h2>

@@ -14,12 +14,15 @@ describe('shellCommand idle timeout behavior', () => {
     process.env.KHY_SHELL_IDLE_TIMEOUT_ENABLED = 'true';
     process.env.KHY_SHELL_IDLE_TIMEOUT_MS = '250';
 
-    const script = [
-      'for i in 1 2 3 4 5; do',
-      '  echo "tick-$i";',
-      '  sleep 0.05;',
-      'done',
+    const nodeScript = [
+      'let i = 0;',
+      'const timer = setInterval(() => {',
+      '  i += 1;',
+      '  console.log(`tick-${i}`);',
+      '  if (i === 5) clearInterval(timer);',
+      '}, 50);',
     ].join(' ');
+    const script = `"${process.execPath}" -e "${nodeScript}"`;
 
     const result = await shellCommandTool.execute(
       { command: script, idleTimeout: 250 },

@@ -28,9 +28,9 @@
 <h1 id="khy-os-选活与发展路径-不知做什么时">Khy-OS 选活与发展路径（不知做什么时）<a class="anchor" href="#khy-os-选活与发展路径-不知做什么时" aria-label="锚点">#</a></h1>
 <p>想推进项目但没头绪时，照这套定位下一步，并把它变成一个<strong>能安全执行的加法式小任务</strong>。</p>
 <h2 id="第一步-只读体检-让项目自己告诉你哪里疼">第一步：只读体检，让项目自己告诉你哪里疼<a class="anchor" href="#第一步-只读体检-让项目自己告诉你哪里疼" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">node services/backend/bin/khy.js maintain freshness    # 与时俱进体检
-npm --prefix services/backend run arch:god             # 有没有上帝组件(&gt;2500行)
-node services/backend/bin/khy.js health                # 顶层诊断</code></pre>
+<pre><code class="language-bash">node services/backend/bin/khy.js maintain freshness    <span class="hljs-comment"># 与时俱进体检</span>
+npm --prefix services/backend run <span class="hljs-built_in">arch</span>:god             <span class="hljs-comment"># 有没有上帝组件(&gt;2500行)</span>
+node services/backend/bin/khy.js health                <span class="hljs-comment"># 顶层诊断</span></code></pre>
 <p>守卫红、体检报警、上帝文件超标——<strong>这些是排最前的活</strong>。</p>
 <h2 id="第二步-按优先级选-从上往下-上面的先做">第二步：按优先级选（从上往下，上面的先做）<a class="anchor" href="#第二步-按优先级选-从上往下-上面的先做" aria-label="锚点">#</a></h2>
 <ol><li><strong>命脉</strong>：pip 能不能打包发布？守卫是否全绿？版本号是否一致？——<strong>任何一个坏，先修这个。</strong></li><li><strong>缺陷</strong>：已知 bug、崩溃、安全洞（SSRF/密钥泄漏/破坏性命令绕过/边界未锚定）。</li><li><strong>兼容</strong>：弱模型/陌生模型跑不通的地方（上下文撑爆、截断、JSON 解析、role 兼容、鉴权形态过时、模型名泄漏 404）。</li><li><strong>体验</strong>：CLI/TUI 的小打磨、错误文案更诚实、可读性。</li><li><strong>能力</strong>：新工具、新 provider、新 skill——<strong>最后做，且必须门控可关</strong>。</li></ol>

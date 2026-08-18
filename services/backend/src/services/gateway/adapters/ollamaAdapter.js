@@ -44,6 +44,9 @@ const DEFAULT_HOST = OLLAMA_HOST;
 // models actually installed on the host (see resolveDefaultModel); a baked-in
 // name must never be the source of truth (zero-hardcoding rule).
 const DEFAULT_MODEL = MODELS.localBrain;
+// Embedding model default, also from constants/models.js (never a literal here).
+// Callers override per-request via embed(input, { model }).
+const DEFAULT_EMBEDDING_MODEL = MODELS.embedding;
 const TIMEOUT_MS = 120_000;
 
 let _available = null;
@@ -596,7 +599,11 @@ function detect(forceRefresh = false) {
   if (_available !== null && !forceRefresh) {
     return _available;
   }
-  // Synchronous path can only return cached value; trigger async probe
+  // Synchronous callers such as prompt assembly must not launch a detached
+  // network probe; they have no lifecycle to await and may outlive a test.
+  if (process.env.JEST_WORKER_ID) {
+    return _available || false;
+  }
   detectAsync().catch(() => {});
   return _available || false;
 }
@@ -976,6 +983,11 @@ async function generate(prompt, options = {}) {
         adapter: 'ollama',
         provider: `Ollama (${model})`,
         model,
+        tokenUsage: {
+          inputTokens: result.data.prompt_eval_count || 0,
+          outputTokens: result.data.eval_count || 0,
+          totalTokens: (result.data.prompt_eval_count || 0) + (result.data.eval_count || 0),
+        },
         toolUseBlocks: parsed.toolUseBlocks,
         thinking,
         attempts: [{ provider: `Ollama (${model})`, success: true }],
@@ -1021,6 +1033,11 @@ async function generate(prompt, options = {}) {
           adapter: 'ollama',
           provider: `Ollama (${model})`,
           model,
+          tokenUsage: {
+            inputTokens: fallback.data.prompt_eval_count || 0,
+            outputTokens: fallback.data.eval_count || 0,
+            totalTokens: (fallback.data.prompt_eval_count || 0) + (fallback.data.eval_count || 0),
+          },
           thinking,
           attempts: [{ provider: `Ollama (${model})`, success: true }],
         });
@@ -1184,6 +1201,75 @@ async function listModels() {
   });
 }
 
+/**
+ * Embed one or more texts via Ollama's `/api/embeddings`.
+ *
+ * `capabilityRegistry` has declared an `embedding` capability (and routes
+ * `/embed|向量|vector|similarity|semantic.*search/` to it) since before any
+ * adapter implemented one — this closes that gap so the gateway's embedding
+ * capability is backed by a real provider instead of being a declaration only.
+ *
+ * Ollama's embeddings endpoint takes a single `prompt` per call, so a batch is
+ * issued sequentially. A batch is all-or-nothing: one failed text voids the
+ * whole call rather than returning a short/partial array, because a caller
+ * comparing cosine similarity across a partially-filled batch would silently
+ * compare against the wrong rows.
+ *
+ * @param {string|string[]} input - text, or array of texts
+ * @param {object} [options]
+ * @param {string} [options.model]     - embedding model id (default: MODELS.embedding)
+ * @param {number} [options.timeoutMs] - per-text request timeout
+ * @param {AbortSignal} [options.signal]
+ * @returns {Promise<{success:boolean, model:string, embeddings?:number[][], dim?:number, error?:string}>}
+ */
+async function embed(input, options = {}) {
+  const texts = (Array.isArray(input) ? input : [input])
+    .map((t) => String(t == null ? '' : t))
+    .filter((t) => t.trim() !== '');
+  const model = String(options.model || DEFAULT_EMBEDDING_MODEL || '').trim();
+
+  if (texts.length === 0) {
+    return { success: false, model, error: 'no input text' };
+  }
+  if (!model) {
+    return { success: false, model: '', error: 'no embedding model configured' };
+  }
+
+  const embeddings = [];
+  for (const text of texts) {
+    let result;
+    try {
+      result = await ollamaRequest(
+        '/api/embeddings',
+        'POST',
+        { model, prompt: text },
+        { timeoutMs: options.timeoutMs, signal: options.signal }
+      );
+    } catch (err) {
+      return {
+        success: false,
+        model,
+        error: extractOllamaErrorMessage(null, err && err.message ? err.message : 'request failed'),
+      };
+    }
+    const vec =
+      result && result.data && Array.isArray(result.data.embedding) ? result.data.embedding : null;
+    if (result && result.status !== 200) {
+      return {
+        success: false,
+        model,
+        error: extractOllamaErrorMessage(result, `HTTP ${result.status}`),
+      };
+    }
+    if (!vec || vec.length === 0) {
+      return { success: false, model, error: 'response contained no embedding vector' };
+    }
+    embeddings.push(vec);
+  }
+
+  return { success: true, model, embeddings, dim: embeddings[0].length };
+}
+
 function destroy() {
   _available = null;
   _models = [];
@@ -1194,6 +1280,7 @@ module.exports = {
   detect,
   detectAsync,
   generate,
+  embed,
   getStatus,
   getModels,
   listModels,

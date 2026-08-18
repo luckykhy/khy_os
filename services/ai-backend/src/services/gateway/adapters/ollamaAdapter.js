@@ -1,15 +1,20 @@
 /**
  * Ollama Adapter — connect to a local Ollama instance for LLM inference.
  *
- * Ollama runs on http://localhost:11434 by default and exposes an
- * OpenAI-compatible API at /api/generate and /api/chat.
+ * Ollama exposes OpenAI-compatible generation and chat APIs; the service host
+ * is resolved through the shared OLLAMA_HOST default.
  *
  * Detection: GET /api/tags (list available models).
  * Generation: POST /api/generate { model, prompt, stream: false }
  */
 const http = require('http');
 
-const DEFAULT_HOST = process.env.OLLAMA_HOST || 'http://localhost:11434';
+// Endpoint default comes from the single source of truth (which already applies
+// the OLLAMA_HOST env override), so a self-hosted or remapped Ollama is one edit
+// there rather than a literal repeated per adapter.
+const { OLLAMA_HOST } = require('../../../constants/serviceDefaults');
+
+const DEFAULT_HOST = OLLAMA_HOST;
 const DEFAULT_MODEL = 'qwen2.5:7b'; // Good Chinese support
 const TIMEOUT_MS = 120_000;
 
@@ -25,11 +30,15 @@ function ollamaRequest(path, method = 'GET', body = null) {
   const timeoutMs = method === 'GET' ? 3000 : TIMEOUT_MS;
 
   return new Promise((resolve, reject) => {
-    // Hard timeout to prevent hanging on Windows (IPv6/IPv4 dual-stack delays)
-    const hardTimer = setTimeout(() => {
-      req.destroy();
-      reject(new Error('Ollama request timeout'));
-    }, timeoutMs);
+    let req;
+    let idleTimer;
+    const resetIdleTimeout = () => {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        req.destroy();
+        reject(new Error('Ollama request idle timeout'));
+      }, timeoutMs);
+    };
 
     const options = {
       // Force IPv4 to avoid Windows dual-stack DNS delay
@@ -41,13 +50,15 @@ function ollamaRequest(path, method = 'GET', body = null) {
       timeout: timeoutMs,
     };
 
-    const req = http.request(options, (res) => {
+    req = http.request(options, (res) => {
+      resetIdleTimeout();
       let data = '';
       res.on('data', (chunk) => {
+        resetIdleTimeout();
         data += chunk;
       });
       res.on('end', () => {
-        clearTimeout(hardTimer);
+        clearTimeout(idleTimer);
         try {
           resolve({ status: res.statusCode, data: JSON.parse(data) });
         } catch {
@@ -57,14 +68,15 @@ function ollamaRequest(path, method = 'GET', body = null) {
     });
 
     req.on('error', (err) => {
-      clearTimeout(hardTimer);
+      clearTimeout(idleTimer);
       reject(err);
     });
     req.on('timeout', () => {
-      clearTimeout(hardTimer);
+      clearTimeout(idleTimer);
       req.destroy();
-      reject(new Error('Ollama request timeout'));
+      reject(new Error('Ollama request idle timeout'));
     });
+    resetIdleTimeout();
 
     if (body) {
       req.write(JSON.stringify(body));

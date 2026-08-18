@@ -35,21 +35,21 @@
      prompt.md        — Prompt template (always created)
      handler.js       — Custom logic (optional, only if requested)</code></pre>
 <ol><li>Generate <code>manifest.json</code>:</li></ol>
-<pre><code class="language-json">   {
-     &quot;name&quot;: &quot;&lt;skill-name&gt;&quot;,
-     &quot;description&quot;: &quot;&lt;description&gt;&quot;,
-     &quot;user_invocable&quot;: true,
-     &quot;trigger&quot;: &quot;/&lt;trigger&gt;&quot;,
-     &quot;aliases&quot;: [],
-     &quot;category&quot;: &quot;custom&quot;,
-     &quot;tags&quot;: [&quot;&lt;relevant&gt;&quot;, &quot;&lt;tags&gt;&quot;]
-   }</code></pre>
+<pre><code class="language-json">   <span class="hljs-punctuation">{</span>
+     <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;&lt;skill-name&gt;&quot;</span><span class="hljs-punctuation">,</span>
+     <span class="hljs-attr">&quot;description&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;&lt;description&gt;&quot;</span><span class="hljs-punctuation">,</span>
+     <span class="hljs-attr">&quot;user_invocable&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+     <span class="hljs-attr">&quot;trigger&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;/&lt;trigger&gt;&quot;</span><span class="hljs-punctuation">,</span>
+     <span class="hljs-attr">&quot;aliases&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+     <span class="hljs-attr">&quot;category&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;custom&quot;</span><span class="hljs-punctuation">,</span>
+     <span class="hljs-attr">&quot;tags&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;&lt;relevant&gt;&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;&lt;tags&gt;&quot;</span><span class="hljs-punctuation">]</span>
+   <span class="hljs-punctuation">}</span></code></pre>
 <ol><li>Generate <code>prompt.md</code>:<ul><li>Clear title and purpose</li><li>Step-by-step instructions for the AI</li><li>Any constraints or important notes</li><li>Tailored to the user's described use case</li></ul></li></ol>
 <ol><li>If handler.js is requested, generate:</li></ol>
-<pre><code class="language-javascript">   module.exports = {
-     async execute(args, context) {
-       // Custom skill logic
-       return { result: 'Skill executed successfully' };
+<pre><code class="language-javascript">   <span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = {
+     <span class="hljs-keyword">async</span> <span class="hljs-title function_">execute</span>(<span class="hljs-params">args, context</span>) {
+       <span class="hljs-comment">// Custom skill logic</span>
+       <span class="hljs-keyword">return</span> { <span class="hljs-attr">result</span>: <span class="hljs-string">&#x27;Skill executed successfully&#x27;</span> };
      }
    };</code></pre>
 <ol><li>After creating, tell the user:<ul><li>The skill is immediately available (no restart needed after cache invalidation)</li><li>They can trigger it with the configured command</li><li>They can edit the files to customize behavior</li></ul></li></ol>

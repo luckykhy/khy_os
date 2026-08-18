@@ -82,9 +82,9 @@
 <p>能力：</p>
 <ul><li><strong>R1</strong> 扫 <code>services/**</code> 反向 require <code>cli/**</code>；</li><li><strong>R2</strong> 行数超阈值（<code>KHY_ARCH_GOD_FILE_LOC</code>，默认 2500）；</li><li><strong>R3</strong> require 有向图 + Tarjan SCC 检出循环依赖簇；</li><li><strong>基线机制</strong>：<code>arch-debt-baseline.json</code> 承认存量债，CI <strong>只拦新增</strong>（增量治理）。</li></ul>
 <p>用法（已加 npm 脚本）：</p>
-<pre><code class="language-bash">npm run arch:debt            # 人类报告；有超基线新增 → 退出码 1（CI 门禁）
-npm run arch:debt -- --json  # 机器可读
-npm run arch:debt:baseline   # 重铸基线（承认现状，确定性无时间戳）</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">arch</span>:debt            <span class="hljs-comment"># 人类报告；有超基线新增 → 退出码 1（CI 门禁）</span>
+npm run <span class="hljs-built_in">arch</span>:debt -- --json  <span class="hljs-comment"># 机器可读</span>
+npm run <span class="hljs-built_in">arch</span>:debt:baseline   <span class="hljs-comment"># 重铸基线（承认现状，确定性无时间戳）</span></code></pre>
 <p>测试：<code>tests/scripts/archDebtScan.test.js</code>（13 用例，合成 fixture，确定性）。</p>
 <hr>
 <h2 id="5-已执行的示范修复-含代码示例">5. 已执行的示范修复（含代码示例）<a class="anchor" href="#5-已执行的示范修复-含代码示例" aria-label="锚点">#</a></h2>
@@ -93,21 +93,21 @@ npm run arch:debt:baseline   # 重铸基线（承认现状，确定性无时间�
 <p>无状态无 I/O、是真正的<strong>叶子</strong>——下沉<strong>不可能</strong>制造新环，且一次性消除 2 条服务层反向边。</p>
 <ul><li><strong>兼容性</strong>：导出签名不变，仅路径变更；5 个引用方同步改路径，零逻辑改动。</li></ul>
 <pre><code class="language-diff"># 文件迁移（保留 git 历史）
-- src/cli/commandSchema.js
-+ src/constants/commandSchema.js
+<span class="hljs-deletion">- src/cli/commandSchema.js</span>
+<span class="hljs-addition">+ src/constants/commandSchema.js</span>
 
 # 服务层（恢复正确方向：services → constants，不再 → cli）
 # src/services/selfProfile.js:28
--   if (!_commandSchema) _commandSchema = require('../cli/commandSchema');
-+   if (!_commandSchema) _commandSchema = require('../constants/commandSchema');
+<span class="hljs-deletion">-   if (!_commandSchema) _commandSchema = require(&#x27;../cli/commandSchema&#x27;);</span>
+<span class="hljs-addition">+   if (!_commandSchema) _commandSchema = require(&#x27;../constants/commandSchema&#x27;);</span>
 # src/services/knowledgeTeachingService.js:1111
--   const commandSchema = require('../cli/commandSchema');
-+   const commandSchema = require('../constants/commandSchema');
+<span class="hljs-deletion">-   const commandSchema = require(&#x27;../cli/commandSchema&#x27;);</span>
+<span class="hljs-addition">+   const commandSchema = require(&#x27;../constants/commandSchema&#x27;);</span>
 
 # CLI 层（cli → constants，合法方向）
 # src/cli/router.js / featureCapabilityMap.js / commandRegistry.js
--   require('./commandSchema')
-+   require('../constants/commandSchema')</code></pre>
+<span class="hljs-deletion">-   require(&#x27;./commandSchema&#x27;)</span>
+<span class="hljs-addition">+   require(&#x27;../constants/commandSchema&#x27;)</span></code></pre>
 <p><strong>效果验证</strong>：</p>
 <ul><li>分层倒置 <strong>30 → 28</strong>（<code>archDebtScan</code> 实测；<code>commandSchema</code> 不再出现在 R1 列表）；</li><li>全部 5 引用方加载通过；命令解析功能不变（124 路由命令 / 84 斜杠命令 / 55 子命令组）；</li><li>无任何测试引用旧路径；分析器自身 13 用例 + 真基线门禁绿。</li></ul>
 <h2 id="5-2-p1-轮已执行修复-2026-06-12-r3-3-1">5.2 P1 轮已执行修复（2026-06-12，R3 3→1）<a class="anchor" href="#5-2-p1-轮已执行修复-2026-06-12-r3-3-1" aria-label="锚点">#</a></h2>

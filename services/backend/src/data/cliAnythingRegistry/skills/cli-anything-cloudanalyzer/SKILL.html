@@ -112,7 +112,7 @@ cli-anything-cloudanalyzer --json evaluate run source.pcd reference.pcd</code></
 <pre><code class="language-bash">cli-anything-cloudanalyzer process filter cloud.pcd -o filtered.pcd</code></pre>
 <h4 id="process-split">process split<a class="anchor" href="#process-split" aria-label="锚点">#</a></h4>
 <p>Split point cloud into grid tiles (writes metadata.yaml).</p>
-<pre><code class="language-bash">cli-anything-cloudanalyzer process split large.pcd -o tiles/ -g 100</code></pre>
+<pre><code class="language-bash">cli-anything-cloudanalyzer process <span class="hljs-built_in">split</span> large.pcd -o tiles/ -g 100</code></pre>
 <h4 id="process-merge">process merge<a class="anchor" href="#process-merge" aria-label="锚点">#</a></h4>
 <p>Merge multiple point clouds.</p>
 <pre><code class="language-bash">cli-anything-cloudanalyzer process merge a.pcd b.pcd -o merged.pcd</code></pre>
@@ -144,7 +144,7 @@ cli-anything-cloudanalyzer --json evaluate run source.pcd reference.pcd</code></
 <pre><code class="language-bash">cli-anything-cloudanalyzer session new -o project.json -n my-run</code></pre>
 <h4 id="session-history">session history<a class="anchor" href="#session-history" aria-label="锚点">#</a></h4>
 <p>Show recent operations for the project given with <code>-p</code> / <code>--project</code>.</p>
-<pre><code class="language-bash">cli-anything-cloudanalyzer --project project.json session history --last 20</code></pre>
+<pre><code class="language-bash">cli-anything-cloudanalyzer --project project.json session <span class="hljs-built_in">history</span> --last 20</code></pre>
 <hr>
 <h2 id="typical-agent-workflows">Typical Agent Workflows<a class="anchor" href="#typical-agent-workflows" aria-label="锚点">#</a></h2>
 <h3 id="workflow-1-evaluate-and-gate-a-point-cloud">Workflow 1: Evaluate and gate a point cloud<a class="anchor" href="#workflow-1-evaluate-and-gate-a-point-cloud" aria-label="锚点">#</a></h3>

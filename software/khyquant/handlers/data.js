@@ -6,8 +6,8 @@ const { printQuote, printTable, printSuccess, printError, withSpinner } = requir
 
 async function handleQuote(symbol) {
   muteDbLogs();
-  const marketDataService = require('../../services/marketDataService');
-  const userProfile = require('../../services/userProfile');
+  const marketDataService = require('../services/marketDataService');
+  const userProfile = require('../../../services/backend/src/services/userProfile');
   restoreDbLogs();
 
   try {
@@ -24,7 +24,7 @@ async function handleQuote(symbol) {
 async function handleDataFetch(symbol, options = {}) {
   await bootstrap({ silent: true });
 
-  const KlineDataService = require('../../services/klineDataService');
+  const KlineDataService = require('../services/klineDataService');
   const kds = new KlineDataService();
 
   const period = options.period || 'daily';
@@ -65,7 +65,7 @@ async function handleDataFetch(symbol, options = {}) {
 async function handleDataList() {
   await bootstrap({ silent: true });
 
-  const { Instrument } = require('../../models');
+  const { Instrument } = require('../models');
 
   const instruments = await Instrument.findAll({
     order: [['market', 'ASC'], ['symbol', 'ASC']],
@@ -91,7 +91,7 @@ async function handleDataList() {
 
 async function handleCacheClear() {
   try {
-    const cacheService = require('../../services/cacheService');
+    const cacheService = require('../services/cacheService');
     if (cacheService && typeof cacheService.flushAll === 'function') {
       await cacheService.flushAll();
     } else if (cacheService && typeof cacheService.clear === 'function') {

@@ -156,7 +156,7 @@
 | `test:<单场景>` | `npm run test:one -- <path>` | 见第四节 |
 
 **至今仍无对应脚本**（引用存在、实现不存在，**不伪造入口**，只登记）：
-`check:quality-gates`、`check:khyos-pins`、`check:pip-packaging`、`check:small-model:safety`、
+`check:khyos-pins`、`check:pip-packaging`、`check:small-model:safety`、
 `check:maintainer:safety`、`check:maintainer:bootstrap`、`check:ai-chat-ui-control-request`、
 `maintenance:generate`、`docs:pdf:onboarding`、`dev:frontend`、`dev:install`、`deploy`。
 `arch:god` 存在但只定义在 `services/backend/package.json`，须带 `--workspace services/backend`。

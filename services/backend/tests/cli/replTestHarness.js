@@ -26,6 +26,9 @@ function createChalkMock(options = {}) {
 class FakeReadline extends EventEmitter {
   constructor(prompt = '> ', options = {}) {
     super();
+    this._pendingLineHandlers = new Set();
+    this._linePromises = [];
+    this._emitLine = EventEmitter.prototype.emit;
     this._prompt = prompt;
     this.line = '';
     this.cursor = 0;
@@ -73,7 +76,15 @@ async function flushAsync() {
 }
 
 async function emitLineAndWait(rl, lineText) {
-  rl.emit('line', lineText);
+  const handlers = typeof rl.listeners === 'function' ? rl.listeners('line') : [];
+  const pending = handlers.map((handler) => {
+    try {
+      return Promise.resolve(handler(lineText));
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  });
+  await Promise.all(pending);
   for (let i = 0; i < 10; i += 1) {
     await flushAsync();
   }
@@ -136,7 +147,13 @@ function createRouterMock(options = {}) {
       rawCommandToken: text,
     };
   });
-  const route = options.route || (async (parsed) => (parsed && parsed.command === '__ai__' ? false : true));
+  const route = options.route || (async (parsed) => {
+    // REPL-owned commands with arguments are dispatched by the line handler
+    // after router() returns false. Keep the harness aligned with production
+    // routing so /tasks reaches its task-control implementation.
+    if (parsed && parsed.command === 'tasks') return false;
+    return parsed && parsed.command === '__ai__' ? false : true;
+  });
   return {
     parseInput: jest.fn(parseInput),
     route: jest.fn(route),
@@ -253,6 +270,8 @@ function createAiRendererMock(options = {}) {
 
 async function setupCliHarness(config = {}) {
   jest.resetModules();
+
+  process.env.KHY_CLIPBOARD_IMG2FILE_AUTO_START = 'false';
 
   const mode = config.mode === 'lite' ? 'lite' : 'full';
   const modulePath = mode === 'lite' ? '../../src/cli/liteRepl' : '../../src/cli/repl';

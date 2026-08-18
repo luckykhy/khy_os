@@ -16,6 +16,7 @@ const path = require('path');
 const zlib = require('zlib');
 
 const selfProfile = require('../services/selfProfile');
+const { isFlagEnabled } = require('../services/flagRegistry');
 
 const { CYBER_RISK_INSTRUCTION } = require('./cyberRiskInstruction');
 const { PRIMARY: MODEL_PRIMARY } = require('./models');
@@ -1215,6 +1216,31 @@ If you can say it in one sentence, don't use three. Prefer short, direct sentenc
   );
 }
 
+function getUnifiedOutputAndToneSection() {
+  return _memoStaticSection('unifiedOutputAndTone', () => {
+    const items = [
+      'Go straight to the point. Try the simplest approach first without going in circles. Do not overdo it. Be extra concise.',
+      'Keep your text output brief and direct. Lead with the answer or action, not the reasoning. Skip filler words, preamble, and unnecessary transitions.',
+      'Focus text output on: decisions that need the user\'s input, high-level status updates at natural milestones, errors or blockers that change the plan.',
+      'Think and communicate like a senior engineer: lead with the conclusion, then concrete steps, then verification/risk.',
+      'For implementation/debugging answers, include practical, testable details (paths, commands, expected outcomes) instead of generic suggestions.',
+      'Only use emojis if the user explicitly requests it. Avoid using emojis in all communication unless asked.',
+      'Your responses should be short and concise.',
+      'When referencing specific functions or pieces of code include the pattern file_path:line_number to allow the user to easily navigate to the source code location.',
+      'When referencing GitHub issues or pull requests, use the owner/repo#123 format so they render as clickable links.',
+      'Do not use a colon before tool calls. Your tool calls may not be shown directly in the output, so text like "Let me read the file:" followed by a read tool call should just be "Let me read the file." with a period.',
+    ];
+
+    try {
+      items.push(...require('../services/fableVoiceProfile').toneAndStyleItems());
+    } catch {
+      /* fail-soft: legacy items only */
+    }
+
+    return ['# Output and tone', ...items.map((i) => ` - ${i}`)].join('\n');
+  });
+}
+
 // ─── Git operations protocol (injected into Bash tool prompt) ───
 
 function getGitOperationsSection() {
@@ -1406,6 +1432,9 @@ function getEnvironmentSection(model, cwd) {
   const release = os.release();
   const isGit = _checkIsGit(cwd);
 
+  // KHY_PROMPT_ENV_MIN: minimal mode — essential environment facts only, skip redundant identity/marketing
+  const minimalEnv = isFlagEnabled('KHY_PROMPT_ENV_MIN', process.env);
+
   const lines = [
     '# Environment',
     `You have been invoked in the following environment:`,
@@ -1450,6 +1479,21 @@ function getEnvironmentSection(model, cwd) {
     }
   }
 
+  if (minimalEnv) {
+    // Minimal mode: skip platform guidance, model line, and marketing text
+    // Keep only system clock (essential for time-sensitive tasks)
+    try {
+      const systemClock = require('./systemClock');
+      lines.push(...systemClock.formatSystemClockLines({ now: new Date(), env: process.env }));
+    } catch {
+      const date = new Date();
+      const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      lines.push(` - Current date: ${dateStr}`);
+    }
+    return lines.join('\n');
+  }
+
+  // Original full mode (flag off = byte-for-byte rollback)
   // Per-OS "optimal path" capability guidance. This lets khy genuinely leverage
   // the host OS — preferring each platform's native tools/paths — grounded in the
   // real capability probe so it only recommends tools that are actually present.
@@ -1814,6 +1858,42 @@ function getGitStatusSection(cwd) {
       return null;
     }
 
+    // KHY_PROMPT_GIT_STATUS_MIN (default-on): 最小化 gitStatus 段——只保留 branch +
+    // 一句话 dirty 摘要,砍掉完整文件状态清单与 recent commits 列表(这些 git 命令能
+    // 瞬时拿回,放进 prompt 浪费)。关 → 逐字节回退今日完整清单。
+    const { isFlagEnabled } = require('../services/flagRegistry');
+    const minimalGitStatus = isFlagEnabled('KHY_PROMPT_GIT_STATUS_MIN', process.env);
+
+    if (minimalGitStatus) {
+      // 最小化模式:只保留 branch + mainBranch + 一句话 dirty 状态
+      const lines = [`# gitStatus`, `Current branch: ${ctx.branch}`];
+      lines.push(`\nMain branch (you will usually use this for PRs): ${ctx.mainBranch}`);
+      const isDirty = !!(ctx.status && String(ctx.status).trim());
+      if (isDirty) {
+        lines.push(`\nWorking tree has uncommitted changes (run git status for details).`);
+      } else {
+        lines.push(`\nWorking tree is clean.`);
+      }
+
+      // git 工作流意识块照旧追加
+      try {
+        const { buildWorkflowAwareness } = require('./gitWorkflowGuidance');
+        const block = buildWorkflowAwareness({
+          branch: ctx.branch,
+          mainBranch: ctx.mainBranch,
+          dirty: isDirty,
+        });
+        if (block) {
+          lines.push(`\n${block}`);
+        }
+      } catch {
+        /* fail-soft */
+      }
+
+      return lines.join('\n');
+    }
+
+    // 原有完整模式(门控关闭时逐字节回退)
     const lines = [`# gitStatus`, `Current branch: ${ctx.branch}`];
     lines.push(`\nMain branch (you will usually use this for PRs): ${ctx.mainBranch}`);
     if (ctx.status) {
@@ -1849,9 +1929,41 @@ function getGitStatusSection(cwd) {
     // (index.lock held, network FS stall) can never block the event loop here.
     try {
       const { execSync } = require('child_process');
+      const { isFlagEnabled } = require('../services/flagRegistry');
+      const minimalGitStatus = isFlagEnabled('KHY_PROMPT_GIT_STATUS_MIN', process.env);
+
       const branch = execSync('git branch --show-current', { cwd, stdio: 'pipe', timeout: 5000 })
         .toString()
         .trim();
+
+      if (minimalGitStatus) {
+        // 最小化模式:只保留 branch + dirty 状态
+        const status = execSync('git status --short', { cwd, stdio: 'pipe', timeout: 5000 })
+          .toString()
+          .trim();
+        const lines = [`# gitStatus`, `Current branch: ${branch}`];
+        const isDirty = !!(status && status.trim());
+        if (isDirty) {
+          lines.push(`\nWorking tree has uncommitted changes (run git status for details).`);
+        } else {
+          lines.push(`\nWorking tree is clean.`);
+        }
+
+        // 工作流意识块照旧追加
+        try {
+          const { buildWorkflowAwareness } = require('./gitWorkflowGuidance');
+          const block = buildWorkflowAwareness({ branch, dirty: isDirty });
+          if (block) {
+            lines.push(`\n${block}`);
+          }
+        } catch {
+          /* fail-soft */
+        }
+
+        return lines.join('\n');
+      }
+
+      // 原有完整模式(门控关闭时逐字节回退)
       const status = execSync('git status --short', { cwd, stdio: 'pipe', timeout: 5000 })
         .toString()
         .trim();
@@ -1903,22 +2015,42 @@ function getGitStatusSection(cwd) {
 function getSkillCatalogSection(opts = {}) {
   const { contextWindowTokens = 128000 } = opts;
   try {
+    // KHY_PROMPT_SKILLS_MIN: minimal mode — show only name + one-line purpose, tighter budget
+    const minimalSkills = isFlagEnabled('KHY_PROMPT_SKILLS_MIN', process.env);
+
     const envBudget = parseInt(process.env.KHY_SKILL_CATALOG_CHARS || '', 10);
     const CHARS_PER_TOKEN = 4;
     const onePercent = Math.floor((Number(contextWindowTokens) || 128000) * 0.01 * CHARS_PER_TOKEN);
     const charBudget =
       Number.isFinite(envBudget) && envBudget > 0
         ? envBudget
-        : Math.max(500, Math.min(8000, onePercent));
+        : minimalSkills
+          ? Math.max(300, Math.min(1000, onePercent * 0.3)) // Minimal mode: ~0.3% budget, capped at 1KB
+          : Math.max(500, Math.min(8000, onePercent));
 
     // Reuse the catalog builder (native skills only — MCP tools have their own
     // dynamic section, so includeMcp:false avoids duplicating them here).
     const { buildSystemReminder } = require('../services/skillSearch');
-    const listing = buildSystemReminder({ charBudget, includeMcp: false });
+    const listing = buildSystemReminder({
+      charBudget,
+      includeMcp: false,
+      minimal: minimalSkills, // Pass minimal flag to catalog builder
+    });
     if (!listing || !listing.trim()) {
       return null;
     }
 
+    if (minimalSkills) {
+      // Minimal mode: brief header + compact listing
+      return [
+        '# Available Skills',
+        'Invoke with the Skill tool when the user request matches one.',
+        '',
+        listing,
+      ].join('\n');
+    }
+
+    // Original full mode (flag off = byte-for-byte rollback)
     return [
       '# Available Skills',
       'Skills provide specialized, on-demand capabilities. When a user request matches one, invoke it with the Skill tool (do not paraphrase its steps). Skill contents load only when invoked — they are NOT in this prompt.',
@@ -2013,7 +2145,18 @@ function getProjectStructureSection(opts = {}) {
       '.next',
       'coverage',
     ]);
-    const MAX_DEPTH = 3;
+
+    // KHY_PROJECT_TREE_MAXDEPTH: numeric flag controls max depth, default 2 (was 3)
+    let MAX_DEPTH = 2; // New default: 2 (瘦身后降低深度)
+    try {
+      const depthValue = isFlagEnabled('KHY_PROJECT_TREE_MAXDEPTH', process.env);
+      if (typeof depthValue === 'number' && depthValue >= 1 && depthValue <= 10) {
+        MAX_DEPTH = depthValue;
+      }
+    } catch {
+      // fail-soft: use default 2
+    }
+
     const lines = [];
     let used = 0;
     let truncated = 0;
@@ -2754,8 +2897,13 @@ async function getSystemPrompt(opts = {}) {
     // Deferred-tools hint (computed by the router from tools-module state, since
     // it depends on which deferred tools are currently revealed). '' → omitted.
     deferredToolsHint || null,
-    getToneAndStyleSection(),
-    getOutputEfficiencySection(),
+    // KHY_PROMPT_UNIFIED_OUTPUT: merge tone + efficiency into one unified section
+    isFlagEnabled('KHY_PROMPT_UNIFIED_OUTPUT', process.env)
+      ? getUnifiedOutputAndToneSection()
+      : null,
+    // Original separate sections (flag off = byte-for-byte rollback)
+    !isFlagEnabled('KHY_PROMPT_UNIFIED_OUTPUT', process.env) ? getToneAndStyleSection() : null,
+    !isFlagEnabled('KHY_PROMPT_UNIFIED_OUTPUT', process.env) ? getOutputEfficiencySection() : null,
     // === BOUNDARY MARKER ===
     SYSTEM_PROMPT_DYNAMIC_BOUNDARY,
     // ─── Dynamic content ───
@@ -2819,6 +2967,7 @@ module.exports = {
   getUsingYourToolsSection,
   getToneAndStyleSection,
   getOutputEfficiencySection,
+  getUnifiedOutputAndToneSection,
   getGitOperationsSection,
   getLanguageSection,
   getOutputStyleSection,

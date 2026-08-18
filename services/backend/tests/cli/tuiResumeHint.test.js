@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 /**
  * Regression guard for the ink-TUI exit resume hint.
@@ -28,7 +28,7 @@ Module._load = function patchedLoad(request, parent, isMain) {
 };
 
 require('../../src/cli/tui/inkRuntime').registerJsx();
-const { printInkResumeHint } = require('../../src/cli/tui/app.jsx');
+const { printInkResumeHint } = require('../../src/cli/tui/app.js');
 
 function captureHint(aiStub) {
   _aiStub = aiStub;

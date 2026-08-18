@@ -4,27 +4,16 @@
 /**
  * prepack.js — npm `prepack` hook for the `khy-os-backend` package.
  *
- * Runs automatically on `npm pack` / `npm publish`. It makes the published
- * tarball self-contained and adds full-source-restore capability:
+ * Runs automatically on `npm pack` / `npm publish`. It vendors @khy/shared into
+ * the package so the file dependency resolves after installation. Large immutable
+ * payloads are published separately and acquired through payloadProvisioner.
  *
- *   1. Vendor @khy/shared:  copy platform/packages/shared → vendor/shared so the
- *      `"@khy/shared": "file:./vendor/shared"` dependency resolves on the user's
- *      machine (the monorepo workspace is not present after `npm i -g`).
- *   2. Embed encrypted source snapshot:  run makeSourceSnapshot.js → _source/, so
- *      `khy restore` can reconstruct the entire project on any machine.
- *
- * Safety: the snapshot step needs git + KHY_SOURCE_PUBLISH_SECRET; without them
- * the generator warns and writes nothing (never ships plaintext). Vendoring is
- * best-effort-with-loud-failure: a missing shared package aborts the pack so we
- * never publish a broken dependency graph.
- *
- * Both `files` allowlist (package.json) and this hook are required: the allowlist
- * keeps `.env`/tests out of the tarball; this hook puts vendor/ + _source/ in.
+ * Safety: vendoring is a hard requirement. Any stale `_source/` from historical
+ * prepack runs is removed so an install tarball cannot silently regain the payload.
  */
 
 const fs = require('fs');
 const path = require('path');
-const { spawnSync } = require('child_process');
 
 const BACKEND_DIR = path.resolve(__dirname, '..'); // services/backend
 const REPO_ROOT = path.resolve(BACKEND_DIR, '..', '..'); // monorepo root
@@ -33,9 +22,6 @@ const VENDOR_SHARED = path.join(BACKEND_DIR, 'vendor', 'shared');
 
 function log(msg) {
   process.stdout.write(`[prepack] ${msg}\n`);
-}
-function warn(msg) {
-  process.stderr.write(`[prepack] ${msg}\n`);
 }
 
 /** Copy platform/packages/shared → vendor/shared (source/config only). */
@@ -69,26 +55,10 @@ function vendorShared() {
   log(`vendored @khy/shared → ${path.relative(BACKEND_DIR, VENDOR_SHARED)}`);
 }
 
-/** Run the encrypted source-snapshot generator into _source/. */
-function embedSourceSnapshot() {
-  const script = path.join(BACKEND_DIR, 'scripts', 'makeSourceSnapshot.js');
-  const outDir = path.join(BACKEND_DIR, '_source');
-  const args = ['--out', outDir, '--root', REPO_ROOT];
-  if (process.env.KHY_BUILD_TIMESTAMP) {
-    args.push('--timestamp', process.env.KHY_BUILD_TIMESTAMP);
-  }
-  // The generator itself reads KHY_SOURCE_PUBLISH_SECRET / KHY_OWNER_SECRET and
-  // warns+skips when absent, so this never breaks a plain `npm pack`.
-  const result = spawnSync('node', [script, ...args], {
-    cwd: REPO_ROOT,
-    stdio: 'inherit',
-  });
-  if (result.error) warn(`source snapshot generator error: ${result.error.message}`);
-}
-
 function main() {
-  vendorShared(); // hard requirement — throws to abort the pack on failure
-  embedSourceSnapshot(); // soft — warns and continues without a secret/git
+  vendorShared();
+  fs.rmSync(path.join(BACKEND_DIR, '_source'), { recursive: true, force: true });
+  log('on-demand source payload stays outside the npm package');
 }
 
 main();

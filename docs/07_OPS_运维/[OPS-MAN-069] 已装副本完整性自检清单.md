@@ -28,13 +28,7 @@ node scripts/verify-install.js      # 或 npm run verify-install
 
 | 关键路径（相对 bundle 根） | 缺失意味着 |
 |------|------|
-| `services/backend/bin/khy.js` | 后端 CLI 入口缺失——包不完整，khy 无法启动。 |
-| `services/backend/server.js` | 后端服务入口缺失——管理后端无法拉起。 |
-| `services/backend/src/models/index.js` | 数据层入口缺失——启动即崩。 |
-| `services/ai-backend/src/middleware/auth.js` | AI 后端鉴权中间件缺失——每条代理/网关路由会 500（历史事故点）。 |
-| `apps/ai-frontend/src/main.js` | 前端入口缺失——管理页打不开。 |
-| `kernel/Makefile` | 内核构建根缺失——workshop 不完整。 |
-| `scripts/lib/leafContractGuard.js` | 纯叶子契约守卫缺失——无 AI 维护时的护栏丢了。 |
+| `runtime/khy/bundle.mjs` | 独立运行时 bundle 缺失，khy 启动入口不可用。 |
 
 ## 结果怎么读
 

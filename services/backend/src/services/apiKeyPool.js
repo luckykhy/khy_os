@@ -18,18 +18,25 @@ const os = require('os');
 const path = require('path');
 
 const { getDataHome, getLegacyDataHome } = require('../utils/dataHome');
+const { safeReadJsonSync } = require('./configGuard');
 
+const { API_KEY_POOL } = require('../constants/serviceDefaults');
 const { parseApiKeyEntries, parseApiKeyList } = require('./apiKeyFormat');
+const atomicWriteJson = require('../utils/atomicWriteJson');
+const { atomicWriteText } = require('../utils/atomicWriteJson');
 
 const KHY_DIR = getDataHome();
 const POOL_FILE = path.join(KHY_DIR, 'api_keys.json');
 const LEGACY_POOL_FILE = path.join(getLegacyDataHome(), 'api_keys.json');
 
-// Max backoff level (2^5 * 10s = 320s ≈ 5min)
-const MAX_BACKOFF_LEVEL = 5;
-const BASE_COOLDOWN_MS = 10000; // 10 seconds
-const MAX_COOLDOWN_MS = 300000; // 5 minutes
-const MAX_RETRY_AFTER_MS = 600000; // 10 minutes (max server-specified cooldown)
+// 冷却/退避参数的单一真源是 constants/serviceDefaults.js 的 API_KEY_POOL
+// (F5「不许散落硬编码」)。这里只保留别名,不再内联字面量 —— 之前这四个数字写死在本文件
+// 顶部且无 env 覆盖,用户遇到 5 分钟冷却时除了改代码没有任何调节手段。
+// 默认仍是 10s 起步 · 2^(level-1) 指数放大 · 封顶 300s · 级数上限 5(行为逐字节不变)。
+const MAX_BACKOFF_LEVEL = API_KEY_POOL.MAX_BACKOFF_LEVEL;
+const BASE_COOLDOWN_MS = API_KEY_POOL.BASE_COOLDOWN_MS;
+const MAX_COOLDOWN_MS = API_KEY_POOL.MAX_COOLDOWN_MS;
+const MAX_RETRY_AFTER_MS = API_KEY_POOL.MAX_RETRY_AFTER_MS;
 
 // ── State ──────────────────────────────────────���─────────────────────────
 
@@ -169,7 +176,8 @@ function init() {
       if (!fs.existsSync(KHY_DIR)) {
         fs.mkdirSync(KHY_DIR, { recursive: true });
       }
-      fs.writeFileSync(POOL_FILE, legacy, 'utf-8');
+      // 逐字节搬运:重新序列化会改变格式与键序,迁移不该动内容。
+      atomicWriteText(POOL_FILE, legacy, { mode: 0o666 });
     }
   } catch {
     /* migration is best-effort; fall through to normal load */
@@ -177,13 +185,8 @@ function init() {
 
   // Load persisted config
   let saved = {};
-  try {
-    if (fs.existsSync(POOL_FILE)) {
-      saved = JSON.parse(fs.readFileSync(POOL_FILE, 'utf-8'));
-    }
-  } catch {
-    /* ignore corrupt file */
-  }
+  const { data: _poolData } = safeReadJsonSync(POOL_FILE, { schema: {}, silent: true });
+  saved = _poolData || {};
 
   // Register keys from JSON
   for (const [provider, rawConfig] of Object.entries(saved)) {
@@ -486,7 +489,10 @@ function save() {
     if (!fs.existsSync(KHY_DIR)) {
       fs.mkdirSync(KHY_DIR, { recursive: true });
     }
-    fs.writeFileSync(POOL_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    if (!atomicWriteJson(POOL_FILE, data, { mode: 0o666 })) {
+      // 原子写返回 false 而不抛:这里必须自己把它变成可见的错误,否则等同静默丢弃。
+      throw new Error(`原子写失败: ${POOL_FILE}`);
+    }
   } catch (err) {
     // 持久化失败静默丢弃 → 服务重启后所有 key 丢失！必须记录。
     try {

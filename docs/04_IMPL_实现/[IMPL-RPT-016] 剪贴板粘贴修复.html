@@ -36,18 +36,18 @@
 <h2 id="根因分析">根因分析<a class="anchor" href="#根因分析" aria-label="锚点">#</a></h2>
 <h3 id="问题-1-burst-检测时间判断-bug">问题 1：Burst 检测时间判断 bug<a class="anchor" href="#问题-1-burst-检测时间判断-bug" aria-label="锚点">#</a></h3>
 <p>粘贴作为单个 stdin chunk 到达时，Node.js <code>emitKeypressEvents</code> 同步处理所有字符。<br><code>Date.now()</code> 在同一 event loop tick 返回相同值，导致 <code>elapsed === 0</code>。</p>
-<pre><code class="language-javascript">// BUG: elapsed === 0 时 (0 &gt; 0) 为 false，burst 永远检测不到
-if (elapsed &gt; 0 &amp;&amp; elapsed &lt;= BURST_CHAR_INTERVAL_MS) {
+<pre><code class="language-javascript"><span class="hljs-comment">// <span class="hljs-doctag">BUG:</span> elapsed === 0 时 (0 &gt; 0) 为 false，burst 永远检测不到</span>
+<span class="hljs-keyword">if</span> (elapsed &gt; <span class="hljs-number">0</span> &amp;&amp; elapsed &lt;= <span class="hljs-variable constant_">BURST_CHAR_INTERVAL_MS</span>) {
 
-// FIX: 用 _burstLastCharAt &gt; 0 判断是否有前序字符
-if (_burstLastCharAt &gt; 0 &amp;&amp; elapsed &lt;= BURST_CHAR_INTERVAL_MS) {</code></pre>
+<span class="hljs-comment">// FIX: 用 _burstLastCharAt &gt; 0 判断是否有前序字符</span>
+<span class="hljs-keyword">if</span> (_burstLastCharAt &gt; <span class="hljs-number">0</span> &amp;&amp; elapsed &lt;= <span class="hljs-variable constant_">BURST_CHAR_INTERVAL_MS</span>) {</code></pre>
 <h3 id="问题-2-finally-块绕过粘贴保护">问题 2：finally 块绕过粘贴保护<a class="anchor" href="#问题-2-finally-块绕过粘贴保护" aria-label="锚点">#</a></h3>
 <p>AI 完成后的 <code>finally</code> 清理代码中，有独立的 <code>_busyQueueAccum</code> flush 逻辑，<br>直接把多行内容推入 <code>_queuedInputs</code> 并自动执行，绕过了 <code>_storePendingPaste</code>。</p>
-<pre><code class="language-javascript">// BUG: 直接推入队列自动执行
-_queuedInputs.push(`&lt;pasted-content&gt;\n${merged}\n&lt;/pasted-content&gt;`);
+<pre><code class="language-javascript"><span class="hljs-comment">// <span class="hljs-doctag">BUG:</span> 直接推入队列自动执行</span>
+_queuedInputs.<span class="hljs-title function_">push</span>(<span class="hljs-string">`&lt;pasted-content&gt;\n<span class="hljs-subst">${merged}</span>\n&lt;/pasted-content&gt;`</span>);
 
-// FIX: 调用 _storePendingPaste 等待用户确认
-_storePendingPaste(merged, null, '', false);</code></pre>
+<span class="hljs-comment">// FIX: 调用 _storePendingPaste 等待用户确认</span>
+<span class="hljs-title function_">_storePendingPaste</span>(merged, <span class="hljs-literal">null</span>, <span class="hljs-string">&#x27;&#x27;</span>, <span class="hljs-literal">false</span>);</code></pre>
 <h3 id="问题-3-busyqueuewithmerge-自动排队">问题 3：<code>_busyQueueWithMerge</code> 自动排队<a class="anchor" href="#问题-3-busyqueuewithmerge-自动排队" aria-label="锚点">#</a></h3>
 <p>多行粘贴通过 <code>_busyQueueWithMerge</code> 累积后，自动推入 <code>_queuedInputs</code>，<br>不经过用户确认。</p>
 <h3 id="问题-4-shouldbatchinputline-在空闲状态不生效">问题 4：<code>_shouldBatchInputLine</code> 在空闲状态不生效<a class="anchor" href="#问题-4-shouldbatchinputline-在空闲状态不生效" aria-label="锚点">#</a></h3>
@@ -90,18 +90,18 @@ _storePendingPaste(merged, null, '', false);</code></pre>
                         ├─ Enter ─→ buffer '\n', reset timer
                         └─ 150ms silence ─→ _flushBurst → _storePendingPaste</code></pre>
 <h3 id="关键常量">关键常量<a class="anchor" href="#关键常量" aria-label="锚点">#</a></h3>
-<pre><code class="language-javascript">BURST_CHAR_INTERVAL_MS = 12   // DeepSeek uses 8ms; 12ms for Node overhead
-BURST_MIN_CHARS        = 3    // 3+ rapid chars → paste
-BURST_SUPPRESS_MS      = 150  // suppress Enter for 150ms after last char</code></pre>
+<pre><code class="language-javascript"><span class="hljs-variable constant_">BURST_CHAR_INTERVAL_MS</span> = <span class="hljs-number">12</span>   <span class="hljs-comment">// DeepSeek uses 8ms; 12ms for Node overhead</span>
+<span class="hljs-variable constant_">BURST_MIN_CHARS</span>        = <span class="hljs-number">3</span>    <span class="hljs-comment">// 3+ rapid chars → paste</span>
+<span class="hljs-variable constant_">BURST_SUPPRESS_MS</span>      = <span class="hljs-number">150</span>  <span class="hljs-comment">// suppress Enter for 150ms after last char</span></code></pre>
 <h3 id="storependingpaste-统一入口"><code>_storePendingPaste</code> — 统一入口<a class="anchor" href="#storependingpaste-统一入口" aria-label="锚点">#</a></h3>
 <p>无论哪层检测到粘贴，统一走 <code>_storePendingPaste(text, writeFn, prefix, autoCommittedLine)</code>：</p>
 <ul><li><strong>短粘贴</strong>（≤5 行 &amp;&amp; ≤500 字符）：内容直接写入 readline，可编辑</li><li><strong>长粘贴</strong>：设置 <code>_pendingPaste</code>，注入 <code>[Pasted text #N +M lines]</code> 标签</li><li>Busy/非 busy 行为一致：都等用户按 Enter</li></ul>
 <h3 id="ghost-enter-防护">Ghost Enter 防护<a class="anchor" href="#ghost-enter-防护" aria-label="锚点">#</a></h3>
-<pre><code class="language-javascript">// 600ms 时间窗口：_storePendingPaste 后的空 Enter 一律视为幽灵事件
-const msSincePaste = Date.now() - _pendingPasteSetAt;
-if (msSincePaste &lt; 600) {
-    // 静默吞掉，重新注入标签
-    return;
+<pre><code class="language-javascript"><span class="hljs-comment">// 600ms 时间窗口：_storePendingPaste 后的空 Enter 一律视为幽灵事件</span>
+<span class="hljs-keyword">const</span> msSincePaste = <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() - _pendingPasteSetAt;
+<span class="hljs-keyword">if</span> (msSincePaste &lt; <span class="hljs-number">600</span>) {
+    <span class="hljs-comment">// 静默吞掉，重新注入标签</span>
+    <span class="hljs-keyword">return</span>;
 }</code></pre>
 <h3 id="finally-块保护">Finally 块保护<a class="anchor" href="#finally-块保护" aria-label="锚点">#</a></h3>
 <p>AI 完成后的 <code>finally</code> 清理代码中：</p>

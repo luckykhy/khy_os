@@ -31,8 +31,8 @@
 <p>轨迹日志（OPS-MAN-086）给了<strong>单会话</strong>记忆——一轮自驱里跨进程重建 stallCount、防死循环。<br>可它是<strong>严格 per-session</strong> 的：每个会话一个 <code>&lt;session&gt;.jsonl</code>，彼此不读。后果——</p>
 <ul><li>会话 A 已用 5 步证明某策略对这台机器的某类卡点是死胡同（次次 stalled → escalate）；</li><li>会话 B 起来，对同一类卡点<strong>从零把同一死胡同重走一遍</strong>。</li></ul>
 <p>人类维护者修一台反复出问题的机器，第二次绝不会再试第一次证明无效的手段；agent 却会。<br>本层让 agent 拥有同样的常识：跨这台机器<strong>所有会话</strong>回放策略的终局分布，学出哪些已被<br>反复证明无用，下次直接跳过。</p>
-<pre><code class="language-bash">node scripts/restore-ledger.js --json    # 下次自驱前读它决定跳过哪些策略
-node scripts/restore-ledger.js --skips    # 只吐建议跳过的策略（逗号分隔）</code></pre>
+<pre><code class="language-bash">node scripts/restore-ledger.js --json    <span class="hljs-comment"># 下次自驱前读它决定跳过哪些策略</span>
+node scripts/restore-ledger.js --skips    <span class="hljs-comment"># 只吐建议跳过的策略（逗号分隔）</span></code></pre>
 <h2 id="分类-保守-安全优先">分类（保守，安全优先）<a class="anchor" href="#分类-保守-安全优先" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>分类</th><th>判据</th><th>建议</th></tr></thead><tbody><tr><td><code>productive</code></td><td>该策略在这台机器上<strong>至少一次</strong>真推进（advanced / converged）</td><td>值得再试</td></tr><tr><td><code>dead</code></td><td>跨 <strong>≥ 2 个独立会话</strong>次次卡住、<strong>从未一次</strong>推进</td><td>建议跳过</td></tr><tr><td><code>unproven</code></td><td>样本不足或信号不清</td><td>保守：不建议跳过</td></tr></tbody></table>
 <h2 id="安全优先的核心不变量-绝不误伤">安全优先的核心不变量（绝不误伤）<a class="anchor" href="#安全优先的核心不变量-绝不误伤" aria-label="锚点">#</a></h2>
