@@ -427,6 +427,20 @@ async function chat(userMessage, opts = {}) {
   const lightweightConversation = _isLightweightConversationInput(userMessage, {
     scale: requestTaskScale,
   });
+  // 门 KHY_GREETING_NO_TOOLS(默认开;与 toolUseLoopCore 同一个门)。关 → 逐字节回退今日行为。
+  const _greetingNoToolsGateOff = ['0', 'false', 'off', 'no'].includes(
+    String(process.env.KHY_GREETING_NO_TOOLS || '')
+      .trim()
+      .toLowerCase()
+  );
+  const _pureFirstTurnGreeting =
+    !_greetingNoToolsGateOff &&
+    !_chatState.studyMode &&
+    !opts._isFollowUp &&
+    !opts._agentContext &&
+    _chatState.messages.length === 0 &&
+    (!Array.isArray(opts.images) || opts.images.length === 0) &&
+    runtime.isGreeting(String(userMessage || '').trim());
   // 记忆自动保存：移出关键路径（不阻塞 SSE 流开始）。fire-and-forget，结果通知也异步。
   const _autoSaveResult = { kind: 'none' };
   Promise.resolve()
@@ -1459,6 +1473,11 @@ async function chat(userMessage, opts = {}) {
     taskScale: requestTaskScale,
     // 轻量对话标记 → aiMessageBuilder 据此把 160 个工具定义裁到核心集(省 ~45k token/轮)。
     _lightweightConversation: lightweightConversation,
+    // 首轮纯问候标记(单一判定,下游不再各自猜):aiMessageBuilder 据此**不注入任何工具**,
+    // 工具循环据此不派发工具。轻量裁剪只是省 token,仍留着 Bash/Read/搜索——一句「你好」
+    // 拿到这些就会被诱导去「先了解仓库」并真的执行命令(截图里的 Bash)。招呼要的是一句
+    // 自然回复,不是仓库调查。带任务的问候(「你好,帮我读 README」)不是纯问候,不受影响。
+    _pureFirstTurnGreeting,
     onChunk: (chunk) => {
       // Any chunk counts as activity for the sliding idle guard; drop stray
       // late chunks from an already idle-aborted pass so they can't corrupt
@@ -3412,7 +3431,10 @@ async function chat(userMessage, opts = {}) {
   // is then a no-op). Previously declared inside the block -> ReferenceError.
   let executionPlan = null;
   let _dreamTurnCounter = 0;
-  if (!opts.disableNaturalToolLoop) {
+  // 首轮纯问候不进工具执行回路:上面已经不注入任何工具,但模型仍可能凭记忆吐出文本协议
+  // 的工具调用。真去执行就又变成截图里那样——一句「你好」跑起 Bash。这里只依据请求级快照
+  // (_pureFirstTurnGreeting),不做内容匹配:用户正常发的「你好」在后续轮仍照常拥有工具。
+  if (!opts.disableNaturalToolLoop && !_pureFirstTurnGreeting) {
     // Intent-aware inner loop boost
     let intentInnerBoost = 0;
     try {
@@ -4083,6 +4105,12 @@ async function chat(userMessage, opts = {}) {
           '\n\n> 提示：文件已读取，但修改尚未自动应用。你可以让我重试编辑，或根据上面的文件内容手动修改。';
       }
     }
+  } else if (_pureFirstTurnGreeting) {
+    // 跳过工具回路也就跳过了回路末尾那次 <tool_call> 清理。模型偶尔会凭记忆吐出协议文本,
+    // 既然本轮不执行它,就别把原始标签显示给用户——只留自然语言。
+    reply = String(reply || '')
+      .replace(/<tool_call>[\s\S]*?<\/tool_call>/g, '')
+      .trim();
   }
 
   // 保存执行计划快照:「继续」时据此恢复步骤状态(已完成/失败/下一步),让断网/
