@@ -67,81 +67,81 @@ Task 4: User can view task list (query + API + UI for list view)</code></pre>
 <p>Each vertical slice delivers working, testable functionality.</p>
 <h3 id="step-4-write-tasks">Step 4: Write Tasks<a class="anchor" href="#step-4-write-tasks" aria-label="锚点">#</a></h3>
 <p>Each task follows this structure:</p>
-<pre><code class="language-markdown">## Task [N]: [Short descriptive title]
+<pre><code class="language-markdown"><span class="hljs-section">## Task [N]: [Short descriptive title]</span>
 
-**Description:** One paragraph explaining what this task accomplishes.
+<span class="hljs-strong">**Description:**</span> One paragraph explaining what this task accomplishes.
 
-**Acceptance criteria:**
-- [ ] [Specific, testable condition]
-- [ ] [Specific, testable condition]
+<span class="hljs-strong">**Acceptance criteria:**</span>
+<span class="hljs-bullet">-</span> [ ] [Specific, testable condition]
+<span class="hljs-bullet">-</span> [ ] [Specific, testable condition]
 
-**Verification:**
-- [ ] Tests pass: `npm test -- --grep &quot;feature-name&quot;`
-- [ ] Build succeeds: `npm run build`
-- [ ] Manual check: [description of what to verify]
+<span class="hljs-strong">**Verification:**</span>
+<span class="hljs-bullet">-</span> [ ] Tests pass: <span class="hljs-code">`npm test -- --grep &quot;feature-name&quot;`</span>
+<span class="hljs-bullet">-</span> [ ] Build succeeds: <span class="hljs-code">`npm run build`</span>
+<span class="hljs-bullet">-</span> [ ] Manual check: [description of what to verify]
 
-**Dependencies:** [Task numbers this depends on, or &quot;None&quot;]
+<span class="hljs-strong">**Dependencies:**</span> [Task numbers this depends on, or &quot;None&quot;]
 
-**Files likely touched:**
-- `src/path/to/file.ts`
-- `tests/path/to/test.ts`
+<span class="hljs-strong">**Files likely touched:**</span>
+<span class="hljs-bullet">-</span> <span class="hljs-code">`src/path/to/file.ts`</span>
+<span class="hljs-bullet">-</span> <span class="hljs-code">`tests/path/to/test.ts`</span>
 
-**Estimated scope:** [Small: 1-2 files | Medium: 3-5 files | Large: 5+ files]</code></pre>
+<span class="hljs-strong">**Estimated scope:**</span> [Small: 1-2 files | Medium: 3-5 files | Large: 5+ files]</code></pre>
 <h3 id="step-5-order-and-checkpoint">Step 5: Order and Checkpoint<a class="anchor" href="#step-5-order-and-checkpoint" aria-label="锚点">#</a></h3>
 <p>Arrange tasks so that:</p>
 <ol><li>Dependencies are satisfied (build foundation first)</li><li>Each task leaves the system in a working state</li><li>Verification checkpoints occur after every 2-3 tasks</li><li>High-risk tasks are early (fail fast)</li></ol>
 <p>Add explicit checkpoints:</p>
-<pre><code class="language-markdown">## Checkpoint: After Tasks 1-3
-- [ ] All tests pass
-- [ ] Application builds without errors
-- [ ] Core user flow works end-to-end
-- [ ] Review with human before proceeding</code></pre>
+<pre><code class="language-markdown"><span class="hljs-section">## Checkpoint: After Tasks 1-3</span>
+<span class="hljs-bullet">-</span> [ ] All tests pass
+<span class="hljs-bullet">-</span> [ ] Application builds without errors
+<span class="hljs-bullet">-</span> [ ] Core user flow works end-to-end
+<span class="hljs-bullet">-</span> [ ] Review with human before proceeding</code></pre>
 <h2 id="task-sizing-guidelines">Task Sizing Guidelines<a class="anchor" href="#task-sizing-guidelines" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>Size</th><th>Files</th><th>Scope</th><th>Example</th></tr></thead><tbody><tr><td><strong>XS</strong></td><td>1</td><td>Single function or config change</td><td>Add a validation rule</td></tr><tr><td><strong>S</strong></td><td>1-2</td><td>One component or endpoint</td><td>Add a new API endpoint</td></tr><tr><td><strong>M</strong></td><td>3-5</td><td>One feature slice</td><td>User registration flow</td></tr><tr><td><strong>L</strong></td><td>5-8</td><td>Multi-component feature</td><td>Search with filtering and pagination</td></tr><tr><td><strong>XL</strong></td><td>8+</td><td><strong>Too large — break it down further</strong></td><td>—</td></tr></tbody></table>
 <p>If a task is L or larger, it should be broken into smaller tasks. An agent performs best on S and M tasks.</p>
 <p><strong>When to break a task down further:</strong></p>
 <ul><li>It would take more than one focused session (roughly 2+ hours of agent work)</li><li>You cannot describe the acceptance criteria in 3 or fewer bullet points</li><li>It touches two or more independent subsystems (e.g., auth and billing)</li><li>You find yourself writing &quot;and&quot; in the task title (a sign it is two tasks)</li></ul>
 <h2 id="plan-document-template">Plan Document Template<a class="anchor" href="#plan-document-template" aria-label="锚点">#</a></h2>
-<pre><code class="language-markdown"># Implementation Plan: [Feature/Project Name]
+<pre><code class="language-markdown"><span class="hljs-section"># Implementation Plan: [Feature/Project Name]</span>
 
-## Overview
-[One paragraph summary of what we're building]
+<span class="hljs-section">## Overview</span>
+[One paragraph summary of what we&#x27;re building]
 
-## Architecture Decisions
-- [Key decision 1 and rationale]
-- [Key decision 2 and rationale]
+<span class="hljs-section">## Architecture Decisions</span>
+<span class="hljs-bullet">-</span> [Key decision 1 and rationale]
+<span class="hljs-bullet">-</span> [Key decision 2 and rationale]
 
-## Task List
+<span class="hljs-section">## Task List</span>
 
-### Phase 1: Foundation
-- [ ] Task 1: ...
-- [ ] Task 2: ...
+<span class="hljs-section">### Phase 1: Foundation</span>
+<span class="hljs-bullet">-</span> [ ] Task 1: ...
+<span class="hljs-bullet">-</span> [ ] Task 2: ...
 
-### Checkpoint: Foundation
-- [ ] Tests pass, builds clean
+<span class="hljs-section">### Checkpoint: Foundation</span>
+<span class="hljs-bullet">-</span> [ ] Tests pass, builds clean
 
-### Phase 2: Core Features
-- [ ] Task 3: ...
-- [ ] Task 4: ...
+<span class="hljs-section">### Phase 2: Core Features</span>
+<span class="hljs-bullet">-</span> [ ] Task 3: ...
+<span class="hljs-bullet">-</span> [ ] Task 4: ...
 
-### Checkpoint: Core Features
-- [ ] End-to-end flow works
+<span class="hljs-section">### Checkpoint: Core Features</span>
+<span class="hljs-bullet">-</span> [ ] End-to-end flow works
 
-### Phase 3: Polish
-- [ ] Task 5: ...
-- [ ] Task 6: ...
+<span class="hljs-section">### Phase 3: Polish</span>
+<span class="hljs-bullet">-</span> [ ] Task 5: ...
+<span class="hljs-bullet">-</span> [ ] Task 6: ...
 
-### Checkpoint: Complete
-- [ ] All acceptance criteria met
-- [ ] Ready for review
+<span class="hljs-section">### Checkpoint: Complete</span>
+<span class="hljs-bullet">-</span> [ ] All acceptance criteria met
+<span class="hljs-bullet">-</span> [ ] Ready for review
 
-## Risks and Mitigations
+<span class="hljs-section">## Risks and Mitigations</span>
 | Risk | Impact | Mitigation |
 |------|--------|------------|
 | [Risk] | [High/Med/Low] | [Strategy] |
 
-## Open Questions
-- [Question needing human input]</code></pre>
+<span class="hljs-section">## Open Questions</span>
+<span class="hljs-bullet">-</span> [Question needing human input]</code></pre>
 <h2 id="parallelization-opportunities">Parallelization Opportunities<a class="anchor" href="#parallelization-opportunities" aria-label="锚点">#</a></h2>
 <p>When multiple agents or sessions are available:</p>
 <ul><li><strong>Safe to parallelize:</strong> Independent feature slices, tests for already-implemented features, documentation</li><li><strong>Must be sequential:</strong> Database migrations, shared state changes, dependency chains</li><li><strong>Needs coordination:</strong> Features that share an API contract (define the contract first, then parallelize)</li></ul>

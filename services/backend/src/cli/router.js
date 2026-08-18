@@ -1141,6 +1141,11 @@ async function route(parsed, context = {}) {
       case 'wx':
         return await require('./handlers/wx').handleWx(subCommand, args, options);
 
+      // 飞书接入(khy feishu …)两种传输:① 群机器人+事件订阅(channels/feishuChannel,
+      // 需公网入口);② 长连接(adapters/im/feishuAdapter,不需公网入口,掉线指数退避重连)。
+      case 'feishu':
+        return await require('./handlers/feishu').handleFeishu(subCommand, args, options);
+
       // ── Document operations (khy doc …) ──
       // First capability instance: `doc title` restyles a Word title/heading.
       case 'doc':
@@ -1682,6 +1687,12 @@ async function route(parsed, context = {}) {
       case 'verify': {
         const { handleVerify } = require('./handlers/verify');
         await handleVerify(subCommand, args, options);
+        return true;
+      }
+
+      case 'resource': {
+        const { handleResource } = require('./handlers/resource');
+        await handleResource(subCommand, args, options);
         return true;
       }
 
@@ -2502,6 +2513,14 @@ async function route(parsed, context = {}) {
         // a non-system drive (explicit, verified, reversible — never automatic).
         const { handleStorageCommand } = require('./handlers/storage');
         await handleStorageCommand(subCommand, args, options);
+        return true;
+      }
+      case 'backup': {
+        // 数据备份与恢复。SQLite 走 VACUUM INTO 热备(不停机、不拷正在写的 .db),
+        // JSON 状态文件逐个原子复制。注意:数据恢复是 `backup restore` 子命令 ——
+        // 顶层 `restore` 是加密源码包恢复,两者不同域。
+        const { handleBackupCommand } = require('./handlers/backup');
+        await handleBackupCommand(subCommand, args, options);
         return true;
       }
 

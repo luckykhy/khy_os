@@ -39,41 +39,41 @@
 <pre><code class="language-bash">pip install git+https://github.com/HKUDS/CLI-Anything.git#subdirectory=exa/agent-harness</code></pre>
 <h2 id="command-reference">Command Reference<a class="anchor" href="#command-reference" aria-label="锚点">#</a></h2>
 <h3 id="search-web-search">search — Web search<a class="anchor" href="#search-web-search" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-exa search &quot;&lt;query&gt;&quot; [OPTIONS]
+<pre><code class="language-bash">cli-anything-exa search <span class="hljs-string">&quot;&lt;query&gt;&quot;</span> [OPTIONS]
 
 Options:
-  --type       auto|fast|instant|deep|deep-reasoning  (default: auto)
+  --<span class="hljs-built_in">type</span>       auto|fast|instant|deep|deep-reasoning  (default: auto)
   --num-results / -n   1–100  (default: 10)
   --category   company|people|research-paper|news|personal-site|financial-report
   --content    highlights|text|summary|none  (default: highlights)
   --freshness  smart|always|never  (default: smart)
   --include-domains DOMAIN   (repeatable)
   --exclude-domains DOMAIN   (repeatable)
-  --from DATE   ISO 8601 start published date
-  --to   DATE   ISO 8601 end published date
-  --location CC  Two-letter country code for geo-bias</code></pre>
+  --from DATE   ISO 8601 start published <span class="hljs-built_in">date</span>
+  --to   DATE   ISO 8601 end published <span class="hljs-built_in">date</span>
+  --location CC  Two-letter country code <span class="hljs-keyword">for</span> geo-bias</code></pre>
 <h3 id="contents-fetch-page-contents">contents — Fetch page contents<a class="anchor" href="#contents-fetch-page-contents" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-exa contents &lt;url&gt; [url ...] [--content text|highlights|summary] [--freshness smart|always|never]</code></pre>
 <h3 id="server-status-verify-api-key-and-connectivity">server status — Verify API key and connectivity<a class="anchor" href="#server-status-verify-api-key-and-connectivity" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-exa server status</code></pre>
 <h2 id="json-output">JSON Output<a class="anchor" href="#json-output" aria-label="锚点">#</a></h2>
 <p>All commands support <code>--json</code> at the root level for machine-readable output:</p>
-<pre><code class="language-bash">cli-anything-exa --json search &quot;latest LLM papers&quot; --num-results 5</code></pre>
+<pre><code class="language-bash">cli-anything-exa --json search <span class="hljs-string">&quot;latest LLM papers&quot;</span> --num-results 5</code></pre>
 <h2 id="common-agent-patterns">Common Agent Patterns<a class="anchor" href="#common-agent-patterns" aria-label="锚点">#</a></h2>
 <h3 id="fast-keyword-lookup">Fast keyword lookup<a class="anchor" href="#fast-keyword-lookup" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-exa --json search &quot;site:arxiv.org transformer architectures&quot; --type fast --content highlights</code></pre>
+<pre><code class="language-bash">cli-anything-exa --json search <span class="hljs-string">&quot;site:arxiv.org transformer architectures&quot;</span> --<span class="hljs-built_in">type</span> fast --content highlights</code></pre>
 <h3 id="deep-research-on-a-topic">Deep research on a topic<a class="anchor" href="#deep-research-on-a-topic" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-exa --json search &quot;EU AI Act compliance requirements 2024&quot; --type deep --content text</code></pre>
+<pre><code class="language-bash">cli-anything-exa --json search <span class="hljs-string">&quot;EU AI Act compliance requirements 2024&quot;</span> --<span class="hljs-built_in">type</span> deep --content text</code></pre>
 <h3 id="academic-paper-discovery">Academic paper discovery<a class="anchor" href="#academic-paper-discovery" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-exa --json search &quot;retrieval augmented generation&quot; --category research-paper --num-results 20</code></pre>
+<pre><code class="language-bash">cli-anything-exa --json search <span class="hljs-string">&quot;retrieval augmented generation&quot;</span> --category research-paper --num-results 20</code></pre>
 <h3 id="company-intelligence">Company intelligence<a class="anchor" href="#company-intelligence" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-exa --json search &quot;Anthropic funding history&quot; --category company</code></pre>
+<pre><code class="language-bash">cli-anything-exa --json search <span class="hljs-string">&quot;Anthropic funding history&quot;</span> --category company</code></pre>
 <h3 id="news-monitoring">News monitoring<a class="anchor" href="#news-monitoring" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-exa --json search &quot;AI regulation news&quot; --category news --from 2024-01-01</code></pre>
+<pre><code class="language-bash">cli-anything-exa --json search <span class="hljs-string">&quot;AI regulation news&quot;</span> --category news --from 2024-01-01</code></pre>
 <h3 id="fetch-full-content-for-summarisation">Fetch full content for summarisation<a class="anchor" href="#fetch-full-content-for-summarisation" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-exa --json contents https://example.com/article --content text</code></pre>
 <h2 id="interactive-repl">Interactive REPL<a class="anchor" href="#interactive-repl" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">cli-anything-exa   # No subcommand → enters REPL</code></pre>
+<pre><code class="language-bash">cli-anything-exa   <span class="hljs-comment"># No subcommand → enters REPL</span></code></pre>
 <p>Type commands without the <code>cli-anything-exa</code> prefix. Type <code>exit</code> or <code>quit</code> to leave.</p>
 <h2 id="notes">Notes<a class="anchor" href="#notes" aria-label="锚点">#</a></h2>
 <ul><li><code>highlights</code> content mode is 10× more token-efficient than <code>text</code> — prefer it for agent pipelines</li><li><code>--type deep</code> triggers multi-step reasoning; slower but synthesises across many sources</li><li><code>--category company</code> and <code>--category people</code> do not support date or domain-exclude filters</li><li>Cost per query is included in JSON output under <code>cost_dollars</code></li></ul>

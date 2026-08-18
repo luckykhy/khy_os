@@ -156,36 +156,36 @@
 <h2 id="7-亲手跑一遍-hands-on">7. 亲手跑一遍（Hands-on）<a class="anchor" href="#7-亲手跑一遍-hands-on" aria-label="锚点">#</a></h2>
 <blockquote><p>前提：装好 <code>qemu-system-x86_64</code>、<code>node</code>、<code>python3</code>、<code>grub-mkrescue</code> 等构建工具（Linux 环境）。</p></blockquote>
 <h3 id="7-1-编译并跑单元测试">7.1 编译并跑单元测试<a class="anchor" href="#7-1-编译并跑单元测试" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cd kernel
-make                                 # 编译出 build/khy-os-kernel.iso
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> kernel
+make                                 <span class="hljs-comment"># 编译出 build/khy-os-kernel.iso</span>
 
-# 跑各阶段验证（看到一堆 [PASS] 就对了）
-python3 tools/agentbus_echo_test.py      # A1 通道
-python3 tools/agentbus_frame_test.py     # A2 帧
-python3 tools/agentbus_ctl_test.py       # A3/A4 控制面
-python3 tools/agentbus_ask_test.py       # A5 决策面
-python3 tools/agentbus_event_test.py     # A6 事件面
-node    tools/agentbus_bridge_test.js    # A7 host 桥
-node    tools/agentbus_nl_test.js        # A8 自然语言配置
-node    tools/agentbus_dualagent_test.js # A7b 双 agent
-node    tools/agentbus_gateway_brain_test.js # 增强① 真模型大脑</code></pre>
+<span class="hljs-comment"># 跑各阶段验证（看到一堆 [PASS] 就对了）</span>
+python3 tools/agentbus_echo_test.py      <span class="hljs-comment"># A1 通道</span>
+python3 tools/agentbus_frame_test.py     <span class="hljs-comment"># A2 帧</span>
+python3 tools/agentbus_ctl_test.py       <span class="hljs-comment"># A3/A4 控制面</span>
+python3 tools/agentbus_ask_test.py       <span class="hljs-comment"># A5 决策面</span>
+python3 tools/agentbus_event_test.py     <span class="hljs-comment"># A6 事件面</span>
+node    tools/agentbus_bridge_test.js    <span class="hljs-comment"># A7 host 桥</span>
+node    tools/agentbus_nl_test.js        <span class="hljs-comment"># A8 自然语言配置</span>
+node    tools/agentbus_dualagent_test.js <span class="hljs-comment"># A7b 双 agent</span>
+node    tools/agentbus_gateway_brain_test.js <span class="hljs-comment"># 增强① 真模型大脑</span></code></pre>
 <h3 id="7-2-手动开机-自己敲命令玩">7.2 手动开机，自己敲命令玩<a class="anchor" href="#7-2-手动开机-自己敲命令玩" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">make -C kernel run-agent             # COM1 给你（stdio），COM2 = /tmp/khy-agent.sock</code></pre>
+<pre><code class="language-bash">make -C kernel run-agent             <span class="hljs-comment"># COM1 给你（stdio），COM2 = /tmp/khy-agent.sock</span></code></pre>
 <p>在出现的 <code>khy&gt;</code> 提示符里试：</p>
 <pre><code>ls /                                 # 列根目录
 agentask 我可以继续吗                 # 问 agent 决策（需另一侧有 agent 连 COM2）
 ai 把模型换成 claude-opus            # 自然语言配模型（需挂 -hda 磁盘才能持久化）</code></pre>
 <h3 id="7-3-路线-a-让内置-agent-真模型来回答">7.3 路线 A：让内置 agent + 真模型来回答<a class="anchor" href="#7-3-路线-a-让内置-agent-真模型来回答" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># 终端1：先把项目 AI 网关跑起来（默认 127.0.0.1:9100）
-# 终端2：
+<pre><code class="language-bash"><span class="hljs-comment"># 终端1：先把项目 AI 网关跑起来（默认 127.0.0.1:9100）</span>
+<span class="hljs-comment"># 终端2：</span>
 make -C kernel run-agent
-# 终端3：把内置 agent 挂上去（大脑 = 真网关）
+<span class="hljs-comment"># 终端3：把内置 agent 挂上去（大脑 = 真网关）</span>
 node kernel/bridge/khy-agent-run.js
-# 然后在终端2的 khy&gt; 里敲 ai / agentask，回答就来自真模型了</code></pre>
+<span class="hljs-comment"># 然后在终端2的 khy&gt; 里敲 ai / agentask，回答就来自真模型了</span></code></pre>
 <h3 id="7-4-路线-b-让-claude-code-操作-khy-os">7.4 路线 B：让 Claude Code 操作 KHY-OS<a class="anchor" href="#7-4-路线-b-让-claude-code-操作-khy-os" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">make -C kernel run-agent             # 先开 OS（COM2 = /tmp/khy-agent.sock）
-# 在仓库根打开 Claude Code，/mcp 里批准 khy-os 这个 server
-# 然后让 Claude：「列出 KHY-OS 根目录并读 /etc/motd」</code></pre>
+<pre><code class="language-bash">make -C kernel run-agent             <span class="hljs-comment"># 先开 OS（COM2 = /tmp/khy-agent.sock）</span>
+<span class="hljs-comment"># 在仓库根打开 Claude Code，/mcp 里批准 khy-os 这个 server</span>
+<span class="hljs-comment"># 然后让 Claude：「列出 KHY-OS 根目录并读 /etc/motd」</span></code></pre>
 <hr>
 <h2 id="8-贯穿全程的-工程纪律-最值得抄走的部分">8. 贯穿全程的「工程纪律」（最值得抄走的部分）<a class="anchor" href="#8-贯穿全程的-工程纪律-最值得抄走的部分" aria-label="锚点">#</a></h2>
 <p>这套项目最有价值的不是某个具体功能，而是<strong>自始至终遵守的纪律</strong>。初学者请重点记：</p>

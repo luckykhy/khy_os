@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "channel": "stable",
+  "description": "Small on-demand resource channel manifest. Large payloads stay outside the package and are fetched only when selected.",
+  "resources": [
+    {
+      "id": "ollama-runner",
+      "kind": "runtime",
+      "version": "v0.6.8",
+      "policy": "first-use",
+      "description": "Local inference runner; platform entries are enabled after release pinning.",
+      "platforms": {
+        "linux-x64": null,
+        "linux-arm64": null,
+        "darwin-arm64": null,
+        "darwin-x64": null,
+        "win32-x64": null
+      }
+    },
+    {
+      "id": "llama-cpp",
+      "kind": "runtime",
+      "version": "b9049",
+      "policy": "manual",
+      "description": "Optional llama.cpp command-line tools.",
+      "platforms": {
+        "linux-x64": null,
+        "linux-arm64": null,
+        "darwin-arm64": null,
+        "darwin-x64": null,
+        "win32-x64": null
+      }
+    }
+  ]
+}

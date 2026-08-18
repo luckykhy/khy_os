@@ -7,8 +7,8 @@
  * We mock the skill sources to isolate the search/scoring logic.
  */
 
-// Prevent real module loads for skills/mcp
-jest.mock('../../src/skills/index', () => ({
+jest.resetModules();
+jest.doMock('../../src/skills/index', () => ({
   getCachedSkills: () => new Map([
     ['commit', {
       name: 'commit',
@@ -43,24 +43,22 @@ jest.mock('../../src/skills/index', () => ({
   ]),
   findSkill: (trigger) => {
     const skills = jest.requireMock('../../src/skills/index').getCachedSkills();
-    for (const s of skills.values()) {
-      if (s.trigger === trigger) return s;
+    for (const skill of skills.values()) {
+      if (skill.trigger === trigger) return skill;
     }
     return null;
   },
   formatSkillListing: () => 'skill listing',
-}), { virtual: true });
-
-jest.mock('../../src/services/skillRegistry', () => ({
+}));
+jest.doMock('../../src/services/skillRegistry', () => ({
   BUILTIN_SKILLS: [],
-}), { virtual: true });
-
-jest.mock('../../src/services/mcp/index', () => ({
+}));
+jest.doMock('../../src/services/mcp/index', () => ({
   listMCPTools: () => [
     { name: 'weather', description: 'Get weather data', serverName: 'weather-server' },
   ],
   getMCPInstructions: () => [],
-}), { virtual: true });
+}));
 
 let mod;
 try {

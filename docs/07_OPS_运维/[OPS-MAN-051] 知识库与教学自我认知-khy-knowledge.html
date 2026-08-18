@@ -39,17 +39,17 @@
 <p><strong><code>sync config</code> 选项</strong>：<code>--platform github|gitee|gitlab</code>、<code>--token &lt;令牌&gt;</code>、<code>--private</code>（建私有库）。</p>
 <hr>
 <h2 id="三-典型用法">三、典型用法<a class="anchor" href="#三-典型用法" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># 检索 / 自查
-khy knowledge search &quot;工作流 校验&quot;
+<pre><code class="language-bash"><span class="hljs-comment"># 检索 / 自查</span>
+khy knowledge search <span class="hljs-string">&quot;工作流 校验&quot;</span>
 khy knowledge stats
-khy knowledge self                       # 我现在是 beginner / intermediate / advanced？
+khy knowledge self                       <span class="hljs-comment"># 我现在是 beginner / intermediate / advanced？</span>
 
-# 把知识库同步到自己的私有 GitHub 仓库
-khy knowledge sync config your-name/my-kb --platform github --token &lt;PAT&gt; --private
-khy knowledge sync push                  # 上传
-khy knowledge sync status                # 看状态
-# 换机后：
-khy knowledge sync pull                  # 拉回</code></pre>
+<span class="hljs-comment"># 把知识库同步到自己的私有 GitHub 仓库</span>
+khy knowledge <span class="hljs-built_in">sync</span> config your-name/my-kb --platform github --token &lt;PAT&gt; --private
+khy knowledge <span class="hljs-built_in">sync</span> push                  <span class="hljs-comment"># 上传</span>
+khy knowledge <span class="hljs-built_in">sync</span> status                <span class="hljs-comment"># 看状态</span>
+<span class="hljs-comment"># 换机后：</span>
+khy knowledge <span class="hljs-built_in">sync</span> pull                  <span class="hljs-comment"># 拉回</span></code></pre>
 <hr>
 <h2 id="四-存储">四、存储<a class="anchor" href="#四-存储" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>路径</th><th>内容</th></tr></thead><tbody><tr><td><code>~/.khyquant/growth/knowledge.json</code></td><td>与 <code>khy growth</code> 共享的 XP/level/知识数据</td></tr><tr><td><code>~/.khyquant/growth/user_knowledge_base.json</code></td><td>用户知识库（<code>USER_KB_FILE</code>）</td></tr><tr><td><code>~/.khyquant/kb_sync.json</code></td><td>同步配置</td></tr><tr><td><code>~/.khyquant/kb-repo/</code></td><td>远程仓库的本地克隆</td></tr></tbody></table>

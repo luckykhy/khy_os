@@ -24,6 +24,10 @@ describe('adminService — lazy data-home resolution (timely admin↔user sync)'
     // Pin the install root to a dir WITHOUT a `.portable` marker (this repo root
     // carries one), so isPortableDeployment() is false and getAppHome() exercises
     // the legacy ~/.khyquant established-wins branch these tests rely on.
+    delete process.env.KHY_PORTABLE_ROOT;
+    delete process.env.KHYQUANT_PORTABLE_ROOT;
+    delete process.env.KHY_PROJECT_DATA_HOME;
+    delete process.env.KHYOS_HOME;
     process.env.KHY_OS_ROOT = path.join(tmpHome, 'install-root');
   });
 

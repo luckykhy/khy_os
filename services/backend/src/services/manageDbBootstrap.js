@@ -244,7 +244,7 @@ async function ensureManageDbSeeded(env) {
           replacements: {
             username: creds.username,
             password: await bcrypt.hash(creds.password, 10),
-            email: 'admin@khy-quant.com',
+            email: credGen.resolveDefaultAdminEmail(creds.username),
             role: 'admin',
             status: 'active',
             now,

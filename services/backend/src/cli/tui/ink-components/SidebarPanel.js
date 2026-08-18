@@ -177,7 +177,7 @@ function buildSidebarLines(props = {}) {
     if (!props.hideTaskSection) {
       if (taskLines.length === 0) {
         lines.push({ ...EMPTY_PLACEHOLDER, text: t(EMPTY_PLACEHOLDER.text) });
-        lines.push({ text: t('创建任务或执行计划后将显示'), color: 'gray', dim: true });
+        lines.push({ text: t('发送消息后将显示任务'), color: 'gray', dim: true });
       } else {
         const counts = countTaskLinesByStatus(taskLines);
         const total = taskLines.length;
@@ -217,7 +217,9 @@ function buildSidebarLines(props = {}) {
     // 3. Message queue.
     const queueLen = Math.max(0, Number(props.queueLen) || 0);
     if (queueLen > 0) {
-      lines.push({ ...divider });
+      if (lines.length > 0) {
+        lines.push({ ...divider });
+      }
       lines.push({ text: t(`⧗ 队列 ${queueLen} 条待发送`), dim: true });
     }
 
@@ -232,7 +234,9 @@ function buildSidebarLines(props = {}) {
       return String(n.title || '') !== '' || String(n.detail || '') !== '';
     });
     if (notifyEntries.length > 0) {
-      lines.push({ ...divider });
+      if (lines.length > 0) {
+        lines.push({ ...divider });
+      }
       lines.push({ text: t(`通知 ${notifyEntries.length} 条`), bold: true });
       for (const n of notifyEntries) {
         const title = String(n.title || '');

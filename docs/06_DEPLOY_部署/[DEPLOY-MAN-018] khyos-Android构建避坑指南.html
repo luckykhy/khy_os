@@ -29,11 +29,11 @@
 <blockquote><p>目标：pip 装好 khyos 后，在 <strong>Windows / Linux</strong> 上一条命令出 Android APK，<br>除自行装 JDK 外<strong>零手动配置</strong>。本指南给出正确的技术路线、用法、以及踩坑对照表。</p></blockquote>
 <hr>
 <h2 id="0-一分钟上手">0. 一分钟上手<a class="anchor" href="#0-一分钟上手" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">pip install khy-os            # 已包含 requests（下载器）与 Node 后端
-# 自行安装 JDK 17（唯一需手动的前置，见 §3）
-khy build android             # 调试包：自动下 SDK → vite build → cap sync → gradlew
-khy build android --release   # 签名发布包
-khy build android -o dist/apk # 指定输出目录</code></pre>
+<pre><code class="language-bash">pip install khy-os            <span class="hljs-comment"># 已包含 requests（下载器）与 Node 后端</span>
+<span class="hljs-comment"># 自行安装 JDK 17（唯一需手动的前置，见 §3）</span>
+khy build android             <span class="hljs-comment"># 调试包：自动下 SDK → vite build → cap sync → gradlew</span>
+khy build android --release   <span class="hljs-comment"># 签名发布包</span>
+khy build android -o dist/apk <span class="hljs-comment"># 指定输出目录</span></code></pre>
 <p>产物默认落到 <code>./dist/android/app-debug.apk</code>（或 <code>--output</code> 指定目录）。</p>
 <hr>
 <h2 id="1-选型纠偏-为什么是-capacitor-不是-beeware-briefcase">1. 选型纠偏：为什么是 Capacitor，不是 BeeWare/Briefcase<a class="anchor" href="#1-选型纠偏-为什么是-capacitor-不是-beeware-briefcase" aria-label="锚点">#</a></h2>

@@ -40,13 +40,21 @@ const CONSUMERS = [
   'views/AIMonitor.vue',
 ];
 
-test('SSOT api/unwrap.js 存在且导出 unwrap', () => {
+test('SSOT api/unwrap.js re-exports the browser shared implementation', () => {
   const src = read('api/unwrap.js');
-  assert.match(src, /export function unwrap\(res\)/, 'unwrap.js must export function unwrap(res)');
-  // 信封判定的三个不变量:success 键 + data 键 + payload ?? res 兜底。
-  assert.match(src, /hasOwnProperty\.call\(payload, 'success'\)/, 'must gate on success key');
-  assert.match(src, /hasOwnProperty\.call\(payload, 'data'\)/, 'must gate on data key');
-  assert.match(src, /return payload \?\? res/, 'must fall back to payload ?? res');
+  assert.match(
+    src,
+    /export \{ unwrapResponse as unwrap \} from '@khy\/ui-shared\/http\/response'/,
+    'unwrap.js must re-export the shared implementation'
+  );
+
+  const shared = readFileSync(
+    join(appRoot, '..', '..', '..', 'platform', 'packages', 'ui-shared', 'src', 'http', 'response.js'),
+    'utf8'
+  );
+  assert.match(shared, /hasOwnProperty\.call\(payload, 'success'\)/, 'must gate on success key');
+  assert.match(shared, /hasOwnProperty\.call\(payload, 'data'\)/, 'must gate on data key');
+  assert.match(shared, /return payload \?\? response/, 'must fall back to payload ?? response');
 });
 
 for (const rel of CONSUMERS) {

@@ -29,18 +29,18 @@
 <h1 id="khy-中的-hermes-风格模型配置">KHY 中的 Hermes 风格模型配置<a class="anchor" href="#khy-中的-hermes-风格模型配置" aria-label="锚点">#</a></h1>
 <p>本指南将 Hermes 风格的模型配置映射到 KHY CLI。</p>
 <h2 id="方式一-命令行配置-推荐">方式一：命令行配置（推荐）<a class="anchor" href="#方式一-命令行配置-推荐" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">khy config set model.provider custom
-khy config set model.base_url https://your-provider.com/v1
-khy config set model.api_key &quot;sk-xxxxx&quot;
-khy config set model.name your-model-id
-khy config set model.default custom/your-model-id</code></pre>
+<pre><code class="language-bash">khy config <span class="hljs-built_in">set</span> model.provider custom
+khy config <span class="hljs-built_in">set</span> model.base_url https://your-provider.com/v1
+khy config <span class="hljs-built_in">set</span> model.api_key <span class="hljs-string">&quot;sk-xxxxx&quot;</span>
+khy config <span class="hljs-built_in">set</span> model.name your-model-id
+khy config <span class="hljs-built_in">set</span> model.default custom/your-model-id</code></pre>
 <p>快速检查：</p>
 <pre><code class="language-bash">khy config get model.default
 khy config list</code></pre>
 <h2 id="方式二-交互式向导">方式二：交互式向导<a class="anchor" href="#方式二-交互式向导" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">khy setup   # full initialization wizard
-# or
-khy model   # model/provider selection only</code></pre>
+<pre><code class="language-bash">khy setup   <span class="hljs-comment"># full initialization wizard</span>
+<span class="hljs-comment"># or</span>
+khy model   <span class="hljs-comment"># model/provider selection only</span></code></pre>
 <p>对于 OpenAI 兼容的自定义服务商，填写：</p>
 <ul><li>Base URL：<code>https://your-provider.com/v1</code></li><li>API Key：你的密钥</li><li>模型名称：<code>your-model-id</code></li></ul>
 <h2 id="方式三-前端管理界面-ai-gateway-标签页">方式三：前端管理界面（AI Gateway 标签页）<a class="anchor" href="#方式三-前端管理界面-ai-gateway-标签页" aria-label="锚点">#</a></h2>
@@ -63,9 +63,9 @@ khy model   # model/provider selection only</code></pre>
 <h2 id="openclaw-兼容配置">OpenClaw 兼容配置<a class="anchor" href="#openclaw-兼容配置" aria-label="锚点">#</a></h2>
 <p>KHY 还支持 OpenClaw 风格的非交互式自定义服务商配置：</p>
 <pre><code class="language-bash">khy config openclaw \
-  --custom-base-url &quot;https://your-provider.com/v1&quot; \
-  --custom-model-id &quot;&lt;your-model-id&gt;&quot; \
-  --custom-api-key &quot;sk-xxxxx&quot; \
+  --custom-base-url <span class="hljs-string">&quot;https://your-provider.com/v1&quot;</span> \
+  --custom-model-id <span class="hljs-string">&quot;&lt;your-model-id&gt;&quot;</span> \
+  --custom-api-key <span class="hljs-string">&quot;sk-xxxxx&quot;</span> \
   --custom-compatibility openai</code></pre>
 <p>说明：</p>
 <ul><li><code>--custom-model-id</code> 是动态的且为必填项。它并不固定为单一值。</li><li><code>--custom-api-key</code> 是可选的（类似 OpenClaw 自定义服务商流程）。若省略，运行时仍可能需要鉴权。</li><li>支持的兼容性取值：<code>openai</code>、<code>anthropic</code>、<code>unknown</code>。</li></ul>
@@ -73,14 +73,14 @@ khy model   # model/provider selection only</code></pre>
 <p>KHY 还支持 OpenCode 风格的配置输入。</p>
 <h3 id="方案-a-直接传参">方案 A：直接传参<a class="anchor" href="#方案-a-直接传参" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">khy config opencode \
-  --base-url &quot;https://your-provider.com/v1&quot; \
-  --model-id &quot;&lt;your-model-id&gt;&quot; \
-  --api-key &quot;sk-xxxxx&quot; \
+  --base-url <span class="hljs-string">&quot;https://your-provider.com/v1&quot;</span> \
+  --model-id <span class="hljs-string">&quot;&lt;your-model-id&gt;&quot;</span> \
+  --api-key <span class="hljs-string">&quot;sk-xxxxx&quot;</span> \
   --compatibility openai</code></pre>
 <h3 id="方案-b-从-opencode-json-导入">方案 B：从 <code>opencode.json</code> 导入<a class="anchor" href="#方案-b-从-opencode-json-导入" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">khy config opencode \
-  --config &quot;~/.config/opencode/opencode.json&quot; \
-  --provider &quot;&lt;provider-name&gt;&quot;</code></pre>
+  --config <span class="hljs-string">&quot;~/.config/opencode/opencode.json&quot;</span> \
+  --provider <span class="hljs-string">&quot;&lt;provider-name&gt;&quot;</span></code></pre>
 <p>说明：</p>
 <ul><li><code>model-id</code> 是动态的；它并不固定为单一值。</li><li>如果 base URL 未以 <code>/v1</code> 结尾，KHY 会自动将其规范化为 <code>/v1</code> 端点并打印警告。</li><li><code>api-key</code> 是可选的；若省略，运行时仍可能需要鉴权。</li></ul>
       </article>

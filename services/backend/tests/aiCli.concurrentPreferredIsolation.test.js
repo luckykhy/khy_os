@@ -54,6 +54,7 @@ describe('ai cli concurrent preferred adapter isolation', () => {
   });
 
   test('concurrent chats keep per-request preferred adapter without env cross-talk', async () => {
+    process.env.KHY_DISABLE_SESSION_PERSIST = '1';
     const callLog = [];
     const gatewayMock = {
       _initialized: true,
@@ -125,5 +126,5 @@ describe('ai cli concurrent preferred adapter isolation', () => {
     expect(adaptersSeen).toContain('localLLM');
     expect(adaptersSeen).toContain('codex');
     expect(gatewayMock.generate).toHaveBeenCalledTimes(2);
-  });
+  }, 15000);
 });

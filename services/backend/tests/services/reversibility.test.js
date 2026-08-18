@@ -106,6 +106,20 @@ describe('boundedReadOnlyLookahead: beam width <= 3, commits filtered', () => {
 
 describe('executeTool integration: budget conservation under speculation', () => {
   const toolCalling = require('../../src/services/toolCalling');
+  const originalGatewayEnv = {
+    KHY_SYSCALL_GATEWAY: process.env.KHY_SYSCALL_GATEWAY,
+    KHY_HUMAN_GATE: process.env.KHY_HUMAN_GATE,
+  };
+  beforeAll(() => {
+    process.env.KHY_SYSCALL_GATEWAY = 'off';
+    process.env.KHY_HUMAN_GATE = 'off';
+  });
+  afterAll(() => {
+    for (const [key, value] of Object.entries(originalGatewayEnv)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  });
   const TOOL = '__spec_destructive_probe__';
   let handlerCalls = 0;
 

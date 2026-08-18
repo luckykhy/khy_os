@@ -45,13 +45,13 @@
 <h2 id="三-skill-与仓库内技能定位">三、<code>--skill</code> 与仓库内技能定位<a class="anchor" href="#三-skill-与仓库内技能定位" aria-label="锚点">#</a></h2>
 <p>技能目录的定位规则（核实自 <code>skillInstallService._locateSkillDir</code>）：</p>
 <ol><li><strong>显式子目录</strong>（<code>--skill &lt;名称|子路径&gt;</code>，或 URL/短写里带出的子目录）：<ul><li>只认这个子目录；不存在、不是目录、或目录里没有 <code>SKILL.md</code>/<code>manifest.json</code> 都会报错。</li><li>有越界保护：子路径不能逃出克隆根目录。</li></ul></li><li><strong>无子目录时</strong>：<ul><li>克隆根目录本身含 <code>SKILL.md</code>/<code>manifest.json</code> → 直接用根（单技能仓库）。</li><li>否则在常见容器目录 <code>skill/</code> <code>skills/</code> <code>.skills/</code> 下扫描第一个含技能文件的命名子目录。</li><li>若扫描到<strong>多个</strong>技能，会报错并要求用 <code>--skill &lt;名称&gt;</code> 指定其中一个。</li><li>一个都没找到 → 提示「若在子目录，请用 <code>--skill &lt;路径&gt;</code> 指定」。</li></ul></li></ol>
-<pre><code class="language-bash"># 仓库根就是一个技能
+<pre><code class="language-bash"><span class="hljs-comment"># 仓库根就是一个技能</span>
 khy skill add acme/single-skill
 
-# 仓库里多个技能，选其中一个
+<span class="hljs-comment"># 仓库里多个技能，选其中一个</span>
 khy skill add acme/skill-collection --skill translator
 
-# 用 GitHub tree 深链直接定位子目录（等价于 --skill）
+<span class="hljs-comment"># 用 GitHub tree 深链直接定位子目录（等价于 --skill）</span>
 khy skill add https://github.com/acme/skill-collection/tree/main/skills/translator</code></pre>
 <hr>
 <h2 id="四-落盘位置-自动发现与调用">四、落盘位置、自动发现与调用<a class="anchor" href="#四-落盘位置-自动发现与调用" aria-label="锚点">#</a></h2>
@@ -67,10 +67,10 @@ khy skill add https://github.com/acme/skill-collection/tree/main/skills/translat
 <hr>
 <h2 id="五-常见问题-faq">五、常见问题（FAQ）<a class="anchor" href="#五-常见问题-faq" aria-label="锚点">#</a></h2>
 <p><strong>Q1：提示「<code>khy skill add</code> 未启用」怎么办？</strong><br>该命令由 <code>KHY_SKILL_ADD</code> 门控（核实自 <code>skillSourceSpec.isSkillAddEnabled</code>）。默认为开启（default-on），但 <code>0/false/off/no</code> 会关闭；若接入 flagRegistry 则以注册表判定为准。设置环境变量开启：</p>
-<pre><code class="language-bash"># PowerShell
-$env:KHY_SKILL_ADD = &quot;1&quot;
-# bash
-export KHY_SKILL_ADD=1</code></pre>
+<pre><code class="language-bash"><span class="hljs-comment"># PowerShell</span>
+<span class="hljs-variable">$env</span>:KHY_SKILL_ADD = <span class="hljs-string">&quot;1&quot;</span>
+<span class="hljs-comment"># bash</span>
+<span class="hljs-built_in">export</span> KHY_SKILL_ADD=1</code></pre>
 <p><strong>Q2：私有仓库怎么安装？</strong><br>本命令直接调用系统 <code>git clone</code>，不注入任何凭据。安装私有仓库前请先配好 git 凭据：</p>
 <ul><li>SSH：用 <code>git@github.com:owner/repo.git</code> 写法，并确保本机 SSH key 已加入账户。</li><li>HTTPS：先配好 credential helper / token（凭据不由 khy 保存）。</li></ul>
 <p><strong>Q3：仓库里有多个技能，安装报「含多个 skill」错误？</strong><br>用 <code>--skill &lt;名称&gt;</code> 指定其中一个，或用 GitHub <code>tree</code> 深链精确定位子目录（见第三节）。</p>

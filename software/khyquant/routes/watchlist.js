@@ -310,19 +310,19 @@ router.get('/available', authMiddleware, async (req, res) => {
   try {
     const { type, sector, market, search, page = 1, limit = 50 } = req.query;
     
-    // 导入全面的金融工具数据
-    const {
-      getAllInstruments,
-      getInstrumentsByType,
-      getAllSectors,
-      getAllMarkets
-    } = require('../../scripts/comprehensive-instruments');
-    
-    let availableInstruments = getAllInstruments();
-    
+    const allInstruments = (await Instrument.findAll({
+      where: { status: 'active' },
+      raw: true,
+    })).map(item => ({
+      ...item,
+      code: item.symbol,
+      sector: item.sector || item.category || '',
+    }));
+    let availableInstruments = allInstruments;
+
     // 按类型筛选
     if (type && type !== 'all') {
-      availableInstruments = getInstrumentsByType(type);
+      availableInstruments = availableInstruments.filter(item => item.type === type);
     }
     
     // 按行业筛选
@@ -368,11 +368,11 @@ router.get('/available', authMiddleware, async (req, res) => {
     // 获取统计信息
     const stats = {
       total,
-      stocks: getAllInstruments().filter(item => item.type === 'stock').length,
-      indices: getAllInstruments().filter(item => item.type === 'index').length,
-      futures: getAllInstruments().filter(item => item.type === 'futures').length,
-      sectors: getAllSectors(),
-      markets: getAllMarkets()
+      stocks: allInstruments.filter(item => item.type === 'stock').length,
+      indices: allInstruments.filter(item => item.type === 'index').length,
+      futures: allInstruments.filter(item => item.type === 'futures').length,
+      sectors: [...new Set(allInstruments.map(item => item.sector).filter(Boolean))].sort(),
+      markets: [...new Set(allInstruments.map(item => item.market).filter(Boolean))].sort(),
     };
     
     res.json({

@@ -44,43 +44,43 @@
 <table><thead><tr><th>#</th><th>Feature</th><th>Y-code Source</th><th>Khyos Gap</th><th>Priority</th></tr></thead><tbody><tr><td>11</td><td><strong>Tool result sanitization</strong></td><td><code>tool_presenter.py</code> — <code>sanitize_tool_display_text()</code> strips ANSI/control chars, cookies, secrets, API keys from tool results before display</td><td>Khyos passes raw tool results directly to frontend without sanitization</td><td><strong>MEDIUM</strong></td></tr><tr><td>12</td><td><strong>Tool progress aggregation</strong></td><td><code>tool_progress.py</code> — <code>ToolProgressAggregator</code> batches adjacent read/search tool calls into single &quot;已读取3个文件 · 0.8s&quot; lines, detects parallel execution</td><td>Khyos shows each tool call as separate line — noisy when LLM issues parallel reads</td><td><strong>MEDIUM</strong></td></tr><tr><td>13</td><td><strong>Session memory compression</strong></td><td><code>memory_compressor.py</code> — LLM-based session history compression: retain recent N messages, summarize older ones via secondary (cheap) model, optimistic concurrency guard</td><td>Khyos has memoryKairos but not session-level LLM compression of conversation history</td><td><strong>HIGH</strong></td></tr><tr><td>14</td><td><strong>Turn event standardization</strong></td><td><code>turn_renderer.py</code> — <code>TurnRenderer</code> processes structured turn events (thinking_delta, tool_started, tool_finished, diff_ready, plan_updated), sanitizes protocol text, splits text at code-block/thinking-tag boundaries</td><td>Khyos renders tool results as raw JSON — no structured event pipeline for progressive display</td><td><strong>MEDIUM</strong></td></tr><tr><td>15</td><td><strong>Frontend markdown theme system</strong></td><td><code>themes.py</code> — 9 curated terminal color themes (cyan, matrix, nord, cyberpunk, dracula, lava, sunset, amber, white)</td><td>Khyos has light/dark toggle but no theme diversity or terminal-style color system</td><td><strong>LOW</strong></td></tr></tbody></table>
 <h3 id="pattern-deep-dives">Pattern Deep-Dives<a class="anchor" href="#pattern-deep-dives" aria-label="锚点">#</a></h3>
 <h4 id="11-tool-result-sanitization-tool-presenter-py">11. Tool Result Sanitization (<code>tool_presenter.py</code>)<a class="anchor" href="#11-tool-result-sanitization-tool-presenter-py" aria-label="锚点">#</a></h4>
-<pre><code class="language-python"># 5-layer sanitization pipeline:
-# 1. Strip ANSI escape codes
-# 2. Mask cookie headers: &quot;cookie: sk-abc...&quot; → &quot;cookie: ***&quot;
-# 3. Strip control characters (0x00-0x1f except \n)
-# 4. Mask named secrets: api_key=xxx → api_key=***
-# 5. Mask Bearer tokens and OpenAI keys (sk-...)
-# 6. Collapse whitespace + truncate to limit</code></pre>
+<pre><code class="language-python"><span class="hljs-comment"># 5-layer sanitization pipeline:</span>
+<span class="hljs-comment"># 1. Strip ANSI escape codes</span>
+<span class="hljs-comment"># 2. Mask cookie headers: &quot;cookie: sk-abc...&quot; → &quot;cookie: ***&quot;</span>
+<span class="hljs-comment"># 3. Strip control characters (0x00-0x1f except \n)</span>
+<span class="hljs-comment"># 4. Mask named secrets: api_key=xxx → api_key=***</span>
+<span class="hljs-comment"># 5. Mask Bearer tokens and OpenAI keys (sk-...)</span>
+<span class="hljs-comment"># 6. Collapse whitespace + truncate to limit</span></code></pre>
 <p><strong>Khyos adoption</strong>: Server-side <code>sanitizeToolDisplayText()</code> that sanitizes ALL tool results before sending to frontend.</p>
 <h4 id="12-tool-progress-aggregation-tool-progress-py">12. Tool Progress Aggregation (<code>tool_progress.py</code>)<a class="anchor" href="#12-tool-progress-aggregation-tool-progress-py" aria-label="锚点">#</a></h4>
-<pre><code class="language-python"># Key insight: adjacent read_file/search_code calls → single summary line
-# &quot;已读取 3 个文件 · 1.2s&quot; instead of 3 separate lines
-# Parallel reads → &quot;正在并行读取 3 个文件&quot;
-# Mutation tools with diff → &quot;+5 / -2 行&quot; inline</code></pre>
+<pre><code class="language-python"><span class="hljs-comment"># Key insight: adjacent read_file/search_code calls → single summary line</span>
+<span class="hljs-comment"># &quot;已读取 3 个文件 · 1.2s&quot; instead of 3 separate lines</span>
+<span class="hljs-comment"># Parallel reads → &quot;正在并行读取 3 个文件&quot;</span>
+<span class="hljs-comment"># Mutation tools with diff → &quot;+5 / -2 行&quot; inline</span></code></pre>
 <p><strong>Khyos adoption</strong>: Backend aggregates tool results per-turn, returns <code>toolProgress</code> block with batch summary.</p>
 <h4 id="13-session-memory-compression-memory-compressor-py">13. Session Memory Compression (<code>memory_compressor.py</code>)<a class="anchor" href="#13-session-memory-compression-memory-compressor-py" aria-label="锚点">#</a></h4>
-<pre><code class="language-python"># Flow:
-# 1. Read all messages, retain last N (default 8)
-# 2. Pack older messages → call LLM (prefer cheap secondary model) for summary
-# 3. Safety: tool_call groups must not be split (orphan check)
-# 4. Concurrency: reentrant lock per session + optimistic boundary check
-# 5. Summary prompt: decisions, files, bugs, current goal — strictly word-limited</code></pre>
+<pre><code class="language-python"><span class="hljs-comment"># Flow:</span>
+<span class="hljs-comment"># 1. Read all messages, retain last N (default 8)</span>
+<span class="hljs-comment"># 2. Pack older messages → call LLM (prefer cheap secondary model) for summary</span>
+<span class="hljs-comment"># 3. Safety: tool_call groups must not be split (orphan check)</span>
+<span class="hljs-comment"># 4. Concurrency: reentrant lock per session + optimistic boundary check</span>
+<span class="hljs-comment"># 5. Summary prompt: decisions, files, bugs, current goal — strictly word-limited</span></code></pre>
 <p><strong>Khyos adoption</strong>: <code>memoryCompressor.js</code> for session-level LLM compression of conversation history.</p>
 <h4 id="14-turn-event-standardizer-turn-renderer-py">14. Turn Event Standardizer (<code>turn_renderer.py</code>)<a class="anchor" href="#14-turn-event-standardizer-turn-renderer-py" aria-label="锚点">#</a></h4>
-<pre><code class="language-python"># Structured event types:
-# thinking_delta → consumed, not rendered
-# thinking_finished → flush via thinking_stream buffer
-# tool_started/tool_requested → track in progress aggregator
-# tool_finished → format via tool_presenter
-# diff_ready → parse diff stats, emit &quot;+5/-2&quot; summary
-# plan_updated → render plan status with ANSI colors
-# Error handling → dedup, suppress duplicates</code></pre>
+<pre><code class="language-python"><span class="hljs-comment"># Structured event types:</span>
+<span class="hljs-comment"># thinking_delta → consumed, not rendered</span>
+<span class="hljs-comment"># thinking_finished → flush via thinking_stream buffer</span>
+<span class="hljs-comment"># tool_started/tool_requested → track in progress aggregator</span>
+<span class="hljs-comment"># tool_finished → format via tool_presenter</span>
+<span class="hljs-comment"># diff_ready → parse diff stats, emit &quot;+5/-2&quot; summary</span>
+<span class="hljs-comment"># plan_updated → render plan status with ANSI colors</span>
+<span class="hljs-comment"># Error handling → dedup, suppress duplicates</span></code></pre>
 <p><strong>Khyos adoption</strong>: Turn event types for structured streaming of tool execution results.</p>
 <h4 id="15-theme-system-themes-py">15. Theme System (<code>themes.py</code>)<a class="anchor" href="#15-theme-system-themes-py" aria-label="锚点">#</a></h4>
-<pre><code class="language-python"># 9 themes, each with 8 color slots:
-# border, label, status_main, status_text, status_sep,
-# text_input, menu_current, menu_current_meta
-# Pure CSS hex values — easily portable to web</code></pre>
+<pre><code class="language-python"><span class="hljs-comment"># 9 themes, each with 8 color slots:</span>
+<span class="hljs-comment"># border, label, status_main, status_text, status_sep,</span>
+<span class="hljs-comment"># text_input, menu_current, menu_current_meta</span>
+<span class="hljs-comment"># Pure CSS hex values — easily portable to web</span></code></pre>
 <p><strong>Khyos adoption</strong>: Frontend theme presets as CSS custom properties.</p>
 <h3 id="implementation-log">Implementation Log<a class="anchor" href="#implementation-log" aria-label="锚点">#</a></h3>
 <p><strong>2026-08-08</strong>: Implemented 4 new services + 2 integration points:</p>

@@ -89,15 +89,15 @@ CONTRACT: &lt;paste contract&gt;</code></pre>
 <ol><li>Check the tool is in PATH (<code>which gemini</code>, <code>which codex</code>).</li><li>Test it works (<code>gemini --version</code> or equivalent) before passing the full prompt — a stale or broken binary may pass <code>which</code> but fail on real input.</li><li>Confirm the exact invocation with the user, including required flags, auth, and env vars (e.g., API keys). Implementations vary; never assume.</li><li>Pass ARTIFACT + CONTRACT + the adversarial prompt <strong>only</strong>. No session context, no CLAIM.</li><li>Mind shell escaping. If the artifact contains quotes, <code>$(...)</code>, or backticks, prefer stdin (<code>echo … | gemini</code>) or a heredoc over inline <code>-p &quot;…&quot;</code>. When in doubt, ask the user to confirm the invocation before running it.</li><li>Take the output into Step 4 (RECONCILE).</li></ol>
 <p><strong>Never interpolate the artifact into a shell-quoted argument.</strong> Code, markdown, and review prompts routinely contain backticks, <code>$(...)</code>, and quote characters that will either truncate the prompt or execute embedded shell. Write the full prompt to a file and pipe it through stdin.</p>
 <p>Example shapes (verify flags against your installed tool — syntax differs across implementations and versions):</p>
-<pre><code class="language-bash"># Write the adversarial prompt + ARTIFACT + CONTRACT to a temp file first.
-# Then pipe via stdin so shell metacharacters in the artifact stay inert.
+<pre><code class="language-bash"><span class="hljs-comment"># Write the adversarial prompt + ARTIFACT + CONTRACT to a temp file first.</span>
+<span class="hljs-comment"># Then pipe via stdin so shell metacharacters in the artifact stay inert.</span>
 
-# Codex (read-only sandbox keeps the CLI from writing to your workspace):
-codex exec --sandbox read-only -C &lt;repo-path&gt; - &lt; /tmp/doubt-prompt.md
+<span class="hljs-comment"># Codex (read-only sandbox keeps the CLI from writing to your workspace):</span>
+codex <span class="hljs-built_in">exec</span> --sandbox read-only -C &lt;repo-path&gt; - &lt; /tmp/doubt-prompt.md
 
-# Gemini ('--approval-mode plan' is read-only; '-p &quot;&quot;' triggers non-interactive
-# mode and the prompt is read from stdin):
-gemini --approval-mode plan -p &quot;&quot; &lt; /tmp/doubt-prompt.md</code></pre>
+<span class="hljs-comment"># Gemini (&#x27;--approval-mode plan&#x27; is read-only; &#x27;-p &quot;&quot;&#x27; triggers non-interactive</span>
+<span class="hljs-comment"># mode and the prompt is read from stdin):</span>
+gemini --approval-mode plan -p <span class="hljs-string">&quot;&quot;</span> &lt; /tmp/doubt-prompt.md</code></pre>
 <p>A read-only sandbox is the load-bearing detail: a doubt artifact may itself contain instructions (intentional or accidental prompt injection) that the cross-model CLI would otherwise execute against your workspace.</p>
 <p><strong>Step 3: If the CLI is unavailable or fails</strong></p>
 <p>Surface the failure explicitly. Offer: run it manually, try a different tool, or skip. Do not silently fall back to single-model — the user should know cross-model didn't happen.</p>

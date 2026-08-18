@@ -120,6 +120,7 @@ let _marketplaceApp;
 let _pluginsApp;
 let _proxySubApp;
 let _commandsApp;
+let _modelMeshApp;
 let _guiEvalApp;
 let _webFrontendEvalApp;
 let _frontendStaticDir = '';
@@ -217,7 +218,7 @@ function getWorkflowApp() {
   a.use('/api/workflow/import/coze', express.json({ limit: cozeLimit }));
   a.use(express.json({ limit }));
   // Reuse ai-backend's mature workflow router; its deps live in @khy/shared and resolve from here too.
-  a.use('/api/workflow', require('../../../ai-backend/src/routes/workflow'));
+  a.use('/api/workflow', require('khy-ai-backend/routes/workflow'));
   return (_wfApp = a);
 }
 
@@ -231,7 +232,7 @@ function getUserGatewayApp() {
   const limit = String(process.env.KHY_USER_GATEWAY_BODY_LIMIT || '2mb').trim() || '2mb';
   const a = express();
   a.use(express.json({ limit }));
-  a.use('/api/user-gateway', require('../../../ai-backend/src/routes/userGateway'));
+  a.use('/api/user-gateway', require('khy-ai-backend/routes/userGateway'));
   return (_userGatewayApp = a);
 }
 
@@ -248,7 +249,7 @@ function getMarketplaceApp() {
   const limit = String(process.env.KHY_MARKETPLACE_BODY_LIMIT || '2mb').trim() || '2mb';
   const a = express();
   a.use(express.json({ limit }));
-  a.use('/api/marketplace', require('../../../ai-backend/src/routes/marketplace'));
+  a.use('/api/marketplace', require('khy-ai-backend/routes/marketplace'));
   return (_marketplaceApp = a);
 }
 
@@ -265,7 +266,7 @@ function getPluginsApp() {
   const limit = String(process.env.KHY_PLUGINS_BODY_LIMIT || '8mb').trim() || '8mb';
   const a = express();
   a.use(express.json({ limit }));
-  a.use('/api/plugins', require('../../../ai-backend/src/routes/plugins'));
+  a.use('/api/plugins', require('khy-ai-backend/routes/plugins'));
   return (_pluginsApp = a);
 }
 
@@ -284,7 +285,7 @@ function getProxySubscriptionApp() {
   const limit = String(process.env.KHY_PROXY_SUB_BODY_LIMIT || '2mb').trim() || '2mb';
   const a = express();
   a.use(express.json({ limit }));
-  const { authenticateToken } = require('../../../ai-backend/src/middleware/auth');
+  const { authenticateToken } = require('khy-ai-backend/middleware/auth');
   a.use('/api/proxy-subscriptions', authenticateToken, require('../routes/proxySubscription'));
   return (_proxySubApp = a);
 }
@@ -304,7 +305,7 @@ function getWxApp() {
   const limit = String(process.env.KHY_WX_BODY_LIMIT || '256kb').trim() || '256kb';
   const a = express();
   a.use(express.json({ limit }));
-  const auth = require('../../../ai-backend/src/middleware/auth');
+  const auth = require('khy-ai-backend/middleware/auth');
   const guards = [auth.authenticateToken];
   if (typeof auth.requireAdmin === 'function') {
     guards.push(auth.requireAdmin);
@@ -328,6 +329,20 @@ function getCommandsApp() {
   a.use(express.json({ limit: '256kb' }));
   a.use('/api/commands', require('../routes/commands'));
   return (_commandsApp = a);
+}
+
+// Authenticated node-to-node model routing. Kept in a separate sub-app so its
+// larger multimodal payload limit does not widen the rest of the management API.
+function getModelMeshApp() {
+  if (_modelMeshApp) {
+    return _modelMeshApp;
+  }
+  const express = require('express');
+  const limit = String(process.env.KHY_MESH_BODY_LIMIT || '16mb').trim() || '16mb';
+  const a = express();
+  a.use(express.json({ limit }));
+  a.use('/api/mesh', require('../routes/modelMesh'));
+  return (_modelMeshApp = a);
 }
 
 // Admin namespace: agent dashboard and other admin-only operations.
@@ -354,7 +369,7 @@ function getGuiEvalApp() {
   const limit = String(process.env.KHY_GUI_EVAL_BODY_LIMIT || '5mb').trim() || '5mb';
   const a = express();
   a.use(express.json({ limit }));
-  const auth = require('../../../ai-backend/src/middleware/auth');
+  const auth = require('khy-ai-backend/middleware/auth');
   const guards = [auth.authenticateToken, auth.requireAdmin];
   a.use('/api/gui-eval', ...guards, require('../routes/guiEval'));
   return (_guiEvalApp = a);
@@ -371,7 +386,7 @@ function getWebFrontendEvalApp() {
   const limit = String(process.env.KHY_WEB_FRONTEND_EVAL_BODY_LIMIT || '10mb').trim() || '10mb';
   const a = express();
   a.use(express.json({ limit }));
-  const auth = require('../../../ai-backend/src/middleware/auth');
+  const auth = require('khy-ai-backend/middleware/auth');
   const guards = [auth.authenticateToken, auth.requireAdmin];
   a.use('/api/web-frontend-eval', ...guards, require('../routes/webFrontendEval'));
   return (_webFrontendEvalApp = a);
@@ -389,7 +404,7 @@ function getGatewayBillingApp() {
   const limit = String(process.env.KHY_GATEWAY_BILLING_BODY_LIMIT || '2mb').trim() || '2mb';
   const a = express();
   a.use(express.json({ limit }));
-  a.use('/api/ai-gateway', require('../../../ai-backend/src/routes/aiGatewayAdmin'));
+  a.use('/api/ai-gateway', require('khy-ai-backend/routes/aiGatewayAdmin'));
   return (_gatewayBillingApp = a);
 }
 
@@ -1675,105 +1690,6 @@ async function handleModelsStream(req, res) {
   }
 }
 
-/**
- * SSE stream for model loading progress.  Each adapter emits a `progress` event
- * when its model list finishes loading, then a final `done` event with the
- * complete result set.  Frontend uses this for percentage-based loading UI.
- */
-async function handleModelsStream(req, res) {
-  const gw = getGateway();
-  if (!gw.isInitialized()) {
-    await gw.init();
-  }
-
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream; charset=utf-8',
-    'Cache-Control': 'no-cache',
-    Connection: 'keep-alive',
-    'X-Accel-Buffering': 'no',
-  });
-
-  const sendEvent = (data) => {
-    try {
-      res.write(`data: ${JSON.stringify(data)}\n\n`);
-    } catch {
-      /* client gone */
-    }
-  };
-
-  let clientGone = false;
-  req.on('close', () => {
-    clientGone = true;
-  });
-
-  try {
-    const statuses = gw.getStatus();
-    const enabled = statuses.filter((s) => s.enabled);
-    if (enabled.length === 0) {
-      sendEvent({ type: 'done', total: 0, loaded: 0, data: [] });
-      try {
-        res.end();
-      } catch {}
-      return;
-    }
-
-    sendEvent({ type: 'start', total: enabled.length, loaded: 0 });
-
-    const results = new Map();
-    const promises = enabled.map(async (s) => {
-      const key = s.type;
-      try {
-        const rawModels = await gw.listModels(key).catch(() => []);
-        const origin = gw.getAdapterOrigin(key);
-        const models = curateModelList(key, rawModels, origin);
-        results.set(key, {
-          adapter: key,
-          kind: origin.kind,
-          source: origin.source,
-          models,
-          error: null,
-        });
-      } catch (err) {
-        results.set(key, { adapter: key, models: [], error: err.message });
-      }
-      if (!clientGone) {
-        sendEvent({
-          type: 'progress',
-          loaded: results.size,
-          total: enabled.length,
-          percent: Math.round((results.size / enabled.length) * 100),
-          adapter: key,
-          count: (results.get(key)?.models || []).length,
-        });
-      }
-    });
-
-    await Promise.all(promises);
-
-    if (!clientGone) {
-      const data = [];
-      for (const s of statuses) {
-        if (!s.enabled) {
-          continue;
-        }
-        const entry = results.get(s.type);
-        if (entry) {
-          data.push(entry);
-        }
-      }
-      sendEvent({ type: 'done', total: enabled.length, loaded: results.size, percent: 100, data });
-    }
-  } catch {
-    if (!clientGone) {
-      sendEvent({ type: 'error', message: '模型加载失败' });
-    }
-  } finally {
-    try {
-      res.end();
-    } catch {}
-  }
-}
-
 // Gather the per-adapter model listing (and optional live probe) across every
 // enabled adapter, fanning the work out up front so total latency is bounded by
 // the slowest single adapter rather than their sum.
@@ -2279,6 +2195,10 @@ async function routeRequest(req, res, pathname, searchParams) {
   // User-gateway namespace: per-user model config, custom providers, CC tokens.
   if (pathname.startsWith('/api/user-gateway')) {
     return getUserGatewayApp()(req, res);
+  }
+
+  if (pathname.startsWith('/api/mesh')) {
+    return getModelMeshApp()(req, res);
   }
 
   if (pathname.startsWith('/api/ai-gateway') || pathname.startsWith('/api/gateway')) {
@@ -3198,7 +3118,11 @@ function start(port) {
 
       _server.once('listening', onListening);
       _server.once('error', onError);
-      _server.listen(tryPort);
+      // The daemon publishes loopback URLs and must claim the same IPv4
+      // namespace used by callers. Keep the handle exclusive so Windows does
+      // not share an occupied loopback port across processes; EADDRINUSE then
+      // reaches the retry path above and the published runtime port is real.
+      _server.listen({ port: tryPort, host: '127.0.0.1', exclusive: true });
     }
 
     tryListen(listenPort);
@@ -3396,6 +3320,7 @@ module.exports = {
     // exact require-path + mount-prefix the dispatcher uses, so the FeatureCatalog page
     // does not 404 ("Not found / 功能索引暂时加载不出来") as it did when unmounted.
     getCommandsApp,
+    getModelMeshApp,
     tryHandleFrontendStatic,
     // Account-pool route dispatch (GET/POST/PUT/DELETE /api/ai-gateway/accounts/*)
     // + a fake-pool injector, so a regression test can assert the frontend's

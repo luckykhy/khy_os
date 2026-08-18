@@ -39,15 +39,15 @@
 ├── bin/ollama            ← sentinel(必须可执行:chmod +x)
 └── lib/ollama/*.so|*.dylib</code></pre>
 <pre><code class="language-bash">tar -xzf ollama-linux-amd64.tgz -C services/backend/bin/ollama-runner/
-chmod +x services/backend/bin/ollama-runner/bin/ollama</code></pre>
+<span class="hljs-built_in">chmod</span> +x services/backend/bin/ollama-runner/bin/ollama</code></pre>
 <blockquote><p>macOS 通用包若解出的是根级 <code>ollama</code>(无 <code>bin/</code>),把 <code>runtime-binaries.json</code> 里对应<br>darwin 平台的 <code>sentinel</code> 改成 <code>&quot;ollama&quot;</code>,或干脆放成 <code>bin/ollama</code> 也行——<br>二选一,只要 sentinel 路径与文件实际位置一致。</p></blockquote>
 <h3 id="windows">Windows<a class="anchor" href="#windows" aria-label="锚点">#</a></h3>
 <p>sentinel = <code>ollama.exe</code>(在 runner <strong>根目录</strong>,无 <code>bin/</code> 前缀——zip 本来就这么打的):</p>
 <pre><code>services\backend\bin\ollama-runner\
 ├── ollama.exe            ← sentinel
 └── lib\ollama\*.dll</code></pre>
-<pre><code class="language-powershell">Expand-Archive -LiteralPath ollama-windows-amd64.zip `
-  -DestinationPath services\backend\bin\ollama-runner\ -Force</code></pre>
+<pre><code class="language-powershell"><span class="hljs-built_in">Expand-Archive</span> <span class="hljs-literal">-LiteralPath</span> ollama<span class="hljs-literal">-windows-amd64</span>.zip `
+  <span class="hljs-literal">-DestinationPath</span> services\backend\bin\ollama<span class="hljs-literal">-runner</span>\ <span class="hljs-literal">-Force</span></code></pre>
 <blockquote><p>或者完全跳过放置:<code>set OLLAMA_BIN=C:\已有\ollama.exe</code>,launcher 第一优先级读它。</p></blockquote>
 <h2 id="三-自检-不联网">三、自检(不联网)<a class="anchor" href="#三-自检-不联网" aria-label="锚点">#</a></h2>
 <p>放完跑一遍,确认 sentinel / 可执行位齐全:</p>

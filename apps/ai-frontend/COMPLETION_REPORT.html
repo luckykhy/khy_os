@@ -114,14 +114,14 @@
 <ul><li>@vitejs/plugin-vue: ^5.0.4</li><li>vite: ^5.2.0</li><li>eslint: ^8.57.0</li><li>eslint-plugin-vue: ^9.23.0</li><li>prettier: ^3.2.5</li><li>sass: ^1.72.0</li></ul>
 <h2 id="如何使用">如何使用<a class="anchor" href="#如何使用" aria-label="锚点">#</a></h2>
 <h3 id="安装依赖">安装依赖<a class="anchor" href="#安装依赖" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cd apps/ai-frontend
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> apps/ai-frontend
 npm install</code></pre>
 <h3 id="启动开发服务器">启动开发服务器<a class="anchor" href="#启动开发服务器" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">npm run dev
-# 访问 http://localhost:3000</code></pre>
+<span class="hljs-comment"># 访问 http://localhost:3000</span></code></pre>
 <h3 id="构建生产版本">构建生产版本<a class="anchor" href="#构建生产版本" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">npm run build
-# 输出到 dist/ 目录</code></pre>
+<span class="hljs-comment"># 输出到 dist/ 目录</span></code></pre>
 <h3 id="代码检查">代码检查<a class="anchor" href="#代码检查" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">npm run lint</code></pre>
 <h3 id="代码格式化">代码格式化<a class="anchor" href="#代码格式化" aria-label="锚点">#</a></h3>
@@ -129,10 +129,10 @@ npm install</code></pre>
 <h2 id="api-代理配置">API 代理配置<a class="anchor" href="#api-代理配置" aria-label="锚点">#</a></h2>
 <p>开发模式下，<code>/api</code> 请求会自动代理到 <code>http://localhost:5000</code>。</p>
 <p>生产环境需配置 Nginx 或其他反向代理：</p>
-<pre><code class="language-nginx">location /api {
-    proxy_pass http://localhost:5000;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
+<pre><code class="language-nginx"><span class="hljs-section">location</span> /api {
+    <span class="hljs-attribute">proxy_pass</span> http://localhost:5000;
+    <span class="hljs-attribute">proxy_set_header</span> Host <span class="hljs-variable">$host</span>;
+    <span class="hljs-attribute">proxy_set_header</span> X-Real-IP <span class="hljs-variable">$remote_addr</span>;
 }</code></pre>
 <h2 id="环境变量">环境变量<a class="anchor" href="#环境变量" aria-label="锚点">#</a></h2>
 <p>复制 <code>.env.example</code> 到 <code>.env.local</code> 并根据需要修改：</p>

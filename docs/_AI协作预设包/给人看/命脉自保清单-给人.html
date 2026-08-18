@@ -33,9 +33,9 @@
 <table><thead><tr><th>支柱</th><th>是什么</th><th>没了会怎样</th></tr></thead><tbody><tr><td><strong>pip 生命线</strong></td><td>唯一的下载与发布渠道（打成 wheel 上传 PyPI）</td><td>无法分发，等于消失</td></tr><tr><td><strong>守卫免疫系统</strong></td><td>提交时自动拦截&quot;越改越差&quot;的机器门禁</td><td>弱模型/手滑会慢慢腐蚀代码</td></tr><tr><td><strong><code>.ai/</code> 种子文档</strong></td><td>机器可读的项目地图与红线</td><td>新人/新 AI 看不懂结构</td></tr><tr><td><strong><code>maintenance/</code> 双击 + <code>khy maintain</code></strong></td><td>不懂命令行也能维护的图形入口</td><td>非技术维护者无从下手</td></tr></tbody></table>
 <hr>
 <h2 id="我怕改坏-先做只读体检-不会改任何东西">我怕改坏 · 先做只读体检（不会改任何东西）<a class="anchor" href="#我怕改坏-先做只读体检-不会改任何东西" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">node services/backend/bin/khy.js maintain freshness   # 与时俱进体检（只读）
-node services/backend/bin/khy.js maintain             # 维护者驾驶舱（只读）
-node services/backend/bin/khy.js health               # 顶层自助诊断</code></pre>
+<pre><code class="language-bash">node services/backend/bin/khy.js maintain freshness   <span class="hljs-comment"># 与时俱进体检（只读）</span>
+node services/backend/bin/khy.js maintain             <span class="hljs-comment"># 维护者驾驶舱（只读）</span>
+node services/backend/bin/khy.js health               <span class="hljs-comment"># 顶层自助诊断</span></code></pre>
 <p><strong>不会敲命令</strong>？双击 <code>maintenance/</code> 里名字排最前的 <code>维护-0-从这里开始</code><br>（macOS <code>.command</code> / Windows <code>windows\*.bat</code> / Linux <code>linux/*.sh</code>），按编号选。</p>
 <p>常用双击入口：</p>
 <table><thead><tr><th>想干什么</th><th>双击这个</th></tr></thead><tbody><tr><td>看现在健不健康</td><td><code>维护-一键健康体检</code></td></tr><tr><td>升级前先备份</td><td><code>维护-备份关键数据配置</code></td></tr><tr><td>升级坏了要回滚</td><td><code>维护-回滚到最近稳定版本</code></td></tr><tr><td>依赖坏了重装</td><td><code>维护-一键重装依赖</code></td></tr><tr><td>求助前导出诊断</td><td><code>维护-导出诊断日志</code></td></tr></tbody></table>
@@ -43,14 +43,14 @@ node services/backend/bin/khy.js health               # 顶层自助诊断</code
 <hr>
 <h2 id="ai-改完了-我该验什么-发布前的最小闭环">AI 改完了 · 我该验什么（发布前的最小闭环）<a class="anchor" href="#ai-改完了-我该验什么-发布前的最小闭环" aria-label="锚点">#</a></h2>
 <p>按顺序，任何一步红就别发布：</p>
-<pre><code class="language-bash"># 1) 只读体检无红
+<pre><code class="language-bash"><span class="hljs-comment"># 1) 只读体检无红</span>
 node services/backend/bin/khy.js maintain freshness
 
-# 2) 守卫全绿（做一次提交就会自动触发 pre-commit 钩子；红了先修）
-git add -A &amp;&amp; git commit -m &quot;...&quot;     # 钩子会自动跑 scripts/check-*.js
+<span class="hljs-comment"># 2) 守卫全绿（做一次提交就会自动触发 pre-commit 钩子；红了先修）</span>
+git add -A &amp;&amp; git commit -m <span class="hljs-string">&quot;...&quot;</span>     <span class="hljs-comment"># 钩子会自动跑 scripts/check-*.js</span>
 
-# 3) 上帝组件没恶化
-npm --prefix services/backend run arch:god</code></pre>
+<span class="hljs-comment"># 3) 上帝组件没恶化</span>
+npm --prefix services/backend run <span class="hljs-built_in">arch</span>:god</code></pre>
 <p><strong>盯死这三个问题问 AI</strong>（它答不好就别信&quot;做完了&quot;）：</p>
 <ol><li>「这改动接到 executeTool / toolUseLoop / aiManagementServer 哪个入口了？」</li><li>「把那个 KHY_ 开关设成 off，行为和改之前一样吗？」</li><li>「守卫全绿吗？没绕过对吧？」</li></ol>
 <hr>
@@ -61,11 +61,11 @@ npm --prefix services/backend run arch:god</code></pre>
 <hr>
 <h2 id="坏了要回退-怎么恢复">坏了要回退 · 怎么恢复<a class="anchor" href="#坏了要回退-怎么恢复" aria-label="锚点">#</a></h2>
 <ul><li><strong>双击</strong>：<code>维护-回滚到最近稳定版本</code>。</li><li><strong>命令</strong>（在仓库根目录）：</li></ul>
-<pre><code class="language-bash">git log --oneline -10          # 看最近提交，找改坏之前那个的哈希
-git stash                      # 先把当前没提交的改动收起来（保险）
-git checkout &lt;好的那个哈希&gt; -- &lt;被改坏的文件&gt;   # 只回退某个文件
-# 或整棵树回到某个提交（谨慎，会丢之后的改动）：
-# git reset --hard &lt;好的那个哈希&gt;</code></pre>
+<pre><code class="language-bash">git <span class="hljs-built_in">log</span> --oneline -10          <span class="hljs-comment"># 看最近提交，找改坏之前那个的哈希</span>
+git stash                      <span class="hljs-comment"># 先把当前没提交的改动收起来（保险）</span>
+git checkout &lt;好的那个哈希&gt; -- &lt;被改坏的文件&gt;   <span class="hljs-comment"># 只回退某个文件</span>
+<span class="hljs-comment"># 或整棵树回到某个提交（谨慎，会丢之后的改动）：</span>
+<span class="hljs-comment"># git reset --hard &lt;好的那个哈希&gt;</span></code></pre>
 <ul><li><strong>依赖坏了</strong>：双击 <code>维护-一键重装依赖</code>。</li><li><strong>完全懵</strong>：<code>docs/_传承/紧急恢复卡片.md</code> + <code>维护-导出诊断日志</code>（把诊断发给会帮你的人/AI）。</li></ul>
 <hr>
 <h2 id="绝对不要做的事">绝对不要做的事<a class="anchor" href="#绝对不要做的事" aria-label="锚点">#</a></h2>

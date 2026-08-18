@@ -448,6 +448,36 @@ async function _checkPlugins(result, issues, scoreRef, opts = {}) {
   result.checks.plugins = out;
 }
 
+async function _checkDaemonWatchdog(result, issues) {
+  try {
+    const daemonManager = require('./daemonManager');
+    const status = await daemonManager.daemonStatus();
+
+    if (!status.running) {
+      // Daemon is down - trigger watchdog recovery
+      try {
+        const watchdog = require('./watchdogService');
+        const watchdogStatus = watchdog.status();
+
+        if (watchdogStatus.enabled && !watchdogStatus.abandoned) {
+          const recovered = await watchdog.triggerRecovery();
+          if (recovered) {
+            issues.push({
+              source: 'watchdog',
+              severity: 'warning',
+              message: 'daemon 已停止运行，watchdog 已触发自动重启',
+            });
+          }
+        }
+      } catch {
+        /* watchdog service not available or failed - non-critical */
+      }
+    }
+  } catch {
+    /* daemon status check failed - non-critical for self-check */
+  }
+}
+
 async function _checkGatewayPreferred(result, issues, scoreRef, opts = {}) {
   const configuredRaw = String(process.env.GATEWAY_PREFERRED_ADAPTER || '').trim();
   const configured = configuredRaw.toLowerCase();
@@ -767,6 +797,9 @@ async function runOnce(options = {}) {
       autoRepairPreferred:
         options.autoRepairPreferred !== false && SELF_CHECK_AUTO_REPAIR_PREFERRED,
     });
+
+    // 7) Daemon watchdog recovery trigger (end of checks)
+    await _checkDaemonWatchdog(result, issues);
   } finally {
     const durationMs = Date.now() - startedAt;
     result.durationMs = durationMs;

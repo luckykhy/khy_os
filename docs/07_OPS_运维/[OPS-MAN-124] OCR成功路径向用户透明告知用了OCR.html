@@ -48,10 +48,10 @@
 <p><strong>无条件</strong>返回一句面向模型的指令，要求它在正常作答的同时，用一句<strong>自然、简短</strong>的话向用户<br>     <strong>明确</strong>说明「本次图片内容是通过 OCR 文字识别读取的」——无感（不长篇、不影响正文）但明显<br>     （用户务必清楚用了 OCR）。门关 / <code>count</code> 缺失或非正 / 畸形 → <code>null</code>，逐字节回退。fail-soft：绝不抛。</p>
 <ol><li><strong><code>aiGatewayGenerateMethod.js</code></strong>：新增 <code>_appendOcrUsageDisclosure(prompt, { count })</code> 辅助</li></ol>
 <p>（镜像既有 <code>_appendOcr*</code> 形制），在<strong>三处 OCR 成功注入点</strong>的 <code>_appendOcrResolutionNotice</code><br>   调用之后<strong>无条件</strong>接线：</p>
-<pre><code class="language-js">   prompt = _appendOcrResolutionNotice(prompt, ocrDetails);
-   // OCR 成功路径「使用 OCR 透明告知」(无条件):上面六条告诫都是条件型,干净成功时全静默,模型
-   // 据 OCR 文本作答却从不告诉用户用了 OCR。本条要求模型无感但明显地向用户披露。门关回退。
-   prompt = _appendOcrUsageDisclosure(prompt, { count: ocrTexts.length });</code></pre>
+<pre><code class="language-js">   prompt = <span class="hljs-title function_">_appendOcrResolutionNotice</span>(prompt, ocrDetails);
+   <span class="hljs-comment">// OCR 成功路径「使用 OCR 透明告知」(无条件):上面六条告诫都是条件型,干净成功时全静默,模型</span>
+   <span class="hljs-comment">// 据 OCR 文本作答却从不告诉用户用了 OCR。本条要求模型无感但明显地向用户披露。门关回退。</span>
+   prompt = <span class="hljs-title function_">_appendOcrUsageDisclosure</span>(prompt, { <span class="hljs-attr">count</span>: ocrTexts.<span class="hljs-property">length</span> });</code></pre>
 <p>三处站点：Site 1（约 1569，<code>_ocrTexts.length</code>）、Site 2（约 1664，<code>ocrTexts.length</code>）、<br>   Site 3 post-failure 救援网（约 2832，<code>ocrTexts.length</code>）。</p>
 <ol><li><strong><code>flagRegistry.js</code></strong>：登记</li></ol>
 <p><code>KHY_OCR_USAGE_DISCLOSURE: { mode: 'default-on', off: 'CANON', default: true }</code>。</p>

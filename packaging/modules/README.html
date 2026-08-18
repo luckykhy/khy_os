@@ -32,27 +32,27 @@
 <table><thead><tr><th>模块</th><th>可执行文件</th><th>说明</th></tr></thead><tbody><tr><td>khy-ai</td><td>khy-ai.exe</td><td>AI 聊天 REPL，支持多模型对话</td></tr><tr><td>khy-gateway</td><td>khy-gateway.exe</td><td>AI 网关服务，统一多供应商 API</td></tr><tr><td>khy-quant</td><td>khy-quant.exe</td><td>量化交易工具（回测、数据、训练）</td></tr><tr><td>khy-server</td><td>khy-server.exe</td><td>Web 管理后台 + 前端 UI</td></tr><tr><td>khy-tools</td><td>khy-tools.exe</td><td>开发者工具集（部署、CI、插件开发）</td></tr><tr><td>khy</td><td>khy.exe</td><td>完整平台（所有模块组合）</td></tr></tbody></table>
 <h2 id="构建">构建<a class="anchor" href="#构建" aria-label="锚点">#</a></h2>
 <h3 id="快速构建-当前平台">快速构建（当前平台）<a class="anchor" href="#快速构建-当前平台" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># 构建所有模块
+<pre><code class="language-bash"><span class="hljs-comment"># 构建所有模块</span>
 node packaging/build/build-all.js
 
-# 构建单个模块
+<span class="hljs-comment"># 构建单个模块</span>
 node packaging/build/build-all.js --module khy-ai
 
-# 生产模式（压缩）
+<span class="hljs-comment"># 生产模式（压缩）</span>
 node packaging/build/build-all.js --prod</code></pre>
 <h3 id="跨平台构建">跨平台构建<a class="anchor" href="#跨平台构建" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># 构建指定平台
+<pre><code class="language-bash"><span class="hljs-comment"># 构建指定平台</span>
 node packaging/build/build-all.js --platform win-x64
 
-# 构建所有平台
+<span class="hljs-comment"># 构建所有平台</span>
 node packaging/build/build-all.js --all-platforms
 
-# 仅 esbuild 捆绑（不打包为 exe）
+<span class="hljs-comment"># 仅 esbuild 捆绑（不打包为 exe）</span>
 node packaging/build/build-all.js --bundle-only</code></pre>
 <h3 id="使用-khy-命令">使用 khy 命令<a class="anchor" href="#使用-khy-命令" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">khy modules list          # 查看所有模块
-khy modules info khy-ai   # 查看模块详情
-khy modules build khy-ai  # 构建模块</code></pre>
+<pre><code class="language-bash">khy modules list          <span class="hljs-comment"># 查看所有模块</span>
+khy modules info khy-ai   <span class="hljs-comment"># 查看模块详情</span>
+khy modules build khy-ai  <span class="hljs-comment"># 构建模块</span></code></pre>
 <h2 id="目录结构">目录结构<a class="anchor" href="#目录结构" aria-label="锚点">#</a></h2>
 <pre><code>packaging/
 ├── modules/

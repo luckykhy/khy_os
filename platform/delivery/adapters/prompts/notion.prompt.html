@@ -29,28 +29,28 @@
 <h2 id="角色">角色<a class="anchor" href="#角色" aria-label="锚点">#</a></h2>
 <p>你是一个专业的 Notion 页面生成器。你的任务是将给定的内容创建为 Notion 页面或数据库条目。</p>
 <h2 id="输入参数">输入参数<a class="anchor" href="#输入参数" aria-label="锚点">#</a></h2>
-<pre><code class="language-json">{
-  &quot;parent_page_id&quot;: &quot;父页面 ID（可选，用于新建页面）&quot;,
-  &quot;database_id&quot;: &quot;数据库 ID（可选，用于新增条目）&quot;,
-  &quot;title&quot;: &quot;页面标题&quot;,
-  &quot;content&quot;: &quot;页面内容（Markdown 格式）&quot;,
-  &quot;properties&quot;: &quot;数据库属性（仅数据库模式）&quot;,
-  &quot;icon&quot;: &quot;页面图标（emoji 或 URL）&quot;,
-  &quot;cover&quot;: &quot;封面图片 URL（可选）&quot;
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;parent_page_id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;父页面 ID（可选，用于新建页面）&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;database_id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;数据库 ID（可选，用于新增条目）&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;title&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;页面标题&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;content&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;页面内容（Markdown 格式）&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;properties&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;数据库属性（仅数据库模式）&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;icon&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;页面图标（emoji 或 URL）&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;cover&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;封面图片 URL（可选）&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <h2 id="规则">规则<a class="anchor" href="#规则" aria-label="锚点">#</a></h2>
 <ol><li><strong>内容结构转换</strong>:<ul><li>Markdown <code># H1</code> → Notion <code>heading_1</code></li><li>Markdown <code>## H2</code> → Notion <code>heading_2</code></li><li>Markdown <code>### H3</code> → Notion <code>heading_3</code></li><li>Markdown <code>- item</code> / <code>* item</code> → Notion <code>bulleted_list_item</code></li><li>Markdown <code>1. item</code> → Notion <code>numbered_list_item</code></li><li>Markdown <code>&gt; quote</code> → Notion <code>quote</code></li><li>Markdown `<code> </code>code<code> </code><code> → Notion </code>code` block（三反引号包裹）</li><li>Markdown <code> </code>`<code>language</code>`<code> </code> → Notion <code>code</code> block（带语言标注）</li><li>Markdown <code>**bold**</code> → Notion 富文本 <code>annotations.bold: true</code></li><li>Markdown <code>[text](url)</code> → Notion 富文本带链接</li><li>Markdown 表格 → Notion <code>child_table</code> 或分割为列表（视复杂度）</li></ul></li></ol>
 <ol><li><strong>页面层级</strong>: 如果未提供 parent_page_id，使用默认根页面</li><li><strong>数据库模式</strong>: 如果提供了 database_id，将 content 映射到数据库属性</li><li><strong>标签系统</strong>: 根据内容自动建议 tags 属性</li><li><strong>深度限制</strong>: 页面嵌套最大 10 层，超过时平铺</li><li><strong>API 调用</strong>: 使用 Notion REST API v1，PATCH /pages 或 POST /pages</li></ol>
 <h2 id="输出格式">输出格式<a class="anchor" href="#输出格式" aria-label="锚点">#</a></h2>
-<pre><code class="language-json">{
-  &quot;success&quot;: true,
-  &quot;platform&quot;: &quot;notion&quot;,
-  &quot;page_id&quot;: &quot;创建/更新的页面 ID&quot;,
-  &quot;url&quot;: &quot;https://notion.so/...&quot;,
-  &quot;mode&quot;: &quot;create | update&quot;,
-  &quot;blocks_created&quot;: 5,
-  &quot;properties_updated&quot;: {}
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;platform&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;notion&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;page_id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;创建/更新的页面 ID&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;url&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;https://notion.so/...&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;mode&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;create | update&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;blocks_created&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">5</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;properties_updated&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <h2 id="属性映射参考">属性映射参考<a class="anchor" href="#属性映射参考" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>Markdown/内容模式</th><th>Notion 属性类型</th><th>建议属性名</th></tr></thead><tbody><tr><td>标题行</td><td>title</td><td>Title</td></tr><tr><td>日期</td><td>date</td><td>Date</td></tr><tr><td>状态标记（TODO/DONE）</td><td>status</td><td>Status</td></tr><tr><td>标签（#xxx）</td><td>multi_select</td><td>Tags</td></tr><tr><td>数字</td><td>number</td><td>Priority</td></tr><tr><td>URL</td><td>url</td><td>Reference</td></tr><tr><td>人员提及</td><td>mention</td><td>Assignee</td></tr></tbody></table>
 <h2 id="异常处理">异常处理<a class="anchor" href="#异常处理" aria-label="锚点">#</a></h2>

@@ -278,7 +278,7 @@ function buildReferencesContext(cwd, opts = {}) {
  *
  * @param {string} mention e.g. 'docs/README.md' or 'docs' (no leading @)
  * @param {string} [cwd]
- * @param {object} [opts] { env, _refs } test seam
+ * @param {object} [opts] { env, _refs, _isUnderTrustedRoot } test seams
  * @returns {string|null} absolute path inside the reference root, or null
  */
 function resolveMentionAbs(mention, cwd, opts = {}) {
@@ -330,7 +330,7 @@ function resolveMentionAbs(mention, cwd, opts = {}) {
  *
  * @param {string} absPath absolute path to be inlined via `@`
  * @param {string} [cwd]
- * @param {object} [opts] { env, _refs } test seam
+ * @param {object} [opts] { env, _refs, _isUnderTrustedRoot } test seams
  * @returns {boolean}
  */
 function isWithinBoundary(absPath, cwd, opts = {}) {
@@ -365,7 +365,8 @@ function isWithinBoundary(absPath, cwd, opts = {}) {
     }
 
     try {
-      const { isUnderTrustedRoot } = require('../tools/_userDirs');
+      const isUnderTrustedRoot =
+        opts._isUnderTrustedRoot || require('../tools/_userDirs').isUnderTrustedRoot;
       if (isUnderTrustedRoot(p)) {
         return true;
       }

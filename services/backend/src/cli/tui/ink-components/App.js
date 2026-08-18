@@ -44,6 +44,7 @@ const { effectiveCols: _railCols, stickyCols: _stickyCols } = require('../effect
 // are what made the task board flicker between show and hide.
 const sidebarLayout = require('../sidebarLayout');
 const rewindControl = require('../rewindControl');
+const pendingImageAttachments = require('../pendingImageAttachments');
 const interruptHint = require('../interruptHint');
 // 未知模型上下文窗口回退值的单一真源(纯常量叶) —— 显示分母与压缩预算共用同一个数。
 const { UNKNOWN_MODEL_CONTEXT_WINDOW } = require('../../../constants/contextWindowDefaults');
@@ -232,6 +233,8 @@ function App({ options = {} }) {
     },
   });
   const [footer, setFooter] = React.useState({});
+  const _queryStatusRef = React.useRef(query.status);
+  _queryStatusRef.current = query.status;
 
   // CC 对齐:页脚 `◎ /goal active (Nm)` 指示器状态。读活动持久目标 + 纯叶子 formatGoalElapsed
   // 算已持续时长标签。goalStore.getActiveGoal 走文件(非缓存),故不在每帧读——由下方一个低频
@@ -518,9 +521,10 @@ function App({ options = {} }) {
   // Transient affordance line ("再按一次 Ctrl-C 退出" / "Esc again to clear"),
   // mirroring Claude Code's double-press hints.
   const [hint, setHint] = React.useState('');
-  // Images attached to the next turn (Ctrl+V from clipboard). Each entry is
-  // { base64, mimeType, ... } as produced by imageService.readImageFromClipboard.
+  // Images attached to the next turn (Ctrl+V from clipboard). Stable UI ids
+  // allow deleting one item without disturbing the remaining image payloads.
   const [pendingImages, setPendingImages] = React.useState([]);
+  const pendingImageIdRef = React.useRef(0);
   // Local mode toggle (/local). When true, turns skip the AI model and are
   // handled by the Tier 1 + Tier 2 local brain (forceLocal) — same semantics as
   // the classic REPL's _localMode. Threaded into query.submit as `forceLocal`.
@@ -720,13 +724,9 @@ function App({ options = {} }) {
     []
   );
 
-  // ── 原生透传(xterm 追踪会吞掉原生选择与滚轮)──────────────────────────────
-  // 对抗式方案:保持追踪常开让按钮可点;但滚轮事件、以及在空白处按住拖动(选择
-  // 意图)时,临时关闭追踪把控制权还给终端 → 原生滚动/原生点击选择接管。空闲
-  // KHY_MOUSE_NATIVE_MS(默认 1500ms)后自动重开追踪恢复按钮。幂等:已在原生态
-  // 时只重置恢复计时。代价:每次手势吞掉开头一小段、恢复前约 1.5s 按钮不响应。
-  const mouseNativeRestoreTimer = React.useRef(null);
-  const mouseNativeRef = React.useRef(false);
+  // Wheel input is already consumed by SGR tracking before Ink sees it. Disable
+  // tracking immediately after the event so the terminal receives the next wheel
+  // event natively; restore after a short idle window for button clicks.
   const enterNativePassthrough = React.useCallback(() => {
     if (!_mouse || !process.stdout || !process.stdout.isTTY) {
       return;
@@ -736,14 +736,13 @@ function App({ options = {} }) {
     }
     if (!mouseNativeRef.current) {
       mouseNativeRef.current = true;
-      const hover = _mouse.mouseHoverEnabled(process.env);
       try {
-        process.stdout.write(_mouse.disableBytes({ hover }));
+        process.stdout.write(_mouse.disableBytes({ hover: _mouse.mouseHoverEnabled(process.env) }));
       } catch {
         /* fail-soft */
       }
     }
-    let ms = 1500;
+    let ms = 250;
     try {
       const raw = Number(process.env.KHY_MOUSE_NATIVE_MS);
       if (Number.isFinite(raw) && raw > 0) {
@@ -756,8 +755,7 @@ function App({ options = {} }) {
       mouseNativeRestoreTimer.current = null;
       mouseNativeRef.current = false;
       try {
-        const hover = _mouse.mouseHoverEnabled(process.env);
-        process.stdout.write(_mouse.enableBytes({ hover }));
+        process.stdout.write(_mouse.enableBytes({ hover: _mouse.mouseHoverEnabled(process.env) }));
       } catch {
         /* fail-soft */
       }
@@ -953,14 +951,30 @@ function App({ options = {} }) {
         return;
       }
       setPendingImages((list) => {
-        const next = [...list, { base64: img.base64, mimeType: img.mimeType || 'image/png' }];
-        showHint(`已附加图片 ${next.length}（Enter 发送，Esc 取消）`);
+        const id = `pending-image-${++pendingImageIdRef.current}`;
+        const next = pendingImageAttachments.appendAttachment(list, img, id);
+        showHint(`已附加图${next.length}（Enter 发送，Esc 清除）`);
         return next;
       });
     } catch (err) {
       showHint('读取剪贴板图片失败：' + (err.message || err));
     }
   }, [showHint]);
+
+  const removePendingImage = React.useCallback(
+    (id) => {
+      setPendingImages((list) => {
+        const currentLabels = pendingImageAttachments.labels(list);
+        const target = currentLabels.find((item) => item.id === id);
+        const next = pendingImageAttachments.removeAttachment(list, id);
+        if (next !== list && next.length !== list.length) {
+          showHint(`${target ? target.label : '图片'}已删除，剩余 ${next.length} 张`);
+        }
+        return next;
+      });
+    },
+    [showHint]
+  );
 
   // ── Native model picker (/model) ───────────────────────────────────────
   // Probe adapters and open the ModelPicker overlay. Replaces the inquirer
@@ -1215,6 +1229,85 @@ function App({ options = {} }) {
     uiPrompt.register(askForm);
     return () => uiPrompt.unregister();
   }, [askForm]);
+
+  // Start the same post-first-frame background jobs as the classic REPL. Update
+  // artifacts are downloaded and verified in the background; FormFlow asks for
+  // the explicit install choice only after the active turn has settled.
+  React.useEffect(() => {
+    let timers = [];
+    let active = true;
+    const pushNotice = (content) => {
+      if (!active || !content) return;
+      query.setMessages((messages) => [
+        ...messages,
+        { type: 'notice', content: String(content), timestamp: Date.now() },
+      ]);
+    };
+    const handleOutput = async (message) => {
+      if (!active) return;
+      if (!message || typeof message !== 'object' || !message.type) {
+        pushNotice(message);
+        return;
+      }
+      const state = message.state;
+      if (message.type === 'update-blocked') {
+        pushNotice(`KhyOS 更新已阻止: ${state?.blockedReason || state?.error || '当前源码状态不适合更新'}`);
+        return;
+      }
+      if (message.type !== 'update-available') return;
+      if (!state || state.state !== 'staged') {
+        pushNotice(`更新预取失败: ${state?.error || '更新尚未完成校验'}`);
+        return;
+      }
+      const target = state.target && (state.target.version || state.target.commit);
+      const sourceType = state.source && state.source.type ? state.source.type : 'unknown';
+      pushNotice(`发现 KhyOS 更新 (${sourceType}: ${target || '新版本'})`);
+      const answer = await askForm({
+        fields: [{
+          name: 'choice',
+          label: `接受 KhyOS 更新 ${target || ''}?`,
+          type: 'select',
+          choices: [
+            { name: '现在安装', value: 'apply' },
+            { name: '稍后', value: 'later' },
+            { name: '跳过此版本', value: 'skip' },
+          ],
+        }],
+      });
+      if (!active) return;
+      const coordinator = require('../../../services/updateCoordinator');
+      if (answer && answer.choice === 'apply') {
+        const result = await coordinator.applyUpdate({ state });
+        pushNotice(
+          result.state === 'applied'
+            ? 'KhyOS 更新已接受，请重启以载入新版本。'
+            : `更新失败，当前版本保持运行: ${result.error || '未知错误'}`
+        );
+      } else if (answer && answer.choice === 'skip') {
+        coordinator.skipUpdate({ state });
+        pushNotice('已跳过此版本。');
+      } else {
+        pushNotice('已暂存更新，稍后可运行 khy update 接受。');
+      }
+    };
+    try {
+      const { deferredPrefetch } = require('../../../bootstrap/prefetch');
+      timers = deferredPrefetch({
+        mode: options.mode === 'khy' ? 'khy' : 'khyquant',
+        isBusy: () => {
+          const status = _queryStatusRef.current;
+          return status !== 'idle' && status !== 'done';
+        },
+        onOutput: handleOutput,
+      });
+    } catch {
+      timers = [];
+    }
+    return () => {
+      active = false;
+      for (const timer of timers) clearTimeout(timer);
+    };
+  }, [askForm, options.mode, query.setMessages]);
 
   // Drive the auth commands (login/register/passwd) through the native form
   // instead of the inquirer prompts baked into router.js's switch. The auth
@@ -2478,7 +2571,7 @@ function App({ options = {} }) {
         // Allow an image-only turn: Enter with attachments but no text sends the
         // images with a default prompt.
         if (pendingImages.length > 0) {
-          const imgs = pendingImages;
+          const imgs = pendingImageAttachments.toPayload(pendingImages);
           setPendingImages([]);
           query.submit('请描述这张图片', { permissionMode, images: imgs });
         }
@@ -2617,7 +2710,7 @@ function App({ options = {} }) {
       // Normal AI turn — attach staged clipboard images + any inline-path image and
       // clear the buffer. The clipboard (pendingImages) and inline-path images merge
       // so a path typed alongside a pasted screenshot keeps both.
-      const stagedImages = pendingImages.length > 0 ? pendingImages : [];
+      const stagedImages = pendingImageAttachments.toPayload(pendingImages);
       const mergedImages = stagedImages.concat(inlineImages);
       if (mergedImages.length > 0) {
         if (stagedImages.length > 0) {
@@ -3322,7 +3415,7 @@ function App({ options = {} }) {
           }
           const _anchorBottom = _startupAnchor
             ? _startupAnchor.anchorBottomEnabled(process.env)
-            : true;
+            : false;
           mouseDispatcherRef.current.onInput(input, {
             rootNode: (_inst && _inst.rootNode) || null,
             rows: _rows,
@@ -3447,6 +3540,14 @@ function App({ options = {} }) {
           }
           return msgs;
         });
+        return;
+      }
+
+      // When the prompt is empty, Backspace/Delete removes only the most recently
+      // staged image. With text in the prompt these keys continue to edit text.
+      if (pendingImages.length > 0 && value === '' && (key.backspace || key.delete)) {
+        setPendingImages((list) => pendingImageAttachments.removeLastAttachment(list));
+        showHint('已删除最后一张图片');
         return;
       }
 
@@ -3643,33 +3744,7 @@ function App({ options = {} }) {
         if (_chord === 'toggleTasks') {
           setTasksHidden((v) => {
             const next = !v;
-            // Honest hint on narrow terminals: the inline panel only renders on
-            // wide ("maximized") terminals, so "已显示" would be a lie there.
-            // Threshold quoted from the same sidebarLayout single source; require
-            // failure → fall back to the legacy wording (fail-soft).
-            let _hint = next ? '任务清单：已隐藏（Ctrl+T 再显示）' : '任务清单：已显示';
-            try {
-              const _sl = require('../sidebarLayout');
-              // Review Major 1: reuse the SAME sticky resolution (_stickyCols,
-              // the single cache holder) instead of a bare stdout read so this
-              // hint can never disagree with the board's verdict on a phantom
-              // undefined-columns frame. Unknown (null) and garbage (0) both
-              // stay null here so isWideTerminal applies the same relaxed
-              // fallback gate the board uses (no contradictory hint).
-              const _sticky = _stickyCols(process.env);
-              const _cols = Number(_sticky) > 0 ? Number(_sticky) : null;
-              if (!_sl.isWideTerminal(_cols, process.env)) {
-                const _n = _sl.minCols(process.env);
-                // Width unknown → say so; never render "当前 null 列".
-                const _cur = _cols == null ? '宽度未知' : `当前 ${_cols} 列`;
-                _hint = next
-                  ? `任务清单：已隐藏（仅宽屏 ≥${_n} 列显示，${_cur}）`
-                  : `任务清单：仅在宽屏终端显示（需 ≥${_n} 列，${_cur}）`;
-              }
-            } catch {
-              /* fail-soft: keep legacy wording */
-            }
-            showHint(_hint);
+            showHint(next ? '任务清单：已隐藏（Ctrl+T 再显示）' : '任务清单：已显示');
             return next;
           });
           return;
@@ -3886,11 +3961,10 @@ function App({ options = {} }) {
           return;
         }
 
-        // EDITING (!empty): ←/→ forward (cursor). For vertical arrows:
-        //   • multiline buffer → forward (useTextInput moves the cursor interiorly
-        //     line-by-line, then browses history once on the boundary line);
-        //   • single line → forward too (default), so ↑/↓ keep browsing history
-        //     across ALL entries even with a draft/recalled entry present.
+        // EDITING (!empty): ←/→ forward (cursor). Vertical arrows are also
+        // forwarded so useTextInput can browse whole submitted entries. A recalled
+        // multiline entry remains one history item: each ↑/↓ moves exactly one item,
+        // never one visual/text line.
         // useTextInput stashes the live draft (draft.current) on the first ↑ and
         // restores it when ↓ walks past the newest entry, so the draft is never
         // lost — matching Claude Code / bash / readline. Without this the buffer
@@ -4256,40 +4330,20 @@ function App({ options = {} }) {
   } catch {
     _bannerVersionOffset = 0;
   }
-  // Sidebar task lines (capped below via the SAME liveRegionBudget leaf so the
-  // sidebar can never grow the live region past the anti-scroll-jump budget).
-  // Legacy path (_liveBudget unavailable): sidebar simply shows no task section
-  // and the inline panel keeps its self-read behavior — nothing breaks.
-  let _sidebarTaskProps = { lines: [], hidden: 0 };
+  // The full-width inline TaskListPanel is the sole task renderer. It remains
+  // independent of sidebar/wide-terminal gates and is height-capped through the
+  // same liveRegionBudget ledger used by StreamingBlock.
   let _streamReserve = null;
-  // Wide-screen-only is the FORMAL semantics for the inline task panel: on a
-  // narrow terminal it must hide on BOTH paths. With _liveBudget the gate
-  // lives in _rawTaskLines below; WITHOUT it the legacy self-read path would
-  // still render on narrow screens, so !_wideOn feeds coordinated empty lines
-  // here (TaskListPanel → null) and only _wideOn keeps the legacy {} passthrough.
-  let _taskProps = _wideOn ? {} : { lines: [], hidden: 0, hiddenLines: [] };
+  let _taskProps = {};
   if (_liveBudget) {
     // Same sticky-resolved rows as the dims block above (根因 B): a phantom
     // undefined-rows frame must not shrink/regrow the task-line budget.
     const _termRows =
       Number(_resRows) > 0 ? Number(_resRows) : sidebarLayout.fallbackRows(process.env);
-    // Ctrl+T hides the checklist: force zero lines so the panel unmounts and its
-    // height drops out of StreamingBlock's reserve (the live window grows back).
-    // The inline task panel only renders on wide ("maximized") terminals —
-    // narrow screens zero the lines so taskLineCount drops out of the height
-    // ledger automatically (sidebar keeps its own copy via its own gate).
-    // Single read shared by BOTH consumers below (inline panel + sidebar/rail).
-    // _readMergedTaskLines() was previously called TWICE in this same frame
-    // (here and in the sidebar branch) — duplicated file/store work per render.
-    // The per-consumer gating predicates are kept byte-for-byte identical:
-    // inline uses (tasksHidden || !_wideOn) → [], sidebar uses
-    // ((_sidebarOn || _railOut) && !tasksHidden). We only read when at least
-    // one consumer will use the result.
-    const _needInlineTaskLines = !tasksHidden && _wideOn;
-    const _needSidebarTaskLines = (_sidebarOn || _railOut) && !tasksHidden;
-    const _mergedTaskLines =
-      _needInlineTaskLines || _needSidebarTaskLines ? _readMergedTaskLines() : [];
-    const _rawTaskLines = tasksHidden || !_wideOn ? [] : _mergedTaskLines;
+    // Ctrl+T hides the checklist. The inline panel is available at every width;
+    // sidebar visibility never suppresses the canonical task data read.
+    const _mergedTaskLines = tasksHidden ? [] : _readMergedTaskLines();
+    const _rawTaskLines = tasksHidden ? [] : _mergedTaskLines;
     if (process.env.KHY_DEBUG_TASK_PANEL === '1') {
       try {
         process.stderr.write(
@@ -4301,13 +4355,6 @@ function App({ options = {} }) {
     }
     const _capped = _liveBudget.capTaskLines(_rawTaskLines, _termRows, process.env);
     _taskProps = { lines: _capped.lines, hidden: _capped.hidden, hiddenLines: _capped.hiddenLines };
-    // 右栏模式下 _sidebarOn 可能为 false(sidebarLayout 的 fullscreen 判定不成立),但槽位
-    // 里的看板仍在画 —— 那就必须照样喂任务行,否则右栏只剩主题/模型行。Ctrl+T(tasksHidden)
-    // 依旧清零,切换语义两种模式一致。
-    if ((_sidebarOn || _railOut) && !tasksHidden) {
-      const _sbCapped = _liveBudget.capTaskLines(_mergedTaskLines, _termRows, process.env);
-      _sidebarTaskProps = { lines: _sbCapped.lines, hidden: _sbCapped.hidden };
-    }
     // 语义分区(缺口②)会在 TaskListPanel 里为「本会话清单 / 项目任务」各插一行 dim 标签。
     // 把标签行数前馈进 reserve,使 anti-scroll-jump 高度账本包含它们(SSOT:同一 splitTaskLinesBySource
     // 叶子;门控关 / 单一来源 → null → 0 行,面板亦不分区,口径一致)。
@@ -4373,8 +4420,8 @@ function App({ options = {} }) {
     return age >= 0 && age <= _notifyTtl;
   });
   const _sidebarProps = {
-    taskLines: _sidebarTaskProps.lines,
-    taskHidden: tasksHidden,
+    taskLines: [],
+    hideTaskSection: true,
     streaming: query.streaming,
     queueLen: query.queueLen || 0,
     notifications: _visibleNotifications,
@@ -4628,12 +4675,26 @@ function App({ options = {} }) {
                 ? h(Text, { color: 'green' }, '# 记忆模式 · Enter 写入记忆（下次对话生效）')
                 : null,
 
-              // Staged image attachments (Ctrl+V). Shown until the next turn is sent.
+              // Staged image attachments (Ctrl+V). Each item has its own clickable
+              // delete control; labels are recomputed from the surviving list so
+              // deleting 图2 leaves 图1 intact and keeps payload order stable.
               pendingImages.length > 0
                 ? h(
-                    Text,
-                    { color: 'blue' },
-                    `📎 已附加 ${pendingImages.length} 张图片 · Enter 发送 · Ctrl+V 再加 · Esc 清除`
+                    Box,
+                    { flexDirection: 'row', flexWrap: 'wrap', columnGap: 1 },
+                    h(Text, { color: 'blue' }, `📎 已附加 ${pendingImages.length} 张图片：`),
+                    ...pendingImageAttachments.labels(pendingImages).map((item) =>
+                      h(
+                        Box,
+                        {
+                          key: item.id,
+                          flexShrink: 0,
+                          onClick: () => removePendingImage(item.id),
+                        },
+                        h(Text, { color: 'cyan', bold: true }, `${item.label} ×`)
+                      )
+                    ),
+                    h(Text, { color: 'blue', dimColor: true }, ' · Enter 发送 · Ctrl+V 再加 · Esc 清除')
                   )
                 : null,
 
@@ -4646,21 +4707,6 @@ function App({ options = {} }) {
                   )
                 : null,
 
-              // Persistent task checklist (缺口②), anchored directly above the prompt
-              // (wide terminals only — gate lives in _rawTaskLines above). Reads
-              // _taskStore.snapshot() pull-style; the existing nowTick 1s heartbeat
-              // repaints the live region, so newly added / status-changed tasks surface
-              // within ≤1s. Lines stay capTaskLines-capped and the box adds no extra
-              // margin below, so the prompt is never squeezed or shifted.
-              // Escape hatch: KHY_TASK_PANEL=0 (checked inside TaskListPanel).
-              // Ctrl+T (tasksHidden) forces the coordinated empty-lines path → null, so the
-              // toggle works even when the budget leaf is unavailable (legacy self-read path).
-              h(TaskListPanel, {
-                key: 'task-panel',
-                tick: nowTick,
-                ..._taskProps,
-                ...(tasksHidden ? { lines: [], hidden: 0, hiddenLines: [] } : {}),
-              })
             ), // end left column
             // Right-column board (任务#8/#11) — always inside the flex row:
             //  - startup (_bannerInLive): STABLE height, version-line offset so the
@@ -4691,6 +4737,7 @@ function App({ options = {} }) {
                     h(SidebarPanel, {
                       ..._sidebarProps,
                       stableRows: _sidebarStableRowsV,
+                      fitContent: true,
                     })
                   )
                 : h(
@@ -4713,6 +4760,16 @@ function App({ options = {} }) {
                   )
               : null
           ), // end upper row — everything below stays full terminal width
+
+          // Canonical task checklist: full-width sibling between the latest
+          // transcript/live content and the prompt. The existing heartbeat keeps
+          // store and plan status changes current; coordinated empty lines unmount it.
+          h(TaskListPanel, {
+            key: 'task-panel',
+            tick: nowTick,
+            ..._taskProps,
+            ...(tasksHidden ? { lines: [], hidden: 0, hiddenLines: [] } : {}),
+          }),
 
           // Prompt input. Hidden while the model picker overlay is mounted:
           // rendering PromptFrame + FooterBar + ModelPicker together grows the live

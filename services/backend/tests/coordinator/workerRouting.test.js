@@ -9,6 +9,20 @@ jest.mock('../../src/services/resourceGuard', () => ({
   createProcessLimits: () => ({ execArgv: [], env: {} }),
 }));
 
+jest.mock('../../src/services/cliAgentRunner', () => ({
+  AGENT_ROLES: {
+    general: { systemPrompt: 'general fixture', toolProfile: null },
+  },
+}));
+
+jest.mock('../../src/cli/ai', () => ({
+  chat: jest.fn(() => new Promise(() => {})),
+}));
+
+jest.mock('../../src/cli/hooks/hookSystem', () => ({
+  trigger: jest.fn(async () => {}),
+}));
+
 jest.mock('../../src/coordinator/taskBoard', () => {
   const _tasks = new Map();
   return {

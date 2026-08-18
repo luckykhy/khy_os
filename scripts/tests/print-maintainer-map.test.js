@@ -2,43 +2,27 @@
 
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('fs');
-const os = require('os');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const scriptPath = path.join(ROOT, 'scripts', 'ci', 'print-maintainer-map.js');
 
-function shellQuote(value) {
-  return `'${String(value).replace(/'/g, `'\\''`)}'`;
-}
-
 function runMaintainerMap(...args) {
-  const outputPath = path.join(os.tmpdir(), `khy-maintainer-map-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}.log`);
-  const command = [
-    'node',
-    shellQuote(path.relative(ROOT, scriptPath)),
-    ...args.map(shellQuote),
-    '>',
-    shellQuote(outputPath),
-    '2>&1',
-  ].join(' ');
-
-  let status = 0;
   try {
-    execSync(command, {
+    const stdout = execFileSync(process.execPath, [scriptPath, ...args], {
       cwd: ROOT,
-      stdio: 'ignore',
-      shell: '/bin/bash',
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
     });
+    return { status: 0, stdout };
   } catch (error) {
-    status = typeof error.status === 'number' ? error.status : 1;
+    const stdout = `${error.stdout || ''}${error.stderr || ''}`;
+    return {
+      status: typeof error.status === 'number' ? error.status : 1,
+      stdout,
+    };
   }
-
-  const stdout = fs.existsSync(outputPath) ? fs.readFileSync(outputPath, 'utf8') : '';
-  fs.rmSync(outputPath, { force: true });
-  return { status, stdout };
 }
 
 describe('print-maintainer-map script', () => {
@@ -59,7 +43,7 @@ describe('print-maintainer-map script', () => {
     assert.ok(payload.area.paths.includes('services/backend/src/routes/aiGatewayAdmin.js'));
     assert.ok(payload.area.paths.includes('services/ai-backend/src/routes/aiGatewayAdmin.js'));
     assert.deepEqual(payload.area.verify, [
-      'npm run test:maintainer:ai-management',
+      'npm run test:one -- services/backend/tests/routes/aiGatewayAdmin.modelSlots.test.js services/backend/tests/gatewayManage.apiDisplay.test.js',
       'npm run build --prefix apps/ai-frontend',
     ]);
   });

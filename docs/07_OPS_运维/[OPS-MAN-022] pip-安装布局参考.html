@@ -30,7 +30,7 @@
 <p>本文件用于说明：<code>pip install khy-os</code>（或 <code>khy-quant</code>）后，安装目录里每一块内容来自源码仓库的哪里。</p>
 <blockquote><p>若你使用 npm 安装，同样可用本项目的 <code>origin-code</code> / <code>npm-dir-bundle</code> 导出结构，见下文第 7 节。</p></blockquote>
 <h2 id="1-快速定位-pip-安装根目录">1. 快速定位 pip 安装根目录<a class="anchor" href="#1-快速定位-pip-安装根目录" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">python -c &quot;import pathlib, khy_platform; p=pathlib.Path(khy_platform.__file__).resolve(); print(p.parent.parent)&quot;</code></pre>
+<pre><code class="language-bash">python -c <span class="hljs-string">&quot;import pathlib, khy_platform; p=pathlib.Path(khy_platform.__file__).resolve(); print(p.parent.parent)&quot;</span></code></pre>
 <p>输出一般是某个 <code>site-packages</code> 路径，例如：</p>
 <p><code>/path/to/python/lib/python3.x/site-packages</code></p>
 <h2 id="2-安装后核心目录-逻辑结构">2. 安装后核心目录（逻辑结构）<a class="anchor" href="#2-安装后核心目录-逻辑结构" aria-label="锚点">#</a></h2>
@@ -59,25 +59,25 @@
 <ul><li>本地开发优先用源码目录</li><li>pip 安装时优先用 wheel 内 bundled backend</li></ul>
 <h2 id="5-一致性自检建议">5. 一致性自检建议<a class="anchor" href="#5-一致性自检建议" aria-label="锚点">#</a></h2>
 <h3 id="5-1-校验关键目录存在">5.1 校验关键目录存在<a class="anchor" href="#5-1-校验关键目录存在" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">python - &lt;&lt;'PY'
+<pre><code class="language-bash">python - &lt;&lt;<span class="hljs-string">&#x27;PY&#x27;</span>
 import pathlib, khy_platform
 site = pathlib.Path(khy_platform.__file__).resolve().parent.parent
 checks = [
-    site / &quot;khy_platform&quot; / &quot;cli.py&quot;,
-    site / &quot;khy_os&quot; / &quot;bundled&quot; / &quot;services&quot; / &quot;backend&quot; / &quot;package.json&quot;,
-    site / &quot;khy_os&quot; / &quot;bundled&quot; / &quot;services&quot; / &quot;backend&quot; / &quot;server.js&quot;,
-    site / &quot;khy_os&quot; / &quot;bundled&quot; / &quot;apps&quot; / &quot;ai-frontend&quot; / &quot;package.json&quot;,
+    site / <span class="hljs-string">&quot;khy_platform&quot;</span> / <span class="hljs-string">&quot;cli.py&quot;</span>,
+    site / <span class="hljs-string">&quot;khy_os&quot;</span> / <span class="hljs-string">&quot;bundled&quot;</span> / <span class="hljs-string">&quot;services&quot;</span> / <span class="hljs-string">&quot;backend&quot;</span> / <span class="hljs-string">&quot;package.json&quot;</span>,
+    site / <span class="hljs-string">&quot;khy_os&quot;</span> / <span class="hljs-string">&quot;bundled&quot;</span> / <span class="hljs-string">&quot;services&quot;</span> / <span class="hljs-string">&quot;backend&quot;</span> / <span class="hljs-string">&quot;server.js&quot;</span>,
+    site / <span class="hljs-string">&quot;khy_os&quot;</span> / <span class="hljs-string">&quot;bundled&quot;</span> / <span class="hljs-string">&quot;apps&quot;</span> / <span class="hljs-string">&quot;ai-frontend&quot;</span> / <span class="hljs-string">&quot;package.json&quot;</span>,
 ]
-for p in checks:
-    print((&quot;OK   &quot; if p.exists() else &quot;MISS &quot;), p)
+<span class="hljs-keyword">for</span> p <span class="hljs-keyword">in</span> checks:
+    <span class="hljs-built_in">print</span>((&quot;OK   &quot; if p.exists() else &quot;MISS &quot;), p)
 PY</code></pre>
 <h3 id="5-2-校验-khy-shared-依赖已本地化">5.2 校验 <code>@khy/shared</code> 依赖已本地化<a class="anchor" href="#5-2-校验-khy-shared-依赖已本地化" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">python - &lt;&lt;'PY'
+<pre><code class="language-bash">python - &lt;&lt;<span class="hljs-string">&#x27;PY&#x27;</span>
 import json, pathlib, khy_platform
 site = pathlib.Path(khy_platform.__file__).resolve().parent.parent
-pkg = site / &quot;khy_os&quot; / &quot;bundled&quot; / &quot;services&quot; / &quot;backend&quot; / &quot;package.json&quot;
-dep = json.loads(pkg.read_text(encoding=&quot;utf-8&quot;)).get(&quot;dependencies&quot;, {}).get(&quot;@khy/shared&quot;)
-print(dep)
+pkg = site / <span class="hljs-string">&quot;khy_os&quot;</span> / <span class="hljs-string">&quot;bundled&quot;</span> / <span class="hljs-string">&quot;services&quot;</span> / <span class="hljs-string">&quot;backend&quot;</span> / <span class="hljs-string">&quot;package.json&quot;</span>
+dep = json.loads(pkg.read_text(encoding=<span class="hljs-string">&quot;utf-8&quot;</span>)).get(<span class="hljs-string">&quot;dependencies&quot;</span>, {}).get(<span class="hljs-string">&quot;@khy/shared&quot;</span>)
+<span class="hljs-built_in">print</span>(dep)
 PY</code></pre>
 <p>期望输出：<code>file:./vendor/shared</code></p>
 <h2 id="6-导出包内结构说明文件">6. 导出包内结构说明文件<a class="anchor" href="#6-导出包内结构说明文件" aria-label="锚点">#</a></h2>
@@ -104,7 +104,7 @@ khy publish origin-code --install npm --npm-root /path/to/npm-install-root</code
 <p><code>pip install</code> 只完成了<strong>「Python 启动器」</strong>这一层。<code>khy</code>（首启入口）真正跑起来，是 Python<br>启动器再去拉起 Node.js 后端，因此在 Windows 上还需另外几层依赖，缺一不可：</p>
 <table><thead><tr><th>层</th><th>检查项</th><th>缺失时的现象</th></tr></thead><tbody><tr><td>1</td><td><code>khy</code> 可执行文件在 PATH 上</td><td><code>'khy' 不是内部或外部命令</code></td></tr><tr><td>2</td><td>Node.js &gt;= 20</td><td>提示 “Node.js not found / &gt;= 20 required”</td></tr><tr><td>3</td><td><code>services/backend/node_modules</code> 已安装</td><td>首启卡在 <code>npm install</code> 或 <code>Cannot find module</code></td></tr><tr><td>4</td><td>全局 <code>claude</code> CLI（<strong>仅</strong> <code>khy claude</code> 需要，普通对话不需要）</td><td><code>错误: 未找到 claude 命令</code></td></tr></tbody></table>
 <h3 id="10-1-一键体检-khy-preflight">10.1 一键体检：<code>khy preflight</code><a class="anchor" href="#10-1-一键体检-khy-preflight" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">khy preflight        # 别名：khy precheck</code></pre>
+<pre><code class="language-bash">khy preflight        <span class="hljs-comment"># 别名：khy precheck</span></code></pre>
 <p>该命令在启动早期对上述四层集中体检，<strong>不触发 Node 后端</strong>，逐项输出<br><code>[ OK ] / [WARN] / [FAIL]</code> 并给出 Windows 专属、可直接粘贴执行的修复指引。<br>退出码：存在阻塞项=1，仅警告或全部通过=0。</p>
 <blockquote><p>若 <code>khy</code> 还没进 PATH（第 1 层就失败），用兜底方式调用：<br><code>python -m khy_platform preflight</code></p></blockquote>
 <h3 id="10-2-各层典型修复">10.2 各层典型修复<a class="anchor" href="#10-2-各层典型修复" aria-label="锚点">#</a></h3>

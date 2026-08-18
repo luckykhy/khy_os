@@ -32,7 +32,7 @@
 <h2 id="一-缺陷本质">一、缺陷本质<a class="anchor" href="#一-缺陷本质" aria-label="锚点">#</a></h2>
 <p><code>executeCode</code> 工具执行 Agent 可控的任意 JavaScript。历史实现用 <code>vm.runInNewContext</code><br>并注入宿主域 intrinsics，逃逸轻而易举：<code>Date.constructor(&quot;return process&quot;)()</code> 直达宿主<br>RCE（fs / child_process / 环境变量外泄）。</p>
 <p>12 小时重构引擎的第 6 次循环做了<strong>进程内 vm 加固</strong>（默认禁用 + 严格 IIFE + 不注入宿主对象），<br>极值推演发现仍有 1/7 向量逃逸：</p>
-<pre><code class="language-js">globalThis.constructor.constructor(&quot;return process&quot;)()  // → [object process]</code></pre>
+<pre><code class="language-js">globalThis.<span class="hljs-property">constructor</span>.<span class="hljs-title function_">constructor</span>(<span class="hljs-params"><span class="hljs-string">&quot;return process&quot;</span></span>)(<span class="hljs-params"></span>)  <span class="hljs-comment">// → [object process]</span></code></pre>
 <p>根因：vm 上下文的<strong>全局对象本身不可避免是宿主对象</strong>，<code>globalThis.constructor</code> 即宿主<br><code>Object</code>，<code>.constructor</code> 即宿主 <code>Function</code>，于是重新桥回宿主域。Node 官方文档原文：<br><em>&quot;the vm module is not a security mechanism. Do not use it to run untrusted code.&quot;</em><br>进程内 vm <strong>无法</strong>密封此逃逸，遂标记 🔴 需人工介入。</p>
 <h2 id="二-修复方案-把代码移出本进程的-v8-域">二、修复方案：把代码移出本进程的 V8 域<a class="anchor" href="#二-修复方案-把代码移出本进程的-v8-域" aria-label="锚点">#</a></h2>
 <p>真正的隔离要求代码离开主进程 realm。新实现在<strong>全新 fork 的 <code>node --permission</code> 子进程</strong><br>中执行用户代码（Node Permission Model，Node 20+/24 稳定）：</p>

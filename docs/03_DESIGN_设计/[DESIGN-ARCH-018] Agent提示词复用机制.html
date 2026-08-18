@@ -45,25 +45,25 @@
 <pre><code>&lt;KHY_DATA_HOME&gt;/prompts/recipes/{id}.json      # 经 getDataDir('prompts','recipes') 解析</code></pre>
 <p><code>id</code> = 任务签名 sha1 的前 16 位；文件名经路径穿越净化（<code>[^a-zA-Z0-9_-]</code> 剔除）。<br>轻量、可直接 <code>git</code>/备份/人工审阅，无需数据库。</p>
 <h3 id="2-2-配方-schema">2.2 配方 Schema<a class="anchor" href="#2-2-配方-schema" aria-label="锚点">#</a></h3>
-<pre><code class="language-jsonc">{
-  &quot;id&quot;: &quot;1fab17104c369c1d&quot;,          // 任务签名前 16 位
-  &quot;signature&quot;: &quot;1fab1710…&quot;,          // 归一化 token 排序后的 sha1（同任务去重键）
-  &quot;category&quot;: &quot;testing&quot;,             // 功能/场景分类（见 §4.3）
-  &quot;tokens&quot;: [&quot;登录&quot;, &quot;接口&quot;, &quot;jest&quot;, &quot;测试&quot;, &quot;...&quot;],  // 相似度匹配用的归一化 token 集
-  &quot;taskSamples&quot;: [&quot;给登录接口补充 Jest 单元测试&quot;, &quot;...&quot;],  // 原始任务样本（≤5，展示/二次匹配）
-  &quot;current&quot;:  { &quot;promptText&quot;: &quot;覆盖成功/401/参数校验三类用例。&quot;, &quot;hash&quot;: &quot;…&quot;, &quot;createdAt&quot;: 0 },
-  &quot;versions&quot;: [                      // 版本历史，永不覆盖（防呆·保留）
-    { &quot;promptText&quot;: &quot;打法 A…&quot;, &quot;hash&quot;: &quot;…&quot;, &quot;createdAt&quot;: 0 },
-    { &quot;promptText&quot;: &quot;覆盖成功/401/参数校验三类用例。&quot;, &quot;hash&quot;: &quot;…&quot;, &quot;createdAt&quot;: 0 }
-  ],
-  &quot;stats&quot;: {
-    &quot;uses&quot;: 7, &quot;successes&quot;: 6, &quot;failures&quot;: 1,
-    &quot;avgDurationMs&quot;: 9000,
-    &quot;feedbackSum&quot;: 2, &quot;feedbackCount&quot;: 3,
-    &quot;createdAt&quot;: 0, &quot;lastUsedAt&quot;: 0, &quot;lastTraceId&quot;: &quot;…&quot;
-  },
-  &quot;effectiveness&quot;: 0.78              // 由 stats 派生缓存（saveRecipe 时重算）
-}</code></pre>
+<pre><code class="language-jsonc"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1fab17104c369c1d&quot;</span><span class="hljs-punctuation">,</span>          <span class="hljs-comment">// 任务签名前 16 位</span>
+  <span class="hljs-attr">&quot;signature&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1fab1710…&quot;</span><span class="hljs-punctuation">,</span>          <span class="hljs-comment">// 归一化 token 排序后的 sha1（同任务去重键）</span>
+  <span class="hljs-attr">&quot;category&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;testing&quot;</span><span class="hljs-punctuation">,</span>             <span class="hljs-comment">// 功能/场景分类（见 §4.3）</span>
+  <span class="hljs-attr">&quot;tokens&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;登录&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;接口&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;jest&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;测试&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;...&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>  <span class="hljs-comment">// 相似度匹配用的归一化 token 集</span>
+  <span class="hljs-attr">&quot;taskSamples&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;给登录接口补充 Jest 单元测试&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;...&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>  <span class="hljs-comment">// 原始任务样本（≤5，展示/二次匹配）</span>
+  <span class="hljs-attr">&quot;current&quot;</span><span class="hljs-punctuation">:</span>  <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;promptText&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;覆盖成功/401/参数校验三类用例。&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;hash&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;…&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;createdAt&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;versions&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>                      <span class="hljs-comment">// 版本历史，永不覆盖（防呆·保留）</span>
+    <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;promptText&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;打法 A…&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;hash&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;…&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;createdAt&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;promptText&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;覆盖成功/401/参数校验三类用例。&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;hash&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;…&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;createdAt&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0</span> <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;stats&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;uses&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">7</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;successes&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">6</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;failures&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;avgDurationMs&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">9000</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;feedbackSum&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">2</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;feedbackCount&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">3</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;createdAt&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;lastUsedAt&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;lastTraceId&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;…&quot;</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;effectiveness&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0.78</span>              <span class="hljs-comment">// 由 stats 派生缓存（saveRecipe 时重算）</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <h3 id="2-3-分词与签名-无分词器-零依赖">2.3 分词与签名（无分词器，零依赖）<a class="anchor" href="#2-3-分词与签名-无分词器-零依赖" aria-label="锚点">#</a></h3>
 <ul><li><strong><code>normalizeTokens(text)</code></strong>：英文按词；中文按<strong>相邻字符二元组（bigram）</strong>切分；去停用词</li></ul>
 <p>与超短 token。二元组在无中文分词器前提下显著提升相似度鲁棒性。</p>
@@ -99,83 +99,83 @@
 <table><thead><tr><th>防呆要求</th><th>落地</th></tr></thead><tbody><tr><td>复用需保留原提示词版本，避免覆盖</td><td><code>recordUsage</code> 对新 <code>promptText</code> <strong>追加</strong> <code>versions[]</code>，仅在哈希变化时新增；<code>MAX_VERSIONS</code> 只截最旧、永不丢最新。</td></tr><tr><td>检索需考虑相似度阈值，避免误推荐</td><td><code>retrieve</code> 强制 <code>sim ≥ threshold</code>（默认 0.35）；不相似任务 Dice≈0 必被过滤。</td></tr><tr><td>只添加复用机制，不改现有提示词内容/核心逻辑</td><td>新增两模块 + 两处加法 hook；不触碰 <code>constants/prompts.js</code>；建议块以独立 <code>[SYSTEM:…]</code> 前置，不混入既有提示词；效果信号复用现有交付裁决，无新增埋点。</td></tr><tr><td>健壮性</td><td>全链 <code>try/catch</code> 静默降级；损坏配方文件读取时跳过；env <code>KHY_PROMPT_REUSE=0</code> 一键整体停用。</td></tr></tbody></table>
 <h2 id="7-代码示例">7. 代码示例<a class="anchor" href="#7-代码示例" aria-label="锚点">#</a></h2>
 <h3 id="7-1-存储-检索-promptreusestore-js-摘录">7.1 存储 + 检索（<code>promptReuseStore.js</code> 摘录）<a class="anchor" href="#7-1-存储-检索-promptreusestore-js-摘录" aria-label="锚点">#</a></h3>
-<pre><code class="language-js">// 登记一次「任务 → 有效提示词」用法（含版本保留）
-function recordUsage({ taskText, promptText, category, traceId }) {
-  const id = idFor(taskText);                 // = signatureFor(taskText).slice(0,16)
-  let recipe = loadRecipe(id);
-  const promptHash = promptText ? _sha1(promptText) : '';
-  if (!recipe) {
-    recipe = { id, /* … */ versions: promptText ? [{ promptText, hash: promptHash, createdAt: Date.now() }] : [],
-               current: promptText ? { promptText, hash: promptHash, createdAt: Date.now() } : null,
-               stats: { uses: 1, successes: 0, failures: 0, /* … */ } };
-  } else {
-    recipe.stats.uses += 1;
-    // 防呆·保留：promptText 变化 → 追加版本，绝不覆盖历史
-    if (promptText &amp;&amp; (!recipe.current || recipe.current.hash !== promptHash)) {
-      recipe.versions.push({ promptText, hash: promptHash, createdAt: Date.now() });
-      recipe.current = { promptText, hash: promptHash, createdAt: Date.now() };
+<pre><code class="language-js"><span class="hljs-comment">// 登记一次「任务 → 有效提示词」用法（含版本保留）</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">recordUsage</span>(<span class="hljs-params">{ taskText, promptText, category, traceId }</span>) {
+  <span class="hljs-keyword">const</span> id = <span class="hljs-title function_">idFor</span>(taskText);                 <span class="hljs-comment">// = signatureFor(taskText).slice(0,16)</span>
+  <span class="hljs-keyword">let</span> recipe = <span class="hljs-title function_">loadRecipe</span>(id);
+  <span class="hljs-keyword">const</span> promptHash = promptText ? <span class="hljs-title function_">_sha1</span>(promptText) : <span class="hljs-string">&#x27;&#x27;</span>;
+  <span class="hljs-keyword">if</span> (!recipe) {
+    recipe = { id, <span class="hljs-comment">/* … */</span> <span class="hljs-attr">versions</span>: promptText ? [{ promptText, <span class="hljs-attr">hash</span>: promptHash, <span class="hljs-attr">createdAt</span>: <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() }] : [],
+               <span class="hljs-attr">current</span>: promptText ? { promptText, <span class="hljs-attr">hash</span>: promptHash, <span class="hljs-attr">createdAt</span>: <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() } : <span class="hljs-literal">null</span>,
+               <span class="hljs-attr">stats</span>: { <span class="hljs-attr">uses</span>: <span class="hljs-number">1</span>, <span class="hljs-attr">successes</span>: <span class="hljs-number">0</span>, <span class="hljs-attr">failures</span>: <span class="hljs-number">0</span>, <span class="hljs-comment">/* … */</span> } };
+  } <span class="hljs-keyword">else</span> {
+    recipe.<span class="hljs-property">stats</span>.<span class="hljs-property">uses</span> += <span class="hljs-number">1</span>;
+    <span class="hljs-comment">// 防呆·保留：promptText 变化 → 追加版本，绝不覆盖历史</span>
+    <span class="hljs-keyword">if</span> (promptText &amp;&amp; (!recipe.<span class="hljs-property">current</span> || recipe.<span class="hljs-property">current</span>.<span class="hljs-property">hash</span> !== promptHash)) {
+      recipe.<span class="hljs-property">versions</span>.<span class="hljs-title function_">push</span>({ promptText, <span class="hljs-attr">hash</span>: promptHash, <span class="hljs-attr">createdAt</span>: <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() });
+      recipe.<span class="hljs-property">current</span> = { promptText, <span class="hljs-attr">hash</span>: promptHash, <span class="hljs-attr">createdAt</span>: <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() };
     }
   }
-  saveRecipe(recipe);                          // saveRecipe 内重算 effectiveness
-  return { id, recipe };
+  <span class="hljs-title function_">saveRecipe</span>(recipe);                          <span class="hljs-comment">// saveRecipe 内重算 effectiveness</span>
+  <span class="hljs-keyword">return</span> { id, recipe };
 }
 
-// 检索：相似度阈值过滤 + 「相似度 × 效果」排序
-function retrieve(taskText, { threshold = 0.35, limit = 3, minUses = 1 } = {}) {
-  const q = new Set(normalizeTokens(taskText));
-  return listRecipes()
-    .filter(r =&gt; r.stats &amp;&amp; (r.stats.uses || 0) &gt;= minUses)
-    .map(r =&gt; {
-      const sim = similarity(q, new Set(r.tokens || []));       // Dice 系数
-      const eff = computeEffectiveness(r.stats);
-      return { id: r.id, sim, eff, score: sim * (0.5 + 0.5 * eff),
-               promptText: r.current?.promptText || '' };
+<span class="hljs-comment">// 检索：相似度阈值过滤 + 「相似度 × 效果」排序</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">retrieve</span>(<span class="hljs-params">taskText, { threshold = <span class="hljs-number">0.35</span>, limit = <span class="hljs-number">3</span>, minUses = <span class="hljs-number">1</span> } = {}</span>) {
+  <span class="hljs-keyword">const</span> q = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Set</span>(<span class="hljs-title function_">normalizeTokens</span>(taskText));
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">listRecipes</span>()
+    .<span class="hljs-title function_">filter</span>(<span class="hljs-function"><span class="hljs-params">r</span> =&gt;</span> r.<span class="hljs-property">stats</span> &amp;&amp; (r.<span class="hljs-property">stats</span>.<span class="hljs-property">uses</span> || <span class="hljs-number">0</span>) &gt;= minUses)
+    .<span class="hljs-title function_">map</span>(<span class="hljs-function"><span class="hljs-params">r</span> =&gt;</span> {
+      <span class="hljs-keyword">const</span> sim = <span class="hljs-title function_">similarity</span>(q, <span class="hljs-keyword">new</span> <span class="hljs-title class_">Set</span>(r.<span class="hljs-property">tokens</span> || []));       <span class="hljs-comment">// Dice 系数</span>
+      <span class="hljs-keyword">const</span> eff = <span class="hljs-title function_">computeEffectiveness</span>(r.<span class="hljs-property">stats</span>);
+      <span class="hljs-keyword">return</span> { <span class="hljs-attr">id</span>: r.<span class="hljs-property">id</span>, sim, eff, <span class="hljs-attr">score</span>: sim * (<span class="hljs-number">0.5</span> + <span class="hljs-number">0.5</span> * eff),
+               <span class="hljs-attr">promptText</span>: r.<span class="hljs-property">current</span>?.<span class="hljs-property">promptText</span> || <span class="hljs-string">&#x27;&#x27;</span> };
     })
-    .filter(c =&gt; c.sim &gt;= threshold)                            // 防呆·阈值
-    .sort((a, b) =&gt; b.score - a.score)
-    .slice(0, limit);
+    .<span class="hljs-title function_">filter</span>(<span class="hljs-function"><span class="hljs-params">c</span> =&gt;</span> c.<span class="hljs-property">sim</span> &gt;= threshold)                            <span class="hljs-comment">// 防呆·阈值</span>
+    .<span class="hljs-title function_">sort</span>(<span class="hljs-function">(<span class="hljs-params">a, b</span>) =&gt;</span> b.<span class="hljs-property">score</span> - a.<span class="hljs-property">score</span>)
+    .<span class="hljs-title function_">slice</span>(<span class="hljs-number">0</span>, limit);
 }</code></pre>
 <h3 id="7-2-复用推荐函数-promptreuseservice-js-摘录">7.2 复用推荐函数（<code>promptReuseService.js</code> 摘录）<a class="anchor" href="#7-2-复用推荐函数-promptreuseservice-js-摘录" aria-label="锚点">#</a></h3>
-<pre><code class="language-js">// 为新任务检索并格式化可前置的「复用建议」上下文块；无命中返回 null
-function recommendForTask(taskText, opts = {}) {
-  if (!_enabled()) return null;                                // KHY_PROMPT_REUSE 门控
-  const candidates = store.retrieve(taskText, {
-    threshold: opts.threshold ?? _threshold(),
-    limit: opts.limit ?? _topK(),
-  }).filter(c =&gt; c.promptText &amp;&amp; c.promptText.trim());
-  if (candidates.length === 0) return null;                    // 零数据零噪音
+<pre><code class="language-js"><span class="hljs-comment">// 为新任务检索并格式化可前置的「复用建议」上下文块；无命中返回 null</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">recommendForTask</span>(<span class="hljs-params">taskText, opts = {}</span>) {
+  <span class="hljs-keyword">if</span> (!<span class="hljs-title function_">_enabled</span>()) <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;                                <span class="hljs-comment">// KHY_PROMPT_REUSE 门控</span>
+  <span class="hljs-keyword">const</span> candidates = store.<span class="hljs-title function_">retrieve</span>(taskText, {
+    <span class="hljs-attr">threshold</span>: opts.<span class="hljs-property">threshold</span> ?? <span class="hljs-title function_">_threshold</span>(),
+    <span class="hljs-attr">limit</span>: opts.<span class="hljs-property">limit</span> ?? <span class="hljs-title function_">_topK</span>(),
+  }).<span class="hljs-title function_">filter</span>(<span class="hljs-function"><span class="hljs-params">c</span> =&gt;</span> c.<span class="hljs-property">promptText</span> &amp;&amp; c.<span class="hljs-property">promptText</span>.<span class="hljs-title function_">trim</span>());
+  <span class="hljs-keyword">if</span> (candidates.<span class="hljs-property">length</span> === <span class="hljs-number">0</span>) <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;                    <span class="hljs-comment">// 零数据零噪音</span>
 
-  const lines = ['[SYSTEM: 提示词复用建议（来自历史相似任务的有效打法，仅供参考，可按需采纳或忽略）：'];
-  candidates.forEach((c, i) =&gt; {
-    const sr = Math.round(c.stats.successes / Math.max(1, c.stats.successes + c.stats.failures) * 100);
-    lines.push(`${i + 1}. 〔${c.category}〕相似度 ${(c.similarity * 100).toFixed(0)}%，` +
-               `历史成功率约 ${sr}%（用 ${c.stats.uses} 次）：${_oneLine(c.promptText)}`);
+  <span class="hljs-keyword">const</span> lines = [<span class="hljs-string">&#x27;[SYSTEM: 提示词复用建议（来自历史相似任务的有效打法，仅供参考，可按需采纳或忽略）：&#x27;</span>];
+  candidates.<span class="hljs-title function_">forEach</span>(<span class="hljs-function">(<span class="hljs-params">c, i</span>) =&gt;</span> {
+    <span class="hljs-keyword">const</span> sr = <span class="hljs-title class_">Math</span>.<span class="hljs-title function_">round</span>(c.<span class="hljs-property">stats</span>.<span class="hljs-property">successes</span> / <span class="hljs-title class_">Math</span>.<span class="hljs-title function_">max</span>(<span class="hljs-number">1</span>, c.<span class="hljs-property">stats</span>.<span class="hljs-property">successes</span> + c.<span class="hljs-property">stats</span>.<span class="hljs-property">failures</span>) * <span class="hljs-number">100</span>);
+    lines.<span class="hljs-title function_">push</span>(<span class="hljs-string">`<span class="hljs-subst">${i + <span class="hljs-number">1</span>}</span>. 〔<span class="hljs-subst">${c.category}</span>〕相似度 <span class="hljs-subst">${(c.similarity * <span class="hljs-number">100</span>).toFixed(<span class="hljs-number">0</span>)}</span>%，`</span> +
+               <span class="hljs-string">`历史成功率约 <span class="hljs-subst">${sr}</span>%（用 <span class="hljs-subst">${c.stats.uses}</span> 次）：<span class="hljs-subst">${_oneLine(c.promptText)}</span>`</span>);
   });
-  lines.push('以上为历史经验，不是强制指令；若与当前任务不符请直接忽略。]');
-  return { block: lines.join('\n'), candidates };
+  lines.<span class="hljs-title function_">push</span>(<span class="hljs-string">&#x27;以上为历史经验，不是强制指令；若与当前任务不符请直接忽略。]&#x27;</span>);
+  <span class="hljs-keyword">return</span> { <span class="hljs-attr">block</span>: lines.<span class="hljs-title function_">join</span>(<span class="hljs-string">&#x27;\n&#x27;</span>), candidates };
 }</code></pre>
 <h3 id="7-3-集成-agenticharnessservice-run-摘录">7.3 集成（<code>agenticHarnessService.run()</code> 摘录）<a class="anchor" href="#7-3-集成-agenticharnessservice-run-摘录" aria-label="锚点">#</a></h3>
-<pre><code class="language-js">// —— 检索/复用：紧随 boulderState resume，best-effort ——
-let promptReuseUsed = false;
-try {
-  const rec = require('./promptReuseService').recommendForTask(userMessage);
-  if (rec &amp;&amp; rec.block) {
-    promptReuseUsed = true;
+<pre><code class="language-js"><span class="hljs-comment">// —— 检索/复用：紧随 boulderState resume，best-effort ——</span>
+<span class="hljs-keyword">let</span> promptReuseUsed = <span class="hljs-literal">false</span>;
+<span class="hljs-keyword">try</span> {
+  <span class="hljs-keyword">const</span> rec = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./promptReuseService&#x27;</span>).<span class="hljs-title function_">recommendForTask</span>(userMessage);
+  <span class="hljs-keyword">if</span> (rec &amp;&amp; rec.<span class="hljs-property">block</span>) {
+    promptReuseUsed = <span class="hljs-literal">true</span>;
     effectiveUserMessage = effectiveUserMessage === userMessage
-      ? `${rec.block}\n\n${userMessage}`            // 单一 \n\n 分隔不变性
-      : `${rec.block}\n${effectiveUserMessage}`;     // boulder 已变形 → 单换行并入
-    if (onEvent) onEvent({ type: 'prompt_reuse', count: rec.candidates.length });
+      ? <span class="hljs-string">`<span class="hljs-subst">${rec.block}</span>\n\n<span class="hljs-subst">${userMessage}</span>`</span>            <span class="hljs-comment">// 单一 \n\n 分隔不变性</span>
+      : <span class="hljs-string">`<span class="hljs-subst">${rec.block}</span>\n<span class="hljs-subst">${effectiveUserMessage}</span>`</span>;     <span class="hljs-comment">// boulder 已变形 → 单换行并入</span>
+    <span class="hljs-keyword">if</span> (onEvent) <span class="hljs-title function_">onEvent</span>({ <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;prompt_reuse&#x27;</span>, <span class="hljs-attr">count</span>: rec.<span class="hljs-property">candidates</span>.<span class="hljs-property">length</span> });
   }
-} catch { /* promptReuse 不可用 → 跳过 */ }
+} <span class="hljs-keyword">catch</span> { <span class="hljs-comment">/* promptReuse 不可用 → 跳过 */</span> }
 
-// —— 效果回收：saveSessionTrace 之后，best-effort ——
-try {
-  require('./promptReuseService').captureOutcome({
-    taskText: userMessage,
-    success: deliveryVerdict.verdict !== 'fail',     // 与现有交付门同源
-    durationMs: harnessReport.durationMs,
+<span class="hljs-comment">// —— 效果回收：saveSessionTrace 之后，best-effort ——</span>
+<span class="hljs-keyword">try</span> {
+  <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./promptReuseService&#x27;</span>).<span class="hljs-title function_">captureOutcome</span>({
+    <span class="hljs-attr">taskText</span>: userMessage,
+    <span class="hljs-attr">success</span>: deliveryVerdict.<span class="hljs-property">verdict</span> !== <span class="hljs-string">&#x27;fail&#x27;</span>,     <span class="hljs-comment">// 与现有交付门同源</span>
+    <span class="hljs-attr">durationMs</span>: harnessReport.<span class="hljs-property">durationMs</span>,
   });
-} catch { /* 回收 best-effort */ }</code></pre>
+} <span class="hljs-keyword">catch</span> { <span class="hljs-comment">/* 回收 best-effort */</span> }</code></pre>
 <h2 id="8-环境开关一览">8. 环境开关一览<a class="anchor" href="#8-环境开关一览" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>变量</th><th>默认</th><th>作用</th></tr></thead><tbody><tr><td><code>KHY_PROMPT_REUSE</code></td><td>启用</td><td><code>0/false/off/no</code> → 整体停用（recommend=null，capture no-op）</td></tr><tr><td><code>KHY_PROMPT_REUSE_THRESHOLD</code></td><td><code>0.35</code></td><td>相似度阈值覆盖</td></tr><tr><td><code>KHY_PROMPT_REUSE_TOPK</code></td><td><code>2</code></td><td>推荐条数上限</td></tr><tr><td><code>KHY_DATA_HOME</code></td><td><code>~/.khy</code></td><td>配方存储根（经 <code>utils/dataHome</code>）</td></tr></tbody></table>
 <h2 id="9-后续可扩展-非本期">9. 后续可扩展（非本期）<a class="anchor" href="#9-后续可扩展-非本期" aria-label="锚点">#</a></h2>

@@ -20,6 +20,7 @@ const os = require('os');
 const path = require('path');
 
 const { getBaseDataDir } = require('../utils/dataHome');
+const atomicWriteJson = require('../utils/atomicWriteJson');
 
 const core = require('./meshCore');
 
@@ -65,10 +66,13 @@ function _readPresence(id) {
 /** 原子写 presence。绝不抛。 */
 function _writePresence(record) {
   try {
-    const dir = _dir();
-    const tmp = path.join(dir, `.${record.id}.${process.pid}.tmp`);
-    fs.writeFileSync(tmp, JSON.stringify(record, null, 2), 'utf-8');
-    fs.renameSync(tmp, _presenceFile(record.id));
+    // 原子写收口到 utils/atomicWriteJson(同目录 tmp + rename,语义与原实现一致)。
+    // mode 0o666 = writeFileSync 默认值:同机多用户协作时 presence 需被同组进程读到,
+    // 本次迁移只换写入原语,不收紧权限。
+    if (!atomicWriteJson(_presenceFile(record.id), record, { mode: 0o666 })) {
+      // atomicWriteJson 不抛,但本函数的契约是 {ok:false,error};失败必须显式变成 ok:false。
+      return { ok: false, error: `原子写失败: ${_presenceFile(record.id)}` };
+    }
     return { ok: true };
   } catch (e) {
     return { ok: false, error: (e && e.message) || String(e) };

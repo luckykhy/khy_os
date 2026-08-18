@@ -57,25 +57,25 @@
 <h2 id="二-模块一-细粒度权限控制中间件">二、模块一：细粒度权限控制中间件<a class="anchor" href="#二-模块一-细粒度权限控制中间件" aria-label="锚点">#</a></h2>
 <h3 id="2-1-配置文件-permissions-json">2.1 配置文件 <code>&lt;dataHome&gt;/permissions.json</code><a class="anchor" href="#2-1-配置文件-permissions-json" aria-label="锚点">#</a></h3>
 <p>通过 <code>utils/dataHome.getDataHome()</code> 解析（默认 <code>~/.khy</code>，可由 <code>KHY_DATA_HOME</code> /<br><code>.location.json</code> 指针覆盖）。<strong>与既有的 profile 式 <code>~/.khyquant/permissions.json</code><br>（permissionStore）是两个独立命名空间</strong>，互不影响。</p>
-<pre><code class="language-jsonc">{
-  &quot;version&quot;: 1,
-  &quot;defaultPolicy&quot;: &quot;confirm&quot;,         // 全局默认：auto | confirm | deny
-  &quot;tools&quot;: { &quot;shellCommand&quot;: &quot;deny&quot; },// 逐工具覆盖（按名，支持别名/规范化匹配）
-  &quot;filesystem&quot;: {
-    &quot;pathWhitelist&quot;:   [&quot;/work/**&quot;],  // 所有文件操作通用
-    &quot;readWhitelist&quot;:   [],            // 进一步按动词限制
-    &quot;writeWhitelist&quot;:  [],
-    &quot;deleteWhitelist&quot;: []
-  },
-  &quot;network&quot;:  { &quot;urlWhitelist&quot;: [&quot;*.github.com&quot;, &quot;https://api.example.com/*&quot;] },
-  &quot;codeExecution&quot;: {
-    &quot;allowedLanguages&quot;: [&quot;javascript&quot;, &quot;python&quot;],
-    &quot;limits&quot;: { &quot;cpuSeconds&quot;: 0, &quot;memoryMb&quot;: 0, &quot;timeoutMs&quot;: 0 }  // 0 = 不额外限制
-  },
-  &quot;sensitiveOperations&quot;: {
-    &quot;requireConfirm&quot;: [&quot;git push&quot;, &quot;git reset --hard&quot;, &quot;deploy&quot;, &quot;rm -rf&quot;, &quot;drop table&quot;, &quot;批量删除&quot;]
-  }
-}</code></pre>
+<pre><code class="language-jsonc"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;version&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;defaultPolicy&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;confirm&quot;</span><span class="hljs-punctuation">,</span>         <span class="hljs-comment">// 全局默认：auto | confirm | deny</span>
+  <span class="hljs-attr">&quot;tools&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;shellCommand&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;deny&quot;</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span><span class="hljs-comment">// 逐工具覆盖（按名，支持别名/规范化匹配）</span>
+  <span class="hljs-attr">&quot;filesystem&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;pathWhitelist&quot;</span><span class="hljs-punctuation">:</span>   <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;/work/**&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>  <span class="hljs-comment">// 所有文件操作通用</span>
+    <span class="hljs-attr">&quot;readWhitelist&quot;</span><span class="hljs-punctuation">:</span>   <span class="hljs-punctuation">[</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>            <span class="hljs-comment">// 进一步按动词限制</span>
+    <span class="hljs-attr">&quot;writeWhitelist&quot;</span><span class="hljs-punctuation">:</span>  <span class="hljs-punctuation">[</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;deleteWhitelist&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-punctuation">]</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;network&quot;</span><span class="hljs-punctuation">:</span>  <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;urlWhitelist&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;*.github.com&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;https://api.example.com/*&quot;</span><span class="hljs-punctuation">]</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;codeExecution&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;allowedLanguages&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;javascript&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;python&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;limits&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;cpuSeconds&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;memoryMb&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;timeoutMs&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0</span> <span class="hljs-punctuation">}</span>  <span class="hljs-comment">// 0 = 不额外限制</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;sensitiveOperations&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;requireConfirm&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;git push&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;git reset --hard&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;deploy&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;rm -rf&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;drop table&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;批量删除&quot;</span><span class="hljs-punctuation">]</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <ul><li><strong>文件不存在 ⇒ 中间件完全无操作</strong>，现有权限流程 100% 不变（用户写文件后才生效）。</li><li>文件损坏 ⇒ 降级为「无策略」，在评估层 fail-closed（只会增加保护）。</li><li>杀手开关：<code>KHY_PERMISSION_POLICY=off</code>。</li></ul>
 <h3 id="2-2-评估契约-evaluate-toolname-params-ctx">2.2 评估契约 <code>evaluate(toolName, params, ctx)</code><a class="anchor" href="#2-2-评估契约-evaluate-toolname-params-ctx" aria-label="锚点">#</a></h3>
 <p>返回 <code>{ decision, category, reason, matched, limits }</code> 或 <code>null</code>（无策略 ⇒ 调用方按原流程继续）。</p>

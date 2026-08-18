@@ -47,6 +47,11 @@ describe('cursor adapter strict availability', () => {
       findInstallation: jest.fn((name) => (name === 'cursor' && installed ? '/fake/Cursor' : null)),
       findDataPath: jest.fn(() => null),
     }));
+    jest.doMock('../../src/services/accountPool', () => ({
+      init: jest.fn(async () => {}),
+      saveObservedToken: jest.fn(async () => {}),
+      autoImportObservedCredentials: jest.fn(async () => {}),
+    }));
 
     // Provide (or withhold) a native token via a real storage.json the adapter reads.
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-cursor-strict-'));

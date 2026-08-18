@@ -34,52 +34,52 @@
 <ul><li>User wants to compress a screen recording, screencast, or any .mov/.mp4 file</li><li>File is too large to share (chat, email, GitHub)</li><li>Need smaller files but cannot tolerate visible quality loss</li><li>Apple Silicon Mac (M1/M2/M3/M4) — best results</li></ul>
 <p><strong>Don't</strong> use this on non-screen content (camera footage, vlogs) — savings will be much smaller because there are no duplicate frames to drop.</p>
 <h2 id="commands">Commands<a class="anchor" href="#commands" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># Compress with default transparent quality
+<pre><code class="language-bash"><span class="hljs-comment"># Compress with default transparent quality</span>
 cli-anything-quietshrink compress &lt;input&gt; [output]
 
-# Compress with specific preset
-cli-anything-quietshrink compress -q tiny &lt;input&gt;     # smallest
-cli-anything-quietshrink compress -q transparent &lt;input&gt;  # default, visually lossless
-cli-anything-quietshrink compress -q pristine &lt;input&gt;     # near-source quality
+<span class="hljs-comment"># Compress with specific preset</span>
+cli-anything-quietshrink compress -q tiny &lt;input&gt;     <span class="hljs-comment"># smallest</span>
+cli-anything-quietshrink compress -q transparent &lt;input&gt;  <span class="hljs-comment"># default, visually lossless</span>
+cli-anything-quietshrink compress -q pristine &lt;input&gt;     <span class="hljs-comment"># near-source quality</span>
 
-# Inspect a file before compressing
+<span class="hljs-comment"># Inspect a file before compressing</span>
 cli-anything-quietshrink probe &lt;input&gt;
 
-# List quality presets
+<span class="hljs-comment"># List quality presets</span>
 cli-anything-quietshrink presets
 
-# Verify environment
+<span class="hljs-comment"># Verify environment</span>
 cli-anything-quietshrink doctor</code></pre>
 <p>All commands accept <code>--json</code> for machine-readable output.</p>
 <h2 id="quality-presets">Quality presets<a class="anchor" href="#quality-presets" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>Preset</th><th>q</th><th>Typical reduction</th><th>SSIM</th><th>Use case</th></tr></thead><tbody><tr><td><code>tiny</code></td><td>50</td><td>~90%</td><td>~0.95</td><td>Chat/email — small artifacts OK</td></tr><tr><td><code>balanced</code></td><td>55</td><td>~88%</td><td>~0.99</td><td>Docs/sharing — high quality</td></tr><tr><td><code>transparent</code> (default)</td><td>60</td><td>~87%</td><td>~0.99+</td><td><strong>Anything important</strong> — visually lossless</td></tr><tr><td><code>pristine</code></td><td>70</td><td>~84%</td><td>~0.997</td><td>Archival — near-source</td></tr></tbody></table>
 <h2 id="json-output-schema">JSON output schema<a class="anchor" href="#json-output-schema" aria-label="锚点">#</a></h2>
 <p><code>compress</code> returns:</p>
-<pre><code class="language-json">{
-  &quot;input&quot;: &quot;/path/to/input.mov&quot;,
-  &quot;output&quot;: &quot;/path/to/output.mov&quot;,
-  &quot;input_size&quot;: 105952129,
-  &quot;output_size&quot;: 12345678,
-  &quot;saved_bytes&quot;: 93606451,
-  &quot;saved_percent&quot;: 88.3,
-  &quot;duration_seconds&quot;: 193.3,
-  &quot;elapsed_seconds&quot;: 87,
-  &quot;encoding_speed&quot;: &quot;2.2x&quot;,
-  &quot;quality_preset&quot;: &quot;transparent&quot;,
-  &quot;q_value&quot;: 60,
-  &quot;gop&quot;: 600
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;input&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;/path/to/input.mov&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;output&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;/path/to/output.mov&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;input_size&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">105952129</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;output_size&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">12345678</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;saved_bytes&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">93606451</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;saved_percent&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">88.3</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;duration_seconds&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">193.3</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;elapsed_seconds&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">87</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;encoding_speed&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2.2x&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;quality_preset&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;transparent&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;q_value&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">60</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;gop&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">600</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <p><code>probe</code> returns:</p>
-<pre><code class="language-json">{
-  &quot;path&quot;: &quot;...&quot;,
-  &quot;size_bytes&quot;: 105952129,
-  &quot;size_mb&quot;: 101.04,
-  &quot;codec&quot;: &quot;h264&quot;,
-  &quot;width&quot;: 3024,
-  &quot;height&quot;: 1964,
-  &quot;framerate&quot;: &quot;120/1&quot;,
-  &quot;duration_seconds&quot;: 193.31
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;path&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;...&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;size_bytes&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">105952129</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;size_mb&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">101.04</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;codec&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;h264&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;width&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">3024</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;height&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1964</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;framerate&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;120/1&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;duration_seconds&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">193.31</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <h2 id="decision-flow-for-agents">Decision flow for agents<a class="anchor" href="#decision-flow-for-agents" aria-label="锚点">#</a></h2>
 <pre><code>User wants to share a recording
   ├─ Is it on Apple Silicon Mac? → use quietshrink

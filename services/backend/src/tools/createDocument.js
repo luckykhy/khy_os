@@ -37,28 +37,11 @@ function _resolveIdleTimeoutMs() {
   return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_IDLE_TIMEOUT_MS;
 }
 
+// docHelper.py 存在 + python 可运行 → 启用。python 探活走共享 TTL 缓存
+// (utils/pythonAvailable),避免简单打招呼的一轮里多处 isEnabled 各 spawn 一次 python。
 let _enabled = null;
 function _checkEnabled() {
-  if (!fs.existsSync(DOC_HELPER)) {
-    return false;
-  }
-  try {
-    require('child_process').execFileSync('python3', ['--version'], {
-      stdio: 'ignore',
-      timeout: 3000,
-    });
-    return true;
-  } catch {
-    try {
-      require('child_process').execFileSync('python', ['--version'], {
-        stdio: 'ignore',
-        timeout: 3000,
-      });
-      return true;
-    } catch {
-      return false;
-    }
-  }
+  return fs.existsSync(DOC_HELPER) && require('../utils/pythonAvailable')();
 }
 
 function _resolvePath(rawPath, cwd) {

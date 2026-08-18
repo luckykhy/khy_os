@@ -619,7 +619,10 @@ async function dispatchSlashCommand(command, _ctx) {
         subCommand === 'show' ||
         subCommand === 'test' ||
         subCommand === 'enable' ||
-        subCommand === 'disable'
+        subCommand === 'disable' ||
+        subCommand === 'eco' ||
+        subCommand === 'ecosystem' ||
+        subCommand === '生态'
       ) {
         await require('./handlers/mcp').handleMcp(subCommand, args, options);
         return true;

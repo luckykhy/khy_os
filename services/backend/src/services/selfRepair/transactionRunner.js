@@ -139,6 +139,33 @@ async function runRepairTransaction(opts = {}) {
         _emit({ type: 'repair_rollback_error', error: e && e.message });
       }
       _emit({ type: 'repair_rollback_done', rolledBack });
+
+      // 回滚**没滚干净** = 事务机制自己也失败了:工作树可能残留半截改动,而这既不能靠
+      // 重试解决,也没有更重的自动手段可用(动别人的工作树是红线)。直接交人(L3):写
+      // .khy/heal_escalation.json + 终端告警,把「注解里一句提示」升级成可追溯的待办。
+      // 回滚成功时不升级——那是护栏正常生效,系统已回到已知良好状态,不该打扰用户。
+      if (rolledBack === false) {
+        try {
+          const p = require('../healEscalationService').escalate({
+            component: 'selfRepairTransaction',
+            trigger: 'self-repair-rollback',
+            context: {
+              files: (changeSet && changeSet.validatable) || [],
+              snapshotMissing,
+            },
+            failedAttempts: [
+              { step: 'validate', error: (decision.failures || []).slice(0, 3).join(' | ') },
+              { step: 'rollback', error: 'rollback_incomplete' },
+            ],
+            env,
+          });
+          if (p && typeof p.catch === 'function') {
+            p.catch(() => {});
+          }
+        } catch {
+          /* 升级链绝不能反过来搞垮自修复事务 */
+        }
+      }
     }
 
     const annotation = leaf.summarizeTransaction({

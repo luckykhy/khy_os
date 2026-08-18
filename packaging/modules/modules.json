@@ -91,12 +91,23 @@
         "ide",
         "maintain",
         "metadata",
+        "mcp",
         "plugin-dev",
         "pr",
         "proxy",
         "publish"
       ],
-      "services": ["cleanupService", "ciStatusService", "extensionMarketplace"],
+      "services": [
+        "cleanupService",
+        "ciStatusService",
+        "extensionMarketplace",
+        "instructionEcosystemRegistry",
+        "instructionFileService",
+        "mcp",
+        "mcpEcosystemRegistry",
+        "payloadProvisioner",
+        "updateChannelRouter"
+      ],
       "excludeDeps": ["pg", "sequelize", "better-sqlite3", "@opentelemetry/*", "node-llama-cpp", "@aws/*"],
       "includeDeps": ["axios", "chalk", "dotenv", "winston", "glob", "cli-table3"],
       "platforms": ["win-x64", "linux-x64", "macos-x64", "macos-arm64"]

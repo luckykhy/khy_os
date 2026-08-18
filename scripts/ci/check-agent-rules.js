@@ -12,9 +12,9 @@
  *  4) ANSI scroll-region escapes (DECSTBM) outside full-screen alt-buffer UIs
  *
  * Usage:
- *   node scripts/check-agent-rules.js --changed
- *   node scripts/check-agent-rules.js <file-or-dir> [more...]
- *   node scripts/check-agent-rules.js --changed --strict-warnings
+ *   node scripts/ci/check-agent-rules.js --changed
+ *   node scripts/ci/check-agent-rules.js <file-or-dir> [more...]
+ *   node scripts/ci/check-agent-rules.js --changed --strict-warnings
  */
 const fs = require('fs');
 const path = require('path');
@@ -40,6 +40,20 @@ const IGNORE_DIRS = new Set([
   '.tmp',
   'coverage',
   'logs',
+  // Third-party / generated trees. These hold code this repo does not author and
+  // cannot refactor, so every hit in them is unactionable noise. A single
+  // unignored Python virtualenv produced 30 `no-hardcoded-endpoint` errors from
+  // library docstrings and pinned the whole gate red, which makes the real
+  // findings invisible and trains readers to skip the output.
+  '.venv',
+  'venv',
+  'site-packages',
+  '__pycache__',
+  '.pytest_cache',
+  '.mypy_cache',
+  '.ruff_cache',
+  'vendor',
+  'third_party',
 ]);
 
 const HARD_ENDPOINT_PATTERNS = [
@@ -55,6 +69,28 @@ const HARD_ENDPOINT_PATTERNS = [
 // above never matched these, so production-domain hardcodes used to pass the
 // gate entirely. Add new first-party hosts here as they appear.
 const PRODUCTION_HOST_PATTERN = /\bkhyquant\.(?:top|com|cn)\b/i;
+
+// Rule 3 termination effects. A fixed-duration timer only violates the idle-timeout
+// rule if it ENDS work when it fires; see Rule 3 below for why the effect, not the
+// timer, is the trigger.
+//
+// Hard kill: tears down a process (tree). Kill WRAPPERS count — `safeKill(child)`
+// ends the child exactly as `child.kill()` does, and matching only `.kill(` let
+// five real fixed-timeout child-process kills in comprehensiveDataService.js
+// through as low-severity warnings instead of errors.
+const HARD_KILL_SIGNALS = [
+  /\.kill\s*\(/i,
+  /\bprocess\.(?:kill|exit)\s*\(/,
+  /\b(?:safeKill|treeKill|killTree|killProcessTree|terminateProcess)\s*\(/i,
+  /\btaskkill\b/i,
+];
+
+// Soft termination: fails one operation without killing a process.
+const SOFT_TERMINATION_SIGNALS = [
+  /\.abort\s*\(/i,
+  /\breject\s*\(/,
+  /\b(?:timedOut|isTimedOut|didTimeout|hasTimedOut|timeoutHit)\s*=\s*true\b/,
+];
 
 const GENERIC_STATUS_TOKENS = [
   '正在工作',
@@ -98,16 +134,22 @@ function run(cmd) {
 }
 
 function listChangedFiles() {
+  // core.quotePath=false: with the default (true), git renders any non-ASCII path
+  // as a double-quoted, octal-escaped string ("docs/_\346\212\245\345\221\212/…").
+  // Those never resolve on disk, so every Chinese-named file in this repo was
+  // silently dropped from the scan — the gate reported a clean pass on files it
+  // had never opened.
+  const git = 'git -c core.quotePath=false';
   const baseRef = String(process.env.GIT_BASE_REF || '').trim();
   if (baseRef) {
-    const out = run(`git diff --name-only --diff-filter=ACMR ${baseRef}...HEAD`);
+    const out = run(`${git} diff --name-only --diff-filter=ACMR ${baseRef}...HEAD`);
     if (out) return out.split('\n').map((s) => s.trim()).filter(Boolean);
   }
 
-  const staged = run('git diff --name-only --cached --diff-filter=ACMR');
+  const staged = run(`${git} diff --name-only --cached --diff-filter=ACMR`);
   if (staged) return staged.split('\n').map((s) => s.trim()).filter(Boolean);
 
-  const head = run('git diff --name-only --diff-filter=ACMR HEAD');
+  const head = run(`${git} diff --name-only --diff-filter=ACMR HEAD`);
   if (head) return head.split('\n').map((s) => s.trim()).filter(Boolean);
   return [];
 }
@@ -117,11 +159,39 @@ function shouldIgnore(filePath) {
   return parts.some((p) => IGNORE_DIRS.has(p));
 }
 
+// Paths deliberately left out of the scan, surfaced in the report. Coverage that
+// shrinks silently reads as "everything passed" when it never looked.
+const scanNotices = [];
+
+function isSubmoduleGitlink(relPath) {
+  // Mode 160000 marks a gitlink: a nested repository whose contents belong to
+  // that repo and are governed by its own gates. `git diff --name-only` reports a
+  // changed submodule as ONE directory path, so recursing into it walked the
+  // submodule's untracked, .gitignore'd virtualenv and reported library
+  // docstrings as this repo's violations.
+  const gitPath = String(relPath).replace(/\\/g, '/');
+  if (/^160000\s/m.test(run(`git ls-files -s -- "${gitPath}"`))) return true;
+  // Fallback: a nested clone that was never registered as a gitlink still is not
+  // this repo's source.
+  return fs.existsSync(path.join(path.resolve(cwd, relPath), '.git'));
+}
+
 function collectFilesFromTarget(targetPath, out) {
   const full = path.resolve(cwd, targetPath);
-  if (!fs.existsSync(full)) return;
+  if (!fs.existsSync(full)) {
+    scanNotices.push(`missing path, nothing scanned: ${targetPath}`);
+    return;
+  }
   const st = fs.statSync(full);
   if (st.isDirectory()) {
+    const relDir = path.relative(cwd, full);
+    // Prune at the directory, not at each leaf file: the old leaf-only filter
+    // still walked every entry under node_modules before discarding them.
+    if (shouldIgnore(relDir)) return;
+    if (isSubmoduleGitlink(targetPath)) {
+      scanNotices.push(`skipped submodule (governed by its own repo): ${targetPath}`);
+      return;
+    }
     const entries = fs.readdirSync(full);
     for (const entry of entries) {
       collectFilesFromTarget(path.join(targetPath, entry), out);
@@ -175,6 +245,17 @@ function isLikelyUserFacingStatusLine(line = '') {
   return STATUS_CONTEXT_HINTS.some((re) => re.test(line));
 }
 
+// This gate necessarily spells out every pattern it bans, so it must exempt
+// itself. Derived from __filename rather than a literal path: the hardcoded
+// 'scripts/check-agent-rules.js' silently stopped matching when the gate moved
+// into scripts/ci/, and the gate started reporting its own detection regexes as
+// violations.
+const SELF_BASENAME = path.basename(__filename);
+
+function isSelfScript(normPath) {
+  return path.basename(normPath) === SELF_BASENAME;
+}
+
 function checkFile(relPath, findings) {
   const full = path.resolve(cwd, relPath);
   let text = '';
@@ -184,10 +265,11 @@ function checkFile(relPath, findings) {
     return;
   }
   const lines = text.split(/\r?\n/);
-  const skipOpaqueStatusCheck = relPath.replace(/\\/g, '/') === 'scripts/check-agent-rules.js';
 
   // Normalized relative path for allowlist matching
   const normPath = relPath.replace(/\\/g, '/');
+  const isSelf = isSelfScript(normPath);
+  const skipOpaqueStatusCheck = isSelf;
   const isTestFile = isTestLikePath(normPath);
 
   // Rule 1: serviceDefaults.js IS the single source of truth — exempt it entirely
@@ -219,11 +301,17 @@ function checkFile(relPath, findings) {
           // Allow proxy-config guidance that shows how to export/set a proxy env var
           // (e.g. "export HTTPS_PROXY=http://127.0.0.1:7890") — instruction text, not a runtime fork
           if (/(?:export|set)\s+\w*PROXY\w*\s*=/i.test(line)) continue;
-          // Allow string concatenation with env/variable port (e.g., 'http://localhost:' + port)
-          if (/['"]https?:\/\/(?:localhost|127\.0\.0\.1):\s*['"]?\s*\+/.test(line)) continue;
-          if (/['"]https?:\/\/(?:localhost|127\.0\.0\.1):\s*['"]?\s*\+/.test(line)) continue;
-          // Allow os.getenv / process.env fallback defaults (single source of truth pattern)
-          if (/os\.getenv\(|process\.env\./i.test(line)) continue;
+          // Allow string concatenation with an env/variable port (e.g.
+          // 'http://localhost:' + port): nothing is pinned there. But NOT when a
+          // quoted numeric port is the fallback (`+ (process.env.PORT || '3000')`)
+          // — that re-pins the default port in a non-SoT module, so the backend
+          // default and this copy silently drift apart. Import the port from
+          // constants/serviceDefaults instead.
+          if (/['"]https?:\/\/(?:localhost|127\.0\.0\.1):\s*['"]?\s*\+/.test(line)
+              && !/\|\|\s*['"]\d{2,5}['"]/.test(line)) continue;
+          // A process.env/os.getenv fallback is intentionally not exempt here.
+          // Purely dynamic env-based endpoints never match HARD_ENDPOINT_PATTERNS;
+          // reaching this branch means the same line still pins a numeric default.
 
           pushFinding(
             findings,
@@ -309,79 +397,86 @@ function checkFile(relPath, findings) {
     }
   }
 
-  // Rule 3: setTimeout-based timeout/kill detection.
+  // Rule 3: fixed-duration timeouts that TERMINATE work without activity renewal.
+  //
+  // The trigger is the termination EFFECT, not the mere presence of a timer. A
+  // timeout that kills, exits, aborts, rejects, or raises a timed-out flag ends
+  // work after a fixed wall clock, which is the banned pattern. A timer with no
+  // termination effect is not a timeout at all — it is a scheduler (debounce,
+  // drain retry, UI linger, poll) and has nothing to renew against. Flagging
+  // those produced most of this rule's output and taught readers to ignore it.
+  //
   // Test files are exempt: a `setTimeout(() => resolve(...), 500)` in a test is a
   // fixture simulating a delayed response, not a production task-loop hard-kill.
   // Consistent with Rules 1/1b and the opaque-status rule, which also exempt tests.
-  // The gate script itself contains `setTimeout` only inside this detection
-  // regex (by design) — exempt it, as we already do for the opaque-status rule.
+  // The gate script itself names these patterns by design — exempt it too.
   const timeoutRegex = /setTimeout\s*\([\s\S]{0,220}?,\s*(\d{3,})\s*\)/g;
   let match;
-  while (!isTestFile && !skipOpaqueStatusCheck && (match = timeoutRegex.exec(text)) !== null) {
+  while (!isTestFile && !isSelf && (match = timeoutRegex.exec(text)) !== null) {
     const snippet = match[0];
-    const snippetWithoutApiName = snippet.replace(/setTimeout/gi, '');
     const timeoutValue = Number(match[1] || 0);
-    const hasHardKillSignal = /(\.kill\(|process\.exit)/i.test(snippet);
-    // abort() on its own (no .kill) is typically a fetch/request cancellation — less severe
-    const hasAbortOnly = /\.abort\(\)/i.test(snippet) && !hasHardKillSignal;
+    if (timeoutValue < 500) continue;
+
+    const hasHardKillSignal = HARD_KILL_SIGNALS.some((re) => re.test(snippet));
+    // abort()/reject() on their own (no process kill) fail one operation rather
+    // than tearing down a process tree — same rule, lower severity.
+    const hasSoftTermination = !hasHardKillSignal
+      && SOFT_TERMINATION_SIGNALS.some((re) => re.test(snippet));
+    if (!hasHardKillSignal && !hasSoftTermination) continue; // scheduler, not a timeout
+
     const start = Math.max(0, match.index - 500);
     const end = Math.min(text.length, match.index + match[0].length + 500);
     const context = text.slice(start, end);
-    const isPromiseSleep = /await\s+new\s+Promise\s*\(/i.test(context)
-      && /setTimeout\s*\(\s*(?:[A-Za-z_$][\w$]*|resolve)\s*,\s*\d+\s*\)/.test(snippet);
-    const isCounterResetTimer = /(?:^|[{\s;])_?[A-Za-z_$][\w$]*(?:Count|Counter)\s*=\s*0\b/.test(snippet)
-      && !/(kill|abort|reject|timeout)/i.test(snippetWithoutApiName);
-    const isShortUiResetTimer = timeoutValue <= 5000
-      && /clearTimeout\(/i.test(context)
-      && /(?:count|counter|debounce|cooldown|hint|tip)/i.test(context)
-      && !/(kill|abort|reject|timeout)/i.test(snippetWithoutApiName);
-    if (timeoutValue < 500) continue;
-    if (isPromiseSleep || isCounterResetTimer || isShortUiResetTimer) continue;
-    if (!hasHardKillSignal && !hasAbortOnly) {
-      // No kill signal — check for warning
-      const hasProgressSignal = /lastactivity|heartbeat|progress|idle|renew|touch|update/i.test(snippet);
-      const lineNo = text.slice(0, match.index).split(/\r?\n/).length;
-      if (!hasProgressSignal) {
-        pushFinding(
-          findings,
-          'warning',
-          'timeout-needs-progress-awareness',
-          relPath,
-          lineNo,
-          'Timeout logic appears fixed; prefer sliding/idle timeout with progress checks.',
-          snippet.replace(/\s+/g, ' ').slice(0, 180),
-        );
-      }
-      continue;
-    }
 
-    // Has kill signal — check broader context (±500 chars) for idle/activity patterns
+    // Activity renewal usually lives in the enclosing idle-timeout system rather
+    // than inside the timer expression itself — the canonical shape here is a
+    // `_resetIdle()` helper re-armed from the child's stdout/stderr 'data'
+    // handlers. Checking only the 220-char snippet made the gate warn about
+    // compliant idle timeouts whose reset helper sat three lines above.
     const hasIdlePattern = /(?:_?reset\s*Idle|_?idle\s*Timer|lastActivity|resetTimer|idleTimeout|idleMs|IDLE_MS|_resetIdle)/i.test(context);
     const hasProgressSignal = /lastactivity|heartbeat|progress|idle|renew|touch|update/i.test(snippet);
+    if (hasIdlePattern || hasProgressSignal) continue; // part of an idle-timeout system
 
-    if (hasIdlePattern || hasProgressSignal) continue; // Part of an idle-timeout system
-
-    // Check for short I/O exempt patterns: <10s timeouts on connect/handshake/probe
-    const isShortIo = timeoutValue <= 10000 && /(?:handshake|probe|startup|connect|health|auth|fetch|race)/i.test(context);
+    // Bounded single operations, where there is no activity stream to slide
+    // against. These checks previously sat AFTER the no-kill branch's
+    // warn-and-`continue`, so reject-only timeouts could never reach them —
+    // isRejectOnly was dead code and every `Promise.race` deadline warned.
+    const isShortIo = timeoutValue <= 10000
+      && /(?:handshake|probe|startup|connect|health|auth|fetch|race)/i.test(context);
     // Grace period after SIGTERM → SIGKILL transitions (process cleanup)
-    const isGracePeriod = timeoutValue <= 5000 && /SIG(?:TERM|KILL)/i.test(snippet) && /SIG(?:TERM|KILL)/i.test(context);
+    const isGracePeriod = timeoutValue <= 5000
+      && /SIG(?:TERM|KILL)/i.test(snippet) && /SIG(?:TERM|KILL)/i.test(context);
     // Single-shot fetch/request abort (AbortController pattern) — short I/O exempt
-    const isFetchAbort = hasAbortOnly && /(?:controller|abortController|AbortController|fetch\(|request)/i.test(context);
-    // reject()-only timeout without process kill (e.g., MCP RPC, promise-based timeout)
-    const isRejectOnly = /reject\(/i.test(snippet) && !hasHardKillSignal && !hasAbortOnly;
+    const isFetchAbort = hasSoftTermination && /\.abort\s*\(/i.test(snippet)
+      && /(?:controller|abortController|AbortController|fetch\(|request)/i.test(context);
+    // reject()-only deadline without process kill (e.g. MCP RPC, Promise.race)
+    const isRejectOnly = hasSoftTermination && /reject\(/i.test(snippet)
+      && !/\.abort\s*\(/i.test(snippet);
 
     if (isShortIo || isGracePeriod || isFetchAbort || isRejectOnly) continue;
 
     const lineNo = text.slice(0, match.index).split(/\r?\n/).length;
-    pushFinding(
-      findings,
-      'error',
-      'no-hard-timeout-kill',
-      relPath,
-      lineNo,
-      'Hard timeout kill detected without activity/progress renewal.',
-      snippet.replace(/\s+/g, ' ').slice(0, 180),
-    );
+    if (hasHardKillSignal) {
+      pushFinding(
+        findings,
+        'error',
+        'no-hard-timeout-kill',
+        relPath,
+        lineNo,
+        'Hard timeout kill detected without activity/progress renewal.',
+        snippet.replace(/\s+/g, ' ').slice(0, 180),
+      );
+    } else {
+      pushFinding(
+        findings,
+        'warning',
+        'timeout-needs-progress-awareness',
+        relPath,
+        lineNo,
+        'Timeout logic appears fixed; prefer sliding/idle timeout with progress checks.',
+        snippet.replace(/\s+/g, ' ').slice(0, 180),
+      );
+    }
   }
 
   // Rule 4: ANSI scroll-region escape (DECSTBM, `ESC [ top ; bottom r`).
@@ -389,7 +484,7 @@ function checkFile(relPath, findings) {
   // terminal's scrollback. Legitimate only inside a full-screen alternate
   // buffer (`?1049h` / `?47h`), where it is scoped to a private screen and
   // restored on exit. The check script itself names the pattern, so skip it.
-  const scrollRegionSkip = relPath.replace(/\\/g, '/') === 'scripts/check-agent-rules.js';
+  const scrollRegionSkip = isSelf;
   if (!scrollRegionSkip) {
     // Matches the escaped text forms a tool emits (backslash-x1b, -u001b, -033, -e) and a raw ESC byte.
     // Params before the final lowercase `r` are digits/semicolons or
@@ -418,9 +513,9 @@ function checkFile(relPath, findings) {
   }
 }
 
-function printFindings(findings) {
+function printFindings(findings, scannedCount) {
   if (findings.length === 0) {
-    console.log('Agent rule check passed: no violations found.');
+    console.log(`Agent rule check passed: no violations found (${scannedCount} file(s) scanned).`);
     return;
   }
 
@@ -433,19 +528,26 @@ function printFindings(findings) {
 
   const errorCount = findings.filter((f) => f.severity === 'error').length;
   const warnCount = findings.filter((f) => f.severity === 'warning').length;
-  console.log(`\nSummary: ${errorCount} error(s), ${warnCount} warning(s).`);
+  console.log(`\nSummary: ${errorCount} error(s), ${warnCount} warning(s) across ${scannedCount} file(s) scanned.`);
 }
 
 function main() {
   const files = gatherFiles();
+  // Say what was left out. A gate whose coverage shrank (stale path, skipped
+  // submodule) otherwise prints the same "passed" line as one that really looked.
+  for (const notice of scanNotices) console.log(`[SKIP ] ${notice}`);
+
   if (files.length === 0) {
     console.log('No target files found. Use --changed or pass file/directory paths.');
-    process.exit(0);
+    // An explicit target is an assertion that these paths are scannable. If none
+    // resolved, the run proved nothing, so it must not read as a pass. A changed
+    // set with no code files (docs-only change) is legitimately empty.
+    process.exit(rawTargets.length > 0 ? 1 : 0);
   }
 
   const findings = [];
   for (const file of files) checkFile(file, findings);
-  printFindings(findings);
+  printFindings(findings, files.length);
 
   const hasError = findings.some((f) => f.severity === 'error');
   const hasWarn = findings.some((f) => f.severity === 'warning');

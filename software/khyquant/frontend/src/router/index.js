@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { resolveAuthGuard } from '@khy/ui-shared/auth/guard'
 import { useUserStore } from '@/stores/user'
 
 const routes = [
@@ -186,19 +187,17 @@ router.beforeEach(async (to, from, next) => {
     }
   }
   
-  if (to.meta.requiresAuth && !userStore.isAuthenticated()) {
-    next('/login')
-  } else if (to.meta.requiresAdmin && userStore.user?.role !== 'admin') {
-    next('/dashboard')
-  } else if ((to.path === '/login' || to.path === '/register' || to.path === '/admin-login') && userStore.isAuthenticated()) {
-    if (userStore.user?.role === 'admin') {
-      next('/admin/dashboard')
-    } else {
-      next('/dashboard')
-    }
-  } else {
-    next()
-  }
+  const authenticated = userStore.isAuthenticated()
+  const redirect = resolveAuthGuard({
+    requiresAuth: Boolean(to.meta.requiresAuth),
+    requiresAdmin: Boolean(to.meta.requiresAdmin),
+    isAuthenticated: authenticated,
+    isAdmin: userStore.user?.role === 'admin',
+    isGuestRoute: to.path === '/login' || to.path === '/register' || to.path === '/admin-login',
+    authenticatedRedirect: userStore.user?.role === 'admin' ? '/admin/dashboard' : '/dashboard',
+    adminRedirect: '/dashboard'
+  })
+  redirect ? next(redirect) : next()
 })
 
 export default router

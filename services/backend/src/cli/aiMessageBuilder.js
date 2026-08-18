@@ -68,6 +68,24 @@ function _isWeakCoreTool(name) {
   return _WEAK_CORE_TOOL_RE.some((re) => re.test(n));
 }
 
+// ── 轻量对话工具集(「一句你好不该背 5.7 万 token 的工具表」)────────────
+// 实测:一句「你好」也无条件注入 160 个工具定义 = 184KB ≈ 57784 token,冷进程构建耗时
+// ~1s。这是打招呼最大的一笔确定性开销,且对招呼毫无用处。核心工具集(上面那套弱模型
+// 已验证的按需集)只有 16 个 ≈ 12144 token,省下约 45k。额外放进 toolSearch(281 字节)
+// 当逃生舱:轻量turn 里模型若真需要别的工具,仍可按关键词检索并在下一轮拿到全量。
+// 只作用于「轻量对话」(招呼/笑话/自我介绍类,见 _isLightweightConversationInput),
+// 且不作用于工具循环的后续轮(_isFollowUp)——那时已确证需要工具,全量注入。
+function _isLightweightConversationTool(name) {
+  const n = String(name || '').trim();
+  if (!n) {
+    return false;
+  }
+  if (/^(toolsearch|tool_search)$/i.test(n)) {
+    return true;
+  }
+  return _isWeakCoreTool(n);
+}
+
 // ── Image save/open helpers ──────────────────────────────────────────
 /**
  * Save a base64 image to the project disk's tmp\khy-images\ (dedicated output
@@ -276,9 +294,30 @@ async function _gatewayGenerate(
 
   // Inject tool definitions so the model knows what tools are available
   let toolDefs;
+  // 轻量对话裁剪的判定要**在构建之前**做:留到构建之后再 filter,160 个工具的
+  // isEnabled() 已经跑完了(python --version×6 / where ffmpeg / where pwsh / git
+  // rev-parse…实测 ~1.4s 阻塞子进程),而其中约 145 个马上就要被丢掉——正是
+  // 「简单打个招呼却做一堆无用的事」。把名字过滤器下推到注册表,这些探测根本不发生。
+  // 下面构建之后的同名 filter 保留为兜底(此时应是空操作),门也仍是同一个
+  // KHY_LIGHT_TOOL_CURATION:关 → 字节回退今日全量注入。
+  let _lightCurate = false;
+  try {
+    const _lightOff = ['0', 'false', 'off', 'no'].includes(
+      String(process.env.KHY_LIGHT_TOOL_CURATION || '')
+        .trim()
+        .toLowerCase()
+    );
+    _lightCurate = Boolean(
+      !_lightOff && opts._lightweightConversation && !opts._isFollowUp && !opts._agentContext
+    );
+  } catch {
+    _lightCurate = false; /* fail-soft: 判定失败 → 全量注入(今日行为) */
+  }
   try {
     const { getToolDefinitions } = require('../services/toolCalling');
-    toolDefs = getToolDefinitions();
+    toolDefs = getToolDefinitions(
+      _lightCurate ? { nameFilter: _isLightweightConversationTool } : {}
+    );
     if (process.env.KHY_DEBUG_TOOLS === '1') {
       console.error(
         `[DEBUG-PROFILE] BEFORE filter: ${toolDefs.length} defs, CU=${toolDefs.some((t) => (t.name || t.function?.name) === 'ComputerUse')}, DC=${toolDefs.some((t) => (t.name || t.function?.name) === 'DesktopControl')}, toolFilter=${opts._agentContext?.toolFilter || '(none)'}`
@@ -342,6 +381,22 @@ async function _gatewayGenerate(
     }
   } catch {
     /* fail-soft: 裁剪失败 → 全量注入(今日行为) */
+  }
+
+  // 轻量对话裁剪(「简单打个招呼不该做一堆无用的事」)。与上面的弱模型裁剪同理,但触发条件
+  // 是**本轮输入**而非模型能力:招呼/笑话/自我介绍这类轻量turn(scale=small 且命中
+  // _isLightweightConversationInput)注入 160 个工具纯属浪费——省 ~45k token/轮,并让
+  // 模型不被一屏工具表诱导去「找活干」。工具循环的后续轮(_isFollowUp)不裁剪:那时模型
+  // 已经在用工具,砍掉会截断正在进行的工作。门 KHY_LIGHT_TOOL_CURATION(默认开)。
+  // 判定已在构建前完成(_lightCurate)并下推给注册表;这里是兜底,正常情况下不再命中。
+  try {
+    if (_lightCurate && Array.isArray(toolDefs) && toolDefs.length > 0) {
+      toolDefs = toolDefs.filter((t) =>
+        _isLightweightConversationTool(t.name || (t.function && t.function.name))
+      );
+    }
+  } catch {
+    /* fail-soft: 裁剪失败 → 全量注入 */
   }
 
   // Forced-summarization turn (toolUseLoop Fix #3): when the loop asks the model

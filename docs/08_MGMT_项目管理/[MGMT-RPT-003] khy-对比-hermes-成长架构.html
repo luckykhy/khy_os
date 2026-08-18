@@ -97,14 +97,14 @@ run_agent.py / cli.py / gateway</code></pre>
   inherit_mcp_toolsets: ...    # MCP 继承</code></pre>
 <p><strong>KHY 对标</strong>：<code>workerAgent.js</code>/<code>processAgent.js</code> 无深度限制和超时杀。</p>
 <h3 id="3-5-skin-theme-纯数据引擎">3.5 Skin/Theme 纯数据引擎<a class="anchor" href="#3-5-skin-theme-纯数据引擎" aria-label="锚点">#</a></h3>
-<pre><code class="language-yaml"># ~/.hermes/skins/cyberpunk.yaml
-name: cyberpunk
-colors:
-  banner_border: &quot;#FF00FF&quot;
-spinner:
-  thinking_verbs: [&quot;jacking in&quot;, &quot;decrypting&quot;]
-branding:
-  agent_name: &quot;Cyber Agent&quot;</code></pre>
+<pre><code class="language-yaml"><span class="hljs-comment"># ~/.hermes/skins/cyberpunk.yaml</span>
+<span class="hljs-attr">name:</span> <span class="hljs-string">cyberpunk</span>
+<span class="hljs-attr">colors:</span>
+  <span class="hljs-attr">banner_border:</span> <span class="hljs-string">&quot;#FF00FF&quot;</span>
+<span class="hljs-attr">spinner:</span>
+  <span class="hljs-attr">thinking_verbs:</span> [<span class="hljs-string">&quot;jacking in&quot;</span>, <span class="hljs-string">&quot;decrypting&quot;</span>]
+<span class="hljs-attr">branding:</span>
+  <span class="hljs-attr">agent_name:</span> <span class="hljs-string">&quot;Cyber Agent&quot;</span></code></pre>
 <ul><li>4 个内置 skin + 用户 <code>~/.hermes/skins/</code> 目录</li><li>覆盖：banner 颜色、spinner 表情/动词/翅膀、工具前缀、品牌文字</li><li><code>/skin &lt;name&gt;</code> 运行时切换，零代码变更</li></ul>
 <p><strong>KHY 对标</strong>：<code>aiRenderer.js</code> 颜色硬编码，应抽取为 JSON/YAML 配置。</p>
 <h3 id="3-6-供应链安全策略">3.6 供应链安全策略<a class="anchor" href="#3-6-供应链安全策略" aria-label="锚点">#</a></h3>

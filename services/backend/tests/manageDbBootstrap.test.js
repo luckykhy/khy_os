@@ -9,6 +9,12 @@
  * 隔离:进程启动前把 SQLITE_DB_PATH 指向 tmp 空文件、DB_TYPE=sqlite,故整测用一个全新
  * 空库;sequelize 实例在首次 require('../models') 时按该路径构造(单例),因此各用例共享同
  * 一 db 文件,用例顺序刻意为:先 gate-off(证不建表)→ 再 gate-on(建表 + admin)→ 幂等。
+ * KHY_DATA_HOME 同样指向 tmp,避免读写开发机真实的
+ * `.khy/credentials/default-admin.json`。
+ *
+ * 用户名不再硬编码 'admin':实现按 credentialGenerator 派生(env > 凭据文件 > OS 用户名),
+ * 故断言一律用 ADMIN_USERNAME —— 与实现同源(同样传空 env 对象,镜像
+ * `ensureManageDbSeeded({})` 的解析路径)。
  */
 
 const os = require('node:os');
@@ -17,19 +23,26 @@ const fs = require('node:fs');
 
 // 必须在 require('../models') 之前设好,让 sequelize 单例绑定隔离库。
 const TMP_DB = path.join(os.tmpdir(), `khy-manageseed-${process.pid}-${Date.now()}.sqlite`);
+const TMP_DATA_HOME = path.join(os.tmpdir(), `khy-manageseed-home-${process.pid}-${Date.now()}`);
 process.env.SQLITE_DB_PATH = TMP_DB;
 process.env.DB_TYPE = 'sqlite';
 process.env.DB_SQLITE3_OPTIONAL = '1';
+process.env.KHY_DATA_HOME = TMP_DATA_HOME;
 
 const test = require('node:test');
 const assert = require('node:assert');
 
 const bootstrap = require(path.join(__dirname, '../src/services/manageDbBootstrap'));
+const credGen = require(path.join(__dirname, '../src/services/credentialGenerator'));
+
+// 镜像实现的解析入参(`ensureManageDbSeeded({})` → resolveDefaultAdminUsername({}))。
+const ADMIN_USERNAME = credGen.resolveDefaultAdminUsername({});
 
 test.after(() => {
   for (const f of [TMP_DB, `${TMP_DB}-journal`, `${TMP_DB}-wal`, `${TMP_DB}-shm`]) {
     try { fs.unlinkSync(f); } catch { /* ignore */ }
   }
+  try { fs.rmSync(TMP_DATA_HOME, { recursive: true, force: true }); } catch { /* ignore */ }
 });
 
 test('isEnabled: default ON; CANON off-words disable', () => {
@@ -65,15 +78,17 @@ test('gate ON, empty DB: creates base tables + admin', async () => {
   assert.strictEqual(out.adminCreated, true);
 
   const { User } = require('../src/models');
-  const admin = await User.findOne({ where: { username: 'admin' } });
-  assert.ok(admin, 'admin row must exist');
+  const admin = await User.findOne({ where: { username: ADMIN_USERNAME } });
+  assert.ok(admin, `admin row must exist (${ADMIN_USERNAME})`);
   assert.strictEqual(admin.role, 'admin');
   assert.strictEqual(admin.status, 'active');
 
+  // 邮箱随用户名派生(不再硬编码 admin@ → 不会撞 users.email 的 UNIQUE 约束)。
+  assert.strictEqual(admin.email, credGen.resolveDefaultAdminEmail(ADMIN_USERNAME));
+
   // Password must be a bcrypt hash (never stored plaintext).
-  const bcrypt = require('bcryptjs');
   assert.ok(admin.password && admin.password.startsWith('$2'), 'password must be a bcrypt hash');
-  assert.ok(!admin.password.includes('admin'), 'password must not contain the username');
+  assert.ok(!admin.password.includes(ADMIN_USERNAME), 'password must not contain the username');
 });
 
 test('idempotent: second call creates nothing new', async () => {
@@ -83,7 +98,7 @@ test('idempotent: second call creates nothing new', async () => {
   assert.strictEqual(out.adminCreated, false, 'admin already present');
 
   const { User } = require('../src/models');
-  const count = await User.count({ where: { username: 'admin' } });
+  const count = await User.count({ where: { username: ADMIN_USERNAME } });
   assert.strictEqual(count, 1, 'exactly one admin row');
 });
 
@@ -227,7 +242,7 @@ test('admin check survives users column drift (raw-SQL existence, not User.findO
 
   // Full-model read now works (drift healed) and the pre-existing row is intact.
   const { User } = require('../src/models');
-  const admin = await User.findOne({ where: { username: 'admin' } });
+  const admin = await User.findOne({ where: { username: ADMIN_USERNAME } });
   assert.ok(admin && admin.role === 'admin', 'admin readable via full model post-heal');
   const [c] = await sequelize.query("SELECT COUNT(*) AS c FROM users WHERE username='someone'");
   assert.strictEqual(Number(c[0].c), 1, 'pre-existing user row preserved');

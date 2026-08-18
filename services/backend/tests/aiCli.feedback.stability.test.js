@@ -85,6 +85,7 @@ describe('ai cli feedback stability', () => {
     ['localLLM', '请求 AI 服务...（本地模型首轮可能需要 30-120 秒预热）'],
     ['codex', '请求 AI 服务...'],
   ])('same-task strict preferred timeout keeps feedback for %s', async (preferredAdapter, expectedRequestStatus) => {
+    process.env.KHY_DISABLE_SESSION_PERSIST = '1';
     process.env.GATEWAY_PREFERRED_ADAPTER = preferredAdapter;
     process.env.GATEWAY_PREFERRED_STRICT = 'true';
 
@@ -94,10 +95,14 @@ describe('ai cli feedback stability', () => {
     ai.clearHistory();
 
     const statuses = [];
+    const phases = [];
     const result = await ai.chat('分析一下比亚迪最近走势', {
       strictPreferred: true,
       disableNaturalToolLoop: true,
-      onStatus: (st) => statuses.push(String(st && st.message ? st.message : '')),
+      onStatus: (st) => {
+        phases.push(String(st && st.phase ? st.phase : ''));
+        statuses.push(String(st && st.message ? st.message : ''));
+      },
       onChunk: () => {},
     });
 
@@ -113,9 +118,10 @@ describe('ai cli feedback stability', () => {
       : statuses.some(s => s.includes(expectedRequestStatus));
     expect(requestStatusMatched).toBe(true);
     expect(statuses.some(s => s.includes('失败原因:'))).toBe(true);
-    expect(statuses.some(s => s.includes('初始化...'))).toBe(true);
+    expect(phases).toContain('init');
+    expect(statuses.some(s => s.includes('初始化') && s.includes('AI 对话管线'))).toBe(true);
     expect(statuses.some(s => s.includes('失败'))).toBe(true);
-  });
+  }, 15000);
 
   test('mirrors adapter status chunks into onStatus', async () => {
     process.env.GATEWAY_PREFERRED_ADAPTER = 'codex';

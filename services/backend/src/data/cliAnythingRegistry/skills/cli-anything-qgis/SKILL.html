@@ -53,7 +53,7 @@
 <ul><li><code>status</code></li><li><code>history [--limit N]</code></li></ul>
 <h2 id="examples">Examples<a class="anchor" href="#examples" aria-label="锚点">#</a></h2>
 <h3 id="create-a-project-and-add-a-writable-layer">Create a project and add a writable layer<a class="anchor" href="#create-a-project-and-add-a-writable-layer" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-qgis --json project new -o demo.qgz --title &quot;Demo&quot; --crs EPSG:4326
+<pre><code class="language-bash">cli-anything-qgis --json project new -o demo.qgz --title <span class="hljs-string">&quot;Demo&quot;</span> --crs EPSG:4326
 cli-anything-qgis --json --project demo.qgz layer create-vector \
   --name places \
   --geometry point \
@@ -62,18 +62,18 @@ cli-anything-qgis --json --project demo.qgz layer create-vector \
 <h3 id="add-features-and-inspect-them">Add features and inspect them<a class="anchor" href="#add-features-and-inspect-them" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-qgis --json --project demo.qgz feature add \
   --layer places \
-  --wkt &quot;POINT(1 2)&quot; \
+  --wkt <span class="hljs-string">&quot;POINT(1 2)&quot;</span> \
   --attr name=HQ \
   --attr score=5
 
-cli-anything-qgis --json --project demo.qgz feature list --layer places --limit 10</code></pre>
+cli-anything-qgis --json --project demo.qgz feature list --layer places --<span class="hljs-built_in">limit</span> 10</code></pre>
 <h3 id="create-and-export-a-layout">Create and export a layout<a class="anchor" href="#create-and-export-a-layout" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-qgis --json --project demo.qgz layout create --name Main
 cli-anything-qgis --json --project demo.qgz layout add-map --layout Main --x 10 --y 20 --width 180 --height 120
-cli-anything-qgis --json --project demo.qgz layout add-label --layout Main --text &quot;Demo map&quot; --x 10 --y 8 --width 100 --height 10
-cli-anything-qgis --json --project demo.qgz export pdf output.pdf --layout Main --overwrite</code></pre>
+cli-anything-qgis --json --project demo.qgz layout add-label --layout Main --text <span class="hljs-string">&quot;Demo map&quot;</span> --x 10 --y 8 --width 100 --height 10
+cli-anything-qgis --json --project demo.qgz <span class="hljs-built_in">export</span> pdf output.pdf --layout Main --overwrite</code></pre>
 <h3 id="inspect-or-run-processing-algorithms">Inspect or run processing algorithms<a class="anchor" href="#inspect-or-run-processing-algorithms" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-qgis --json process help native:buffer
+<pre><code class="language-bash">cli-anything-qgis --json process <span class="hljs-built_in">help</span> native:buffer
 cli-anything-qgis --json --project demo.qgz process run native:buffer \
   --param INPUT=/tmp/demo_data.gpkg|layername=places \
   --param DISTANCE=1 \
@@ -81,7 +81,7 @@ cli-anything-qgis --json --project demo.qgz process run native:buffer \
   --param END_CAP_STYLE=0 \
   --param JOIN_STYLE=0 \
   --param MITER_LIMIT=2 \
-  --param DISSOLVE=false \
+  --param DISSOLVE=<span class="hljs-literal">false</span> \
   --param OUTPUT=/tmp/buffer.geojson</code></pre>
 <h3 id="repl">REPL<a class="anchor" href="#repl" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-qgis</code></pre>

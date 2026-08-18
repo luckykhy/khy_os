@@ -55,7 +55,7 @@ test('pip wheel 漏钉启动脚本 → ok=false，点名它', () => {
     npmText: makeList(NPM_PREFIX, ALL),
   });
   assert.strictEqual(r.ok, false);
-  assert.ok(r.missingInPipWheel.includes('services/backend/bin/khy.js'));
+  assert.ok(r.missingInPipWheel.includes('runtime/khy/bundle.mjs'));
   assert.deepStrictEqual(r.missingInPipSdist, []);
   assert.deepStrictEqual(r.missingInNpm, []);
   assert.match(r.summary, /契约破裂/);
@@ -78,7 +78,7 @@ test('前缀敏感：wheel 清单漏写 khy_os/bundled/ 前缀则判缺失', () 
   // wheel 判定用非空前缀 khy_os/bundled/。若清单只写裸路径（漏前缀），
   // 子串 `khy_os/bundled/<path>` 找不到 → 判缺失。这堵住「路径进了包但没进 wheel 命名空间」。
   const r = assessChannelParity({
-    pipWheelText: makeList(PIP_SDIST_PREFIX, ALL), // 裸路径，无 wheel 前缀
+    pipWheelText: makeList('', ALL), // 裸路径，无 wheel 前缀
     pipSdistText: makeList(PIP_SDIST_PREFIX, ALL),
     npmText: makeList(NPM_PREFIX, ALL),
   });
@@ -127,7 +127,7 @@ test('_missingFrom：完整带引号条目命中才算钉死', () => {
 // 却被误判为已钉死 → 守卫对一个真没钉死该文件的清单放行（false-GREEN，最危险的失败）。
 // 判定必须锚定收尾引号：只有作为完整带引号条目出现才算数。
 test('substring false-GREEN：server.js 仅作 .template 子串 / 注释 → 判为缺失（不放行）', () => {
-  const victim = 'services/backend/server.js';
+  const victim = 'runtime/khy/bundle.mjs';
   const sdistPaths = ALL.filter((p) => p !== victim);
   let sdistText = sdistPaths.map((p) => `    "${p}",`).join('\n');
   // victim 真没被钉死，只作为更长路径的子串 + 注释里出现：
@@ -153,7 +153,7 @@ test('_pinnedAsQuotedEntry：紧后是引号才算，双引号与单引号皆认
 });
 
 test('LAUNCH_CRITICAL_BUNDLE_PATHS 非空、无重复、皆为相对路径', () => {
-  assert.ok(LAUNCH_CRITICAL_BUNDLE_PATHS.length >= 2);
+  assert.ok(LAUNCH_CRITICAL_BUNDLE_PATHS.length >= 1);
   assert.strictEqual(new Set(ALL).size, ALL.length);
   for (const p of ALL) {
     assert.ok(!p.startsWith('/'), `${p} 不应是绝对路径`);

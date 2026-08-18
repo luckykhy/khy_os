@@ -58,7 +58,7 @@ khy gateway model</code></pre>
 <p>验收标准：</p>
 <ol><li><code>codex</code> 列表默认仅展示 codex 原生 ID。</li><li>跨 Provider 模型仅在 routed/relay 区块中可见，并带清晰标签。</li><li>选择确认信息包含 <code>adapter + upstream provider + route mode</code>。</li></ol>
 <p>验证：</p>
-<pre><code class="language-bash">cd backend &amp;&amp; npm test -- modelRouter.test.js gatewayModelSelection.strictProbe.test.js</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> backend &amp;&amp; npm <span class="hljs-built_in">test</span> -- modelRouter.test.js gatewayModelSelection.strictProbe.test.js</code></pre>
 <h3 id="p0-3-执行器错误归因与恢复路径">P0-3. 执行器错误归因与恢复路径<a class="anchor" href="#p0-3-执行器错误归因与恢复路径" aria-label="锚点">#</a></h3>
 <p>目标：</p>
 <ul><li>避免在执行器/沙箱路径失败时得出&quot;系统资源耗尽&quot;的错误结论。</li></ul>
@@ -69,7 +69,7 @@ khy gateway model</code></pre>
 <p>验收标准：</p>
 <ol><li><code>fork</code> 失败不再输出泛化的主机资源耗尽结论。</li><li>当 shell 探测失败时，程序启动请求自动尝试 <code>open_app</code> 恢复。</li><li>最终失败文本包含未完成工作的披露。</li></ol>
 <p>验证：</p>
-<pre><code class="language-bash">cd backend &amp;&amp; npm test -- toolCalling.shellForkClassify.test.js toolUseLoop.appLaunchRecovery.test.js</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> backend &amp;&amp; npm <span class="hljs-built_in">test</span> -- toolCalling.shellForkClassify.test.js toolUseLoop.appLaunchRecovery.test.js</code></pre>
 <h3 id="p0-4-基于活动的超时统一-禁止硬杀">P0-4. 基于活动的超时统一（禁止硬杀）<a class="anchor" href="#p0-4-基于活动的超时统一-禁止硬杀" aria-label="锚点">#</a></h3>
 <p>目标：</p>
 <ul><li>移除对活跃长任务的固定挂钟时间强杀逻辑。</li></ul>
@@ -80,7 +80,7 @@ khy gateway model</code></pre>
 <p>验收标准：</p>
 <ol><li>长时间活跃任务不会仅因挂钟时间超限而被强杀。</li><li>空闲超时仅在配置的空闲窗口内无任何进展事件时触发。</li><li>日志包含支撑超时决策的活动证据。</li></ol>
 <p>验证：</p>
-<pre><code class="language-bash">cd backend &amp;&amp; npm test -- aiGateway.stability.test.js aiGateway.stability.regressions.test.js aiCli.concurrentPreferredIsolation.test.js</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> backend &amp;&amp; npm <span class="hljs-built_in">test</span> -- aiGateway.stability.test.js aiGateway.stability.regressions.test.js aiCli.concurrentPreferredIsolation.test.js</code></pre>
 <h3 id="p0-5-状态管线-action-target-progress">P0-5. 状态管线：Action + Target + Progress<a class="anchor" href="#p0-5-状态管线-action-target-progress" aria-label="锚点">#</a></h3>
 <p>目标：</p>
 <ul><li>让运行时状态透明且动态，杜绝含糊/不透明的等待文本。</li></ul>
@@ -105,7 +105,7 @@ khy gateway model</code></pre>
 <p>验收标准：</p>
 <ol><li>模糊请求仍能以高一致性映射到预期的工具路径。</li><li>程序启动场景下首工具误触发率下降。</li><li>调试日志中可获取意图轨迹。</li></ol>
 <p>验证：</p>
-<pre><code class="language-bash">cd backend &amp;&amp; npm test -- toolUseLoop.guardrails.test.js toolUseLoop.appLaunchRewrite.test.js toolCalling.openAppAlias.test.js</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> backend &amp;&amp; npm <span class="hljs-built_in">test</span> -- toolUseLoop.guardrails.test.js toolUseLoop.appLaunchRewrite.test.js toolCalling.openAppAlias.test.js</code></pre>
 <h3 id="p1-2-审批-权限-ux-对齐">P1-2. 审批 / 权限 UX 对齐<a class="anchor" href="#p1-2-审批-权限-ux-对齐" aria-label="锚点">#</a></h3>
 <p>目标：</p>
 <ul><li>让权限工作流具备清晰的模式语义与持久化的信任规则。</li></ul>
@@ -116,7 +116,7 @@ khy gateway model</code></pre>
 <p>验收标准：</p>
 <ol><li>当作用域内已存在规则时，同一命令路径不再重复询问。</li><li>提示文本明确且可审计。</li><li>规则冲突解析具备确定性。</li></ol>
 <p>验证：</p>
-<pre><code class="language-bash">cd backend &amp;&amp; npm test -- toolRegistryMcp.test.js hook-lifecycle.test.js</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> backend &amp;&amp; npm <span class="hljs-built_in">test</span> -- toolRegistryMcp.test.js hook-lifecycle.test.js</code></pre>
 <h3 id="p1-3-配置分层与-schema-迁移">P1-3. 配置分层与 Schema 迁移<a class="anchor" href="#p1-3-配置分层与-schema-迁移" aria-label="锚点">#</a></h3>
 <p>目标：</p>
 <ul><li>让行为在 env/profile/session 覆盖下可复现。</li></ul>
@@ -127,7 +127,7 @@ khy gateway model</code></pre>
 <p>验收标准：</p>
 <ol><li>生效的配置值始终包含来源轨迹。</li><li>旧配置格式自动迁移并带警告。</li><li>不存在向隐式硬编码值的静默回退。</li></ol>
 <p>验证：</p>
-<pre><code class="language-bash">cd backend &amp;&amp; npm test -- proxyConfig.routing.test.js proxyConfigService.socks5Compatibility.test.js</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> backend &amp;&amp; npm <span class="hljs-built_in">test</span> -- proxyConfig.routing.test.js proxyConfigService.socks5Compatibility.test.js</code></pre>
 <h3 id="p1-4-记忆-会话生命周期对齐">P1-4. 记忆 / 会话生命周期对齐<a class="anchor" href="#p1-4-记忆-会话生命周期对齐" aria-label="锚点">#</a></h3>
 <p>目标：</p>
 <ul><li>改善长会话的稳定性与可恢复性。</li></ul>
@@ -138,7 +138,7 @@ khy gateway model</code></pre>
 <p>验收标准：</p>
 <ol><li>长对话在压缩后仍保持回复质量。</li><li>会话损坏可被自动修复或清晰隔离。</li><li>压缩事件在状态日志中可见。</li></ol>
 <p>验证：</p>
-<pre><code class="language-bash">cd backend &amp;&amp; npm test -- agent-context.test.js aiCli.feedback.stability.test.js</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> backend &amp;&amp; npm <span class="hljs-built_in">test</span> -- agent-context.test.js aiCli.feedback.stability.test.js</code></pre>
 <h3 id="p1-5-测试矩阵与回归闸门">P1-5. 测试矩阵与回归闸门<a class="anchor" href="#p1-5-测试矩阵与回归闸门" aria-label="锚点">#</a></h3>
 <p>目标：</p>
 <ul><li>将近期事故模式转化为强制回归检查。</li></ul>
@@ -149,7 +149,7 @@ khy gateway model</code></pre>
 <p>验收标准：</p>
 <ol><li>新回归可在本地复现，并在 CI 中被捕获。</li><li>P0 场景成为发布门禁。</li></ol>
 <p>验证：</p>
-<pre><code class="language-bash">cd backend &amp;&amp; npm test -- gatewayModelSelection.strictProbe.test.js toolUseLoop.appLaunchRecovery.test.js toolCalling.shellForkClassify.test.js aiGateway.stability.regressions.test.js
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> backend &amp;&amp; npm <span class="hljs-built_in">test</span> -- gatewayModelSelection.strictProbe.test.js toolUseLoop.appLaunchRecovery.test.js toolCalling.shellForkClassify.test.js aiGateway.stability.regressions.test.js
 node scripts/check-agent-rules.js --changed</code></pre>
 <h2 id="4-交付与签收">4. 交付与签收<a class="anchor" href="#4-交付与签收" aria-label="锚点">#</a></h2>
 <p>发布门禁：</p>

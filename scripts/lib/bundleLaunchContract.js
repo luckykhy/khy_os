@@ -53,21 +53,15 @@
 // pip(wheel/sdist) 早已三处钉死前 6 条；npm audit-purity 历史只钉了前 2 条——本契约
 // 就是把这条渠道非对称逼成硬门（三份清单必须都钉死同一份启动地板）。
 const LAUNCH_CRITICAL_BUNDLE_PATHS = [
-  'services/backend/bin/khy.js',
-  'services/backend/package.json',
-  'services/backend/server.js',
-  'services/backend/src/models/index.js',
-  'services/ai-backend/src/middleware/auth.js',
-  'apps/ai-frontend/src/main.js',
-  'software/khyquant/frontend/src/main.js',
+  'runtime/khy/bundle.mjs',
 ];
 
 // 三份权威清单里，各自给启动地板加的前缀：
 //   pip wheel  —— khy_os/bundled/<path>
 //   pip sdist  —— <path>（源码树相对路径，无 bundled 前缀）
 //   npm        —— package/bundled/<path>
-const PIP_WHEEL_PREFIX = 'khy_os/bundled/';
-const PIP_SDIST_PREFIX = '';
+const PIP_WHEEL_PREFIX = 'khy_platform/bundled/';
+const PIP_SDIST_PREFIX = 'platform/khy_platform/bundled/';
 const NPM_PREFIX = 'package/bundled/';
 
 /** 把任意入参安全转成字符串（null/undefined → ''），绝不抛。 */

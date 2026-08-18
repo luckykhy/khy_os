@@ -34,16 +34,16 @@
 <p>根因（已复现）：<code>readFile.js</code> 只有「大小上限」防护（默认 2MB），<strong>完全没有二进制探测</strong>。<br>默认门控 <code>KHY_FILE_READ_LIMIT</code> 开 → 超限走「有界窗口」把前 2MB <strong>当文本解码</strong>；未超限则<br>全量解码（<code>readTextFileSmart</code>）。于是 tar.gz 的二进制字节被解码成含 NUL 的 mojibake，以<br><strong><code>success: true</code></strong> 注入模型上下文。这坨含 NUL 字节的二进制垃圾 payload 发给（尤其中转/<br>relay 的）模型端点后让请求卡死/超时。文本 <code>.sha256</code> 同目录秒读，正好印证是二进制文件毒化<br>了请求。</p>
 <h2 id="修法-读前保守二进制探测-快速信息性拒绝">修法：读前保守二进制探测 → 快速信息性拒绝<a class="anchor" href="#修法-读前保守二进制探测-快速信息性拒绝" aria-label="锚点">#</a></h2>
 <p>在 <code>readFile.execute</code> 里 <code>stat</code> + 目录检查之后、大小/解码之前插入防护：</p>
-<pre><code class="language-js">try {
-  const { binaryReadGuardEnabled, isBinaryForRead, buildBinaryReadRefusal } = require('./readBinaryGuard');
-  if (binaryReadGuardEnabled(process.env)) {
-    const { detectFile } = require('../services/formatInspect/fileFormatDetector');
-    const fmt = detectFile(filePath);            // 只读 head/tail 16KB,~1-6ms,有界
-    if (isBinaryForRead(fmt)) {
-      return { success: false, error: buildBinaryReadRefusal({...}), binary: true, format, size };
+<pre><code class="language-js"><span class="hljs-keyword">try</span> {
+  <span class="hljs-keyword">const</span> { binaryReadGuardEnabled, isBinaryForRead, buildBinaryReadRefusal } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./readBinaryGuard&#x27;</span>);
+  <span class="hljs-keyword">if</span> (<span class="hljs-title function_">binaryReadGuardEnabled</span>(process.<span class="hljs-property">env</span>)) {
+    <span class="hljs-keyword">const</span> { detectFile } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../services/formatInspect/fileFormatDetector&#x27;</span>);
+    <span class="hljs-keyword">const</span> fmt = <span class="hljs-title function_">detectFile</span>(filePath);            <span class="hljs-comment">// 只读 head/tail 16KB,~1-6ms,有界</span>
+    <span class="hljs-keyword">if</span> (<span class="hljs-title function_">isBinaryForRead</span>(fmt)) {
+      <span class="hljs-keyword">return</span> { <span class="hljs-attr">success</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">error</span>: <span class="hljs-title function_">buildBinaryReadRefusal</span>({...}), <span class="hljs-attr">binary</span>: <span class="hljs-literal">true</span>, format, size };
     }
   }
-} catch { /* 探测失败 → 回退历史文本读取行为 */ }</code></pre>
+} <span class="hljs-keyword">catch</span> { <span class="hljs-comment">/* 探测失败 → 回退历史文本读取行为 */</span> }</code></pre>
 <ul><li>拒绝消息点明<strong>类型 + 大小</strong>，并把 agent 重定向到正确工具：<code>analyzeBinary</code>（ELF/PE）/</li></ul>
 <p><code>UpstreamStudy</code>（只读列出压缩包目录、零解压）/ 先校验解压后再读文本；并给逃生门<br>  <code>KHY_READFILE_BINARY_GUARD=0</code>。</p>
 <ul><li><code>detectFile</code> 只读 head/tail（16KB/4KB），耗时 ~1-6ms，不会像旧路径那样解码 2MB 二进制。</li></ul>
@@ -57,9 +57,9 @@
 <p>（size 缺失 → 「未知大小」，不当 0 B）。</p>
 <ul><li>真 key/token 永不进包、不落盘；pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本必须一致。</li></ul>
 <h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">npm run test:readfile-binary-guard      # 纯叶单测（9 用例）
-# LIVE：假 tar.gz → success:false 6ms（无垃圾注入）；.txt → success:true 行为不变；
-#       KHY_READFILE_BINARY_GUARD=0 + tar.gz → 回退旧解码注入（字节等价）。</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:readfile-binary-guard      <span class="hljs-comment"># 纯叶单测（9 用例）</span>
+<span class="hljs-comment"># LIVE：假 tar.gz → success:false 6ms（无垃圾注入）；.txt → success:true 行为不变；</span>
+<span class="hljs-comment">#       KHY_READFILE_BINARY_GUARD=0 + tar.gz → 回退旧解码注入（字节等价）。</span></code></pre>
       </article>
       <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-120] 剥图必留痕最小底线与OCR功能门解耦.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-120] 剥图必留痕：最小诚实底线与「OCR 功能门」解耦</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-122] post-failure救援网剥图必留痕解耦.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-122] post-failure 救援网：剥图必留痕与「OCR 无文本」分支解耦</div></a></nav>
       <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>

@@ -116,28 +116,28 @@
 <hr>
 <h2 id="五-感觉一下-一段极简伪代码">五、感觉一下：一段极简伪代码<a class="anchor" href="#五-感觉一下-一段极简伪代码" aria-label="锚点">#</a></h2>
 <p><strong>⚠️ 郑重提醒：下面这段代码你完全不用会写、不用看懂每一行。</strong> 放它在这，只是让你<strong>亲眼看一下</strong>——用 PyTorch 搭个网络、让它学习，代码到底有多短、多清爽。请你只体会一件事：<strong>那些最脏的活（求导、算矩阵、调显卡），代码里几乎看不见，因为框架全替你干了。</strong></p>
-<pre><code class="language-python">import torch
-import torch.nn as nn
+<pre><code class="language-python"><span class="hljs-keyword">import</span> torch
+<span class="hljs-keyword">import</span> torch.nn <span class="hljs-keyword">as</span> nn
 
-# ① 定义网络：像拼乐高——现成的层拼起来就是一个网络
+<span class="hljs-comment"># ① 定义网络：像拼乐高——现成的层拼起来就是一个网络</span>
 model = nn.Sequential(
-    nn.Linear(784, 128),   # 一块积木：全连接层
-    nn.ReLU(),             # 一块积木：激活函数
-    nn.Linear(128, 10),    # 又一块积木
+    nn.Linear(<span class="hljs-number">784</span>, <span class="hljs-number">128</span>),   <span class="hljs-comment"># 一块积木：全连接层</span>
+    nn.ReLU(),             <span class="hljs-comment"># 一块积木：激活函数</span>
+    nn.Linear(<span class="hljs-number">128</span>, <span class="hljs-number">10</span>),    <span class="hljs-comment"># 又一块积木</span>
 )
 
-# 定义&quot;怎么算错了多少&quot;和&quot;怎么拧旋钮&quot;
+<span class="hljs-comment"># 定义&quot;怎么算错了多少&quot;和&quot;怎么拧旋钮&quot;</span>
 loss_fn = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters())
 
-# ② 训练循环：反复&quot;前向 → 算错 → 自动求导 → 更新&quot;
-for images, labels in dataloader:          # 一批批喂数据
-    predictions = model(images)            # 前向：网络吐出预测
-    loss = loss_fn(predictions, labels)    # 算 loss：错了多少
+<span class="hljs-comment"># ② 训练循环：反复&quot;前向 → 算错 → 自动求导 → 更新&quot;</span>
+<span class="hljs-keyword">for</span> images, labels <span class="hljs-keyword">in</span> dataloader:          <span class="hljs-comment"># 一批批喂数据</span>
+    predictions = model(images)            <span class="hljs-comment"># 前向：网络吐出预测</span>
+    loss = loss_fn(predictions, labels)    <span class="hljs-comment"># 算 loss：错了多少</span>
 
-    optimizer.zero_grad()                  # 清掉上一轮的旧梯度
-    loss.backward()                        # 🪄 autograd 自动求导！这一行就是全部脏活
-    optimizer.step()                       # 🔧 优化器照梯度，把每个旋钮拧一点点</code></pre>
+    optimizer.zero_grad()                  <span class="hljs-comment"># 清掉上一轮的旧梯度</span>
+    loss.backward()                        <span class="hljs-comment"># 🪄 autograd 自动求导！这一行就是全部脏活</span>
+    optimizer.step()                       <span class="hljs-comment"># 🔧 优化器照梯度，把每个旋钮拧一点点</span></code></pre>
 <p>看到那行 <code>loss.backward()</code> 了吗？<strong>从零手写要推几百万条求导公式的地狱级脏活，在这里就是短短一行。</strong> 这就是框架的魔力——<strong>它把最难的部分，浓缩成了一句话。</strong></p>
 <p>再看整个 <code>for</code> 循环，是不是正好就是<a href="./[CONCEPT-13]%20什么是深度学习-DeepLearning.html">⑬ 深度学习</a>里讲的<strong>射箭三步</strong>？前向出预测（射一箭）→ 算 loss（看偏多少）→ <code>backward</code> + <code>step</code>（调姿势）→ 反复亿万次。<strong>原理你早就懂了，PyTorch 只是把这套原理变成了几行能跑的代码。</strong></p>
 <div class="flip reveal" tabindex="0" role="button" aria-label="点击翻转卡片"><div class="flip-inner"><div class="flip-face flip-front">那行神奇的 <code>loss.backward()</code>，一句话说它到底干了啥？（点一下翻到背面）<div class="flip-hint">👆 点我翻面看答案</div></div><div class="flip-face flip-back">它就是[⑬ 深度学习]里讲的<strong>反向传播</strong>的&quot;一键版&quot;：从零手写时，你得对几百万个参数<strong>逐个手推求导公式</strong>算出梯度（该往哪拧、拧多少），繁琐到令人绝望且极易出错；而 <code>loss.backward()</code> 让 <strong>autograd</strong> 帮你把这几百万个梯度<strong>自动、精确地全算好</strong>——一条公式都不用你推。这就是&quot;框架替你干掉最脏那件活&quot;的最典型例子。</div></div></div>

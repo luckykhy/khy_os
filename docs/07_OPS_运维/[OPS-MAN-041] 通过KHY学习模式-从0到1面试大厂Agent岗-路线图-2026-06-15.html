@@ -33,27 +33,27 @@
 <p>而 KHY-OS <strong>每一块都有真实可读的实现</strong>，不是 PPT。这意味着每道面试题你都能答：<br><strong>「我不是看过文章，我读过/写过一套完整实现，它是这么做的、为什么这么做、踩过哪些坑。」</strong><br>这就是「底气」的来源——<strong>用一套你能讲到代码行的系统，覆盖整张面试地图。</strong></p>
 <hr>
 <h2 id="1-学习模式怎么用-命令速查">1. 学习模式怎么用（命令速查）<a class="anchor" href="#1-学习模式怎么用-命令速查" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">khy learn                 # 进入课程总览（12 层）
-khy learn 3               # 学第 3 层（AI 网关）整层
-khy learn 3.2             # 学第 3 层第 2 个知识点（适配器协议层）
-khy learn next            # 顺着进度学下一个知识点
-khy learn progress        # 看已学进度
-khy learn &lt;关键词&gt;         # 按关键词检索知识点（如 khy learn 工具循环）
-khy learn check           # 校验课程链接完整性（94 检查点）
-khy learn refresh         # 课程自进化：扫新模块/自愈失效引用/（有模型时）AI 扩充讲解
-khy learn refresh clear   # 清空动态覆盖层，回到纯随包课程（地板）
-khy learn reset           # 重置进度
-khy learn note / memory   # 记笔记 / 看你的学习记忆
+<pre><code class="language-bash">khy learn                 <span class="hljs-comment"># 进入课程总览（12 层）</span>
+khy learn 3               <span class="hljs-comment"># 学第 3 层（AI 网关）整层</span>
+khy learn 3.2             <span class="hljs-comment"># 学第 3 层第 2 个知识点（适配器协议层）</span>
+khy learn next            <span class="hljs-comment"># 顺着进度学下一个知识点</span>
+khy learn progress        <span class="hljs-comment"># 看已学进度</span>
+khy learn &lt;关键词&gt;         <span class="hljs-comment"># 按关键词检索知识点（如 khy learn 工具循环）</span>
+khy learn check           <span class="hljs-comment"># 校验课程链接完整性（94 检查点）</span>
+khy learn refresh         <span class="hljs-comment"># 课程自进化：扫新模块/自愈失效引用/（有模型时）AI 扩充讲解</span>
+khy learn refresh clear   <span class="hljs-comment"># 清空动态覆盖层，回到纯随包课程（地板）</span>
+khy learn reset           <span class="hljs-comment"># 重置进度</span>
+khy learn note / memory   <span class="hljs-comment"># 记笔记 / 看你的学习记忆</span>
 
-# 零基础讲解档位（持久化，默认 normal）
-khy learn level           # 看当前讲解档位
-khy learn level beginner  # 切「零基础」：先生活比喻→逐行点关键语法+「这门语言为什么这样写」→算法讲直觉→Agent 概念日常类比→结尾主动指出本段可改进点
-khy learn level normal    # 切回常规档位（同一知识点回到原讲解，无零基础块）
+<span class="hljs-comment"># 零基础讲解档位（持久化，默认 normal）</span>
+khy learn level           <span class="hljs-comment"># 看当前讲解档位</span>
+khy learn level beginner  <span class="hljs-comment"># 切「零基础」：先生活比喻→逐行点关键语法+「这门语言为什么这样写」→算法讲直觉→Agent 概念日常类比→结尾主动指出本段可改进点</span>
+khy learn level normal    <span class="hljs-comment"># 切回常规档位（同一知识点回到原讲解，无零基础块）</span>
 
-# 边学边发现不足并完善（改进清单，只产建议不改代码）
-khy learn improve &lt;一句话描述&gt;   # 把刚学知识点的「不足」记入清单；有模型时附 AI 修复提议（仅展示、不自动应用）
-khy learn improve list           # 复盘改进清单（最新在前）
-khy learn improve &lt;描述&gt; --route # 额外路由到 evo 改进管线（需 KHY_EVO_ENGINE=1，默认关）</code></pre>
+<span class="hljs-comment"># 边学边发现不足并完善（改进清单，只产建议不改代码）</span>
+khy learn improve &lt;一句话描述&gt;   <span class="hljs-comment"># 把刚学知识点的「不足」记入清单；有模型时附 AI 修复提议（仅展示、不自动应用）</span>
+khy learn improve list           <span class="hljs-comment"># 复盘改进清单（最新在前）</span>
+khy learn improve &lt;描述&gt; --route <span class="hljs-comment"># 额外路由到 evo 改进管线（需 KHY_EVO_ENGINE=1，默认关）</span></code></pre>
 <blockquote><p><strong>零基础专用</strong>：档位与改进清单都落 <code>~/.khyos/growth/</code>（随 pip 升级不丢），与进度同主权域；<br>无模型/无网时 <code>improve</code> 仍记清单（只是没有 AI 提议），banner 会显示「改进清单 N」。<br>别名：<code>难度/档位 → level</code>、<code>零基础 → level beginner</code>、<code>改进/反馈/记不足 → improve</code>、<code>改进清单 → improve list</code>。</p></blockquote>
 <p><strong>三种模式</strong>（系统自动按能力探测，无需手配）：</p>
 <ul><li>模式 1（无模型/无网）：纯静态——源码预览 + 导航，照样能学。</li><li>模式 2（有网/无模型）：词法 RAG 补检索。</li><li>模式 3（有模型 + 混合 RAG）：<strong>面谈式</strong>讲解，像和资深工程师对话——<strong>面试备战首选这个</strong>。</li></ul>
@@ -63,12 +63,12 @@ khy learn improve &lt;描述&gt; --route # 额外路由到 evo 改进管线（�
 <hr>
 <h2 id="1-5-成长段位与进度携带-从-白纸-到-大师">1.5 成长段位与进度携带（从「白纸」到「大师」）<a class="anchor" href="#1-5-成长段位与进度携带-从-白纸-到-大师" aria-label="锚点">#</a></h2>
 <p>学习不是无感的，KHY 给你一条<strong>修仙式成长路线</strong>：每<strong>通关一层</strong>（该层所有知识点都 <code>learn done</code>）<br>就可能突破一个境界。零基础起步也有清晰路标和成长反馈。</p>
-<pre><code class="language-bash">khy learn roadmap     # 看完整成长路线图（修仙阶梯 + 当前境界 + 距下一境界还差几层）
-khy learn rank        # 同上（别名）
-khy learn export      # 导出进度到 ./khy-learning-progress.json（换电脑带得走）
-khy learn export /path/to/p.json    # 导出到指定路径
-khy learn import &lt;文件&gt;             # 在新设备导入（默认合并：取并集 + 较高 XP）
-khy learn import &lt;文件&gt; --replace   # 整体覆盖本机进度</code></pre>
+<pre><code class="language-bash">khy learn roadmap     <span class="hljs-comment"># 看完整成长路线图（修仙阶梯 + 当前境界 + 距下一境界还差几层）</span>
+khy learn rank        <span class="hljs-comment"># 同上（别名）</span>
+khy learn <span class="hljs-built_in">export</span>      <span class="hljs-comment"># 导出进度到 ./khy-learning-progress.json（换电脑带得走）</span>
+khy learn <span class="hljs-built_in">export</span> /path/to/p.json    <span class="hljs-comment"># 导出到指定路径</span>
+khy learn import &lt;文件&gt;             <span class="hljs-comment"># 在新设备导入（默认合并：取并集 + 较高 XP）</span>
+khy learn import &lt;文件&gt; --replace   <span class="hljs-comment"># 整体覆盖本机进度</span></code></pre>
 <p><strong>八重境界</strong>（按已通关层数解锁）：</p>
 <table><thead><tr><th>等级</th><th>境界</th><th>解锁条件（已通关层数）</th></tr></thead><tbody><tr><td>Lv0</td><td>凡人（白纸）</td><td>0</td></tr><tr><td>Lv1</td><td>练气</td><td>≥1</td></tr><tr><td>Lv2</td><td>筑基</td><td>≥3</td></tr><tr><td>Lv3</td><td>金丹</td><td>≥5</td></tr><tr><td>Lv4</td><td>元婴</td><td>≥7</td></tr><tr><td>Lv5</td><td>化神</td><td>≥9</td></tr><tr><td>Lv6</td><td>大乘</td><td>通关全部内容层（≥11）</td></tr><tr><td>Lv7</td><td>大师（渡劫飞升）</td><td>通关全部层（含 Bug 层）= 毕业认证</td></tr></tbody></table>
 <p><strong>三种「不丢进度」保障</strong>：</p>

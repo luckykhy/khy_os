@@ -39,62 +39,62 @@
 <p>Avoid forcing consumers to choose between multiple versions of the same dependency or API. Diamond dependency problems arise when different consumers need different versions of the same thing. Design for a world where only one version exists at a time — extend rather than fork.</p>
 <h3 id="1-contract-first">1. Contract First<a class="anchor" href="#1-contract-first" aria-label="锚点">#</a></h3>
 <p>Define the interface before implementing it. The contract is the spec — implementation follows.</p>
-<pre><code class="language-typescript">// Define the contract first
-interface TaskAPI {
-  // Creates a task and returns the created task with server-generated fields
-  createTask(input: CreateTaskInput): Promise&lt;Task&gt;;
+<pre><code class="language-typescript"><span class="hljs-comment">// Define the contract first</span>
+<span class="hljs-keyword">interface</span> <span class="hljs-title class_">TaskAPI</span> {
+  <span class="hljs-comment">// Creates a task and returns the created task with server-generated fields</span>
+  <span class="hljs-title function_">createTask</span>(<span class="hljs-attr">input</span>: <span class="hljs-title class_">CreateTaskInput</span>): <span class="hljs-title class_">Promise</span>&lt;<span class="hljs-title class_">Task</span>&gt;;
 
-  // Returns paginated tasks matching filters
-  listTasks(params: ListTasksParams): Promise&lt;PaginatedResult&lt;Task&gt;&gt;;
+  <span class="hljs-comment">// Returns paginated tasks matching filters</span>
+  <span class="hljs-title function_">listTasks</span>(<span class="hljs-attr">params</span>: <span class="hljs-title class_">ListTasksParams</span>): <span class="hljs-title class_">Promise</span>&lt;<span class="hljs-title class_">PaginatedResult</span>&lt;<span class="hljs-title class_">Task</span>&gt;&gt;;
 
-  // Returns a single task or throws NotFoundError
-  getTask(id: string): Promise&lt;Task&gt;;
+  <span class="hljs-comment">// Returns a single task or throws NotFoundError</span>
+  <span class="hljs-title function_">getTask</span>(<span class="hljs-attr">id</span>: <span class="hljs-built_in">string</span>): <span class="hljs-title class_">Promise</span>&lt;<span class="hljs-title class_">Task</span>&gt;;
 
-  // Partial update — only provided fields change
-  updateTask(id: string, input: UpdateTaskInput): Promise&lt;Task&gt;;
+  <span class="hljs-comment">// Partial update — only provided fields change</span>
+  <span class="hljs-title function_">updateTask</span>(<span class="hljs-attr">id</span>: <span class="hljs-built_in">string</span>, <span class="hljs-attr">input</span>: <span class="hljs-title class_">UpdateTaskInput</span>): <span class="hljs-title class_">Promise</span>&lt;<span class="hljs-title class_">Task</span>&gt;;
 
-  // Idempotent delete — succeeds even if already deleted
-  deleteTask(id: string): Promise&lt;void&gt;;
+  <span class="hljs-comment">// Idempotent delete — succeeds even if already deleted</span>
+  <span class="hljs-title function_">deleteTask</span>(<span class="hljs-attr">id</span>: <span class="hljs-built_in">string</span>): <span class="hljs-title class_">Promise</span>&lt;<span class="hljs-built_in">void</span>&gt;;
 }</code></pre>
 <h3 id="2-consistent-error-semantics">2. Consistent Error Semantics<a class="anchor" href="#2-consistent-error-semantics" aria-label="锚点">#</a></h3>
 <p>Pick one error strategy and use it everywhere:</p>
-<pre><code class="language-typescript">// REST: HTTP status codes + structured error body
-// Every error response follows the same shape
-interface APIError {
-  error: {
-    code: string;        // Machine-readable: &quot;VALIDATION_ERROR&quot;
-    message: string;     // Human-readable: &quot;Email is required&quot;
-    details?: unknown;   // Additional context when helpful
+<pre><code class="language-typescript"><span class="hljs-comment">// REST: HTTP status codes + structured error body</span>
+<span class="hljs-comment">// Every error response follows the same shape</span>
+<span class="hljs-keyword">interface</span> <span class="hljs-title class_">APIError</span> {
+  <span class="hljs-attr">error</span>: {
+    <span class="hljs-attr">code</span>: <span class="hljs-built_in">string</span>;        <span class="hljs-comment">// Machine-readable: &quot;VALIDATION_ERROR&quot;</span>
+    <span class="hljs-attr">message</span>: <span class="hljs-built_in">string</span>;     <span class="hljs-comment">// Human-readable: &quot;Email is required&quot;</span>
+    <span class="hljs-attr">details</span>?: <span class="hljs-built_in">unknown</span>;   <span class="hljs-comment">// Additional context when helpful</span>
   };
 }
 
-// Status code mapping
-// 400 → Client sent invalid data
-// 401 → Not authenticated
-// 403 → Authenticated but not authorized
-// 404 → Resource not found
-// 409 → Conflict (duplicate, version mismatch)
-// 422 → Validation failed (semantically invalid)
-// 500 → Server error (never expose internal details)</code></pre>
+<span class="hljs-comment">// Status code mapping</span>
+<span class="hljs-comment">// 400 → Client sent invalid data</span>
+<span class="hljs-comment">// 401 → Not authenticated</span>
+<span class="hljs-comment">// 403 → Authenticated but not authorized</span>
+<span class="hljs-comment">// 404 → Resource not found</span>
+<span class="hljs-comment">// 409 → Conflict (duplicate, version mismatch)</span>
+<span class="hljs-comment">// 422 → Validation failed (semantically invalid)</span>
+<span class="hljs-comment">// 500 → Server error (never expose internal details)</span></code></pre>
 <p><strong>Don't mix patterns.</strong> If some endpoints throw, others return null, and others return <code>{ error }</code> — the consumer can't predict behavior.</p>
 <h3 id="3-validate-at-boundaries">3. Validate at Boundaries<a class="anchor" href="#3-validate-at-boundaries" aria-label="锚点">#</a></h3>
 <p>Trust internal code. Validate at system edges where external input enters:</p>
-<pre><code class="language-typescript">// Validate at the API boundary
-app.post('/api/tasks', async (req, res) =&gt; {
-  const result = CreateTaskSchema.safeParse(req.body);
-  if (!result.success) {
-    return res.status(422).json({
-      error: {
-        code: 'VALIDATION_ERROR',
-        message: 'Invalid task data',
-        details: result.error.flatten(),
+<pre><code class="language-typescript"><span class="hljs-comment">// Validate at the API boundary</span>
+app.<span class="hljs-title function_">post</span>(<span class="hljs-string">&#x27;/api/tasks&#x27;</span>, <span class="hljs-title function_">async</span> (req, res) =&gt; {
+  <span class="hljs-keyword">const</span> result = <span class="hljs-title class_">CreateTaskSchema</span>.<span class="hljs-title function_">safeParse</span>(req.<span class="hljs-property">body</span>);
+  <span class="hljs-keyword">if</span> (!result.<span class="hljs-property">success</span>) {
+    <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">status</span>(<span class="hljs-number">422</span>).<span class="hljs-title function_">json</span>({
+      <span class="hljs-attr">error</span>: {
+        <span class="hljs-attr">code</span>: <span class="hljs-string">&#x27;VALIDATION_ERROR&#x27;</span>,
+        <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;Invalid task data&#x27;</span>,
+        <span class="hljs-attr">details</span>: result.<span class="hljs-property">error</span>.<span class="hljs-title function_">flatten</span>(),
       },
     });
   }
 
-  // After validation, internal code trusts the types
-  const task = await taskService.create(result.data);
-  return res.status(201).json(task);
+  <span class="hljs-comment">// After validation, internal code trusts the types</span>
+  <span class="hljs-keyword">const</span> task = <span class="hljs-keyword">await</span> taskService.<span class="hljs-title function_">create</span>(result.<span class="hljs-property">data</span>);
+  <span class="hljs-keyword">return</span> res.<span class="hljs-title function_">status</span>(<span class="hljs-number">201</span>).<span class="hljs-title function_">json</span>(task);
 });</code></pre>
 <p>Where validation belongs:</p>
 <ul><li>API route handlers (user input)</li><li>Form submission handlers (user input)</li><li>External service response parsing (third-party data -- <strong>always treat as untrusted</strong>)</li><li>Environment variable loading (configuration)</li></ul>
@@ -103,19 +103,19 @@ app.post('/api/tasks', async (req, res) =&gt; {
 <ul><li>Between internal functions that share type contracts</li><li>In utility functions called by already-validated code</li><li>On data that just came from your own database</li></ul>
 <h3 id="4-prefer-addition-over-modification">4. Prefer Addition Over Modification<a class="anchor" href="#4-prefer-addition-over-modification" aria-label="锚点">#</a></h3>
 <p>Extend interfaces without breaking existing consumers:</p>
-<pre><code class="language-typescript">// Good: Add optional fields
-interface CreateTaskInput {
-  title: string;
-  description?: string;
-  priority?: 'low' | 'medium' | 'high';  // Added later, optional
-  labels?: string[];                       // Added later, optional
+<pre><code class="language-typescript"><span class="hljs-comment">// Good: Add optional fields</span>
+<span class="hljs-keyword">interface</span> <span class="hljs-title class_">CreateTaskInput</span> {
+  <span class="hljs-attr">title</span>: <span class="hljs-built_in">string</span>;
+  <span class="hljs-attr">description</span>?: <span class="hljs-built_in">string</span>;
+  <span class="hljs-attr">priority</span>?: <span class="hljs-string">&#x27;low&#x27;</span> | <span class="hljs-string">&#x27;medium&#x27;</span> | <span class="hljs-string">&#x27;high&#x27;</span>;  <span class="hljs-comment">// Added later, optional</span>
+  <span class="hljs-attr">labels</span>?: <span class="hljs-built_in">string</span>[];                       <span class="hljs-comment">// Added later, optional</span>
 }
 
-// Bad: Change existing field types or remove fields
-interface CreateTaskInput {
-  title: string;
-  // description: string;  // Removed — breaks existing consumers
-  priority: number;         // Changed from string — breaks existing consumers
+<span class="hljs-comment">// Bad: Change existing field types or remove fields</span>
+<span class="hljs-keyword">interface</span> <span class="hljs-title class_">CreateTaskInput</span> {
+  <span class="hljs-attr">title</span>: <span class="hljs-built_in">string</span>;
+  <span class="hljs-comment">// description: string;  // Removed — breaks existing consumers</span>
+  <span class="hljs-attr">priority</span>: <span class="hljs-built_in">number</span>;         <span class="hljs-comment">// Changed from string — breaks existing consumers</span>
 }</code></pre>
 <h3 id="5-predictable-naming">5. Predictable Naming<a class="anchor" href="#5-predictable-naming" aria-label="锚点">#</a></h3>
 <table><thead><tr><th>Pattern</th><th>Convention</th><th>Example</th></tr></thead><tbody><tr><td>REST endpoints</td><td>Plural nouns, no verbs</td><td><code>GET /api/tasks</code>, <code>POST /api/tasks</code></td></tr><tr><td>Query params</td><td>camelCase</td><td><code>?sortBy=createdAt&amp;pageSize=20</code></td></tr><tr><td>Response fields</td><td>camelCase</td><td><code>{ createdAt, updatedAt, taskId }</code></td></tr><tr><td>Boolean fields</td><td>is/has/can prefix</td><td><code>isComplete</code>, <code>hasAttachments</code></td></tr><tr><td>Enum values</td><td>UPPER_SNAKE</td><td><code>&quot;IN_PROGRESS&quot;</code>, <code>&quot;COMPLETED&quot;</code></td></tr></tbody></table>
@@ -131,17 +131,17 @@ GET    /api/tasks/:id/comments → List comments for a task (sub-resource)
 POST   /api/tasks/:id/comments → Add a comment to a task</code></pre>
 <h3 id="pagination">Pagination<a class="anchor" href="#pagination" aria-label="锚点">#</a></h3>
 <p>Paginate list endpoints:</p>
-<pre><code class="language-typescript">// Request
-GET /api/tasks?page=1&amp;pageSize=20&amp;sortBy=createdAt&amp;sortOrder=desc
+<pre><code class="language-typescript"><span class="hljs-comment">// Request</span>
+<span class="hljs-variable constant_">GET</span> /api/tasks?page=<span class="hljs-number">1</span>&amp;pageSize=<span class="hljs-number">20</span>&amp;sortBy=createdAt&amp;sortOrder=desc
 
-// Response
+<span class="hljs-comment">// Response</span>
 {
-  &quot;data&quot;: [...],
-  &quot;pagination&quot;: {
-    &quot;page&quot;: 1,
-    &quot;pageSize&quot;: 20,
-    &quot;totalItems&quot;: 142,
-    &quot;totalPages&quot;: 8
+  <span class="hljs-string">&quot;data&quot;</span>: [...],
+  <span class="hljs-string">&quot;pagination&quot;</span>: {
+    <span class="hljs-string">&quot;page&quot;</span>: <span class="hljs-number">1</span>,
+    <span class="hljs-string">&quot;pageSize&quot;</span>: <span class="hljs-number">20</span>,
+    <span class="hljs-string">&quot;totalItems&quot;</span>: <span class="hljs-number">142</span>,
+    <span class="hljs-string">&quot;totalPages&quot;</span>: <span class="hljs-number">8</span>
   }
 }</code></pre>
 <h3 id="filtering">Filtering<a class="anchor" href="#filtering" aria-label="锚点">#</a></h3>
@@ -149,49 +149,49 @@ GET /api/tasks?page=1&amp;pageSize=20&amp;sortBy=createdAt&amp;sortOrder=desc
 <pre><code>GET /api/tasks?status=in_progress&amp;assignee=user123&amp;createdAfter=2025-01-01</code></pre>
 <h3 id="partial-updates-patch">Partial Updates (PATCH)<a class="anchor" href="#partial-updates-patch" aria-label="锚点">#</a></h3>
 <p>Accept partial objects — only update what's provided:</p>
-<pre><code class="language-typescript">// Only title changes, everything else preserved
-PATCH /api/tasks/123
-{ &quot;title&quot;: &quot;Updated title&quot; }</code></pre>
+<pre><code class="language-typescript"><span class="hljs-comment">// Only title changes, everything else preserved</span>
+<span class="hljs-variable constant_">PATCH</span> /api/tasks/<span class="hljs-number">123</span>
+{ <span class="hljs-string">&quot;title&quot;</span>: <span class="hljs-string">&quot;Updated title&quot;</span> }</code></pre>
 <h2 id="typescript-interface-patterns">TypeScript Interface Patterns<a class="anchor" href="#typescript-interface-patterns" aria-label="锚点">#</a></h2>
 <h3 id="use-discriminated-unions-for-variants">Use Discriminated Unions for Variants<a class="anchor" href="#use-discriminated-unions-for-variants" aria-label="锚点">#</a></h3>
-<pre><code class="language-typescript">// Good: Each variant is explicit
-type TaskStatus =
-  | { type: 'pending' }
-  | { type: 'in_progress'; assignee: string; startedAt: Date }
-  | { type: 'completed'; completedAt: Date; completedBy: string }
-  | { type: 'cancelled'; reason: string; cancelledAt: Date };
+<pre><code class="language-typescript"><span class="hljs-comment">// Good: Each variant is explicit</span>
+<span class="hljs-keyword">type</span> <span class="hljs-title class_">TaskStatus</span> =
+  | { <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;pending&#x27;</span> }
+  | { <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;in_progress&#x27;</span>; <span class="hljs-attr">assignee</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">startedAt</span>: <span class="hljs-title class_">Date</span> }
+  | { <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;completed&#x27;</span>; <span class="hljs-attr">completedAt</span>: <span class="hljs-title class_">Date</span>; <span class="hljs-attr">completedBy</span>: <span class="hljs-built_in">string</span> }
+  | { <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;cancelled&#x27;</span>; <span class="hljs-attr">reason</span>: <span class="hljs-built_in">string</span>; <span class="hljs-attr">cancelledAt</span>: <span class="hljs-title class_">Date</span> };
 
-// Consumer gets type narrowing
-function getStatusLabel(status: TaskStatus): string {
-  switch (status.type) {
-    case 'pending': return 'Pending';
-    case 'in_progress': return `In progress (${status.assignee})`;
-    case 'completed': return `Done on ${status.completedAt}`;
-    case 'cancelled': return `Cancelled: ${status.reason}`;
+<span class="hljs-comment">// Consumer gets type narrowing</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">getStatusLabel</span>(<span class="hljs-params"><span class="hljs-attr">status</span>: <span class="hljs-title class_">TaskStatus</span></span>): <span class="hljs-built_in">string</span> {
+  <span class="hljs-keyword">switch</span> (status.<span class="hljs-property">type</span>) {
+    <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;pending&#x27;</span>: <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;Pending&#x27;</span>;
+    <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;in_progress&#x27;</span>: <span class="hljs-keyword">return</span> <span class="hljs-string">`In progress (<span class="hljs-subst">${status.assignee}</span>)`</span>;
+    <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;completed&#x27;</span>: <span class="hljs-keyword">return</span> <span class="hljs-string">`Done on <span class="hljs-subst">${status.completedAt}</span>`</span>;
+    <span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;cancelled&#x27;</span>: <span class="hljs-keyword">return</span> <span class="hljs-string">`Cancelled: <span class="hljs-subst">${status.reason}</span>`</span>;
   }
 }</code></pre>
 <h3 id="input-output-separation">Input/Output Separation<a class="anchor" href="#input-output-separation" aria-label="锚点">#</a></h3>
-<pre><code class="language-typescript">// Input: what the caller provides
-interface CreateTaskInput {
-  title: string;
-  description?: string;
+<pre><code class="language-typescript"><span class="hljs-comment">// Input: what the caller provides</span>
+<span class="hljs-keyword">interface</span> <span class="hljs-title class_">CreateTaskInput</span> {
+  <span class="hljs-attr">title</span>: <span class="hljs-built_in">string</span>;
+  <span class="hljs-attr">description</span>?: <span class="hljs-built_in">string</span>;
 }
 
-// Output: what the system returns (includes server-generated fields)
-interface Task {
-  id: string;
-  title: string;
-  description: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  createdBy: string;
+<span class="hljs-comment">// Output: what the system returns (includes server-generated fields)</span>
+<span class="hljs-keyword">interface</span> <span class="hljs-title class_">Task</span> {
+  <span class="hljs-attr">id</span>: <span class="hljs-built_in">string</span>;
+  <span class="hljs-attr">title</span>: <span class="hljs-built_in">string</span>;
+  <span class="hljs-attr">description</span>: <span class="hljs-built_in">string</span> | <span class="hljs-literal">null</span>;
+  <span class="hljs-attr">createdAt</span>: <span class="hljs-title class_">Date</span>;
+  <span class="hljs-attr">updatedAt</span>: <span class="hljs-title class_">Date</span>;
+  <span class="hljs-attr">createdBy</span>: <span class="hljs-built_in">string</span>;
 }</code></pre>
 <h3 id="use-branded-types-for-ids">Use Branded Types for IDs<a class="anchor" href="#use-branded-types-for-ids" aria-label="锚点">#</a></h3>
-<pre><code class="language-typescript">type TaskId = string &amp; { readonly __brand: 'TaskId' };
-type UserId = string &amp; { readonly __brand: 'UserId' };
+<pre><code class="language-typescript"><span class="hljs-keyword">type</span> <span class="hljs-title class_">TaskId</span> = <span class="hljs-built_in">string</span> &amp; { <span class="hljs-keyword">readonly</span> <span class="hljs-attr">__brand</span>: <span class="hljs-string">&#x27;TaskId&#x27;</span> };
+<span class="hljs-keyword">type</span> <span class="hljs-title class_">UserId</span> = <span class="hljs-built_in">string</span> &amp; { <span class="hljs-keyword">readonly</span> <span class="hljs-attr">__brand</span>: <span class="hljs-string">&#x27;UserId&#x27;</span> };
 
-// Prevents accidentally passing a UserId where a TaskId is expected
-function getTask(id: TaskId): Promise&lt;Task&gt; { ... }</code></pre>
+<span class="hljs-comment">// Prevents accidentally passing a UserId where a TaskId is expected</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">getTask</span>(<span class="hljs-params"><span class="hljs-attr">id</span>: <span class="hljs-title class_">TaskId</span></span>): <span class="hljs-title class_">Promise</span>&lt;<span class="hljs-title class_">Task</span>&gt; { ... }</code></pre>
 <h2 id="common-rationalizations">Common Rationalizations<a class="anchor" href="#common-rationalizations" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>Rationalization</th><th>Reality</th></tr></thead><tbody><tr><td>&quot;We'll document the API later&quot;</td><td>The types ARE the documentation. Define them first.</td></tr><tr><td>&quot;We don't need pagination for now&quot;</td><td>You will the moment someone has 100+ items. Add it from the start.</td></tr><tr><td>&quot;PATCH is complicated, let's just use PUT&quot;</td><td>PUT requires the full object every time. PATCH is what clients actually want.</td></tr><tr><td>&quot;We'll version the API when we need to&quot;</td><td>Breaking changes without versioning break consumers. Design for extension from the start.</td></tr><tr><td>&quot;Nobody uses that undocumented behavior&quot;</td><td>Hyrum's Law: if it's observable, somebody depends on it. Treat every public behavior as a commitment.</td></tr><tr><td>&quot;We can just maintain two versions&quot;</td><td>Multiple versions multiply maintenance cost and create diamond dependency problems. Prefer the One-Version Rule.</td></tr><tr><td>&quot;Internal APIs don't need contracts&quot;</td><td>Internal consumers are still consumers. Contracts prevent coupling and enable parallel work.</td></tr></tbody></table>
 <h2 id="red-flags">Red Flags<a class="anchor" href="#red-flags" aria-label="锚点">#</a></h2>

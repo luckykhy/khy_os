@@ -34,27 +34,27 @@
 <p><code>run.ps1</code> / <code>run-portable.bat</code> / <code>run-portable.sh</code> 归入 <code>portable/</code>；<br>  <strong>只跑一次的装机/救急脚本</strong>归入 <code>setup/</code>（见 <code>setup/README.md</code> 的「何时跑哪个」表）。</p>
 <ul><li><strong>新增脚本</strong>按上述主题放入对应子目录；不建一次性散落目录。</li><li><strong>跨平台</strong>：新增批处理类脚本应同时提供 <code>.bat</code> 与 <code>.sh</code> 配对（参照 <code>install-path-wrappers</code>、<code>slim-down</code>）。</li><li><strong>共享逻辑</strong>写入 <code>lib/</code>，脚本主体保持薄壳。</li><li><strong>运行时产物</strong>（<code>__pycache__</code>、<code>logs/</code>、<code>ab-traces/</code> 等）不入库，随运行产生。</li></ul>
 <h2 id="常用入口">常用入口<a class="anchor" href="#常用入口" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># 体积精简（Win）
+<pre><code class="language-bash"><span class="hljs-comment"># 体积精简（Win）</span>
 scripts/maintenance/slim-down.bat
-# 体积精简（Linux/macOS）
+<span class="hljs-comment"># 体积精简（Linux/macOS）</span>
 bash scripts/maintenance/slim-down.sh
-# 版本同步校验
+<span class="hljs-comment"># 版本同步校验</span>
 node scripts/ci/check-version-sync.js
-# agent 规则检查
+<span class="hljs-comment"># agent 规则检查</span>
 node scripts/ci/check-agent-rules.js --changed
-# 导出本机代码为离线 bundle（本机 AI 数据 .khy/、.env 等被 gitignore，不会混入）
-scripts/sync/export-sync.bat            # 或 bash scripts/sync/export-sync.sh
-# 在另一台电脑导入对方 bundle
+<span class="hljs-comment"># 导出本机代码为离线 bundle（本机 AI 数据 .khy/、.env 等被 gitignore，不会混入）</span>
+scripts/sync/export-sync.bat            <span class="hljs-comment"># 或 bash scripts/sync/export-sync.sh</span>
+<span class="hljs-comment"># 在另一台电脑导入对方 bundle</span>
 scripts/sync/import-sync.bat --bundle &lt;导出的.bundle&gt;</code></pre>
 <h2 id="两台电脑同步-scripts-sync">两台电脑同步（scripts/sync/）<a class="anchor" href="#两台电脑同步-scripts-sync" aria-label="锚点">#</a></h2>
 <p>场景：两台电脑各装不同 AI，代码需保持一致，但<strong>各自的 AI 数据必须隔离</strong>。<br>方案：git bundle 离线包（无需网络/账号）。本机数据（<code>.khy/</code>、<code>.env</code>、<br><code>config.json</code> 等）已被 <code>.gitignore</code> 排除，永远不会进入 bundle。</p>
-<pre><code class="language-bash"># 电脑 A：提交本机变更并导出 bundle（输出到 &lt;项目根&gt;\..\khy-sync\）
+<pre><code class="language-bash"><span class="hljs-comment"># 电脑 A：提交本机变更并导出 bundle（输出到 &lt;项目根&gt;\..\khy-sync\）</span>
 scripts/sync/export-sync.bat
-# 将 .bundle 文件通过 U 盘/网盘等离线方式传给电脑 B
+<span class="hljs-comment"># 将 .bundle 文件通过 U 盘/网盘等离线方式传给电脑 B</span>
 
-# 电脑 B：导入（默认切到对方分支；--merge 则合并到当前分支）
+<span class="hljs-comment"># 电脑 B：导入（默认切到对方分支；--merge 则合并到当前分支）</span>
 scripts/sync/import-sync.bat --bundle &lt;路径&gt;\khy-sync-xxx.bundle
-# 反向同步同理：B 导出 → A 导入</code></pre>
+<span class="hljs-comment"># 反向同步同理：B 导出 → A 导入</span></code></pre>
 <p>注意事项：</p>
 <ul><li><code>export-sync.bat</code> 默认会 <code>git add -A</code> + 提交本机变更后再导出；</li></ul>
 <p><code>--no-commit</code> 可跳过提交。</p>

@@ -319,7 +319,7 @@ async function seed() {
           replacements: {
             username: creds.username,
             password: adminPassword,
-            email: 'admin@khy-quant.com',
+            email: credGen.resolveDefaultAdminEmail(creds.username),
             role: 'admin',
             status: 'active',
             now,

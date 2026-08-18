@@ -36,10 +36,10 @@
 <ul><li>但维护者在陌生机器上只看到横幅那句「commit 44a491fb · 目录布局原样」→ 合理地误判</li></ul>
 <p>「我还原的就是 44a491fb」→ 拿它去 <code>git diff 44a491fb</code> 看到一堆幻影差异、或把它当成<br>  「发布的那份代码」——全错，因为它比那个提交多了未提交的活儿。</p>
 <p><code>captureMode</code> / <code>includesUncommitted</code> 上游忠实记录、跨渠道送达、下游能读，却<strong>在还原时<br>无人据此向维护者澄清来源</strong> = 死字段（断桥）。本层就是那个缺失的消费者：把「这份还原源码<br>到底等于哪个 git 状态」从一句会误导的「commit X」，变成一次诚实的裁决。</p>
-<pre><code class="language-bash">node scripts/restore-check-format.js ./Khy-OS --json     # ① 格式看得懂吗？（105）
-khy restore ./Khy-OS                                     # ② 解密还原
-node scripts/restore-verify-complete.js ./Khy-OS --json  # ③ 文件数对得上吗？（095）
-node scripts/restore-provenance.js ./Khy-OS --json       # ④ 这源码到底等于哪个 git 状态？（本层）</code></pre>
+<pre><code class="language-bash">node scripts/restore-check-format.js ./Khy-OS --json     <span class="hljs-comment"># ① 格式看得懂吗？（105）</span>
+khy restore ./Khy-OS                                     <span class="hljs-comment"># ② 解密还原</span>
+node scripts/restore-verify-complete.js ./Khy-OS --json  <span class="hljs-comment"># ③ 文件数对得上吗？（095）</span>
+node scripts/restore-provenance.js ./Khy-OS --json       <span class="hljs-comment"># ④ 这源码到底等于哪个 git 状态？（本层）</span></code></pre>
 <h2 id="判定档-来源诚实门-最保守优先-没有正面证据绝不谎称-clean">判定档：来源诚实门（最保守优先 · 没有正面证据绝不谎称 clean）<a class="anchor" href="#判定档-来源诚实门-最保守优先-没有正面证据绝不谎称-clean" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>档</th><th>条件</th><th>裁决</th><th>ok</th></tr></thead><tbody><tr><td>1</td><td>头非对象</td><td><code>unverifiable</code>：无从判断来源</td><td>✗</td></tr><tr><td>2</td><td>无 <code>gitCommit</code></td><td><code>no-provenance</code>：没记录任何提交，无从溯源</td><td>✗</td></tr><tr><td>3</td><td><code>includesUncommitted===true</code> 或 <code>dirty===true</code></td><td><code>dirty</code>：== 提交 X + 未提交增量，<strong>不等于干净提交</strong></td><td>✗</td></tr><tr><td>4</td><td>HEAD 归档，或 working-tree 且 <code>includesUncommitted===false</code></td><td><code>clean</code>：可证 == 提交 X</td><td>✓</td></tr><tr><td>5</td><td>有提交、非脏，但无正面 clean 证据</td><td><code>indeterminate</code>：保守，不臆断 clean</td><td>✗</td></tr></tbody></table>
 <ul><li><code>ok===true</code> <strong>仅当</strong> <code>status===clean</code>（还原源码可证等于某个干净提交）——「简单还原」里最强的一档：</li></ul>

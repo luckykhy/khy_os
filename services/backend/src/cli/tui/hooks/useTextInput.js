@@ -275,16 +275,11 @@ function useTextInput({ onSubmit, onChange, onHistoryEmpty, mouseModule } = {}) 
       }
 
       if (key.upArrow) {
-        // Multi-line: move within buffer; single-line: browse history.
-        if (cur.lines().length > 1 && cur.line() > 0) {
-          return move(cur.up());
-        }
+        // History stores each submitted value as one entry, including newlines.
+        // Vertical navigation therefore always advances by entry, never by line.
         return historyPrev();
       }
       if (key.downArrow) {
-        if (cur.lines().length > 1 && cur.line() < cur.lines().length - 1) {
-          return move(cur.down());
-        }
         return historyNext();
       }
 

@@ -71,8 +71,9 @@ const DATA_FILE_SUFFIXES = [
   // 硬件 / Ollama 推荐 catalog
   'src/services/hardwareProfileService.js',
   'src/services/ollamaModelManager.js',
-  // 免费层 provider 的 availableModels catalog
+  // 免费层 provider 的 availableModels catalog（backend 与 khyquant 应用镜像）
   'src/services/multiFreeService.js',
+  'software/khyquant/services/multiFreeService.js',
   // 计费价格表(键=模型 id)
   'src/services/usageFormatter.js',
   'src/services/usageTracker.js',

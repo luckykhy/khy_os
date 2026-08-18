@@ -55,18 +55,18 @@ _responseBuilder.buildSuccess / buildFailure → 标准化响应</code></pre>
 <h2 id="核心模块">核心模块<a class="anchor" href="#核心模块" aria-label="锚点">#</a></h2>
 <h3 id="protocolregistry-js-协议元数据与自动选择"><code>_protocolRegistry.js</code> — 协议元数据与自动选择<a class="anchor" href="#protocolregistry-js-协议元数据与自动选择" aria-label="锚点">#</a></h3>
 <p>声明每个适配器支持的协议，多协议适配器提供 <code>resolveProtocol()</code> 动态选择。</p>
-<pre><code class="language-js">// 查询适配器的协议
-getProtocolForAdapter('cursor', 'gpt-4o', {})       // → 'openai'
-getProtocolForAdapter('claude', 'claude-sonnet', {}) // → 'anthropic'
-getProtocolForAdapter('trae', model, opts)           // → 动态: 'openai' | 'codewhisperer' | 'trae-native'
+<pre><code class="language-js"><span class="hljs-comment">// 查询适配器的协议</span>
+<span class="hljs-title function_">getProtocolForAdapter</span>(<span class="hljs-string">&#x27;cursor&#x27;</span>, <span class="hljs-string">&#x27;gpt-4o&#x27;</span>, {})       <span class="hljs-comment">// → &#x27;openai&#x27;</span>
+<span class="hljs-title function_">getProtocolForAdapter</span>(<span class="hljs-string">&#x27;claude&#x27;</span>, <span class="hljs-string">&#x27;claude-sonnet&#x27;</span>, {}) <span class="hljs-comment">// → &#x27;anthropic&#x27;</span>
+<span class="hljs-title function_">getProtocolForAdapter</span>(<span class="hljs-string">&#x27;trae&#x27;</span>, model, opts)           <span class="hljs-comment">// → 动态: &#x27;openai&#x27; | &#x27;codewhisperer&#x27; | &#x27;trae-native&#x27;</span>
 
-// 查询支持某协议的所有适配器
-getAdaptersForProtocol('anthropic')  // → ['claude', 'relay_api', 'api']
+<span class="hljs-comment">// 查询支持某协议的所有适配器</span>
+<span class="hljs-title function_">getAdaptersForProtocol</span>(<span class="hljs-string">&#x27;anthropic&#x27;</span>)  <span class="hljs-comment">// → [&#x27;claude&#x27;, &#x27;relay_api&#x27;, &#x27;api&#x27;]</span>
 
-// 从模型名推断协议
-inferProtocolFromModel('claude-sonnet-4-6')  // → 'anthropic'
-inferProtocolFromModel('gpt-4o')             // → 'openai'
-inferProtocolFromModel('unknown-model')      // → null</code></pre>
+<span class="hljs-comment">// 从模型名推断协议</span>
+<span class="hljs-title function_">inferProtocolFromModel</span>(<span class="hljs-string">&#x27;claude-sonnet-4-6&#x27;</span>)  <span class="hljs-comment">// → &#x27;anthropic&#x27;</span>
+<span class="hljs-title function_">inferProtocolFromModel</span>(<span class="hljs-string">&#x27;gpt-4o&#x27;</span>)             <span class="hljs-comment">// → &#x27;openai&#x27;</span>
+<span class="hljs-title function_">inferProtocolFromModel</span>(<span class="hljs-string">&#x27;unknown-model&#x27;</span>)      <span class="hljs-comment">// → null</span></code></pre>
 <p><strong>协议标识符</strong>:</p>
 <table><thead><tr><th>协议</th><th>适配器</th></tr></thead><tbody><tr><td><code>openai</code></td><td>cursor, vscode, windsurf, cursor2api, ollama, trae(HTTP), relay_api, api</td></tr><tr><td><code>anthropic</code></td><td>claude(直连), relay_api(Anthropic端点), api</td></tr><tr><td><code>codewhisperer</code></td><td>kiro, trae(CW路径)</td></tr><tr><td><code>codex</code></td><td>codex(直连)</td></tr><tr><td><code>responses</code></td><td>relay_api(Responses 端点) — 出站消费 OpenAI <code>/v1/responses</code></td></tr><tr><td><code>cli-stream-json</code></td><td>claude(桥接), codex(CLI), cli</td></tr><tr><td><code>trae-native</code></td><td>trae(原生协议)</td></tr><tr><td><code>direct</code></td><td>localLLM</td></tr><tr><td><code>manual</code></td><td>relay, clipboard, warp</td></tr></tbody></table>
 <blockquote><p><strong>命名陷阱</strong>:<code>codex</code> 与 <code>responses</code> 都对应 OpenAI 的 Responses 线格式(<code>/v1/responses</code>),但分属两个方向:</p>
@@ -76,16 +76,16 @@ inferProtocolFromModel('unknown-model')      // → null</code></pre>
 <p>(见下文「Responses API 出站消费」)。两者共用 <code>protocolConverter</code> 的 codex 转换器,但走不同的管线分支。</p></blockquote>
 <h3 id="protocolpipeline-js-协议管线工厂"><code>_protocolPipeline.js</code> — 协议管线工厂<a class="anchor" href="#protocolpipeline-js-协议管线工厂" aria-label="锚点">#</a></h3>
 <p>为每种协议提供统一的请求构建和响应解析，消除适配器间的重复代码。</p>
-<pre><code class="language-js">const handler = createProtocolHandler({ protocol: 'openai', adapterName: 'cursor' });
+<pre><code class="language-js"><span class="hljs-keyword">const</span> handler = <span class="hljs-title function_">createProtocolHandler</span>({ <span class="hljs-attr">protocol</span>: <span class="hljs-string">&#x27;openai&#x27;</span>, <span class="hljs-attr">adapterName</span>: <span class="hljs-string">&#x27;cursor&#x27;</span> });
 
-// 构建请求体（自动处理消息格式、工具转换、图片附加）
-const { body, system } = handler.buildRequestBody(prompt, options);
+<span class="hljs-comment">// 构建请求体（自动处理消息格式、工具转换、图片附加）</span>
+<span class="hljs-keyword">const</span> { body, system } = handler.<span class="hljs-title function_">buildRequestBody</span>(prompt, options);
 
-// 解析 JSON 响应（提取 content、toolUseBlocks、usage、thinking）
-const result = handler.parseJsonResponse(rawResponse);
+<span class="hljs-comment">// 解析 JSON 响应（提取 content、toolUseBlocks、usage、thinking）</span>
+<span class="hljs-keyword">const</span> result = handler.<span class="hljs-title function_">parseJsonResponse</span>(rawResponse);
 
-// 解析 SSE 流式响应
-const result = await handler.parseStreamResponse(stream, onChunk, { signal });</code></pre>
+<span class="hljs-comment">// 解析 SSE 流式响应</span>
+<span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> handler.<span class="hljs-title function_">parseStreamResponse</span>(stream, onChunk, { signal });</code></pre>
 <p>内部按协议委托到专用模块：</p>
 <ul><li><strong>openai</strong>: <code>_messageBuilder</code>(消息解析) → <code>_toolSchemaConverter</code>(Anthropic→OpenAI工具转换) → <code>_openaiSseStream</code>(流解析)</li><li><strong>anthropic</strong>: <code>_messageBuilder</code>(消息解析) → <code>_imageCompat</code>(图片转换) → <code>_anthropicSseStream</code>(流解析)</li><li><strong>responses</strong>: 复用 openai handler 构建 canonical 后经 <code>protocolConverter</code> 转 Responses <code>input[]</code>+<code>instructions</code> → <code>_responsesSseStream</code>(流解析) / <code>_responsesFormat.parseDirectResponse</code>(JSON 解析)</li></ul>
 <h3 id="responsesssestream-js-responses-api-sse-流解析-出站"><code>_responsesSseStream.js</code> — Responses API SSE 流解析(出站)<a class="anchor" href="#responsesssestream-js-responses-api-sse-流解析-出站" aria-label="锚点">#</a></h3>
@@ -124,15 +124,15 @@ const result = await handler.parseStreamResponse(stream, onChunk, { signal });</
 <ul><li><code>message_start</code> → 提取 model、input_tokens</li><li><code>content_block_start/delta/stop</code> → 累积 text、tool_use、thinking 块</li><li><code>message_delta</code> → 提取 stop_reason、output_tokens</li><li>兼容两种 SSE 帧格式（两行 <code>event: + data:</code> 和内联 <code>data: {type:...}</code>）</li><li>工具输入 JSON 容错：<code>safeJsonParse</code> 兜底</li></ul>
 <h3 id="responsebuilder-js-标准化响应构建"><code>_responseBuilder.js</code> — 标准化响应构建<a class="anchor" href="#responsebuilder-js-标准化响应构建" aria-label="锚点">#</a></h3>
 <p>所有适配器统一使用：</p>
-<pre><code class="language-js">buildSuccess(content, { adapter, provider, model, toolUseBlocks, stopReason, usage })
-buildFailure(error, { adapter, provider, statusCode, errorType })</code></pre>
+<pre><code class="language-js"><span class="hljs-title function_">buildSuccess</span>(content, { adapter, provider, model, toolUseBlocks, stopReason, usage })
+<span class="hljs-title function_">buildFailure</span>(error, { adapter, provider, statusCode, errorType })</code></pre>
 <h2 id="自动协议选择流程">自动协议选择流程<a class="anchor" href="#自动协议选择流程" aria-label="锚点">#</a></h2>
 <p>当模型接入后，系统自动选择最合适的协议，无需手动配置：</p>
-<pre><code class="language-text">1. modelRouter.resolveModelRoute({ model: 'claude-sonnet-4-6' })
-   → protocolHint: 'anthropic'  (从模型名前缀推断)
+<pre><code class="language-text">1. modelRouter.resolveModelRoute({ model: &#x27;claude-sonnet-4-6&#x27; })
+   → protocolHint: &#x27;anthropic&#x27;  (从模型名前缀推断)
 
 2. aiGateway.autoSelectModel(taskType, { model })
-   → 优先选择支持 'anthropic' 协议的适配器 (claude &gt; relay_api &gt; api)
+   → 优先选择支持 &#x27;anthropic&#x27; 协议的适配器 (claude &gt; relay_api &gt; api)
    → 若协议过滤后无可用适配器，退回全量优先级列表
 
 3. aiGateway._generateWithAdapterIsolation(entry, prompt, options)
@@ -143,13 +143,13 @@ buildFailure(error, { adapter, provider, statusCode, errorType })</code></pre>
 <h2 id="适配器开发指南">适配器开发指南<a class="anchor" href="#适配器开发指南" aria-label="锚点">#</a></h2>
 <h3 id="新建适配器">新建适配器<a class="anchor" href="#新建适配器" aria-label="锚点">#</a></h3>
 <ol><li>在 <code>_protocolRegistry.js</code> 的 <code>ADAPTER_PROTOCOL_MAP</code> 中声明协议支持</li><li>在适配器中创建管线处理器：</li></ol>
-<pre><code class="language-js">   const { createProtocolHandler } = require('./_protocolPipeline');
-   const _handler = createProtocolHandler({ protocol: 'openai', adapterName: 'myAdapter' });</code></pre>
+<pre><code class="language-js">   <span class="hljs-keyword">const</span> { createProtocolHandler } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./_protocolPipeline&#x27;</span>);
+   <span class="hljs-keyword">const</span> _handler = <span class="hljs-title function_">createProtocolHandler</span>({ <span class="hljs-attr">protocol</span>: <span class="hljs-string">&#x27;openai&#x27;</span>, <span class="hljs-attr">adapterName</span>: <span class="hljs-string">&#x27;myAdapter&#x27;</span> });</code></pre>
 <ol><li><code>generate()</code> 中使用管线：</li></ol>
-<pre><code class="language-js">   const { body } = _handler.buildRequestBody(prompt, options);
-   // ... 发送 HTTP 请求 ...
-   const result = _handler.parseJsonResponse(rawResponse);
-   return buildSuccess(result.content, { adapter: 'myAdapter', ...result });</code></pre>
+<pre><code class="language-js">   <span class="hljs-keyword">const</span> { body } = _handler.<span class="hljs-title function_">buildRequestBody</span>(prompt, options);
+   <span class="hljs-comment">// ... 发送 HTTP 请求 ...</span>
+   <span class="hljs-keyword">const</span> result = _handler.<span class="hljs-title function_">parseJsonResponse</span>(rawResponse);
+   <span class="hljs-keyword">return</span> <span class="hljs-title function_">buildSuccess</span>(result.<span class="hljs-property">content</span>, { <span class="hljs-attr">adapter</span>: <span class="hljs-string">&#x27;myAdapter&#x27;</span>, ...result });</code></pre>
 <ol><li>在 <code>aiGateway.js</code> 的 <code>_adapters</code> 数组中注册</li></ol>
 <h3 id="添加新协议">添加新协议<a class="anchor" href="#添加新协议" aria-label="锚点">#</a></h3>
 <ol><li>在 <code>_protocolRegistry.js</code> 的 <code>PROTOCOLS</code> 中添加协议标识符</li><li>在 <code>_protocolPipeline.js</code> 的 <code>createProtocolHandler</code> switch 中添加分支</li><li>实现 <code>buildRequestBody</code> / <code>parseJsonResponse</code> / <code>parseStreamResponse</code></li></ol>

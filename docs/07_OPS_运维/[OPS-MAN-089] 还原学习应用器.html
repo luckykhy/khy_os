@@ -32,7 +32,7 @@
 <p>端到端闭环(本 CLI 接线)：</p>
 <pre><code>gatherAssessments(三面镜子) -&gt; detectRestoreConflicts(矛盾) -&gt; resolveRestoreConflicts(有序恢复链)
   -&gt; readAllSessions + deriveStrategyLedger(跨会话学出死策略) -&gt; applyLearnedSkips(标注到链上)</code></pre>
-<pre><code class="language-bash">node scripts/restore-apply.js --json   # 自驱 agent 读它决定跳哪步、试哪步</code></pre>
+<pre><code class="language-bash">node scripts/restore-apply.js --json   <span class="hljs-comment"># 自驱 agent 读它决定跳哪步、试哪步</span></code></pre>
 <h2 id="怎么应用-只标注-不删除-不重排-诚实边界">怎么应用：只标注，不删除，不重排(诚实边界)<a class="anchor" href="#怎么应用-只标注-不删除-不重排-诚实边界" aria-label="锚点">#</a></h2>
 <p>台账划下红线：「学习只做减法，<strong>绝不重排安全恢复链顺序</strong>」。本层严格遵守，逐 move 标注：</p>
 <table><thead><tr><th>标注</th><th>含义</th></tr></thead><tbody><tr><td><code>learnedDead</code></td><td>该 move 的 strategy 属于跨会话已证死的集合</td></tr><tr><td><code>safeToSkip</code></td><td>已证死<strong>且</strong>跳过它不搁浅任何冲突(它 covers 的每个冲突都另有非死 move 兜底)<strong>且</strong>不是安全网</td></tr><tr><td><code>mustTryDespiteDead</code></td><td>已证死但<strong>是唯一出路</strong>或<strong>是 escalate 安全网</strong> → 仍须一试或升级交人</td></tr></tbody></table>

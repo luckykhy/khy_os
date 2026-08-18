@@ -40,20 +40,20 @@
    └── session    (undo, redo, history, snapshot)</code></pre>
 <ol><li><strong>Design State Model</strong>:<ul><li>What is the &quot;project&quot; concept? (file, workspace, session)</li><li>What state changes between commands? (selections, settings, layers)</li><li>Deep-copy undo/redo: each command snapshots state before execution</li></ul></li></ol>
 <ol><li><strong>Design Output Format</strong>:<ul><li>Human-readable: clear terminal output with color hints</li><li>JSON (<code>--json</code>): structured output for agent consumption</li></ul></li></ol>
-<pre><code class="language-json">   {
-     &quot;status&quot;: &quot;success|error&quot;,
-     &quot;command&quot;: &quot;&lt;command.subcommand&gt;&quot;,
-     &quot;data&quot;: { ... },
-     &quot;metadata&quot;: { &quot;duration_ms&quot;: 123, &quot;software_version&quot;: &quot;x.y.z&quot; }
-   }</code></pre>
+<pre><code class="language-json">   <span class="hljs-punctuation">{</span>
+     <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;success|error&quot;</span><span class="hljs-punctuation">,</span>
+     <span class="hljs-attr">&quot;command&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;&lt;command.subcommand&gt;&quot;</span><span class="hljs-punctuation">,</span>
+     <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> ... <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+     <span class="hljs-attr">&quot;metadata&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;duration_ms&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">123</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;software_version&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;x.y.z&quot;</span> <span class="hljs-punctuation">}</span>
+   <span class="hljs-punctuation">}</span></code></pre>
 <ol><li><strong>Design Backend Calls</strong>:<ul><li>Map each command to specific software invocations</li><li>Define subprocess timeout per command category</li><li>Define error detection patterns (exit codes, stderr patterns)</li></ul></li></ol>
 <ol><li><strong>Generate <code>architecture.json</code></strong>:</li></ol>
-<pre><code class="language-json">   {
-     &quot;commandGroups&quot;: [...],
-     &quot;stateModel&quot;: {...},
-     &quot;outputFormat&quot;: {...},
-     &quot;backendCalls&quot;: [...]
-   }</code></pre>
+<pre><code class="language-json">   <span class="hljs-punctuation">{</span>
+     <span class="hljs-attr">&quot;commandGroups&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>...<span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+     <span class="hljs-attr">&quot;stateModel&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>...<span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+     <span class="hljs-attr">&quot;outputFormat&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>...<span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+     <span class="hljs-attr">&quot;backendCalls&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>...<span class="hljs-punctuation">]</span>
+   <span class="hljs-punctuation">}</span></code></pre>
 <h2 id="output">Output<a class="anchor" href="#output" aria-label="锚点">#</a></h2>
 <ul><li><code>architecture.json</code> — the complete design specification</li></ul>
       </article>

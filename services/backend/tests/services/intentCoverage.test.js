@@ -120,6 +120,14 @@ describe('assessIntentCoverage — 零假阳性边界', () => {
     assert.equal(r.shouldNudge, false);
   });
 
+  test('英文句首大写普通词不算 camelCase 标识符', () => {
+    for (const rawMessage of ['Please ultrawork this fix.', 'Current task']) {
+      const r = assessIntentCoverage({ rawMessage, reply: 'Done.' });
+      assert.equal(r.shouldNudge, false);
+      assert.equal(r.checked, 0);
+    }
+  });
+
   test('空回复 / 空输入 → 不追问', () => {
     assert.equal(assessIntentCoverage({ rawMessage: '改 a.js', reply: '' }).shouldNudge, false);
     assert.equal(assessIntentCoverage({}).shouldNudge, false);

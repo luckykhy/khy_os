@@ -297,6 +297,12 @@ function applyUpdate(opts = {}) {
   let lastDetail = '';
   let updateChannelPkg = candidates[0];
 
+  const emitStatus = (phase, progress) => {
+    if (typeof opts.onStatus === 'function') {
+      opts.onStatus({ action: '更新', target: updateChannelPkg, phase, progress });
+    }
+  };
+
   try {
     const currentVersion = env.KHYQUANT_PKG_VERSION || vs.getCurrentVersion();
     const installedPkg = _detectInstalledPackage(execImpl, candidates);
@@ -322,7 +328,13 @@ function applyUpdate(opts = {}) {
           if (forceReinstall) {
             cmd += ' --force-reinstall --no-cache-dir';
           }
-          cmd += ` --upgrade ${pkgName} 2>&1`;
+          if (opts.staged && opts.staged.artifacts && opts.staged.artifacts.pip && pkgName === opts.staged.package) {
+            cmd += ` "${String(opts.staged.artifacts.pip).replace(/"/g, '\\"')}"`;
+          } else {
+            cmd += ` --upgrade ${pkgName}`;
+          }
+          cmd += ' 2>&1';
+          emitStatus(forceReinstall ? '重试安装' : '安装包', `第 ${lockRetried || proxyRetried ? 2 : 1} 次`);
           output = String(execImpl(cmd, execOpts) || '');
           upgradedPkg = pkgName;
           break;

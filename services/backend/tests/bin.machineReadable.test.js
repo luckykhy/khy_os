@@ -28,6 +28,7 @@ describe('khy machine-readable CLI entrypoints', () => {
         env: {
           ...process.env,
           HOME: tmpHome,
+          KHY_DATA_HOME: path.join(tmpHome, '.khy'),
           KHY_ENV_FILE: envPath,
           KHY_ENV_SYNC_ROOT: 'false',
           KHY_SHOW_INSTALL_PATH_ALWAYS: '0',
@@ -57,7 +58,7 @@ describe('khy machine-readable CLI entrypoints', () => {
       expect(envContent).toContain('GATEWAY_API_POOL_DEFAULT_MODEL_MAP=');
       expect(envContent).toContain('PROXY_MODEL_ROUTE_MAP=');
 
-      const providerRegistryPath = path.join(tmpHome, '.khyquant', 'custom_providers.json');
+      const providerRegistryPath = path.join(tmpHome, '.khy', 'custom_providers.json');
       expect(fs.existsSync(providerRegistryPath)).toBe(true);
       const providers = JSON.parse(fs.readFileSync(providerRegistryPath, 'utf8'));
       expect(providers).toEqual(expect.arrayContaining([

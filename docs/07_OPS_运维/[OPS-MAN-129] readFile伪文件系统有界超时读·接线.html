@@ -46,14 +46,14 @@
 <p>已实测：真 <code>spawnSync('head', ['-c', N, path], {timeout:1500})</code> 对无写端 FIFO（真实阻塞源，<br>等价于阻塞 <code>/proc</code> 文件）<strong>在 1502ms 处被杀</strong>（<code>timedOut:true</code>），而非卡死。</p>
 <h2 id="修法-特殊文件守卫之后-detectfile-二进制守卫之前插入有界读">修法：特殊文件守卫之后、detectFile / 二进制守卫之前插入有界读<a class="anchor" href="#修法-特殊文件守卫之后-detectfile-二进制守卫之前插入有界读" aria-label="锚点">#</a></h2>
 <p><code>readFile.execute</code> 在 OPS-125 特殊文件守卫的 <code>catch</code> 之后：</p>
-<pre><code class="language-js">try {
-  const { shouldBoundedRead, readPseudoFileBounded } = require('./pseudoFileReadGuard');
-  const _pkind = shouldBoundedRead({ absPath: filePath, stat, env: process.env }); // 'proc'|'sys'|null
-  if (_pkind) {
-    const routed = readPseudoFileBounded({ filePath, kind: _pkind, env: process.env });
-    if (routed &amp;&amp; routed.handled) return routed.result;  // 有界读到内容 / 超时拒绝 → 直接返回
+<pre><code class="language-js"><span class="hljs-keyword">try</span> {
+  <span class="hljs-keyword">const</span> { shouldBoundedRead, readPseudoFileBounded } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./pseudoFileReadGuard&#x27;</span>);
+  <span class="hljs-keyword">const</span> _pkind = <span class="hljs-title function_">shouldBoundedRead</span>({ <span class="hljs-attr">absPath</span>: filePath, stat, <span class="hljs-attr">env</span>: process.<span class="hljs-property">env</span> }); <span class="hljs-comment">// &#x27;proc&#x27;|&#x27;sys&#x27;|null</span>
+  <span class="hljs-keyword">if</span> (_pkind) {
+    <span class="hljs-keyword">const</span> routed = <span class="hljs-title function_">readPseudoFileBounded</span>({ filePath, <span class="hljs-attr">kind</span>: _pkind, <span class="hljs-attr">env</span>: process.<span class="hljs-property">env</span> });
+    <span class="hljs-keyword">if</span> (routed &amp;&amp; routed.<span class="hljs-property">handled</span>) <span class="hljs-keyword">return</span> routed.<span class="hljs-property">result</span>;  <span class="hljs-comment">// 有界读到内容 / 超时拒绝 → 直接返回</span>
   }
-} catch { /* 判定/有界读失败 → 回退历史读取行为 */ }</code></pre>
+} <span class="hljs-keyword">catch</span> { <span class="hljs-comment">/* 判定/有界读失败 → 回退历史读取行为 */</span> }</code></pre>
 <p><code>shouldBoundedRead</code> 仅当<strong>全部</strong>成立才返回 kind：门开 + 平台 linux + <code>stat.isFile()</code> +<br><code>stat.size === 0</code> + 路径落在 <code>/proc/</code> 或 <code>/sys/</code> 挂载下。其中 <code>isPseudoFsPath</code> 精确匹配<br><code>/proc</code>、<code>/proc/...</code>、<code>/sys</code>、<code>/sys/...</code>——工程目录里名为 <code>proc</code>/<code>sys</code> 的子目录（如<br><code>/home/x/proc/y</code>）、前缀陷阱（<code>/procession</code>）<strong>不</strong>匹配；非 linux 平台恒 <code>null</code>。<strong>零误伤常规文件</strong>。</p>
 <p><code>readPseudoFileBounded</code> 返回：</p>
 <ul><li>子进程退出 0 且有内容 → <code>{handled:true, result:{success:true, content:'【/proc 伪文件 · 有界读】\n…', format:'pseudo-fs-proc', extractedBy:'bounded-read', size, truncated}}</code>；</li><li>超时 / 被信号杀 → <code>{handled:true, result:{success:false, error:超时拒绝消息, pseudoFile, timedOut:true}}</code>；</li><li><code>head</code> 不存在（ENOENT）/ status≠0 / 空入参 / 抛错 → <code>{handled:false}</code>（调用方回退历史读取路径）。</li></ul>
@@ -68,16 +68,16 @@
 <h2 id="恒久红线">恒久红线<a class="anchor" href="#恒久红线" aria-label="锚点">#</a></h2>
 <ul><li>只读伪文件内容（有界），不碰任何密钥；有界子进程 <code>head</code> 只读、无副作用。</li><li>真 key/token 永不进包、不落盘；pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本必须一致。</li></ul>
 <h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">npm run test:readfile-pseudo-guard      # 纯叶 DI 单测(27 用例)
-npm run test:readfile-special-guard     # OPS-125 无回归
-npm run test:readfile-binary-guard      # OPS-121 无回归
-npm run test:readfile-format-route      # OPS-123 无回归
-# LIVE(经真 readFile.execute + 真 spawnSync，带 timeout 防自身卡死):
-#   真 /proc/cpuinfo GUARD-ON → success:true format=pseudo-fs-proc 33ms(有界读出真内容);
-#   /proc/uptime、/proc/self/status → 同样秒读出;
-#   KHY_READFILE_PSEUDO_GUARD=0 + /proc/cpuinfo → format=undefined 走旧解码路径(字节等价回退);
-#   真无写端 FIFO(阻塞源) + 真 spawnSync timeout=1500 → 1502ms 被杀 timedOut:true(不卡死);
-#   /proc/kmsg(root-only) 非 root → EACCES 快速 handled:false(2ms,不卡死)。</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:readfile-pseudo-guard      <span class="hljs-comment"># 纯叶 DI 单测(27 用例)</span>
+npm run <span class="hljs-built_in">test</span>:readfile-special-guard     <span class="hljs-comment"># OPS-125 无回归</span>
+npm run <span class="hljs-built_in">test</span>:readfile-binary-guard      <span class="hljs-comment"># OPS-121 无回归</span>
+npm run <span class="hljs-built_in">test</span>:readfile-format-route      <span class="hljs-comment"># OPS-123 无回归</span>
+<span class="hljs-comment"># LIVE(经真 readFile.execute + 真 spawnSync，带 timeout 防自身卡死):</span>
+<span class="hljs-comment">#   真 /proc/cpuinfo GUARD-ON → success:true format=pseudo-fs-proc 33ms(有界读出真内容);</span>
+<span class="hljs-comment">#   /proc/uptime、/proc/self/status → 同样秒读出;</span>
+<span class="hljs-comment">#   KHY_READFILE_PSEUDO_GUARD=0 + /proc/cpuinfo → format=undefined 走旧解码路径(字节等价回退);</span>
+<span class="hljs-comment">#   真无写端 FIFO(阻塞源) + 真 spawnSync timeout=1500 → 1502ms 被杀 timedOut:true(不卡死);</span>
+<span class="hljs-comment">#   /proc/kmsg(root-only) 非 root → EACCES 快速 handled:false(2ms,不卡死)。</span></code></pre>
       </article>
       <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-128] restore解密后归档形制解包前把关·接线.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-128] restore 解密后内层归档形制解包前把关 · 接线（让陌生机器上盲目 tar -xzf 变成「请升级 khy」精确成因）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-130] 还原来源可溯性·接线运行时横幅.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-130] 还原来源可溯性 · 接线运行时横幅（让 khy restore 诚实告知「这份源码等于哪个 git 状态」）</div></a></nav>
       <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>

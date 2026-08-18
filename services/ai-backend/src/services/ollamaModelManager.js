@@ -8,7 +8,10 @@ const http = require('http');
 const os = require('os');
 const { execSync } = require('child_process');
 
-const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://localhost:11434';
+// Endpoint default comes from the single source of truth (which already applies
+// the OLLAMA_HOST env override), so a self-hosted or remapped Ollama is one edit
+// there rather than a literal repeated per consumer.
+const { OLLAMA_HOST } = require('../constants/serviceDefaults');
 const TIMEOUT_MS = 15_000;
 
 // Model recommendations by hardware tier

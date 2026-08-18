@@ -38,11 +38,11 @@
 <p><strong>可见性</strong>：该墙在<strong>视觉级联全失败 + 本地 OCR 读空</strong>（照片/截图/无对应语言字库）时对用户可见；<br>OCR 成功时被 OPS-142(<code>_deferredFailureMsg</code>) 抑制，故本泄漏只在 OCR-失败子分支显现（外加<br><code>recognizeImage.js</code> 直调工具路径）。</p>
 <h2 id="修-全-additive-复用-ops-150-门与叶-显示边界归一-内部路由不动">修（全 additive · 复用 OPS-150 门与叶 · 显示边界归一 · 内部路由不动）<a class="anchor" href="#修-全-additive-复用-ops-150-门与叶-显示边界归一-内部路由不动" aria-label="锚点">#</a></h2>
 <p>在 <code>buildVisionFailureMessage</code> 拼装 <code>本次尝试的视觉模型</code> 行的<strong>显示边界</strong>处，复用 OPS-150 纯叶<br><code>visionModelDisplayName.toDisplayModelName(modelId, env)</code> 归一：</p>
-<pre><code class="language-js">if (modelId) {
-  let _dispModel = modelId;
-  try { _dispModel = require('./visionModelDisplayName').toDisplayModelName(modelId, e); }
-  catch { /* 叶不可用 → 原样,逐字节回退 */ }
-  lines.push(`本次尝试的视觉模型:${_dispModel || modelId}。`);
+<pre><code class="language-js"><span class="hljs-keyword">if</span> (modelId) {
+  <span class="hljs-keyword">let</span> _dispModel = modelId;
+  <span class="hljs-keyword">try</span> { _dispModel = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./visionModelDisplayName&#x27;</span>).<span class="hljs-title function_">toDisplayModelName</span>(modelId, e); }
+  <span class="hljs-keyword">catch</span> { <span class="hljs-comment">/* 叶不可用 → 原样,逐字节回退 */</span> }
+  lines.<span class="hljs-title function_">push</span>(<span class="hljs-string">`本次尝试的视觉模型:<span class="hljs-subst">${_dispModel || modelId}</span>。`</span>);
 }</code></pre>
 <ul><li><strong>在叶内归一</strong>（而非调用方）→ 单一显示边界，<strong>所有调用方</strong>（级联路径 + <code>recognizeImage.js</code> 工具）</li></ul>
 <p>同时受益。</p>

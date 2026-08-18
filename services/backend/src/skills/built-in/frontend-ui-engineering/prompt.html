@@ -42,54 +42,54 @@
     types.ts              # Component-specific types (if needed)</code></pre>
 <h3 id="component-patterns">Component Patterns<a class="anchor" href="#component-patterns" aria-label="锚点">#</a></h3>
 <p><strong>Prefer composition over configuration:</strong></p>
-<pre><code class="language-tsx">// Good: Composable
-&lt;Card&gt;
-  &lt;CardHeader&gt;
-    &lt;CardTitle&gt;Tasks&lt;/CardTitle&gt;
-  &lt;/CardHeader&gt;
-  &lt;CardBody&gt;
-    &lt;TaskList tasks={tasks} /&gt;
-  &lt;/CardBody&gt;
-&lt;/Card&gt;
+<pre><code class="language-tsx"><span class="hljs-comment">// Good: Composable</span>
+&lt;<span class="hljs-title class_">Card</span>&gt;
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">CardHeader</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">CardTitle</span>&gt;</span>Tasks<span class="hljs-tag">&lt;/<span class="hljs-name">CardTitle</span>&gt;</span>
+  <span class="hljs-tag">&lt;/<span class="hljs-name">CardHeader</span>&gt;</span></span>
+  <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">CardBody</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">TaskList</span> <span class="hljs-attr">tasks</span>=<span class="hljs-string">{tasks}</span> /&gt;</span>
+  <span class="hljs-tag">&lt;/<span class="hljs-name">CardBody</span>&gt;</span></span>
+&lt;/<span class="hljs-title class_">Card</span>&gt;
 
-// Avoid: Over-configured
-&lt;Card
-  title=&quot;Tasks&quot;
-  headerVariant=&quot;large&quot;
-  bodyPadding=&quot;md&quot;
-  content={&lt;TaskList tasks={tasks} /&gt;}
-/&gt;</code></pre>
+<span class="hljs-comment">// Avoid: Over-configured</span>
+<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">Card</span>
+  <span class="hljs-attr">title</span>=<span class="hljs-string">&quot;Tasks&quot;</span>
+  <span class="hljs-attr">headerVariant</span>=<span class="hljs-string">&quot;large&quot;</span>
+  <span class="hljs-attr">bodyPadding</span>=<span class="hljs-string">&quot;md&quot;</span>
+  <span class="hljs-attr">content</span>=<span class="hljs-string">{</span>&lt;<span class="hljs-attr">TaskList</span> <span class="hljs-attr">tasks</span>=<span class="hljs-string">{tasks}</span> /&gt;</span>}
+/&gt;</span></code></pre>
 <p><strong>Keep components focused:</strong></p>
-<pre><code class="language-tsx">// Good: Does one thing
-export function TaskItem({ task, onToggle, onDelete }: TaskItemProps) {
-  return (
-    &lt;li className=&quot;flex items-center gap-3 p-3&quot;&gt;
-      &lt;Checkbox checked={task.done} onChange={() =&gt; onToggle(task.id)} /&gt;
-      &lt;span className={task.done ? 'line-through text-muted' : ''}&gt;{task.title}&lt;/span&gt;
-      &lt;Button variant=&quot;ghost&quot; size=&quot;sm&quot; onClick={() =&gt; onDelete(task.id)}&gt;
-        &lt;TrashIcon /&gt;
-      &lt;/Button&gt;
-    &lt;/li&gt;
+<pre><code class="language-tsx"><span class="hljs-comment">// Good: Does one thing</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">TaskItem</span>(<span class="hljs-params">{ task, onToggle, onDelete }: <span class="hljs-title class_">TaskItemProps</span></span>) {
+  <span class="hljs-keyword">return</span> (
+    <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">li</span> <span class="hljs-attr">className</span>=<span class="hljs-string">&quot;flex items-center gap-3 p-3&quot;</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">Checkbox</span> <span class="hljs-attr">checked</span>=<span class="hljs-string">{task.done}</span> <span class="hljs-attr">onChange</span>=<span class="hljs-string">{()</span> =&gt;</span> onToggle(task.id)} /&gt;
+      <span class="hljs-tag">&lt;<span class="hljs-name">span</span> <span class="hljs-attr">className</span>=<span class="hljs-string">{task.done</span> ? &#x27;<span class="hljs-attr">line-through</span> <span class="hljs-attr">text-muted</span>&#x27; <span class="hljs-attr">:</span> &#x27;&#x27;}&gt;</span>{task.title}<span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">Button</span> <span class="hljs-attr">variant</span>=<span class="hljs-string">&quot;ghost&quot;</span> <span class="hljs-attr">size</span>=<span class="hljs-string">&quot;sm&quot;</span> <span class="hljs-attr">onClick</span>=<span class="hljs-string">{()</span> =&gt;</span> onDelete(task.id)}&gt;
+        <span class="hljs-tag">&lt;<span class="hljs-name">TrashIcon</span> /&gt;</span>
+      <span class="hljs-tag">&lt;/<span class="hljs-name">Button</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">li</span>&gt;</span></span>
   );
 }</code></pre>
 <p><strong>Separate data fetching from presentation:</strong></p>
-<pre><code class="language-tsx">// Container: handles data
-export function TaskListContainer() {
-  const { tasks, isLoading, error } = useTasks();
+<pre><code class="language-tsx"><span class="hljs-comment">// Container: handles data</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">TaskListContainer</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> { tasks, isLoading, error } = <span class="hljs-title function_">useTasks</span>();
 
-  if (isLoading) return &lt;TaskListSkeleton /&gt;;
-  if (error) return &lt;ErrorState message=&quot;Failed to load tasks&quot; retry={refetch} /&gt;;
-  if (tasks.length === 0) return &lt;EmptyState message=&quot;No tasks yet&quot; /&gt;;
+  <span class="hljs-keyword">if</span> (isLoading) <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">TaskListSkeleton</span> /&gt;</span></span>;
+  <span class="hljs-keyword">if</span> (error) <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">ErrorState</span> <span class="hljs-attr">message</span>=<span class="hljs-string">&quot;Failed to load tasks&quot;</span> <span class="hljs-attr">retry</span>=<span class="hljs-string">{refetch}</span> /&gt;</span></span>;
+  <span class="hljs-keyword">if</span> (tasks.<span class="hljs-property">length</span> === <span class="hljs-number">0</span>) <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">EmptyState</span> <span class="hljs-attr">message</span>=<span class="hljs-string">&quot;No tasks yet&quot;</span> /&gt;</span></span>;
 
-  return &lt;TaskList tasks={tasks} /&gt;;
+  <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">TaskList</span> <span class="hljs-attr">tasks</span>=<span class="hljs-string">{tasks}</span> /&gt;</span></span>;
 }
 
-// Presentation: handles rendering
-export function TaskList({ tasks }: { tasks: Task[] }) {
-  return (
-    &lt;ul role=&quot;list&quot; className=&quot;divide-y&quot;&gt;
-      {tasks.map(task =&gt; &lt;TaskItem key={task.id} task={task} /&gt;)}
-    &lt;/ul&gt;
+<span class="hljs-comment">// Presentation: handles rendering</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">TaskList</span>(<span class="hljs-params">{ tasks }: { tasks: Task[] }</span>) {
+  <span class="hljs-keyword">return</span> (
+    <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">ul</span> <span class="hljs-attr">role</span>=<span class="hljs-string">&quot;list&quot;</span> <span class="hljs-attr">className</span>=<span class="hljs-string">&quot;divide-y&quot;</span>&gt;</span>
+      {tasks.map(task =&gt; <span class="hljs-tag">&lt;<span class="hljs-name">TaskItem</span> <span class="hljs-attr">key</span>=<span class="hljs-string">{task.id}</span> <span class="hljs-attr">task</span>=<span class="hljs-string">{task}</span> /&gt;</span>)}
+    <span class="hljs-tag">&lt;/<span class="hljs-name">ul</span>&gt;</span></span>
   );
 }</code></pre>
 <h2 id="state-management">State Management<a class="anchor" href="#state-management" aria-label="锚点">#</a></h2>
@@ -107,11 +107,11 @@ Global store (Zustand, Redux)    → Complex client state shared app-wide</code>
 <table><thead><tr><th>AI Default</th><th>Why It Is a Problem</th><th>Production Quality</th></tr></thead><tbody><tr><td>Purple/indigo everything</td><td>Models default to visually &quot;safe&quot; palettes, making every app look identical</td><td>Use the project's actual color palette</td></tr><tr><td>Excessive gradients</td><td>Gradients add visual noise and clash with most design systems</td><td>Flat or subtle gradients matching the design system</td></tr><tr><td>Rounded everything (rounded-2xl)</td><td>Maximum rounding signals &quot;friendly&quot; but ignores the hierarchy of corner radii in real designs</td><td>Consistent border-radius from the design system</td></tr><tr><td>Generic hero sections</td><td>Template-driven layout with no connection to the actual content or user need</td><td>Content-first layouts</td></tr><tr><td>Lorem ipsum-style copy</td><td>Placeholder text hides layout problems that real content reveals (length, wrapping, overflow)</td><td>Realistic placeholder content</td></tr><tr><td>Oversized padding everywhere</td><td>Equal generous padding destroys visual hierarchy and wastes screen space</td><td>Consistent spacing scale</td></tr><tr><td>Stock card grids</td><td>Uniform grids are a layout shortcut that ignores information priority and scanning patterns</td><td>Purpose-driven layouts</td></tr><tr><td>Shadow-heavy design</td><td>Layered shadows add depth that competes with content and slows rendering on low-end devices</td><td>Subtle or no shadows unless the design system specifies</td></tr></tbody></table>
 <h3 id="spacing-and-layout">Spacing and Layout<a class="anchor" href="#spacing-and-layout" aria-label="锚点">#</a></h3>
 <p>Use a consistent spacing scale. Don't invent values:</p>
-<pre><code class="language-css">/* Use the scale: 0.25rem increments (or whatever the project uses) */
-/* Good */  padding: 1rem;      /* 16px */
-/* Good */  gap: 0.75rem;       /* 12px */
-/* Bad */   padding: 13px;      /* Not on any scale */
-/* Bad */   margin-top: 2.3rem; /* Not on any scale */</code></pre>
+<pre><code class="language-css"><span class="hljs-comment">/* Use the scale: 0.25rem increments (or whatever the project uses) */</span>
+<span class="hljs-comment">/* Good */</span>  <span class="hljs-attribute">padding</span>: <span class="hljs-number">1rem</span>;      <span class="hljs-comment">/* 16px */</span>
+<span class="hljs-comment">/* Good */</span>  <span class="hljs-attribute">gap</span>: <span class="hljs-number">0.75rem</span>;       <span class="hljs-comment">/* 12px */</span>
+<span class="hljs-comment">/* Bad */</span>   <span class="hljs-attribute">padding</span>: <span class="hljs-number">13px</span>;      <span class="hljs-comment">/* Not on any scale */</span>
+<span class="hljs-comment">/* Bad */</span>   <span class="hljs-attribute">margin-top</span>: <span class="hljs-number">2.3rem</span>; <span class="hljs-comment">/* Not on any scale */</span></code></pre>
 <h3 id="typography">Typography<a class="anchor" href="#typography" aria-label="锚点">#</a></h3>
 <p>Respect the type hierarchy:</p>
 <pre><code>h1 → Page title (one per page)
@@ -125,102 +125,102 @@ small → Secondary/helper text</code></pre>
 <h2 id="accessibility-wcag-2-1-aa">Accessibility (WCAG 2.1 AA)<a class="anchor" href="#accessibility-wcag-2-1-aa" aria-label="锚点">#</a></h2>
 <p>Every component must meet these standards:</p>
 <h3 id="keyboard-navigation">Keyboard Navigation<a class="anchor" href="#keyboard-navigation" aria-label="锚点">#</a></h3>
-<pre><code class="language-tsx">// Every interactive element must be keyboard accessible
-&lt;button onClick={handleClick}&gt;Click me&lt;/button&gt;        // ✓ Focusable by default
-&lt;div onClick={handleClick}&gt;Click me&lt;/div&gt;               // ✗ Not focusable
-&lt;div role=&quot;button&quot; tabIndex={0} onClick={handleClick}    // ✓ But prefer &lt;button&gt;
-     onKeyDown={e =&gt; {
-       if (e.key === 'Enter') handleClick();
-       if (e.key === ' ') e.preventDefault();
+<pre><code class="language-tsx"><span class="hljs-comment">// Every interactive element must be keyboard accessible</span>
+&lt;button onClick={handleClick}&gt;<span class="hljs-title class_">Click</span> me&lt;<span class="hljs-regexp">/button&gt;        /</span>/ ✓ <span class="hljs-title class_">Focusable</span> by <span class="hljs-keyword">default</span>
+&lt;div onClick={handleClick}&gt;<span class="hljs-title class_">Click</span> me&lt;<span class="hljs-regexp">/div&gt;               /</span>/ ✗ <span class="hljs-title class_">Not</span> focusable
+&lt;div role=<span class="hljs-string">&quot;button&quot;</span> tabIndex={<span class="hljs-number">0</span>} onClick={handleClick}    <span class="hljs-comment">// ✓ But prefer &lt;button&gt;</span>
+     onKeyDown={<span class="hljs-function"><span class="hljs-params">e</span> =&gt;</span> {
+       <span class="hljs-keyword">if</span> (e.<span class="hljs-property">key</span> === <span class="hljs-string">&#x27;Enter&#x27;</span>) <span class="hljs-title function_">handleClick</span>();
+       <span class="hljs-keyword">if</span> (e.<span class="hljs-property">key</span> === <span class="hljs-string">&#x27; &#x27;</span>) e.<span class="hljs-title function_">preventDefault</span>();
      }}
-     onKeyUp={e =&gt; {
-       if (e.key === ' ') handleClick();
+     onKeyUp={<span class="hljs-function"><span class="hljs-params">e</span> =&gt;</span> {
+       <span class="hljs-keyword">if</span> (e.<span class="hljs-property">key</span> === <span class="hljs-string">&#x27; &#x27;</span>) <span class="hljs-title function_">handleClick</span>();
      }}&gt;
-  Click me
+  <span class="hljs-title class_">Click</span> me
 &lt;/div&gt;</code></pre>
 <h3 id="aria-labels">ARIA Labels<a class="anchor" href="#aria-labels" aria-label="锚点">#</a></h3>
-<pre><code class="language-tsx">// Label interactive elements that lack visible text
-&lt;button aria-label=&quot;Close dialog&quot;&gt;&lt;XIcon /&gt;&lt;/button&gt;
+<pre><code class="language-tsx"><span class="hljs-comment">// Label interactive elements that lack visible text</span>
+&lt;button aria-label=<span class="hljs-string">&quot;Close dialog&quot;</span>&gt;<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">XIcon</span> /&gt;</span></span>&lt;/button&gt;
 
-// Label form inputs
-&lt;label htmlFor=&quot;email&quot;&gt;Email&lt;/label&gt;
-&lt;input id=&quot;email&quot; type=&quot;email&quot; /&gt;
+<span class="hljs-comment">// Label form inputs</span>
+<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">label</span> <span class="hljs-attr">htmlFor</span>=<span class="hljs-string">&quot;email&quot;</span>&gt;</span>Email<span class="hljs-tag">&lt;/<span class="hljs-name">label</span>&gt;</span></span>
+<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">input</span> <span class="hljs-attr">id</span>=<span class="hljs-string">&quot;email&quot;</span> <span class="hljs-attr">type</span>=<span class="hljs-string">&quot;email&quot;</span> /&gt;</span></span>
 
-// Or use aria-label when no visible label exists
-&lt;input aria-label=&quot;Search tasks&quot; type=&quot;search&quot; /&gt;</code></pre>
+<span class="hljs-comment">// Or use aria-label when no visible label exists</span>
+<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">input</span> <span class="hljs-attr">aria-label</span>=<span class="hljs-string">&quot;Search tasks&quot;</span> <span class="hljs-attr">type</span>=<span class="hljs-string">&quot;search&quot;</span> /&gt;</span></span></code></pre>
 <h3 id="focus-management">Focus Management<a class="anchor" href="#focus-management" aria-label="锚点">#</a></h3>
-<pre><code class="language-tsx">// Move focus when content changes
-function Dialog({ isOpen, onClose }: DialogProps) {
-  const closeRef = useRef&lt;HTMLButtonElement&gt;(null);
+<pre><code class="language-tsx"><span class="hljs-comment">// Move focus when content changes</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">Dialog</span>(<span class="hljs-params">{ isOpen, onClose }: <span class="hljs-title class_">DialogProps</span></span>) {
+  <span class="hljs-keyword">const</span> closeRef = useRef&lt;<span class="hljs-title class_">HTMLButtonElement</span>&gt;(<span class="hljs-literal">null</span>);
 
-  useEffect(() =&gt; {
-    if (isOpen) closeRef.current?.focus();
+  <span class="hljs-title function_">useEffect</span>(<span class="hljs-function">() =&gt;</span> {
+    <span class="hljs-keyword">if</span> (isOpen) closeRef.<span class="hljs-property">current</span>?.<span class="hljs-title function_">focus</span>();
   }, [isOpen]);
 
-  // Trap focus inside dialog when open
-  return (
-    &lt;dialog open={isOpen}&gt;
-      &lt;button ref={closeRef} onClick={onClose}&gt;Close&lt;/button&gt;
+  <span class="hljs-comment">// Trap focus inside dialog when open</span>
+  <span class="hljs-keyword">return</span> (
+    <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">dialog</span> <span class="hljs-attr">open</span>=<span class="hljs-string">{isOpen}</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">button</span> <span class="hljs-attr">ref</span>=<span class="hljs-string">{closeRef}</span> <span class="hljs-attr">onClick</span>=<span class="hljs-string">{onClose}</span>&gt;</span>Close<span class="hljs-tag">&lt;/<span class="hljs-name">button</span>&gt;</span>
       {/* dialog content */}
-    &lt;/dialog&gt;
+    <span class="hljs-tag">&lt;/<span class="hljs-name">dialog</span>&gt;</span></span>
   );
 }</code></pre>
 <h3 id="meaningful-empty-and-error-states">Meaningful Empty and Error States<a class="anchor" href="#meaningful-empty-and-error-states" aria-label="锚点">#</a></h3>
-<pre><code class="language-tsx">// Don't show blank screens
-function TaskList({ tasks }: { tasks: Task[] }) {
-  if (tasks.length === 0) {
-    return (
-      &lt;div role=&quot;status&quot; className=&quot;text-center py-12&quot;&gt;
-        &lt;TasksEmptyIcon className=&quot;mx-auto h-12 w-12 text-muted&quot; /&gt;
-        &lt;h3 className=&quot;mt-2 text-sm font-medium&quot;&gt;No tasks&lt;/h3&gt;
-        &lt;p className=&quot;mt-1 text-sm text-muted&quot;&gt;Get started by creating a new task.&lt;/p&gt;
-        &lt;Button className=&quot;mt-4&quot; onClick={onCreateTask}&gt;Create Task&lt;/Button&gt;
-      &lt;/div&gt;
+<pre><code class="language-tsx"><span class="hljs-comment">// Don&#x27;t show blank screens</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">TaskList</span>(<span class="hljs-params">{ tasks }: { tasks: Task[] }</span>) {
+  <span class="hljs-keyword">if</span> (tasks.<span class="hljs-property">length</span> === <span class="hljs-number">0</span>) {
+    <span class="hljs-keyword">return</span> (
+      <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">role</span>=<span class="hljs-string">&quot;status&quot;</span> <span class="hljs-attr">className</span>=<span class="hljs-string">&quot;text-center py-12&quot;</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">TasksEmptyIcon</span> <span class="hljs-attr">className</span>=<span class="hljs-string">&quot;mx-auto h-12 w-12 text-muted&quot;</span> /&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">h3</span> <span class="hljs-attr">className</span>=<span class="hljs-string">&quot;mt-2 text-sm font-medium&quot;</span>&gt;</span>No tasks<span class="hljs-tag">&lt;/<span class="hljs-name">h3</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">p</span> <span class="hljs-attr">className</span>=<span class="hljs-string">&quot;mt-1 text-sm text-muted&quot;</span>&gt;</span>Get started by creating a new task.<span class="hljs-tag">&lt;/<span class="hljs-name">p</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">Button</span> <span class="hljs-attr">className</span>=<span class="hljs-string">&quot;mt-4&quot;</span> <span class="hljs-attr">onClick</span>=<span class="hljs-string">{onCreateTask}</span>&gt;</span>Create Task<span class="hljs-tag">&lt;/<span class="hljs-name">Button</span>&gt;</span>
+      <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span></span>
     );
   }
 
-  return &lt;ul role=&quot;list&quot;&gt;...&lt;/ul&gt;;
+  <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">ul</span> <span class="hljs-attr">role</span>=<span class="hljs-string">&quot;list&quot;</span>&gt;</span>...<span class="hljs-tag">&lt;/<span class="hljs-name">ul</span>&gt;</span></span>;
 }</code></pre>
 <h2 id="responsive-design">Responsive Design<a class="anchor" href="#responsive-design" aria-label="锚点">#</a></h2>
 <p>Design for mobile first, then expand:</p>
-<pre><code class="language-tsx">// Tailwind: mobile-first responsive
-&lt;div className=&quot;
+<pre><code class="language-tsx"><span class="hljs-comment">// Tailwind: mobile-first responsive</span>
+&lt;div className=<span class="hljs-string">&quot;
   grid grid-cols-1      /* Mobile: single column */
   sm:grid-cols-2        /* Small: 2 columns */
   lg:grid-cols-3        /* Large: 3 columns */
   gap-4
-&quot;&gt;</code></pre>
+&quot;</span>&gt;</code></pre>
 <p>Test at these breakpoints: 320px, 768px, 1024px, 1440px.</p>
 <h2 id="loading-and-transitions">Loading and Transitions<a class="anchor" href="#loading-and-transitions" aria-label="锚点">#</a></h2>
-<pre><code class="language-tsx">// Skeleton loading (not spinners for content)
-function TaskListSkeleton() {
-  return (
-    &lt;div className=&quot;space-y-3&quot; aria-busy=&quot;true&quot; aria-label=&quot;Loading tasks&quot;&gt;
+<pre><code class="language-tsx"><span class="hljs-comment">// Skeleton loading (not spinners for content)</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">TaskListSkeleton</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">return</span> (
+    <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">className</span>=<span class="hljs-string">&quot;space-y-3&quot;</span> <span class="hljs-attr">aria-busy</span>=<span class="hljs-string">&quot;true&quot;</span> <span class="hljs-attr">aria-label</span>=<span class="hljs-string">&quot;Loading tasks&quot;</span>&gt;</span>
       {Array.from({ length: 3 }).map((_, i) =&gt; (
-        &lt;div key={i} className=&quot;h-12 bg-muted animate-pulse rounded&quot; /&gt;
+        <span class="hljs-tag">&lt;<span class="hljs-name">div</span> <span class="hljs-attr">key</span>=<span class="hljs-string">{i}</span> <span class="hljs-attr">className</span>=<span class="hljs-string">&quot;h-12 bg-muted animate-pulse rounded&quot;</span> /&gt;</span>
       ))}
-    &lt;/div&gt;
+    <span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span></span>
   );
 }
 
-// Optimistic updates for perceived speed
-function useToggleTask() {
-  const queryClient = useQueryClient();
+<span class="hljs-comment">// Optimistic updates for perceived speed</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">useToggleTask</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> queryClient = <span class="hljs-title function_">useQueryClient</span>();
 
-  return useMutation({
-    mutationFn: toggleTask,
-    onMutate: async (taskId) =&gt; {
-      await queryClient.cancelQueries({ queryKey: ['tasks'] });
-      const previous = queryClient.getQueryData(['tasks']);
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">useMutation</span>({
+    <span class="hljs-attr">mutationFn</span>: toggleTask,
+    <span class="hljs-attr">onMutate</span>: <span class="hljs-title function_">async</span> (taskId) =&gt; {
+      <span class="hljs-keyword">await</span> queryClient.<span class="hljs-title function_">cancelQueries</span>({ <span class="hljs-attr">queryKey</span>: [<span class="hljs-string">&#x27;tasks&#x27;</span>] });
+      <span class="hljs-keyword">const</span> previous = queryClient.<span class="hljs-title function_">getQueryData</span>([<span class="hljs-string">&#x27;tasks&#x27;</span>]);
 
-      queryClient.setQueryData(['tasks'], (old: Task[]) =&gt;
-        old.map(t =&gt; t.id === taskId ? { ...t, done: !t.done } : t)
+      queryClient.<span class="hljs-title function_">setQueryData</span>([<span class="hljs-string">&#x27;tasks&#x27;</span>], <span class="hljs-function">(<span class="hljs-params"><span class="hljs-attr">old</span>: <span class="hljs-title class_">Task</span>[]</span>) =&gt;</span>
+        old.<span class="hljs-title function_">map</span>(<span class="hljs-function"><span class="hljs-params">t</span> =&gt;</span> t.<span class="hljs-property">id</span> === taskId ? { ...t, <span class="hljs-attr">done</span>: !t.<span class="hljs-property">done</span> } : t)
       );
 
-      return { previous };
+      <span class="hljs-keyword">return</span> { previous };
     },
-    onError: (_err, _taskId, context) =&gt; {
-      queryClient.setQueryData(['tasks'], context?.previous);
+    <span class="hljs-attr">onError</span>: <span class="hljs-function">(<span class="hljs-params">_err, _taskId, context</span>) =&gt;</span> {
+      queryClient.<span class="hljs-title function_">setQueryData</span>([<span class="hljs-string">&#x27;tasks&#x27;</span>], context?.<span class="hljs-property">previous</span>);
     },
   });
 }</code></pre>

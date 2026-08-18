@@ -307,7 +307,82 @@ function isRescueStripFloorEnabled(env) {
   return !(v !== undefined && _FALSY.has(String(v).trim().toLowerCase()));
 }
 
-// ── 透明视觉降级时的「配 GLM 视觉 key」邀约 ─────────────────────────────────
+// KHY CLI 文件视觉桥接生成的临时路径。只匹配本仓生成的命名约定，避免误伤用户路径。
+const GENERATED_IMAGE_BRIDGE_PATH_RE = /(?:[a-z]:)?(?:[\\/][^\\/\s"'<>),;]+)*[\\/]?khy-cli-img-[^\\/\s"'<>),;]+[\\/]image-\d+-[0-9a-f]+\.(?:png|jpe?g|webp|gif|bmp|svg|tiff?)(?=$|[\s"'<>),;])/gi;
+
+/**
+ * 从 MCP/OCR 已消费图片后的文本中清理旧的 CLI 图片桥接痕迹。
+ * 只处理 KHY 生成的附件标记和临时路径；消息结构由调用方负责保留。
+ * @param {string} text
+ * @returns {string}
+ */
+function stripConsumedImageBridgeText(text) {
+  if (typeof text !== 'string' || !text) {
+    return text;
+  }
+  const out = [];
+  for (const line of text.split('\n')) {
+    if (line.includes('【图片附件】')) {
+      continue;
+    }
+    const cleaned = line.replace(GENERATED_IMAGE_BRIDGE_PATH_RE, '');
+    if (/^\s*(?:[-*]\s*)?$/.test(cleaned) && cleaned !== line) {
+      continue;
+    }
+    out.push(cleaned);
+  }
+  return out.join('\n');
+}
+
+function stripConsumedImageBridgeMessages(messages) {
+  if (!Array.isArray(messages)) {
+    return messages;
+  }
+  return messages.map((message) => {
+    if (!message || typeof message !== 'object') {
+      return message;
+    }
+    if (typeof message.content === 'string') {
+      const content = stripConsumedImageBridgeText(message.content);
+      return content === message.content ? message : { ...message, content };
+    }
+    if (!Array.isArray(message.content)) {
+      return message;
+    }
+    let changed = false;
+    const content = message.content.map((block) => {
+      if (!block || typeof block !== 'object' || typeof block.text !== 'string') {
+        return block;
+      }
+      const text = stripConsumedImageBridgeText(block.text);
+      if (text === block.text) {
+        return block;
+      }
+      changed = true;
+      return { ...block, text };
+    });
+    return changed ? { ...message, content } : message;
+  });
+}
+
+const MCP_VISION_SUCCESS_MARKER = '[图片已完成视觉识别]';
+
+/**
+ * MCP 已成功识别图片时注入的模型侧约束，阻止历史临时路径触发重复 Read。
+ * @param {object} [input]
+ * @param {number} [input.count]
+ * @returns {string}
+ */
+function buildMcpVisionSuccessNote(input = {}) {
+  const n = Number.isFinite(input.count) && input.count > 0 ? Math.floor(input.count) : 0;
+  const countPart = n > 0 ? `${n} 张图片` : '图片';
+  return [
+    `${MCP_VISION_SUCCESS_MARKER} 用户本轮上传的${countPart}已由视觉服务完成识别。`,
+    '以下视觉描述是本轮图片的权威依据，请直接结合它回答用户原问题。',
+    '不要读取、猜测或重试历史消息中的 khy-cli-img-* 临时路径，也不要再次调用 Read 读取已经消费的图片。',
+  ].join('\n');
+}
+
 // 背景(用户目标 2026-07「上传照片给纯文本模型会发生什么」的收尾「接上」):透明视觉路
 // (aiGateway prep 期 decideVisionRouting)在「GLM 视觉门控开、但用户尚未配置 GLM key」时,
 // 无法把请求改道到 GLM 视觉端点(见 aiGateway 的 hasAvailableKeys('glm') 守卫「无 GLM key
@@ -382,6 +457,10 @@ module.exports = {
   shouldOcrRescue,
   buildVisionUnreadableNote,
   UNREADABLE_NOTE_MARKER,
+  stripConsumedImageBridgeText,
+  stripConsumedImageBridgeMessages,
+  buildMcpVisionSuccessNote,
+  MCP_VISION_SUCCESS_MARKER,
   // 剥图但 OCR 说明被功能门关掉时的最小诚实底线(独立门控 KHY_VISION_STRIP_IMAGE_FLOOR,
   // 与 KHY_VISION_OCR_FALLBACK 正交;保「剥图 ⟹ 必留『收到图但读不出』痕迹」不变量)。
   isStripImageFloorEnabled,

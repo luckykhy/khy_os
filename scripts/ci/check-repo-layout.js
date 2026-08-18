@@ -94,6 +94,8 @@ const CROSSCUTTING = {
   alpine: 'Alpine 镜像 etc 覆盖层',
   _source: '加密源码快照与恢复说明',
 };
+// 构建/打包工具在仓库根生成的目录，不是源码层。保持封闭集合，新增项须有对应忽略规则。
+const GENERATED_TOP_LEVEL_DIRS = new Set(['build', 'dist', 'khy_os.egg-info']);
 
 // ── 根目录白名单（真源 [MGMT-STD-001] 第 1.3 条，封闭、严禁扩张）──────────────
 // 说明性文件白名单：README 及其语言变体 + 平台/工具链按根路径强制加载的文件。
@@ -285,8 +287,9 @@ function checkLayerRegistry(findings) {
     .readdirSync(repoRoot, { withFileTypes: true })
     .filter(entry => entry.isDirectory())
     .map(entry => entry.name)
-    // 点目录（.git/.github/.khy…）与 node_modules 不属层级体系。
+    // 点目录（.git/.github/.khy…）、node_modules 与声明过的生成目录不属层级体系。
     .filter(name => !name.startsWith('.') && name !== 'node_modules')
+    .filter(name => !GENERATED_TOP_LEVEL_DIRS.has(name))
     .filter(name => !known.has(name))
     .sort();
 
@@ -418,6 +421,11 @@ function looksLikeComment(rawLine, requireIndex) {
   return lineComment >= 0 && lineComment < requireIndex;
 }
 
+function isTestFixture(relFile) {
+  return /(?:^|\/)(?:tests?|__tests__)(?:\/|$)/.test(relFile)
+    || /(?:^|\.)test\.[cm]?js$/.test(relFile);
+}
+
 function checkCrossLayerRequires(findings, counts) {
   const out = git([
     'grep',
@@ -444,6 +452,9 @@ function checkCrossLayerRequires(findings, counts) {
     const secondColon = line.indexOf(':', firstColon + 1);
     if (firstColon < 0 || secondColon < 0) continue;
     const file = toPosix(line.slice(0, firstColon));
+    // 这条规则约束可发布的运行时模块图。测试可直接加载相邻 workspace 的
+    // fixture / implementation 做契约验证，不会形成产品运行时依赖边。
+    if (isTestFixture(file)) continue;
     const lineNo = line.slice(firstColon + 1, secondColon);
     const body = line.slice(secondColon + 1);
 

@@ -36,6 +36,16 @@ test('codex 大小写/空白不敏感', () => {
   assert.strictEqual(adapterHandlesImagesNatively('  CODEX ', {}), true);
 });
 
+test('cli 仅在实际适配器报告文件视觉时判定原生', () => {
+  const adapter = { handlesImagesNatively: () => true };
+  assert.strictEqual(adapterHandlesImagesNatively('cli', {}, { adapter, options: {} }), true);
+  assert.strictEqual(
+    adapterHandlesImagesNatively('cli', {}, { adapter: { handlesImagesNatively: () => false }, options: {} }),
+    false
+  );
+  assert.strictEqual(adapterHandlesImagesNatively('cli', {}, { options: {} }), false);
+});
+
 test('非原生收图适配器 → false', () => {
   for (const k of ['sensenova', 'trae', 'kiro', 'localLLM', 'claude', '']) {
     assert.strictEqual(adapterHandlesImagesNatively(k, {}), false, `应 false: ${k}`);

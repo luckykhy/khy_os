@@ -946,6 +946,13 @@ function getResponseStatusCode(res) {
   return Number(res?.status || res?.statusCode || 0);
 }
 
+function normalizeOpenAITokenUsage(usage = null) {
+  const inputTokens = Number(usage?.prompt_tokens || usage?.input_tokens || 0);
+  const outputTokens = Number(usage?.completion_tokens || usage?.output_tokens || 0);
+  const totalTokens = Number(usage?.total_tokens || inputTokens + outputTokens);
+  return { inputTokens, outputTokens, totalTokens };
+}
+
 async function readSdkResponseText(res) {
   if (!res) {
     return '';
@@ -1110,6 +1117,7 @@ async function callWindsurfBySdk(tokenData, prompt, model, options = {}) {
           adapter: 'windsurf',
           provider: `Windsurf SDK (${model})`,
           model,
+          tokenUsage: normalizeOpenAITokenUsage(json?.usage),
           toolUseBlocks: sdkToolUseBlocks,
           stopReason:
             sdkToolUseBlocks.length > 0 ? undefined : sdkChoice?.finish_reason || undefined,
@@ -1240,6 +1248,7 @@ function callWindsurfByHttp(tokenData, prompt, model, options = {}) {
             adapter: 'windsurf',
             provider: `Windsurf (${model})`,
             model: parsed.model || model,
+            tokenUsage: normalizeOpenAITokenUsage(parsed.usage),
             toolUseBlocks: parsed.toolUseBlocks,
             stopReason:
               parsed.toolUseBlocks.length > 0 ? undefined : parsed.stopReason || undefined,

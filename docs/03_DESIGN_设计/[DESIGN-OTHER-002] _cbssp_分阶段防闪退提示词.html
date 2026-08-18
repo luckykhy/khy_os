@@ -104,7 +104,7 @@
 - 复用工具元数据 isReadOnly/isDestructive。
   补：在 executeTool 入口（toolCalling.js:2299）按可逆性分层路由：
   · A_safe（只读/可逆）：允许有界前瞻/beam（宽度 k≤3，env 可调）锐化信念 b；
-  · A_commit（不可逆）：禁止投机分支，一步最优承诺 a*=argmin_a[g+h(s')]，
+  · A_commit（不可逆）：禁止投机分支，一步最优承诺 a*=argmin_a[g+h(s&#x27;)]，
     高 Irrev 强制 plan-then-confirm（复用现有 requestPermission，不新建审批通道）。
 
 必须断言的数学性质：
@@ -127,7 +127,7 @@ C-1 适配器路由（aiGateway.js:2115）：把 score=basePriority×10+Σpenalt
 C-4 统一断路器：废弃 aiGateway 内联指数退避，全栈改用 circuitBreaker.js 三态机
     (CLOSED/OPEN/HALF_OPEN)，消除双实现并存。
 C-2 账号池（accountPool.js:3121）：把粘性 MRU(ORDER BY last_used_at DESC) 改成
-    真负载均衡（true LRU 或 power-of-two-choices），兑现 'Balance' 名称。
+    真负载均衡（true LRU 或 power-of-two-choices），兑现 &#x27;Balance&#x27; 名称。
 C-3 工作流抢占（workflowRunWorker.js:116）：给 worker 一个 quantum（每 N 步经
     boulderState 落盘检查点即让出），引入 ready-queue + 抢占，避免长 run 饿死短 run。
 

@@ -43,13 +43,13 @@
 <h2 id="如何录制">如何录制<a class="anchor" href="#如何录制" aria-label="锚点">#</a></h2>
 <ul><li>终端部分用 <strong>asciinema</strong>（清晰、体积小、可复制粘贴）：</li></ul>
 <pre><code class="language-bash">  asciinema rec demo.cast
-  # ...do the steps...  then Ctrl-D</code></pre>
+  <span class="hljs-comment"># ...do the steps...  then Ctrl-D</span></code></pre>
 <p>用 <code>agg demo.cast assets/demo.gif</code> 转成 GIF（或保留 .cast 并嵌入<br>  asciinema 播放器链接）。</p>
 <ul><li>QEMU 启动部分，录制窗口画面（例如 <code>peek</code>、<code>ffmpeg</code> 或 OBS），</li></ul>
 <p>再与 asciinema GIF 拼接。</p>
 <h2 id="接进-readme">接进 README<a class="anchor" href="#接进-readme" aria-label="锚点">#</a></h2>
 <p>一旦 <code>assets/demo.gif</code> 就位，把 <code>README.md</code> 里的占位块<br>（那段「📽️ Demo recording」备注）替换为：</p>
-<pre><code class="language-markdown">&lt;p align=&quot;center&quot;&gt;&lt;img src=&quot;assets/demo.gif&quot; alt=&quot;khy in action&quot; width=&quot;800&quot;&gt;&lt;/p&gt;</code></pre>
+<pre><code class="language-markdown"><span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">p</span> <span class="hljs-attr">align</span>=<span class="hljs-string">&quot;center&quot;</span>&gt;</span></span><span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">img</span> <span class="hljs-attr">src</span>=<span class="hljs-string">&quot;assets/demo.gif&quot;</span> <span class="hljs-attr">alt</span>=<span class="hljs-string">&quot;khy in action&quot;</span> <span class="hljs-attr">width</span>=<span class="hljs-string">&quot;800&quot;</span>&gt;</span></span><span class="language-xml"><span class="hljs-tag">&lt;/<span class="hljs-name">p</span>&gt;</span></span></code></pre>
 <p>把文件控制在 ~5 MB 以内，好让它在 GitHub 上瞬间加载——必要时裁剪或降低<br>帧率。一段要 8 秒才加载出来的演示，等于没人看的演示。</p>
       </article>
       <nav class="pager"><span></span><a class="next" href="../../docs/06_DEPLOY_部署/[DEPLOY-MAN-002] PRODUCT_HUNT.html"><div class="dir">下一篇 →</div><div class="ttl">Product Hunt 文案草稿</div></a></nav>

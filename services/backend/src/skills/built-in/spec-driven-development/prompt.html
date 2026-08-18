@@ -63,35 +63,35 @@
    docs/          → Documentation</code></pre>
 <ol><li><strong>Code Style</strong> — One real code snippet showing your style beats three paragraphs describing it. Include naming conventions, formatting rules, and examples of good output.</li><li><strong>Testing Strategy</strong> — What framework, where tests live, coverage expectations, which test levels for which concerns.</li><li><strong>Boundaries</strong> — Three-tier system:<ul><li><strong>Always do:</strong> Run tests before commits, follow naming conventions, validate inputs</li><li><strong>Ask first:</strong> Database schema changes, adding dependencies, changing CI config</li><li><strong>Never do:</strong> Commit secrets, edit vendor directories, remove failing tests without approval</li></ul></li></ol>
 <p><strong>Spec template:</strong></p>
-<pre><code class="language-markdown"># Spec: [Project/Feature Name]
+<pre><code class="language-markdown"><span class="hljs-section"># Spec: [Project/Feature Name]</span>
 
-## Objective
-[What we're building and why. User stories or acceptance criteria.]
+<span class="hljs-section">## Objective</span>
+[What we&#x27;re building and why. User stories or acceptance criteria.]
 
-## Tech Stack
+<span class="hljs-section">## Tech Stack</span>
 [Framework, language, key dependencies with versions]
 
-## Commands
+<span class="hljs-section">## Commands</span>
 [Build, test, lint, dev — full commands]
 
-## Project Structure
+<span class="hljs-section">## Project Structure</span>
 [Directory layout with descriptions]
 
-## Code Style
+<span class="hljs-section">## Code Style</span>
 [Example snippet + key conventions]
 
-## Testing Strategy
+<span class="hljs-section">## Testing Strategy</span>
 [Framework, test locations, coverage requirements, test levels]
 
-## Boundaries
-- Always: [...]
-- Ask first: [...]
-- Never: [...]
+<span class="hljs-section">## Boundaries</span>
+<span class="hljs-bullet">-</span> Always: [...]
+<span class="hljs-bullet">-</span> Ask first: [...]
+<span class="hljs-bullet">-</span> Never: [...]
 
-## Success Criteria
-[How we'll know this is done — specific, testable conditions]
+<span class="hljs-section">## Success Criteria</span>
+[How we&#x27;ll know this is done — specific, testable conditions]
 
-## Open Questions
+<span class="hljs-section">## Open Questions</span>
 [Anything unresolved that needs human input]</code></pre>
 <p><strong>Reframe instructions as success criteria.</strong> When receiving vague requirements, translate them into concrete conditions:</p>
 <pre><code>REQUIREMENT: &quot;Make the dashboard faster&quot;
@@ -110,10 +110,10 @@ REFRAMED SUCCESS CRITERIA:
 <p>Break the plan into discrete, implementable tasks:</p>
 <ul><li>Each task should be completable in a single focused session</li><li>Each task has explicit acceptance criteria</li><li>Each task includes a verification step (test, build, manual check)</li><li>Tasks are ordered by dependency, not by perceived importance</li><li>No task should require changing more than ~5 files</li></ul>
 <p><strong>Task template:</strong></p>
-<pre><code class="language-markdown">- [ ] Task: [Description]
-  - Acceptance: [What must be true when done]
-  - Verify: [How to confirm — test command, build, manual check]
-  - Files: [Which files will be touched]</code></pre>
+<pre><code class="language-markdown"><span class="hljs-bullet">-</span> [ ] Task: [Description]
+<span class="hljs-bullet">  -</span> Acceptance: [What must be true when done]
+<span class="hljs-bullet">  -</span> Verify: [How to confirm — test command, build, manual check]
+<span class="hljs-bullet">  -</span> Files: [Which files will be touched]</code></pre>
 <h3 id="phase-4-implement">Phase 4: Implement<a class="anchor" href="#phase-4-implement" aria-label="锚点">#</a></h3>
 <p>Execute tasks one at a time following <code>skills/incremental-implementation/SKILL.md</code> (<code>incremental-implementation</code>) and <code>skills/test-driven-development/SKILL.md</code> (<code>test-driven-development</code>). Use <code>skills/context-engineering/SKILL.md</code> (<code>context-engineering</code>) to load the right spec sections and source files at each step rather than flooding the agent with the entire spec.</p>
 <h2 id="keeping-the-spec-alive">Keeping the Spec Alive<a class="anchor" href="#keeping-the-spec-alive" aria-label="锚点">#</a></h2>

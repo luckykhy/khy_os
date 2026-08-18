@@ -46,16 +46,16 @@
 <ul><li><strong>标注方式</strong>: 文件头部 JSDoc 注释中使用 <code>@pattern</code> 标签</li><li><strong>机器映射</strong>: <code>docs/design-patterns/pattern-registry.json</code> 存储全量映射</li><li><strong>CI 验证</strong>: <code>scripts/ci/check-pattern-coverage.js</code> 确保 100% 覆盖</li></ul>
 <h2 id="pattern-标签规范">@pattern 标签规范<a class="anchor" href="#pattern-标签规范" aria-label="锚点">#</a></h2>
 <p>在文件头部注释中添加（已有头部注释则追加，无则新建）：</p>
-<pre><code class="language-js">/**
- * @pattern Strategy, Facade
- */</code></pre>
-<pre><code class="language-c">/**
+<pre><code class="language-js"><span class="hljs-comment">/**
+ * <span class="hljs-doctag">@pattern</span> Strategy, Facade
+ */</span></code></pre>
+<pre><code class="language-c"><span class="hljs-comment">/**
  * @pattern Singleton, Builder
- */</code></pre>
-<pre><code class="language-python"># @pattern Template Method, Command</code></pre>
+ */</span></code></pre>
+<pre><code class="language-python"><span class="hljs-comment"># @pattern Template Method, Command</span></code></pre>
 <pre><code class="language-vue">&lt;!-- @pattern Composite, Observer --&gt;</code></pre>
 <pre><code class="language-asm">; @pattern Template Method</code></pre>
-<pre><code class="language-sh"># @pattern Command, Template Method</code></pre>
+<pre><code class="language-sh"><span class="hljs-comment"># @pattern Command, Template Method</span></code></pre>
 <h3 id="规则">规则<a class="anchor" href="#规则" aria-label="锚点">#</a></h3>
 <ol><li>一个文件可以标注多个模式，用英文逗号分隔</li><li>模式名使用英文全称（见下表）</li><li>标注必须有代码结构支撑，不为模式而模式</li><li><code>pattern-registry.json</code> 是权威来源，注释是辅助</li></ol>
 <h2 id="23-种设计模式名称映射">23 种设计模式名称映射<a class="anchor" href="#23-种设计模式名称映射" aria-label="锚点">#</a></h2>

@@ -129,18 +129,18 @@
 <h3 id="规则-3-基于活动的超时-不许硬-kill">规则 3：基于活动的超时 —— 不许硬 kill<a class="anchor" href="#规则-3-基于活动的超时-不许硬-kill" aria-label="锚点">#</a></h3>
 <p><strong>红线</strong>：任何超时机制都不得在固定时长后<strong>无条件</strong>杀死一个<br><strong>长时间运行的任务</strong>（AI 循环、构建、回测、数据同步），<br>无论该任务是否仍在推进。</p>
 <p><strong>要求的模式 —— 空闲/滑动超时</strong>：</p>
-<pre><code class="language-javascript">// ✅ Correct: reset timer on every productive event
-let lastActivity = Date.now();
-const IDLE_LIMIT = 120_000;
+<pre><code class="language-javascript"><span class="hljs-comment">// ✅ Correct: reset timer on every productive event</span>
+<span class="hljs-keyword">let</span> lastActivity = <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>();
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">IDLE_LIMIT</span> = <span class="hljs-number">120_000</span>;
 
-onToolResult = () =&gt; { lastActivity = Date.now(); };
-onAiReply   = () =&gt; { lastActivity = Date.now(); };
+onToolResult = <span class="hljs-function">() =&gt;</span> { lastActivity = <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>(); };
+onAiReply   = <span class="hljs-function">() =&gt;</span> { lastActivity = <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>(); };
 
-// Only timeout when IDLE for IDLE_LIMIT
-if (Date.now() - lastActivity &gt; IDLE_LIMIT) { /* timeout */ }</code></pre>
-<pre><code class="language-javascript">// ❌ Wrong: hard wall clock timeout on a task loop
-const start = Date.now();
-if (Date.now() - start &gt; 120_000) { /* kills active work */ }</code></pre>
+<span class="hljs-comment">// Only timeout when IDLE for IDLE_LIMIT</span>
+<span class="hljs-keyword">if</span> (<span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() - lastActivity &gt; <span class="hljs-variable constant_">IDLE_LIMIT</span>) { <span class="hljs-comment">/* timeout */</span> }</code></pre>
+<pre><code class="language-javascript"><span class="hljs-comment">// ❌ Wrong: hard wall clock timeout on a task loop</span>
+<span class="hljs-keyword">const</span> start = <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>();
+<span class="hljs-keyword">if</span> (<span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() - start &gt; <span class="hljs-number">120_000</span>) { <span class="hljs-comment">/* kills active work */</span> }</code></pre>
 <p><strong>例外</strong>：短生命周期的网络 fetch 超时（例如 30s HTTP 请求超时）<br>与认证握手超时<strong>不</strong>算违规——它们防的是挂死的 I/O，而非活跃的计算。<br>其定量化标准见下方合法例外清单。</p>
 <p><strong>合法例外清单</strong>（与 <code>check-agent-rules.js</code> 的实际豁免逻辑一致）：</p>
 <ul><li>低于 500ms 的 <code>setTimeout</code> 完全不检查；</li><li>Promise 延迟睡眠：<code>await new Promise(r =&gt; setTimeout(r, ms))</code>（无 kill/abort）；</li><li>计数器重置定时器：回调只做 <code>xxxCount = 0</code> 类赋值（无 kill/abort/reject）；</li><li>短 UI 重置计时器：≤5s，且上下文含 <code>clearTimeout</code> 及</li></ul>
@@ -166,16 +166,16 @@ if (Date.now() - start &gt; 120_000) { /* kills active work */ }</code></pre>
 <p><strong>红线</strong>：在与正常终端回滚输出（REPL、交互式 prompt）共存的 CLI 中，<br>绝不使用 ANSI 滚动区（<code>\x1B[n;mr</code>）。</p>
 <p>滚动区会<strong>丢弃</strong>越过边界滚出的内容，而不是把它加入终端的回滚缓冲区。<br>这会让用户无法向上滚动回看历史输出。</p>
 <p><strong>要求的模式 —— 保存/恢复光标 + 绝对定位</strong>：</p>
-<pre><code class="language-javascript">// ✅ Correct: render at bottom row without affecting scrollback
-process.stdout.write(
-  `\x1B7`                              // save cursor
-  + `\x1B[${process.stdout.rows};1H`   // move to last row
-  + `${statusLine}`                     // render
-  + `\x1B[K`                           // clear to end of line
-  + `\x1B8`                            // restore cursor
+<pre><code class="language-javascript"><span class="hljs-comment">// ✅ Correct: render at bottom row without affecting scrollback</span>
+process.<span class="hljs-property">stdout</span>.<span class="hljs-title function_">write</span>(
+  <span class="hljs-string">`\x1B7`</span>                              <span class="hljs-comment">// save cursor</span>
+  + <span class="hljs-string">`\x1B[<span class="hljs-subst">${process.stdout.rows}</span>;1H`</span>   <span class="hljs-comment">// move to last row</span>
+  + <span class="hljs-string">`<span class="hljs-subst">${statusLine}</span>`</span>                     <span class="hljs-comment">// render</span>
+  + <span class="hljs-string">`\x1B[K`</span>                           <span class="hljs-comment">// clear to end of line</span>
+  + <span class="hljs-string">`\x1B8`</span>                            <span class="hljs-comment">// restore cursor</span>
 );</code></pre>
-<pre><code class="language-javascript">// ❌ Wrong: scroll region traps all output, kills scrollback
-process.stdout.write(`\x1B[1;${rows - 1}r`);</code></pre>
+<pre><code class="language-javascript"><span class="hljs-comment">// ❌ Wrong: scroll region traps all output, kills scrollback</span>
+process.<span class="hljs-property">stdout</span>.<span class="hljs-title function_">write</span>(<span class="hljs-string">`\x1B[1;<span class="hljs-subst">${rows - <span class="hljs-number">1</span>}</span>r`</span>);</code></pre>
 <p><strong>例外</strong>：先切到备用屏幕缓冲区（<code>\x1B[?1049h</code>）的全屏 TUI 应用<br>（例如内置分页器或编辑器）——那里的滚动区是安全的，因为主回滚被保留。</p>
 <p><strong>检查机制</strong>：检查脚本扫描 DECSTBM 转义序列——<code>\x1B[...r</code> 的各种写法<br>（<code>\x1B</code> / <code>\u001B</code> / <code>\033</code> / <code>\e</code> 前缀及原始 ESC 字节，参数为数字/分号<br>或插值 token）。若同一文件中出现<strong>备用缓冲区标志</strong>，该命中降级为<br><strong>warning</strong>（需人工确认滚动区确实只作用于全屏 UI 且退出时恢复）；<br>否则判 <strong>error</strong>。备用缓冲区标志的定义：<code>\x1B[?1049h</code> 进入备用缓冲区 /<br><code>\x1B[?1049l</code> 退出（及兼容模式 <code>\x1B[?47h</code> / <code>\x1B[?47l</code>）。</p>
 <p><strong>复盘</strong>：见 <code>docs/04_IMPL_实现/[IMPL-RPT-015] 修复记录时间线.md</code>。</p>

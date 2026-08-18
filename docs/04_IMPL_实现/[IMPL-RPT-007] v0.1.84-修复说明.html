@@ -34,15 +34,15 @@
 <p><strong>现象</strong>：Windows 上安装 khy 后，无法用鼠标选中、复制终端内的任何文本。</p>
 <p><strong>根因</strong>：<code>keypressParser.js</code> 在 Windows Terminal (<code>WT_SESSION</code>) 上启用了 <code>\x1b[?1002h</code> (button-event tracking) + <code>\x1b[?1006h</code> (SGR mouse mode)。虽然代码注释声称只用 <code>?1002h</code>（不用 <code>?1000h</code>）就能保留原生选中，但实际上 <strong>Windows Terminal 下 <code>?1002h</code> 同样会捕获拖拽事件</strong>，导致无法框选文本。</p>
 <p><strong>修复</strong> (<code>backend/src/cli/tui/runtime/keypressParser.js</code>):</p>
-<pre><code class="language-javascript">// Before: Windows 现代终端也启用鼠标报告
-const hasModernWinTerm = isWin &amp;&amp; (process.env.WT_SESSION || ...);
-if (!isWin || hasModernWinTerm) {
-  this._stdout.write('\x1b[?1002h\x1b[?1006h');
+<pre><code class="language-javascript"><span class="hljs-comment">// Before: Windows 现代终端也启用鼠标报告</span>
+<span class="hljs-keyword">const</span> hasModernWinTerm = isWin &amp;&amp; (process.<span class="hljs-property">env</span>.<span class="hljs-property">WT_SESSION</span> || ...);
+<span class="hljs-keyword">if</span> (!isWin || hasModernWinTerm) {
+  <span class="hljs-variable language_">this</span>.<span class="hljs-property">_stdout</span>.<span class="hljs-title function_">write</span>(<span class="hljs-string">&#x27;\x1b[?1002h\x1b[?1006h&#x27;</span>);
 }
 
-// After: Windows 上完全不启用鼠标报告
-if (!isWin) {
-  this._stdout.write('\x1b[?1002h\x1b[?1006h');
+<span class="hljs-comment">// After: Windows 上完全不启用鼠标报告</span>
+<span class="hljs-keyword">if</span> (!isWin) {
+  <span class="hljs-variable language_">this</span>.<span class="hljs-property">_stdout</span>.<span class="hljs-title function_">write</span>(<span class="hljs-string">&#x27;\x1b[?1002h\x1b[?1006h&#x27;</span>);
 }</code></pre>
 <p><strong>权衡</strong>：Windows 上不再有 SGR 鼠标滚轮事件。滚轮滚动由 Windows Terminal 自动翻译为方向键序列（<code>\x1b[A</code>/<code>\x1b[B</code>），在 busy 状态下等效于 viewport 滚动，空闲状态为历史导航——行为合理无功能损失。</p>
 <hr>
@@ -51,19 +51,19 @@ if (!isWin) {
 <p><strong>根因</strong>：消息在两个位置各被渲染一次：</p>
 <ol><li><code>doSend()</code> 发送时立即调用 <code>addUserMsg(text)</code> 显示在本地</li><li>后端 <code>tuiShell.js</code> 收到消息后广播 <code>{ type: 'turn_start', input: text }</code> 给所有客户端，手机端的 <code>turn_start</code> handler 又调用了 <code>addUserMsg(msg.input)</code></li></ol>
 <p><strong>修复</strong> (<code>backend/src/bridge/mobilePage.js</code>):</p>
-<pre><code class="language-javascript">// 发送时记录最近发出的文本
-var _lastSentText = null;
-function doSend(){
+<pre><code class="language-javascript"><span class="hljs-comment">// 发送时记录最近发出的文本</span>
+<span class="hljs-keyword">var</span> _lastSentText = <span class="hljs-literal">null</span>;
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">doSend</span>(<span class="hljs-params"></span>){
   _lastSentText = text;
-  wsSend({type:'input', text: text});
-  addUserMsg(text);  // 本地立即显示
+  <span class="hljs-title function_">wsSend</span>({<span class="hljs-attr">type</span>:<span class="hljs-string">&#x27;input&#x27;</span>, <span class="hljs-attr">text</span>: text});
+  <span class="hljs-title function_">addUserMsg</span>(text);  <span class="hljs-comment">// 本地立即显示</span>
   ...
 }
 
-// 收到 turn_start 时去重
-case 'turn_start':
-  if(msg.input &amp;&amp; msg.input !== _lastSentText) addUserMsg(msg.input);
-  _lastSentText = null;  // 重置，确保重连回放时仍能显示
+<span class="hljs-comment">// 收到 turn_start 时去重</span>
+<span class="hljs-keyword">case</span> <span class="hljs-string">&#x27;turn_start&#x27;</span>:
+  <span class="hljs-keyword">if</span>(msg.<span class="hljs-property">input</span> &amp;&amp; msg.<span class="hljs-property">input</span> !== _lastSentText) <span class="hljs-title function_">addUserMsg</span>(msg.<span class="hljs-property">input</span>);
+  _lastSentText = <span class="hljs-literal">null</span>;  <span class="hljs-comment">// 重置，确保重连回放时仍能显示</span>
   ...</code></pre>
 <p><strong>设计说明</strong>：使用文本匹配而非 clientId 排除，因为 <code>broadcastOutput</code> 不支持 excludeClient，且此方案零改动服务端。重连回放场景中 <code>_lastSentText</code> 已被清空，历史消息仍能正确回显。</p>
 <hr>
@@ -73,31 +73,31 @@ case 'turn_start':
 <ul><li><code>liteRepl.js</code> 的 <code>inqPrompt()</code> wrapper 设置 module-level <code>_inquirerActive</code></li><li><code>gateway.js</code> 的 <code>promptWithReplGuard()</code> 设置 <code>global.__KHY_INQUIRER_ACTIVE__</code></li><li>Spinner <code>_render()</code> 依赖 <code>isInteractiveInputActive()</code> guard，但该 guard 只检查&quot;busy 且用户在打字&quot;</li><li><code>emitRuntimeStatus()</code> 和 <code>tracker.start()</code> 完全没有 inquirer 状态检查</li></ul>
 <p><strong>修复</strong> (<code>backend/src/cli/liteRepl.js</code>, 三处修改):</p>
 <h3 id="3a-交互守卫增加-inquirer-检查">3a. 交互守卫增加 inquirer 检查<a class="anchor" href="#3a-交互守卫增加-inquirer-检查" aria-label="锚点">#</a></h3>
-<pre><code class="language-javascript">// Before: 只在用户打字时抑制 spinner
-renderer.setInteractiveGuard(() =&gt; (
-  _busy &amp;&amp; (rl.line.length &gt; 0 || Date.now() &lt; _busyTypingUntil)
+<pre><code class="language-javascript"><span class="hljs-comment">// Before: 只在用户打字时抑制 spinner</span>
+renderer.<span class="hljs-title function_">setInteractiveGuard</span>(<span class="hljs-function">() =&gt;</span> (
+  _busy &amp;&amp; (rl.<span class="hljs-property">line</span>.<span class="hljs-property">length</span> &gt; <span class="hljs-number">0</span> || <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() &lt; _busyTypingUntil)
 ));
 
-// After: inquirer 活跃时也抑制
-renderer.setInteractiveGuard(() =&gt; (
-  _inquirerActive || global.__KHY_INQUIRER_ACTIVE__
-  || (_busy &amp;&amp; (rl.line.length &gt; 0 || Date.now() &lt; _busyTypingUntil))
+<span class="hljs-comment">// After: inquirer 活跃时也抑制</span>
+renderer.<span class="hljs-title function_">setInteractiveGuard</span>(<span class="hljs-function">() =&gt;</span> (
+  _inquirerActive || <span class="hljs-variable language_">global</span>.<span class="hljs-property">__KHY_INQUIRER_ACTIVE__</span>
+  || (_busy &amp;&amp; (rl.<span class="hljs-property">line</span>.<span class="hljs-property">length</span> &gt; <span class="hljs-number">0</span> || <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() &lt; _busyTypingUntil))
 ));</code></pre>
 <p><strong>效果</strong>：<code>DynamicSpinner._render()</code> 和 <code>startSparkle()</code> 的 setInterval 回调在 inquirer 活跃期间短路返回，不写任何 stdout 内容。</p>
 <h3 id="3b-emitruntimestatus-增加守卫">3b. emitRuntimeStatus 增加守卫<a class="anchor" href="#3b-emitruntimestatus-增加守卫" aria-label="锚点">#</a></h3>
-<pre><code class="language-javascript">const emitRuntimeStatus = (text = '') =&gt; {
-  if (_inquirerActive || global.__KHY_INQUIRER_ACTIVE__) return;
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> <span class="hljs-title function_">emitRuntimeStatus</span> = (<span class="hljs-params">text = <span class="hljs-string">&#x27;&#x27;</span></span>) =&gt; {
+  <span class="hljs-keyword">if</span> (_inquirerActive || <span class="hljs-variable language_">global</span>.<span class="hljs-property">__KHY_INQUIRER_ACTIVE__</span>) <span class="hljs-keyword">return</span>;
   ...
 };</code></pre>
 <p><strong>效果</strong>：codexAdapter 的 stall 超时消息、适配器状态回传等通过 <code>onChunk({ type: 'status' })</code> 产生的 console.log 输出在菜单期间被静默丢弃。</p>
 <h3 id="3c-tracker-start-与适配器事件处理器增加守卫">3c. tracker.start 与适配器事件处理器增加守卫<a class="anchor" href="#3c-tracker-start-与适配器事件处理器增加守卫" aria-label="锚点">#</a></h3>
-<pre><code class="language-javascript">// status chunk handler
-if (raw &amp;&amp; !_inquirerActive &amp;&amp; !global.__KHY_INQUIRER_ACTIVE__)
-  tracker.start(...);
+<pre><code class="language-javascript"><span class="hljs-comment">// status chunk handler</span>
+<span class="hljs-keyword">if</span> (raw &amp;&amp; !_inquirerActive &amp;&amp; !<span class="hljs-variable language_">global</span>.<span class="hljs-property">__KHY_INQUIRER_ACTIVE__</span>)
+  tracker.<span class="hljs-title function_">start</span>(...);
 
-// adapter status event
-_adapterStatusHandler = (text) =&gt; {
-  if (!_inquirerActive &amp;&amp; !global.__KHY_INQUIRER_ACTIVE__) emitRuntimeStatus(text);
+<span class="hljs-comment">// adapter status event</span>
+_adapterStatusHandler = <span class="hljs-function">(<span class="hljs-params">text</span>) =&gt;</span> {
+  <span class="hljs-keyword">if</span> (!_inquirerActive &amp;&amp; !<span class="hljs-variable language_">global</span>.<span class="hljs-property">__KHY_INQUIRER_ACTIVE__</span>) <span class="hljs-title function_">emitRuntimeStatus</span>(text);
 };</code></pre>
 <hr>
 <h2 id="修改的文件">修改的文件<a class="anchor" href="#修改的文件" aria-label="锚点">#</a></h2>

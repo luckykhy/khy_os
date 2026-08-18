@@ -71,13 +71,13 @@ feat/windows...            ●  f81a65e   把内核工作拍成这张，贴在�
 <table><thead><tr><th>你可能以为</th><th>实际上</th></tr></thead><tbody><tr><td>改了文件就进 Git 了</td><td>❌ 改文件只动<strong>工作树</strong>；必须 <code>commit</code> 才存档</td></tr><tr><td>分支是「文件夹的拷贝」</td><td>❌ 分支只是<strong>一条时间线的标签</strong>，切分支不复制文件夹</td></tr><tr><td>HEAD 是某个文件</td><td>❌ HEAD 只是<strong>「你在哪」的箭头</strong>，指向当前 commit</td></tr></tbody></table>
 <hr>
 <h2 id="常用命令速查">常用命令速查<a class="anchor" href="#常用命令速查" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">git status                 # 我在哪条分支？工作树有哪些没提交的改动？（最常用）
-git log --oneline -5       # 我脚下这条线最近 5 张照片
-git branch                 # 有哪些分支？* 号是当前所在
-git add &lt;文件&gt;             # 把某文件放进「待拍照」清单（暂存区）
-git commit -m &quot;说明&quot;       # 把暂存的内容拍成一张照片
-git checkout -b &lt;新分支名&gt;  # 在当前位置开一条新线并跳过去
-git push                   # 把本地照片上传到远端</code></pre>
+<pre><code class="language-bash">git status                 <span class="hljs-comment"># 我在哪条分支？工作树有哪些没提交的改动？（最常用）</span>
+git <span class="hljs-built_in">log</span> --oneline -5       <span class="hljs-comment"># 我脚下这条线最近 5 张照片</span>
+git branch                 <span class="hljs-comment"># 有哪些分支？* 号是当前所在</span>
+git add &lt;文件&gt;             <span class="hljs-comment"># 把某文件放进「待拍照」清单（暂存区）</span>
+git commit -m <span class="hljs-string">&quot;说明&quot;</span>       <span class="hljs-comment"># 把暂存的内容拍成一张照片</span>
+git checkout -b &lt;新分支名&gt;  <span class="hljs-comment"># 在当前位置开一条新线并跳过去</span>
+git push                   <span class="hljs-comment"># 把本地照片上传到远端</span></code></pre>
 <blockquote><p>一条命令随时看清自己站在哪、桌上还有什么没存：<code>git status</code>。</p></blockquote>
 <hr>
 <h2 id="进阶一步-还有个-暂存区-staging-area">进阶一步：还有个「暂存区」（Staging Area）<a class="anchor" href="#进阶一步-还有个-暂存区-staging-area" aria-label="锚点">#</a></h2>

@@ -44,30 +44,30 @@
 <p><code>publish-dual.sh</code>（§4）会自动同步这三处；手工发布（§5）需手动改。</p>
 <hr>
 <h2 id="3-发布前提-凭证">3. 发布前提（凭证）<a class="anchor" href="#3-发布前提-凭证" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># pip：~/.pypirc 配好 [pypi] 的 API token（已就绪则无需再做）
-#   [pypi]
-#   username = __token__
-#   password = pypi-AgEN...     ← PyPI API token
+<pre><code class="language-bash"><span class="hljs-comment"># pip：~/.pypirc 配好 [pypi] 的 API token（已就绪则无需再做）</span>
+<span class="hljs-comment">#   [pypi]</span>
+<span class="hljs-comment">#   username = __token__</span>
+<span class="hljs-comment">#   password = pypi-AgEN...     ← PyPI API token</span>
 
-# npm：scoped 包 @khy-os/khy-os 首次发布前必须登录
-npm login            # 按提示输入账号 / 邮箱 / OTP
-npm whoami           # 确认登录成功</code></pre>
+<span class="hljs-comment"># npm：scoped 包 @khy-os/khy-os 首次发布前必须登录</span>
+npm login            <span class="hljs-comment"># 按提示输入账号 / 邮箱 / OTP</span>
+npm <span class="hljs-built_in">whoami</span>           <span class="hljs-comment"># 确认登录成功</span></code></pre>
 <blockquote><p><strong>源码不再加锁</strong>：发布真实源码（<code>origin-code</code> / <code>git-push</code>）与还原（<code>khy restore</code>）都<strong>不再需要任何密码</strong>——发行物始终内嵌完整真实源码（用固定默认密钥加密），<code>khy restore</code> 会自动解密。仅当还原<strong>由自定义密钥加密的旧快照</strong>时才需 <code>--secret &lt;密钥&gt;</code> / <code>KHY_SOURCE_PUBLISH_SECRET</code>。模型导出（<code>train export</code> / <code>train upload</code>）同样已取消密码，学习模式（<code>/study on</code>）也不再需要密码。</p></blockquote>
 <hr>
 <h2 id="4-一键双渠道发布-推荐">4. 一键双渠道发布（推荐）<a class="anchor" href="#4-一键双渠道发布-推荐" aria-label="锚点">#</a></h2>
 <p>脚本：<code>scripts/release/publish-dual.sh</code>。<strong>审计门控</strong>——两个渠道审计全绿之前不上传任何东西；任一审计失败立即中止。</p>
-<pre><code class="language-bash">cd /home/kodehu03/Khy-OS
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> /home/kodehu03/Khy-OS
 
-# 正式双发（会先打印发布计划并要求确认）
+<span class="hljs-comment"># 正式双发（会先打印发布计划并要求确认）</span>
 bash scripts/release/publish-dual.sh 0.1.95
 
-# 彩排：改版本号 + 跑完整构建/审计，但只 twine check / npm --dry-run，不真正上传
+<span class="hljs-comment"># 彩排：改版本号 + 跑完整构建/审计，但只 twine check / npm --dry-run，不真正上传</span>
 bash scripts/release/publish-dual.sh 0.1.95 --dry-run
 
-# 发布成功后：提交版本改动 + 打 annotated tag v0.1.95
+<span class="hljs-comment"># 发布成功后：提交版本改动 + 打 annotated tag v0.1.95</span>
 bash scripts/release/publish-dual.sh 0.1.95 --tag
 
-# 再 push 分支 + tag 到 remote（--push 自动隐含 --tag；默认 origin，否则第一个 remote）
+<span class="hljs-comment"># 再 push 分支 + tag 到 remote（--push 自动隐含 --tag；默认 origin，否则第一个 remote）</span>
 bash scripts/release/publish-dual.sh 0.1.95 --push</code></pre>
 <h3 id="全部开关">全部开关<a class="anchor" href="#全部开关" aria-label="锚点">#</a></h3>
 <table><thead><tr><th>开关</th><th>作用</th></tr></thead><tbody><tr><td><code>&lt;version&gt;</code> / <code>--version X.Y.Z</code></td><td>目标版本（位置参数或具名皆可）</td></tr><tr><td><code>--dry-run</code></td><td>全流程构建 + 审计，但不上传（<code>twine check</code> + <code>npm publish --dry-run</code>），也不 tag/push</td></tr><tr><td><code>--skip-pip</code></td><td>只发 npm</td></tr><tr><td><code>--skip-npm</code></td><td>只发 pip</td></tr><tr><td><code>--test-pypi</code></td><td>pip 上传到 TestPyPI 而非正式 PyPI</td></tr><tr><td><code>--no-isolation</code></td><td>离线构建 wheel/sdist（复用已装的 build/setuptools/wheel，不解析网络）</td></tr><tr><td><code>--tag</code></td><td>发布成功后提交版本改动 + 打 annotated tag <code>vX.Y.Z</code>（仅本地）</td></tr><tr><td><code>--push</code></td><td>额外把分支与 tag push 到 remote（隐含 <code>--tag</code>）</td></tr><tr><td><code>--remote NAME</code></td><td>指定 push 的 remote</td></tr><tr><td><code>-y</code> / <code>--yes</code></td><td>跳过确认提示</td></tr></tbody></table>
@@ -79,26 +79,26 @@ bash scripts/release/publish-dual.sh 0.1.95 --push</code></pre>
 <h3 id="5-1-改版本号">5.1 改版本号<a class="anchor" href="#5-1-改版本号" aria-label="锚点">#</a></h3>
 <p>把 §2 的三个文件里的版本号改成新版本（例如 <code>0.1.95</code>）。</p>
 <h3 id="5-2-发布-pip-khy-os">5.2 发布 pip（<code>khy-os</code>）<a class="anchor" href="#5-2-发布-pip-khy-os" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cd /home/kodehu03/Khy-OS
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> /home/kodehu03/Khy-OS
 
-# (1) 隔离构建 + 纯净/完整双审计
+<span class="hljs-comment"># (1) 隔离构建 + 纯净/完整双审计</span>
 bash scripts/release/build-and-audit-pip-purity.sh
-#   网络不通时离线兜底：
-#   KHY_OFFLINE_BUILD=1 bash scripts/release/build-and-audit-pip-purity.sh --no-isolation
+<span class="hljs-comment">#   网络不通时离线兜底：</span>
+<span class="hljs-comment">#   KHY_OFFLINE_BUILD=1 bash scripts/release/build-and-audit-pip-purity.sh --no-isolation</span>
 
-# (2) 审计全绿后上传
+<span class="hljs-comment"># (2) 审计全绿后上传</span>
 python3 -m twine upload dist/*
-#   先在 TestPyPI 演练：python3 -m twine upload --repository testpypi dist/*</code></pre>
+<span class="hljs-comment">#   先在 TestPyPI 演练：python3 -m twine upload --repository testpypi dist/*</span></code></pre>
 <h3 id="5-3-发布-npm-khy-os-khy-os">5.3 发布 npm（<code>@khy-os/khy-os</code>）<a class="anchor" href="#5-3-发布-npm-khy-os-khy-os" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cd /home/kodehu03/Khy-OS/packaging/npm
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> /home/kodehu03/Khy-OS/packaging/npm
 
-# (1) 纯净 + 完整审计（内部 npm pack 触发 prepack 组装工作坊）+ 单测
+<span class="hljs-comment"># (1) 纯净 + 完整审计（内部 npm pack 触发 prepack 组装工作坊）+ 单测</span>
 npm run audit:purity
-npm test
+npm <span class="hljs-built_in">test</span>
 
-# (2) 审计绿后发布；scope 包首次必须带 --access public
+<span class="hljs-comment"># (2) 审计绿后发布；scope 包首次必须带 --access public</span>
 npm publish --access public
-#   先彩排：npm publish --dry-run</code></pre>
+<span class="hljs-comment">#   先彩排：npm publish --dry-run</span></code></pre>
 <blockquote><p>⚠️ <code>prepack</code>（<code>assemble.js</code>）在<strong>维护端</strong>需要 Python（它复用 pip bundle，缺失时会 <code>python setup.py build_py</code> 建一次）。终端用户安装时是纯 Node。</p></blockquote>
 <hr>
 <h2 id="6-源码还原">6. 源码还原<a class="anchor" href="#6-源码还原" aria-label="锚点">#</a></h2>
@@ -106,45 +106,45 @@ npm publish --access public
 <h3 id="6-1-从-pip-发行物还原">6.1 从 pip 发行物还原<a class="anchor" href="#6-1-从-pip-发行物还原" aria-label="锚点">#</a></h3>
 <p>发行布局：</p>
 <ul><li><strong>sdist</strong>（<code>*.tar.gz</code>）：<strong>原始源码布局</strong> —— <code>kernel/Makefile</code>、<code>kernel/src</code>、<code>kernel/boot</code>、<code>platform/khy_platform/_resources/dev-constraints.txt</code> 等，直接对应仓库目录结构。最干净的还原源。</li><li><strong>wheel</strong>（<code>*.whl</code>）：<strong>安装态布局</strong> —— 工作坊在 <code>khy_os/bundled/...</code>，Python 胶水在 <code>khy_platform/</code>。</li></ul>
-<pre><code class="language-bash"># 方式 A：只下载源码分发（sdist），解压即得完整原始工作坊
+<pre><code class="language-bash"><span class="hljs-comment"># 方式 A：只下载源码分发（sdist），解压即得完整原始工作坊</span>
 pip download khy-os --no-deps --no-binary :all: -d /tmp/khy-src
 tar -xzf /tmp/khy-src/khy_os-*.tar.gz -C /tmp/khy-src
-ls /tmp/khy-src/khy_os-*/         # kernel/ services/ platform/ ...
+<span class="hljs-built_in">ls</span> /tmp/khy-src/khy_os-*/         <span class="hljs-comment"># kernel/ services/ platform/ ...</span>
 
-# 方式 B：下载 wheel 并解压（取 bundled 工作坊）
+<span class="hljs-comment"># 方式 B：下载 wheel 并解压（取 bundled 工作坊）</span>
 pip download khy-os --no-deps -d /tmp/khy-whl
 unzip -q /tmp/khy-whl/khy_os-*.whl -d /tmp/khy-whl/x
-ls /tmp/khy-whl/x/khy_os/bundled/   # 同一份工作坊
+<span class="hljs-built_in">ls</span> /tmp/khy-whl/x/khy_os/bundled/   <span class="hljs-comment"># 同一份工作坊</span>
 
-# 方式 C：从已安装环境定位
-python3 -c &quot;import khy_platform; print('glue   :', khy_platform.INSTALL_PATH)&quot;
-python3 -c &quot;import khy_os, os; print('bundle :', os.path.join(os.path.dirname(khy_os.__file__), 'bundled'))&quot;</code></pre>
+<span class="hljs-comment"># 方式 C：从已安装环境定位</span>
+python3 -c <span class="hljs-string">&quot;import khy_platform; print(&#x27;glue   :&#x27;, khy_platform.INSTALL_PATH)&quot;</span>
+python3 -c <span class="hljs-string">&quot;import khy_os, os; print(&#x27;bundle :&#x27;, os.path.join(os.path.dirname(khy_os.__file__), &#x27;bundled&#x27;))&quot;</span></code></pre>
 <h3 id="6-2-从-npm-发行物还原">6.2 从 npm 发行物还原<a class="anchor" href="#6-2-从-npm-发行物还原" aria-label="锚点">#</a></h3>
 <p>发行布局：tarball 根为 <code>package/</code>，工作坊在 <code>package/bundled/...</code>；安装后位于 <code>node_modules/@khy-os/khy-os/bundled/...</code>。</p>
-<pre><code class="language-bash"># 方式 A：直接拉取已发布 tarball 并解压
+<pre><code class="language-bash"><span class="hljs-comment"># 方式 A：直接拉取已发布 tarball 并解压</span>
 npm pack @khy-os/khy-os --pack-destination /tmp/khy-npm
 tar -xzf /tmp/khy-npm/khy-os-*.tgz -C /tmp/khy-npm
-ls /tmp/khy-npm/package/bundled/    # services/backend kernel platform ...
+<span class="hljs-built_in">ls</span> /tmp/khy-npm/package/bundled/    <span class="hljs-comment"># services/backend kernel platform ...</span>
 
-# 方式 B：从已安装环境定位（index.js 在包入口导出绝对路径）
-node -e &quot;const m=require('@khy-os/khy-os'); console.log('install:', m.getInstallPath()); console.log('bundle :', m.getBundleRoot()); console.log('backend:', m.getBackendDir());&quot;</code></pre>
+<span class="hljs-comment"># 方式 B：从已安装环境定位（index.js 在包入口导出绝对路径）</span>
+node -e <span class="hljs-string">&quot;const m=require(&#x27;@khy-os/khy-os&#x27;); console.log(&#x27;install:&#x27;, m.getInstallPath()); console.log(&#x27;bundle :&#x27;, m.getBundleRoot()); console.log(&#x27;backend:&#x27;, m.getBackendDir());&quot;</span></code></pre>
 <h3 id="6-3-还原后重建运行依赖-self-heal">6.3 还原后重建运行依赖（self-heal）<a class="anchor" href="#6-3-还原后重建运行依赖-self-heal" aria-label="锚点">#</a></h3>
 <p>因纯净规则不含 <code>node_modules</code>，还原出来的工作坊<strong>不能直接运行</strong>，需触发自愈拉取运行依赖：</p>
-<pre><code class="language-bash"># pip 渠道：安装期自愈（也可在首次启动时自动触发）
-khy postinstall            # 等价于 khy_platform.run_postinstall()
-khy dev-setup              # 编译期：补 Python dev 工具 + 检测 C/MoonBit 工具链
+<pre><code class="language-bash"><span class="hljs-comment"># pip 渠道：安装期自愈（也可在首次启动时自动触发）</span>
+khy postinstall            <span class="hljs-comment"># 等价于 khy_platform.run_postinstall()</span>
+khy dev-setup              <span class="hljs-comment"># 编译期：补 Python dev 工具 + 检测 C/MoonBit 工具链</span>
 
-# npm 渠道：postinstall 在 `npm install @khy-os/khy-os` 时已自动跑；手工兜底：
+<span class="hljs-comment"># npm 渠道：postinstall 在 `npm install @khy-os/khy-os` 时已自动跑；手工兜底：</span>
 node node_modules/@khy-os/khy-os/bin/khy.js postinstall
 node node_modules/@khy-os/khy-os/bin/khy.js dev-setup</code></pre>
 <p>自愈遵守「永不中断」硬契约：任何依赖拉取失败都会被 catch、打印可复制的手动恢复命令、并返回 0（npm 渠道尤其关键——非 0 的 postinstall 会中断整个 <code>npm install</code>）。</p>
 <hr>
 <h2 id="7-发布后验证">7. 发布后验证<a class="anchor" href="#7-发布后验证" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># pip
+<pre><code class="language-bash"><span class="hljs-comment"># pip</span>
 pip install --upgrade khy-os &amp;&amp; khy --version
 
-# npm（全新目录里装，验证 postinstall 自愈真的跑）
-mkdir -p /tmp/verify &amp;&amp; cd /tmp/verify &amp;&amp; npm init -y &gt;/dev/null
+<span class="hljs-comment"># npm（全新目录里装，验证 postinstall 自愈真的跑）</span>
+<span class="hljs-built_in">mkdir</span> -p /tmp/verify &amp;&amp; <span class="hljs-built_in">cd</span> /tmp/verify &amp;&amp; npm init -y &gt;/dev/null
 npm install @khy-os/khy-os &amp;&amp; npx khy --version</code></pre>
 <p><code>khy --version</code> 应输出刚发布的版本号（即 §2 第三处真源同步后的值）。</p>
 <hr>

@@ -10,6 +10,8 @@ const os = require('os');
 const path = require('path');
 const zlib = require('zlib');
 
+const atomicWriteJson = require('../utils/atomicWriteJson');
+
 const proxyEvents = new EventEmitter();
 
 // Portable-aware app home resolved at load (legacy const semantics preserved).
@@ -230,7 +232,7 @@ function loadConfig() {
 function saveConfig(config) {
   try {
     fs.mkdirSync(KHY_DIR, { recursive: true });
-    fs.writeFileSync(PROXY_CONFIG_PATH, JSON.stringify(sanitizeConfig(config), null, 2));
+    atomicWriteJson(PROXY_CONFIG_PATH, sanitizeConfig(config), { mode: 0o666 });
   } catch {
     /* ignore write failures */
   }

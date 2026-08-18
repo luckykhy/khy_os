@@ -32,9 +32,9 @@
 <table><thead><tr><th>类型</th><th>解析路径</th><th>中转/直连可见性</th></tr></thead><tbody><tr><td>文本 text</td><td>apiKeyPool + providerPresets + gateway pool</td><td>无</td></tr><tr><td>视频 video</td><td><code>KHY_VIDEO_GEN_*</code>（在 provider 注册表之外）+ pool bridge</td><td>无</td></tr><tr><td>向量 vector</td><td><code>EMBED_URL</code> / ollama / gateway <code>/v1/embeddings</code></td><td>无</td></tr><tr><td>角色 role</td><td><code>subAgentModelSelect</code>（复用文本池，<code>KHY_SUBAGENT_MODEL_AUTOSELECT</code>）</td><td>无</td></tr></tbody></table>
 <p>陌生机器上的用户想给不同类型配不同 API（中转站或直连）时，没有任何单一入口能回答：<br>“哪几类模型已就绪，各自是怎么接线的？”本工具就是这个入口。</p>
 <h2 id="用法">用法<a class="anchor" href="#用法" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">node scripts/model-type-providers.js            # 人类可读表格
-node scripts/model-type-providers.js --json     # 机器 JSON（非全就绪 exit 2）
-node scripts/model-type-providers.js --gen-doc  # 重新生成本文件</code></pre>
+<pre><code class="language-bash">node scripts/model-type-providers.js            <span class="hljs-comment"># 人类可读表格</span>
+node scripts/model-type-providers.js --json     <span class="hljs-comment"># 机器 JSON（非全就绪 exit 2）</span>
+node scripts/model-type-providers.js --gen-doc  <span class="hljs-comment"># 重新生成本文件</span></code></pre>
 <h2 id="判定语义-纯叶-scripts-lib-modeltypeproviderplan-js">判定语义（纯叶 <code>scripts/lib/modelTypeProviderPlan.js</code>）<a class="anchor" href="#判定语义-纯叶-scripts-lib-modeltypeproviderplan-js" aria-label="锚点">#</a></h2>
 <ul><li><code>channel</code> 仅由 base URL 主机对比 <code>providerPresets</code> 官方 SSOT 主机名判定：</li></ul>
 <p>loopback → <code>local</code>；主机 ∈ 官方名单 → <code>direct</code>（直连）；其它公网主机 → <code>relay</code>（中转站）。</p>

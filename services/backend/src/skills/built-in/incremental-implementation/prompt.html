@@ -103,19 +103,19 @@ Slice 3: Add offline support and reconnection</code></pre>
 <p>After each increment, the project must build and existing tests must pass. Don't leave the codebase in a broken state between slices.</p>
 <h3 id="rule-3-feature-flags-for-incomplete-features">Rule 3: Feature Flags for Incomplete Features<a class="anchor" href="#rule-3-feature-flags-for-incomplete-features" aria-label="锚点">#</a></h3>
 <p>If a feature isn't ready for users but you need to merge increments:</p>
-<pre><code class="language-typescript">// Feature flag for work-in-progress
-const ENABLE_TASK_SHARING = process.env.FEATURE_TASK_SHARING === 'true';
+<pre><code class="language-typescript"><span class="hljs-comment">// Feature flag for work-in-progress</span>
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">ENABLE_TASK_SHARING</span> = process.<span class="hljs-property">env</span>.<span class="hljs-property">FEATURE_TASK_SHARING</span> === <span class="hljs-string">&#x27;true&#x27;</span>;
 
-if (ENABLE_TASK_SHARING) {
-  // New sharing UI
+<span class="hljs-keyword">if</span> (<span class="hljs-variable constant_">ENABLE_TASK_SHARING</span>) {
+  <span class="hljs-comment">// New sharing UI</span>
 }</code></pre>
 <p>This lets you merge small increments to the main branch without exposing incomplete work.</p>
 <h3 id="rule-4-safe-defaults">Rule 4: Safe Defaults<a class="anchor" href="#rule-4-safe-defaults" aria-label="锚点">#</a></h3>
 <p>New code should default to safe, conservative behavior:</p>
-<pre><code class="language-typescript">// Safe: disabled by default, opt-in
-export function createTask(data: TaskInput, options?: { notify?: boolean }) {
-  const shouldNotify = options?.notify ?? false;
-  // ...
+<pre><code class="language-typescript"><span class="hljs-comment">// Safe: disabled by default, opt-in</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">createTask</span>(<span class="hljs-params"><span class="hljs-attr">data</span>: <span class="hljs-title class_">TaskInput</span>, <span class="hljs-attr">options</span>?: { notify?: <span class="hljs-built_in">boolean</span> }</span>) {
+  <span class="hljs-keyword">const</span> shouldNotify = options?.<span class="hljs-property">notify</span> ?? <span class="hljs-literal">false</span>;
+  <span class="hljs-comment">// ...</span>
 }</code></pre>
 <h3 id="rule-5-rollback-friendly">Rule 5: Rollback-Friendly<a class="anchor" href="#rule-5-rollback-friendly" aria-label="锚点">#</a></h3>
 <p>Each increment should be independently revertable:</p>

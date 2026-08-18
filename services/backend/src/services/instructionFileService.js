@@ -20,6 +20,9 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
+// 生态层规则的声明式真源(纯叶子:表 + 门控 + 作用域过滤,零 IO)。
+// 用在下方 discoverEcosystemInstructionFiles();接入理由见那里的注释与该模块文档。
+const _ecoReg = require('./instructionEcosystemRegistry');
 // External-include detection (aligns CC ClaudeMdExternalIncludesDialog 背后逻辑):
 // flags `@path` imports resolving OUTSIDE the repo/cwd trust boundary so
 // loadInstructions can surface a security warning — display/awareness only, the
@@ -216,6 +219,102 @@ function _appHome() {
   }
 }
 
+// ── 生态指令层(蹭规则生态)────────────────────────────────────────────────
+//
+// 别的 agent 早就在这个仓库里写好了「该怎么干活」的规则文件(AGENTS.md / CLAUDE.md /
+// .cursor/rules / .github/copilot-instructions.md / …),而此前 khy 只读自己的 khy.md ——
+// 连 COMPAT_FILENAMES 里的 CLAUDE.md / AGENTS.md 也只在 getCompatInstructionSummary()
+// 的展示列表里出现,**从未进过系统提示词**。这一层把这些既有资产接进来。
+//
+// 位置在 khy 自己的三层之后 = 最低优先级;三道闸(注入扫描复用同一条路径、独立字符预算、
+// 作用域过滤)见 instructionEcosystemRegistry 的文档。门控关 → sources 为空 → 整段空转,
+// discoverInstructionFiles 的返回值与接入前逐字节相同。(_ecoReg 在文件顶部 import 组里。)
+
+/**
+ * 列出一个目录型 source 里可采纳的文件(按文件名排序,截断到 maxFiles)。
+ * @returns {string[]} 绝对路径
+ */
+function _listEcoDirFiles(src) {
+  try {
+    if (!fs.existsSync(src.path) || !fs.statSync(src.path).isDirectory()) {
+      return [];
+    }
+    return fs
+      .readdirSync(src.path)
+      .filter((f) => src.exts.some((ext) => f.toLowerCase().endsWith(ext)))
+      .sort()
+      .slice(0, src.maxFiles)
+      .map((f) => path.join(src.path, f));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * 发现生态规则文件。纯壳:所有「在哪、要不要收」的判断都在 registry 叶子里。
+ *
+ * @param {string} projectDir 项目根(git-root || cwd)
+ * @param {Set<string>} seen  已收录的 path.resolve 结果(去重,khy 自己的文件优先)
+ * @returns {Array<{path,content,level:'ecosystem',ecosystem,label,kind,truncated,size}>}
+ */
+function discoverEcosystemInstructionFiles(projectDir, seen) {
+  const results = [];
+  let budget = _ecoReg.ECO_MAX_TOTAL_CHARS;
+  try {
+    const sources = _ecoReg.instructionEcosystemSources({
+      homedir: os.homedir(),
+      projectDir,
+      env: process.env,
+    });
+    for (const src of sources) {
+      if (budget <= 0) {
+        break;
+      }
+      const files = src.mode === 'dir' ? _listEcoDirFiles(src) : [src.path];
+      for (const filePath of files) {
+        if (budget <= 0) {
+          break;
+        }
+        const resolved = path.resolve(filePath);
+        if (seen.has(resolved)) {
+          continue;
+        }
+        const entry = readFileSafe(filePath, _ecoReg.ECO_MAX_FILE_CHARS);
+        if (!entry) {
+          continue;
+        }
+        // 带作用域的规则(Cursor alwaysApply/globs、Copilot applyTo、Kiro inclusion)
+        // 只收「全局生效」的那些 —— khy 的提示词没有 per-file 作用域。
+        if (src.scoped && !_ecoReg.evaluateScopedRule(entry.content).accept) {
+          continue;
+        }
+        let content = entry.content;
+        if (content.length > budget) {
+          content = content.slice(0, budget);
+        }
+        if (!content.trim()) {
+          continue;
+        }
+        budget -= content.length;
+        seen.add(resolved);
+        results.push({
+          path: filePath,
+          content,
+          level: 'ecosystem',
+          ecosystem: src.ecosystem,
+          label: src.label,
+          kind: src.kind,
+          truncated: entry.truncated || content.length < entry.content.length,
+          size: entry.size,
+        });
+      }
+    }
+  } catch {
+    // 生态层永远不能拖垮 khy 自己的指令发现
+  }
+  return results;
+}
+
 function discoverInstructionFiles(cwd) {
   cwd = cwd || process.cwd();
   const results = [];
@@ -296,8 +395,14 @@ function discoverInstructionFiles(cwd) {
           cwd
         ),
       });
+      seen.add(cwdResolved);
     }
   }
+
+  // 4. 生态层:别的 agent 已经写好的规则文件(最低优先级,门控默认开;关 → 空数组)。
+  //    刻意**不**对生态文件跑 resolveIncludes():`@path` 导入是 khy 自己指令文件的约定,
+  //    对第三方文件展开它等于替别人的文件拉取任意路径 —— 多一层信任面,不值当。
+  results.push(...discoverEcosystemInstructionFiles(gitRoot || cwd, seen));
 
   return results;
 }
@@ -320,13 +425,19 @@ function loadInstructions(cwd) {
     project: '项目指令',
     rules: '规则指令',
     directory: '目录指令',
+    ecosystem: '生态指令',
   };
 
   const sections = [];
   let totalChars = 0;
 
   for (const file of files) {
-    const label = LEVEL_LABELS[file.level] || file.level;
+    // 生态文件必须**标明出处**:模型看到的是第三方文本,来源要可归因(也让用户一眼看出
+    // 哪条约束不是自己写的)。
+    const label =
+      file.level === 'ecosystem' && file.label
+        ? `${LEVEL_LABELS.ecosystem}(${file.label})`
+        : LEVEL_LABELS[file.level] || file.level;
     const header = `[${label} - ${file.path}]`;
     let content = file.content;
 
@@ -484,11 +595,13 @@ function scanForPromptInjection(text) {
  * @returns {Array<{ path: string, level: string, size: number, truncated: boolean }>}
  */
 function getInstructionSummary(cwd) {
-  return discoverInstructionFiles(cwd).map(({ path: p, level, size, truncated }) => ({
+  return discoverInstructionFiles(cwd).map(({ path: p, level, size, truncated, label }) => ({
     path: p,
     level,
     size,
     truncated,
+    // 生态层带上出处名(如 'Cursor'),让 /memory 能显示这条规则是蹭谁的。
+    ...(label ? { label } : {}),
   }));
 }
 
@@ -671,6 +784,7 @@ module.exports = {
   getCompatInstructionSummary,
   resolveIncludes,
   discoverRuleFiles,
+  discoverEcosystemInstructionFiles,
   scanForPromptInjection,
   FILENAMES,
   AGENT_FILENAMES,

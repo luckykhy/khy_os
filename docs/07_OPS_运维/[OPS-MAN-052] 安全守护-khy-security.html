@@ -37,20 +37,20 @@
 <h2 id="二-权限模式-profile-重点">二、权限模式：<code>profile</code>（重点）<a class="anchor" href="#二-权限模式-profile-重点" aria-label="锚点">#</a></h2>
 <p><code>khy security profile</code> 设置的是 <strong>KHY 执行工具时的授权级别</strong>（不是「威胁画像」）：</p>
 <table><thead><tr><th>模式</th><th>含义</th></tr></thead><tbody><tr><td><code>strict</code></td><td>最严格，几乎所有动作都要确认</td></tr><tr><td><code>normal</code></td><td><strong>默认</strong>，常规确认策略</td></tr><tr><td><code>acceptEdits</code></td><td>自动接受文件编辑类动作</td></tr><tr><td><code>yolo</code></td><td>放开确认；<strong>同时</strong>开启 toolCalling 的危险模式</td></tr></tbody></table>
-<pre><code class="language-bash">khy security profile              # 看当前模式
-khy security profile strict       # 切到最严格
-khy security profile normal       # 切回默认</code></pre>
+<pre><code class="language-bash">khy security profile              <span class="hljs-comment"># 看当前模式</span>
+khy security profile strict       <span class="hljs-comment"># 切到最严格</span>
+khy security profile normal       <span class="hljs-comment"># 切回默认</span></code></pre>
 <blockquote><p>⚠️ <code>yolo</code> 会让 KHY 在不二次确认的情况下执行高风险动作（含 toolCalling 危险模式），仅在你完全清楚后果且环境隔离时使用。</p></blockquote>
 <hr>
 <h2 id="三-诚实边界-monitor-的真实形态">三、诚实边界（<code>monitor</code> 的真实形态）<a class="anchor" href="#三-诚实边界-monitor-的真实形态" aria-label="锚点">#</a></h2>
 <ul><li><strong><code>khy security monitor</code> 不是脱离式守护进程</strong>：它在<strong>当前进程内</strong>用 <code>setInterval</code> 每约 <strong>10 分钟</strong>跑一次扫描（<code>securityGuardService.js:603-630</code>），并且调用了 <code>.unref()</code>——意味着它<strong>不会单独保活</strong>，当前进程退出它就停。要常驻请配合常驻入口（如 <code>khy daemon</code>）运行，不要以为关掉终端它还在跑。</li><li>扫描结果写入 <code>~/.khyquant/security.log</code>（<code>securityGuardService.js:16</code>）。</li><li><code>scan</code> / <code>integrity</code> 的检测是<strong>真实的 OS 探测</strong>，不是桩。</li></ul>
 <hr>
 <h2 id="四-典型用法">四、典型用法<a class="anchor" href="#四-典型用法" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">khy security scan                 # 立即体检一次
-khy security status               # 看总览
-khy security integrity            # 查 KHY 自身完整性
-khy security audit --tool bash --limit 20   # 审计最近 20 条 bash 工具调用
-tail -f ~/.khyquant/security.log  # 跟踪安全日志</code></pre>
+<pre><code class="language-bash">khy security scan                 <span class="hljs-comment"># 立即体检一次</span>
+khy security status               <span class="hljs-comment"># 看总览</span>
+khy security integrity            <span class="hljs-comment"># 查 KHY 自身完整性</span>
+khy security audit --tool bash --<span class="hljs-built_in">limit</span> 20   <span class="hljs-comment"># 审计最近 20 条 bash 工具调用</span>
+<span class="hljs-built_in">tail</span> -f ~/.khyquant/security.log  <span class="hljs-comment"># 跟踪安全日志</span></code></pre>
 <hr>
 <h2 id="五-相关文档">五、相关文档<a class="anchor" href="#五-相关文档" aria-label="锚点">#</a></h2>
 <ul><li>[OPS-MAN-053] 监控与自检（<code>khy monitor</code>）—— 系统健康自检与 AI 请求遥测。</li></ul>

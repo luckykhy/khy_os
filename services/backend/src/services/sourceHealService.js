@@ -195,17 +195,17 @@ function _snapshotDirHasFiles(dir) {
  */
 function _findSnapshotSourceDir(opts = {}) {
   const explicit = opts && (opts.sourceDir || opts.snapshotDir);
-  const candidates = [];
   if (explicit) {
-    candidates.push(path.resolve(explicit));
+    const resolved = path.resolve(explicit);
+    return _snapshotDirHasFiles(resolved) ? resolved : null;
   }
 
   const backendRoot = path.resolve(__dirname, '../..'); // services/backend
-  candidates.push(
+  const candidates = [
     path.join(backendRoot, '_source'), // npm package + standalone backend
     path.join(backendRoot, '..', '..', '_source'), // pip: bundled/services/backend → bundled/_source
     path.join(backendRoot, '..', '_source') // defensive
-  );
+  ];
 
   for (const c of candidates) {
     try {
@@ -761,6 +761,85 @@ function _readSnapshotFingerprint(opts = {}) {
 }
 
 /**
+ * 本机是否**曾经**见过随包快照(节流状态里留过指纹)。
+ *
+ * 这是「开发树(本来就没快照,正常)」与「装机后快照被删/损坏(参照丢失,属故障)」的判据:
+ * _writeHealState 只在拿到指纹后才写,故开发树永远没有这个状态文件。升级链据此决定
+ * 「无快照」到底要不要升级到整树还原,避免在开发树上误触重手段。
+ */
+function _hadSnapshotBefore(opts = {}) {
+  const state = _readHealState(opts);
+  return !!(state && state.fingerprint);
+}
+
+/**
+ * 安装树里(向上任意层)存在 `.git` = 这是开发者的工作树。
+ *
+ * 红线:升级链的 L2 是**重手段**(整树还原 + 覆盖写回),而开发树里的「差异」几乎全是
+ * 正在写的代码,不是损坏;那里的恢复手段是 git,不是 khy。故开发树一律不升级——
+ * 既不跑 restore,也不写 L3 记录(那会把正常的开发状态误报成事故)。
+ */
+function _isDevTree(opts = {}) {
+  try {
+    let dir = path.resolve(opts.installSrcDir || _installSrcDir());
+    for (let i = 0; i < 8; i++) {
+      if (fs.existsSync(path.join(dir, '.git'))) {
+        return true;
+      }
+      const parent = path.dirname(dir);
+      if (parent === dir) {
+        break;
+      }
+      dir = parent;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 自愈失败 → 交给升级链(healEscalationService)。fail-soft 且**不改变**本函数返回值:
+ * 升级是善后,绝不能反过来影响自愈结果或拖垮启动。escalate 是异步的,这里刻意
+ * fire-and-forget(启动路径不等重手段跑完);opts.escalateFn 是注入点(测试/调用方替换)。
+ *
+ * @returns {object|null} 分类结果(供调用方回填 res.escalation,便于 --json 观察)
+ */
+function _maybeEscalate(res, opts = {}, hadSnapshotBefore = false) {
+  try {
+    if (opts.escalate === false) {
+      return null;
+    }
+    // 开发树:交给 git,绝不自动整树还原/覆盖写。
+    if (_isDevTree(opts)) {
+      return null;
+    }
+    const esc = opts.escalateFn || require('./healEscalationService').escalate;
+    const classify = require('./healEscalationService').classifySourceHealFailure;
+    const verdict = classify(res, { hadSnapshotBefore });
+    if (!verdict.failed) {
+      return null;
+    }
+    const p = esc({
+      component: 'sourceHealService',
+      trigger: opts.reason || 'source-heal',
+      failedAttempts: verdict.attempts,
+      context: { installSrcDir: opts.installSrcDir || null, healReason: (res && res.reason) || null },
+      env: _env(opts),
+      cwd: opts.cwd,
+    });
+    if (p && typeof p.catch === 'function') {
+      p.catch(() => {
+        /* 升级链自身失败不上抛 */
+      });
+    }
+    return verdict;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * 启动/触发点调用的**节流**自愈体检。健康且近期已查 → 极廉价短路(仅读 header + 状态文件)。
  * 仅当指纹变化或超时间窗时才真正 healSource。全程 fail-soft——绝不能拖垮启动/更新流程。
  *
@@ -786,8 +865,20 @@ function runStartupHeal(opts = {}) {
     const now = typeof opts.now === 'number' ? opts.now : Date.now();
     const fingerprint = _readSnapshotFingerprint(opts);
     if (!fingerprint) {
-      // dev 树无随包快照 → 无参照,静默跳过(交给 git)。
-      return { ok: true, reason: 'no-snapshot', skipped: true, healed: 0 };
+      // 从来没有过快照 → dev 树,无参照,静默跳过(交给 git)。
+      // 但**曾经**有过(状态文件里留过指纹)却不见了 → 随包快照被删/损坏,自愈从此失去参照:
+      // 这正是「自愈失败」的一种,升级到 L2(khy restore 整树还原)而不是静默返回。
+      const had = _hadSnapshotBefore(opts);
+      const escalation = had
+        ? _maybeEscalate({ ok: true, reason: 'no-snapshot' }, opts, true)
+        : null;
+      return {
+        ok: true,
+        reason: 'no-snapshot',
+        skipped: true,
+        healed: 0,
+        ...(escalation ? { escalation } : {}),
+      };
     }
 
     // 节流判定:非 force + 指纹未变 + 距上次体检未超窗 → 跳过。
@@ -870,6 +961,15 @@ function runStartupHeal(opts = {}) {
       /* fail-soft:清理错误绝不阻断 */
     }
 
+    // 自愈没修成(参照丢了 / 跑挂了 / 修了没落地)→ 升级链接手(L2:khy restore;
+    // 再失败 → L3 写 .khy/heal_escalation.json + 终端告警)。判据见
+    // healEscalationService.classifySourceHealFailure:护栏主动拒写(版本红线/过量红线)
+    // 与开发树无快照都**不**算失败,不会被误升级。
+    const escalation = _maybeEscalate(res, opts, true);
+    if (escalation) {
+      res.escalation = escalation;
+    }
+
     return { ...res, skipped: false };
   } catch (err) {
     return {
@@ -899,5 +999,8 @@ module.exports = {
   _manifestCachePath,
   _healStatePath,
   _readSnapshotFingerprint,
+  _hadSnapshotBefore,
+  _isDevTree,
+  _maybeEscalate,
   _resolveIntervalMs,
 };

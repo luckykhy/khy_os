@@ -34,6 +34,65 @@ const { printInfo, printWarn, printError } = require('../formatters');
  * @param {object} options       parseInput 解析的 --flags
  */
 async function handleHeal(subCommand, args = [], options = {}) {
+  // 子命令: log — 查询自愈审计日志
+  if (subCommand === 'log') {
+    let healAuditSvc;
+    try {
+      healAuditSvc = require('../../services/healAuditService');
+    } catch (err) {
+      printError(`自愈审计服务加载失败: ${String((err && err.message) || err)}`);
+      return true;
+    }
+
+    const last = parseInt(String(options.last || '20'), 10) || 20;
+    const component = options.component || null;
+    const filter = { last };
+    if (component) filter.component = component;
+
+    let events;
+    try {
+      events = healAuditSvc.queryHealEvents(filter);
+    } catch (err) {
+      printError(`查询自愈日志失败: ${String((err && err.message) || err)}`);
+      return true;
+    }
+
+    if (!events || events.length === 0) {
+      printInfo('暂无自愈事件记录。');
+      return true;
+    }
+
+    // 表格输出: 时间 | 组件 | 动作 | 目标 | 结果
+    console.log(
+      chalk.bold('\n  时间                ') +
+        chalk.bold('组件          ') +
+        chalk.bold('动作                    ') +
+        chalk.bold('目标                          ') +
+        chalk.bold('结果')
+    );
+    console.log(chalk.dim('  ' + '─'.repeat(100)));
+
+    for (const evt of events) {
+      const ts = (evt.timestamp || '').slice(0, 19).replace('T', ' ');
+      const comp = (evt.component || '').padEnd(12).slice(0, 12);
+      const action = (evt.action || '').padEnd(22).slice(0, 22);
+      const target = (evt.target || '').padEnd(28).slice(0, 28);
+      const result = evt.result || '';
+
+      const resultColored =
+        result === 'success'
+          ? chalk.green(result)
+          : result === 'failure'
+          ? chalk.red(result)
+          : chalk.yellow(result);
+
+      console.log(`  ${ts}  ${comp}  ${action}  ${target}  ${resultColored}`);
+    }
+
+    console.log(chalk.dim(`\n  共 ${events.length} 条记录\n`));
+    return true;
+  }
+
   const env = process.env;
   let svc;
   try {
@@ -61,6 +120,60 @@ async function handleHeal(subCommand, args = [], options = {}) {
   }
 
   const reason = (res && res.reason) || 'unknown';
+
+  // 上次自愈已交人(L3)且尚未清理 → 先把它摆到台面上,免得用户反复跑 heal 却不知道
+  // 早就有一份「机器修不了,请人工处理」的记录躺在 .khy/ 里。
+  try {
+    const escSvc = require('../../services/healEscalationService');
+    const pending = escSvc.readPendingEscalation({});
+    if (pending && pending.component) {
+      printWarn(
+        `存在待处理的自愈升级记录（${pending.timestamp || '?'} · ${pending.component} · ` +
+          `严重级 ${pending.severity || '?'}）：建议执行 ${pending.suggestedAction || 'khy doctor'}；` +
+          `详情 ${escSvc.getEscalationFilePath({})}`
+      );
+    }
+  } catch {
+    /* 升级记录读不到不影响本命令 */
+  }
+
+  // 自愈失败 → 升级链(仅 --apply 路径:默认 dry-run 的红线是「绝不写盘」,
+  // 自然也不能替用户触发 khy restore 这种更重的手段)。开发树同样不升级:
+  // 那里的「差异」是正在写的代码,恢复手段是 git。
+  if (apply && !svc._isDevTree({})) {
+    try {
+      const escSvc = require('../../services/healEscalationService');
+      const verdict = escSvc.classifySourceHealFailure(res, {
+        hadSnapshotBefore: svc._hadSnapshotBefore({}),
+      });
+      if (verdict.failed) {
+        printWarn(`本机自愈(L1)未能修复：${verdict.reason}，正在升级到更重的修复手段…`);
+        const out = await escSvc.escalate({
+          component: 'sourceHealService',
+          trigger: 'cli-heal',
+          failedAttempts: verdict.attempts,
+          force: force, // 人工显式 --force 时绕过冷却窗
+          context: { healReason: reason },
+          env,
+        });
+        if (out.level === 'L2' && out.reason === 'l2-ok') {
+          printInfo(chalk.green(`✓ 已升级到 L2（${out.action}）并修复成功。`));
+          return true;
+        }
+        if (out.level === 'L3') {
+          // L3 的终端告警已由升级链打印(含具体故障与建议),这里不重复刷屏。
+          return true;
+        }
+        if (out.reason === 'cooldown') {
+          printInfo('升级冷却窗内（默认 24h）已升级过，本次不重复执行；如需强制请加 --force。');
+        } else if (out.reason === 'gate-off') {
+          printWarn('升级链已被 KHY_HEAL_ESCALATION 禁用，失败后无后续动作。');
+        }
+      }
+    } catch (err) {
+      printWarn(`自愈升级链执行异常（不影响本次体检结果）: ${String((err && err.message) || err)}`);
+    }
+  }
 
   // 门控关。
   if (reason === 'gate-off') {

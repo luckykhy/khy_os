@@ -55,6 +55,7 @@ SDIST_FILE_INCLUDES = _ordered_unique([
     "platform/khy_platform/_resources/dev-constraints.txt",
     "platform/khy_platform/_resources/__init__.py",
     "platform/khy_platform/_resources/tray-icon.png",
+    "platform/khy_platform/bundled/runtime/khy/bundle.mjs",
     "package-lock.json",
     "apps/ai-frontend/package-lock.json",
     "software/khyquant/frontend/package-lock.json",
@@ -70,13 +71,17 @@ SDIST_PRUNE_DIRS = _ordered_unique([
     "extensions/khy-trae-bridge/node_modules",
     "services/backend/node_modules",
     "services/backend/vendor",
+    # Historical prepack output. Source snapshots are immutable Release payloads
+    # and must never return to either pip artifact.
+    "services/backend/_source",
     # ai-backend/node_modules is a dev symlink -> ../backend/node_modules;
     # without this prune, recursive-include would follow it and drag the entire
     # backend node_modules tree into the sdist.
     "services/ai-backend/node_modules",
-    # khyosMarkdown muya build harness deps — never shipped; the committed
-    # tools/khyos-markdown/vendor/ bundle is the runtime artifact, not this.
+    # khyosMarkdown's bridge, HTML shell, and OS integration ship in the sdist;
+    # the 10.5 MB WYSIWYG vendor bundle is an immutable first-use payload.
     "tools/khyos-markdown/muya-embed/node_modules",
+    "tools/khyos-markdown/vendor",
     "apps/ai-frontend/node_modules",
     "services/backend/models",
     "services/backend/logs",
@@ -93,9 +98,42 @@ SDIST_PRUNE_DIRS = _ordered_unique([
     "software/khyquant/ml/models",
     "software/khyquant/ml/data",
     "software/khyquant/khy_quant/bundled",
-    "platform/khy_os/bundled",
     ".tmp",
     "dist",
+    # ``prune dist`` above only matches the REPOSITORY-ROOT dist/. Nested frontend
+    # build outputs are gitignored (apps/ai-frontend/.gitignore:11, .gitignore:9)
+    # with zero git-tracked files, but MANIFEST.in walks the WORKING TREE, so
+    # ``recursive-include apps/ai-frontend *`` drags a local ``npm run build``
+    # result into the sdist. That leaked ~24 MB, including a THIRD byte-identical
+    # copy of the muya bundle (dist/vendor/khyos-muya.{js,css}, 10.52 MB) on top
+    # of the SSOT and the public/ mirror below. Both trees regenerate from source
+    # via each frontend's build script, so they are pure derivatives.
+    "apps/ai-frontend/dist",
+    "software/khyquant/frontend/dist",
+    # Build-time mirror of tools/khyos-markdown/vendor/ produced by
+    # apps/ai-frontend/scripts/sync-md-vendor.mjs (srcDir -> public/vendor).
+    # Verified byte-identical to the SSOT, so shipping it doubles 10.52 MB for
+    # nothing; the sync script recreates it during the frontend build.
+    "apps/ai-frontend/public/vendor",
+    # Local reference material: 23.77 MB across 40 files with ZERO runtime
+    # consumers (only .gitignore:107, .dockerignore:48, two generated nav cards
+    # in docs/index.html, and the generated docs/_assets/nav-data.js reference
+    # it). Already gitignored, so it is never part of a clean checkout. Its mass
+    # is a nested .git/objects/pack (11.82 MB / 25 files) plus a single 11.59 MB
+    # 测试视频.mp4 — neither is reachable from any code path.
+    "docs/_ref",
+    # Test trees. Directory-level prunes cover fixtures, helpers and snapshots
+    # that GLOBAL_EXCLUDES' *.test.* globs cannot match by basename. Tests are a
+    # development artifact: the sdist exists to rebuild the wheel, and the wheel
+    # is a single esbuild bundle that never reads them.
+    "services/backend/tests",
+    "services/backend/test",
+    "scripts/tests",
+    "services/ai-backend/test",
+    "software/khyquant/tests",
+    "platform/packages/shared/tests",
+    "tools/khyos-markdown/test",
+    "apps/ai-frontend/test",
     "kernel/build",
     "kernel/iso/output",
     "platform/packages/moonbit-plugin-sdk/node_modules",
@@ -153,18 +191,37 @@ GLOBAL_EXCLUDES = _ordered_unique([
     "*.h5",
     "*.pkl",
     "*.pyc",
+    # Test files scattered outside the pruned test trees (e.g. the nested
+    # src/**/__tests__/ directories, which sit at arbitrary depth and therefore
+    # cannot be reached by a path-specific ``prune``). Basename globs catch all
+    # 2164 of them (12.90 MB) wherever they live. Same rationale as the test-tree
+    # prunes: the wheel is a single esbuild bundle that never reads a test file.
+    # *.spec.* matches nothing in-tree today and is defense-in-depth against a
+    # future convention change.
+    "*.test.js",
+    "*.test.cjs",
+    "*.test.mjs",
+    "*.test.jsx",
+    "*.spec.js",
+    "*.spec.cjs",
+    "*.spec.mjs",
+    "*.spec.jsx",
+    # Video assets: no rule covered these before, so a single 11.59 MB
+    # 测试视频.mp4 under docs/_ref/ shipped in every sdist. The docs/_ref prune
+    # removes that specific file; these globs keep any future stray recording out
+    # regardless of where it lands. No runtime code path reads video.
+    "*.mp4",
+    "*.mov",
+    "*.webm",
     # Security defense-in-depth for the sdist: never global-include private
     # keys / certs / stray rar archives. Zero such files exist in-tree today.
     "*.key",
     "*.pem",
     "*.rar",
-    # Environment files must NEVER travel in the source distribution. The broad
-    # ``recursive-include services/backend *`` follows even *untracked* files, so a
-    # stray ``.env.broken-<timestamp>`` backup (holding a real JWT_SECRET) once
-    # leaked into the sdist while the narrow exact ``.env`` exclude below missed it.
-    # ``.env.*`` prunes every suffixed variant (.env.broken-*, .env.ml-config,
-    # .env.example, .env.local) anywhere in the tree; the exact ``.env`` stays in
-    # SDIST_EXCLUDES. Users configure via real env vars / docs, never a shipped file.
+    # Environment files must NEVER travel in the source distribution. Broad
+    # recursive includes can pick them up at any depth, so exclude both the exact
+    # basename and every suffixed variant globally.
+    ".env",
     ".env.*",
 ])
 
@@ -189,9 +246,8 @@ BASE_COPY_PAYLOADS = [
     # __pycache__/*.pyc/node_modules are stripped by COPY_EXCLUDE_PATTERNS; the
     # tree carries no data/models/node_modules so no source is at risk.
     ("scripts", "scripts"),
-    # khyosMarkdown (muya WYSIWYG editor + OS "Open With" registration). Ships the
-    # committed self-contained vendor/ bundle; muya-embed/node_modules is pruned by
-    # COPY_EXCLUDE_PATTERNS ("node_modules"), so only sources + vendor/ travel.
+    # khyosMarkdown shell + bridge + OS registration. The vendor/ subtree is
+    # excluded by SDIST_PRUNE_DIRS and provisioned from the immutable Release.
     ("tools/khyos-markdown", "tools/khyos-markdown"),
 ]
 
@@ -201,8 +257,11 @@ ROOT_LOCKFILES = [
 ]
 
 PACKAGE_RESOURCE_INCLUDES = {
-    "khy_os": ["bundled/**/*"],
-    "khy_platform": ["_resources/dev-constraints.txt", "_resources/tray-icon.png"],
+    "khy_platform": [
+        "_resources/dev-constraints.txt",
+        "_resources/tray-icon.png",
+        "bundled/runtime/khy/bundle.mjs",
+    ],
 }
 
 # Generic basename ignores for ``shutil.ignore_patterns``. Keep this list free
@@ -335,10 +394,8 @@ AUDIT_FORBIDDEN_FILE_GLOBS = _ordered_unique([
     "*.dylib",
     "*.gguf",
     "*.safetensors",
-    # Stray archives must never land in the shipped artifacts. *.enc / *.tar.gz
-    # are EXEMPTED under _source/ (see AUDIT_FORBIDDEN_FILE_EXEMPT_DIRS): the
-    # intentional encrypted source snapshot lives at
-    # _source/khy-os-source.tar.gz.enc and is the carrier for `khy restore`.
+    # Stray archives and encrypted payloads must never land in install artifacts.
+    # First-use payloads live on the immutable GitHub Release instead.
     # *.zip is intentionally NOT forbidden — services/ai-backend ships a legit
     # test fixture (test/fixtures/coze/sample-linear.zip).
     "*.rar",
@@ -353,17 +410,9 @@ AUDIT_FORBIDDEN_FILE_GLOBS = _ordered_unique([
     ".env.*",
 ])
 
-# Directories whose contents are exempt from AUDIT_FORBIDDEN_FILE_GLOBS. The
-# encrypted source snapshot ships intentionally under _source/
-# (khy-os-source.tar.gz.enc + snapshot.json + RESTORE_WINDOWS.md), so the
-# *.enc / *.tar.gz archive globs must not flag it. _source/ is audited by
-# construction — makeSourceSnapshot.js is its only writer.
-#
-# HOW-TO-EXTEND: add a directory basename here ONLY if its entire contents are
-# an intentional, audited-by-construction payload. Keep this list tiny.
-AUDIT_FORBIDDEN_FILE_EXEMPT_DIRS = _ordered_unique([
-    "_source",
-])
+# Directory-wide audit exemptions are intentionally empty. On-demand payloads
+# live outside pip artifacts, so an encrypted/archive hit is always actionable.
+AUDIT_FORBIDDEN_FILE_EXEMPT_DIRS = _ordered_unique([])
 
 # Metadata cross-package contamination rules (root cause of the "1.8.0" version
 # confusion): khy-os must never declare a runtime/extra dependency on the
@@ -417,30 +466,15 @@ REQUIRED_SDIST_PATHS = _ordered_unique([
     "services/ai-backend/src/middleware/auth.js",
     "apps/ai-frontend/src/main.js",
     "software/khyquant/frontend/src/main.js",
+    "platform/khy_platform/bundled/runtime/khy/bundle.mjs",
 ])
 
 REQUIRED_WHEEL_PATHS = _ordered_unique([
-    "khy_os/bundled/kernel/Makefile",
-    "khy_os/bundled/kernel/src",
-    "khy_os/bundled/kernel/boot",
-    "khy_os/bundled/kernel/iso/boot/grub/grub.cfg",
-    "khy_os/bundled/kernel/iso/boot/limine/limine.conf",
-    "khy_os/bundled/kernel/vendor/moonbit/moonbit_gen.c",
-    "khy_os/bundled/kernel/vendor/moonbit/runtime.c",
-    "khy_os/bundled/kernel/vendor/moonbit/include/moonbit.h",
+    "khy_platform/__init__.py",
+    "khy_platform/cli.py",
     "khy_platform/_resources/dev-constraints.txt",
-    "khy_platform/_resources/__init__.py",
-    "khy_os/bundled/scripts/lib/leafContractGuard.js",
-    "khy_os/bundled/scripts/alpine",
-    # Launch floor (see REQUIRED_SDIST_PATHS): pip cli.py:2304 execs bin/khy.js;
-    # missing -> fatal exit. Pin it on pip's own wheel audit, matching npm.
-    "khy_os/bundled/services/backend/bin/khy.js",
-    "khy_os/bundled/services/backend/package.json",
-    "khy_os/bundled/services/backend/server.js",
-    "khy_os/bundled/services/backend/src/models/index.js",
-    "khy_os/bundled/services/ai-backend/src/middleware/auth.js",
-    "khy_os/bundled/apps/ai-frontend/src/main.js",
-    "khy_os/bundled/software/khyquant/frontend/src/main.js",
+    "khy_platform/_resources/tray-icon.png",
+    "khy_platform/bundled/runtime/khy/bundle.mjs",
 ])
 
 

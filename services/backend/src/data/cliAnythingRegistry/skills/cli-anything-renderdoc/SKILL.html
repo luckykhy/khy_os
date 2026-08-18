@@ -37,42 +37,42 @@
 <ul><li><strong>Capture inspection</strong>: metadata, sections, thumbnails, format conversion</li><li><strong>Action tree</strong>: list/search/filter draw calls, clears, dispatches, markers</li><li><strong>Texture operations</strong>: list, inspect, export (PNG/JPG/DDS/HDR/EXR), pixel picking</li><li><strong>Pipeline state</strong>: full shader/RT/viewport state at any event</li><li><strong>Shader analysis</strong>: export shader in human-readable form (HLSL/GLSL/disasm), constant buffer readback</li><li><strong>Resource inspection</strong>: buffer/texture enumeration, raw data reading</li><li><strong>Mesh data</strong>: vertex shader input/output decoding</li><li><strong>GPU counters</strong>: enumerate and fetch hardware performance counters</li></ul>
 <h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
 <h3 id="capture">capture<a class="anchor" href="#capture" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-renderdoc -c frame.rdc capture info          # Metadata + sections
-cli-anything-renderdoc -c frame.rdc capture thumb -o t.png # Extract thumbnail
+<pre><code class="language-bash">cli-anything-renderdoc -c frame.rdc capture info          <span class="hljs-comment"># Metadata + sections</span>
+cli-anything-renderdoc -c frame.rdc capture thumb -o t.png <span class="hljs-comment"># Extract thumbnail</span>
 cli-anything-renderdoc -c frame.rdc capture convert -o out.rdc --format rdc</code></pre>
 <h3 id="actions">actions<a class="anchor" href="#actions" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-renderdoc -c frame.rdc actions list           # All actions
-cli-anything-renderdoc -c frame.rdc actions list --draws-only  # Draw calls only
-cli-anything-renderdoc -c frame.rdc actions summary        # Counts by type
-cli-anything-renderdoc -c frame.rdc actions find &quot;Shadow&quot;  # Search by name
-cli-anything-renderdoc -c frame.rdc actions get 42         # Single action</code></pre>
+<pre><code class="language-bash">cli-anything-renderdoc -c frame.rdc actions list           <span class="hljs-comment"># All actions</span>
+cli-anything-renderdoc -c frame.rdc actions list --draws-only  <span class="hljs-comment"># Draw calls only</span>
+cli-anything-renderdoc -c frame.rdc actions summary        <span class="hljs-comment"># Counts by type</span>
+cli-anything-renderdoc -c frame.rdc actions find <span class="hljs-string">&quot;Shadow&quot;</span>  <span class="hljs-comment"># Search by name</span>
+cli-anything-renderdoc -c frame.rdc actions get 42         <span class="hljs-comment"># Single action</span></code></pre>
 <h3 id="textures">textures<a class="anchor" href="#textures" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-renderdoc -c frame.rdc textures list
-cli-anything-renderdoc -c frame.rdc textures get &lt;id&gt;
-cli-anything-renderdoc -c frame.rdc textures save &lt;id&gt; -o out.png --format png
+cli-anything-renderdoc -c frame.rdc textures get &lt;<span class="hljs-built_in">id</span>&gt;
+cli-anything-renderdoc -c frame.rdc textures save &lt;<span class="hljs-built_in">id</span>&gt; -o out.png --format png
 cli-anything-renderdoc -c frame.rdc textures save-outputs 42 -o ./renders/
-cli-anything-renderdoc -c frame.rdc textures pick &lt;id&gt; 100 200</code></pre>
+cli-anything-renderdoc -c frame.rdc textures pick &lt;<span class="hljs-built_in">id</span>&gt; 100 200</code></pre>
 <h3 id="pipeline">pipeline<a class="anchor" href="#pipeline" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-renderdoc -c frame.rdc pipeline state 42
 
-# Export shader in human-readable form
-# Text shaders (GLSL/HLSL) → saved directly
-# Binary shaders (DXBC/SPIR-V) → embedded source (HLSL/GLSL) or disassembly
+<span class="hljs-comment"># Export shader in human-readable form</span>
+<span class="hljs-comment"># Text shaders (GLSL/HLSL) → saved directly</span>
+<span class="hljs-comment"># Binary shaders (DXBC/SPIR-V) → embedded source (HLSL/GLSL) or disassembly</span>
 cli-anything-renderdoc -c frame.rdc pipeline shader-export 42 --stage Fragment
 cli-anything-renderdoc -c frame.rdc pipeline shader-export 42 --stage Vertex -o ./shaders/
 
 cli-anything-renderdoc -c frame.rdc pipeline cbuffer 42 --stage Vertex --index 0
 
-# Compare pipeline state between two events
-# Default output: same directory as the capture file  ;  use -o to override
+<span class="hljs-comment"># Compare pipeline state between two events</span>
+<span class="hljs-comment"># Default output: same directory as the capture file  ;  use -o to override</span>
 cli-anything-renderdoc -c a.rdc pipeline diff 100 200 -b b.rdc
-cli-anything-renderdoc -c frame.rdc pipeline diff 100 200              # same capture
+cli-anything-renderdoc -c frame.rdc pipeline diff 100 200              <span class="hljs-comment"># same capture</span>
 cli-anything-renderdoc -c a.rdc pipeline diff 100 200 -b b.rdc -o result.json
 cli-anything-renderdoc -c a.rdc pipeline diff 100 200 -b b.rdc --no-compact</code></pre>
 <h3 id="resources">resources<a class="anchor" href="#resources" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-renderdoc -c frame.rdc resources list
 cli-anything-renderdoc -c frame.rdc resources buffers
-cli-anything-renderdoc -c frame.rdc resources read-buffer &lt;id&gt; --format float32</code></pre>
+cli-anything-renderdoc -c frame.rdc resources read-buffer &lt;<span class="hljs-built_in">id</span>&gt; --format float32</code></pre>
 <h3 id="mesh">mesh<a class="anchor" href="#mesh" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-renderdoc -c frame.rdc mesh inputs 42 --max-vertices 10
 cli-anything-renderdoc -c frame.rdc mesh outputs 42</code></pre>
@@ -81,17 +81,17 @@ cli-anything-renderdoc -c frame.rdc mesh outputs 42</code></pre>
 cli-anything-renderdoc -c frame.rdc counters fetch --ids 1,2,3</code></pre>
 <h2 id="preview-bundles">Preview Bundles<a class="anchor" href="#preview-bundles" aria-label="锚点">#</a></h2>
 <p>RenderDoc preview support is for truthful capture inspection rather than live<br>creative preview.</p>
-<pre><code class="language-bash"># List preview recipes
+<pre><code class="language-bash"><span class="hljs-comment"># List preview recipes</span>
 cli-anything-renderdoc -c frame.rdc --json preview recipes
 
-# Capture a preview bundle for the active capture or a specific event
+<span class="hljs-comment"># Capture a preview bundle for the active capture or a specific event</span>
 cli-anything-renderdoc -c frame.rdc --json preview capture --recipe quick --event-id 42
 
-# Capture a diff preview bundle for two events or captures
+<span class="hljs-comment"># Capture a diff preview bundle for two events or captures</span>
 cli-anything-renderdoc -c frame.rdc --json preview diff 100 200
 cli-anything-renderdoc -c a.rdc --json preview diff 100 200 --capture-b b.rdc
 
-# Return the latest existing bundle for the capture
+<span class="hljs-comment"># Return the latest existing bundle for the capture</span>
 cli-anything-renderdoc -c frame.rdc --json preview latest --recipe quick</code></pre>
 <p>Typical preview bundle contents:</p>
 <ul><li>capture thumbnail</li><li>output-target images</li><li><code>pipeline_state.json</code></li><li><code>action_summary.json</code></li></ul>

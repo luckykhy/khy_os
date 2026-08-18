@@ -144,15 +144,20 @@ test('CRITICAL_PACKAGES 非空、无重复', () => {
 // ── 反漂移护栏：CRITICAL_PACKAGES 每项必须是 backend 真实运行时依赖 ───────────
 // 若 package.json 改了依赖名/删了依赖，这里会红，逼维护者同步 CRITICAL_PACKAGES，
 // 避免自检去 stat 一个根本不该存在的包（永远误报缺失）。
-test('反漂移：每个 CRITICAL_PACKAGES 都在 services/backend package.json dependencies 里', () => {
-  const pkgFile = path.resolve(__dirname, '..', '..', 'services', 'backend', 'package.json');
-  const pkg = JSON.parse(fs.readFileSync(pkgFile, 'utf8'));
-  const deps = pkg.dependencies || {};
+test('反漂移：每个 CRITICAL_PACKAGES 都由 backend 或 @khy/shared 声明', () => {
+  const manifests = [
+    path.resolve(__dirname, '..', '..', 'services', 'backend', 'package.json'),
+    path.resolve(__dirname, '..', '..', 'platform', 'packages', 'shared', 'package.json'),
+  ].map(file => JSON.parse(fs.readFileSync(file, 'utf8')));
+  const deps = Object.assign({}, ...manifests.map(pkg => ({
+    ...(pkg.dependencies || {}),
+    ...(pkg.optionalDependencies || {}),
+  })));
   for (const p of CRITICAL_PACKAGES) {
     assert.ok(
       Object.prototype.hasOwnProperty.call(deps, p),
-      `漂移：CRITICAL_PACKAGES 的 "${p}" 不在 services/backend package.json 的 dependencies 中。` +
-        `依赖若已改名/移除，请同步更新 scripts/lib/hydrationHealth.js 的 CRITICAL_PACKAGES。`
+      `漂移：CRITICAL_PACKAGES 的 "${p}" 不在 backend 或 @khy/shared 的运行时依赖中。` +
+        `依赖若已改名/移除，请同步更新 services/backend/src/services/restore/hydrationHealth.js。`
     );
   }
 });

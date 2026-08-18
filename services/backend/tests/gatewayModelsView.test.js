@@ -28,6 +28,14 @@ let origLog;
 
 beforeEach(() => {
   jest.resetModules();
+  // The legacy renderer only needs these gateway reads. Keep this view test
+  // independent of the real singleton's background model refresh lifecycle.
+  jest.doMock('../src/services/gateway/aiGateway', () => ({
+    isInitialized: jest.fn(() => true),
+    init: jest.fn(async () => {}),
+    getStatus: jest.fn(() => []),
+    listModels: jest.fn(async () => []),
+  }));
   gateway = require('../src/cli/handlers/gateway');
   logs = [];
   origLog = console.log;

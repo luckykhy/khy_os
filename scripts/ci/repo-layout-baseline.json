@@ -7,11 +7,11 @@
     "unresolved-require": "深层相对 require 指向磁盘上不存在的路径的处数 —— 每一处都是潜伏崩溃",
     "docs-index-complete": "阶段目录里没有出现在主索引 docs/00_INDEX_文档索引.md 的文档份数（CP-3 漏链）"
   },
-  "updated": "2026-08-15",
+  "updated": "2026-08-17",
   "counts": {
-    "dangling-task": 119,
+    "dangling-task": 115,
     "cross-layer-require": 43,
     "unresolved-require": 24,
-    "docs-index-complete": 102
+    "docs-index-complete": 0
   }
 }

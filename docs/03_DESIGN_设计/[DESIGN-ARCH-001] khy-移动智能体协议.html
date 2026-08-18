@@ -54,56 +54,56 @@
 <ul><li>将疑似密钥的值（<code>password</code>、<code>token</code>、<code>secret</code>、私钥）替换为掩码形式。</li><li>对于代码变更，仅发送 diff 摘录。</li><li>对于日志，仅发送末尾摘要（建议最多：最后 10 行）。</li></ul>
 <h2 id="7-最小示例">7. 最小示例<a class="anchor" href="#7-最小示例" aria-label="锚点">#</a></h2>
 <h3 id="7-1-approval-ticket-流式事件">7.1 <code>approval_ticket</code> 流式事件<a class="anchor" href="#7-1-approval-ticket-流式事件" aria-label="锚点">#</a></h3>
-<pre><code class="language-json">{
-  &quot;version&quot;: &quot;1.0&quot;,
-  &quot;event_id&quot;: &quot;ev_6jk4m9p2r1&quot;,
-  &quot;trace_id&quot;: &quot;tr_20260516_6e9a3f21&quot;,
-  &quot;sequence&quot;: 25,
-  &quot;ts&quot;: &quot;2026-05-16T10:31:12Z&quot;,
-  &quot;stream&quot;: &quot;ops&quot;,
-  &quot;kind&quot;: &quot;approval_ticket&quot;,
-  &quot;severity&quot;: &quot;warn&quot;,
-  &quot;title&quot;: &quot;High-risk operation approval&quot;,
-  &quot;payload&quot;: {
-    &quot;ticket_id&quot;: &quot;ap_h8k2m9q1v4&quot;,
-    &quot;risk_level&quot;: &quot;high&quot;,
-    &quot;requested_action&quot;: &quot;Kill high-memory process&quot;,
-    &quot;target&quot;: &quot;chromium-render (PID 892)&quot;,
-    &quot;reason&quot;: &quot;Memory usage remains above threshold for 120s.&quot;,
-    &quot;impact_summary&quot;: &quot;Process termination may lose unsaved renderer state.&quot;,
-    &quot;command_preview&quot;: [&quot;kill -9 892&quot;],
-    &quot;expires_at&quot;: &quot;2026-05-16T10:35:00Z&quot;,
-    &quot;choices&quot;: [&quot;approve&quot;, &quot;reject&quot;, &quot;edit_then_approve&quot;]
-  },
-  &quot;redaction_applied&quot;: true
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;version&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1.0&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;event_id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ev_6jk4m9p2r1&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;trace_id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;tr_20260516_6e9a3f21&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;sequence&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">25</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;ts&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-05-16T10:31:12Z&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;stream&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ops&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;kind&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;approval_ticket&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;severity&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;warn&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;title&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;High-risk operation approval&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;payload&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;ticket_id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ap_h8k2m9q1v4&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;risk_level&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;high&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;requested_action&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Kill high-memory process&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;target&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;chromium-render (PID 892)&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;reason&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Memory usage remains above threshold for 120s.&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;impact_summary&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Process termination may lose unsaved renderer state.&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;command_preview&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;kill -9 892&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;expires_at&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-05-16T10:35:00Z&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;choices&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;approve&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;reject&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;edit_then_approve&quot;</span><span class="hljs-punctuation">]</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;redaction_applied&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span>
+<span class="hljs-punctuation">}</span></code></pre>
 <h3 id="7-2-handover-snapshot-流式事件">7.2 <code>handover_snapshot</code> 流式事件<a class="anchor" href="#7-2-handover-snapshot-流式事件" aria-label="锚点">#</a></h3>
-<pre><code class="language-json">{
-  &quot;version&quot;: &quot;1.0&quot;,
-  &quot;event_id&quot;: &quot;ev_91dzk2q4m6&quot;,
-  &quot;trace_id&quot;: &quot;tr_20260516_6e9a3f21&quot;,
-  &quot;sequence&quot;: 42,
-  &quot;ts&quot;: &quot;2026-05-16T11:00:00Z&quot;,
-  &quot;stream&quot;: &quot;sync&quot;,
-  &quot;kind&quot;: &quot;handover_snapshot&quot;,
-  &quot;severity&quot;: &quot;info&quot;,
-  &quot;title&quot;: &quot;Session handover snapshot&quot;,
-  &quot;payload&quot;: {
-    &quot;recent_actions&quot;: [
-      &quot;Killed stuck python training process (PID 882).&quot;,
-      &quot;Switched model to claude-3.5-sonnet and reran tests.&quot;,
-      &quot;Auth patch applied; git commit still pending.&quot;
-    ],
-    &quot;background_tasks&quot;: [
-      &quot;npm run dev (PID 1024, port 8080)&quot;
-    ],
-    &quot;pending_approvals&quot;: [],
-    &quot;todos&quot;: [
-      &quot;Commit auth patch&quot;
-    ]
-  },
-  &quot;redaction_applied&quot;: true
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;version&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1.0&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;event_id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ev_91dzk2q4m6&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;trace_id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;tr_20260516_6e9a3f21&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;sequence&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">42</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;ts&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2026-05-16T11:00:00Z&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;stream&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;sync&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;kind&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;handover_snapshot&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;severity&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;info&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;title&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Session handover snapshot&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;payload&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;recent_actions&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+      <span class="hljs-string">&quot;Killed stuck python training process (PID 882).&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-string">&quot;Switched model to claude-3.5-sonnet and reran tests.&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-string">&quot;Auth patch applied; git commit still pending.&quot;</span>
+    <span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;background_tasks&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+      <span class="hljs-string">&quot;npm run dev (PID 1024, port 8080)&quot;</span>
+    <span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;pending_approvals&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;todos&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+      <span class="hljs-string">&quot;Commit auth patch&quot;</span>
+    <span class="hljs-punctuation">]</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;redaction_applied&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span>
+<span class="hljs-punctuation">}</span></code></pre>
       </article>
       <nav class="pager"><span></span><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-002] Khyos-CB-SSP-数学建模与实现映射.html"><div class="dir">下一篇 →</div><div class="ttl">Khyos CB-SSP 数学建模与实现映射（落地规格）</div></a></nav>
       <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>

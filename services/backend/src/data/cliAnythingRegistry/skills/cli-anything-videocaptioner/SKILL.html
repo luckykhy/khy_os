@@ -36,38 +36,38 @@
 <ul><li>Python 3.10-3.12 (<code>videocaptioner</code> 1.4.1 requires <code>&gt;=3.10,&lt;3.13</code>)</li><li><code>videocaptioner</code> must be installed (<code>pip install videocaptioner</code>)</li><li>FFmpeg required for video synthesis</li></ul>
 <h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
 <h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Show help
-cli-anything-videocaptioner --help
+<pre><code class="language-bash"><span class="hljs-comment"># Show help</span>
+cli-anything-videocaptioner --<span class="hljs-built_in">help</span>
 
-# Start interactive REPL mode
+<span class="hljs-comment"># Start interactive REPL mode</span>
 cli-anything-videocaptioner
 
-# Transcribe a video (free, no setup)
+<span class="hljs-comment"># Transcribe a video (free, no setup)</span>
 cli-anything-videocaptioner transcribe video.mp4 --asr bijian
 
-# Translate subtitles (free Bing translator)
+<span class="hljs-comment"># Translate subtitles (free Bing translator)</span>
 cli-anything-videocaptioner subtitle input.srt --translator bing --target-language en
 
-# Full pipeline: transcribe → translate → burn subtitles
+<span class="hljs-comment"># Full pipeline: transcribe → translate → burn subtitles</span>
 cli-anything-videocaptioner process video.mp4 --asr bijian --translator bing --target-language en --subtitle-mode hard
 
-# Review subtitle/script consistency before a final hard-burn
+<span class="hljs-comment"># Review subtitle/script consistency before a final hard-burn</span>
 cli-anything-videocaptioner synthesize video.mp4 -s subtitles.srt \
   --subtitle-mode hard \
   --review-script approved_script.txt
 
-# Render a one-frame subtitle preview for review
+<span class="hljs-comment"># Render a one-frame subtitle preview for review</span>
 cli-anything-videocaptioner review subtitles.srt \
   --script approved_script.txt \
   --preview-video video.mp4 \
   --preview-output review_5s.png
 
-# JSON output (for agent consumption)
+<span class="hljs-comment"># JSON output (for agent consumption)</span>
 cli-anything-videocaptioner --json transcribe video.mp4 --asr bijian</code></pre>
 <h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
 <p>When invoked without a subcommand, the CLI enters an interactive REPL session:</p>
 <pre><code class="language-bash">cli-anything-videocaptioner
-# Enter commands interactively with tab-completion and history</code></pre>
+<span class="hljs-comment"># Enter commands interactively with tab-completion and history</span></code></pre>
 <h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
 <h3 id="transcribe-speech-to-subtitles">transcribe — Speech to subtitles<a class="anchor" href="#transcribe-speech-to-subtitles" aria-label="锚点">#</a></h3>
 <pre><code>transcribe &lt;input&gt; [--asr bijian|jianying|whisper-api|whisper-cpp] [--language CODE] [--format srt|ass|txt|json] [-o PATH]</code></pre>
@@ -94,7 +94,7 @@ config set &lt;key&gt; &lt;value&gt;</code></pre>
 <h2 id="json-output">JSON Output<a class="anchor" href="#json-output" aria-label="锚点">#</a></h2>
 <p>All commands support <code>--json</code> for machine-readable output:</p>
 <pre><code class="language-bash">cli-anything-videocaptioner --json transcribe video.mp4 --asr bijian
-# {&quot;output_path&quot;: &quot;/path/to/output.srt&quot;}</code></pre>
+<span class="hljs-comment"># {&quot;output_path&quot;: &quot;/path/to/output.srt&quot;}</span></code></pre>
 <h2 id="backend-notes">Backend Notes<a class="anchor" href="#backend-notes" aria-label="锚点">#</a></h2>
 <ul><li>The upstream backend currently requires Python <code>&gt;=3.10,&lt;3.13</code>; prefer Python <code>3.12</code> for matrix runs.</li><li>Advanced synthesize-time style flags are backend-version dependent. Use <code>styles</code> to check whether the installed backend exposes them.</li><li>Compatibility flags such as <code>layout</code>, <code>render_mode</code>, <code>style</code>, <code>style_override</code>, and <code>font_file</code> should be treated as non-stable unless <code>styles</code> and the installed backend confirm they are supported.</li></ul>
 <h2 id="target-languages">Target Languages<a class="anchor" href="#target-languages" aria-label="锚点">#</a></h2>

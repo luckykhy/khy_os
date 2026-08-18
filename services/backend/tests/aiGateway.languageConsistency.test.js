@@ -52,6 +52,14 @@ describe('aiGateway language consistency tracking', () => {
     gateway.refreshAdapters = async () => {};
     gateway._enforceRateLimit = async () => {};
     gateway._adapters = [];
+    gateway._adapterFailures = {};
+    gateway._adapterLastError = {};
+    gateway._requestLog = {};
+    // These tests exercise adapter language handling, not persisted key-pool
+    // routing. Keep relay_api mocks on the standard adapter flow.
+    jest.spyOn(require('../src/services/apiKeyPool'), 'init').mockImplementation(() => {
+      throw new Error('API key pool disabled for language-consistency tests');
+    });
 
     aiMonitor.clearTraces();
     modelSwitch.reset();

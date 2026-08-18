@@ -3,6 +3,7 @@
  */
 const { execFileSync } = require('child_process');
 const http = require('http');
+const net = require('net');
 const path = require('path');
 
 const chalk = require('chalk').default || require('chalk');
@@ -11,37 +12,66 @@ const { printSuccess, printError, printInfo, printTable, withSpinner } = require
 
 const BACKEND_DIR = path.resolve(__dirname, '../../../');
 
+async function findAvailablePort(startPort, maxAttempts = 20) {
+  for (let offset = 0; offset < maxAttempts; offset += 1) {
+    const port = startPort + offset;
+    const state = await new Promise((resolve) => {
+      const probe = net.createServer();
+      probe.once('error', (err) => resolve(err.code === 'EADDRINUSE' ? 'occupied' : 'error'));
+      probe.once('listening', () => probe.close(() => resolve('free')));
+      probe.listen(port, '127.0.0.1');
+    });
+    if (state === 'free') return port;
+  }
+  return null;
+}
+
+async function portResponds(port) {
+  return new Promise((resolve) => {
+    const req = http.get(`http://127.0.0.1:${port}/health`, { timeout: 250 }, (res) => {
+      let body = '';
+      res.setEncoding('utf8');
+      res.on('data', (chunk) => { body += chunk; });
+      res.once('end', () => {
+        try {
+          const data = JSON.parse(body);
+          resolve(data.status === 'ok' || data.status === 'degraded');
+        } catch {
+          resolve(false);
+        }
+      });
+    });
+    req.once('error', () => resolve(false));
+    req.once('timeout', () => { req.destroy(); resolve(false); });
+  });
+}
+
 async function handleServerStart(options = {}) {
   const { spawn } = require('child_process');
-  const net = require('net');
-  const PORT = parseInt(options.port || process.env.PORT || '3000', 10);
-  if (options.port) {
-    process.env.PORT = String(PORT);
+  const requestedPort = parseInt(options.port || process.env.PORT || '3000', 10);
+  let port = requestedPort;
+  if (await portResponds(requestedPort)) {
+    printSuccess(`后端服务已在运行 (端口 ${requestedPort})`);
+    return requestedPort;
   }
+
+  port = await findAvailablePort(requestedPort);
+  if (port == null) {
+    printError(`后端服务启动失败 (端口 ${requestedPort}-${requestedPort + 19} 均不可用)`);
+    return null;
+  }
+  if (port !== requestedPort) {
+    printInfo(`端口 ${requestedPort} 已占用，自动切换到 ${port}`);
+  }
+  process.env.PORT = String(port);
   const STARTUP_WAIT_MS = parseInt(process.env.KHY_SERVER_START_WAIT_MS || '6000', 10);
   const MAX_ERR_CHARS = 1200;
-
-  // Check if already running
-  const inUse = await new Promise((resolve) => {
-    const srv = net.createServer();
-    srv.once('error', (err) => resolve(err.code === 'EADDRINUSE'));
-    srv.once('listening', () => {
-      srv.close();
-      resolve(false);
-    });
-    srv.listen(PORT);
-  });
-
-  if (inUse) {
-    printSuccess(`后端服务已在运行 (端口 ${PORT})`);
-    return;
-  }
 
   printInfo('启动后端服务...');
   const serverScript = path.join(BACKEND_DIR, 'server.js');
   const child = spawn(process.execPath, [serverScript], {
     cwd: BACKEND_DIR,
-    env: { ...process.env, PORT: String(PORT) },
+    env: { ...process.env, PORT: String(port) },
     detached: true,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -65,16 +95,7 @@ async function handleServerStart(options = {}) {
 
   // Wait for server to bind
   await new Promise((r) => setTimeout(r, STARTUP_WAIT_MS));
-  const portInUse = async () =>
-    new Promise((resolve) => {
-      const srv = net.createServer();
-      srv.once('error', (err) => resolve(err.code === 'EADDRINUSE'));
-      srv.once('listening', () => {
-        srv.close();
-        resolve(false);
-      });
-      srv.listen(PORT);
-    });
+  const portInUse = async () => (await findAvailablePort(port, 1)) == null;
   let nowRunning = await portInUse();
   if (!nowRunning) {
     await new Promise((r) => setTimeout(r, 1500));
@@ -82,7 +103,7 @@ async function handleServerStart(options = {}) {
   }
 
   if (nowRunning) {
-    printSuccess(`后端服务已启动 → http://localhost:${PORT}`);
+    printSuccess(`后端服务已启动 → http://localhost:${port}`);
     return;
   }
 
@@ -118,7 +139,7 @@ async function handleServerStart(options = {}) {
     return;
   }
 
-  printInfo(`后端服务启动中... (端口 ${PORT})，请稍后用 server status 检查`);
+  printInfo(`后端服务启动中... (端口 ${port})，请稍后用 server status 检查`);
 }
 
 async function handleServerStatus() {
@@ -224,6 +245,8 @@ async function handleDbStatus() {
 module.exports = {
   handleServerStart,
   handleServerStatus,
+  findAvailablePort,
+  portResponds,
   handleDbInit,
   handleDbSeed,
   handleDbStatus,

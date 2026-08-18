@@ -44,19 +44,19 @@
 <h3 id="2-1-回放账本条目-replay-ledger-jsonl-与-jsonl-transcript-同目录-append-only">2.1 回放账本条目（<code>*.replay-ledger.jsonl</code>，与 JSONL transcript 同目录、append-only）<a class="anchor" href="#2-1-回放账本条目-replay-ledger-jsonl-与-jsonl-transcript-同目录-append-only" aria-label="锚点">#</a></h3>
 <p>账本是录制侧的<strong>真源</strong>，只存<strong>哈希</strong>以保持热路径轻量；复现已删文件所需的<strong>字节</strong>进会话级内容仓（内容寻址）。</p>
 <pre><code class="language-js">{
-  v: 1, seq: 0, at: &lt;epochMs&gt;,
-  name: &quot;write_file&quot;, normName: &quot;writefile&quot;, tier: &quot;FILE&quot;,   // FILE|SHELL|NETWORK_AI（frozen）
-  params: { /* 完整未截断 */ }, paramsHash: &quot;sha256…&quot;,
-  result: { success: true, exitCode: 0, outputHash: &quot;sha256…&quot;, denied: false },
-  writeDiff: { filePath: &quot;/abs&quot;, beforeHash: &quot;sha256|null&quot;, afterHash: &quot;sha256|null&quot; }, // 非文件变更=null
-  artifacts: [ { path: &quot;/abs&quot;, sha256: &quot;…&quot;, op: &quot;create|modify|delete&quot; } ]
+  <span class="hljs-attr">v</span>: <span class="hljs-number">1</span>, <span class="hljs-attr">seq</span>: <span class="hljs-number">0</span>, <span class="hljs-attr">at</span>: &lt;epochMs&gt;,
+  <span class="hljs-attr">name</span>: <span class="hljs-string">&quot;write_file&quot;</span>, <span class="hljs-attr">normName</span>: <span class="hljs-string">&quot;writefile&quot;</span>, <span class="hljs-attr">tier</span>: <span class="hljs-string">&quot;FILE&quot;</span>,   <span class="hljs-comment">// FILE|SHELL|NETWORK_AI（frozen）</span>
+  <span class="hljs-attr">params</span>: { <span class="hljs-comment">/* 完整未截断 */</span> }, <span class="hljs-attr">paramsHash</span>: <span class="hljs-string">&quot;sha256…&quot;</span>,
+  <span class="hljs-attr">result</span>: { <span class="hljs-attr">success</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">exitCode</span>: <span class="hljs-number">0</span>, <span class="hljs-attr">outputHash</span>: <span class="hljs-string">&quot;sha256…&quot;</span>, <span class="hljs-attr">denied</span>: <span class="hljs-literal">false</span> },
+  <span class="hljs-attr">writeDiff</span>: { <span class="hljs-attr">filePath</span>: <span class="hljs-string">&quot;/abs&quot;</span>, <span class="hljs-attr">beforeHash</span>: <span class="hljs-string">&quot;sha256|null&quot;</span>, <span class="hljs-attr">afterHash</span>: <span class="hljs-string">&quot;sha256|null&quot;</span> }, <span class="hljs-comment">// 非文件变更=null</span>
+  <span class="hljs-attr">artifacts</span>: [ { <span class="hljs-attr">path</span>: <span class="hljs-string">&quot;/abs&quot;</span>, <span class="hljs-attr">sha256</span>: <span class="hljs-string">&quot;…&quot;</span>, <span class="hljs-attr">op</span>: <span class="hljs-string">&quot;create|modify|delete&quot;</span> } ]
 }</code></pre>
 <h3 id="2-2-回放包-manifest-自包含可移植复现单元">2.2 回放包 manifest（自包含可移植复现单元）<a class="anchor" href="#2-2-回放包-manifest-自包含可移植复现单元" aria-label="锚点">#</a></h3>
 <p>目录 <code>getProjectDataDir('trajectory_replay', &lt;sessionId&gt;)/&lt;sessionId&gt;.replaybundle/</code>：<br><code>manifest.json</code> + <code>ledger.jsonl</code> + <code>env.json</code> + <code>content/&lt;sha256&gt;</code>（FILE 产物 after 字节，内容寻址去重）+ <code>chain.json</code>（可选，溯源链副本）。</p>
 <pre><code class="language-js">manifest = {
-  v: 1, kind: &quot;khyos-replay-bundle&quot;, sessionId, createdAt, producer: &quot;khyos&quot;,
-  env: &lt;EnvFingerprint&gt;,
-  steps: [ &lt;LedgerEntry…按 seq&gt; ],
+  <span class="hljs-attr">v</span>: <span class="hljs-number">1</span>, <span class="hljs-attr">kind</span>: <span class="hljs-string">&quot;khyos-replay-bundle&quot;</span>, sessionId, createdAt, <span class="hljs-attr">producer</span>: <span class="hljs-string">&quot;khyos&quot;</span>,
+  <span class="hljs-attr">env</span>: &lt;<span class="hljs-title class_">EnvFingerprint</span>&gt;,
+  <span class="hljs-attr">steps</span>: [ &lt;LedgerEntry…按 seq&gt; ],
   contentManifest: { &quot;&lt;sha256&gt;&quot;: { bytes: N } },
   summary: { total, byTier: { FILE, SHELL, NETWORK_AI }, artifacts },
   integrity: { ledgerHash: &quot;sha256(ledger.jsonl)&quot;, chainStatus: {…} }

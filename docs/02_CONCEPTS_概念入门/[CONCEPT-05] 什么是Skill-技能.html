@@ -75,13 +75,13 @@
 <h2 id="四-解剖一个真实-skill-khy-release-safety">四、解剖一个真实 Skill：<code>khy-release-safety</code><a class="anchor" href="#四-解剖一个真实-skill-khy-release-safety" aria-label="锚点">#</a></h2>
 <p>光讲抽象结构不够，我们<strong>真的拆开一个</strong> Khy-OS 里存在的 Skill 看看。它就在 <a href="../_AI协作预设包/skills/khy-release-safety"><code>docs/_AI协作预设包/skills/khy-release-safety</code></a> 目录里，由两个文件组成：一个 <code>manifest.json</code>（登记表：告诉系统&quot;我是谁、什么时候该用我&quot;），一个 <code>prompt.md</code>（正文：具体怎么做）。</p>
 <h3 id="4-1-登记表-manifest-json-什么时候用-写在这里">4.1 登记表 <code>manifest.json</code>——&quot;什么时候用&quot;写在这里<a class="anchor" href="#4-1-登记表-manifest-json-什么时候用-写在这里" aria-label="锚点">#</a></h3>
-<pre><code class="language-json">{
-  &quot;name&quot;: &quot;khy-release-safety&quot;,
-  &quot;description&quot;: &quot;Khy-OS 发布前自保清单：pip 是唯一命脉……准备发布 pip 包、或改动可能影响分发时激活，按最小闭环逐项确认。&quot;,
-  &quot;user_invocable&quot;: true,
-  &quot;trigger&quot;: &quot;/khy-release-safety&quot;,
-  &quot;when_to_use&quot;: &quot;准备打包发布 pip、或不确定改动能否安全发布时。&quot;
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;khy-release-safety&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;description&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Khy-OS 发布前自保清单：pip 是唯一命脉……准备发布 pip 包、或改动可能影响分发时激活，按最小闭环逐项确认。&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;user_invocable&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;trigger&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;/khy-release-safety&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;when_to_use&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;准备打包发布 pip、或不确定改动能否安全发布时。&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <p>看这几个字段——它们正好对应上一节表格里的&quot;<strong>什么时候用</strong>&quot;：</p>
 <ul><li><code>when_to_use</code>：<strong>这就是触发条件</strong>。它明确写着&quot;准备打包发布 pip、或不确定改动能否安全发布时&quot;。AI 遇到发布类任务，才会把这份手册拿出来。</li><li><code>trigger</code> / <code>user_invocable</code>：用户也可以<strong>手动</strong>打 <code>/khy-release-safety</code> 主动把它叫出来。</li><li><code>description</code>：一句话自我介绍，帮系统在众多 Skill 里挑对的那一份。</li></ul>
 <h3 id="4-2-正文-prompt-md-步骤-红线-写在这里">4.2 正文 <code>prompt.md</code>——&quot;步骤 + 红线&quot;写在这里<a class="anchor" href="#4-2-正文-prompt-md-步骤-红线-写在这里" aria-label="锚点">#</a></h3>

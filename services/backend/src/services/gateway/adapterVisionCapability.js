@@ -68,9 +68,10 @@ const _normKey = require('../../utils/trimLowerNullish');
  *
  * @param {string} adapterKey  适配器键(如 'codex'、'sensenova')
  * @param {object} [env]       注入的环境对象(默认 process.env)
+ * @param {object} [context]   具体适配器及请求选项(用于 CLI 文件视觉能力判定)
  * @returns {boolean}  门控关 → 恒 false(字节回退,等于此能力不存在)
  */
-function adapterHandlesImagesNatively(adapterKey, env) {
+function adapterHandlesImagesNatively(adapterKey, env, context = {}) {
   const e = env || process.env;
   if (!isEnabled(e)) {
     return false;
@@ -84,6 +85,18 @@ function adapterHandlesImagesNatively(adapterKey, env) {
   const override = parseAdapterListEnv(e && e.KHY_NATIVE_VISION_ADAPTERS);
   if (override.has(key)) {
     return true;
+  }
+
+  if (
+    key === 'cli' &&
+    context.adapter &&
+    typeof context.adapter.handlesImagesNatively === 'function'
+  ) {
+    try {
+      return context.adapter.handlesImagesNatively(context.options || {});
+    } catch {
+      return false;
+    }
   }
 
   return NATIVE_VISION_ADAPTERS.includes(key);

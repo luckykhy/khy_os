@@ -270,7 +270,7 @@ function getUsageHistory(days = 30) {
  */
 function _fmtTokenCount(n, legacy, env = process.env) {
   try {
-    const { ccFormatEnabled, ccFormatTokens } = require('../cli/ccFormat');
+    const { ccFormatEnabled, ccFormatTokens } = require('../../../services/backend/src/cli/ccFormat');
     if (ccFormatEnabled(env)) {
       const out = ccFormatTokens(Number(n));
       if (out) return out;
@@ -441,7 +441,7 @@ function formatCostReport() {
   // (this /cost panel's historical format). ccFormat.js's header already lists
   // "router /cost hardcoded toFixed(4)" as a convergence target; this wires the
   // one call-site that was left stranded.
-  const { ccFormatCostOr } = require('../cli/ccFormat');
+  const { ccFormatCostOr } = require('../../../services/backend/src/cli/ccFormat');
   const fmtCNY = (n) => `\u00A5${ccFormatCostOr(n, n.toFixed(4), process.env)}`;
   const fmtUSD = (n) => `$${ccFormatCostOr(n, n.toFixed(4), process.env)}`;
   const d = chalk.dim;

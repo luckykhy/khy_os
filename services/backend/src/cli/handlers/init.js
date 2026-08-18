@@ -1734,9 +1734,11 @@ function runDoctorChecks() {
   // /同系需改 OLLAMA_MODEL/未装需 pull」的可执行结论——把诊断落到能直接照做的一步。
   try {
     const localLLM = require('../../services/localLLMService');
+    // Ollama 默认主机统一从 serviceDefaults 取，避免与常量模块的默认值漂移。
+    const { OLLAMA_HOST } = require('../../constants/serviceDefaults');
     const tagsProbe = runProbe(process.execPath, [
       '-e',
-      'const http=require("http");const u=new URL((process.env.OLLAMA_HOST||"http://localhost:11434").replace(/\\/+$/,"")+"/api/tags");const req=http.get(u,{timeout:1500},res=>{let b="";res.on("data",d=>b+=d);res.on("end",()=>{try{const j=JSON.parse(b);const names=(j.models||[]).map(m=>m&&m.name).filter(Boolean);console.log("TAGS:"+JSON.stringify(names));process.exit(0)}catch(e){console.log("ERR:parse "+(e&&e.message));process.exit(2)}})});req.on("error",e=>{console.log("ERR:"+((e&&e.message)||e));process.exit(3)});req.on("timeout",()=>{req.destroy();console.log("ERR:timeout");process.exit(4)});',
+      `const http=require("http");const u=new URL((process.env.OLLAMA_HOST||"${OLLAMA_HOST}").replace(/\\/+$/,"")+"/api/tags");const req=http.get(u,{timeout:1500},res=>{let b="";res.on("data",d=>b+=d);res.on("end",()=>{try{const j=JSON.parse(b);const names=(j.models||[]).map(m=>m&&m.name).filter(Boolean);console.log("TAGS:"+JSON.stringify(names));process.exit(0)}catch(e){console.log("ERR:parse "+(e&&e.message));process.exit(2)}})});req.on("error",e=>{console.log("ERR:"+((e&&e.message)||e));process.exit(3)});req.on("timeout",()=>{req.destroy();console.log("ERR:timeout");process.exit(4)});`,
     ]);
     let tags = [];
     if (tagsProbe.ok) {
@@ -1754,8 +1756,8 @@ function runDoctorChecks() {
       tags,
       configuredModel: localLLM.OLLAMA_MODEL,
     });
-    // 未启用本地模型时，离线只是「未配置」而非故障，降为 info 且判定 ok（可忽略）。
-    const softWhenNotExpected = !verdict.ok && !localModelExpected && !tagsProbe.ok;
+    // 未启用本地模型时，Ollama 的任何非就绪状态都只是未配置而非故障。
+    const softWhenNotExpected = !verdict.ok && !localModelExpected;
     results.push({
       category: 'AI 能力',
       label: 'Ollama 推理服务',

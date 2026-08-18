@@ -34,26 +34,26 @@
 <p><strong>真因</strong>：<code>backend/src/cli/repl.js</code> 的 <code>startRepl</code> 发生未提交回归，把<br>TUI 门控 <code>if (KHY_FULL_TUI === '1' &amp;&amp; stdout.isTTY)</code> 改成了无条件<br><code>if (stdout.isTTY)</code>，导致真实终端默认进入 <strong>Ink TUI</strong>。Ink 独占 stdin<br>raw mode，而 Ink 里 <code>/model</code> 仍走 <code>handleGatewaySelectModel</code> →<br><code>promptWithReplGuard</code> → <code>inquirer.prompt</code>。inquirer 抢 stdin 并在释放时<br>让 Ink 退出整个 app（<code>waitUntilExit()</code> resolve）→ 进程结束回 bash。</p>
 <p><strong>诊断关键</strong>：用 <code>node-pty</code> 真实 PTY 驱动 khy 抓到调用栈<br><code>startRepl → startInkApp</code>，确认运行的是 Ink 而非经典 readline。我此前所有<br>改动都打在经典 readline 路径（非 TTY 分支），运行时根本不走。</p>
 <p><strong>修复</strong>：恢复 <code>KHY_FULL_TUI=1</code> 灰度门控（对齐 commit e53012c<br>&quot;TUI 降级为灰度&quot;：默认经典 REPL，Ink 仅 opt-in）。</p>
-<pre><code class="language-javascript">const tuiRequested = process.env.KHY_FULL_TUI === '1' || options.fullTui;
-if (tuiRequested &amp;&amp; process.stdout.isTTY) { /* startInkApp */ }
-// 默认 fall through → 经典 readline REPL（/model 正常工作）</code></pre>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> tuiRequested = process.<span class="hljs-property">env</span>.<span class="hljs-property">KHY_FULL_TUI</span> === <span class="hljs-string">&#x27;1&#x27;</span> || options.<span class="hljs-property">fullTui</span>;
+<span class="hljs-keyword">if</span> (tuiRequested &amp;&amp; process.<span class="hljs-property">stdout</span>.<span class="hljs-property">isTTY</span>) { <span class="hljs-comment">/* startInkApp */</span> }
+<span class="hljs-comment">// 默认 fall through → 经典 readline REPL（/model 正常工作）</span></code></pre>
 <p><strong>验证</strong>：PTY 实测 <code>/model</code> 触发通道探测（&quot;检测各通道连通性...&quot;），<br>进程存活不退出。经典 REPL 的 <code>/model</code> 已被老版 <code>bundled.zip</code> 证明正常。</p>
 <p><strong>遗留待办</strong>：若将来默认启用 Ink，必须先把 <code>/model</code> 等 inquirer 交互移植<br>为原生 Ink 组件（参考 <code>QuestionPrompt.js</code>），否则 Ink 下必崩。</p>
 <h2 id="次要修复-保留-无害加固">次要修复（保留，无害加固）<a class="anchor" href="#次要修复-保留-无害加固" aria-label="锚点">#</a></h2>
 <h3 id="修复-1-添加取消提示">修复 1: 添加取消提示<a class="anchor" href="#修复-1-添加取消提示" aria-label="锚点">#</a></h3>
 <p><strong>文件</strong>: <code>backend/src/cli/handlers/gateway.js:3730</code></p>
-<pre><code class="language-javascript">if (!selectedValue) {
-  printInfo('已取消模型选择');  // 新增提示
-  return;
+<pre><code class="language-javascript"><span class="hljs-keyword">if</span> (!selectedValue) {
+  <span class="hljs-title function_">printInfo</span>(<span class="hljs-string">&#x27;已取消模型选择&#x27;</span>);  <span class="hljs-comment">// 新增提示</span>
+  <span class="hljs-keyword">return</span>;
 }</code></pre>
 <h3 id="修复-2-添加-claude-opus-4-8-4-7">修复 2: 添加 Claude Opus 4.8/4.7<a class="anchor" href="#修复-2-添加-claude-opus-4-8-4-7" aria-label="锚点">#</a></h3>
 <p><strong>文件</strong>: <code>backend/src/services/gateway/adapters/claudeAdapter.js:99</code></p>
-<pre><code class="language-javascript">const KNOWN_MODELS = [
-  { id: 'claude-opus-4-8', name: 'Claude Opus 4.8', ... },  // 新增
-  { id: 'claude-opus-4-7', name: 'Claude Opus 4.7', ... },  // 新增
-  { id: 'claude-opus-4-6', name: 'Claude Opus 4.6', ... },
-  { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', ... },
-  { id: 'claude-haiku-4-5-latest', name: 'Claude Haiku 4.5', ... },
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> <span class="hljs-variable constant_">KNOWN_MODELS</span> = [
+  { <span class="hljs-attr">id</span>: <span class="hljs-string">&#x27;claude-opus-4-8&#x27;</span>, <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;Claude Opus 4.8&#x27;</span>, ... },  <span class="hljs-comment">// 新增</span>
+  { <span class="hljs-attr">id</span>: <span class="hljs-string">&#x27;claude-opus-4-7&#x27;</span>, <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;Claude Opus 4.7&#x27;</span>, ... },  <span class="hljs-comment">// 新增</span>
+  { <span class="hljs-attr">id</span>: <span class="hljs-string">&#x27;claude-opus-4-6&#x27;</span>, <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;Claude Opus 4.6&#x27;</span>, ... },
+  { <span class="hljs-attr">id</span>: <span class="hljs-string">&#x27;claude-sonnet-4-6&#x27;</span>, <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;Claude Sonnet 4.6&#x27;</span>, ... },
+  { <span class="hljs-attr">id</span>: <span class="hljs-string">&#x27;claude-haiku-4-5-latest&#x27;</span>, <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;Claude Haiku 4.5&#x27;</span>, ... },
 ];</code></pre>
 <h2 id="应用修复">应用修复<a class="anchor" href="#应用修复" aria-label="锚点">#</a></h2>
 <h3 id="当前状态检测">当前状态检测<a class="anchor" href="#当前状态检测" aria-label="锚点">#</a></h3>
@@ -69,30 +69,30 @@ kodehu03  869439  ... 21:40 (33分钟运行时长)</code></pre>
 <p>在每个运行 khy 的终端窗口中：</p>
 <ol><li>按 <code>Ctrl+C</code> 中断当前会话</li><li>重新运行 <code>khy</code> 命令</li></ol>
 <h4 id="方法-2-强制终止所有进程">方法 2: 强制终止所有进程<a class="anchor" href="#方法-2-强制终止所有进程" aria-label="锚点">#</a></h4>
-<pre><code class="language-bash"># 终止所有 khy 进程
-pkill -f &quot;node.*khy.js&quot;
+<pre><code class="language-bash"><span class="hljs-comment"># 终止所有 khy 进程</span>
+pkill -f <span class="hljs-string">&quot;node.*khy.js&quot;</span>
 
-# 或者逐个终止
-kill 319270 540289 545126 859871 869439
+<span class="hljs-comment"># 或者逐个终止</span>
+<span class="hljs-built_in">kill</span> 319270 540289 545126 859871 869439
 
-# 然后重新启动 khy
+<span class="hljs-comment"># 然后重新启动 khy</span>
 khy</code></pre>
 <h4 id="方法-3-仅重启当前终端的会话">方法 3: 仅重启当前终端的会话<a class="anchor" href="#方法-3-仅重启当前终端的会话" aria-label="锚点">#</a></h4>
 <p>如果你只想修复当前终端：</p>
 <ol><li>记下当前会话的对话历史（如果需要）</li><li><code>Ctrl+C</code> 退出</li><li>重新运行 <code>khy</code></li></ol>
 <h2 id="验证修复">验证修复<a class="anchor" href="#验证修复" aria-label="锚点">#</a></h2>
 <p>重启后验证：</p>
-<pre><code class="language-bash"># 1. 测试 /model 命令
+<pre><code class="language-bash"><span class="hljs-comment"># 1. 测试 /model 命令</span>
 /model
 
-# 2. 应该看到：
-#    - Claude Opus 4.8 出现在列表中
-#    - 按 Esc 时显示&quot;已取消模型选择&quot;而不是静默退出
+<span class="hljs-comment"># 2. 应该看到：</span>
+<span class="hljs-comment">#    - Claude Opus 4.8 出现在列表中</span>
+<span class="hljs-comment">#    - 按 Esc 时显示&quot;已取消模型选择&quot;而不是静默退出</span>
 
-# 3. 测试选择 Claude Opus 4.8
+<span class="hljs-comment"># 3. 测试选择 Claude Opus 4.8</span>
 /model
-# 选择 &quot;Claude Opus 4.8&quot;
-# 应该成功切换</code></pre>
+<span class="hljs-comment"># 选择 &quot;Claude Opus 4.8&quot;</span>
+<span class="hljs-comment"># 应该成功切换</span></code></pre>
 <h2 id="技术细节">技术细节<a class="anchor" href="#技术细节" aria-label="锚点">#</a></h2>
 <h3 id="为什么需要重启">为什么需要重启？<a class="anchor" href="#为什么需要重启" aria-label="锚点">#</a></h3>
 <p>Node.js 进程启动时会将所有代码加载到内存中：</p>

@@ -14,6 +14,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
+const { safeReadJsonSync, safeWriteJsonSync } = require('../services/configGuard');
 const { getColorDepth, adaptColor } = require('./palette');
 
 const THEMES_DIR = path.join(__dirname, 'themes');
@@ -182,15 +183,9 @@ function init() {
   }
 
   // Load saved preference
-  try {
-    if (fs.existsSync(PREFS_FILE)) {
-      const prefs = JSON.parse(fs.readFileSync(PREFS_FILE, 'utf8'));
-      if (prefs.theme && _themes.has(prefs.theme)) {
-        _activeName = prefs.theme;
-      }
-    }
-  } catch {
-    /* ignore */
+  const { data: _prefs } = safeReadJsonSync(PREFS_FILE, { schema: {}, silent: true });
+  if (_prefs && _prefs.theme && _themes.has(_prefs.theme)) {
+    _activeName = _prefs.theme;
   }
 }
 
@@ -229,14 +224,10 @@ function setTheme(name) {
       fs.mkdirSync(dir, { recursive: true });
     }
 
-    let prefs = {};
-    try {
-      prefs = JSON.parse(fs.readFileSync(PREFS_FILE, 'utf8'));
-    } catch {
-      /* new file */
-    }
+    const { data: _existing } = safeReadJsonSync(PREFS_FILE, { schema: {}, silent: true });
+    const prefs = _existing || {};
     prefs.theme = name;
-    fs.writeFileSync(PREFS_FILE, JSON.stringify(prefs, null, 2), 'utf8');
+    safeWriteJsonSync(PREFS_FILE, prefs);
   } catch {
     /* persistence is best-effort */
   }

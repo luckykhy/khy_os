@@ -36,377 +36,377 @@
 <ul><li>Python 3.10+</li><li>Running Firefly III instance</li><li>Personal Access Token (PAT)</li></ul>
 <h2 id="configuration">Configuration<a class="anchor" href="#configuration" aria-label="锚点">#</a></h2>
 <h3 id="environment-variables-recommended">Environment Variables (Recommended)<a class="anchor" href="#environment-variables-recommended" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">export FIREFLY_III_BASE_URL=&quot;https://firefly.yourdomain.com&quot;
-export FIREFLY_III_PAT=&quot;your-personal-access-token&quot;</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">export</span> FIREFLY_III_BASE_URL=<span class="hljs-string">&quot;https://firefly.yourdomain.com&quot;</span>
+<span class="hljs-built_in">export</span> FIREFLY_III_PAT=<span class="hljs-string">&quot;your-personal-access-token&quot;</span></code></pre>
 <h3 id="command-line-arguments">Command Line Arguments<a class="anchor" href="#command-line-arguments" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-firefly-iii --base-url https://firefly.yourdomain.com --pat your-token</code></pre>
 <h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>Command Group</th><th>Description</th><th>Corresponding API</th></tr></thead><tbody><tr><td><code>accounts</code></td><td>Account management (CRUD)</td><td><code>/api/v1/accounts</code></td></tr><tr><td><code>transactions</code></td><td>Transaction management (CRUD)</td><td><code>/api/v1/transactions</code></td></tr><tr><td><code>budgets</code></td><td>Budget management (CRUD + limits)</td><td><code>/api/v1/budgets</code></td></tr><tr><td><code>categories</code></td><td>Category management (CRUD)</td><td><code>/api/v1/categories</code></td></tr><tr><td><code>tags</code></td><td>Tag management (CRUD)</td><td><code>/api/v1/tags</code></td></tr><tr><td><code>bills</code></td><td>Bill management (CRUD)</td><td><code>/api/v1/bills</code></td></tr><tr><td><code>piggy-banks</code></td><td>Piggy bank management (CRUD + events)</td><td><code>/api/v1/piggy-banks</code></td></tr><tr><td><code>autocomplete</code></td><td>Autocomplete for various entities</td><td><code>/api/v1/autocomplete/*</code></td></tr><tr><td><code>currencies</code></td><td>Currency management (CRUD)</td><td><code>/api/v1/currencies</code></td></tr><tr><td><code>recurrences</code></td><td>Recurring transaction management (CRUD)</td><td><code>/api/v1/recurrences</code></td></tr><tr><td><code>rules</code></td><td>Rule management (CRUD + test/execute)</td><td><code>/api/v1/rules</code></td></tr><tr><td><code>rule-groups</code></td><td>Rule group management (CRUD + execute)</td><td><code>/api/v1/rule-groups</code></td></tr><tr><td><code>summary</code></td><td>Financial summaries</td><td><code>/api/v1/summary/*</code></td></tr><tr><td><code>webhooks</code></td><td>Webhook management (CRUD + trigger)</td><td><code>/api/v1/webhooks</code></td></tr><tr><td><code>insights</code></td><td>Insights and reports</td><td><code>/api/v1/insight/*</code></td></tr><tr><td><code>search</code></td><td>Search</td><td><code>/api/v1/search/*</code></td></tr><tr><td><code>export</code></td><td>Data export</td><td><code>/api/v1/data/export/*</code></td></tr><tr><td><code>info</code></td><td>System information</td><td><code>/api/v1/about</code></td></tr></tbody></table>
 <h2 id="usage-examples">Usage Examples<a class="anchor" href="#usage-examples" aria-label="锚点">#</a></h2>
 <h3 id="account-management">Account Management<a class="anchor" href="#account-management" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># List all accounts
+<pre><code class="language-bash"><span class="hljs-comment"># List all accounts</span>
 cli-anything-firefly-iii --json accounts list
 
-# List asset accounts
-cli-anything-firefly-iii --json accounts list --type asset
+<span class="hljs-comment"># List asset accounts</span>
+cli-anything-firefly-iii --json accounts list --<span class="hljs-built_in">type</span> asset
 
-# Get account details
-cli-anything-firefly-iii --json accounts get --id 123
+<span class="hljs-comment"># Get account details</span>
+cli-anything-firefly-iii --json accounts get --<span class="hljs-built_in">id</span> 123
 
-# Create account
-cli-anything-firefly-iii --json accounts create --name &quot;Cash&quot; --type asset --currency-code USD
+<span class="hljs-comment"># Create account</span>
+cli-anything-firefly-iii --json accounts create --name <span class="hljs-string">&quot;Cash&quot;</span> --<span class="hljs-built_in">type</span> asset --currency-code USD
 
-# Update account
-cli-anything-firefly-iii --json accounts update --id 123 --name &quot;New Name&quot;
+<span class="hljs-comment"># Update account</span>
+cli-anything-firefly-iii --json accounts update --<span class="hljs-built_in">id</span> 123 --name <span class="hljs-string">&quot;New Name&quot;</span>
 
-# Delete account
-cli-anything-firefly-iii accounts delete --id 123</code></pre>
+<span class="hljs-comment"># Delete account</span>
+cli-anything-firefly-iii accounts delete --<span class="hljs-built_in">id</span> 123</code></pre>
 <h3 id="transaction-management">Transaction Management<a class="anchor" href="#transaction-management" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># List transactions
-cli-anything-firefly-iii --json transactions list --limit 10
+<pre><code class="language-bash"><span class="hljs-comment"># List transactions</span>
+cli-anything-firefly-iii --json transactions list --<span class="hljs-built_in">limit</span> 10
 
-# List transactions with date range
+<span class="hljs-comment"># List transactions with date range</span>
 cli-anything-firefly-iii --json transactions list --start 2024-01-01 --end 2024-01-31
 
-# Create transaction
+<span class="hljs-comment"># Create transaction</span>
 cli-anything-firefly-iii --json transactions create \
-  --description &quot;Grocery&quot; \
+  --description <span class="hljs-string">&quot;Grocery&quot;</span> \
   --amount 50.00 \
   --source-account 1 \
-  --category &quot;Food&quot;
+  --category <span class="hljs-string">&quot;Food&quot;</span>
 
-# Update transaction
-cli-anything-firefly-iii --json transactions update --id 456 --description &quot;Updated&quot;
+<span class="hljs-comment"># Update transaction</span>
+cli-anything-firefly-iii --json transactions update --<span class="hljs-built_in">id</span> 456 --description <span class="hljs-string">&quot;Updated&quot;</span>
 
-# Delete transaction
-cli-anything-firefly-iii transactions delete --id 456</code></pre>
+<span class="hljs-comment"># Delete transaction</span>
+cli-anything-firefly-iii transactions delete --<span class="hljs-built_in">id</span> 456</code></pre>
 <h3 id="budget-management">Budget Management<a class="anchor" href="#budget-management" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># List budgets
+<pre><code class="language-bash"><span class="hljs-comment"># List budgets</span>
 cli-anything-firefly-iii --json budgets list
 
-# Get budget details
-cli-anything-firefly-iii --json budgets get --id 1
+<span class="hljs-comment"># Get budget details</span>
+cli-anything-firefly-iii --json budgets get --<span class="hljs-built_in">id</span> 1
 
-# Create budget
-cli-anything-firefly-iii --json budgets create --name &quot;Monthly Budget&quot;
+<span class="hljs-comment"># Create budget</span>
+cli-anything-firefly-iii --json budgets create --name <span class="hljs-string">&quot;Monthly Budget&quot;</span>
 
-# Update budget
-cli-anything-firefly-iii --json budgets update --id 1 --name &quot;New Budget Name&quot;
+<span class="hljs-comment"># Update budget</span>
+cli-anything-firefly-iii --json budgets update --<span class="hljs-built_in">id</span> 1 --name <span class="hljs-string">&quot;New Budget Name&quot;</span>
 
-# Delete budget
-cli-anything-firefly-iii budgets delete --id 1
+<span class="hljs-comment"># Delete budget</span>
+cli-anything-firefly-iii budgets delete --<span class="hljs-built_in">id</span> 1
 
-# List budget limits
+<span class="hljs-comment"># List budget limits</span>
 cli-anything-firefly-iii --json budgets limits --budget-id 1
 
-# Create budget limit
+<span class="hljs-comment"># Create budget limit</span>
 cli-anything-firefly-iii --json budgets limit-create --budget-id 1 --amount 1000 --start 2024-01-01 --end 2024-01-31
 
-# Update budget limit
-cli-anything-firefly-iii --json budgets limit-update --id 1 --amount 1500
+<span class="hljs-comment"># Update budget limit</span>
+cli-anything-firefly-iii --json budgets limit-update --<span class="hljs-built_in">id</span> 1 --amount 1500
 
-# Delete budget limit
-cli-anything-firefly-iii budgets limit-delete --id 1</code></pre>
+<span class="hljs-comment"># Delete budget limit</span>
+cli-anything-firefly-iii budgets limit-delete --<span class="hljs-built_in">id</span> 1</code></pre>
 <h3 id="category-management">Category Management<a class="anchor" href="#category-management" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># List categories
+<pre><code class="language-bash"><span class="hljs-comment"># List categories</span>
 cli-anything-firefly-iii --json categories list
 
-# Get category
-cli-anything-firefly-iii --json categories get --id 1
+<span class="hljs-comment"># Get category</span>
+cli-anything-firefly-iii --json categories get --<span class="hljs-built_in">id</span> 1
 
-# Create category
-cli-anything-firefly-iii --json categories create --name &quot;Food&quot;
+<span class="hljs-comment"># Create category</span>
+cli-anything-firefly-iii --json categories create --name <span class="hljs-string">&quot;Food&quot;</span>
 
-# Update category
-cli-anything-firefly-iii --json categories update --id 1 --name &quot;Food &amp; Dining&quot;
+<span class="hljs-comment"># Update category</span>
+cli-anything-firefly-iii --json categories update --<span class="hljs-built_in">id</span> 1 --name <span class="hljs-string">&quot;Food &amp; Dining&quot;</span>
 
-# Delete category
-cli-anything-firefly-iii categories delete --id 1</code></pre>
+<span class="hljs-comment"># Delete category</span>
+cli-anything-firefly-iii categories delete --<span class="hljs-built_in">id</span> 1</code></pre>
 <h3 id="tag-management">Tag Management<a class="anchor" href="#tag-management" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># List tags
+<pre><code class="language-bash"><span class="hljs-comment"># List tags</span>
 cli-anything-firefly-iii --json tags list
 
-# Get tag
-cli-anything-firefly-iii --json tags get --id &quot;uuid-here&quot;
+<span class="hljs-comment"># Get tag</span>
+cli-anything-firefly-iii --json tags get --<span class="hljs-built_in">id</span> <span class="hljs-string">&quot;uuid-here&quot;</span>
 
-# Create tag
-cli-anything-firefly-iii --json tags create --tag &quot;important&quot;
+<span class="hljs-comment"># Create tag</span>
+cli-anything-firefly-iii --json tags create --tag <span class="hljs-string">&quot;important&quot;</span>
 
-# Update tag
-cli-anything-firefly-iii --json tags update --id &quot;uuid-here&quot; --tag &quot;important-updated&quot;
+<span class="hljs-comment"># Update tag</span>
+cli-anything-firefly-iii --json tags update --<span class="hljs-built_in">id</span> <span class="hljs-string">&quot;uuid-here&quot;</span> --tag <span class="hljs-string">&quot;important-updated&quot;</span>
 
-# Delete tag
-cli-anything-firefly-iii tags delete --id &quot;uuid-here&quot;</code></pre>
+<span class="hljs-comment"># Delete tag</span>
+cli-anything-firefly-iii tags delete --<span class="hljs-built_in">id</span> <span class="hljs-string">&quot;uuid-here&quot;</span></code></pre>
 <h3 id="bill-management">Bill Management<a class="anchor" href="#bill-management" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># List bills
+<pre><code class="language-bash"><span class="hljs-comment"># List bills</span>
 cli-anything-firefly-iii --json bills list
 
-# Get bill
-cli-anything-firefly-iii --json bills get --id 1
+<span class="hljs-comment"># Get bill</span>
+cli-anything-firefly-iii --json bills get --<span class="hljs-built_in">id</span> 1
 
-# Create bill
+<span class="hljs-comment"># Create bill</span>
 cli-anything-firefly-iii --json bills create \
-  --name &quot;Netflix&quot; \
+  --name <span class="hljs-string">&quot;Netflix&quot;</span> \
   --amount-min 15.99 \
   --amount-max 15.99 \
   --frequency monthly
 
-# Update bill
-cli-anything-firefly-iii --json bills update --id 1 --amount-min 19.99
+<span class="hljs-comment"># Update bill</span>
+cli-anything-firefly-iii --json bills update --<span class="hljs-built_in">id</span> 1 --amount-min 19.99
 
-# Delete bill
-cli-anything-firefly-iii bills delete --id 1</code></pre>
+<span class="hljs-comment"># Delete bill</span>
+cli-anything-firefly-iii bills delete --<span class="hljs-built_in">id</span> 1</code></pre>
 <h3 id="piggy-bank-management">Piggy Bank Management<a class="anchor" href="#piggy-bank-management" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># List piggy banks
+<pre><code class="language-bash"><span class="hljs-comment"># List piggy banks</span>
 cli-anything-firefly-iii --json piggy-banks list
 
-# Get piggy bank
-cli-anything-firefly-iii --json piggy-banks get --id 1
+<span class="hljs-comment"># Get piggy bank</span>
+cli-anything-firefly-iii --json piggy-banks get --<span class="hljs-built_in">id</span> 1
 
-# Create piggy bank
+<span class="hljs-comment"># Create piggy bank</span>
 cli-anything-firefly-iii --json piggy-banks create \
-  --name &quot;Vacation Fund&quot; \
+  --name <span class="hljs-string">&quot;Vacation Fund&quot;</span> \
   --account-id 1 \
   --target-amount 5000
 
-# Update piggy bank
-cli-anything-firefly-iii --json piggy-banks update --id 1 --name &quot;New Name&quot;
+<span class="hljs-comment"># Update piggy bank</span>
+cli-anything-firefly-iii --json piggy-banks update --<span class="hljs-built_in">id</span> 1 --name <span class="hljs-string">&quot;New Name&quot;</span>
 
-# Delete piggy bank
-cli-anything-firefly-iii piggy-banks delete --id 1
+<span class="hljs-comment"># Delete piggy bank</span>
+cli-anything-firefly-iii piggy-banks delete --<span class="hljs-built_in">id</span> 1
 
-# List piggy bank events
-cli-anything-firefly-iii --json piggy-banks events --id 1
+<span class="hljs-comment"># List piggy bank events</span>
+cli-anything-firefly-iii --json piggy-banks events --<span class="hljs-built_in">id</span> 1
 
-# Add money to piggy bank
-cli-anything-firefly-iii --json piggy-banks add-money --id 1 --amount 100</code></pre>
+<span class="hljs-comment"># Add money to piggy bank</span>
+cli-anything-firefly-iii --json piggy-banks add-money --<span class="hljs-built_in">id</span> 1 --amount 100</code></pre>
 <h3 id="autocomplete">Autocomplete<a class="anchor" href="#autocomplete" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Autocomplete accounts
-cli-anything-firefly-iii --json autocomplete accounts --query &quot;bank&quot;
+<pre><code class="language-bash"><span class="hljs-comment"># Autocomplete accounts</span>
+cli-anything-firefly-iii --json autocomplete accounts --query <span class="hljs-string">&quot;bank&quot;</span>
 
-# Autocomplete categories
-cli-anything-firefly-iii --json autocomplete categories --query &quot;food&quot;
+<span class="hljs-comment"># Autocomplete categories</span>
+cli-anything-firefly-iii --json autocomplete categories --query <span class="hljs-string">&quot;food&quot;</span>
 
-# Autocomplete tags
-cli-anything-firefly-iii --json autocomplete tags --query &quot;important&quot;
+<span class="hljs-comment"># Autocomplete tags</span>
+cli-anything-firefly-iii --json autocomplete tags --query <span class="hljs-string">&quot;important&quot;</span>
 
-# Autocomplete transactions
-cli-anything-firefly-iii --json autocomplete transactions --query &quot;grocery&quot;
+<span class="hljs-comment"># Autocomplete transactions</span>
+cli-anything-firefly-iii --json autocomplete transactions --query <span class="hljs-string">&quot;grocery&quot;</span>
 
-# Autocomplete budgets
-cli-anything-firefly-iii --json autocomplete budgets --query &quot;monthly&quot;
+<span class="hljs-comment"># Autocomplete budgets</span>
+cli-anything-firefly-iii --json autocomplete budgets --query <span class="hljs-string">&quot;monthly&quot;</span>
 
-# Autocomplete bills
-cli-anything-firefly-iii --json autocomplete bills --query &quot;netflix&quot;
+<span class="hljs-comment"># Autocomplete bills</span>
+cli-anything-firefly-iii --json autocomplete bills --query <span class="hljs-string">&quot;netflix&quot;</span>
 
-# Autocomplete piggy banks
-cli-anything-firefly-iii --json autocomplete piggy-banks --query &quot;vacation&quot;
+<span class="hljs-comment"># Autocomplete piggy banks</span>
+cli-anything-firefly-iii --json autocomplete piggy-banks --query <span class="hljs-string">&quot;vacation&quot;</span>
 
-# Autocomplete currencies
-cli-anything-firefly-iii --json autocomplete currencies --query &quot;dollar&quot;
+<span class="hljs-comment"># Autocomplete currencies</span>
+cli-anything-firefly-iii --json autocomplete currencies --query <span class="hljs-string">&quot;dollar&quot;</span>
 
-# Autocomplete rules
-cli-anything-firefly-iii --json autocomplete rules --query &quot;auto&quot;
+<span class="hljs-comment"># Autocomplete rules</span>
+cli-anything-firefly-iii --json autocomplete rules --query <span class="hljs-string">&quot;auto&quot;</span>
 
-# Autocomplete rule groups
-cli-anything-firefly-iii --json autocomplete rule-groups --query &quot;finances&quot;
+<span class="hljs-comment"># Autocomplete rule groups</span>
+cli-anything-firefly-iii --json autocomplete rule-groups --query <span class="hljs-string">&quot;finances&quot;</span>
 
-# Autocomplete recurring
-cli-anything-firefly-iii --json autocomplete recurring --query &quot;rent&quot;
+<span class="hljs-comment"># Autocomplete recurring</span>
+cli-anything-firefly-iii --json autocomplete recurring --query <span class="hljs-string">&quot;rent&quot;</span>
 
-# Autocomplete object groups
-cli-anything-firefly-iii --json autocomplete object-groups --query &quot;group&quot;
+<span class="hljs-comment"># Autocomplete object groups</span>
+cli-anything-firefly-iii --json autocomplete object-groups --query <span class="hljs-string">&quot;group&quot;</span>
 
-# Autocomplete transaction types
-cli-anything-firefly-iii --json autocomplete transaction-types --query &quot;with&quot;</code></pre>
+<span class="hljs-comment"># Autocomplete transaction types</span>
+cli-anything-firefly-iii --json autocomplete transaction-types --query <span class="hljs-string">&quot;with&quot;</span></code></pre>
 <h3 id="currency-management">Currency Management<a class="anchor" href="#currency-management" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># List currencies
+<pre><code class="language-bash"><span class="hljs-comment"># List currencies</span>
 cli-anything-firefly-iii --json currencies list
 
-# Get currency
-cli-anything-firefly-iii --json currencies get --id 1
+<span class="hljs-comment"># Get currency</span>
+cli-anything-firefly-iii --json currencies get --<span class="hljs-built_in">id</span> 1
 
-# Create currency
+<span class="hljs-comment"># Create currency</span>
 cli-anything-firefly-iii --json currencies create \
-  --code &quot;CNY&quot; \
-  --name &quot;Chinese Yuan&quot; \
-  --symbol &quot;¥&quot;
+  --code <span class="hljs-string">&quot;CNY&quot;</span> \
+  --name <span class="hljs-string">&quot;Chinese Yuan&quot;</span> \
+  --symbol <span class="hljs-string">&quot;¥&quot;</span>
 
-# Update currency
-cli-anything-firefly-iii --json currencies update --id 1 --symbol &quot;元&quot;
+<span class="hljs-comment"># Update currency</span>
+cli-anything-firefly-iii --json currencies update --<span class="hljs-built_in">id</span> 1 --symbol <span class="hljs-string">&quot;元&quot;</span>
 
-# Delete currency
-cli-anything-firefly-iii currencies delete --id 1
+<span class="hljs-comment"># Delete currency</span>
+cli-anything-firefly-iii currencies delete --<span class="hljs-built_in">id</span> 1
 
-# Get exchange rates
+<span class="hljs-comment"># Get exchange rates</span>
 cli-anything-firefly-iii --json currencies exchange-rates --from USD --to EUR</code></pre>
 <h3 id="recurring-transaction-management">Recurring Transaction Management<a class="anchor" href="#recurring-transaction-management" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># List recurring transactions
+<pre><code class="language-bash"><span class="hljs-comment"># List recurring transactions</span>
 cli-anything-firefly-iii --json recurrences list
 
-# Get recurring transaction
-cli-anything-firefly-iii --json recurrences get --id 1
+<span class="hljs-comment"># Get recurring transaction</span>
+cli-anything-firefly-iii --json recurrences get --<span class="hljs-built_in">id</span> 1
 
-# Create recurring transaction
+<span class="hljs-comment"># Create recurring transaction</span>
 cli-anything-firefly-iii --json recurrences create \
-  --title &quot;Rent Payment&quot; \
-  --type withdrawal \
+  --title <span class="hljs-string">&quot;Rent Payment&quot;</span> \
+  --<span class="hljs-built_in">type</span> withdrawal \
   --amount 1500 \
   --source-account 1 \
   --destination-account 2 \
   --frequency monthly
 
-# Update recurring transaction
-cli-anything-firefly-iii --json recurrences update --id 1 --amount 1600
+<span class="hljs-comment"># Update recurring transaction</span>
+cli-anything-firefly-iii --json recurrences update --<span class="hljs-built_in">id</span> 1 --amount 1600
 
-# Delete recurring transaction
-cli-anything-firefly-iii recurrences delete --id 1</code></pre>
+<span class="hljs-comment"># Delete recurring transaction</span>
+cli-anything-firefly-iii recurrences delete --<span class="hljs-built_in">id</span> 1</code></pre>
 <h3 id="rule-management">Rule Management<a class="anchor" href="#rule-management" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># List rules
+<pre><code class="language-bash"><span class="hljs-comment"># List rules</span>
 cli-anything-firefly-iii --json rules list
 
-# Get rule
-cli-anything-firefly-iii --json rules get --id 1
+<span class="hljs-comment"># Get rule</span>
+cli-anything-firefly-iii --json rules get --<span class="hljs-built_in">id</span> 1
 
-# Create rule
+<span class="hljs-comment"># Create rule</span>
 cli-anything-firefly-iii --json rules create \
-  --title &quot;Auto-tag groceries&quot; \
-  --trigger &quot;description_contains&quot; \
-  --value &quot;grocery&quot; \
+  --title <span class="hljs-string">&quot;Auto-tag groceries&quot;</span> \
+  --trigger <span class="hljs-string">&quot;description_contains&quot;</span> \
+  --value <span class="hljs-string">&quot;grocery&quot;</span> \
   --action set_category \
-  --action-value &quot;Food&quot;
+  --action-value <span class="hljs-string">&quot;Food&quot;</span>
 
-# Update rule
-cli-anything-firefly-iii --json rules update --id 1 --title &quot;New Title&quot;
+<span class="hljs-comment"># Update rule</span>
+cli-anything-firefly-iii --json rules update --<span class="hljs-built_in">id</span> 1 --title <span class="hljs-string">&quot;New Title&quot;</span>
 
-# Delete rule
-cli-anything-firefly-iii rules delete --id 1
+<span class="hljs-comment"># Delete rule</span>
+cli-anything-firefly-iii rules delete --<span class="hljs-built_in">id</span> 1
 
-# Test rule
-cli-anything-firefly-iii --json rules test --id 1
+<span class="hljs-comment"># Test rule</span>
+cli-anything-firefly-iii --json rules <span class="hljs-built_in">test</span> --<span class="hljs-built_in">id</span> 1
 
-# Execute rule
-cli-anything-firefly-iii --json rules execute --id 1</code></pre>
+<span class="hljs-comment"># Execute rule</span>
+cli-anything-firefly-iii --json rules execute --<span class="hljs-built_in">id</span> 1</code></pre>
 <h3 id="rule-group-management">Rule Group Management<a class="anchor" href="#rule-group-management" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># List rule groups
+<pre><code class="language-bash"><span class="hljs-comment"># List rule groups</span>
 cli-anything-firefly-iii --json rule-groups list
 
-# Get rule group
-cli-anything-firefly-iii --json rule-groups get --id 1
+<span class="hljs-comment"># Get rule group</span>
+cli-anything-firefly-iii --json rule-groups get --<span class="hljs-built_in">id</span> 1
 
-# Create rule group
-cli-anything-firefly-iii --json rule-groups create --title &quot;Finance Rules&quot;
+<span class="hljs-comment"># Create rule group</span>
+cli-anything-firefly-iii --json rule-groups create --title <span class="hljs-string">&quot;Finance Rules&quot;</span>
 
-# Update rule group
-cli-anything-firefly-iii --json rule-groups update --id 1 --title &quot;New Title&quot;
+<span class="hljs-comment"># Update rule group</span>
+cli-anything-firefly-iii --json rule-groups update --<span class="hljs-built_in">id</span> 1 --title <span class="hljs-string">&quot;New Title&quot;</span>
 
-# Delete rule group
-cli-anything-firefly-iii rule-groups delete --id 1
+<span class="hljs-comment"># Delete rule group</span>
+cli-anything-firefly-iii rule-groups delete --<span class="hljs-built_in">id</span> 1
 
-# Execute rule group
-cli-anything-firefly-iii --json rule-groups execute --id 1</code></pre>
+<span class="hljs-comment"># Execute rule group</span>
+cli-anything-firefly-iii --json rule-groups execute --<span class="hljs-built_in">id</span> 1</code></pre>
 <h3 id="summary-reports">Summary Reports<a class="anchor" href="#summary-reports" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Default summary set
+<pre><code class="language-bash"><span class="hljs-comment"># Default summary set</span>
 cli-anything-firefly-iii --json summary default-set --start 2024-01-01 --end 2024-01-31
 
-# Account summary
+<span class="hljs-comment"># Account summary</span>
 cli-anything-firefly-iii --json summary account-summary --start 2024-01-01 --end 2024-01-31
 
-# Available budget summary
+<span class="hljs-comment"># Available budget summary</span>
 cli-anything-firefly-iii --json summary available-budget --start 2024-01-01 --end 2024-01-31
 
-# Bill summary
+<span class="hljs-comment"># Bill summary</span>
 cli-anything-firefly-iii --json summary bill-summary --start 2024-01-01 --end 2024-01-31
 
-# Budget summary
+<span class="hljs-comment"># Budget summary</span>
 cli-anything-firefly-iii --json summary budget-summary --start 2024-01-01 --end 2024-01-31
 
-# Category summary
+<span class="hljs-comment"># Category summary</span>
 cli-anything-firefly-iii --json summary category-summary --start 2024-01-01 --end 2024-01-31
 
-# Tag summary
+<span class="hljs-comment"># Tag summary</span>
 cli-anything-firefly-iii --json summary tag-summary --start 2024-01-01 --end 2024-01-31
 
-# Transfer summary
+<span class="hljs-comment"># Transfer summary</span>
 cli-anything-firefly-iii --json summary transfer-summary --start 2024-01-01 --end 2024-01-31</code></pre>
 <h3 id="webhook-management">Webhook Management<a class="anchor" href="#webhook-management" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># List webhooks
+<pre><code class="language-bash"><span class="hljs-comment"># List webhooks</span>
 cli-anything-firefly-iii --json webhooks list
 
-# Get webhook
-cli-anything-firefly-iii --json webhooks get --id 1
+<span class="hljs-comment"># Get webhook</span>
+cli-anything-firefly-iii --json webhooks get --<span class="hljs-built_in">id</span> 1
 
-# Create webhook
+<span class="hljs-comment"># Create webhook</span>
 cli-anything-firefly-iii --json webhooks create \
-  --title &quot;My Webhook&quot; \
+  --title <span class="hljs-string">&quot;My Webhook&quot;</span> \
   --trigger create \
-  --url &quot;https://example.com/webhook&quot; \
-  --secret &quot;my-secret&quot;
+  --url <span class="hljs-string">&quot;https://example.com/webhook&quot;</span> \
+  --secret <span class="hljs-string">&quot;my-secret&quot;</span>
 
-# Update webhook
-cli-anything-firefly-iii --json webhooks update --id 1 --title &quot;New Title&quot;
+<span class="hljs-comment"># Update webhook</span>
+cli-anything-firefly-iii --json webhooks update --<span class="hljs-built_in">id</span> 1 --title <span class="hljs-string">&quot;New Title&quot;</span>
 
-# Delete webhook
-cli-anything-firefly-iii webhooks delete --id 1
+<span class="hljs-comment"># Delete webhook</span>
+cli-anything-firefly-iii webhooks delete --<span class="hljs-built_in">id</span> 1
 
-# Trigger webhook manually
-cli-anything-firefly-iii --json webhooks trigger --id 1</code></pre>
+<span class="hljs-comment"># Trigger webhook manually</span>
+cli-anything-firefly-iii --json webhooks trigger --<span class="hljs-built_in">id</span> 1</code></pre>
 <h3 id="insights-and-reports">Insights and Reports<a class="anchor" href="#insights-and-reports" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Expense report (by category)
+<pre><code class="language-bash"><span class="hljs-comment"># Expense report (by category)</span>
 cli-anything-firefly-iii --json insights expense \
   --start 2024-01-01 \
   --end 2024-01-31 \
   --group-by category
 
-# Income report
+<span class="hljs-comment"># Income report</span>
 cli-anything-firefly-iii --json insights income \
   --start 2024-01-01 \
   --end 2024-01-31
 
-# Transfer insights
+<span class="hljs-comment"># Transfer insights</span>
 cli-anything-firefly-iii --json insights transfer \
   --start 2024-01-01 \
   --end 2024-01-31
 
-# Account overview
+<span class="hljs-comment"># Account overview</span>
 cli-anything-firefly-iii --json insights overview \
   --start 2024-01-01 \
   --end 2024-01-31</code></pre>
 <h3 id="search">Search<a class="anchor" href="#search" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Search transactions
-cli-anything-firefly-iii --json search transactions --query &quot;grocery&quot;</code></pre>
+<pre><code class="language-bash"><span class="hljs-comment"># Search transactions</span>
+cli-anything-firefly-iii --json search transactions --query <span class="hljs-string">&quot;grocery&quot;</span></code></pre>
 <h3 id="data-export">Data Export<a class="anchor" href="#data-export" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Export transactions
-cli-anything-firefly-iii --json export transactions \
+<pre><code class="language-bash"><span class="hljs-comment"># Export transactions</span>
+cli-anything-firefly-iii --json <span class="hljs-built_in">export</span> transactions \
   --start 2024-01-01 \
   --end 2024-01-31
 
-# Export accounts
-cli-anything-firefly-iii --json export accounts
+<span class="hljs-comment"># Export accounts</span>
+cli-anything-firefly-iii --json <span class="hljs-built_in">export</span> accounts
 
-# Export budgets
-cli-anything-firefly-iii --json export budgets
+<span class="hljs-comment"># Export budgets</span>
+cli-anything-firefly-iii --json <span class="hljs-built_in">export</span> budgets
 
-# Export categories
-cli-anything-firefly-iii --json export categories</code></pre>
+<span class="hljs-comment"># Export categories</span>
+cli-anything-firefly-iii --json <span class="hljs-built_in">export</span> categories</code></pre>
 <h3 id="system-information">System Information<a class="anchor" href="#system-information" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># System information
+<pre><code class="language-bash"><span class="hljs-comment"># System information</span>
 cli-anything-firefly-iii --json info about
 
-# Connection status
+<span class="hljs-comment"># Connection status</span>
 cli-anything-firefly-iii info status</code></pre>
 <h2 id="preset-filtering">Preset Filtering<a class="anchor" href="#preset-filtering" aria-label="锚点">#</a></h2>
 <p>Use <code>--preset</code> parameter to filter available commands:</p>
-<pre><code class="language-bash"># Default preset
+<pre><code class="language-bash"><span class="hljs-comment"># Default preset</span>
 cli-anything-firefly-iii --preset default accounts list
 
-# Full preset
+<span class="hljs-comment"># Full preset</span>
 cli-anything-firefly-iii --preset full accounts list
 
-# Budget preset
+<span class="hljs-comment"># Budget preset</span>
 cli-anything-firefly-iii --preset budget budgets list
 
-# Reporting preset
+<span class="hljs-comment"># Reporting preset</span>
 cli-anything-firefly-iii --preset reporting insights expense --start 2024-01-01 --end 2024-01-31</code></pre>
 <p>Available presets:</p>
 <ul><li><code>default</code>: Core features (accounts, transactions, categories, tags, bills, search)</li><li><code>full</code>: All features</li><li><code>basic</code>: Basic features (accounts, transactions, categories, tags, search)</li><li><code>budget</code>: Budget-related (accounts, budgets, transactions, summary, insight)</li><li><code>reporting</code>: Reporting-related (accounts, transactions, categories, insight, summary, search)</li><li><code>admin</code>: Admin features (about, configuration, currencies, users, preferences)</li><li><code>automation</code>: Automation (rules, recurrences, webhooks, transactions)</li></ul>
@@ -415,68 +415,68 @@ cli-anything-firefly-iii --preset reporting insights expense --start 2024-01-01 
 <ol><li><strong>Use <code>--json</code> for structured output</strong>: All commands support <code>--json</code> flag, returning JSON format data</li><li><strong>Call <code>info status</code> first to check connection</strong>: Confirm Firefly III connection is normal before executing operations</li><li><strong>Use presets to reduce command count</strong>: Filter unnecessary commands via <code>--preset</code></li></ol>
 <h3 id="common-workflows">Common Workflows<a class="anchor" href="#common-workflows" aria-label="锚点">#</a></h3>
 <h4 id="view-account-balances">View Account Balances<a class="anchor" href="#view-account-balances" aria-label="锚点">#</a></h4>
-<pre><code class="language-bash"># 1. Check connection
+<pre><code class="language-bash"><span class="hljs-comment"># 1. Check connection</span>
 cli-anything-firefly-iii info status
 
-# 2. List asset accounts
-cli-anything-firefly-iii --json accounts list --type asset
+<span class="hljs-comment"># 2. List asset accounts</span>
+cli-anything-firefly-iii --json accounts list --<span class="hljs-built_in">type</span> asset
 
-# 3. View account details (get balance)
-cli-anything-firefly-iii --json accounts get --id &lt;account_id&gt;</code></pre>
+<span class="hljs-comment"># 3. View account details (get balance)</span>
+cli-anything-firefly-iii --json accounts get --<span class="hljs-built_in">id</span> &lt;account_id&gt;</code></pre>
 <h4 id="record-expense">Record Expense<a class="anchor" href="#record-expense" aria-label="锚点">#</a></h4>
-<pre><code class="language-bash"># 1. Find expense accounts
-cli-anything-firefly-iii --json accounts list --type expense
+<pre><code class="language-bash"><span class="hljs-comment"># 1. Find expense accounts</span>
+cli-anything-firefly-iii --json accounts list --<span class="hljs-built_in">type</span> expense
 
-# 2. Create transaction
+<span class="hljs-comment"># 2. Create transaction</span>
 cli-anything-firefly-iii --json transactions create \
-  --description &quot;Lunch&quot; \
+  --description <span class="hljs-string">&quot;Lunch&quot;</span> \
   --amount 15.50 \
   --source-account &lt;asset_account_id&gt; \
   --destination-account &lt;expense_account_id&gt; \
-  --category &quot;Food&quot;</code></pre>
+  --category <span class="hljs-string">&quot;Food&quot;</span></code></pre>
 <h4 id="set-up-recurring-budget">Set Up Recurring Budget<a class="anchor" href="#set-up-recurring-budget" aria-label="锚点">#</a></h4>
-<pre><code class="language-bash"># 1. Create budget
-cli-anything-firefly-iii --json budgets create --name &quot;Monthly Groceries&quot;
+<pre><code class="language-bash"><span class="hljs-comment"># 1. Create budget</span>
+cli-anything-firefly-iii --json budgets create --name <span class="hljs-string">&quot;Monthly Groceries&quot;</span>
 
-# 2. Set budget limit
+<span class="hljs-comment"># 2. Set budget limit</span>
 cli-anything-firefly-iii --json budgets limit-create \
   --budget-id &lt;budget_id&gt; \
   --amount 500 \
   --start 2024-01-01 \
   --end 2024-01-31</code></pre>
 <h4 id="create-automation-rule">Create Automation Rule<a class="anchor" href="#create-automation-rule" aria-label="锚点">#</a></h4>
-<pre><code class="language-bash"># 1. List rule groups
+<pre><code class="language-bash"><span class="hljs-comment"># 1. List rule groups</span>
 cli-anything-firefly-iii --json rule-groups list
 
-# 2. Create rule
+<span class="hljs-comment"># 2. Create rule</span>
 cli-anything-firefly-iii --json rules create \
-  --title &quot;Auto-tag groceries&quot; \
+  --title <span class="hljs-string">&quot;Auto-tag groceries&quot;</span> \
   --trigger description_contains \
-  --value &quot;grocery&quot; \
+  --value <span class="hljs-string">&quot;grocery&quot;</span> \
   --action set_category \
-  --action-value &quot;Food&quot;
+  --action-value <span class="hljs-string">&quot;Food&quot;</span>
 
-# 3. Execute rule to apply to existing transactions
-cli-anything-firefly-iii --json rules execute --id &lt;rule_id&gt;</code></pre>
+<span class="hljs-comment"># 3. Execute rule to apply to existing transactions</span>
+cli-anything-firefly-iii --json rules execute --<span class="hljs-built_in">id</span> &lt;rule_id&gt;</code></pre>
 <h4 id="monthly-financial-report">Monthly Financial Report<a class="anchor" href="#monthly-financial-report" aria-label="锚点">#</a></h4>
-<pre><code class="language-bash"># 1. Expense report
+<pre><code class="language-bash"><span class="hljs-comment"># 1. Expense report</span>
 cli-anything-firefly-iii --json insights expense \
   --start 2024-01-01 \
   --end 2024-01-31 \
   --group-by category
 
-# 2. Income report
+<span class="hljs-comment"># 2. Income report</span>
 cli-anything-firefly-iii --json insights income \
   --start 2024-01-01 \
   --end 2024-01-31
 
-# 3. Budget summary
+<span class="hljs-comment"># 3. Budget summary</span>
 cli-anything-firefly-iii --json summary budget-summary \
   --start 2024-01-01 \
   --end 2024-01-31
 
-# 4. Export data
-cli-anything-firefly-iii --json export transactions \
+<span class="hljs-comment"># 4. Export data</span>
+cli-anything-firefly-iii --json <span class="hljs-built_in">export</span> transactions \
   --start 2024-01-01 \
   --end 2024-01-31</code></pre>
 <h3 id="error-handling">Error Handling<a class="anchor" href="#error-handling" aria-label="锚点">#</a></h3>

@@ -11,7 +11,9 @@
     "bundled/"
   ],
   "scripts": {
-    "audit:purity": "node scripts/audit-purity.js",
+    "assemble": "node scripts/assemble.js",
+    "prepack": "npm run assemble && npm run audit:purity",
+    "audit:purity": "node scripts/audit-purity.js --package-root .",
     "test": "node --test test/"
   },
   "publishConfig": {

@@ -38,11 +38,11 @@
 <p>两个模块级辅助函数：</p>
 <ul><li><code>_deferralActive()</code> —— 除非 <code>KHY_DEFER_TOOLS=0</code>，否则返回 <code>true</code></li><li><code>_buildBetaHeader()</code> —— 返回 <code>tool-search-tool-2025-10-19</code>，并追加来自 <code>KHY_ANTHROPIC_BETA</code> 环境变量的任何额外项</li></ul>
 <p><code>callAnthropicStream()</code> 有条件地包含 <code>anthropic-beta</code> 请求头：</p>
-<pre><code class="language-js">headers: {
-  'x-api-key': apiKey,
-  'anthropic-version': '2024-10-22',
-  ...(_deferralActive() ? { 'anthropic-beta': _buildBetaHeader() } : {}),
-  'Content-Type': 'application/json',
+<pre><code class="language-js"><span class="hljs-attr">headers</span>: {
+  <span class="hljs-string">&#x27;x-api-key&#x27;</span>: apiKey,
+  <span class="hljs-string">&#x27;anthropic-version&#x27;</span>: <span class="hljs-string">&#x27;2024-10-22&#x27;</span>,
+  ...(<span class="hljs-title function_">_deferralActive</span>() ? { <span class="hljs-string">&#x27;anthropic-beta&#x27;</span>: <span class="hljs-title function_">_buildBetaHeader</span>() } : {}),
+  <span class="hljs-string">&#x27;Content-Type&#x27;</span>: <span class="hljs-string">&#x27;application/json&#x27;</span>,
 }</code></pre>
 <h3 id="2-builddirecttooldefs-重写-claudeadapter-js">2. buildDirectToolDefs() 重写（<code>claudeAdapter.js</code>）<a class="anchor" href="#2-builddirecttooldefs-重写-claudeadapter-js" aria-label="锚点">#</a></h3>
 <p>此前：从 <code>getToolDefinitions()</code> 取硬编码的 13 个工具白名单。</p>
@@ -63,9 +63,9 @@ if deferEnabled:
 <h3 id="4-json-响应解析-protocolpipeline-js">4. JSON 响应解析（<code>_protocolPipeline.js</code>）<a class="anchor" href="#4-json-响应解析-protocolpipeline-js" aria-label="锚点">#</a></h3>
 <p><code>_createAnthropicHandler().parseJsonResponse()</code> 现在能够识别非流式响应中的 <code>server_tool_use</code> 块，并以 <code>type: 'server_tool_use'</code> 将其推入 <code>toolUseBlocks</code>。</p>
 <h3 id="5-工具循环跳过-tooluseloop-js">5. 工具循环跳过（<code>toolUseLoop.js</code>）<a class="anchor" href="#5-工具循环跳过-tooluseloop-js" aria-label="锚点">#</a></h3>
-<pre><code class="language-js">toolCalls = aiResult.toolUseBlocks
-  .filter(block =&gt; block.type !== 'server_tool_use')  // &lt;-- new
-  .map(block =&gt; { ... });</code></pre>
+<pre><code class="language-js">toolCalls = aiResult.<span class="hljs-property">toolUseBlocks</span>
+  .<span class="hljs-title function_">filter</span>(<span class="hljs-function"><span class="hljs-params">block</span> =&gt;</span> block.<span class="hljs-property">type</span> !== <span class="hljs-string">&#x27;server_tool_use&#x27;</span>)  <span class="hljs-comment">// &lt;-- new</span>
+  .<span class="hljs-title function_">map</span>(<span class="hljs-function"><span class="hljs-params">block</span> =&gt;</span> { ... });</code></pre>
 <p><code>server_tool_use</code> 块（tool_search）完全由 Anthropic 在服务端处理。它们绝不能进入本地工具执行管线。</p>
 <h2 id="修改的文件">修改的文件<a class="anchor" href="#修改的文件" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>文件</th><th style="text-align:center">改动行数</th><th>用途</th></tr></thead><tbody><tr><td><code>backend/src/services/gateway/adapters/claudeAdapter.js</code></td><td style="text-align:center">+35 -20</td><td>Beta 请求头、buildDirectToolDefs 重写</td></tr><tr><td><code>backend/src/services/gateway/adapters/_anthropicSseStream.js</code></td><td style="text-align:center">+20</td><td>server_tool_use SSE 解析</td></tr><tr><td><code>backend/src/services/gateway/adapters/_protocolPipeline.js</code></td><td style="text-align:center">+6</td><td>server_tool_use JSON 解析</td></tr><tr><td><code>backend/src/services/toolUseLoop.js</code></td><td style="text-align:center">+3</td><td>server_tool_use 过滤</td></tr></tbody></table>

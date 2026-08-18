@@ -42,10 +42,10 @@
 <p>两者读的字段完全不重叠——预检管密文，本层管解密后的归档形制。</p>
 <h2 id="修法-sha256-校验之后-创建目标目录之前插入把关">修法：sha256 校验之后、创建目标目录之前插入把关<a class="anchor" href="#修法-sha256-校验之后-创建目标目录之前插入把关" aria-label="锚点">#</a></h2>
 <p><code>_restoreFromSnapshot</code> 在 <code>header.sha256</code> 校验之后、<code>dest</code> 解析/<code>mkdir</code>/<code>_extractTarGz</code> <strong>之前</strong>：</p>
-<pre><code class="language-js">if (_restoreArchiveCheckEnabled()) {
-  const ac = assessArchiveExtractCompat(header);
-  if (ac.block) throw new Error(ac.message);   // 格式不支持 → 抛精确成因，在任何文件系统改动前拦下
-  if (ac.warn) printWarn(ac.message);          // layout 陌生 → 只提示、仍解包
+<pre><code class="language-js"><span class="hljs-keyword">if</span> (<span class="hljs-title function_">_restoreArchiveCheckEnabled</span>()) {
+  <span class="hljs-keyword">const</span> ac = <span class="hljs-title function_">assessArchiveExtractCompat</span>(header);
+  <span class="hljs-keyword">if</span> (ac.<span class="hljs-property">block</span>) <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">Error</span>(ac.<span class="hljs-property">message</span>);   <span class="hljs-comment">// 格式不支持 → 抛精确成因，在任何文件系统改动前拦下</span>
+  <span class="hljs-keyword">if</span> (ac.<span class="hljs-property">warn</span>) <span class="hljs-title function_">printWarn</span>(ac.<span class="hljs-property">message</span>);          <span class="hljs-comment">// layout 陌生 → 只提示、仍解包</span>
 }</code></pre>
 <p>放在这里而非解包点右侧，是为了<strong>在创建目标目录 / 盲目解包之前</strong>就 block——不给磁盘留下空目录、<br>不解出半个损坏目录。</p>
 <p><code>assessArchiveExtractCompat(header)</code> 纯函数、绝不抛，返回二级严重度裁决：</p>
@@ -65,14 +65,14 @@
 <h2 id="how-to-extend">HOW-TO-EXTEND<a class="anchor" href="#how-to-extend" aria-label="锚点">#</a></h2>
 <p>当源码打包的内层归档形制变更时：① 在 <code>makeSourceSnapshot.js</code> 改 <code>plaintextFormat</code>/<code>layout</code> 盖章值；<br>② <strong>只有当</strong> <code>_extractTarGz</code> 解包器真支持了该形制，才把对应值加进 <code>SUPPORTED_PLAINTEXT_FORMATS</code> /<br><code>SUPPORTED_LAYOUTS</code>——别为了绿灯谎报；③ 新增判定档按<strong>保守优先</strong>插进判定链正确位置，并在<br><code>_SEVERITY_BY_STATUS</code> 表登记严重度。</p>
 <h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">npm run test:restore-archive-check      # 本层 bundled 纯叶单测（15 用例）
-npm run test:restore-preflight          # OPS-119 无回归
-node --test scripts/tests/archiveExtractCompat.test.js   # dev 侧原叶无回归
-# LIVE（真 crypto 构造 tar.gz 快照，驱动真实 _restoreFromSnapshot via options.from）:
-#   header.plaintextFormat='zip'（篡改）→ block：抛「请升级 khy」精确成因，目标目录未创建、无半个目录;
-#   KHY_RESTORE_ARCHIVE_CHECK=0 + 同快照 → 盲目 tar -xzf 成功解包（字节等价旧行为）;
-#   plaintextFormat='tar.gz'/layout='git-archive' → 正常还原，无回归;
-#   layout='full-fs-with-git'（陌生）→ warn + 仍解包。</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:restore-archive-check      <span class="hljs-comment"># 本层 bundled 纯叶单测（15 用例）</span>
+npm run <span class="hljs-built_in">test</span>:restore-preflight          <span class="hljs-comment"># OPS-119 无回归</span>
+node --<span class="hljs-built_in">test</span> scripts/tests/archiveExtractCompat.test.js   <span class="hljs-comment"># dev 侧原叶无回归</span>
+<span class="hljs-comment"># LIVE（真 crypto 构造 tar.gz 快照，驱动真实 _restoreFromSnapshot via options.from）:</span>
+<span class="hljs-comment">#   header.plaintextFormat=&#x27;zip&#x27;（篡改）→ block：抛「请升级 khy」精确成因，目标目录未创建、无半个目录;</span>
+<span class="hljs-comment">#   KHY_RESTORE_ARCHIVE_CHECK=0 + 同快照 → 盲目 tar -xzf 成功解包（字节等价旧行为）;</span>
+<span class="hljs-comment">#   plaintextFormat=&#x27;tar.gz&#x27;/layout=&#x27;git-archive&#x27; → 正常还原，无回归;</span>
+<span class="hljs-comment">#   layout=&#x27;full-fs-with-git&#x27;（陌生）→ warn + 仍解包。</span></code></pre>
       </article>
       <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-127] OCR救援网成功实时状态告知已降级到OCR.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-127] OCR 救援网成功实时状态告知已降级到 OCR</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-129] readFile伪文件系统有界超时读·接线.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-129] readFile 伪文件系统（/proc·/sys）有界超时读 · 接线（让 khy 不再因读到会阻塞的 /proc 伪文件而永久卡死）</div></a></nav>
       <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>

@@ -77,6 +77,20 @@ describe('Route Auth Regression - comprehensiveData', () => {
     expect(res.status).toBe(401);
   });
 
+  test('rejects malformed Authorization schemes and extra token parts', async () => {
+    const wrongScheme = await request(app)
+      .get('/api/comprehensive/kline')
+      .set('Authorization', 'Basic token');
+    const extraParts = await request(app)
+      .get('/api/comprehensive/kline')
+      .set('Authorization', 'Bearer token extra');
+
+    expect(wrongScheme.status).toBe(401);
+    expect(extraParts.status).toBe(401);
+    expect(wrongScheme.body.message).toBe('需要认证（Bearer Token 或 X-API-Key）');
+    expect(extraParts.body.message).toBe('需要认证（Bearer Token 或 X-API-Key）');
+  });
+
   test('POST /api/comprehensive/batch returns 401 without auth', async () => {
     const res = await request(app).post('/api/comprehensive/batch').send({});
     expect(res.status).toBe(401);

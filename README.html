@@ -53,39 +53,39 @@
 <table><thead><tr><th>组件</th><th>文件</th><th>用途</th></tr></thead><tbody><tr><td>CLI 路由器</td><td><code>services/backend/src/cli/router.js</code></td><td>命令解析 + 分派</td></tr><tr><td>别名表</td><td><code>services/backend/src/cli/aliases.js</code></td><td>中文/拼音 → 英文命令映射</td></tr><tr><td>REPL 循环</td><td><code>services/backend/src/cli/repl.js</code></td><td>readline 接口 + AI 模式</td></tr><tr><td>AI 网关</td><td><code>services/backend/src/services/gateway/aiGateway.js</code></td><td>统一的多供应商 AI 调用</td></tr><tr><td>Token 统计</td><td><code>services/backend/src/services/tokenUsageService.js</code></td><td>以人民币计的用量统计</td></tr><tr><td>训练</td><td><code>services/backend/src/services/modelTrainingService.js</code></td><td>LoRA/蒸馏/导出</td></tr><tr><td>回测</td><td><code>services/backend/src/services/backtestEngine.js</code></td><td>策略模拟</td></tr></tbody></table>
 <h2 id="安装方式">安装方式<a class="anchor" href="#安装方式" aria-label="锚点">#</a></h2>
 <h3 id="包管理器安装-二选一-两渠道内容一致">包管理器安装（二选一，两渠道内容一致）<a class="anchor" href="#包管理器安装-二选一-两渠道内容一致" aria-label="锚点">#</a></h3>
-<pre><code class="language-powershell"># pip 渠道
-python -m pip install -U khy-os
+<pre><code class="language-powershell"><span class="hljs-comment"># pip 渠道</span>
+python <span class="hljs-literal">-m</span> pip install <span class="hljs-literal">-U</span> khy<span class="hljs-literal">-os</span>
 
-# npm 渠道
-npm install -g @khy-os/khy-os</code></pre>
+<span class="hljs-comment"># npm 渠道</span>
+npm install <span class="hljs-literal">-g</span> @khy<span class="hljs-literal">-os</span>/khy<span class="hljs-literal">-os</span></code></pre>
 <p>安装后直接运行：</p>
-<pre><code class="language-powershell">khy                        # 启动智能体终端
-khy preflight              # 首次运行前诊断 PATH / Node / 依赖
-khy ai &quot;总结这个仓库&quot;       # 一次性 AI 调用，不进 REPL
-khy gateway status         # 查看各 AI 后端的可用状态
-khy doctor                 # 系统健康检查</code></pre>
+<pre><code class="language-powershell">khy                        <span class="hljs-comment"># 启动智能体终端</span>
+khy preflight              <span class="hljs-comment"># 首次运行前诊断 PATH / Node / 依赖</span>
+khy ai <span class="hljs-string">&quot;总结这个仓库&quot;</span>       <span class="hljs-comment"># 一次性 AI 调用，不进 REPL</span>
+khy gateway status         <span class="hljs-comment"># 查看各 AI 后端的可用状态</span>
+khy doctor                 <span class="hljs-comment"># 系统健康检查</span></code></pre>
 <h3 id="本仓库源码运行">本仓库源码运行<a class="anchor" href="#本仓库源码运行" aria-label="锚点">#</a></h3>
 <p>要求 Python ≥ 3.8、Node.js ≥ 20。在仓库根目录：</p>
-<pre><code class="language-powershell"># Windows：通过便携启动器进入 khy CLI（自动探测 Python / Node）
+<pre><code class="language-powershell"><span class="hljs-comment"># Windows：通过便携启动器进入 khy CLI（自动探测 Python / Node）</span>
 .\khy.bat
 
-# 或使用 PowerShell 便携化启动脚本（npm workspaces monorepo）
-.\scripts\portable\run.ps1                  # 等价于 npm run dev
-.\scripts\portable\run.ps1 build            # npm run build
-.\scripts\portable\run.ps1 shell            # 进入带 node/npm 环境的 PowerShell</code></pre>
+<span class="hljs-comment"># 或使用 PowerShell 便携化启动脚本（npm workspaces monorepo）</span>
+.\scripts\portable\run.ps1                  <span class="hljs-comment"># 等价于 npm run dev</span>
+.\scripts\portable\run.ps1 build            <span class="hljs-comment"># npm run build</span>
+.\scripts\portable\run.ps1 shell            <span class="hljs-comment"># 进入带 node/npm 环境的 PowerShell</span></code></pre>
 <p>Linux / macOS 使用 <code>./khy.sh</code>。便携模式详见 <a href="docs/06_DEPLOY_部署/PORTABLE.html">PORTABLE.md</a>。</p>
 <h2 id="快速开始-开发者">快速开始（开发者）<a class="anchor" href="#快速开始-开发者" aria-label="锚点">#</a></h2>
 <h3 id="启动后端">启动后端<a class="anchor" href="#启动后端" aria-label="锚点">#</a></h3>
-<pre><code class="language-powershell">cd services\backend
+<pre><code class="language-powershell"><span class="hljs-built_in">cd</span> services\backend
 npm install
-npm start                  # 生产模式：node server.js
-npm run dev                # 开发模式：nodemon 热重载
-npm run cli                # 直接进入 CLI：node bin/khy.js</code></pre>
+npm <span class="hljs-built_in">start</span>                  <span class="hljs-comment"># 生产模式：node server.js</span>
+npm run dev                <span class="hljs-comment"># 开发模式：nodemon 热重载</span>
+npm run <span class="hljs-built_in">cli</span>                <span class="hljs-comment"># 直接进入 CLI：node bin/khy.js</span></code></pre>
 <h3 id="启动-ai-平台前端">启动 AI 平台前端<a class="anchor" href="#启动-ai-平台前端" aria-label="锚点">#</a></h3>
-<pre><code class="language-powershell">cd apps\ai-frontend
+<pre><code class="language-powershell"><span class="hljs-built_in">cd</span> apps\ai<span class="hljs-literal">-frontend</span>
 npm install
-npm run dev                # Vite 开发服务器
-npm run build              # 生产构建</code></pre>
+npm run dev                <span class="hljs-comment"># Vite 开发服务器</span>
+npm run build              <span class="hljs-comment"># 生产构建</span></code></pre>
 <h3 id="本地开发访问地址">本地开发访问地址<a class="anchor" href="#本地开发访问地址" aria-label="锚点">#</a></h3>
 <p>后端与前端各占一个终端窗口；两者都起来后浏览器打开前端地址即可进入管理界面。</p>
 <table><thead><tr><th>服务</th><th>地址</th><th>说明</th></tr></thead><tbody><tr><td>前端管理界面</td><td>http://localhost:3000</td><td>Vue 3 管理 UI</td></tr><tr><td>后端 API</td><td>http://localhost:5000</td><td>RESTful API</td></tr><tr><td>WebSocket</td><td>ws://localhost:5000</td><td>实时通信</td></tr></tbody></table>
@@ -97,9 +97,9 @@ npm run build              # 生产构建</code></pre>
 <p>可通过环境变量控制：</p>
 <table><thead><tr><th>变量</th><th>说明</th></tr></thead><tbody><tr><td><code>KHY_ADMIN_AUTO_INIT</code></td><td>设为 <code>0</code> 或 <code>false</code> 禁用自动初始化（默认开启）</td></tr><tr><td><code>KHY_ADMIN_USERNAME</code></td><td>自定义用户名（默认取 OS 用户名）</td></tr><tr><td><code>KHY_ADMIN_PASSWORD</code></td><td>自定义密码；设置后不会打印到日志，也不写凭据文件</td></tr></tbody></table>
 <p>手动脚本仍可用于<strong>重置</strong>管理员账号：</p>
-<pre><code class="language-powershell">cd services\backend
-node scripts\create-admin.js       # 仅创建/重置管理员账号
-node scripts\seed.js               # 或：完整种子数据（含管理员）</code></pre>
+<pre><code class="language-powershell"><span class="hljs-built_in">cd</span> services\backend
+node scripts\create<span class="hljs-literal">-admin</span>.js       <span class="hljs-comment"># 仅创建/重置管理员账号</span>
+node scripts\seed.js               <span class="hljs-comment"># 或：完整种子数据（含管理员）</span></code></pre>
 <p>前端登录页提供「<strong>使用默认管理员用户名填充</strong>」按钮，一键填入后端解析出的默认用户名；密码需在数据目录 <code>.khy/credentials/default-admin.json</code> 中查看。登录后通过顶部<strong>工作区切换</strong>进入管理员视图。</p>
 <blockquote><p>⚠️ 生产环境部署时<strong>务必修改默认密码</strong>（或设置 <code>KHY_ADMIN_PASSWORD</code>），并妥善保管凭据文件。</p></blockquote>
 <h2 id="配置文件位置">配置文件位置<a class="anchor" href="#配置文件位置" aria-label="锚点">#</a></h2>
@@ -174,7 +174,7 @@ node scripts\seed.js               # 或：完整种子数据（含管理员）<
 <p>不要在 <code>platform/khy_platform/__init__.py</code> 中硬编码 <code>__version__</code>——它从 <code>pyproject.toml</code> / 已安装元数据中动态解析，硬编码会导致版本同步检查失败。</p>
 <h2 id="贡献与维护">贡献与维护<a class="anchor" href="#贡献与维护" aria-label="锚点">#</a></h2>
 <ul><li>AI 助手与维护者指南（架构速查、工程规则、代码风格、评审清单）：<a href="AGENTS.html">AGENTS.md</a></li><li>便携模式说明：<a href="docs/06_DEPLOY_部署/PORTABLE.html">PORTABLE.md</a></li><li>工程红线（零硬编码、状态透明、活动超时、终端渲染）详见 AGENTS.md 的「工程规则」章节；提交前可运行本地检查：</li></ul>
-<pre><code class="language-powershell">node scripts\ci\check-agent-rules.js --changed</code></pre>
+<pre><code class="language-powershell">node scripts\ci\check<span class="hljs-literal">-agent-rules</span>.js <span class="hljs-literal">--changed</span></code></pre>
 <p>代码风格：JS 用 2 空格缩进、单引号、分号；命名 camelCase（JS）/ snake_case（Python）；面向用户的字符串用中文，代码注释用英文。</p>
 <h2 id="许可">许可<a class="anchor" href="#许可" aria-label="锚点">#</a></h2>
 <p><strong>Source-available（源码可见）</strong>。Khy-OS 可免费下载、运行、学习与非商业使用；复制、修改、再分发源码及商业使用需获得作者（孔浩原 / Kong Haoyuan）的书面许可。</p>

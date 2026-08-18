@@ -1,0 +1,69 @@
+{"from":"0.0.0","level":"info","message":"Auto DB migration completed","reason":"cli-bootstrap","service":"khyos","timestamp":"2026-08-14 09:26:51","to":"1.1.9"}
+{"level":"warn","message":"[gateway] credential refresh failed for trae: refresh network error","service":"khyos","timestamp":"2026-08-14 11:56:08"}
+{"level":"info","message":"Arena arena-720f0219: starting with 2 models","service":"khyos","timestamp":"2026-08-14 12:00:10"}
+{"level":"info","message":"Arena arena-720f0219: completed in 1ms, 2/2 succeeded","service":"khyos","timestamp":"2026-08-14 12:00:10"}
+{"level":"info","message":"Arena arena-3683fb1f: starting with 2 models","service":"khyos","timestamp":"2026-08-14 12:00:10"}
+{"level":"warn","message":"Arena: model bad-model failed: Model unavailable","service":"khyos","timestamp":"2026-08-14 12:00:10"}
+{"level":"info","message":"Arena arena-3683fb1f: completed in 1ms, 1/2 succeeded","service":"khyos","timestamp":"2026-08-14 12:00:10"}
+{"level":"info","message":"Arena arena-06ea784b: starting with 2 models","service":"khyos","timestamp":"2026-08-14 12:00:10"}
+{"level":"info","message":"Arena arena-06ea784b: completed in 0ms, 2/2 succeeded","service":"khyos","timestamp":"2026-08-14 12:00:10"}
+{"from":"0.0.0","level":"info","message":"Auto DB migration completed","reason":"jest-force","service":"khyos","timestamp":"2026-08-14 12:03:03","to":"1.1.9"}
+{"at":1786680202552,"detail":"garbled output unrepairable (replacement=40, misdecode=0, len=40)","level":"error","message":"[outputIntegrity] mojibake: garbled output unrepairable (replacement=40, misdecode=0, len=40)","service":"khyos","source":"repl-render","timestamp":"2026-08-14 12:03:22","type":"mojibake"}
+{"level":"info","message":"test log message","service":"khyos","timestamp":"2026-08-14 12:03:25"}
+{"level":"error","message":"test error message","service":"khyos","timestamp":"2026-08-14 12:03:25"}
+{"level":"warn","message":"ilink: 会话已过期(ret=-14),需重新扫码 khy wx login。暂停轮询。","service":"khyos","timestamp":"2026-08-14 16:44:13"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:13"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:13"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:13"}
+{"level":"warn","message":"ilink dispatcher 处理失败:模型超时","service":"khyos","timestamp":"2026-08-14 16:44:13"}
+{"level":"warn","message":"ilink: AI 内核未就绪(headless?),入站消息已解析但无法回答","service":"khyos","timestamp":"2026-08-14 16:44:13"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:13"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:13"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:13"}
+{"level":"error","message":"Channel handler for ilink failed:","service":"khyos","timestamp":"2026-08-14 16:44:13"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:13"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:13"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:13"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:14"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:14"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:14"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:14"}
+{"level":"warn","message":"ilink: 文件发送失败(a.txt):CDN 拒绝","service":"khyos","timestamp":"2026-08-14 16:44:14"}
+{"level":"warn","message":"ilink: 文件投递出错(a.txt):炸了","service":"khyos","timestamp":"2026-08-14 16:44:14"}
+{"level":"warn","message":"ilink: 文件发送失败(one.txt):失败","service":"khyos","timestamp":"2026-08-14 16:44:14"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:14"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:14"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:14"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:14"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:14"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:15"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:15"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:15"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:15"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:15"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:15"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:15"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:15"}
+{"level":"warn","message":"ilink: 单次查询超过 80ms,已放弃并放行队列(用户 u1)","service":"khyos","timestamp":"2026-08-14 16:44:15"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:15"}
+{"level":"warn","message":"ilink: 单次查询超过 80ms,已放弃并放行队列(用户 u1)","service":"khyos","timestamp":"2026-08-14 16:44:16"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:16"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:16"}
+{"level":"warn","message":"ilink: 单次查询超过 80ms,已放弃并放行队列(用户 u1)","service":"khyos","timestamp":"2026-08-14 16:44:16"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:16"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:16"}
+{"level":"warn","message":"ilink dispatcher 处理失败:工具执行到一半炸了","service":"khyos","timestamp":"2026-08-14 16:44:16"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:17"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:17"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:17"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:17"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:17"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:17"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:17"}
+{"level":"warn","message":"ilink: 结构化工具循环不可用,本通道只能做纯文本问答(需要动手的请求会答不了)","service":"khyos","timestamp":"2026-08-14 16:44:17"}
+{"level":"warn","message":"ilink dispatcher 处理失败:boom: chat 半路炸了","service":"khyos","timestamp":"2026-08-14 16:44:17"}
+{"level":"info","message":"ilink(微信)通道已启动:账号 botA(第 1/3 个)","service":"khyos","timestamp":"2026-08-14 16:44:17"}
+{"level":"info","message":"ilink(微信)通道已启动:账号 botB(第 2/3 个)","service":"khyos","timestamp":"2026-08-14 16:44:17"}
+{"level":"info","message":"ilink(微信)通道已启动:账号 botC(第 3/3 个)","service":"khyos","timestamp":"2026-08-14 16:44:17"}
+{"level":"warn","message":"msg auto-reply: no AI chat registered (headless?); inbound messages parsed but not answered","service":"khyos","timestamp":"2026-08-14 16:45:34"}
+{"level":"warn","message":"dingtalk webhook rejected: dingtalk 签名校验失败","service":"khyos","timestamp":"2026-08-14 16:45:34"}

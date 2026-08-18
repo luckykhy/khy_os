@@ -43,23 +43,23 @@
 <p><strong><code>export</code> 选项</strong>：<code>--format gguf</code>（默认，配 <code>--quant q4_k_m</code>）/ <code>--format safetensors</code>。<br><strong><code>export-data</code> 选项</strong>：<code>--format alpaca|sharegpt|openai</code>。<br><strong><code>upload</code> 选项</strong>：<code>--platform github|gitee</code> <code>--repo &lt;owner/name&gt;</code>。</p>
 <hr>
 <h2 id="三-典型用法-可直接照抄">三、典型用法（可直接照抄）<a class="anchor" href="#三-典型用法-可直接照抄" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># 0) 先体检算力（决定用 cuda / mps / cpu、是否 fp16）
+<pre><code class="language-bash"><span class="hljs-comment"># 0) 先体检算力（决定用 cuda / mps / cpu、是否 fp16）</span>
 khy compute
 
-# 1) 看看攒了多少交互记录（要 ≥10 条）
+<span class="hljs-comment"># 1) 看看攒了多少交互记录（要 ≥10 条）</span>
 khy train status
 khy train data
 
-# 2) 标准档微调 Qwen-3B
+<span class="hljs-comment"># 2) 标准档微调 Qwen-3B</span>
 khy train start --base qwen-3b --preset standard
 
-# 3) 导出成 GGUF（llama.cpp / Ollama 可直接加载），q4_k_m 量化
-khy train export --format gguf --quant q4_k_m
+<span class="hljs-comment"># 3) 导出成 GGUF（llama.cpp / Ollama 可直接加载），q4_k_m 量化</span>
+khy train <span class="hljs-built_in">export</span> --format gguf --quant q4_k_m
 
-# 4) 仅导出数据集（喂别的训练框架）
+<span class="hljs-comment"># 4) 仅导出数据集（喂别的训练框架）</span>
 khy train export-data --format openai
 
-# 5) 上传到自己的 GitHub 仓库
+<span class="hljs-comment"># 5) 上传到自己的 GitHub 仓库</span>
 khy train upload --platform github --repo your-name/my-khy-lora</code></pre>
 <hr>
 <h2 id="四-存储与环境变量">四、存储与环境变量<a class="anchor" href="#四-存储与环境变量" aria-label="锚点">#</a></h2>

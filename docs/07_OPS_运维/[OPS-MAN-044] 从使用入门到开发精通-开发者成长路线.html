@@ -41,11 +41,11 @@
                                         D6 精通：可维护性 + 发布纪律</code></pre>
 <blockquote><p>分界线：<strong>用 khy 干你的活</strong> = 使用；<strong>改 khy 本身、给它加能力、维护它的质量</strong> = 开发。<br>你不必学完全部——挑你要改的那一块，沿对应那一级深入即可。</p></blockquote>
 <p><strong>开发者最短上手路径（5 条命令摸到全貌）：</strong></p>
-<pre><code class="language-bash">khy restore                         # 1) 把装进来的加密源码还原成可读源码树
-python3 scripts/dev-install.py      # 2) editable 安装：改 canonical 即生效
-node scripts/ci/print-maintainer-map.js   # 3) 打印&quot;改 X 去哪&quot;的维护映射
-npm run check:version-sync          # 4) 跑最小仓库检查
-khy doctor                          # 5) 改启动/路由/网络/打包前先体检</code></pre>
+<pre><code class="language-bash">khy restore                         <span class="hljs-comment"># 1) 把装进来的加密源码还原成可读源码树</span>
+python3 scripts/dev-install.py      <span class="hljs-comment"># 2) editable 安装：改 canonical 即生效</span>
+node scripts/ci/print-maintainer-map.js   <span class="hljs-comment"># 3) 打印&quot;改 X 去哪&quot;的维护映射</span>
+npm run check:version-sync          <span class="hljs-comment"># 4) 跑最小仓库检查</span>
+khy doctor                          <span class="hljs-comment"># 5) 改启动/路由/网络/打包前先体检</span></code></pre>
 <hr>
 <h2 id="d0-拿到可读源码-看懂地图">D0 · 拿到可读源码 + 看懂地图<a class="anchor" href="#d0-拿到可读源码-看懂地图" aria-label="锚点">#</a></h2>
 <p>开发的第一步不是写代码，而是<strong>让自己能读到源码、并看懂仓库地图</strong>。pip/npm 装进来的是加密快照，<br>先还原成可读源码树；然后读三件套地图，避免一上来就在 6000+ 文件里迷路。</p>
@@ -77,8 +77,8 @@ khy doctor                          # 5) 改启动/路由/网络/打包前先体
 3) services/backend/src/cli/handlers/&lt;area&gt;.js  # 实现
 4) services/backend/src/cli/router.js           # 接到大 switch</code></pre>
 <p>最小验证：</p>
-<pre><code class="language-bash">npm run test:maintainer:cli-routing
-node -e &quot;require('./services/backend/src/cli/router')&quot;</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:maintainer:cli-routing
+node -e <span class="hljs-string">&quot;require(&#x27;./services/backend/src/cli/router&#x27;)&quot;</span></code></pre>
 <p>✅ <strong>你学会了</strong>：khy 的命令是&quot;schema→alias→handler→router&quot;四件套，且每个维护区都有<strong>专属最小测试</strong>。<br>➡️ <strong>深入读</strong>：[OPS-MAN-013] §5 CLI 命令开发规范（4 步）、<code>CONTRIBUTING.md</code> &quot;Add or fix a CLI command&quot;。</p>
 <hr>
 <h2 id="d4-扩展能力-网关适配器-工具-前端">D4 · 扩展能力：网关适配器 / 工具 / 前端<a class="anchor" href="#d4-扩展能力-网关适配器-工具-前端" aria-label="锚点">#</a></h2>

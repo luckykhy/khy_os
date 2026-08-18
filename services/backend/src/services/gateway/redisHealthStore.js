@@ -32,10 +32,23 @@ const HALF_OPEN_STATE_TTL_MS = (() => {
   return Number.isFinite(raw) && raw >= 30000 ? raw : 600000;
 })();
 
+// 连续失败计数的存活时间(ms)。**两条路径共用同一个值**:Redis 路径以前把 300 写死在
+// incrFailure 里,内存路径则完全没有过期 —— 于是同一份代码在装了 Redis 的机器上会自愈,
+// 在默认(无 Redis)安装上永不衰减:计数只能被 clearFailure(=一次成功)清零,而一旦
+// 连续失败数把熔断退避推到 300s 上限,「等一次成功」本身就已经很难发生了。这就是用户报的
+// 「一次失败永久失败、无法恢复」。语义按 Redis 的滑动 TTL 对齐:**最后一次**失败之后
+// 静默满 TTL,计数归零。env 覆盖,下限 10s 防抖。
+const FAILURE_TTL_MS = (() => {
+  const raw = parseInt(process.env.GATEWAY_FAILURE_COUNT_TTL_MS, 10);
+  return Number.isFinite(raw) && raw >= 10000 ? raw : 300000;
+})();
+const FAILURE_TTL_SEC = Math.max(1, Math.ceil(FAILURE_TTL_MS / 1000));
+
 // ── In-Memory Fallback Store ────────────────────────────────────────────────
 class MemoryHealthStore {
   constructor() {
     this._failures = {}; // key → count
+    this._failureExpiry = {}; // key → expiresAt(与 Redis 的 fail: TTL 语义一致)
     this._errors = {}; // key → { record, expiresAt }
     this._cooldowns = {}; // key → expiresAt
     this._halfOk = {}; // key → { count, expiresAt }
@@ -43,13 +56,34 @@ class MemoryHealthStore {
     this._hostate = {}; // key → { record, expiresAt } (persisted HALF_OPEN state)
   }
 
+  // 过期即视为 0(惰性淘汰,和本类其它字段一个写法)。返回值供 incr/get 复用。
+  _liveFailureCount(key) {
+    const exp = this._failureExpiry[key];
+    if (exp !== undefined && Date.now() > exp) {
+      delete this._failures[key];
+      delete this._failureExpiry[key];
+      return 0;
+    }
+    return this._failures[key] || 0;
+  }
+
+  // Redis 路径把权威计数镜像回内存(供 Redis 抖动时降级读取)。必须连同过期戳一起写,
+  // 否则镜像进来的计数会变成一条永不衰减的记录 —— 正是这里原本的 bug。
+  _mirrorFailureCount(key, count) {
+    this._failures[key] = count;
+    this._failureExpiry[key] = Date.now() + FAILURE_TTL_MS;
+  }
+
   async incrFailure(key) {
-    this._failures[key] = (this._failures[key] || 0) + 1;
-    return this._failures[key];
+    const count = this._liveFailureCount(key) + 1;
+    this._failures[key] = count;
+    this._failureExpiry[key] = Date.now() + FAILURE_TTL_MS; // 滑动:每次失败都续期
+    return count;
   }
 
   async clearFailure(key) {
     delete this._failures[key];
+    delete this._failureExpiry[key];
     delete this._errors[key];
     delete this._cooldowns[key];
     delete this._halfOk[key];
@@ -58,7 +92,7 @@ class MemoryHealthStore {
   }
 
   async getFailureCount(key) {
-    return this._failures[key] || 0;
+    return this._liveFailureCount(key);
   }
 
   async recordLastError(key, record, ttlMs) {
@@ -210,7 +244,7 @@ class MemoryHealthStore {
     for (const key of adapterKeys) {
       const win = await this.getWindowStats(key);
       states[key] = {
-        failureCount: this._failures[key] || 0,
+        failureCount: this._liveFailureCount(key),
         lastError:
           this._errors[key] && Date.now() <= this._errors[key].expiresAt
             ? this._errors[key].record
@@ -231,6 +265,7 @@ class MemoryHealthStore {
     for (const k of Object.keys(this._failures)) {
       if (!valid.has(k)) {
         delete this._failures[k];
+        delete this._failureExpiry[k];
       }
     }
     for (const k of Object.keys(this._errors)) {
@@ -346,9 +381,9 @@ class RedisHealthStore {
       try {
         const key = this._key(`fail:${adapterKey}`);
         const count = await client.incr(key);
-        await client.expire(key, 300); // 5 min TTL
+        await client.expire(key, FAILURE_TTL_SEC); // 与内存路径共用 FAILURE_TTL_MS
         // Mirror to memory for fast reads
-        this._memory._failures[adapterKey] = count;
+        this._memory._mirrorFailureCount(adapterKey, count);
         return count;
       } catch (err) {
         this._logRedisError('incrFailure', err);
@@ -383,7 +418,7 @@ class RedisHealthStore {
       try {
         const val = await client.get(this._key(`fail:${adapterKey}`));
         const count = val ? parseInt(val, 10) : 0;
-        this._memory._failures[adapterKey] = count; // sync to memory
+        this._memory._mirrorFailureCount(adapterKey, count); // sync to memory
         return count;
       } catch (err) {
         this._logRedisError('getFailureCount', err);

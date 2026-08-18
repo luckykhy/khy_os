@@ -34,12 +34,12 @@
 <h2 id="改动-全-additive-门关字节回退-fail-soft">改动(全 additive,门关字节回退,fail-soft)<a class="anchor" href="#改动-全-additive-门关字节回退-fail-soft" aria-label="锚点">#</a></h2>
 <ol><li><code>shellSafetyValidator.js</code> 的 <code>analyzeCommand</code>,在「Deep nesting」层之后、<code>maxSeverity</code></li></ol>
 <p>计算之前,splice 一段 <strong>Layer 7</strong>:</p>
-<pre><code class="language-js">   try {
-     const { buildFetchExecuteRisks } = require('./fetchExecuteGuard');
-     for (const r of buildFetchExecuteRisks(command)) {
-       risks.push({ type: r.type, severity: r.severity, detail: r.detail });
+<pre><code class="language-js">   <span class="hljs-keyword">try</span> {
+     <span class="hljs-keyword">const</span> { buildFetchExecuteRisks } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./fetchExecuteGuard&#x27;</span>);
+     <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> r <span class="hljs-keyword">of</span> <span class="hljs-title function_">buildFetchExecuteRisks</span>(command)) {
+       risks.<span class="hljs-title function_">push</span>({ <span class="hljs-attr">type</span>: r.<span class="hljs-property">type</span>, <span class="hljs-attr">severity</span>: r.<span class="hljs-property">severity</span>, <span class="hljs-attr">detail</span>: r.<span class="hljs-property">detail</span> });
      }
-   } catch { /* fail-soft */ }</code></pre>
+   } <span class="hljs-keyword">catch</span> { <span class="hljs-comment">/* fail-soft */</span> }</code></pre>
 <ul><li>门开 + 命中 → 追加 <code>{ type:'fetch_execute', severity:'critical', detail }</code> → <code>maxSeverity</code></li></ul>
 <p>变 <code>critical</code> → <code>safe:false</code> → validator 既有 block 路径接管(fail-closed)。</p>
 <ul><li>门关(<code>KHY_FETCH_EXEC_GUARD</code> ∈ {0,false,off,no})→ <code>buildFetchExecuteRisks</code> 返 <code>[]</code> →</li></ul>

@@ -36,11 +36,11 @@
 <h2 id="prerequisites">Prerequisites<a class="anchor" href="#prerequisites" aria-label="锚点">#</a></h2>
 <ul><li>Python 3.10+</li><li><code>MAILCHIMP_API_KEY</code> environment variable set to your API key (including datacenter suffix, e.g. <code>abc123-us8</code>)</li></ul>
 <h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># From the CLI-Anything repo (once merged):
+<pre><code class="language-bash"><span class="hljs-comment"># From the CLI-Anything repo (once merged):</span>
 pip install git+https://github.com/HKUDS/CLI-Anything.git#subdirectory=mailchimp/agent-harness
 
-# During development:
-cd mailchimp/agent-harness &amp;&amp; pip install -e .</code></pre>
+<span class="hljs-comment"># During development:</span>
+<span class="hljs-built_in">cd</span> mailchimp/agent-harness &amp;&amp; pip install -e .</code></pre>
 <h2 id="command-reference">Command Reference<a class="anchor" href="#command-reference" aria-label="锚点">#</a></h2>
 <h3 id="root">Root<a class="anchor" href="#root" aria-label="锚点">#</a></h3>
 <table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>cli-anything-mailchimp ping</code></td><td>Health check — confirms API connectivity</td></tr><tr><td><code>cli-anything-mailchimp root list</code></td><td>Get account info</td></tr><tr><td><code>cli-anything-mailchimp --json &lt;cmd&gt;</code></td><td>Output any command as JSON</td></tr><tr><td><code>cli-anything-mailchimp</code></td><td>Launch interactive REPL</td></tr></tbody></table>
@@ -58,50 +58,50 @@ cd mailchimp/agent-harness &amp;&amp; pip install -e .</code></pre>
 <table><thead><tr><th>Group</th><th>Description</th></tr></thead><tbody><tr><td><code>templates</code></td><td>Email templates (list, get, create, update, delete)</td></tr><tr><td><code>template-folders</code></td><td>Template folders</td></tr><tr><td><code>campaign-folders</code></td><td>Campaign folders</td></tr><tr><td><code>file-manager</code></td><td>Files and folders in the file manager</td></tr><tr><td><code>landing-pages</code></td><td>Landing pages (list, create, publish, unpublish)</td></tr><tr><td><code>sms-campaigns</code></td><td>SMS campaigns (10 operations)</td></tr><tr><td><code>surveys</code></td><td>Surveys (list, get, publish)</td></tr><tr><td><code>reporting</code></td><td>Facebook ad and landing page reporting</td></tr><tr><td><code>search-campaigns</code></td><td>Search campaigns by query</td></tr><tr><td><code>search-members</code></td><td>Search members across all audiences</td></tr><tr><td><code>batches</code></td><td>Batch API operations</td></tr><tr><td><code>batch-webhooks</code></td><td>Batch operation webhooks</td></tr><tr><td><code>verified-domains</code></td><td>Email domain verification</td></tr><tr><td><code>authorized-apps</code></td><td>OAuth connected apps</td></tr><tr><td><code>connected-sites</code></td><td>Connected site integrations</td></tr><tr><td><code>conversations</code></td><td>Inbox conversations</td></tr><tr><td><code>activity-feed</code></td><td>Account activity feed</td></tr><tr><td><code>account-exports</code></td><td>Account data exports</td></tr></tbody></table>
 <h2 id="json-output">JSON Output<a class="anchor" href="#json-output" aria-label="锚点">#</a></h2>
 <p>All commands support <code>--json</code> at the root level:</p>
-<pre><code class="language-bash"># List all audiences as JSON
+<pre><code class="language-bash"><span class="hljs-comment"># List all audiences as JSON</span>
 cli-anything-mailchimp --json lists list
 
-# Get a campaign report as JSON
+<span class="hljs-comment"># Get a campaign report as JSON</span>
 cli-anything-mailchimp --json reports get abc123def
 
-# Pipe to jq — use the native Mailchimp field name for the resource
-cli-anything-mailchimp --json lists list | jq '.lists[].name'
-cli-anything-mailchimp --json campaigns list | jq '.campaigns[].id'</code></pre>
+<span class="hljs-comment"># Pipe to jq — use the native Mailchimp field name for the resource</span>
+cli-anything-mailchimp --json lists list | jq <span class="hljs-string">&#x27;.lists[].name&#x27;</span>
+cli-anything-mailchimp --json campaigns list | jq <span class="hljs-string">&#x27;.campaigns[].id&#x27;</span></code></pre>
 <p><strong>Envelope shapes</strong> (native Mailchimp API response — use the resource-specific key):</p>
-<pre><code class="language-json">// List endpoints — key matches the resource name (lists, campaigns, members, etc.)
-{&quot;lists&quot;: [...], &quot;total_items&quot;: 42, &quot;_links&quot;: [...]}
-{&quot;campaigns&quot;: [...], &quot;total_items&quot;: 10, &quot;_links&quot;: [...]}
+<pre><code class="language-json"><span class="hljs-comment">// List endpoints — key matches the resource name (lists, campaigns, members, etc.)</span>
+<span class="hljs-punctuation">{</span><span class="hljs-attr">&quot;lists&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>...<span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;total_items&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">42</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;_links&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>...<span class="hljs-punctuation">]</span><span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">{</span><span class="hljs-attr">&quot;campaigns&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>...<span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;total_items&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">10</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;_links&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>...<span class="hljs-punctuation">]</span><span class="hljs-punctuation">}</span>
 
-// Single resource GET / POST / PATCH
-{&quot;id&quot;: &quot;abc123&quot;, &quot;name&quot;: &quot;My List&quot;, ...}
+<span class="hljs-comment">// Single resource GET / POST / PATCH</span>
+<span class="hljs-punctuation">{</span><span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;abc123&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;My List&quot;</span><span class="hljs-punctuation">,</span> ...<span class="hljs-punctuation">}</span>
 
-// DELETE
-{&quot;ok&quot;: true, &quot;message&quot;: &quot;Deleted.&quot;}
+<span class="hljs-comment">// DELETE</span>
+<span class="hljs-punctuation">{</span><span class="hljs-attr">&quot;ok&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Deleted.&quot;</span><span class="hljs-punctuation">}</span>
 
-// Error
-{&quot;ok&quot;: false, &quot;message&quot;: &quot;Resource Not Found: ...&quot;, &quot;data&quot;: {...}}</code></pre>
+<span class="hljs-comment">// Error</span>
+<span class="hljs-punctuation">{</span><span class="hljs-attr">&quot;ok&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Resource Not Found: ...&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>...<span class="hljs-punctuation">}</span><span class="hljs-punctuation">}</span></code></pre>
 <h2 id="common-agent-patterns">Common Agent Patterns<a class="anchor" href="#common-agent-patterns" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># Get account health
-cli-anything-mailchimp --json ping | jq '.health_status'
+<pre><code class="language-bash"><span class="hljs-comment"># Get account health</span>
+cli-anything-mailchimp --json ping | jq <span class="hljs-string">&#x27;.health_status&#x27;</span>
 
-# List all audience IDs and names
-cli-anything-mailchimp --json lists list | jq '.lists[] | {id, name}'
+<span class="hljs-comment"># List all audience IDs and names</span>
+cli-anything-mailchimp --json lists list | jq <span class="hljs-string">&#x27;.lists[] | {id, name}&#x27;</span>
 
-# Find all subscribed members in an audience
-cli-anything-mailchimp --json lists list-lists-id-members &lt;list_id&gt; --status subscribed | jq '.members[].email_address'
+<span class="hljs-comment"># Find all subscribed members in an audience</span>
+cli-anything-mailchimp --json lists list-lists-id-members &lt;list_id&gt; --status subscribed | jq <span class="hljs-string">&#x27;.members[].email_address&#x27;</span>
 
-# Create a campaign and get its send checklist
-cli-anything-mailchimp --json campaigns create --data '{&quot;type&quot;:&quot;regular&quot;,&quot;settings&quot;:{&quot;subject_line&quot;:&quot;Hello&quot;,&quot;from_name&quot;:&quot;Me&quot;,&quot;reply_to&quot;:&quot;me@example.com&quot;}}' | jq '.id'
-cli-anything-mailchimp --json campaigns list-send-checklist &lt;campaign_id&gt; | jq '.items[] | select(.result == false)'
+<span class="hljs-comment"># Create a campaign and get its send checklist</span>
+cli-anything-mailchimp --json campaigns create --data <span class="hljs-string">&#x27;{&quot;type&quot;:&quot;regular&quot;,&quot;settings&quot;:{&quot;subject_line&quot;:&quot;Hello&quot;,&quot;from_name&quot;:&quot;Me&quot;,&quot;reply_to&quot;:&quot;me@example.com&quot;}}&#x27;</span> | jq <span class="hljs-string">&#x27;.id&#x27;</span>
+cli-anything-mailchimp --json campaigns list-send-checklist &lt;campaign_id&gt; | jq <span class="hljs-string">&#x27;.items[] | select(.result == false)&#x27;</span>
 
-# Get unsubscribes for a sent campaign
-cli-anything-mailchimp --json reports list-unsubscribed &lt;campaign_id&gt; | jq '.unsubscribes[].email_address'
+<span class="hljs-comment"># Get unsubscribes for a sent campaign</span>
+cli-anything-mailchimp --json reports list-unsubscribed &lt;campaign_id&gt; | jq <span class="hljs-string">&#x27;.unsubscribes[].email_address&#x27;</span>
 
-# Add a member to an audience (subscriber hash = MD5 of lowercased email)
-cli-anything-mailchimp --json lists create-members &lt;list_id&gt; --data '{&quot;email_address&quot;:&quot;user@example.com&quot;,&quot;status&quot;:&quot;subscribed&quot;}'
+<span class="hljs-comment"># Add a member to an audience (subscriber hash = MD5 of lowercased email)</span>
+cli-anything-mailchimp --json lists create-members &lt;list_id&gt; --data <span class="hljs-string">&#x27;{&quot;email_address&quot;:&quot;user@example.com&quot;,&quot;status&quot;:&quot;subscribed&quot;}&#x27;</span>
 
-# Search for a member across all audiences
-cli-anything-mailchimp --json search-members list --query &quot;user@example.com&quot; | jq '.exact_matches.members[]'</code></pre>
+<span class="hljs-comment"># Search for a member across all audiences</span>
+cli-anything-mailchimp --json search-members list --query <span class="hljs-string">&quot;user@example.com&quot;</span> | jq <span class="hljs-string">&#x27;.exact_matches.members[]&#x27;</span></code></pre>
 <h2 id="interactive-repl">Interactive REPL<a class="anchor" href="#interactive-repl" aria-label="锚点">#</a></h2>
 <p>Run <code>cli-anything-mailchimp</code> with no arguments to enter the REPL:</p>
 <pre><code>◆  cli-anything · Mailchimp

@@ -30,9 +30,13 @@ const UA =
 
 // Lazily resolve a Playwright module. Cached across calls. `null` if absent.
 let _pwModule = null; // resolved module or false (tried, missing)
+let _pwModuleOverride; // undefined = autodetect; any other value is a test override
 
 /** Resolve the Playwright module (playwright → playwright-core), cached. */
 function loadPlaywright() {
+  if (_pwModuleOverride !== undefined) {
+    return _pwModuleOverride;
+  }
   if (_pwModule && _pwModule.chromium) {
     return _pwModule;
   } // already loaded
@@ -152,8 +156,8 @@ module.exports = {
   launchTimeoutMs,
   getProxyServer,
   acquireBrowser,
-  // test hook — inject a fake chromium module.
+  // test hook — inject a fake module; null simulates absence; undefined restores autodetect.
   __setPlaywrightModuleForTests(mod) {
-    _pwModule = mod == null ? null : mod;
+    _pwModuleOverride = mod;
   },
 };

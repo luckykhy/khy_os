@@ -339,11 +339,26 @@ test('Unix command setup updates one PATH block and keeps wrappers relocatable',
   const profileContent = fs.readFileSync(profile, 'utf8');
   assert.equal((profileContent.match(/# >>> khy-os portable command >>>/g) || []).length, 1);
   assert.equal((profileContent.match(/# <<< khy-os portable command <<</g) || []).length, 1);
-  assert.match(profileContent, new RegExp(binDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  const toShellPath = value => process.platform === 'win32'
+    ? spawnSync('cygpath', ['-u', value], { encoding: 'utf8' }).stdout.trim()
+    : value;
+  const shellBinDir = toShellPath(binDir);
+  const shellSourceRoot = toShellPath(sourceRoot);
+  const escapedShellBinDir = shellBinDir.replace(/ /g, '\\ ');
+  assert.match(profileContent, new RegExp(escapedShellBinDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
 
   for (const name of ['khy', 'khy-os', 'khyquant']) {
-    assert.equal(fs.statSync(path.join(binDir, name)).mode & 0o111, 0o111);
-    assert.match(fs.readFileSync(path.join(binDir, name), 'utf8'), new RegExp(sourceRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    const wrapperPath = path.join(binDir, name);
+    if (process.platform !== 'win32') {
+      assert.equal(fs.statSync(wrapperPath).mode & 0o111, 0o111);
+    }
+    const wrapperContent = fs.readFileSync(wrapperPath, 'utf8');
+    if (process.platform === 'win32') {
+      assert.match(wrapperContent, /\/khy\.sh['"]?\s+"\$@"/);
+    } else {
+      const escapedSourceRoot = shellSourceRoot.replace(/ /g, '\\ ');
+      assert.match(wrapperContent, new RegExp(escapedSourceRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    }
   }
   const invoke = spawnSync('bash', [path.join(binDir, 'khy'), 'hello world', '中文'], {
     cwd: base,

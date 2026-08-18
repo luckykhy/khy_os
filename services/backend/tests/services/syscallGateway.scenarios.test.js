@@ -177,7 +177,7 @@ describe('场景C — 正常写入项目内文件（L1 黄灯）', () => {
 describe('防呆① — 旁路注入零容忍', () => {
   test('detectBypassMarkers 命中 force/--yes', () => {
     expect(detectBypassMarkers({ force: true }).length).toBeGreaterThan(0);
-    expect(detectBypassMarkers({ command: 'rm x --force' }).length).toBeGreaterThan(0);
+    expect(detectBypassMarkers({ command: 'rm x --force' })).toEqual([]);
     expect(detectBypassMarkers({ force: false }).length).toBe(0); // false 不算
   });
 

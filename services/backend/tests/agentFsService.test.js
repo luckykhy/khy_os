@@ -268,8 +268,12 @@ describe('agentFsService (AgentFS)', () => {
     expect(mine[0].companionId).toBe(id);
     expect(rcpt.listReceipts({ companionId: 'nobody' })).toHaveLength(0);
 
-    // describeAssets reflects the recorded receipt.
-    const receiptsAsset = svc.describeAssets(id).find(a => a.key === 'receipts');
+    // describeAssets keeps receipts as an injected external asset so AgentFS
+    // does not gain a sideways dependency on receiptService (the CLI handler
+    // supplies the same counter in production).
+    const receiptsAsset = svc.describeAssets(id, {
+      countReceipts: (companionId) => rcpt.listReceipts({ companionId, limit: 1000 }).length,
+    }).find(a => a.key === 'receipts');
     expect(receiptsAsset.count).toBe(1);
     expect(receiptsAsset.present).toBe(true);
   });

@@ -3,18 +3,23 @@
   "private": true,
   "workspaces": [
     "platform/packages/shared",
+    "platform/packages/ui-shared",
     "services/backend",
-    "services/ai-backend"
+    "services/ai-backend",
+    "apps/ai-frontend",
+    "software/khyquant/frontend"
   ],
   "//": "任务入口按域分组，命名规约 <域>:<动作>[:<变体>] 见 docs/03_DESIGN_设计/[DESIGN-ARCH-068] 仓库层级板块规范.md 第五节；逐条说明见 docs/07_OPS_运维/[OPS-MAN-174] 任务入口总表.md。每个入口都指向一个已存在的脚本文件——check:layout 的 dangling-task 规则会守住这条。",
   "scripts": {
     "preinstall": "node scripts/install/link-shared-dev.js",
-
     "//check": "── CI 守卫：会亮红灯的检查（scripts/ci/*）──",
     "check:layout": "node scripts/ci/check-repo-layout.js",
     "check:version-sync": "node scripts/ci/check-version-sync.js",
     "check:change-safety": "node scripts/ci/check-change-safety.js --changed",
     "check:agent-rules": "node scripts/ci/check-agent-rules.js --changed",
+    "check:quality-gates": "node scripts/quality-gate/index.js --mode release",
+    "quality:gate": "npm run check:quality-gates",
+    "quality:pr": "node scripts/quality-gate/index.js --mode pr",
     "check:leaf-contract": "node scripts/ci/check-leaf-contract.js --changed",
     "check:node-syntax": "node scripts/ci/check-node-syntax.js",
     "check:python-syntax": "node scripts/ci/run-python.js scripts/ci/check-python-syntax.py",
@@ -37,7 +42,6 @@
     "check:reliability": "node scripts/ci/validate-reliability.js",
     "check:structure": "npm run check:layout && npm run check:json-schemas && npm run check:node-syntax",
     "check:changed": "npm run check:change-safety && npm run check:agent-rules && npm run check:leaf-contract",
-
     "//docs": "── 文档站构建与体检（scripts/docs/*）──",
     "docs:build": "node scripts/docs/build_docs_site.js",
     "docs:verify": "node scripts/docs/verify_docs_site.js",
@@ -45,7 +49,6 @@
     "docs:check-beginner": "node scripts/docs/check_beginner_docs.js",
     "docs:pdf": "node scripts/docs/md-to-pdf.js",
     "docs:gen-evolution-prompts": "node scripts/docs/gen-evolution-prompts.js",
-
     "//test": "── 测试。跑单个文件用 npm run test:one -- <path>，不为每个场景登记入口。Node 22+ 的 --test 把位置参数当 glob 而非目录，故必须写通配并加引号（裸目录会被当成 entry point，报 Cannot find module）──",
     "test:one": "node --test",
     "test:scripts": "node --test \"scripts/tests/**/*.test.js\"",
@@ -53,7 +56,9 @@
     "test:backend": "npm run test:all --workspace services/backend",
     "test:frontend": "npm test --prefix apps/ai-frontend",
     "test:all": "npm run test:scripts && npm run test:docs && npm run test:backend",
-
+    "cover-unit": "node scripts/quality-gate/coverage.js --scope=unit",
+    "cover-integration": "node scripts/quality-gate/coverage.js --scope=integration",
+    "merge-coverage": "node scripts/quality-gate/merge-coverage.js",
     "//maintainer": "── 维护映射表与生成物（真源 docs/_维护者/维护映射表.json）──",
     "maintainer:map": "node scripts/ci/print-maintainer-map.js",
     "maintainer:triage": "node scripts/diagnostics/triage.js",
@@ -62,14 +67,12 @@
     "maintenance:pattern-registry": "node scripts/ci/generate-pattern-registry.js",
     "maintenance:dimension-health": "node scripts/ci/export-dimension-health.js",
     "maintenance:quality-dashboard": "node scripts/ci/export-quality-dashboard.js",
-
     "//gate": "── 发布门（scripts/release/*）──",
     "gate:release": "node scripts/release/release-gate.js",
     "gate:release:all": "node scripts/release/release-gate.js --tier=all",
     "gate:release:json": "node scripts/release/release-gate.js --json",
     "gate:runtime-placement": "node scripts/release/verify-runtime-placement.js",
     "gate:changelog-new": "node scripts/release/changelog-new.js",
-
     "//restore": "── 源码恢复流程（scripts/restore/*，18 个阶段 1:1 映射）──",
     "restore:plan": "node scripts/restore/restore-plan.js",
     "restore:check": "node scripts/restore/restore-check.js",
@@ -89,7 +92,6 @@
     "restore:trace": "node scripts/restore/restore-trace.js",
     "restore:effect-probe": "node scripts/restore/restore-effect-probe.js",
     "restore:field-attribution": "node scripts/restore/restore-field-attribution.js",
-
     "//portable": "── 便携版构建与打包（scripts/portable/*）──",
     "portable:build:dev": "node scripts/portable/build-portable-artifact.js --kind portable-dev",
     "portable:build:runtime": "node scripts/portable/build-portable-artifact.js --kind portable-runtime",
@@ -100,25 +102,32 @@
     "portable:package:dev": "node scripts/portable/package-portable.js --kind dev",
     "portable:verify": "node scripts/portable/portable-health-check.js",
     "portable:repair": "node scripts/portable/repair-portable.js",
-
     "//install": "── 安装与自检（scripts/install/*）──",
     "hooks:install": "node scripts/install/install-git-hooks.js",
     "verify:install": "node scripts/install/verify-install.js",
-
     "//bench": "── 性能基准（scripts/bench/*）──",
     "bench:startup": "node scripts/bench/startup_ab_bench.js",
     "bench:startup-probe": "node scripts/bench/startup_probe_cost_bench.js",
     "bench:ab-compare": "node scripts/bench/ab-compare.js",
     "bench:git-spawn": "node scripts/bench/git_spawn_bench.js",
-
     "//diagnostics": "── 诊断（scripts/diagnostics/*）──",
     "doctor:hydration": "node scripts/diagnostics/hydration-doctor.js",
     "doctor:model-types": "node scripts/diagnostics/model-type-providers.js"
   },
   "devDependencies": {
-    "javascript-obfuscator": "^5.4.2"
+    "@opentelemetry/exporter-trace-otlp-http": "^0.207.0",
+    "@opentelemetry/sdk-trace-base": "^2.2.0",
+    "c8": "^10.1.3",
+    "esbuild": "^0.25.12",
+    "javascript-obfuscator": "^5.4.2",
+    "node-cron": "^4.2.1"
   },
   "allowScripts": {
     "better-sqlite3@12.9.0": true
+  },
+  "dependencies": {
+    "@opentelemetry/instrumentation-express": "^0.56.0",
+    "@opentelemetry/instrumentation-http": "^0.207.0",
+    "@opentelemetry/sdk-node": "^0.207.0"
   }
 }

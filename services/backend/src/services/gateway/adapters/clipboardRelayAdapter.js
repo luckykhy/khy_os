@@ -331,11 +331,45 @@ function detect() {
     return _detectCache.ok;
   }
   try {
-    readClipboard();
-    return _cacheDetect(true, '');
+    // Capability probe must NOT read the clipboard. A capability question
+    // ("is this relay available?") is answered by "is the platform clipboard
+    // tool present" — reading the user's clipboard content here would both leak
+    // its contents to every gateway status poll and add ~200ms of PowerShell.
+    // searchExecutable is TTL-cached (30s) + stale-while-revalidate. Its first
+    // lookup may run `where`, but subsequent status checks are cache hits and no
+    // status path starts PowerShell or touches clipboard content. darwin/linux
+    // probe the respective binary in path; win32 asks for either PowerShell executable.
+    const ok = _probeBinaryPresent();
+    return _cacheDetect(ok, ok ? '' : 'no system clipboard tool found');
   } catch (err) {
     return _cacheDetect(false, err.message || 'clipboard unavailable');
   }
+}
+
+/**
+ * Non-blocking binary-presence probe for the sync `detect()` cold-cache path.
+ * Pure executable lookup (platformUtils.searchExecutable, TTL-cached) — never
+ * touches clipboard contents. The helper stays private; callers exercise the
+ * public `detect()` / `detectAsync()` APIs.
+ */
+function _probeBinaryPresent() {
+  const platform = os.platform();
+  const { searchExecutable } = require('../../../tools/platformUtils');
+  if (platform === 'darwin') {
+    return Boolean(searchExecutable('pbpaste') || searchExecutable('pbcopy'));
+  }
+  if (platform === 'win32') {
+    for (const bin of POWERSHELL_BINS) {
+      if (searchExecutable(bin)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  // Linux: any of xclip / xsel / wl-clipboard-tools present
+  return Boolean(
+    searchExecutable('xclip') || searchExecutable('xsel') || searchExecutable('wl-paste')
+  );
 }
 
 async function detectAsync() {
@@ -533,6 +567,7 @@ async function generate(prompt, options = {}) {
                 adapter: 'clipboard',
                 provider: `clipboard-relay (${serviceInfo.name})`,
                 model: service,
+                tokenUsage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
                 attempts: [{ provider: serviceInfo.name, success: true }],
               })
             );

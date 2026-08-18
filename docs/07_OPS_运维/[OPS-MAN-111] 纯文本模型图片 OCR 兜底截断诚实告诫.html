@@ -29,7 +29,7 @@
 <blockquote><p>状态:已实现(未提交,待用户点头)。承接 [OPS-MAN-104] 低置信、[OPS-MAN-109] 覆盖率两条诚实告诫,补<strong>正交</strong>的第三条诚实维度。<br>门控:<code>KHY_OCR_TRUNCATION_NOTICE</code>(default-on,<code>0/false/off/no</code> 关 → 逐字节回退)。</p></blockquote>
 <h2 id="一-背景与缺口-goal-2026-07-12">一、背景与缺口(/goal 2026-07-12)<a class="anchor" href="#一-背景与缺口-goal-2026-07-12" aria-label="锚点">#</a></h2>
 <p>当运行模型为<strong>纯文本 / 非多模态</strong>、且识图模型不可用时,khy 落到本地 OCR 兜底,把提取到的文字<br>当作「请据此作答」的权威依据注入 prompt。gateway 三处注入点都以:</p>
-<pre><code class="language-js">extractImageOcrDetails(images, { maxImages: 3, maxChars: 1200 })</code></pre>
+<pre><code class="language-js"><span class="hljs-title function_">extractImageOcrDetails</span>(images, { <span class="hljs-attr">maxImages</span>: <span class="hljs-number">3</span>, <span class="hljs-attr">maxChars</span>: <span class="hljs-number">1200</span> })</code></pre>
 <p>提取。<code>ocrSnippetService.js</code> 内部对每张图的 OCR 全文做 <code>_truncate(text, maxChars)</code>——<strong>超过<br>1200 字符的稠密图片(整页文档、长截图、密集表格)尾部被静默裁掉</strong>,只在文本里追加一个内嵌<br>英文标记 <code>...[truncated]</code>。这个标记从不作为结构化信号 <code>truncated</code> 离开 service:输出对象里没有<br>它,<code>extractImageOcrDetails</code> 的明细里也没有它。</p>
 <p>于是模型收到一段看似完整、实则被砍掉尾部的 OCR 文本,并被告知「请据此作答」。用户发了一张稠密<br>发票 / 合同 / 长截图时,模型基于<strong>残缺</strong>文本自信作答、把「文本里没提到」当成「事实上不存在」而<br>毫不知情——又一处「silent truncation reads as covered everything」反模式:截断已在代码里发生,却从不<br>向作答的模型披露。</p>
 <p><strong>与 OPS-104 / OPS-109 的三条正交关系</strong>(同一 consumer = OCR 注入点上三条互相独立的诚实轴):</p>

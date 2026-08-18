@@ -31,29 +31,29 @@
 <ul><li><strong>R1 加法式</strong>：新逻辑只加不改。先 <code>grep</code> 有没有现成实现可复用；绝不为同一概念写第二份真源。</li><li><strong>R2 纯叶子</strong>：新逻辑写成一个<strong>纯叶子模块</strong>——零 IO、确定性、<strong>绝不抛异常</strong>（坏输入返安全默认）、可单测、不 <code>require</code> 重依赖。</li><li><strong>R3 门控</strong>：用一个 <code>KHY_XXX</code> 环境变量门控，<strong>默认开</strong>；登记到 <code>services/backend/src/services/flagRegistry.js</code>；父门控关 → 子门控必关。</li><li><strong>R4 逐字节回退</strong>：<code>KHY_XXX</code> 关闭时，行为和改动前<strong>逐字节相同</strong>。接线处 <code>try/catch</code>，叶子异常 fail-soft 回退旧行为。</li><li><strong>R5 严格超集</strong>：只在旧路径<strong>漏做/做错</strong>处补正，绝不改变既有正确路径的输出；安全向只多封锁/多清理，不放宽。</li><li><strong>R6 真接线</strong>：必须能从 <code>executeTool</code>（<code>toolCalling.js</code>）/ <code>toolUseLoop.js</code> / <code>aiManagementServer.js</code> 之一被 <code>require</code> 到才算&quot;在产&quot;。<strong>隔离单测全绿 ≠ 在产。</strong></li><li><strong>R7 守卫绿</strong>：改完跑相关单测；提交前守卫 <code>scripts/check-*.js</code>（git 钩子自动触发）必须<strong>全绿</strong>；绝不用 <code>git --no-verify</code> 跳过。</li><li><strong>R8 不建上帝组件</strong>：单文件不超 <strong>2500 行</strong>；拆分把内聚分节抽成纯叶子，原文件同名别名 re-export 保契约。</li><li><strong>R9 诚实收尾</strong>：如实说测了什么/几个绿/跳过了什么/哪些没做。（收尾模板见 <code>/khy-honest-closure</code>。）</li></ul>
 <h2 id="可照抄的模板">可照抄的模板<a class="anchor" href="#可照抄的模板" aria-label="锚点">#</a></h2>
 <p><strong>纯叶子模板</strong>（新建 <code>services/backend/src/services/xxxGuard.js</code>）：</p>
-<pre><code class="language-js">function isEnabled(env = process.env) {
-  try {
-    const v = env &amp;&amp; env.KHY_XXX;
-    if (v == null) return true;                 // 默认开
-    return !['0', 'false', 'off', 'no'].includes(String(v).trim().toLowerCase());
-  } catch { return true; }
+<pre><code class="language-js"><span class="hljs-keyword">function</span> <span class="hljs-title function_">isEnabled</span>(<span class="hljs-params">env = process.env</span>) {
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">const</span> v = env &amp;&amp; env.<span class="hljs-property">KHY_XXX</span>;
+    <span class="hljs-keyword">if</span> (v == <span class="hljs-literal">null</span>) <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;                 <span class="hljs-comment">// 默认开</span>
+    <span class="hljs-keyword">return</span> ![<span class="hljs-string">&#x27;0&#x27;</span>, <span class="hljs-string">&#x27;false&#x27;</span>, <span class="hljs-string">&#x27;off&#x27;</span>, <span class="hljs-string">&#x27;no&#x27;</span>].<span class="hljs-title function_">includes</span>(<span class="hljs-title class_">String</span>(v).<span class="hljs-title function_">trim</span>().<span class="hljs-title function_">toLowerCase</span>());
+  } <span class="hljs-keyword">catch</span> { <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>; }
 }
-function decide(input) {
-  try {
-    // 纯计算，坏输入返安全默认
-    return { ok: true, value: /* ... */ };
-  } catch { return null; }                       // 绝不抛
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">decide</span>(<span class="hljs-params">input</span>) {
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-comment">// 纯计算，坏输入返安全默认</span>
+    <span class="hljs-keyword">return</span> { <span class="hljs-attr">ok</span>: <span class="hljs-literal">true</span>, <span class="hljs-attr">value</span>: <span class="hljs-comment">/* ... */</span> };
+  } <span class="hljs-keyword">catch</span> { <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>; }                       <span class="hljs-comment">// 绝不抛</span>
 }
-module.exports = { isEnabled, decide };</code></pre>
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = { isEnabled, decide };</code></pre>
 <p><strong>接线模板</strong>（在真实消费点接入，保留旧值兜底）：</p>
-<pre><code class="language-js">let result = legacyValue;
-try {
-  const leaf = require('./xxxGuard');
-  if (leaf.isEnabled(process.env)) {
-    const d = leaf.decide(input);
-    if (d) result = d.value;
+<pre><code class="language-js"><span class="hljs-keyword">let</span> result = legacyValue;
+<span class="hljs-keyword">try</span> {
+  <span class="hljs-keyword">const</span> leaf = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./xxxGuard&#x27;</span>);
+  <span class="hljs-keyword">if</span> (leaf.<span class="hljs-title function_">isEnabled</span>(process.<span class="hljs-property">env</span>)) {
+    <span class="hljs-keyword">const</span> d = leaf.<span class="hljs-title function_">decide</span>(input);
+    <span class="hljs-keyword">if</span> (d) result = d.<span class="hljs-property">value</span>;
   }
-} catch { /* 保持 legacyValue，逐字节回退旧行为 */ }</code></pre>
+} <span class="hljs-keyword">catch</span> { <span class="hljs-comment">/* 保持 legacyValue，逐字节回退旧行为 */</span> }</code></pre>
 <p><strong>验回退</strong>：临时设 <code>KHY_XXX=off</code> 跑同样输入，输出应与改动前<strong>逐字节相同</strong>。</p>
 <h2 id="动手前先声明-每次">动手前先声明（每次）<a class="anchor" href="#动手前先声明-每次" aria-label="锚点">#</a></h2>
 <p>一句话说清：</p>

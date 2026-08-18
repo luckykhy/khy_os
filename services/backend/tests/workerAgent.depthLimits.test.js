@@ -4,8 +4,27 @@ describe('workerAgent depth/concurrency limits', () => {
   let workerAgent;
 
   beforeEach(() => {
-    // Fresh require to reset module state
+    // Fresh require to reset module state. These tests exercise lifecycle limits,
+    // so keep worker execution deterministic and out of the full chat pipeline.
     jest.resetModules();
+    jest.doMock('../src/services/cliAgentRunner', () => ({
+      AGENT_ROLES: {
+        coder: { systemPrompt: 'coder fixture', toolProfile: null },
+        general: { systemPrompt: 'general fixture', toolProfile: null },
+      },
+    }));
+    jest.doMock('../src/cli/ai', () => ({
+      chat: jest.fn(() => new Promise(() => {})),
+    }));
+    jest.doMock('../src/cli/hooks/hookSystem', () => ({
+      trigger: jest.fn(async () => {}),
+    }));
+    jest.doMock('../src/services/resourceGuard', () => ({
+      startWatchdog: jest.fn(() => ({
+        touch: jest.fn(),
+        done: jest.fn(),
+      })),
+    }));
     workerAgent = require('../src/coordinator/workerAgent');
   });
 

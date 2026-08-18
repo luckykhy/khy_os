@@ -27,7 +27,7 @@ function fakeChromium(htmlFor) {
 }
 
 afterEach(() => {
-  playwrightSearch.__setPlaywrightModuleForTests(null); // restore autodetect
+  playwrightSearch.__setPlaywrightModuleForTests(undefined); // restore autodetect
   delete process.env.KHY_SEARCH_MODE;
   delete process.env.KHY_PLAYWRIGHT_WS_ENDPOINT;
   delete process.env.KHY_PLAYWRIGHT_CDP_ENDPOINT;
@@ -58,7 +58,7 @@ describe('playwrightSearch helpers', () => {
   });
 
   test('fetchRenderedHtml returns unavailable when playwright is absent', async () => {
-    // No stub set + playwright not installed → unavailable.
+    playwrightSearch.__setPlaywrightModuleForTests({});
     const r = await playwrightSearch.fetchRenderedHtml('https://example.com/');
     expect(r.unavailable).toBe(true);
   });
@@ -75,7 +75,7 @@ describe('webSearch _playwrightFanout', () => {
   const fanout = svc.__parsersForTests.playwrightFanout;
 
   test('returns unavailable when playwright missing', async () => {
-    playwrightSearch.__setPlaywrightModuleForTests(null); // autodetect → absent
+    playwrightSearch.__setPlaywrightModuleForTests({});
     const r = await fanout('typescript generics');
     expect(r.unavailable).toBe(true);
   });

@@ -38,17 +38,17 @@
 <table><thead><tr><th>行号</th><th>原引用</th><th>修复方式</th></tr></thead><tbody><tr><td>~46</td><td><code>require('../cli/handlers/data')</code> — handleQuote</td><td>try/catch 降级，返回&quot;仅在主 CLI 中可用&quot;</td></tr><tr><td>~64</td><td><code>require('../cli/handlers/backtest')</code> — handleBacktestRun</td><td>同上</td></tr><tr><td>~78</td><td><code>require('../cli/handlers/data')</code> — handleDataFetch</td><td>同上</td></tr><tr><td>~92</td><td><code>require('../cli/symbolResolver')</code> — resolveSymbol</td><td>同上</td></tr><tr><td>~108</td><td><code>require('../services/resourceGuard')</code> — withTimeout (execute_code)</td><td>移除，改用 VM 内置 <code>{ timeout: 5000 }</code></td></tr><tr><td>~149</td><td><code>require('../services/resourceGuard')</code> — safeExec (shell_command)</td><td>改用 <code>child_process.execSync</code> + 30s 超时</td></tr></tbody></table>
 <p><strong>strategy_list handler</strong>（~206 行）：<code>require('../models')</code> 改为 <code>require('@khy/shared/models')</code>。</p>
 <h3 id="2-2-backend-src-services-gateway-aigateway-js-539">2.2 backend/src/services/gateway/aiGateway.js:539<a class="anchor" href="#2-2-backend-src-services-gateway-aigateway-js-539" aria-label="锚点">#</a></h3>
-<pre><code class="language-diff">- require('@khy/shared/src/services/cacheService')
-+ require('@khy/shared/services/cacheService')</code></pre>
+<pre><code class="language-diff"><span class="hljs-deletion">- require(&#x27;@khy/shared/src/services/cacheService&#x27;)</span>
+<span class="hljs-addition">+ require(&#x27;@khy/shared/services/cacheService&#x27;)</span></code></pre>
 <p>路径多了一级 <code>/src/</code>，不匹配 <code>@khy/shared</code> 的 exports map。被 try/catch 包裹后静默失败，导致 Redis health store 功能永远无法启用。</p>
 <h3 id="2-3-backend-src-routes-marketdata-js-164">2.3 backend/src/routes/marketData.js:164<a class="anchor" href="#2-3-backend-src-routes-marketdata-js-164" aria-label="锚点">#</a></h3>
-<pre><code class="language-diff">- const { importAllStocks, ... } = require('../../import-stock-data');
-+ let importAllStocks, importSingleStock, STOCK_LIST;
-+ try {
-+   ({ importAllStocks, importSingleStock, STOCK_LIST } = require('../../import-stock-data'));
-+ } catch {
-+   return res.status(501).json({ success: false, message: 'import-stock-data 模块不可用...' });
-+ }</code></pre>
+<pre><code class="language-diff"><span class="hljs-deletion">- const { importAllStocks, ... } = require(&#x27;../../import-stock-data&#x27;);</span>
+<span class="hljs-addition">+ let importAllStocks, importSingleStock, STOCK_LIST;</span>
+<span class="hljs-addition">+ try {</span>
+<span class="hljs-addition">+   ({ importAllStocks, importSingleStock, STOCK_LIST } = require(&#x27;../../import-stock-data&#x27;));</span>
+<span class="hljs-addition">+ } catch {</span>
+<span class="hljs-addition">+   return res.status(501).json({ success: false, message: &#x27;import-stock-data 模块不可用...&#x27; });</span>
+<span class="hljs-addition">+ }</span></code></pre>
 <p><code>backend/import-stock-data.js</code> 文件不存在，调用 <code>/api/market-data/import</code> 时直接崩溃。改为 501 降级响应。</p>
 <hr>
 <h2 id="三-环境变量和配置默认值矛盾-5-处">三、环境变量和配置默认值矛盾（5 处）<a class="anchor" href="#三-环境变量和配置默认值矛盾-5-处" aria-label="锚点">#</a></h2>

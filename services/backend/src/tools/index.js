@@ -1053,11 +1053,24 @@ function getConcurrencySafe() {
 
 /**
  * Get all currently enabled tools (respects isEnabled checks like isGitRepo).
+ *
+ * `options.nameFilter` lets a caller that will discard most tools anyway say so
+ * up front: names it rejects never get their `isEnabled()` probed. That probe is
+ * not free — several tools shell out (`python --version`, `where ffmpeg`,
+ * `where pwsh`, `git rev-parse`), so building the full map costs ~1.4s of
+ * blocking child processes. A greeting turn keeps 16 of ~160 tools; probing the
+ * other ~145 is pure waste. Without a filter, behaviour is unchanged.
+ *
+ * @param {{nameFilter?: (name: string) => boolean}} [options]
  * @returns {Map<string, object>}
  */
-function getEnabled() {
+function getEnabled(options = {}) {
+  const nameFilter = typeof options.nameFilter === 'function' ? options.nameFilter : null;
   const result = new Map();
   for (const [name, tool] of getAll()) {
+    if (nameFilter && !nameFilter(name)) {
+      continue;
+    }
     const enabled = typeof tool.isEnabled === 'function' ? tool.isEnabled() : true;
     if (enabled) {
       result.set(name, tool);
@@ -1068,10 +1081,11 @@ function getEnabled() {
 
 /**
  * Get function-calling definitions for enabled tools only.
+ * @param {{nameFilter?: (name: string) => boolean}} [options] see getEnabled
  * @returns {Array<{name, description, parameters}>}
  */
-function getEnabledDefinitions() {
-  return [...getEnabled().values()].map((t) => t.toFunctionDef());
+function getEnabledDefinitions(options = {}) {
+  return [...getEnabled(options).values()].map((t) => t.toFunctionDef());
 }
 
 // ── Exports ─────────────────────────────────────────────────────────

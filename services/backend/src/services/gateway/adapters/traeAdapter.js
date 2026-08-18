@@ -1989,6 +1989,7 @@ async function callTraeBySdk(tokenData, prompt, model, options = {}) {
             adapter: 'trae',
             provider: `Trae SDK (${model})`,
             model,
+            tokenUsage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
             attempts: mergeAttempts(attempts, [
               { provider: `Trae(SDK:${sdkEndpoint})`, success: true },
             ]),
@@ -2018,6 +2019,11 @@ async function callTraeBySdk(tokenData, prompt, model, options = {}) {
           adapter: 'trae',
           provider: `Trae SDK (${model})`,
           model,
+          tokenUsage: {
+            inputTokens: Number(json?.usage?.prompt_tokens || 0),
+            outputTokens: Number(json?.usage?.completion_tokens || 0),
+            totalTokens: Number(json?.usage?.total_tokens || 0),
+          },
           toolUseBlocks: sdkToolUseBlocks.length > 0 ? sdkToolUseBlocks : undefined,
           stopReason:
             sdkToolUseBlocks.length > 0 ? 'tool_use' : sdkChoice?.finish_reason || 'end_turn',
@@ -2158,6 +2164,7 @@ function callTraeByHttp(tokenData, prompt, model, options = {}) {
               adapter: 'trae',
               provider: `Trae (${model})`,
               model,
+              tokenUsage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
               attempts: mergeAttempts(attempts, [{ provider: 'Trae(HTTP)', success: true }]),
             });
           }
@@ -2170,6 +2177,11 @@ function callTraeByHttp(tokenData, prompt, model, options = {}) {
             adapter: 'trae',
             provider: `Trae (${model})`,
             model,
+            tokenUsage: {
+              inputTokens: Number(json?.usage?.prompt_tokens || 0),
+              outputTokens: Number(json?.usage?.completion_tokens || 0),
+              totalTokens: Number(json?.usage?.total_tokens || 0),
+            },
             toolUseBlocks: parsed.toolUseBlocks.length > 0 ? parsed.toolUseBlocks : undefined,
             stopReason: parsed.stopReason,
             attempts: mergeAttempts(attempts, [{ provider: 'Trae(HTTP)', success: true }]),

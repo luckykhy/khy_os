@@ -37,11 +37,11 @@
 <h2 id="它和家族其它层的正交关系-别混淆">它和家族其它层的正交关系（别混淆）<a class="anchor" href="#它和家族其它层的正交关系-别混淆" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>层</th><th>管什么</th><th>一句话</th></tr></thead><tbody><tr><td>105 <code>snapshotFormatCompat</code></td><td>外层快照信封（<code>format</code>/<code>formatVersion</code>）</td><td>「这是不是 khy 快照」</td></tr><tr><td><strong>110 本层 <code>cryptoSuiteCompat</code></strong></td><td><strong>解密套件可执行性</strong>（<code>algo</code>/<code>kdf</code> + 必需材料）</td><td><strong>「我做不做得了这个解密」</strong></td></tr><tr><td>108 <code>archiveExtractCompat</code></td><td>解密后内层归档形制（<code>plaintextFormat</code>/<code>layout</code>）</td><td>「解开后我解不解得包」</td></tr><tr><td>095 <code>completenessVerifier</code></td><td>解包后文件数</td><td>「落地数量对得上吗」</td></tr></tbody></table>
 <p>顺序恰是还原流水线：信封(105) → <strong>解密套件(本层 110)</strong> → 真解密 → 内层归档(108) → 解包 → 完整性(095)。</p>
-<pre><code class="language-bash">node scripts/restore-check-format.js  ./Khy-OS --json   # ① 信封格式：本机看得懂吗？（105）
-node scripts/restore-check-crypto.js  ./Khy-OS --json   # ② 解密套件：本机解得了吗？（本层 110）
-node scripts/restore-check-archive.js ./Khy-OS --json   # ③ 内层归档：本机解包器解得开吗？（108）
-khy restore ./Khy-OS                                    # ④ 三门都过才敢真解密解包还原
-node scripts/restore-verify-complete.js ./Khy-OS --json # ⑤ 再对账数量：真完整吗？（095）</code></pre>
+<pre><code class="language-bash">node scripts/restore-check-format.js  ./Khy-OS --json   <span class="hljs-comment"># ① 信封格式：本机看得懂吗？（105）</span>
+node scripts/restore-check-crypto.js  ./Khy-OS --json   <span class="hljs-comment"># ② 解密套件：本机解得了吗？（本层 110）</span>
+node scripts/restore-check-archive.js ./Khy-OS --json   <span class="hljs-comment"># ③ 内层归档：本机解包器解得开吗？（108）</span>
+khy restore ./Khy-OS                                    <span class="hljs-comment"># ④ 三门都过才敢真解密解包还原</span>
+node scripts/restore-verify-complete.js ./Khy-OS --json <span class="hljs-comment"># ⑤ 再对账数量：真完整吗？（095）</span></code></pre>
 <h2 id="判定档-解密套件门-最保守优先">判定档：解密套件门（最保守优先）<a class="anchor" href="#判定档-解密套件门-最保守优先" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>档</th><th>条件</th><th>裁决</th><th>ok</th></tr></thead><tbody><tr><td>1</td><td>头非对象 / 数组 / 无 <code>crypto</code> 块 / <code>algo</code> 非非空串</td><td><code>unverifiable</code>：证据不足，绝不谎报</td><td>✗</td></tr><tr><td>2</td><td><code>crypto.algo</code> ∉ 支持集</td><td><code>unsupported-algo</code>：本机执行不了这个算法，<strong>先升级 khy</strong></td><td>✗</td></tr><tr><td>3</td><td><code>crypto.kdf</code> 存在且 ∉ 支持集</td><td><code>unsupported-kdf</code>：会误派生 → 假「口令错误」，<strong>先升级 khy</strong></td><td>✗</td></tr><tr><td>4</td><td>缺 <code>salt</code>/<code>iv</code>/<code>authTag</code> 任一</td><td><code>incomplete-material</code>：快照残缺，<strong>不是口令错误</strong></td><td>✗</td></tr><tr><td>5</td><td><code>algo</code> ∈ 支持集且（<code>kdf</code> 缺省 / ∈ 支持集）且材料齐全</td><td><code>supported</code>：唯一可安心进解密的档</td><td>✓</td></tr></tbody></table>
 <ul><li>本机解密真能执行的套件由叶子常量 <code>SUPPORTED_ALGOS</code> / <code>SUPPORTED_KDFS</code> 定义</li></ul>

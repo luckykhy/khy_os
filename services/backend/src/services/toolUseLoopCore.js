@@ -2548,13 +2548,17 @@ async function runToolUseLoop(userMessage, options = {}) {
   // Apply intentGate outerBoost: coding +18, ultrawork +12, analyze +6
   const { getLoopLimitBoost } = require('./intentGate');
   const _loopBoost = getLoopLimitBoost(gatedInput.activatedModes || []);
-  const effectiveMaxIterations = Math.min(
-    200,
-    resolvedMaxIterations +
-      _loopBoost.outerBoost +
-      transientRecoveryMax +
-      (_harnessProfile.maxIterationsBoost || 0)
-  );
+  const hasExplicitMaxIterations =
+    requestedMaxIterations !== undefined && requestedMaxIterations !== null;
+  const effectiveMaxIterations = hasExplicitMaxIterations
+    ? resolvedMaxIterations
+    : Math.min(
+        200,
+        resolvedMaxIterations +
+          _loopBoost.outerBoost +
+          transientRecoveryMax +
+          (_harnessProfile.maxIterationsBoost || 0)
+      );
   const maxElapsedMs = _resolveMaxElapsedMs();
   let transientRecoveryUsed = 0;
   // /s! 紧急 steer 重发计数：用户抢占在飞模型回合并注入修正后原地重发，bounded 防滥用。
@@ -3377,7 +3381,10 @@ async function runToolUseLoop(userMessage, options = {}) {
       }
     }
 
-    while (!budget.depleted || budget.graceAvailable) {
+    // A depleted budget may re-enter only after the bottom-of-loop seam has
+    // explicitly armed the single summarization round. Merely having unused
+    // grace must not let recovery `continue` branches consume unbounded rounds.
+    while (!budget.depleted || _gracePending) {
       budget.consume();
       // Grace turn activation: consume the pending grace armed at the bottom of
       // the previous round. Marking it used here (not at the arm site) is what
@@ -5237,6 +5244,7 @@ async function runToolUseLoop(userMessage, options = {}) {
           // the guard relaxes its Jaccard threshold so a re-worded lead-in cannot slip
           // a near-identical answer past the breaker (see answerEchoGuard.isEcho).
           if (
+            !_stopHookActive &&
             _answerEchoGuard.isSubstantive(aiResult.reply) &&
             _answerEchoGuard.isEcho(_echoFp, _streamedAnswerFps, {
               redriveCount: _streamedAnswerFps.length,
@@ -6064,13 +6072,10 @@ async function runToolUseLoop(userMessage, options = {}) {
               Array.isArray(executionPlan.steps) &&
               executionPlan.steps.length > 0
             ),
-            goalModeActive: (() => {
-              try {
-                return require('./goalModeService').isActive();
-              } catch {
-                return false;
-              }
-            })(),
+            // KHY_GOAL_MODE_ACTIVE is also used as the shared permission marker
+            // for ultrawork/coding. Audit on the explicit intent for this turn,
+            // otherwise those modes make a text-only completion spawn agents.
+            goalModeActive: (gatedInput.activatedModes || []).includes('goal'),
             isSubagent: !!effectiveChatOpts._isSubagent,
           });
           if (_gate.audit) {

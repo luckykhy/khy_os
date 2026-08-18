@@ -67,25 +67,25 @@
 <p>配置来源（优先级从低到高）：<code>DEFAULTS</code> ← JSON 文件 <code>getDataHome()/input_sanitizer.json</code><br>← 环境变量。任一步失败安全降级到上一层，绝不抛。</p>
 <table><thead><tr><th>配置项</th><th>默认</th><th>env 覆盖</th><th>说明</th></tr></thead><tbody><tr><td><code>enabled</code></td><td><code>true</code></td><td><code>KHY_INPUT_SANITIZE</code></td><td>主开关（0/false/off 关闭）</td></tr><tr><td><code>stripControlChars</code></td><td><code>true</code></td><td>—</td><td>删控制字符（保留 <code>\n</code> <code>\t</code>）</td></tr><tr><td><code>stripZeroWidth</code></td><td><code>true</code></td><td>—</td><td>删零宽字符/BOM/软连字符</td></tr><tr><td><code>stripReplacementChar</code></td><td><code>true</code></td><td>—</td><td>删 <code>U+FFFD</code> 乱码替换符</td></tr><tr><td><code>collapseWhitespace</code></td><td><code>true</code></td><td>—</td><td>行内多空格/制表符→单空格</td></tr><tr><td><code>maxBlankLines</code></td><td><code>1</code></td><td><code>KHY_INPUT_SANITIZE_MAX_BLANK_LINES</code></td><td>连续空行上限</td></tr><tr><td><code>collapsePunctRun</code></td><td><code>true</code></td><td>—</td><td>折叠刷屏标点</td></tr><tr><td><code>maxPunctRun</code></td><td><code>4</code></td><td><code>KHY_INPUT_SANITIZE_MAX_PUNCT_RUN</code></td><td>同一标点连续 ≥ 此数才折叠</td></tr><tr><td><code>punctRunKeep</code></td><td><code>3</code></td><td><code>KHY_INPUT_SANITIZE_PUNCT_KEEP</code></td><td>折叠后保留个数</td></tr><tr><td><code>collapseLetterRuns</code></td><td><code>false</code></td><td><code>KHY_INPUT_SANITIZE_LETTER_RUNS</code></td><td>字母长串折叠（默认关，保守）</td></tr><tr><td><code>maxLetterRun</code> / <code>letterRunKeep</code></td><td><code>8</code> / <code>3</code></td><td>—</td><td>字母折叠阈值/保留</td></tr><tr><td><code>dedupLines</code></td><td><code>true</code></td><td>—</td><td>连续重复行去重</td></tr><tr><td><code>maxLineRepeat</code> / <code>lineRepeatKeep</code></td><td><code>3</code> / <code>3</code></td><td><code>KHY_INPUT_SANITIZE_MAX_LINE_REPEAT</code></td><td>重复行阈值/保留</td></tr><tr><td><code>trimTrailingWs</code></td><td><code>true</code></td><td>—</td><td>行尾空白清除</td></tr><tr><td><code>maxInputChars</code></td><td><code>200000</code></td><td>—</td><td>超长跳过阈值</td></tr></tbody></table>
 <p>JSON 文件示例（<code>~/.khyquant/input_sanitizer.json</code>）：</p>
-<pre><code class="language-json">{ &quot;maxPunctRun&quot;: 3, &quot;collapseLetterRuns&quot;: true, &quot;maxBlankLines&quot;: 0 }</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;maxPunctRun&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">3</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;collapseLetterRuns&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;maxBlankLines&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0</span> <span class="hljs-punctuation">}</span></code></pre>
 <hr>
 <h2 id="5-示例">5. 示例<a class="anchor" href="#5-示例" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>输入（乱）</th><th>输出（净）</th><th>说明</th></tr></thead><tbody><tr><td><code>帮我分析下茅台！！！！！！！！！！谢谢？？？？？？</code></td><td><code>帮我分析下茅台！！！谢谢？？？</code></td><td>刷屏标点折叠</td></tr><tr><td><code>成本是10000000元对吧</code></td><td><code>成本是10000000元对吧</code></td><td><strong>数字永不折叠</strong></td></tr><tr><td><code>买入\n买入\n买入\n买入\n买入</code></td><td><code>买入\n买入\n买入</code></td><td>连续重复行去重</td></tr><tr><td><code>第一行\n\n\n\n\n第二行</code></td><td><code>第一行\n\n第二行</code></td><td>空行折叠</td></tr><tr><td><code>贵&lt;ZWSP&gt;州&lt;BOM&gt;茅台</code></td><td><code>贵州茅台</code></td><td>零宽/BOM 清除</td></tr><tr><td><code>请   帮我   查询</code></td><td><code>请 帮我 查询</code></td><td>行内空白归一</td></tr><tr><td>`<code>看这段\n</code>`<code>js\nconst x=1;;;;;;;;\n</code>````</td><td>（代码块原样保留）</td><td>代码保护，内部不动</td></tr><tr><td><code>请帮我查询贵州茅台今天的收盘价。</code></td><td>（不变）</td><td>正常输入零改动</td></tr></tbody></table>
 <hr>
 <h2 id="6-接口">6. 接口<a class="anchor" href="#6-接口" aria-label="锚点">#</a></h2>
-<pre><code class="language-js">const S = require('services/inputSanitizer');
+<pre><code class="language-js"><span class="hljs-keyword">const</span> S = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;services/inputSanitizer&#x27;</span>);
 
-// 便捷接口（接入用）：返回可直接送模型的字符串，永不抛，回退即原文。
-const clean = S.sanitizeForModel(userText);                  // string
-S.sanitizeForModel(userText, { onStats: (r) =&gt; log(r.stats) }); // 可观测 token 节省
+<span class="hljs-comment">// 便捷接口（接入用）：返回可直接送模型的字符串，永不抛，回退即原文。</span>
+<span class="hljs-keyword">const</span> clean = S.<span class="hljs-title function_">sanitizeForModel</span>(userText);                  <span class="hljs-comment">// string</span>
+S.<span class="hljs-title function_">sanitizeForModel</span>(userText, { <span class="hljs-attr">onStats</span>: <span class="hljs-function">(<span class="hljs-params">r</span>) =&gt;</span> <span class="hljs-title function_">log</span>(r.<span class="hljs-property">stats</span>) }); <span class="hljs-comment">// 可观测 token 节省</span>
 
-// 完整接口（需要统计/原因时）：
-const r = S.sanitize(userText);
-// → { original, sanitized, changed, fellBack, reason,
-//     stats: { beforeChars, afterChars, savedChars, beforeTokens, afterTokens, savedTokens } }
+<span class="hljs-comment">// 完整接口（需要统计/原因时）：</span>
+<span class="hljs-keyword">const</span> r = S.<span class="hljs-title function_">sanitize</span>(userText);
+<span class="hljs-comment">// → { original, sanitized, changed, fellBack, reason,</span>
+<span class="hljs-comment">//     stats: { beforeChars, afterChars, savedChars, beforeTokens, afterTokens, savedTokens } }</span>
 
-S.loadConfig(env?);  // 解析配置（DEFAULTS ← JSON ← env）
-S.DEFAULTS;          // 冻结的默认配置</code></pre>
+S.<span class="hljs-title function_">loadConfig</span>(env?);  <span class="hljs-comment">// 解析配置（DEFAULTS ← JSON ← env）</span>
+S.<span class="hljs-property">DEFAULTS</span>;          <span class="hljs-comment">// 冻结的默认配置</span></code></pre>
 <p><code>reason</code> 取值：<code>disabled</code> / <code>empty</code> / <code>too-large</code> / <code>unchanged</code> / <code>sanitized</code> /<br><code>degenerate-empty</code>（退化回退）/ <code>essential-lost</code>（丢失有效内容回退）/ <code>error:&lt;msg&gt;</code>（异常回退）。</p>
 <hr>
 <h2 id="7-边界-只新增预处理模块">7. 边界（只新增预处理模块）<a class="anchor" href="#7-边界-只新增预处理模块" aria-label="锚点">#</a></h2>

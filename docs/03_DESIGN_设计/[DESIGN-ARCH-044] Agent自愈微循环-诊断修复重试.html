@@ -55,17 +55,17 @@
 <h2 id="5-修复分级">5. 修复分级<a class="anchor" href="#5-修复分级" aria-label="锚点">#</a></h2>
 <ul><li><strong>L0 自愈</strong>：参数补全 / 路径修正 / 格式纠错——代码级硬修复，零风险，不问用户，<code>auto=true</code>。</li><li><strong>L1 交互</strong>：装依赖 / 切运行时——必问用户获批，<code>auto=false</code>。</li><li><strong>L2 拒绝</strong>：系统核心配置 / 危险命令 / 网络越权——不修，直接降级树。</li></ul>
 <h2 id="6-强制兜底报告-goal3-形状-严格对齐">6. 强制兜底报告（Goal3 形状，严格对齐）<a class="anchor" href="#6-强制兜底报告-goal3-形状-严格对齐" aria-label="锚点">#</a></h2>
-<pre><code class="language-json">{
-  &quot;status&quot;: &quot;failed&quot;,
-  &quot;intent&quot;: &quot;fetch-web-content&quot;,
-  &quot;diagnosis&quot;: { &quot;error_code&quot;: &quot;E05&quot;, &quot;cause&quot;: &quot;依赖缺失（Node 模块/Python 包未安装）&quot;,
-                 &quot;reason&quot;: &quot;missing-dependency&quot;, &quot;risk&quot;: &quot;L1&quot;,
-                 &quot;prescription&quot;: &quot;安装依赖 puppeteer（委派 dependency 注册表，命令来自受控表）。&quot;,
-                 &quot;detail&quot;: &quot;…(脱敏)…&quot; },
-  &quot;attempted_fixes&quot;: [ { &quot;action&quot;: &quot;安装依赖 puppeteer…&quot;, &quot;result&quot;: &quot;failed:network-unreachable&quot;, &quot;auto&quot;: false } ],
-  &quot;salvage_data&quot;: &quot;…(降级树各 Plan 抢救到的残料)…&quot;,
-  &quot;next_action_suggestion&quot;: &quot;手动安装依赖 puppeteer… 或改用不依赖它的来源后重试。&quot;
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;failed&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;intent&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;fetch-web-content&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;diagnosis&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;error_code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;E05&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;cause&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;依赖缺失（Node 模块/Python 包未安装）&quot;</span><span class="hljs-punctuation">,</span>
+                 <span class="hljs-attr">&quot;reason&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;missing-dependency&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;risk&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;L1&quot;</span><span class="hljs-punctuation">,</span>
+                 <span class="hljs-attr">&quot;prescription&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;安装依赖 puppeteer（委派 dependency 注册表，命令来自受控表）。&quot;</span><span class="hljs-punctuation">,</span>
+                 <span class="hljs-attr">&quot;detail&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;…(脱敏)…&quot;</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;attempted_fixes&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;action&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;安装依赖 puppeteer…&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;result&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;failed:network-unreachable&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;auto&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span> <span class="hljs-punctuation">}</span> <span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;salvage_data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;…(降级树各 Plan 抢救到的残料)…&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;next_action_suggestion&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;手动安装依赖 puppeteer… 或改用不依赖它的来源后重试。&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <h2 id="7-架构">7. 架构<a class="anchor" href="#7-架构" aria-label="锚点">#</a></h2>
 <pre><code>selfHeal/diagnosisDictionary.js  六行病因表（单一真源）；处方=展示串，命令不出此门
 selfHeal/errorDiagnostician.js   ErrorDiagnostician：failsafe.classify(E0x) + resilience.classifyFailure(reason) + 字典(处方)
@@ -84,15 +84,15 @@ selfHeal/index.js                门面；types.d.ts TS 契约</code></pre>
 <ul><li><strong>④降级树深度硬上限 3 层</strong>：复用 resilience <code>MAX_FALLBACK_DEPTH=3</code>；穷尽仍失败立即触发兜底报告。</li><li><strong>⑤处方级死循环熔断</strong>：同一条处方（<code>fixKind:受控标识</code>，与工具无关）重复开具 → 判无效，</li></ul>
 <p>中断微循环走降级。</p>
 <h2 id="9-接入-零侵入">9. 接入（零侵入）<a class="anchor" href="#9-接入-零侵入" aria-label="锚点">#</a></h2>
-<pre><code class="language-js">const { FallbackTreeWithHeal } = require('.../selfHeal');
-const { makeToolRunner } = require('.../resilience');
-const heal = new FallbackTreeWithHeal({
-  runner: makeToolRunner(executeTool),         // 复用全局唯一工具漏斗
-  confirm: async ({ diagnosis }) =&gt; askUser(diagnosis.action),  // L1 获批
-  onDegrade: (text) =&gt; injectSystemTurn(text),
+<pre><code class="language-js"><span class="hljs-keyword">const</span> { <span class="hljs-title class_">FallbackTreeWithHeal</span> } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;.../selfHeal&#x27;</span>);
+<span class="hljs-keyword">const</span> { makeToolRunner } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;.../resilience&#x27;</span>);
+<span class="hljs-keyword">const</span> heal = <span class="hljs-keyword">new</span> <span class="hljs-title class_">FallbackTreeWithHeal</span>({
+  <span class="hljs-attr">runner</span>: <span class="hljs-title function_">makeToolRunner</span>(executeTool),         <span class="hljs-comment">// 复用全局唯一工具漏斗</span>
+  <span class="hljs-attr">confirm</span>: <span class="hljs-title function_">async</span> ({ diagnosis }) =&gt; <span class="hljs-title function_">askUser</span>(diagnosis.<span class="hljs-property">action</span>),  <span class="hljs-comment">// L1 获批</span>
+  <span class="hljs-attr">onDegrade</span>: <span class="hljs-function">(<span class="hljs-params">text</span>) =&gt;</span> <span class="hljs-title function_">injectSystemTurn</span>(text),
 });
-const out = await heal.run('fetch-web-content', { url, query, control });
-// out.status==='ok' ? out.result : out（Goal3 兜底报告）</code></pre>
+<span class="hljs-keyword">const</span> out = <span class="hljs-keyword">await</span> heal.<span class="hljs-title function_">run</span>(<span class="hljs-string">&#x27;fetch-web-content&#x27;</span>, { url, query, control });
+<span class="hljs-comment">// out.status===&#x27;ok&#x27; ? out.result : out（Goal3 兜底报告）</span></code></pre>
 <p>不改 <code>executeTool</code> 一行；不外科手术改写 toolUseLoop。</p>
 <h2 id="10-验收-26-用例绿-零网络-零真实安装-零真实-fs">10. 验收（26 用例绿，零网络/零真实安装/零真实 FS）<a class="anchor" href="#10-验收-26-用例绿-零网络-零真实安装-零真实-fs" aria-label="锚点">#</a></h2>
 <ul><li>诊断字典六行各归正确病因/级别/fixKind + 受控标识抽取；L2 优先；未命中返回 null（不臆造）。</li><li>诊断器：依赖缺失校正 E05、L2 fixable=false、403 degrade-direct。</li><li>处方级熔断：同处方第二次 dead=true；签名与工具无关。</li><li>FixActions：retarget→/tmp、switch-runtime 固定候选、probe-only 不算修复、install 委派注入桩。</li><li>微循环：L0 自愈重试通过（恰一次）、L1 未获批降级、L2 不进循环（attempted 为空、不重试）、</li></ul>

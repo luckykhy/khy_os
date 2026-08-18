@@ -20,10 +20,9 @@
  *
  * The restore side (khy restore / khy publish origin-code) consumes these.
  *
- * Source publishing is NOT password-gated: when no explicit secret is given the
- * snapshot is encrypted under the fixed DEFAULT_SOURCE_SECRET so real source
- * always ships and `khy restore` decrypts it with no user input. The only skip
- * condition is "not a git repo" — it never falls back to shipping plaintext.
+ * Source publishing is not password-gated. Without an explicit secret, immutable
+ * releases derive a built-in key from their version; versionless legacy fixtures
+ * retain DEFAULT_SOURCE_SECRET. `khy restore` selects the matching key automatically.
  *
  * Usage:
  *   node services/backend/scripts/makeSourceSnapshot.js --out <dir> \
@@ -41,6 +40,7 @@ const {
   SNAPSHOT_META_NAME,
   RESTORE_DOC_NAME,
   resolveSourceSecret,
+  resolveVersionSourceSecret,
   encrypt,
   sha256Hex,
 } = require('../src/services/sourceSnapshotCrypto');
@@ -225,24 +225,13 @@ function main() {
     process.exit(args.require ? 1 : 0);
   }
 
-  // Source publishing is no longer password-gated. When no explicit secret is
-  // supplied we fall back to the fixed DEFAULT_SOURCE_SECRET so the real source
-  // is ALWAYS embedded (encrypted) and `khy restore` can decrypt it without any
-  // user input. An explicit KHY_SOURCE_PUBLISH_SECRET / --secret still overrides.
-  const explicit =
-    args.secret && args.secret !== true
-      ? String(args.secret)
-      : process.env.KHY_SOURCE_PUBLISH_SECRET || process.env.KHY_OWNER_SECRET || '';
-  const secret = resolveSourceSecret(explicit);
-  if (!explicit) {
-    info('no explicit secret — embedding source under the password-free default key.');
-  }
-
-  // 1. archive → tar.gz buffer (working tree by default, original layout).
+  // 1. archive -> tar.gz buffer (working tree by default, original layout).
   const { plaintext, mode, treeish } = captureSource(root);
   const sha256 = sha256Hex(plaintext);
 
-  // 2. metadata
+  // 2. metadata. Resolve the release version before selecting the built-in key:
+  // every immutable release has a distinct derived key, while versionless test
+  // fixtures retain the legacy key for compatibility.
   const dirty = isWorkingTreeDirty(root);
   const fileCount = countTreeFiles(root, treeish);
   let gitCommit = '';
@@ -260,6 +249,23 @@ function main() {
   }
   const createdAt =
     args.timestamp && args.timestamp !== true ? String(args.timestamp) : new Date().toISOString();
+
+  const explicit =
+    args.secret && args.secret !== true
+      ? String(args.secret)
+      : process.env.KHY_SOURCE_PUBLISH_SECRET || process.env.KHY_OWNER_SECRET || '';
+  const secret = explicit
+    ? resolveSourceSecret(explicit)
+    : version
+      ? resolveVersionSourceSecret(version)
+      : resolveSourceSecret('');
+  if (!explicit) {
+    info(
+      version
+        ? `no explicit secret - embedding source with the built-in key for ${version}.`
+        : 'no explicit secret - embedding source with the legacy default key.'
+    );
+  }
 
   // 3. encrypt
   const { ciphertext, crypto: cryptoMeta } = encrypt(plaintext, secret);

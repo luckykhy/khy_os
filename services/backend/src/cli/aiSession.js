@@ -488,6 +488,138 @@ function _getProjectMemoryCandidates(cwd = process.cwd()) {
   return [...new Set(files)];
 }
 
+/**
+ * Whether the project-memory payload is packed by relevance instead of blindly
+ * truncated. Default ON; `KHY_PROJECT_MEMORY_RANKED ∈ {0,false,off,no}` reverts
+ * to the original `content.slice(0, maxChars)` behavior byte-for-byte.
+ */
+function _projectMemoryRankedEnabled() {
+  const v = String(process.env.KHY_PROJECT_MEMORY_RANKED || '').trim();
+  return !/^(0|false|off|no)$/i.test(v);
+}
+
+/** A MEMORY.md pointer line: `- [Title](slug.md) — hook`. */
+const _MEMORY_POINTER_RE = /^\s*[-*+]\s+/;
+
+/** Extract the memory filename a pointer line refers to, if any. */
+function _pointerTarget(line) {
+  const linked = /\(([^)\s]+\.md)\)/.exec(line);
+  if (linked) {
+    return path.basename(linked[1]);
+  }
+  const bare = /([A-Za-z0-9_.\-一-鿿]+\.md)/.exec(line);
+  return bare ? path.basename(bare[1]) : null;
+}
+
+/**
+ * Fit a MEMORY.md index into the context budget by dropping the LEAST relevant
+ * pointer lines instead of cutting the file mid-character.
+ *
+ * The defect this replaces: `content.slice(0, maxChars)` keeps whatever happens
+ * to be at the top of the file (memdir writes new pointers by append order) and
+ * severs the last line mid-word. Once a user accumulates enough memories, their
+ * most important ones — permanent-tier identity and standing instructions — are
+ * exactly the ones silently cut, because nothing about the byte offset correlates
+ * with relevance.
+ *
+ * There is no query at session bootstrap, so relevance here is the
+ * query-independent priming rank (tier × recency × type preference) from the
+ * scoring SSOT — the same order the session-priming path uses. No embedding call
+ * is made: with nothing to compare against, a vector would rank nothing.
+ *
+ * Structural lines (headings, prose, blank lines) are always kept — they are the
+ * document's skeleton and cost little. Pointer lines compete for the remainder
+ * and are emitted in their ORIGINAL file order, so the packed index still reads
+ * as an index rather than as a score-ordered list.
+ *
+ * @param {string} content - the raw MEMORY.md text, already trimmed
+ * @param {number} maxChars - character budget for this payload
+ * @returns {{text:string, truncated:boolean, kept:number, total:number}|null}
+ *          null ⇒ caller must fall back to blind truncation
+ */
+function _packProjectMemory(content, maxChars) {
+  const lines = String(content).split(/\r?\n/);
+
+  const pointers = [];
+  const skeleton = [];
+  for (let i = 0; i < lines.length; i++) {
+    const target = _MEMORY_POINTER_RE.test(lines[i]) ? _pointerTarget(lines[i]) : null;
+    if (target) {
+      pointers.push({ i, target });
+    } else {
+      skeleton.push(i);
+    }
+  }
+  if (pointers.length === 0) {
+    return null; // not an index we understand ⇒ don't pretend to rank it
+  }
+
+  // Priming rank → position. Memories absent from the ranking (deleted, stale,
+  // or filtered out) sort after every ranked one but keep their file order.
+  const rankOf = new Map();
+  try {
+    const { scoring } = require('../services/memoryEngine');
+    const ranked = scoring.rankForPriming({
+      limit: Math.max(pointers.length, 1),
+      bodies: false,
+    });
+    ranked.forEach((m, idx) => rankOf.set(m.filename, idx));
+  } catch {
+    return null; // ranking unavailable ⇒ blind truncation, unchanged behavior
+  }
+
+  const NOTE = '\n\n[Memory truncated for context budget]';
+  const keep = new Set(skeleton);
+  const lineCost = (i) => lines[i].length + 1; // +1 for the joining newline
+
+  let used = skeleton.reduce((sum, i) => sum + lineCost(i), 0);
+  if (used + NOTE.length > maxChars) {
+    return null; // skeleton alone busts the budget ⇒ blind truncation
+  }
+
+  const order = pointers
+    .map((p, seq) => ({ ...p, seq }))
+    .sort((a, b) => {
+      const ra = rankOf.has(a.target) ? rankOf.get(a.target) : Number.MAX_SAFE_INTEGER;
+      const rb = rankOf.has(b.target) ? rankOf.get(b.target) : Number.MAX_SAFE_INTEGER;
+      return ra - rb || a.seq - b.seq;
+    });
+
+  // Reserve room for the note only once we know something will be dropped.
+  let dropped = false;
+  for (const p of order) {
+    const cost = lineCost(p.i);
+    const reserve = dropped ? NOTE.length : 0;
+    if (used + cost + reserve > maxChars) {
+      dropped = true;
+      continue;
+    }
+    keep.add(p.i);
+    used += cost;
+  }
+  if (dropped && used + NOTE.length > maxChars) {
+    // Shed the lowest-ranked kept pointers until the note fits.
+    for (let k = order.length - 1; k >= 0 && used + NOTE.length > maxChars; k--) {
+      if (keep.delete(order[k].i)) {
+        used -= lineCost(order[k].i);
+      }
+    }
+  }
+
+  const text =
+    lines
+      .filter((_, i) => keep.has(i))
+      .join('\n')
+      .replace(/\n{3,}$/, '\n') + (dropped ? NOTE : '');
+
+  return {
+    text: dropped ? text : content,
+    truncated: dropped,
+    kept: pointers.filter((p) => keep.has(p.i)).length,
+    total: pointers.length,
+  };
+}
+
 function loadProjectMemoryContext(options = {}) {
   try {
     const alreadyInjected = _chatState.messages.some(
@@ -520,10 +652,24 @@ function loadProjectMemoryContext(options = {}) {
           continue;
         }
 
-        const truncated = content.length > maxChars;
-        const summary = truncated
-          ? `${content.slice(0, maxChars)}\n\n[Memory truncated for context budget]`
-          : content;
+        // Relevance packing (default on). Only engages when the index actually
+        // exceeds the budget; below budget, `summary === content` either way, so
+        // the injected payload is byte-identical to before.
+        let packed = null;
+        if (_projectMemoryRankedEnabled() && content.length > maxChars) {
+          try {
+            packed = _packProjectMemory(content, maxChars);
+          } catch {
+            packed = null; // any failure ⇒ blind truncation below
+          }
+        }
+
+        const truncated = packed ? packed.truncated : content.length > maxChars;
+        const summary = packed
+          ? packed.text
+          : truncated
+            ? `${content.slice(0, maxChars)}\n\n[Memory truncated for context budget]`
+            : content;
         const payload = [
           PROJECT_MEMORY_CONTEXT_TAG,
           `source: ${filePath}`,
@@ -544,8 +690,11 @@ function loadProjectMemoryContext(options = {}) {
         return {
           loaded: true,
           file: filePath,
-          chars: Math.min(content.length, maxChars),
+          // Legacy path keeps its exact reporting; packing reports what it built.
+          chars: packed ? packed.text.length : Math.min(content.length, maxChars),
           truncated,
+          // Additive diagnostics; absent when the index was not packed.
+          ...(packed ? { packed: true, kept: packed.kept, total: packed.total } : {}),
         };
       } catch {
         /* try next candidate */
@@ -1039,6 +1188,10 @@ module.exports = {
   recordInterruption,
   getLiveSessionId,
   loadProjectMemoryContext,
+  // Exposed for tests: the relevance packer is pure (string + budget in, string
+  // out) and is the part worth pinning down independently of session state.
+  _packProjectMemory,
+  _projectMemoryRankedEnabled,
   getConvoDir,
   saveConversation,
   loadLastConversation,

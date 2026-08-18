@@ -427,6 +427,22 @@
   "services/backend/setup.js": [
     "Template Method"
   ],
+  "services/backend/src/adapters/im/adapterRegistry.js": [
+    "Factory Method",
+    "Singleton"
+  ],
+  "services/backend/src/adapters/im/baseImAdapter.js": [
+    "Template Method",
+    "Adapter"
+  ],
+  "services/backend/src/adapters/im/feishuAdapter.js": [
+    "Adapter",
+    "Strategy"
+  ],
+  "services/backend/src/adapters/im/imRuntimeConfig.js": [
+    "Chain of Responsibility",
+    "Facade"
+  ],
   "services/backend/src/agents/built-in/exploreAgent.js": [
     "Strategy"
   ],
@@ -1166,6 +1182,9 @@
   "services/backend/src/services/channels/_baseChannel.js": [
     "Factory Method",
     "Template Method"
+  ],
+  "services/backend/src/services/channels/imAdapterChannel.js": [
+    "Adapter"
   ],
   "services/backend/src/services/channels/messageRouter.js": [
     "Mediator"

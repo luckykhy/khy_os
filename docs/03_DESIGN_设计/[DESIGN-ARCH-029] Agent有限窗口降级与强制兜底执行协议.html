@@ -68,25 +68,25 @@ intentTrees.js                   内置 fetch-web-content 树（WebBrowser→Web
 <h3 id="3-3-死循环检测-deadloopdetector-js">3.3 死循环检测（deadLoopDetector.js）<a class="anchor" href="#3-3-死循环检测-deadloopdetector-js" aria-label="锚点">#</a></h3>
 <p><code>callSignature(tool,params)</code>（与键序无关、忽略 Symbol 键）把调用压成指纹。<code>inspect()</code> 与&quot;上一发已执行&quot;签名比对，或会话内重复出现 → <code>dead=true</code> 强制跳过。那唯一一次重试由 <code>changed(prev,next)</code> 判定——<strong>新旧签名不同才算&quot;真的换了输入&quot;</strong>，否则视为同类死缠拒绝。</p>
 <h3 id="3-4-强制兜底协议-salvage-js">3.4 强制兜底协议（salvage.js）<a class="anchor" href="#3-4-强制兜底协议-salvage-js" aria-label="锚点">#</a></h3>
-<pre><code class="language-json">{
-  &quot;status&quot;: &quot;failed_with_salvage&quot;,
-  &quot;intent&quot;: &quot;获取网页内容&quot;,
-  &quot;attempted_paths&quot;: [ { &quot;plan&quot;: &quot;WebBrowser&quot;, &quot;reason&quot;: &quot;missing-dependency&quot;, &quot;retry&quot;: 0 }, … ],
-  &quot;salvage_data&quot;: &quot;抠到的最长残料（部分正文 / 搜索线索）&quot;,
-  &quot;next_action_suggestion&quot;: &quot;可执行的下一步（装依赖 / 换源 / 提预算…）&quot;
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;failed_with_salvage&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;intent&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;获取网页内容&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;attempted_paths&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;plan&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;WebBrowser&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;reason&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;missing-dependency&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;retry&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">0</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span> … <span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;salvage_data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;抠到的最长残料（部分正文 / 搜索线索）&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;next_action_suggestion&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;可执行的下一步（装依赖 / 换源 / 提预算…）&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <p>防呆：<code>attempted_paths</code> 必非空（预算从一开始见底也登记一条合成记录）；<code>salvage_data</code> 与 <code>next_action_suggestion</code> 字段恒在；建议依&quot;最后一类失败 + 熔断原因&quot;映射成可执行话术。</p>
 <h2 id="4-防呆清单-与-goal-硬要求逐条对应">4. 防呆清单（与 /goal 硬要求逐条对应）<a class="anchor" href="#4-防呆清单-与-goal-硬要求逐条对应" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>#</th><th>要求</th><th>落地</th></tr></thead><tbody><tr><td>①</td><td>树深写死 ≤3，无法配置突破</td><td><code>MAX_FALLBACK_DEPTH=3</code> 硬编码；超限抛错；executor <code>slice(0,3)</code> 双保险</td></tr><tr><td>②</td><td>拦截&quot;让我再试一次&quot;而不换方法</td><td><code>DeadLoopDetector.inspect/changed</code>，同签名跳过；重试仅 <code>changed===true</code> 放行</td></tr><tr><td>③</td><td>每次执行前查预算，&lt;10% 禁开新 Plan 直接兜底</td><td>预算闸门①②在每个 Plan 入口；见底时 <code>log.length===0</code>（绝不真调工具）</td></tr><tr><td>④</td><td>失败必降级，绝不躺平</td><td>失败强制 <code>i++</code> 向下；无第二遍循环；穷尽即兜底</td></tr><tr><td>⑤</td><td>兜底必交差</td><td><code>SalvageProtector</code> 字段恒全 + <code>attempted_paths</code> 非空 + 残料抽取</td></tr><tr><td>⑥</td><td>执行器不可成为新故障源</td><td><code>run()</code> try/catch fail-safe；归类器/参数构造/残料抽取全 <code>try{}catch</code></td></tr></tbody></table>
 <h2 id="5-接入方式-非侵入">5. 接入方式（非侵入）<a class="anchor" href="#5-接入方式-非侵入" aria-label="锚点">#</a></h2>
-<pre><code class="language-js">const { ResilienceCoordinator, makeToolRunner, makeTokenBudget } = require('.../services/resilience');
-const coord = new ResilienceCoordinator({
-  runner: makeToolRunner(executeTool, { sessionId }),   // 复用全局唯一工具漏斗，不改其一行
-  budget: makeTokenBudget({ total, spent: () =&gt; usage.outputTokens }),
-  onDegrade: (text) =&gt; injectSystemTurn(text),          // 模型在环时把强制上下文喂回去
+<pre><code class="language-js"><span class="hljs-keyword">const</span> { <span class="hljs-title class_">ResilienceCoordinator</span>, makeToolRunner, makeTokenBudget } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;.../services/resilience&#x27;</span>);
+<span class="hljs-keyword">const</span> coord = <span class="hljs-keyword">new</span> <span class="hljs-title class_">ResilienceCoordinator</span>({
+  <span class="hljs-attr">runner</span>: <span class="hljs-title function_">makeToolRunner</span>(executeTool, { sessionId }),   <span class="hljs-comment">// 复用全局唯一工具漏斗，不改其一行</span>
+  <span class="hljs-attr">budget</span>: <span class="hljs-title function_">makeTokenBudget</span>({ total, <span class="hljs-attr">spent</span>: <span class="hljs-function">() =&gt;</span> usage.<span class="hljs-property">outputTokens</span> }),
+  <span class="hljs-attr">onDegrade</span>: <span class="hljs-function">(<span class="hljs-params">text</span>) =&gt;</span> <span class="hljs-title function_">injectSystemTurn</span>(text),          <span class="hljs-comment">// 模型在环时把强制上下文喂回去</span>
 });
-const out = await coord.run('fetch-web-content', { url, query });
-// out.ok ? out.result : out.salvage   ← 后者即 failed_with_salvage JSON</code></pre>
+<span class="hljs-keyword">const</span> out = <span class="hljs-keyword">await</span> coord.<span class="hljs-title function_">run</span>(<span class="hljs-string">&#x27;fetch-web-content&#x27;</span>, { url, query });
+<span class="hljs-comment">// out.ok ? out.result : out.salvage   ← 后者即 failed_with_salvage JSON</span></code></pre>
 <p><code>makeToolRunner</code> 把 <code>executeTool(tool,params,trace)</code> 适配成 <code>runner(tool,params,planMeta)</code> 并透传 <code>resiliencePlan/resilienceRetry</code> 追踪元数据。本 PR 仅交付子系统 + 门面 + 内置树 + 接入缝，<strong>未</strong>外科改写 toolUseLoop（与 ARCH-025 元规划&quot;零侵入未接管 executeTool&quot;同档，留待后续 PR 把 Web 三件套挂上 <code>fetch-web-content</code> 树）。</p>
 <h2 id="6-测试-23-用例绿">6. 测试（23 用例绿）<a class="anchor" href="#6-测试-23-用例绿" aria-label="锚点">#</a></h2>
 <p><code>tests/services/resilience/resilience.test.js</code>，全程零网络、纯内存 runner 桩：</p>

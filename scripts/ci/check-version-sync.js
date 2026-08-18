@@ -66,6 +66,21 @@ function main() {
       file: 'platform/packages/shared/package.json',
       regex: /"version"\s*:\s*"([^"]+)"/m,
     },
+    // ── Browser UI shared package (independent version track) ───────────────────
+    // The two frontend applications retain their own release versions. Their
+    // dependency declarations must point at the exact @khy/ui-shared version.
+    {
+      file: 'platform/packages/ui-shared/package.json',
+      regex: /"version"\s*:\s*"([^"]+)"/m,
+    },
+    {
+      file: 'apps/ai-frontend/package.json',
+      regex: /"@khy\/ui-shared"\s*:\s*"([^"]+)"/m,
+    },
+    {
+      file: 'software/khyquant/frontend/package.json',
+      regex: /"@khy\/ui-shared"\s*:\s*"([^"]+)"/m,
+    },
   ];
 
   const versions = {};
@@ -115,6 +130,21 @@ function main() {
     throw new Error('Version mismatch detected in ai-backend ecosystem group');
   }
   console.log(`AI-backend ecosystem version sync check passed: ${[...aiVersions][0]}`);
+
+  // ── Group 3: browser UI shared package ───────────────────────────────────────
+  const uiGroup = [
+    'platform/packages/ui-shared/package.json',
+    'apps/ai-frontend/package.json',
+    'software/khyquant/frontend/package.json',
+  ];
+  const uiVersions = new Set(uiGroup.map(f => versions[f]));
+  for (const f of uiGroup) {
+    console.log(`${f}: ${versions[f]}`);
+  }
+  if (uiVersions.size !== 1) {
+    throw new Error('Version mismatch detected in browser UI shared package group');
+  }
+  console.log(`Browser UI shared package version sync check passed: ${[...uiVersions][0]}`);
 
   console.log(`\n${initFile}: <dynamic from pyproject.toml>`);
   console.log('All version sync checks passed.');

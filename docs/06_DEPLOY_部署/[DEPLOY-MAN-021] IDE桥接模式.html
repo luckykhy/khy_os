@@ -41,16 +41,16 @@
 <hr>
 <h2 id="二-claude-code-桥接-探测最简单的一条">二、Claude Code 桥接（探测最简单的一条）<a class="anchor" href="#二-claude-code-桥接-探测最简单的一条" aria-label="锚点">#</a></h2>
 <p><code>claudeAdapter.detect()</code> 的全部逻辑就是「<code>claude</code> 命令在不在」：</p>
-<pre><code class="language-js">_available = commandExists('claude');
-if (!_available &amp;&amp; _portableClaudeInstalled()) { _available = true; }</code></pre>
+<pre><code class="language-js">_available = <span class="hljs-title function_">commandExists</span>(<span class="hljs-string">&#x27;claude&#x27;</span>);
+<span class="hljs-keyword">if</span> (!_available &amp;&amp; <span class="hljs-title function_">_portableClaudeInstalled</span>()) { _available = <span class="hljs-literal">true</span>; }</code></pre>
 <p>所以检查也只有一步：</p>
-<pre><code class="language-powershell">claude --version        # 有输出 → claude 通道会 available
-where claude            # 找不到时看 PATH</code></pre>
+<pre><code class="language-powershell">claude <span class="hljs-literal">--version</span>        <span class="hljs-comment"># 有输出 → claude 通道会 available</span>
+<span class="hljs-built_in">where</span> claude            <span class="hljs-comment"># 找不到时看 PATH</span></code></pre>
 <p><strong>找不到 <code>claude</code> 命令时</strong>：确认 Claude Code 已安装、且 <code>claude</code> 在 PATH 中，<br>并在 Claude Code 里至少完整跑过一次对话（CLI 通常在首次使用时才落到系统）。</p>
 <p><code>detectAsync()</code> 比同步版多做一步：<strong>当环境里存在 Anthropic key 时</strong>，额外对 API 根做一次<br>轻量 GET 验证端点可达（401/405 也算可达，只有超时 / ECONNREFUSED 才判为不可达）。<br>这是为了让健康检查在用户选中直连模型<strong>之前</strong>就发现端点配错，而不是在生成时才炸。<br>探测走 <code>execFile</code> 而非 <code>spawnSync</code>，因此网关初始化不会卡住事件循环。</p>
 <p><strong>桥接失败但命令存在</strong>：多为 Claude Code 未登录或 token 过期。</p>
-<pre><code class="language-powershell">gateway test claude     # 看详细错误
-claude auth login       # 重新登录</code></pre>
+<pre><code class="language-powershell">gateway test claude     <span class="hljs-comment"># 看详细错误</span>
+claude auth login       <span class="hljs-comment"># 重新登录</span></code></pre>
 <hr>
 <h2 id="三-cursor-桥接">三、Cursor 桥接<a class="anchor" href="#三-cursor-桥接" aria-label="锚点">#</a></h2>
 <p><code>cursorAdapter</code> 按序在<strong>多个 home 根</strong>下找这些文件（<code>buildCursorStoragePaths()</code> 实测清单）：</p>
@@ -69,19 +69,19 @@ claude auth login       # 重新登录</code></pre>
 <hr>
 <h2 id="五-多通道并存与固定首选">五、多通道并存与固定首选<a class="anchor" href="#五-多通道并存与固定首选" aria-label="锚点">#</a></h2>
 <p>启用多个通道时，网关按 <code>[DEPLOY-MAN-019]</code> 第二节的 priority 自动挑第一个 available 的。<br>要固定用某一个：</p>
-<pre><code class="language-powershell">$env:GATEWAY_PREFERRED_ADAPTER = &quot;claude&quot;      # 适配器 key
-$env:GATEWAY_PREFERRED_MODEL   = &quot;&lt;model id&gt;&quot;
-$env:GATEWAY_PREFERRED_STRICT  = &quot;true&quot;        # 只用首选，不回退</code></pre>
+<pre><code class="language-powershell"><span class="hljs-variable">$env:GATEWAY_PREFERRED_ADAPTER</span> = <span class="hljs-string">&quot;claude&quot;</span>      <span class="hljs-comment"># 适配器 key</span>
+<span class="hljs-variable">$env:GATEWAY_PREFERRED_MODEL</span>   = <span class="hljs-string">&quot;&lt;model id&gt;&quot;</span>
+<span class="hljs-variable">$env:GATEWAY_PREFERRED_STRICT</span>  = <span class="hljs-string">&quot;true&quot;</span>        <span class="hljs-comment"># 只用首选，不回退</span></code></pre>
 <p>反过来，<strong>排除</strong>探测很慢或本机没装的 IDE（这才是 <code>_ENABLED</code> 的正确用法）：</p>
-<pre><code class="language-powershell">$env:GATEWAY_WINDSURF_ENABLED = &quot;false&quot;
-$env:GATEWAY_VSCODE_ENABLED   = &quot;false&quot;</code></pre>
+<pre><code class="language-powershell"><span class="hljs-variable">$env:GATEWAY_WINDSURF_ENABLED</span> = <span class="hljs-string">&quot;false&quot;</span>
+<span class="hljs-variable">$env:GATEWAY_VSCODE_ENABLED</span>   = <span class="hljs-string">&quot;false&quot;</span></code></pre>
 <blockquote><p>只有字符串 <code>&quot;false&quot;</code> 有效。设 <code>&quot;true&quot;</code> 是 no-op —— 默认已是开。</p></blockquote>
 <hr>
 <h2 id="六-验证">六、验证<a class="anchor" href="#六-验证" aria-label="锚点">#</a></h2>
 <pre><code class="language-powershell">khy
-gateway status          # 逐通道 enabled / available，第一现场
-gateway test claude     # 单通道连通性 + 生成测试
-/model                  # 看模型列表</code></pre>
+gateway status          <span class="hljs-comment"># 逐通道 enabled / available，第一现场</span>
+gateway test claude     <span class="hljs-comment"># 单通道连通性 + 生成测试</span>
+/model                  <span class="hljs-comment"># 看模型列表</span></code></pre>
 <table><thead><tr><th>现象</th><th>读法</th><th>处理</th></tr></thead><tbody><tr><td>通道 enabled 但 available=false</td><td>探测没找到凭据</td><td>按第二～四节补上对应 IDE 的登录状态</td></tr><tr><td>通道 enabled=false</td><td>设了 <code>GATEWAY_&lt;KEY&gt;_ENABLED=false</code></td><td>取消该环境变量</td></tr><tr><td>桥接一度可用后失效</td><td>IDE token 过期，或 IDE 进程/登录态变了</td><td>在 IDE 里重新登录，重启 khy</td></tr><tr><td>探测阶段整体很慢</td><td>逐适配器探测累加</td><td>关掉本机没装的 IDE 通道；或调 <code>GATEWAY_INIT_TIMEOUT_MS</code>（默认 15000ms）</td></tr></tbody></table>
 <blockquote><p>桥接读的是 IDE 落在磁盘上的<strong>真实凭据</strong>。红线 R2 同样适用：不要把探测到的 token 值<br>抄进文档、issue 或提交。排查只需报告「找到 / 没找到」与 <code>source</code> 字段，不需要贴 token。</p></blockquote>
 <hr>

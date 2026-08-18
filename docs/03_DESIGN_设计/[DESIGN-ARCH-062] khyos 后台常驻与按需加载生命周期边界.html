@@ -40,11 +40,11 @@
 <ul><li><code>isPolicyEnabled(env)</code> — 主门 <code>KHY_LIFECYCLE_POLICY</code>(默认开,flagRegistry-first + 本地 CANON 回退)。</li><li><code>listByTier</code> / <code>listByProcess</code> — 分类查询(深拷贝)。</li><li><code>gateEnabled(id, env)</code> — 该条目 gate 是否开(禁用式 <code>KHY_DISABLE_*</code> 语义已内建)。</li><li><code>perIdOverride(id, env)</code> — 读约定名 <code>KHY_LIFECYCLE_&lt;ID&gt;</code>;仅主门开时生效。</li><li><code>isResident(id, env)</code> — 存在 ∧ tier=resident ∧ gate 开 ∧ 未被 per-id 覆盖关。</li><li><code>listStartupSchedule(env, mode)</code> — <strong>deferredPrefetch 消费的唯一入口</strong>。</li><li><code>describe</code> / <code>allGates</code> / <code>allIds</code> — 守卫与自省用。</li></ul>
 <h2 id="4-操作化-deferredprefetch-由策略驱动-不只是文档">4. 操作化:deferredPrefetch 由策略驱动(不只是文档)<a class="anchor" href="#4-操作化-deferredprefetch-由策略驱动-不只是文档" aria-label="锚点">#</a></h2>
 <p><code>deferredPrefetch</code> 把原来每个 <code>setTimeout</code> 的 body <strong>逐字节</strong>搬进一个 <code>RUNNERS</code> 映射(id ↔ 策略<br>cli-startup 条目一一对应),主体改为:</p>
-<pre><code class="language-js">for (const entry of policy.listStartupSchedule(process.env, mode)) {
-  const run = RUNNERS[entry.id];
-  if (!run) continue;
-  if (entry.immediate) setImmediate(run);       // 不进 timers,与原 setImmediate 语义一致
-  else timers.push(setTimeout(run, entry.delayMs));
+<pre><code class="language-js"><span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> entry <span class="hljs-keyword">of</span> policy.<span class="hljs-title function_">listStartupSchedule</span>(process.<span class="hljs-property">env</span>, mode)) {
+  <span class="hljs-keyword">const</span> run = <span class="hljs-variable constant_">RUNNERS</span>[entry.<span class="hljs-property">id</span>];
+  <span class="hljs-keyword">if</span> (!run) <span class="hljs-keyword">continue</span>;
+  <span class="hljs-keyword">if</span> (entry.<span class="hljs-property">immediate</span>) <span class="hljs-title function_">setImmediate</span>(run);       <span class="hljs-comment">// 不进 timers,与原 setImmediate 语义一致</span>
+  <span class="hljs-keyword">else</span> timers.<span class="hljs-title function_">push</span>(<span class="hljs-built_in">setTimeout</span>(run, entry.<span class="hljs-property">delayMs</span>));
 }</code></pre>
 <p><strong>判定与执行分离</strong>:策略决定「跑什么 / 何时 / 是否启用」,prefetch 只持有「怎么跑」。<br>延迟值、emit 文案、调度顺序全部源自策略且策略值 = 改造前现值 → <strong>零功能回归</strong>。<br>轻量模式 gatewayWarmup 的 <code>!== 'false'</code> 门判定保留在 runner body 内,逐字节保留原语义。</p>
 <h2 id="5-防漂移守卫-scripts-check-lifecycle-policy-js">5. 防漂移守卫:scripts/check-lifecycle-policy.js<a class="anchor" href="#5-防漂移守卫-scripts-check-lifecycle-policy-js" aria-label="锚点">#</a></h2>

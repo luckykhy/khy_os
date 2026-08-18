@@ -165,6 +165,7 @@ const {
   SNAPSHOT_META_NAME,
   RESTORE_DOC_NAME,
   DEFAULT_SOURCE_SECRET,
+  resolveVersionSourceSecret,
   decrypt: _decryptSnapshot,
   sha256Hex: _sha256Hex,
   ALGO: _SNAPSHOT_ALGO,
@@ -1048,9 +1049,11 @@ function _listTarGzEntries(tarGzBuffer) {
  * built with a custom key), but absent that we fall back to the password-free
  * DEFAULT_SOURCE_SECRET the build now embeds under — so `khy restore` just works.
  */
-async function _resolveRestoreSecret(options = {}) {
+async function _resolveRestoreSecrets(options = {}, header = {}) {
   const explicit = _readSourceReleaseSecret(options);
-  return explicit || DEFAULT_SOURCE_SECRET;
+  if (explicit) return [explicit];
+  const versioned = header && header.version ? resolveVersionSourceSecret(header.version) : '';
+  return Array.from(new Set([versioned, DEFAULT_SOURCE_SECRET].filter(Boolean)));
 }
 
 /**
@@ -1059,9 +1062,17 @@ async function _resolveRestoreSecret(options = {}) {
  * @returns {{ok:boolean, reason?:string, dest?:string, header?:object, srcDir?:string}}
  */
 async function _restoreFromSnapshot(targetDir, options = {}) {
-  const srcDir = _findSnapshotSourceDir(options);
+  let srcDir = _findSnapshotSourceDir(options);
+  let provision = null;
+  if (!srcDir && !options['source-dir'] && !options.sourceDir && !options.from) {
+    const { ensurePayload } = require('../../services/payloadProvisioner');
+    provision = await ensurePayload('source-snapshot', {
+      onProgress: options.onPayloadProgress,
+    });
+    if (provision.ok) srcDir = provision.targetDir;
+  }
   if (!srcDir) {
-    return { ok: false, reason: 'no-snapshot' };
+    return { ok: false, reason: 'no-snapshot', provision };
   }
 
   const header = _readJsonSafe(path.join(srcDir, SNAPSHOT_META_NAME), null);
@@ -1085,16 +1096,19 @@ async function _restoreFromSnapshot(targetDir, options = {}) {
     }
   }
 
-  const secret = await _resolveRestoreSecret(options);
+  const secrets = await _resolveRestoreSecrets(options, header);
 
   const ciphertext = fs.readFileSync(path.join(srcDir, SNAPSHOT_ENC_NAME));
-  let plaintext;
-  try {
-    plaintext = _decryptSnapshot(ciphertext, header, secret);
-  } catch {
-    // Snapshots built after the password-free change decrypt with the default
-    // key automatically; a failure here means a legacy snapshot encrypted with a
-    // custom key, so the explicit --secret / KHY_SOURCE_PUBLISH_SECRET is needed.
+  let plaintext = null;
+  for (const secret of secrets) {
+    try {
+      plaintext = _decryptSnapshot(ciphertext, header, secret);
+      break;
+    } catch {
+      /* try the legacy built-in key after the version key */
+    }
+  }
+  if (!plaintext) {
     throw new Error(
       '解密失败：该快照由自定义密钥加密，请用 --secret <密钥> 指定；或快照已损坏/篡改。'
     );
@@ -1175,12 +1189,30 @@ async function handleRestore(args = [], options = {}) {
   ]);
 
   try {
-    const result = await _restoreFromSnapshot(targetDir, options);
+    let lastProgressBytes = -1;
+    const restoreOptions = {
+      ...options,
+      onPayloadProgress(progress) {
+        const received = Number(progress.received) || 0;
+        const total = Number(progress.total) || 0;
+        if (received !== total && received - lastProgressBytes < 512 * 1024) return;
+        lastProgressBytes = received;
+        const done = (received / 1024 / 1024).toFixed(1);
+        const all = total > 0 ? `/${(total / 1024 / 1024).toFixed(1)}MB` : 'MB';
+        printInfo(`下载源码快照 ${progress.asset}（${done}${all}）`);
+      },
+    };
+    const result = await _restoreFromSnapshot(targetDir, restoreOptions);
 
     if (!result.ok && result.reason === 'no-snapshot') {
-      printWarn('未在安装包中找到加密源码快照（_source/snapshot.json）。');
-      printInfo('该包可能为旧版本（未内嵌完整源码快照）。');
-      printInfo('可改用从已安装运行时负载重建：khy publish origin-code --secret <密钥>');
+      printWarn('未找到本地加密源码快照，自动获取未完成。');
+      if (result.provision) {
+        printInfo(`手动获取清单: ${result.provision.manualUrl}`);
+        printInfo(`放置目录: ${result.provision.targetDir}`);
+        if (result.provision.reason) printInfo(`获取状态: ${result.provision.reason}`);
+      }
+      printInfo('离线时可在联网设备下载上述清单及其 source-snapshot 文件后复制到放置目录。');
+      printInfo('也可从已安装运行时负载重建：khy publish origin-code --secret <密钥>');
       _markFailure();
       return false;
     }

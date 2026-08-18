@@ -26,6 +26,7 @@ const readline = require('readline');
 let _chalk;
 const chalk = () => (_chalk ??= require('chalk').default || require('chalk'));
 const { PERMISSIONS_FILE, RISK_LEVELS } = require('./toolCallingBuiltins');
+const atomicWriteJson = require('../utils/atomicWriteJson');
 
 // 宿主描述符解析器,加载时由 setPermissionResolvers 注入一次(打破两条 leaf→host 反向边,
 // 零环)。getToolRisk/formatToolCall/requestPermission 按**同名**调用,故其体字节不变。
@@ -175,7 +176,7 @@ function savePermissions() {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    fs.writeFileSync(PERMISSIONS_FILE, JSON.stringify(_permissions, null, 2), 'utf-8');
+    atomicWriteJson(PERMISSIONS_FILE, _permissions, { mode: 0o666 });
   } catch {
     /* ignore */
   }
@@ -449,13 +450,34 @@ async function requestPermission(toolName, params, onControlRequest = null) {
       isReadOnly: _beh.isReadOnly,
       isDestructive: _beh.isDestructive,
     });
-    if (verdict) {
-      if (verdict.decision === 'deny') {
+    // ── 插件注册点 ToolPermission(Block B):只能收紧,绝不放松 ──────
+    // 在 policy 裁决**之后**触发,把 policy 结论作为基线交给 hook。hook 的提议与基线在
+    // auto<confirm<deny 上取更严者(hookContribSeams.tighten 强制单调性),因此:
+    //   - 基线 'deny'   → 任何 hook 都无法降级为 confirm/auto。
+    //   - 基线 'confirm'→ hook 说 'auto' 无效,仍然弹确认。
+    //   - 基线未表态    → hook 可收紧到 confirm/deny(只增保护)。
+    // hook 崩溃/超时/坏返回 → 回落基线,等价于未注册 hook。门控关 → 短路,逐字节回退。
+    let _decision = verdict && typeof verdict.decision === 'string' ? verdict.decision : '';
+    try {
+      const seams = require('./hooks/hookContribSeams');
+      _decision = await seams.applyToolPermissionHooks(_decision, {
+        toolName,
+        permissionKey,
+        params,
+        category: _beh.category,
+        isReadOnly: _beh.isReadOnly,
+        isDestructive: _beh.isDestructive,
+      });
+    } catch {
+      /* 接缝不可用 → 保持 policy 原裁决,行为与接线前一致 */
+    }
+    if (_decision) {
+      if (_decision === 'deny') {
         return 'deny';
       }
-      if (verdict.decision === 'confirm') {
+      if (_decision === 'confirm') {
         policyConfirm = true;
-      } else if (verdict.decision === 'auto') {
+      } else if (_decision === 'auto') {
         policyAutoAllow = true;
       }
     }

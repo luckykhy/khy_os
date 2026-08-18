@@ -96,6 +96,7 @@ test('verify 全部来自白名单值集合（含 node --check 与 area verify�
       p.verify.startsWith('node --test ') ||
       p.verify.startsWith('node -e ') ||
       p.verify.startsWith('bash scripts/') ||
+      p.verify.startsWith('python3 -m ') ||
       p.verify.startsWith('npx jest ');
     assert.ok(isKnown, `#${p.n} verify 形态未知: ${p.verify}`);
   }

@@ -45,6 +45,132 @@ test('dispatchOpsCommand returns the sentinel for non-ops commands (fall-through
   assert.strictEqual(r, ROUTER_NOT_HANDLED);
 });
 
+test('update check delegates detection and staging without applying', async t => {
+  const coordinatorPath = require.resolve('../../../src/services/updateCoordinator');
+  const channelRouterPath = require.resolve('../../../src/services/updateChannelRouter');
+  const leafPath = require.resolve(LEAF);
+  const originalCoordinator = require.cache[coordinatorPath];
+  const originalChannelRouter = require.cache[channelRouterPath];
+  const calls = [];
+  require.cache[coordinatorPath] = {
+    id: coordinatorPath,
+    filename: coordinatorPath,
+    loaded: true,
+    exports: {
+      CHANNELS: ['stable', 'preview', 'dev'],
+      checkUpdate: async options => {
+        calls.push(['check', options]);
+        return {
+          state: 'available',
+          channel: options.channel,
+          target: { version: '1.2.3', commit: 'bbb' },
+          source: { type: 'package' },
+        };
+      },
+      stageUpdate: async options => {
+        calls.push(['stage', options.state]);
+        return { ...options.state, state: 'staged', stagedPath: 'STAGED.json' };
+      },
+      applyUpdate: async () => {
+        calls.push(['apply']);
+        return { state: 'applied' };
+      },
+    },
+  };
+  require.cache[channelRouterPath] = {
+    id: channelRouterPath,
+    filename: channelRouterPath,
+    loaded: true,
+    exports: {
+      checkAllChannels: async options => ({
+        available: true,
+        repaired: false,
+        source: 'github',
+        releaseChannel: options.channel,
+        current: '1.2.2',
+        target: '1.2.3',
+        channelResults: [],
+        degradation: [],
+      }),
+      _channelLabel: value => value,
+    },
+  };
+  delete require.cache[leafPath];
+  t.after(() => {
+    delete require.cache[leafPath];
+    if (originalCoordinator) require.cache[coordinatorPath] = originalCoordinator;
+    else delete require.cache[coordinatorPath];
+    if (originalChannelRouter) require.cache[channelRouterPath] = originalChannelRouter;
+    else delete require.cache[channelRouterPath];
+  });
+
+  const messages = [];
+  const { dispatchOpsCommand } = require(LEAF);
+  const result = await dispatchOpsCommand('update', {
+    subCommand: 'check',
+    args: ['dev'],
+    options: {},
+    rawCommandToken: '',
+    parsed: {},
+    context: {},
+    printError: message => messages.push(['error', message]),
+    printHelp() {},
+    printInfo: message => messages.push(['info', message]),
+    printTable() {},
+    printSuccess: message => messages.push(['success', message]),
+    printWarn: message => messages.push(['warn', message]),
+    withSpinner() {},
+    chalk: {},
+  });
+
+  assert.strictEqual(result, true);
+  assert.deepStrictEqual(calls.map(call => call[0]), ['check', 'stage']);
+  assert.strictEqual(calls[0][1].force, true);
+  assert.strictEqual(calls[0][1].channel, 'dev');
+  assert.match(messages.find(([kind]) => kind === 'success')[1], /已暂存并通过校验/);
+});
+
+test('update apply accepts the existing staged state without rechecking', async t => {
+  const coordinatorPath = require.resolve('../../../src/services/updateCoordinator');
+  const leafPath = require.resolve(LEAF);
+  const originalCoordinator = require.cache[coordinatorPath];
+  const calls = [];
+  require.cache[coordinatorPath] = {
+    id: coordinatorPath,
+    filename: coordinatorPath,
+    loaded: true,
+    exports: {
+      CHANNELS: ['stable', 'preview', 'dev'],
+      checkUpdate: async () => { calls.push('check'); },
+      stageUpdate: async () => { calls.push('stage'); },
+      applyUpdate: async options => {
+        calls.push(['apply', options]);
+        return { state: 'applied', pendingRestart: true };
+      },
+    },
+  };
+  delete require.cache[leafPath];
+  t.after(() => {
+    delete require.cache[leafPath];
+    if (originalCoordinator) require.cache[coordinatorPath] = originalCoordinator;
+    else delete require.cache[coordinatorPath];
+  });
+
+  const messages = [];
+  const { dispatchOpsCommand } = require(LEAF);
+  const result = await dispatchOpsCommand('update', {
+    subCommand: 'apply', args: [], options: {}, rawCommandToken: '', parsed: {}, context: {},
+    printError: message => messages.push(['error', message]), printHelp() {},
+    printInfo: message => messages.push(['info', message]), printTable() {},
+    printSuccess: message => messages.push(['success', message]),
+    printWarn: message => messages.push(['warn', message]), withSpinner() {}, chalk: {},
+  });
+
+  assert.strictEqual(result, true);
+  assert.deepStrictEqual(calls, [['apply', undefined]]);
+  assert.match(messages.find(([kind]) => kind === 'success')[1], /请重启/);
+});
+
 test('setRouterDispatchOpsDeps is a guarded, idempotent, non-throwing DI setter', () => {
   const { setRouterDispatchOpsDeps } = require(LEAF);
   assert.doesNotThrow(() => setRouterDispatchOpsDeps());

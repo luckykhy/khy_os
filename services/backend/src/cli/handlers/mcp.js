@@ -33,6 +33,122 @@ function _presets() {
   return require('../../services/mcp/mcpServerPresets');
 }
 
+/**
+ * `khy mcp eco` —— 只读:khy 从**别家 agent 生态**蹭到了哪些 MCP server。
+ *
+ * 逐家扫 mcpEcosystemRegistry 声明的配置文件:存在吗、解析出几台、哪些真被采用(名字未被
+ * khy 自己或 CC 桥占用)、哪些被同名遮蔽。纯只读(不写任何配置、不连接任何 server),
+ * 因此不受 KHY_MCP_ADD 约束;门控在 KHY_MCP_ECOSYSTEM。
+ *
+ * @returns {number} 0
+ */
+function _handleEco() {
+  const fs = require('fs');
+  const os = require('os');
+  let reg;
+  try {
+    reg = require('../../services/mcp/mcpEcosystemRegistry');
+  } catch (e) {
+    printError(`生态注册表不可用:${(e && e.message) || e}`);
+    return 1;
+  }
+  if (!reg.isMcpEcosystemEnabled(process.env)) {
+    printError('MCP 生态桥未启用(KHY_MCP_ECOSYSTEM 已关闭)。开启后 khy 会复用别家 agent 已配置的 MCP server。');
+    return 1;
+  }
+
+  // khy 自己(+ CC/OpenClaw 专用桥)已经占用的名字 → 生态里的同名条目会被遮蔽。
+  const taken = new Set();
+  try {
+    const loaded = require('../../services/mcp').loadConfig(process.cwd());
+    for (const [name, cfg] of Object.entries((loaded && loaded.mcpServers) || {})) {
+      if (!cfg || !cfg._ecoBridged) {
+        taken.add(name);
+      }
+    }
+  } catch {
+    /* 读不到就只报生态侧发现,不影响本视图 */
+  }
+
+  const sources = reg.mcpEcosystemSources({
+    homedir: os.homedir(),
+    projectDir: process.cwd(),
+    platform: process.platform,
+    env: process.env,
+  });
+
+  // 按生态聚合
+  const byEco = new Map();
+  for (const src of sources) {
+    if (!byEco.has(src.ecosystem)) {
+      byEco.set(src.ecosystem, { label: src.label, evidence: src.evidence, files: [] });
+    }
+    let exists = false;
+    let servers = {};
+    let broken = false;
+    try {
+      exists = fs.existsSync(src.path);
+      if (exists) {
+        const parsed = reg.parseEcosystemConfig(fs.readFileSync(src.path, 'utf-8'), src.format);
+        if (!parsed) {
+          broken = true;
+        } else {
+          servers = reg.extractEcosystemServers(parsed, src);
+        }
+      }
+    } catch {
+      broken = true;
+    }
+    byEco.get(src.ecosystem).files.push({ src, exists, broken, servers });
+  }
+
+  printInfo('MCP 生态桥(只读复用别家 agent 已配置的 server;不安装、不联网、不改别家配置)');
+  printInfo('');
+  let adopted = 0;
+  let shadowed = 0;
+  let present = 0;
+  for (const [id, eco] of byEco) {
+    const hit = eco.files.filter((f) => f.exists);
+    if (hit.length) {
+      present += 1;
+    }
+    const total = eco.files.reduce((n, f) => n + Object.keys(f.servers).length, 0);
+    const head = hit.length
+      ? total
+        ? `✅ ${eco.label}(${id}):${total} 台`
+        : `➖ ${eco.label}(${id}):有配置文件,未解析出可用 server`
+      : `·  ${eco.label}(${id}):未安装/无配置`;
+    printInfo(head);
+    for (const f of eco.files) {
+      if (!f.exists) {
+        continue;
+      }
+      if (f.broken) {
+        printInfo(`     ⚠ ${f.src.path}(${f.src.format} 解析失败,已跳过)`);
+        continue;
+      }
+      printInfo(`     ${f.src.kind}: ${f.src.path}`);
+      for (const [name, cfg] of Object.entries(f.servers)) {
+        const where = cfg.type === 'stdio' ? cfg.command : cfg.url;
+        if (taken.has(name)) {
+          shadowed += 1;
+          printInfo(`       - ${name} (${cfg.type}) → 同名已存在,被遮蔽`);
+        } else {
+          adopted += 1;
+          printInfo(`       + ${name} (${cfg.type}: ${where})`);
+        }
+      }
+    }
+  }
+  printInfo('');
+  printSuccess(
+    `共扫描 ${byEco.size} 家生态:${present} 家有配置,采用 ${adopted} 台,${shadowed} 台因同名被遮蔽。`
+  );
+  printInfo('生态项按上游文档约定登记(evidence=doc);文件不存在即跳过,不会误伤已有配置。');
+  printInfo('关掉某一家:KHY_MCP_ECO_<ID>=0;整体关闭:KHY_MCP_ECOSYSTEM=0。`khy mcp` 看连接状态。');
+  return 0;
+}
+
 function _handleAdd(args, options) {
   const spec = _spec();
   const name = Array.isArray(args) ? args[0] : undefined;
@@ -362,6 +478,10 @@ async function handleMcp(subCommand, args = [], options = {}) {
   if (sub === 'test') {
     return _handleTest(Array.isArray(args) ? args[0] : undefined);
   }
+  // `eco` 只读:列出从别家 agent 生态蹭到的 server,门控在 KHY_MCP_ECOSYSTEM。
+  if (sub === 'eco' || sub === 'ecosystem' || sub === '生态') {
+    return _handleEco();
+  }
   const spec = _spec();
   if (!spec.isMcpAddEnabled(process.env)) {
     printError(
@@ -382,7 +502,7 @@ async function handleMcp(subCommand, args = [], options = {}) {
     return _handleSetEnabled(args, options, false);
   }
   printError(
-    `未知 mcp 子命令:${subCommand}。可用:add / remove / presets / serve / list / show / test / enable / disable。`
+    `未知 mcp 子命令:${subCommand}。可用:add / remove / presets / serve / list / show / test / enable / disable / eco。`
   );
   return 1;
 }

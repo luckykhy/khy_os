@@ -60,98 +60,98 @@
 <p><strong>No gate can be skipped.</strong> If lint fails, fix lint — don't disable the rule. If a test fails, fix the code — don't skip the test.</p>
 <h2 id="github-actions-configuration">GitHub Actions Configuration<a class="anchor" href="#github-actions-configuration" aria-label="锚点">#</a></h2>
 <h3 id="basic-ci-pipeline">Basic CI Pipeline<a class="anchor" href="#basic-ci-pipeline" aria-label="锚点">#</a></h3>
-<pre><code class="language-yaml"># .github/workflows/ci.yml
-name: CI
+<pre><code class="language-yaml"><span class="hljs-comment"># .github/workflows/ci.yml</span>
+<span class="hljs-attr">name:</span> <span class="hljs-string">CI</span>
 
-on:
-  pull_request:
-    branches: [main]
-  push:
-    branches: [main]
+<span class="hljs-attr">on:</span>
+  <span class="hljs-attr">pull_request:</span>
+    <span class="hljs-attr">branches:</span> [<span class="hljs-string">main</span>]
+  <span class="hljs-attr">push:</span>
+    <span class="hljs-attr">branches:</span> [<span class="hljs-string">main</span>]
 
-jobs:
-  quality:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+<span class="hljs-attr">jobs:</span>
+  <span class="hljs-attr">quality:</span>
+    <span class="hljs-attr">runs-on:</span> <span class="hljs-string">ubuntu-latest</span>
+    <span class="hljs-attr">steps:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/checkout@v4</span>
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/setup-node@v4</span>
+        <span class="hljs-attr">with:</span>
+          <span class="hljs-attr">node-version:</span> <span class="hljs-string">&#x27;22&#x27;</span>
+          <span class="hljs-attr">cache:</span> <span class="hljs-string">&#x27;npm&#x27;</span>
 
-      - name: Install dependencies
-        run: npm ci
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Install</span> <span class="hljs-string">dependencies</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">ci</span>
 
-      - name: Lint
-        run: npm run lint
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Lint</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">run</span> <span class="hljs-string">lint</span>
 
-      - name: Type check
-        run: npx tsc --noEmit
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Type</span> <span class="hljs-string">check</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">npx</span> <span class="hljs-string">tsc</span> <span class="hljs-string">--noEmit</span>
 
-      - name: Test
-        run: npm test -- --coverage
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Test</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">test</span> <span class="hljs-string">--</span> <span class="hljs-string">--coverage</span>
 
-      - name: Build
-        run: npm run build
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Build</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">run</span> <span class="hljs-string">build</span>
 
-      - name: Security audit
-        run: npm audit --audit-level=high</code></pre>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Security</span> <span class="hljs-string">audit</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">audit</span> <span class="hljs-string">--audit-level=high</span></code></pre>
 <h3 id="with-database-integration-tests">With Database Integration Tests<a class="anchor" href="#with-database-integration-tests" aria-label="锚点">#</a></h3>
-<pre><code class="language-yaml">  integration:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_DB: testdb
-          POSTGRES_USER: ci_user
-          POSTGRES_PASSWORD: ${{ secrets.CI_DB_PASSWORD }}
-        ports:
-          - 5432:5432
-        options: &gt;-
+<pre><code class="language-yaml">  <span class="hljs-attr">integration:</span>
+    <span class="hljs-attr">runs-on:</span> <span class="hljs-string">ubuntu-latest</span>
+    <span class="hljs-attr">services:</span>
+      <span class="hljs-attr">postgres:</span>
+        <span class="hljs-attr">image:</span> <span class="hljs-string">postgres:16</span>
+        <span class="hljs-attr">env:</span>
+          <span class="hljs-attr">POSTGRES_DB:</span> <span class="hljs-string">testdb</span>
+          <span class="hljs-attr">POSTGRES_USER:</span> <span class="hljs-string">ci_user</span>
+          <span class="hljs-attr">POSTGRES_PASSWORD:</span> <span class="hljs-string">${{</span> <span class="hljs-string">secrets.CI_DB_PASSWORD</span> <span class="hljs-string">}}</span>
+        <span class="hljs-attr">ports:</span>
+          <span class="hljs-bullet">-</span> <span class="hljs-number">5432</span><span class="hljs-string">:5432</span>
+        <span class="hljs-attr">options:</span> <span class="hljs-string">&gt;-
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-      - run: npm ci
-      - name: Run migrations
-        run: npx prisma migrate deploy
-        env:
-          DATABASE_URL: postgresql://ci_user:${{ secrets.CI_DB_PASSWORD }}@localhost:5432/testdb
-      - name: Integration tests
-        run: npm run test:integration
-        env:
-          DATABASE_URL: postgresql://ci_user:${{ secrets.CI_DB_PASSWORD }}@localhost:5432/testdb</code></pre>
+</span>
+    <span class="hljs-attr">steps:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/checkout@v4</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/setup-node@v4</span>
+        <span class="hljs-attr">with:</span>
+          <span class="hljs-attr">node-version:</span> <span class="hljs-string">&#x27;22&#x27;</span>
+          <span class="hljs-attr">cache:</span> <span class="hljs-string">&#x27;npm&#x27;</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">ci</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Run</span> <span class="hljs-string">migrations</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">npx</span> <span class="hljs-string">prisma</span> <span class="hljs-string">migrate</span> <span class="hljs-string">deploy</span>
+        <span class="hljs-attr">env:</span>
+          <span class="hljs-attr">DATABASE_URL:</span> <span class="hljs-string">postgresql://ci_user:${{</span> <span class="hljs-string">secrets.CI_DB_PASSWORD</span> <span class="hljs-string">}}@localhost:5432/testdb</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Integration</span> <span class="hljs-string">tests</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">run</span> <span class="hljs-string">test:integration</span>
+        <span class="hljs-attr">env:</span>
+          <span class="hljs-attr">DATABASE_URL:</span> <span class="hljs-string">postgresql://ci_user:${{</span> <span class="hljs-string">secrets.CI_DB_PASSWORD</span> <span class="hljs-string">}}@localhost:5432/testdb</span></code></pre>
 <blockquote><p><strong>Note:</strong> Even for CI-only test databases, use GitHub Secrets for credentials rather than hardcoding values. This builds good habits and prevents accidental reuse of test credentials in other contexts.</p></blockquote>
 <h3 id="e2e-tests">E2E Tests<a class="anchor" href="#e2e-tests" aria-label="锚点">#</a></h3>
-<pre><code class="language-yaml">  e2e:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-      - run: npm ci
-      - name: Install Playwright
-        run: npx playwright install --with-deps chromium
-      - name: Build
-        run: npm run build
-      - name: Run E2E tests
-        run: npx playwright test
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: playwright-report
-          path: playwright-report/</code></pre>
+<pre><code class="language-yaml">  <span class="hljs-attr">e2e:</span>
+    <span class="hljs-attr">runs-on:</span> <span class="hljs-string">ubuntu-latest</span>
+    <span class="hljs-attr">steps:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/checkout@v4</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/setup-node@v4</span>
+        <span class="hljs-attr">with:</span>
+          <span class="hljs-attr">node-version:</span> <span class="hljs-string">&#x27;22&#x27;</span>
+          <span class="hljs-attr">cache:</span> <span class="hljs-string">&#x27;npm&#x27;</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">ci</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Install</span> <span class="hljs-string">Playwright</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">npx</span> <span class="hljs-string">playwright</span> <span class="hljs-string">install</span> <span class="hljs-string">--with-deps</span> <span class="hljs-string">chromium</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Build</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">run</span> <span class="hljs-string">build</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Run</span> <span class="hljs-string">E2E</span> <span class="hljs-string">tests</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">npx</span> <span class="hljs-string">playwright</span> <span class="hljs-string">test</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/upload-artifact@v4</span>
+        <span class="hljs-attr">if:</span> <span class="hljs-string">failure()</span>
+        <span class="hljs-attr">with:</span>
+          <span class="hljs-attr">name:</span> <span class="hljs-string">playwright-report</span>
+          <span class="hljs-attr">path:</span> <span class="hljs-string">playwright-report/</span></code></pre>
 <h2 id="feeding-ci-failures-back-to-agents">Feeding CI Failures Back to Agents<a class="anchor" href="#feeding-ci-failures-back-to-agents" aria-label="锚点">#</a></h2>
 <p>The power of CI with AI agents is the feedback loop. When CI fails:</p>
 <pre><code>CI fails
@@ -175,22 +175,22 @@ Build error → Agent checks config and dependencies</code></pre>
 <h2 id="deployment-strategies">Deployment Strategies<a class="anchor" href="#deployment-strategies" aria-label="锚点">#</a></h2>
 <h3 id="preview-deployments">Preview Deployments<a class="anchor" href="#preview-deployments" aria-label="锚点">#</a></h3>
 <p>Every PR gets a preview deployment for manual testing:</p>
-<pre><code class="language-yaml"># Deploy preview on PR (Vercel/Netlify/etc.)
-deploy-preview:
-  runs-on: ubuntu-latest
-  if: github.event_name == 'pull_request'
-  steps:
-    - uses: actions/checkout@v4
-    - name: Deploy preview
-      run: npx vercel --token=${{ secrets.VERCEL_TOKEN }}</code></pre>
+<pre><code class="language-yaml"><span class="hljs-comment"># Deploy preview on PR (Vercel/Netlify/etc.)</span>
+<span class="hljs-attr">deploy-preview:</span>
+  <span class="hljs-attr">runs-on:</span> <span class="hljs-string">ubuntu-latest</span>
+  <span class="hljs-attr">if:</span> <span class="hljs-string">github.event_name</span> <span class="hljs-string">==</span> <span class="hljs-string">&#x27;pull_request&#x27;</span>
+  <span class="hljs-attr">steps:</span>
+    <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/checkout@v4</span>
+    <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Deploy</span> <span class="hljs-string">preview</span>
+      <span class="hljs-attr">run:</span> <span class="hljs-string">npx</span> <span class="hljs-string">vercel</span> <span class="hljs-string">--token=${{</span> <span class="hljs-string">secrets.VERCEL_TOKEN</span> <span class="hljs-string">}}</span></code></pre>
 <h3 id="feature-flags">Feature Flags<a class="anchor" href="#feature-flags" aria-label="锚点">#</a></h3>
 <p>Feature flags decouple deployment from release. Deploy incomplete or risky features behind flags so you can:</p>
 <ul><li><strong>Ship code without enabling it.</strong> Merge to main early, enable when ready.</li><li><strong>Roll back without redeploying.</strong> Disable the flag instead of reverting code.</li><li><strong>Canary new features.</strong> Enable for 1% of users, then 10%, then 100%.</li><li><strong>Run A/B tests.</strong> Compare behavior with and without the feature.</li></ul>
-<pre><code class="language-typescript">// Simple feature flag pattern
-if (featureFlags.isEnabled('new-checkout-flow', { userId })) {
-  return renderNewCheckout();
+<pre><code class="language-typescript"><span class="hljs-comment">// Simple feature flag pattern</span>
+<span class="hljs-keyword">if</span> (featureFlags.<span class="hljs-title function_">isEnabled</span>(<span class="hljs-string">&#x27;new-checkout-flow&#x27;</span>, { userId })) {
+  <span class="hljs-keyword">return</span> <span class="hljs-title function_">renderNewCheckout</span>();
 }
-return renderLegacyCheckout();</code></pre>
+<span class="hljs-keyword">return</span> <span class="hljs-title function_">renderLegacyCheckout</span>();</code></pre>
 <p><strong>Flag lifecycle:</strong> Create → Enable for testing → Canary → Full rollout → Remove the flag and dead code. Flags that live forever become technical debt — set a cleanup date when you create them.</p>
 <h3 id="staged-rollouts">Staged Rollouts<a class="anchor" href="#staged-rollouts" aria-label="锚点">#</a></h3>
 <pre><code>PR merged to main
@@ -208,23 +208,23 @@ return renderLegacyCheckout();</code></pre>
     └── Clean → Done</code></pre>
 <h3 id="rollback-plan">Rollback Plan<a class="anchor" href="#rollback-plan" aria-label="锚点">#</a></h3>
 <p>Every deployment should be reversible:</p>
-<pre><code class="language-yaml"># Manual rollback workflow
-name: Rollback
-on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to rollback to'
-        required: true
+<pre><code class="language-yaml"><span class="hljs-comment"># Manual rollback workflow</span>
+<span class="hljs-attr">name:</span> <span class="hljs-string">Rollback</span>
+<span class="hljs-attr">on:</span>
+  <span class="hljs-attr">workflow_dispatch:</span>
+    <span class="hljs-attr">inputs:</span>
+      <span class="hljs-attr">version:</span>
+        <span class="hljs-attr">description:</span> <span class="hljs-string">&#x27;Version to rollback to&#x27;</span>
+        <span class="hljs-attr">required:</span> <span class="hljs-literal">true</span>
 
-jobs:
-  rollback:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Rollback deployment
-        run: |
+<span class="hljs-attr">jobs:</span>
+  <span class="hljs-attr">rollback:</span>
+    <span class="hljs-attr">runs-on:</span> <span class="hljs-string">ubuntu-latest</span>
+    <span class="hljs-attr">steps:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">Rollback</span> <span class="hljs-string">deployment</span>
+        <span class="hljs-attr">run:</span> <span class="hljs-string">|
           # Deploy the specified previous version
-          npx vercel rollback ${{ inputs.version }}</code></pre>
+          npx vercel rollback ${{ inputs.version }}</span></code></pre>
 <h2 id="environment-management">Environment Management<a class="anchor" href="#environment-management" aria-label="锚点">#</a></h2>
 <pre><code>.env.example       → Committed (template for developers)
 .env                → NOT committed (local development)
@@ -234,14 +234,14 @@ Production secrets  → Stored in deployment platform / vault</code></pre>
 <p>CI should never have production secrets. Use separate secrets for CI testing.</p>
 <h2 id="automation-beyond-ci">Automation Beyond CI<a class="anchor" href="#automation-beyond-ci" aria-label="锚点">#</a></h2>
 <h3 id="dependabot-renovate">Dependabot / Renovate<a class="anchor" href="#dependabot-renovate" aria-label="锚点">#</a></h3>
-<pre><code class="language-yaml"># .github/dependabot.yml
-version: 2
-updates:
-  - package-ecosystem: npm
-    directory: /
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5</code></pre>
+<pre><code class="language-yaml"><span class="hljs-comment"># .github/dependabot.yml</span>
+<span class="hljs-attr">version:</span> <span class="hljs-number">2</span>
+<span class="hljs-attr">updates:</span>
+  <span class="hljs-bullet">-</span> <span class="hljs-attr">package-ecosystem:</span> <span class="hljs-string">npm</span>
+    <span class="hljs-attr">directory:</span> <span class="hljs-string">/</span>
+    <span class="hljs-attr">schedule:</span>
+      <span class="hljs-attr">interval:</span> <span class="hljs-string">weekly</span>
+    <span class="hljs-attr">open-pull-requests-limit:</span> <span class="hljs-number">5</span></code></pre>
 <h3 id="build-cop-role">Build Cop Role<a class="anchor" href="#build-cop-role" aria-label="锚点">#</a></h3>
 <p>Designate someone responsible for keeping CI green. When the build breaks, the Build Cop's job is to fix or revert — not the person whose change caused the break. This prevents broken builds from accumulating while everyone assumes someone else will fix it.</p>
 <h3 id="pr-checks">PR Checks<a class="anchor" href="#pr-checks" aria-label="锚点">#</a></h3>
@@ -262,33 +262,33 @@ updates:
 └── Use larger runners
     └── GitHub-hosted larger runners or self-hosted for CPU-heavy builds</code></pre>
 <p><strong>Example: caching and parallelism</strong></p>
-<pre><code class="language-yaml">jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: '22', cache: 'npm' }
-      - run: npm ci
-      - run: npm run lint
+<pre><code class="language-yaml"><span class="hljs-attr">jobs:</span>
+  <span class="hljs-attr">lint:</span>
+    <span class="hljs-attr">runs-on:</span> <span class="hljs-string">ubuntu-latest</span>
+    <span class="hljs-attr">steps:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/checkout@v4</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/setup-node@v4</span>
+        <span class="hljs-attr">with:</span> { <span class="hljs-attr">node-version:</span> <span class="hljs-string">&#x27;22&#x27;</span>, <span class="hljs-attr">cache:</span> <span class="hljs-string">&#x27;npm&#x27;</span> }
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">ci</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">run</span> <span class="hljs-string">lint</span>
 
-  typecheck:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: '22', cache: 'npm' }
-      - run: npm ci
-      - run: npx tsc --noEmit
+  <span class="hljs-attr">typecheck:</span>
+    <span class="hljs-attr">runs-on:</span> <span class="hljs-string">ubuntu-latest</span>
+    <span class="hljs-attr">steps:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/checkout@v4</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/setup-node@v4</span>
+        <span class="hljs-attr">with:</span> { <span class="hljs-attr">node-version:</span> <span class="hljs-string">&#x27;22&#x27;</span>, <span class="hljs-attr">cache:</span> <span class="hljs-string">&#x27;npm&#x27;</span> }
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">ci</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">run:</span> <span class="hljs-string">npx</span> <span class="hljs-string">tsc</span> <span class="hljs-string">--noEmit</span>
 
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: '22', cache: 'npm' }
-      - run: npm ci
-      - run: npm test -- --coverage</code></pre>
+  <span class="hljs-attr">test:</span>
+    <span class="hljs-attr">runs-on:</span> <span class="hljs-string">ubuntu-latest</span>
+    <span class="hljs-attr">steps:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/checkout@v4</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">uses:</span> <span class="hljs-string">actions/setup-node@v4</span>
+        <span class="hljs-attr">with:</span> { <span class="hljs-attr">node-version:</span> <span class="hljs-string">&#x27;22&#x27;</span>, <span class="hljs-attr">cache:</span> <span class="hljs-string">&#x27;npm&#x27;</span> }
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">ci</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-attr">run:</span> <span class="hljs-string">npm</span> <span class="hljs-string">test</span> <span class="hljs-string">--</span> <span class="hljs-string">--coverage</span></code></pre>
 <h2 id="common-rationalizations">Common Rationalizations<a class="anchor" href="#common-rationalizations" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>Rationalization</th><th>Reality</th></tr></thead><tbody><tr><td>&quot;CI is too slow&quot;</td><td>Optimize the pipeline (see CI Optimization below), don't skip it. A 5-minute pipeline prevents hours of debugging.</td></tr><tr><td>&quot;This change is trivial, skip CI&quot;</td><td>Trivial changes break builds. CI is fast for trivial changes anyway.</td></tr><tr><td>&quot;The test is flaky, just re-run&quot;</td><td>Flaky tests mask real bugs and waste everyone's time. Fix the flakiness.</td></tr><tr><td>&quot;We'll add CI later&quot;</td><td>Projects without CI accumulate broken states. Set it up on day one.</td></tr><tr><td>&quot;Manual testing is enough&quot;</td><td>Manual testing doesn't scale and isn't repeatable. Automate what you can.</td></tr></tbody></table>
 <h2 id="red-flags">Red Flags<a class="anchor" href="#red-flags" aria-label="锚点">#</a></h2>

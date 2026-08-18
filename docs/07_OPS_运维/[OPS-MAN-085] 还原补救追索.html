@@ -32,9 +32,9 @@
 <ul><li><code>restore-authorize</code>（OPS-MAN-084）答 <strong>should I?</strong>（该不该自动开跑：是 / 否 / 问）；</li><li><code>restore-converge</code>（OPS-MAN-082）答 <strong>did it work?</strong>（跑完一步进展如何）；</li><li><code>restore-recourse</code>（本文件）答 <strong>if no, what is the minimal path to yes?</strong></li></ul>
 <p>（被挡了，把世界改成什么样这个判定就会翻绿）。</p>
 <p>整条链此前有个刺眼缺口：<strong>它只会说「不」，从不说「怎么才能变成是」。</strong> 当授权门判<br><code>forbidden</code>、或 converge 判 <code>escalate-human</code>，落在陌生机器上的开发者 / 使用者 / 维护者<br>只得到一个<strong>死胡同拒绝</strong>。安全 agent 系统里，一个不可操作的拒绝等于把用户推下悬崖——<br>他知道被挡了，却不知道下一步。本层取一个非授权判定，按它的<strong>每个 blocker</strong> 反查<br><strong>最小、有序、安全</strong>的解锁选项，每条标明「谁来做、成本多少、翻到哪一档」。</p>
-<pre><code class="language-bash">node scripts/restore-recourse.js --json   # 撞到拒绝的 agent 读这个找出路
-# needed=false → 已授权，无需补救
-# needed=true  → options 按成本升序，最短解锁路线在最前</code></pre>
+<pre><code class="language-bash">node scripts/restore-recourse.js --json   <span class="hljs-comment"># 撞到拒绝的 agent 读这个找出路</span>
+<span class="hljs-comment"># needed=false → 已授权，无需补救</span>
+<span class="hljs-comment"># needed=true  → options 按成本升序，最短解锁路线在最前</span></code></pre>
 <h2 id="解锁词表-与授权门-blockers-一一对齐">解锁词表（与授权门 blockers 一一对齐）<a class="anchor" href="#解锁词表-与授权门-blockers-一一对齐" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>blocker</th><th>补救（可析取多解）</th><th>agent 能否自愈</th></tr></thead><tbody><tr><td><code>overwrite-risk</code></td><td>→ask-first；→authorized</td><td>否</td></tr><tr><td><code>chain-requires-human</code></td><td>→ask-first；→authorized</td><td>否</td></tr><tr><td><code>dangerous-move</code></td><td>（无解锁保证）</td><td>否</td></tr><tr><td><code>facts-missing</code></td><td>（无解锁保证）</td><td>是</td></tr><tr><td><code>assessment-error</code></td><td>（无解锁保证）</td><td>是</td></tr></tbody></table>
 <blockquote><p><code>dangerous-move</code> 是恒久红线：<strong>无自动解</strong>，只能人工审阅整条链、剔除或确认危险步。<br>拒绝可操作 ≠ 拒绝可被绕过——本层绝不承诺「危险动作可自动解锁」。</p></blockquote>

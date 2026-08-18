@@ -46,41 +46,41 @@ X-XSS-Protection: 0  (disabled, rely on CSP)
 Referrer-Policy: strict-origin-when-cross-origin
 Permissions-Policy: camera=(), microphone=(), geolocation=()</code></pre>
 <h2 id="cors-configuration">CORS Configuration<a class="anchor" href="#cors-configuration" aria-label="锚点">#</a></h2>
-<pre><code class="language-typescript">// Restrictive (recommended)
-cors({
-  origin: ['https://yourdomain.com', 'https://app.yourdomain.com'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+<pre><code class="language-typescript"><span class="hljs-comment">// Restrictive (recommended)</span>
+<span class="hljs-title function_">cors</span>({
+  <span class="hljs-attr">origin</span>: [<span class="hljs-string">&#x27;https://yourdomain.com&#x27;</span>, <span class="hljs-string">&#x27;https://app.yourdomain.com&#x27;</span>],
+  <span class="hljs-attr">credentials</span>: <span class="hljs-literal">true</span>,
+  <span class="hljs-attr">methods</span>: [<span class="hljs-string">&#x27;GET&#x27;</span>, <span class="hljs-string">&#x27;POST&#x27;</span>, <span class="hljs-string">&#x27;PUT&#x27;</span>, <span class="hljs-string">&#x27;PATCH&#x27;</span>, <span class="hljs-string">&#x27;DELETE&#x27;</span>],
+  <span class="hljs-attr">allowedHeaders</span>: [<span class="hljs-string">&#x27;Content-Type&#x27;</span>, <span class="hljs-string">&#x27;Authorization&#x27;</span>],
 })
 
-// NEVER use in production:
-cors({ origin: '*' })  // Allows any origin</code></pre>
+<span class="hljs-comment">// NEVER use in production:</span>
+<span class="hljs-title function_">cors</span>({ <span class="hljs-attr">origin</span>: <span class="hljs-string">&#x27;*&#x27;</span> })  <span class="hljs-comment">// Allows any origin</span></code></pre>
 <h2 id="data-protection">Data Protection<a class="anchor" href="#data-protection" aria-label="锚点">#</a></h2>
 <ul><li>[ ] Sensitive fields excluded from API responses (<code>passwordHash</code>, <code>resetToken</code>, etc.)</li><li>[ ] Sensitive data not logged (passwords, tokens, full CC numbers)</li><li>[ ] PII encrypted at rest (if required by regulation)</li><li>[ ] HTTPS for all external communication</li><li>[ ] Database backups encrypted</li></ul>
 <h2 id="dependency-security">Dependency Security<a class="anchor" href="#dependency-security" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># Audit dependencies
+<pre><code class="language-bash"><span class="hljs-comment"># Audit dependencies</span>
 npm audit
 
-# Fix automatically where possible
+<span class="hljs-comment"># Fix automatically where possible</span>
 npm audit fix
 
-# Check for critical vulnerabilities
+<span class="hljs-comment"># Check for critical vulnerabilities</span>
 npm audit --audit-level=critical
 
-# Keep dependencies updated
+<span class="hljs-comment"># Keep dependencies updated</span>
 npx npm-check-updates</code></pre>
 <h2 id="error-handling">Error Handling<a class="anchor" href="#error-handling" aria-label="锚点">#</a></h2>
-<pre><code class="language-typescript">// Production: generic error, no internals
-res.status(500).json({
-  error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' }
+<pre><code class="language-typescript"><span class="hljs-comment">// Production: generic error, no internals</span>
+res.<span class="hljs-title function_">status</span>(<span class="hljs-number">500</span>).<span class="hljs-title function_">json</span>({
+  <span class="hljs-attr">error</span>: { <span class="hljs-attr">code</span>: <span class="hljs-string">&#x27;INTERNAL_ERROR&#x27;</span>, <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;Something went wrong&#x27;</span> }
 });
 
-// NEVER in production:
-res.status(500).json({
-  error: err.message,
-  stack: err.stack,         // Exposes internals
-  query: err.sql,           // Exposes database details
+<span class="hljs-comment">// NEVER in production:</span>
+res.<span class="hljs-title function_">status</span>(<span class="hljs-number">500</span>).<span class="hljs-title function_">json</span>({
+  <span class="hljs-attr">error</span>: err.<span class="hljs-property">message</span>,
+  <span class="hljs-attr">stack</span>: err.<span class="hljs-property">stack</span>,         <span class="hljs-comment">// Exposes internals</span>
+  <span class="hljs-attr">query</span>: err.<span class="hljs-property">sql</span>,           <span class="hljs-comment">// Exposes database details</span>
 });</code></pre>
 <h2 id="owasp-top-10-quick-reference">OWASP Top 10 Quick Reference<a class="anchor" href="#owasp-top-10-quick-reference" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>#</th><th>Vulnerability</th><th>Prevention</th></tr></thead><tbody><tr><td>1</td><td>Broken Access Control</td><td>Auth checks on every endpoint, ownership verification</td></tr><tr><td>2</td><td>Cryptographic Failures</td><td>HTTPS, strong hashing, no secrets in code</td></tr><tr><td>3</td><td>Injection</td><td>Parameterized queries, input validation</td></tr><tr><td>4</td><td>Insecure Design</td><td>Threat modeling, spec-driven development</td></tr><tr><td>5</td><td>Security Misconfiguration</td><td>Security headers, minimal permissions, audit deps</td></tr><tr><td>6</td><td>Vulnerable Components</td><td><code>npm audit</code>, keep deps updated, minimal deps</td></tr><tr><td>7</td><td>Auth Failures</td><td>Strong passwords, rate limiting, session management</td></tr><tr><td>8</td><td>Data Integrity Failures</td><td>Verify updates/dependencies, signed artifacts</td></tr><tr><td>9</td><td>Logging Failures</td><td>Log security events, don't log secrets</td></tr><tr><td>10</td><td>SSRF</td><td>Validate/allowlist URLs, restrict outbound requests</td></tr></tbody></table>

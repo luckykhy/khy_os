@@ -717,8 +717,171 @@ function routeMessage(fromId, toId, message) {
 const ZOMBIE_CHECK_INTERVAL = parseInt(process.env.KHY_ZOMBIE_CHECK_MS, 10) || 30_000;
 const ZOMBIE_THRESHOLD_MS = parseInt(process.env.KHY_ZOMBIE_THRESHOLD_MS, 10) || 300_000;
 
+// Auto-retry policy for tasks whose worker was reaped as a zombie.
+// A task is re-queued at most ZOMBIE_MAX_RETRIES times; the next zombie after
+// that (the ZOMBIE_MAX_RETRIES+1-th) sends it to the dead-letter state.
+const ZOMBIE_MAX_RETRIES = parseInt(process.env.KHY_ZOMBIE_MAX_RETRIES, 10) || 2;
+// Jitter window before a re-queued task becomes claimable again — a retry that
+// fires instantly would just hit the same blocking condition.
+const ZOMBIE_RETRY_JITTER_MIN_MS = parseInt(process.env.KHY_ZOMBIE_RETRY_MIN_MS, 10) || 1_000;
+const ZOMBIE_RETRY_JITTER_MAX_MS = parseInt(process.env.KHY_ZOMBIE_RETRY_MAX_MS, 10) || 5_000;
+
+/** Random retry delay inside the configured jitter window. */
+function _zombieRetryDelayMs() {
+  const min = Math.max(0, ZOMBIE_RETRY_JITTER_MIN_MS);
+  const max = Math.max(min, ZOMBIE_RETRY_JITTER_MAX_MS);
+  return min + Math.floor(Math.random() * (max - min + 1));
+}
+
+/**
+ * Write a zombie-reap heal record to both audit trails. Fail-soft by contract:
+ * audit trouble must never break reaping.
+ * @param {{ action: string, target: string, reason: string, details: object, message: string, result?: string }} entry
+ */
+function _writeZombieHealAudit(entry) {
+  try {
+    const { writeHealAudit } = require('../utils/healAudit');
+    Promise.resolve(
+      writeHealAudit({
+        action: entry.action,
+        target: entry.target,
+        reason: entry.reason,
+        details: entry.details,
+        message: entry.message,
+      })
+    ).catch(() => {
+      /* audit is best-effort */
+    });
+  } catch {
+    /* audit module unavailable */
+  }
+  try {
+    require('../services/healAuditService').logHealEvent({
+      component: 'coordinator',
+      action: entry.action,
+      target: entry.target,
+      result: entry.result || 'success',
+      details: { ...entry.details, message: entry.message },
+    });
+  } catch {
+    /* audit module unavailable */
+  }
+}
+
+/**
+ * Re-dispatch (or abandon) the task owned by a reaped zombie worker.
+ *
+ * retryCount < ZOMBIE_MAX_RETRIES → re-queue with a jitter delay + heal audit.
+ * Otherwise → dead-letter the task and alert the user.
+ *
+ * @param {object} worker - The worker just marked as a zombie
+ * @returns {{ taskId: string, action: 'requeued'|'dead_letter'|'failed', attempt?: number,
+ *             delayMs?: number, zombieCount?: number }|null} null when the worker owns no task
+ */
+function _reassignZombieTask(worker) {
+  const taskId = worker._taskId;
+  if (!taskId) {
+    return null;
+  }
+
+  let taskBoard;
+  try {
+    taskBoard = require('./taskBoard');
+  } catch {
+    return null;
+  }
+
+  let task = null;
+  try {
+    task = typeof taskBoard.getTask === 'function' ? taskBoard.getTask(taskId) : null;
+  } catch {
+    task = null;
+  }
+  const retryCount = Number(task && task.retryCount) || 0;
+  const reason = worker.error || 'zombie reap';
+
+  // ── Retry budget left → re-queue with jitter ──
+  if (retryCount < ZOMBIE_MAX_RETRIES && typeof taskBoard.requeueTask === 'function') {
+    const attempt = retryCount + 1;
+    const delayMs = _zombieRetryDelayMs();
+    let requeued = null;
+    try {
+      requeued = taskBoard.requeueTask(taskId, { reason, delayMs });
+    } catch {
+      requeued = null;
+    }
+    if (requeued) {
+      const message = `重试任务 ${taskId}(zombie reap，第 ${attempt}/${ZOMBIE_MAX_RETRIES} 次)，${delayMs}ms 抖动后重新入队`;
+      _writeZombieHealAudit({
+        action: 'coordinator_zombie_task_requeued',
+        target: taskId,
+        reason: 'zombie_worker_reaped',
+        details: {
+          taskId,
+          workerId: worker.id,
+          attempt,
+          maxRetries: ZOMBIE_MAX_RETRIES,
+          delayMs,
+          zombieError: reason,
+        },
+        message,
+      });
+      return { taskId, action: 'requeued', attempt, delayMs };
+    }
+    // Re-queue failed (task vanished / board unavailable) → fall through to
+    // the terminal path so the task never silently stays 'running'.
+  }
+
+  // ── Retry budget exhausted → dead letter + user alert ──
+  const zombieCount = retryCount + 1;
+  const message = `任务 ${taskId} 连续 ${zombieCount} 次 zombie，已放弃`;
+  let terminal = 'dead_letter';
+  try {
+    if (typeof taskBoard.deadLetterTask === 'function') {
+      taskBoard.deadLetterTask(taskId, message);
+    } else {
+      // Older board without dead-letter support: legacy fail path.
+      taskBoard.failTask(taskId, reason);
+      terminal = 'failed';
+    }
+  } catch {
+    /* board unavailable — audit + alert below still fire */
+  }
+
+  _writeZombieHealAudit({
+    action: 'coordinator_zombie_task_dead_letter',
+    target: taskId,
+    reason: 'zombie_retries_exhausted',
+    result: 'failure',
+    details: {
+      taskId,
+      workerId: worker.id,
+      zombieCount,
+      maxRetries: ZOMBIE_MAX_RETRIES,
+      zombieError: reason,
+    },
+    message,
+  });
+
+  // User-facing alert — a dead-lettered task needs a human decision.
+  try {
+    require('../services/notificationPort').emitNotification({
+      type: 'coordinator_zombie_dead_letter',
+      level: 'error',
+      title: '任务已放弃 (zombie 重试耗尽)',
+      detail: message,
+    });
+  } catch {
+    /* notification port unavailable */
+  }
+
+  return { taskId, action: terminal, zombieCount };
+}
+
 /**
  * Detect and reap zombie workers — workers marked 'running' but idle beyond threshold.
+ * Each reaped worker's task is automatically re-queued (up to ZOMBIE_MAX_RETRIES)
+ * or dead-lettered; see _reassignZombieTask.
  * @returns {string[]} IDs of reaped zombie workers
  */
 function detectZombies() {
@@ -734,13 +897,11 @@ function detectZombies() {
       worker.error = `Zombie: inactive for ${now - lastActivity}ms`;
       worker.completedAt = now;
       zombies.push(id);
-      // Auto-fail taskBoard entry
-      if (worker._taskId) {
-        try {
-          require('./taskBoard').failTask(worker._taskId, worker.error);
-        } catch {
-          /* best-effort */
-        }
+      // Re-dispatch the orphaned task (or dead-letter it once retries run out)
+      try {
+        worker._zombieReap = _reassignZombieTask(worker);
+      } catch {
+        /* best-effort: reaping must complete even if the board misbehaves */
       }
     }
   }
@@ -905,4 +1066,5 @@ module.exports = {
   OUTPUT_CONTRACT,
   WORKER_DEFAULTS,
   ZOMBIE_THRESHOLD_MS,
+  ZOMBIE_MAX_RETRIES,
 };

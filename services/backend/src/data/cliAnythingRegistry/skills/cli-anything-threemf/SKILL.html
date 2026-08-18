@@ -33,19 +33,19 @@
 <h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
 <pre><code class="language-bash">pip install git+https://github.com/HKUDS/CLI-Anything.git#subdirectory=3MF/agent-harness</code></pre>
 <h2 id="commands">Commands<a class="anchor" href="#commands" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># Show mesh info (vertices, faces, bounding box, watertight status, volume)
+<pre><code class="language-bash"><span class="hljs-comment"># Show mesh info (vertices, faces, bounding box, watertight status, volume)</span>
 cli-anything-3mf info &lt;file.3mf&gt;
 
-# Detect cylindrical holes (center, diameter, confidence)
+<span class="hljs-comment"># Detect cylindrical holes (center, diameter, confidence)</span>
 cli-anything-3mf inspect &lt;file.3mf&gt;
 
-# Resize holes to target diameter
+<span class="hljs-comment"># Resize holes to target diameter</span>
 cli-anything-3mf resize &lt;file.3mf&gt; --hole 0 --hole 1 --diameter 4.2 -o output.3mf
 
-# Fix mesh issues (degenerate faces, duplicate vertices, normals)
+<span class="hljs-comment"># Fix mesh issues (degenerate faces, duplicate vertices, normals)</span>
 cli-anything-3mf repair &lt;file.3mf&gt; -o repaired.3mf
 
-# Compare two 3MF files
+<span class="hljs-comment"># Compare two 3MF files</span>
 cli-anything-3mf compare &lt;file1.3mf&gt; &lt;file2.3mf&gt;</code></pre>
 <h2 id="json-output">JSON Output<a class="anchor" href="#json-output" aria-label="锚点">#</a></h2>
 <p>All commands support <code>--json</code> for machine-readable output:</p>

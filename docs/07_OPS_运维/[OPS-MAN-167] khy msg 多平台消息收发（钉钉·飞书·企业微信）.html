@@ -45,21 +45,21 @@ IO 层
   routes/webhooks.js  POST /webhooks/{dingtalk,feishu}、GET+POST /webhooks/wecom（验签失败 401）
   cli/handlers/msg.js CLI 处理器；cli/router.js case 'msg'；constants/commandSchema.js 三处登记</code></pre>
 <h2 id="使用-发送">使用（发送）<a class="anchor" href="#使用-发送" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># 1) 配置某平台的 webhook（值为 - 时从 stdin 读，避免密钥进 shell 历史）
-khy msg set dingtalk webhook=https://oapi.dingtalk.com/robot/send?access_token=xxx
-khy msg set dingtalk secret=-      # 加签密钥从 stdin 读
+<pre><code class="language-bash"><span class="hljs-comment"># 1) 配置某平台的 webhook（值为 - 时从 stdin 读，避免密钥进 shell 历史）</span>
+khy msg <span class="hljs-built_in">set</span> dingtalk webhook=https://oapi.dingtalk.com/robot/send?access_token=xxx
+khy msg <span class="hljs-built_in">set</span> dingtalk secret=-      <span class="hljs-comment"># 加签密钥从 stdin 读</span>
 
-# 2) 看已配置的平台（webhook 掩码显示）
+<span class="hljs-comment"># 2) 看已配置的平台（webhook 掩码显示）</span>
 khy msg status
 
-# 3) 发一条 / 发测试
+<span class="hljs-comment"># 3) 发一条 / 发测试</span>
 khy msg send dingtalk 库存已同步完成
-khy msg test feishu
+khy msg <span class="hljs-built_in">test</span> feishu
 
-# 4) 支持的平台 / 清除 / 开关
+<span class="hljs-comment"># 4) 支持的平台 / 清除 / 开关</span>
 khy msg platforms
-khy msg clear wecom      # 省略平台名则清空全部
-khy msg off              # 关闭消息能力（持久化 KHY_MSG）</code></pre>
+khy msg clear wecom      <span class="hljs-comment"># 省略平台名则清空全部</span>
+khy msg off              <span class="hljs-comment"># 关闭消息能力（持久化 KHY_MSG）</span></code></pre>
 <p>各平台加签规则（出站，纯叶子 <code>msgChannelCore</code> 单一真源）：</p>
 <ul><li><strong>钉钉</strong>：<code>sign = urlEncode(base64(HMAC_SHA256(key=secret, msg=timestampMs+&quot;\n&quot;+secret)))</code>，</li></ul>
 <p>以 <code>&amp;timestamp=&lt;ms&gt;&amp;sign=&lt;sign&gt;</code> 追加到 webhook；无 secret 时不加签。</p>
@@ -94,9 +94,9 @@ khy msg off              # 关闭消息能力（持久化 KHY_MSG）</code></pre
 <ul><li>能力总开关 <code>KHY_MSG</code>（default-on）；关闭 / 异常 / 入参不全时逐层 fail-soft 回退，</li></ul>
 <p>绝不因消息子系统拖垮主流程。</p>
 <h2 id="验证-做完的定义">验证（做完的定义）<a class="anchor" href="#验证-做完的定义" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">cd services/backend
-node --test 'tests/services/messaging/*.test.js'   # 叶子 + store + sender(含 retry) + channels + 路由 + 回复桥 + 龙虾环
-node --test tests/cli/handlers/msgHandler.test.js   # CLI handler（deps 注入，零真实网络）</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> services/backend
+node --<span class="hljs-built_in">test</span> <span class="hljs-string">&#x27;tests/services/messaging/*.test.js&#x27;</span>   <span class="hljs-comment"># 叶子 + store + sender(含 retry) + channels + 路由 + 回复桥 + 龙虾环</span>
+node --<span class="hljs-built_in">test</span> tests/cli/handlers/msgHandler.test.js   <span class="hljs-comment"># CLI handler（deps 注入，零真实网络）</span></code></pre>
       </article>
       <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-166] cc(Claude Code)个性化使用说明书·重逢版.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-166] cc（Claude Code）个性化使用说明书 · 重逢版</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-168] 弱模型护栏与维护子系统登记.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-168] 弱模型护栏与维护子系统登记（单人可维护补登记）</div></a></nav>
       <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>

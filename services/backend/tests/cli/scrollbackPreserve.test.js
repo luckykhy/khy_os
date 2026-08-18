@@ -1,12 +1,6 @@
 'use strict';
 
-// 离线确定性单测:scrollbackPreserve 纯叶子(在 ink stdout 边界按平台规范化 clearTerminal:
-// 非 win32 剥 `\x1b[3J` 保全 scrollback;win32 注入 `\x1b[3J` 消除重复 transcript 副本)。
-// 零 IO、零网络、可 CI 复跑。覆盖:门控默认开 + 四 falsy 关;stripScrollbackClear 剥 `3J`
-// (单/多/真帧串/无 3J/win32 无 3J);normalizeClearTerminal 平台对称(win32 注入 + 幂等 +
-// 真帧 + 普通串;非 win32 委托剥离);门控关两平台逐字节回退;非字符串透传;常量字节正确。
-//
-// 运行: node --test services/backend/tests/cli/scrollbackPreserve.test.js
+// scrollbackPreserve 纯叶子单测：所有平台都剥 `\x1b[3J`，保留终端原生回滚缓冲。
 
 const test = require('node:test');
 const assert = require('node:assert');
@@ -16,6 +10,7 @@ const {
   isEnabled,
   stripScrollbackClear,
   normalizeClearTerminal,
+  createClearTerminalNormalizer,
   SCROLLBACK_CLEAR,
   OFF_VALUES,
   WIN_CLEAR,
@@ -80,24 +75,24 @@ test('gate on: win32 clearTerminal (no 3J) passes through stripScrollbackClear u
 
 // ── normalizeClearTerminal: platform-aware dispatch ───────────────────────────
 
-test('exported win32 constants are the expected byte sequences', () => {
-  assert.strictEqual(WIN_CLEAR, WIN32_CLEAR); // ESC[2J ESC[0f
-  assert.strictEqual(WIN_CLEAR_FIXED, `${ESC}[2J${ESC}[3J${ESC}[0f`); // 3J injected
-  // The fixed form must NOT contain the bare WIN_CLEAR token → injection is idempotent.
-  assert.strictEqual(WIN_CLEAR_FIXED.indexOf(WIN_CLEAR), -1);
+test('exported win32 constants preserve the original byte sequence', () => {
+  assert.strictEqual(WIN_CLEAR, WIN32_CLEAR);
+  assert.strictEqual(WIN_CLEAR_FIXED, WIN_CLEAR);
 });
 
-test('win32: clearTerminal gets 3J injected (purges duplicate scrollback copies)', () => {
-  assert.strictEqual(normalizeClearTerminal(WIN_CLEAR, {}, 'win32'), WIN_CLEAR_FIXED);
+test('win32: clearTerminal remains byte-identical and never gains 3J', () => {
+  assert.strictEqual(normalizeClearTerminal(WIN_CLEAR, {}, 'win32'), WIN_CLEAR);
+  assert.strictEqual(normalizeClearTerminal(WIN_CLEAR, {}, 'win32').includes(SCROLLBACK_CLEAR), false);
 });
 
-test('win32: injection is idempotent (already-fixed frame unchanged)', () => {
-  assert.strictEqual(normalizeClearTerminal(WIN_CLEAR_FIXED, {}, 'win32'), WIN_CLEAR_FIXED);
+test('win32: a legacy 3J-bearing frame has 3J removed', () => {
+  const legacy = `${ESC}[2J${ESC}[3J${ESC}[0f`;
+  assert.strictEqual(normalizeClearTerminal(legacy, {}, 'win32'), WIN_CLEAR);
 });
 
-test('win32: real fullscreen frame injects 3J, body untouched', () => {
+test('win32: real fullscreen frame keeps body untouched', () => {
   const body = 'line1\nline2\n[32mgreen[39m\n';
-  assert.strictEqual(normalizeClearTerminal(WIN_CLEAR + body, {}, 'win32'), WIN_CLEAR_FIXED + body);
+  assert.strictEqual(normalizeClearTerminal(WIN_CLEAR + body, {}, 'win32'), WIN_CLEAR + body);
 });
 
 test('win32: string without clearTerminal returned unchanged', () => {
@@ -133,10 +128,32 @@ test('normalizeClearTerminal: non-string chunks pass through on win32', () => {
 test('normalizeClearTerminal: does not throw on hostile env (win32 arm)', () => {
   const hostile = Object.create(null);
   assert.doesNotThrow(() => normalizeClearTerminal(WIN_CLEAR, hostile, 'win32'));
-  assert.strictEqual(normalizeClearTerminal(WIN_CLEAR, hostile, 'win32'), WIN_CLEAR_FIXED);
+  assert.strictEqual(normalizeClearTerminal(WIN_CLEAR, hostile, 'win32'), WIN_CLEAR);
 });
 
-// ── stripScrollbackClear: gate off (byte-identical fallback) ───────────────────
+test('stateful win32 normalizer passes split clear sequence through unchanged', () => {
+  const n = createClearTerminalNormalizer({}, 'win32');
+  assert.strictEqual(n.write(`${ESC}[2`), `${ESC}[2`);
+  assert.strictEqual(n.write(`J${ESC}[0fbody`), `J${ESC}[0fbody`);
+  assert.strictEqual(n.flush(), '');
+});
+
+test('stateful normalizer handles Buffer frames and preserves ordinary bytes', () => {
+  const n = createClearTerminalNormalizer({}, 'win32');
+  const out = n.write(Buffer.from(`${WIN32_CLEAR}prompt`, 'utf8'));
+  assert.ok(Buffer.isBuffer(out));
+  assert.strictEqual(out.toString('utf8'), `${WIN_CLEAR}prompt`);
+  assert.strictEqual(n.write(Buffer.from('tail', 'utf8')).toString('utf8'), 'tail');
+});
+
+test('stateful normalizer gate off is byte-identical', () => {
+  const n = createClearTerminalNormalizer({ KHY_PRESERVE_SCROLLBACK: 'off' }, 'win32');
+  const frame = Buffer.from(`${WIN32_CLEAR}prompt`, 'utf8');
+  const out = n.write(frame);
+  assert.strictEqual(out, frame);
+  assert.strictEqual(n.flush(), '');
+});
+
 
 test('gate off: 3J-bearing frame returned byte-identical', () => {
   for (const v of OFF_VALUES) {

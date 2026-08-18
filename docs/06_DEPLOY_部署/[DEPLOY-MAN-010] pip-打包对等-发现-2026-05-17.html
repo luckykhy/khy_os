@@ -54,10 +54,10 @@
 <pre><code class="language-bash">python3 -m build --wheel --no-isolation
 python3 -m build --sdist --no-isolation
 
-# Rebuild wheel from sdist in temp dir and inspect:
-tmpdir=$(mktemp -d /tmp/khy_sdist_build_check_XXXXXX)
-tar -xzf dist/khy_os-0.1.9.tar.gz -C &quot;$tmpdir&quot;
-cd &quot;$tmpdir/khy_os-0.1.9&quot;
+<span class="hljs-comment"># Rebuild wheel from sdist in temp dir and inspect:</span>
+tmpdir=$(<span class="hljs-built_in">mktemp</span> -d /tmp/khy_sdist_build_check_XXXXXX)
+tar -xzf dist/khy_os-0.1.9.tar.gz -C <span class="hljs-string">&quot;<span class="hljs-variable">$tmpdir</span>&quot;</span>
+<span class="hljs-built_in">cd</span> <span class="hljs-string">&quot;<span class="hljs-variable">$tmpdir</span>/khy_os-0.1.9&quot;</span>
 python3 -m build --wheel --no-isolation</code></pre>
 <h2 id="发布说明">发布说明<a class="anchor" href="#发布说明" aria-label="锚点">#</a></h2>
 <p>自本版本起及之后的版本，wheel 与 sdist 两种安装路径在 bundled 运行时负载上已保持一致。</p>

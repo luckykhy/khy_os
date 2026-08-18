@@ -27,6 +27,8 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
+const atomicWriteJson = require('../../utils/atomicWriteJson');
+
 const CHAIN_VERSION = 1;
 const GENESIS_PREV = '0'.repeat(64);
 const CHAIN_EXT = '.trace-chain.json';
@@ -102,23 +104,14 @@ function _readRaw(chainFile) {
   }
 }
 
+// 原子写收口到 utils/atomicWriteJson(同语义:同目录 tmp、0600、fsync、rename)。
+// **函数名与「失败即抛」契约保留**:append() 靠捕获异常转成 {ok:false,error},
+// 而 atomicWriteJson 返回 false 从不抛。fsync 显式 true —— 溯源哈希链是 evidence,
+// 不跟随 KHY_ATOMIC_FSYNC 的全局默认。
 function _writeAtomic(chainFile, chain) {
-  const dir = path.dirname(chainFile);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+  if (!atomicWriteJson(chainFile, chain, { mode: 0o600, fsync: true })) {
+    throw new Error(`原子写失败: ${chainFile}`);
   }
-  const tmp = path.join(
-    dir,
-    `.${path.basename(chainFile)}.tmp-${process.pid}-${crypto.randomBytes(4).toString('hex')}`
-  );
-  const fd = fs.openSync(tmp, 'w', 0o600);
-  try {
-    fs.writeFileSync(fd, JSON.stringify(chain, null, 2));
-    fs.fsyncSync(fd);
-  } finally {
-    fs.closeSync(fd);
-  }
-  fs.renameSync(tmp, chainFile);
 }
 
 /**

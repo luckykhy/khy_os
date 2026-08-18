@@ -36,26 +36,26 @@
 <ul><li>Python 3.10+</li><li>MiniMax API key from <a href="https://platform.minimax.io" target="_blank" rel="noopener">platform.minimax.io</a></li></ul>
 <h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
 <h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Show help
-cli-anything-minimax --help
+<pre><code class="language-bash"><span class="hljs-comment"># Show help</span>
+cli-anything-minimax --<span class="hljs-built_in">help</span>
 
-# Start interactive REPL
+<span class="hljs-comment"># Start interactive REPL</span>
 cli-anything-minimax
 
-# Chat with MiniMax-M2.7
-cli-anything-minimax chat --prompt &quot;What is AI?&quot;
+<span class="hljs-comment"># Chat with MiniMax-M2.7</span>
+cli-anything-minimax chat --prompt <span class="hljs-string">&quot;What is AI?&quot;</span>
 
-# High-speed model
-cli-anything-minimax chat --prompt &quot;Quick answer&quot; --model MiniMax-M2.7-highspeed
+<span class="hljs-comment"># High-speed model</span>
+cli-anything-minimax chat --prompt <span class="hljs-string">&quot;Quick answer&quot;</span> --model MiniMax-M2.7-highspeed
 
-# Stream chat response
-cli-anything-minimax stream --prompt &quot;Write a poem about code&quot;
+<span class="hljs-comment"># Stream chat response</span>
+cli-anything-minimax stream --prompt <span class="hljs-string">&quot;Write a poem about code&quot;</span>
 
-# Synthesize speech
-cli-anything-minimax tts --text &quot;Hello world&quot; --output hello.mp3
+<span class="hljs-comment"># Synthesize speech</span>
+cli-anything-minimax tts --text <span class="hljs-string">&quot;Hello world&quot;</span> --output hello.mp3
 
-# JSON output for agents
-cli-anything-minimax --json chat --prompt &quot;Hello&quot;</code></pre>
+<span class="hljs-comment"># JSON output for agents</span>
+cli-anything-minimax --json chat --prompt <span class="hljs-string">&quot;Hello&quot;</span></code></pre>
 <h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
 <h3 id="chat">Chat<a class="anchor" href="#chat" aria-label="锚点">#</a></h3>
 <table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>chat</code></td><td>Chat with MiniMax LLM</td></tr><tr><td><code>stream</code></td><td>Stream chat completion</td></tr></tbody></table>
@@ -69,15 +69,15 @@ cli-anything-minimax --json chat --prompt &quot;Hello&quot;</code></pre>
 <table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>test</code></td><td>Test API connectivity</td></tr><tr><td><code>models</code></td><td>List chat models</td></tr><tr><td><code>models --tts</code></td><td>List TTS models</td></tr></tbody></table>
 <h2 id="examples">Examples<a class="anchor" href="#examples" aria-label="锚点">#</a></h2>
 <h3 id="configure-api-key">Configure API Key<a class="anchor" href="#configure-api-key" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">export MINIMAX_API_KEY=&quot;your-api-key&quot;
-# or
-cli-anything-minimax config set api_key &quot;your-api-key&quot;</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">export</span> MINIMAX_API_KEY=<span class="hljs-string">&quot;your-api-key&quot;</span>
+<span class="hljs-comment"># or</span>
+cli-anything-minimax config <span class="hljs-built_in">set</span> api_key <span class="hljs-string">&quot;your-api-key&quot;</span></code></pre>
 <h3 id="chat-2">Chat<a class="anchor" href="#chat-2" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-minimax chat --prompt &quot;Explain quantum computing&quot;
-cli-anything-minimax stream --prompt &quot;Write a Python quicksort&quot;</code></pre>
+<pre><code class="language-bash">cli-anything-minimax chat --prompt <span class="hljs-string">&quot;Explain quantum computing&quot;</span>
+cli-anything-minimax stream --prompt <span class="hljs-string">&quot;Write a Python quicksort&quot;</span></code></pre>
 <h3 id="tts-2">TTS<a class="anchor" href="#tts-2" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-minimax tts --text &quot;Hello!&quot; --output hello.mp3
-cli-anything-minimax tts --text &quot;Fast&quot; --model speech-2.8-turbo --voice English_Insightful_Speaker --output fast.mp3</code></pre>
+<pre><code class="language-bash">cli-anything-minimax tts --text <span class="hljs-string">&quot;Hello!&quot;</span> --output hello.mp3
+cli-anything-minimax tts --text <span class="hljs-string">&quot;Fast&quot;</span> --model speech-2.8-turbo --voice English_Insightful_Speaker --output fast.mp3</code></pre>
 <h2 id="chat-models">Chat Models<a class="anchor" href="#chat-models" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>Model ID</th><th>Description</th></tr></thead><tbody><tr><td><code>MiniMax-M2.7</code></td><td>Peak Performance. Ultimate Value. (default)</td></tr><tr><td><code>MiniMax-M2.7-highspeed</code></td><td>Same performance, faster and more agile</td></tr></tbody></table>
 <h2 id="tts-models">TTS Models<a class="anchor" href="#tts-models" aria-label="锚点">#</a></h2>

@@ -206,9 +206,14 @@ function _scheduleFlush() {
   if (_flushTimer) {
     return;
   } // debounce: one pending write at a time
+  // Resolve the destination while the caller's module environment is live.
+  // Long-running Jest processes may fire this unref'd timer after that test
+  // environment has been torn down; the deferred callback must not lazy-require
+  // dataHome at that point.
+  const file = _storePath();
   _flushTimer = setTimeout(() => {
     _flushTimer = null;
-    void flush();
+    void flush(file);
   }, FLUSH_DEBOUNCE_MS);
   // unref() so this single-shot debounce timer never holds the event loop /
   // process open (critical for Jest teardown — no --forceExit needed). The
@@ -370,14 +375,14 @@ function getAggregates() {
  * Safe to call any time; a clean state is a no-op. NEVER throws.
  * @returns {Promise<boolean>} true when a write happened
  */
-async function flush() {
+async function flush(fileOverride = '') {
   try {
     if (!_dirty) {
       return false;
     }
     _dirty = false;
     _dirtySinceFlush = 0;
-    const file = _storePath();
+    const file = fileOverride || _storePath();
     const tmp = `${file}.tmp-${process.pid}`;
     await fsp.writeFile(tmp, JSON.stringify(_serialize()));
     await fsp.rename(tmp, file);

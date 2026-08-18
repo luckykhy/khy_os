@@ -14,7 +14,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { execSync } = require('child_process');
+const { spawnSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const scriptPath = path.join(ROOT, 'scripts', 'ci', 'check-duplication.js');
@@ -22,25 +22,19 @@ const scriptPath = path.join(ROOT, 'scripts', 'ci', 'check-duplication.js');
 let tmpDir;
 let scopeDir;
 
-function shellQuote(value) {
-  return `'${String(value).replace(/'/g, `'\\''`)}'`;
-}
-
 // 运行 CLI:targets = 传给 CLI 的位置/开关参数;extraEnv 覆盖环境(基线路径隔离用)。
 function runGate(targets, extraEnv) {
-  const outputPath = path.join(os.tmpdir(), `khy-dup-${process.pid}-${Math.abs(hashStr(targets.join('|')))}.log`);
-  const command = ['node', shellQuote(path.relative(ROOT, scriptPath)), ...targets.map(shellQuote), '>', shellQuote(outputPath), '2>&1'].join(' ');
-  let status = 0;
-  try {
-    execSync(command, { cwd: ROOT, stdio: 'ignore', shell: '/bin/bash', env: Object.assign({}, process.env, extraEnv || {}) });
-  } catch (error) {
-    status = typeof error.status === 'number' ? error.status : 1;
-  }
-  const stdout = fs.existsSync(outputPath) ? fs.readFileSync(outputPath, 'utf8') : '';
-  fs.rmSync(outputPath, { force: true });
-  return { status, stdout };
+  const result = spawnSync(process.execPath, [scriptPath, ...targets], {
+    cwd: ROOT,
+    env: Object.assign({}, process.env, extraEnv || {}),
+    encoding: 'utf8',
+    windowsHide: true,
+  });
+  return {
+    status: result.status == null ? 1 : result.status,
+    stdout: `${result.stdout || ''}${result.stderr || ''}`,
+  };
 }
-function hashStr(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h; }
 
 // ── 拼接式 fixture(源码不出现字面 4 行重复块) ─────────────────────────────────────
 function cloneBody() {

@@ -31,14 +31,13 @@ test('全部就位 → intact=true，无缺失', () => {
   assert.match(r.summary, /完整/);
 });
 
-test('缺 auth.js → intact=false，缺失清单含它', () => {
+test('缺独立 bundle → intact=false，缺失清单含它', () => {
   const probes = { ...ALL_PRESENT };
-  delete probes['services/ai-backend/src/middleware/auth.js'];
+  delete probes['runtime/khy/bundle.mjs'];
   const r = assessInstallIntegrity(probes);
   assert.strictEqual(r.intact, false);
-  assert.ok(missPaths(r).includes('services/ai-backend/src/middleware/auth.js'));
-  // 该项修法非空且是通用重装建议
-  const item = r.missing.find((m) => m.path.endsWith('auth.js'));
+  assert.ok(missPaths(r).includes('runtime/khy/bundle.mjs'));
+  const item = r.missing.find((m) => m.path === 'runtime/khy/bundle.mjs');
   assert.ok(item.reason.length > 0);
   assert.strictEqual(item.fix, _GENERIC_FIX);
 });
@@ -49,7 +48,7 @@ test('bundle 未定位 → intact=false，summary 明说定位失败', () => {
   assert.match(r.summary, /无法定位/);
 });
 
-test('bundle 已定位但全缺 → 8/8 缺失', () => {
+test('bundle 已定位但全缺 → 所有关键项缺失', () => {
   const r = assessInstallIntegrity({}, { bundleResolved: true });
   assert.strictEqual(r.intact, false);
   assert.strictEqual(r.missing.length, CRITICAL_BUNDLE_PATHS.length);
@@ -61,10 +60,9 @@ test('checked === 关键路径总数', () => {
 
 test('多缺失：数量与 summary 计数一致', () => {
   const probes = { ...ALL_PRESENT };
-  delete probes['services/backend/bin/khy.js'];
-  delete probes['apps/ai-frontend/src/main.js'];
+  delete probes['runtime/khy/bundle.mjs'];
   const r = assessInstallIntegrity(probes);
-  assert.strictEqual(r.missing.length, 2);
+  assert.strictEqual(r.missing.length, 1);
   assert.match(r.summary, new RegExp(`缺失 ${r.missing.length}/`));
 });
 
@@ -98,7 +96,7 @@ test('opts 缺省视为 bundleResolved=true', () => {
 });
 
 test('CRITICAL_BUNDLE_PATHS 非空、无重复、皆为相对路径', () => {
-  assert.ok(CRITICAL_BUNDLE_PATHS.length >= 6);
+  assert.ok(CRITICAL_BUNDLE_PATHS.length >= 1);
   assert.strictEqual(new Set(CRITICAL_BUNDLE_PATHS).size, CRITICAL_BUNDLE_PATHS.length);
   for (const p of CRITICAL_BUNDLE_PATHS) {
     assert.ok(!p.startsWith('/'), `${p} 不应是绝对路径`);
@@ -120,8 +118,8 @@ test('通用修法安全：不含 commit/push/rm/curl/publish', () => {
 });
 
 test('_normalizeProbes 只保留关键路径键，值收敛为布尔', () => {
-  const n = _normalizeProbes({ 'services/backend/bin/khy.js': true, 'junk/x': true });
-  assert.strictEqual(n['services/backend/bin/khy.js'], true);
+  const n = _normalizeProbes({ 'runtime/khy/bundle.mjs': true, 'junk/x': true });
+  assert.strictEqual(n['runtime/khy/bundle.mjs'], true);
   assert.ok(!('junk/x' in n), '未知键应被忽略');
   assert.strictEqual(Object.keys(n).length, CRITICAL_BUNDLE_PATHS.length);
 });
@@ -144,12 +142,12 @@ test('反漂移：每条 CRITICAL_BUNDLE_PATHS 都被 pip 或 npm 权威清单�
   const npmList = npmBlock[1];
 
   for (const p of CRITICAL_BUNDLE_PATHS) {
-    const inPip = pipList.includes(`khy_os/bundled/${p}`);
+    const inPip = pipList.includes(`khy_platform/bundled/${p}`);
     const inNpm = npmList.includes(`package/bundled/${p}`);
     assert.ok(
       inPip || inNpm,
       `漂移：CRITICAL_BUNDLE_PATHS 的 "${p}" 既不在 pip REQUIRED_WHEEL_PATHS ` +
-        `（应含 "khy_os/bundled/${p}"）也不在 npm REQUIRED_PATHS（应含 "package/bundled/${p}"）。` +
+        `（应含 "khy_platform/bundled/${p}"）也不在 npm REQUIRED_PATHS（应含 "package/bundled/${p}"）。` +
         `先把它加进 scripts/release/pip_packaging_rules.py 或 packaging/npm/scripts/audit-purity.js 的权威清单。`
     );
   }

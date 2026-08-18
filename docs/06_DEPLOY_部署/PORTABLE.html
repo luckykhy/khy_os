@@ -30,17 +30,17 @@
 <h2 id="直接压缩源码文件夹-原样源码包">直接压缩源码文件夹（原样源码包）<a class="anchor" href="#直接压缩源码文件夹-原样源码包" aria-label="锚点">#</a></h2>
 <p>如果只是要把当前开发环境整体传给另一台机器，直接在 Windows 资源管理器中对整个 <code>khy-os</code> 文件夹右键，选择“压缩为 ZIP 文件”即可。这个操作不需要先运行 npm 命令，也不需要执行 <code>打包便携版.bat</code>。</p>
 <p>解压时保留最外层 <code>khy-os</code> 目录和全部子目录。无需注册全局命令时，可直接从解压后的目录启动：</p>
-<pre><code class="language-powershell">cd &lt;解压后的 khy-os&gt;
-.\khy.bat --help</code></pre>
+<pre><code class="language-powershell"><span class="hljs-built_in">cd</span> &lt;解压后的 khy<span class="hljs-literal">-os</span>&gt;
+.\khy.bat <span class="hljs-literal">--help</span></code></pre>
 <p>希望在任意目录使用 <code>khy</code> 命令时，Windows 双击根目录的 <code>portable-setup.bat</code>（或在终端运行 <code>.\portable-setup.bat</code>）。脚本会安装 <code>khy</code>、<code>khy-os</code>、<code>khyquant</code> 三个命令包装器到 <code>%LocalAppData%\khy-os\bin</code>，并幂等加入当前用户 PATH。打开新终端后运行：</p>
-<pre><code class="language-powershell">khy --help</code></pre>
+<pre><code class="language-powershell">khy <span class="hljs-literal">--help</span></code></pre>
 <p>Linux/macOS 可运行：</p>
 <pre><code class="language-sh">bash portable-setup.sh
-khy --help</code></pre>
+khy --<span class="hljs-built_in">help</span></code></pre>
 <p>Unix 配置默认将包装器安装到 <code>~/.local/bin</code>，并在 <code>.bashrc</code> 或 <code>.zshrc</code> 中维护唯一的 Khy-OS PATH 配置块。项目目录移动、盘符变化或重新解压到其他位置后，在新目录再次运行对应的 <code>portable-setup</code> 脚本即可刷新包装器目标。</p>
 <p>不希望修改用户 PATH 时，Linux/macOS 也可直接启动：</p>
-<pre><code class="language-sh">cd &lt;解压后的 khy-os&gt;
-./khy.sh --help</code></pre>
+<pre><code class="language-sh"><span class="hljs-built_in">cd</span> &lt;解压后的 khy-os&gt;
+./khy.sh --<span class="hljs-built_in">help</span></code></pre>
 <p>配置脚本写入用户 PATH 和命令包装器属于使用者主动执行的命令注册操作。Khy-OS 日常便携启动的数据仍位于源码根的 <code>.khy/</code>，不会因此改写到宿主 HOME、APPDATA 或其他系统数据目录。</p>
 <p>源码入口从自身脚本位置解析项目根目录，支持移动到其他盘符以及包含空格或中文的路径。也可以从任意工作目录调用绝对路径入口。源码便携模式的状态默认位于源码根的 <code>.khy/</code>，不会因为调用者当前目录改变。</p>
 <p>这是“原样压缩”，压缩包会忠实包含压缩时源码目录中已有的所有内容，包括 <code>node_modules/</code>、<code>.khy/</code>、缓存、日志、数据库和本地配置；不会自动清理、裁剪或重排。若目录中含有个人凭据或运行状态，请在压缩前自行处理。该方式适合继续开发和保留当前工作区，不等同于面向终端用户的发布包。</p>
@@ -52,7 +52,7 @@ khy --help</code></pre>
 <pre><code class="language-text">dist/releases/portable-runtime-&lt;version&gt;-win-x64.zip</code></pre>
 <p>命令行等价入口：</p>
 <pre><code class="language-powershell">npm run portable:package
-# 或
+<span class="hljs-comment"># 或</span>
 npm run portable:package:runtime</code></pre>
 <p>生成可复制到 U 盘继续开发的开发版：</p>
 <pre><code class="language-powershell">npm run portable:package:dev</code></pre>
@@ -66,10 +66,10 @@ npm run portable:package:runtime</code></pre>
 <p>不得在不同平台间复制 <code>node_modules</code>、原生模块或嵌入式运行时混用。CI 在上述四个平台的原生 runner 上分别构建和验证运行产物。</p>
 <h2 id="使用-portable-runtime">使用 portable-runtime<a class="anchor" href="#使用-portable-runtime" aria-label="锚点">#</a></h2>
 <p>解压与当前平台匹配的 <code>portable-runtime-&lt;version&gt;-&lt;platform&gt;/</code> 后直接运行：</p>
-<pre><code class="language-powershell"># Windows
-.\launch.bat --help</code></pre>
-<pre><code class="language-sh"># Linux / macOS
-./launch.sh --help</code></pre>
+<pre><code class="language-powershell"><span class="hljs-comment"># Windows</span>
+.\launch.bat <span class="hljs-literal">--help</span></code></pre>
+<pre><code class="language-sh"><span class="hljs-comment"># Linux / macOS</span>
+./launch.sh --<span class="hljs-built_in">help</span></code></pre>
 <p>启动器只为当前进程设置环境变量，不修改系统配置。产物可整体移动到其他目录、盘符以及包含空格或中文的路径，再从新位置运行同一启动器。</p>
 <p>目录结构：</p>
 <pre><code class="language-text">portable-runtime-&lt;version&gt;-&lt;platform&gt;/
@@ -90,10 +90,10 @@ npm run portable:package:runtime</code></pre>
 └── launch.bat|launch.sh  相对路径启动器</code></pre>
 <h2 id="使用-portable-dev">使用 portable-dev<a class="anchor" href="#使用-portable-dev" aria-label="锚点">#</a></h2>
 <p>解压与当前平台匹配的 <code>portable-dev-&lt;version&gt;-&lt;platform&gt;/</code> 后运行：</p>
-<pre><code class="language-powershell"># Windows
-.\launch.bat --help</code></pre>
-<pre><code class="language-sh"># Linux / macOS
-./launch.sh --help</code></pre>
+<pre><code class="language-powershell"><span class="hljs-comment"># Windows</span>
+.\launch.bat <span class="hljs-literal">--help</span></code></pre>
+<pre><code class="language-sh"><span class="hljs-comment"># Linux / macOS</span>
+./launch.sh --<span class="hljs-built_in">help</span></code></pre>
 <p>开发产物内置运行时和离线缓存。正常启动不读取宿主 Python/Node，也不要求修改 PATH。源码位于 <code>source/</code>；Windows 使用 <code>.\launch.bat shell</code>、Linux/macOS 使用 <code>./launch.sh shell</code> 进入便携开发终端，构建和依赖命令应在该环境中执行。</p>
 <p>目录结构：</p>
 <pre><code class="language-text">portable-dev-&lt;version&gt;-&lt;platform&gt;/
@@ -139,7 +139,7 @@ npm run portable:build:runtime -- \
   --pip-cache PIP_CACHE_DIR \
   --force</code></pre>
 <p>Windows PowerShell 可使用同样参数，不使用反斜杠续行：</p>
-<pre><code class="language-powershell">npm run portable:build:dev -- --node-runtime RUNTIME_NODE_DIR --python-runtime RUNTIME_PYTHON_DIR --npm-cache NPM_CACHE_DIR --pip-cache PIP_CACHE_DIR --force</code></pre>
+<pre><code class="language-powershell">npm run portable:build:dev <span class="hljs-literal">--</span> <span class="hljs-literal">--node-runtime</span> RUNTIME_NODE_DIR <span class="hljs-literal">--python-runtime</span> RUNTIME_PYTHON_DIR <span class="hljs-literal">--npm-cache</span> NPM_CACHE_DIR <span class="hljs-literal">--pip-cache</span> PIP_CACHE_DIR <span class="hljs-literal">--force</span></code></pre>
 <p>规划检查：</p>
 <pre><code class="language-sh">npm run portable:plan:dev -- \
   --node-runtime RUNTIME_NODE_DIR \

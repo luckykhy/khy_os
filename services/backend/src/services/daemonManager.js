@@ -100,6 +100,7 @@ function _isAlive(pid) {
  * Start the daemon process.
  * @param {object} [opts]
  * @param {number} [opts.port] - Port for HTTP/WS server
+ * @param {boolean} [opts.enableWatchdog] - Enable watchdog auto-restart (default: true)
  * @returns {{ pid: number, port: number }}
  */
 function daemonStart(opts = {}) {
@@ -109,6 +110,7 @@ function daemonStart(opts = {}) {
   }
 
   const port = opts.port || DEFAULT_PORT;
+  const enableWatchdog = opts.enableWatchdog !== false;
 
   // Open log file for append
   let logFd;
@@ -144,11 +146,22 @@ function daemonStart(opts = {}) {
     port,
     startedAt: Date.now(),
     nodeVersion: process.version,
+    watchdogEnabled: enableWatchdog,
   };
   fs.writeFileSync(PID_FILE, JSON.stringify(info, null, 2), 'utf-8');
 
   child.unref();
   fs.closeSync(logFd);
+
+  // Start watchdog if enabled
+  if (enableWatchdog) {
+    try {
+      const watchdog = require('./watchdogService');
+      watchdog.start();
+    } catch {
+      /* watchdog is optional - don't fail daemon start if unavailable */
+    }
+  }
 
   return { pid: child.pid, port };
 }
@@ -161,6 +174,14 @@ function daemonStop() {
   const info = _readPidFile();
   if (!info) {
     return false;
+  }
+
+  // Stop watchdog first to prevent auto-restart during shutdown
+  try {
+    const watchdog = require('./watchdogService');
+    watchdog.stop();
+  } catch {
+    /* watchdog is optional */
   }
 
   if (_isAlive(info.pid)) {

@@ -62,6 +62,12 @@ function setAiGatewayCooldownMethodsDeps(deps = {}) {
   }
 }
 
+// 零信号失败类型:请求**根本没有发出**,通道健康状况完全未被测量。与 network/timeout/empty
+// 的区别是后者至少「试过并且失败了」,而这里连一个 provider 都没被选中。因此它不允许在失败
+// 状态上留下任何痕迹(见 _recordAdapterFailure 顶部的早退)。
+// 目前唯一成员 'no_provider' 由 multiFreeService.generateResponse 在 attempts 为空时产生。
+const _ZERO_SIGNAL_FAILURE_TYPES = new Set(['no_provider']);
+
 // Prototype mixin — Object.assign'd onto AIGateway.prototype by the host (see module doc).
 const AIGatewayCooldownMethods = {
   /**
@@ -219,6 +225,24 @@ const AIGatewayCooldownMethods = {
   async _recordAdapterFailure(adapterKey, errorType, error, meta = null) {
     const normalizedType = String(errorType || '').trim() || 'unknown';
     const normalizedTypeLower = normalizedType.toLowerCase();
+    // 零信号失败(_ZERO_SIGNAL_FAILURE_TYPES)在这里**完全不落痕迹**,只广播一次事件:
+    //   - 不写 _adapterLastError:否则一条 circuitOpen:false 的记录会**覆盖掉**一条真实的
+    //     熔断记录,把已开的熔断悄悄清掉(反向 bug,比不修更糟);
+    //   - 不 incrFailure / 不进错误率窗口:否则「根本没试」会累计成连续失败数,让之后**一次**
+    //     真实失败就撞上阈值直接熔断;
+    //   - 不进 UCB bandit 的 outcome:那是对通道快慢/好坏的采样,这里没有样本。
+    // 用户报的「一次失败永久失败、无法恢复」正是这条造成的:3 次「没试」→ circuitOpen →
+    // 冷却指数放大到 300s 上限 → 熔断态关掉 fast-fail 探测放行 → api 通道的自愈探针又因同一
+    // 个解析问题永远返回 still_unhealthy → 没有任何路径能把通道救回来。
+    // 仍然广播 failure:`khy health` 里看得见,不做静默丢弃。
+    if (_ZERO_SIGNAL_FAILURE_TYPES.has(normalizedTypeLower)) {
+      try {
+        this._healthBroadcaster.recordRequestActivity(adapterKey, 'failure', normalizedType);
+      } catch {
+        /* 广播是尽力而为,绝不影响调用方 */
+      }
+      return;
+    }
     // 载荷(payload)级失败:本次带附件,且失败是上游对该附件内容的拒绝/不支持格式
     // (bad_request / model_not_found / 不支持格式)。通道是健康的——只有这一次带附件的
     // 请求内容上游读不了。与下方 `empty` 同理:不该毒化整条通道(否则一个坏文件会让后续
@@ -292,9 +316,12 @@ const AIGatewayCooldownMethods = {
     // the ONLY available channel for 30s+ and re-create the reported incoherence
     // (re-asks blocked after a few empties). Same-request empty recovery is owned
     // by the tool loop; the channel must stay available for the next re-ask.
+    // 'no_provider' 在本函数顶部已被 _ZERO_SIGNAL_FAILURE_TYPES 早退拦掉,走不到这里。
+    // 仍列进排除集是双保险:万一将来有人放宽那条早退(比如想保留 lastError 供排障),
+    // 也不能让「一个 provider 都没试过」这种零信号失败去开熔断。
     const circuitEligible =
       !_payloadScopedFailure &&
-      !['network', 'timeout', 'rate_limit', 'overloaded', 'cancelled', 'empty'].includes(
+      !['network', 'timeout', 'rate_limit', 'overloaded', 'cancelled', 'empty', 'no_provider'].includes(
         normalizedTypeLower
       );
 

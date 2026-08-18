@@ -54,10 +54,10 @@
 <hr>
 <h2 id="三-gateway-enabled-是-关闭开关-不是开启开关">三、<code>GATEWAY_&lt;KEY&gt;_ENABLED</code> 是<strong>关闭开关</strong>，不是开启开关<a class="anchor" href="#三-gateway-enabled-是-关闭开关-不是开启开关" aria-label="锚点">#</a></h2>
 <p>代码里这组变量名是<strong>用模板拼出来的</strong>（`<code> </code>GATEWAY_${ideKey.toUpperCase()}_ENABLED<code> </code><code>），<br>判定条件是 </code>=== 'false'`：</p>
-<pre><code class="language-js">// aiGatewayRoutingMethods.js
-for (const ideKey of ['kiro','cursor','trae','claude','codex','windsurf','vscode','warp','cursor2api']) {
-  const envKey = `GATEWAY_${ideKey.toUpperCase()}_ENABLED`;
-  if (process.env[envKey] === 'false') { entry.enabled = false; }
+<pre><code class="language-js"><span class="hljs-comment">// aiGatewayRoutingMethods.js</span>
+<span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> ideKey <span class="hljs-keyword">of</span> [<span class="hljs-string">&#x27;kiro&#x27;</span>,<span class="hljs-string">&#x27;cursor&#x27;</span>,<span class="hljs-string">&#x27;trae&#x27;</span>,<span class="hljs-string">&#x27;claude&#x27;</span>,<span class="hljs-string">&#x27;codex&#x27;</span>,<span class="hljs-string">&#x27;windsurf&#x27;</span>,<span class="hljs-string">&#x27;vscode&#x27;</span>,<span class="hljs-string">&#x27;warp&#x27;</span>,<span class="hljs-string">&#x27;cursor2api&#x27;</span>]) {
+  <span class="hljs-keyword">const</span> envKey = <span class="hljs-string">`GATEWAY_<span class="hljs-subst">${ideKey.toUpperCase()}</span>_ENABLED`</span>;
+  <span class="hljs-keyword">if</span> (process.<span class="hljs-property">env</span>[envKey] === <span class="hljs-string">&#x27;false&#x27;</span>) { entry.<span class="hljs-property">enabled</span> = <span class="hljs-literal">false</span>; }
 }</code></pre>
 <p>由此可得三条事实：</p>
 <ol><li><strong>存在</strong>且生效的 kill switch：<code>GATEWAY_KIRO_ENABLED</code>、<code>GATEWAY_CURSOR_ENABLED</code>、</li></ol>
@@ -65,34 +65,34 @@ for (const ideKey of ['kiro','cursor','trae','claude','codex','windsurf','vscode
 <ol><li><strong>只有字符串 <code>&quot;false&quot;</code> 有效果</strong>。设 <code>true</code>、<code>1</code>、<code>yes</code> 一律等同于不设——因为默认已经是开。</li><li><strong>不存在</strong>的变量（归档来源里写过、实测全仓无此名）：<code>GATEWAY_OPENAI_ENABLED</code>、</li></ol>
 <p><code>GATEWAY_CLAUDE_API_ENABLED</code>、<code>GATEWAY_DEEPSEEK_ENABLED</code>、<code>GATEWAY_OPENAI_API_KEY</code>、<br>   <code>GATEWAY_CLAUDE_API_KEY</code>、<code>GATEWAY_OLLAMA_BASE_URL</code>。设它们<strong>不会有任何效果</strong>。<br>   OpenAI / Claude API / DeepSeek 一类云端供应商走的是 <code>api</code> 适配器，读的是<strong>不带 <code>GATEWAY_</code> 前缀</strong><br>   的标准 key 名（见 <code>[DEPLOY-MAN-020]</code>）。</p>
 <p><strong>典型用法</strong>：临时排除某个探测很慢的通道，而不是「打开」它。</p>
-<pre><code class="language-powershell">$env:GATEWAY_WINDSURF_ENABLED = &quot;false&quot;   # 本机没装 Windsurf，省掉这次探测
-$env:GATEWAY_VSCODE_ENABLED   = &quot;false&quot;
+<pre><code class="language-powershell"><span class="hljs-variable">$env:GATEWAY_WINDSURF_ENABLED</span> = <span class="hljs-string">&quot;false&quot;</span>   <span class="hljs-comment"># 本机没装 Windsurf，省掉这次探测</span>
+<span class="hljs-variable">$env:GATEWAY_VSCODE_ENABLED</span>   = <span class="hljs-string">&quot;false&quot;</span>
 khy</code></pre>
 <hr>
 <h2 id="四-让菜单有内容-三条最短路径">四、让菜单有内容：三条最短路径<a class="anchor" href="#四-让菜单有内容-三条最短路径" aria-label="锚点">#</a></h2>
 <p>按上手难度排序。三条都不需要改任何 <code>GATEWAY_*_ENABLED</code>。</p>
 <h3 id="路径-1-ollama-本地-免费-无-key">路径 1：Ollama（本地、免费、无 key）<a class="anchor" href="#路径-1-ollama-本地-免费-无-key" aria-label="锚点">#</a></h3>
-<pre><code class="language-powershell"># 1) 装 Ollama：https://ollama.com/download
-# 2) 拉一个模型
-ollama pull llama3.2
-# 3) 确认服务在跑（detect 就是打这个接口）
-curl http://localhost:11434/api/tags
-# 4) 起 khy → /model
+<pre><code class="language-powershell"><span class="hljs-comment"># 1) 装 Ollama：https://ollama.com/download</span>
+<span class="hljs-comment"># 2) 拉一个模型</span>
+ollama pull llama3.<span class="hljs-number">2</span>
+<span class="hljs-comment"># 3) 确认服务在跑（detect 就是打这个接口）</span>
+<span class="hljs-built_in">curl</span> http://localhost:<span class="hljs-number">11434</span>/api/tags
+<span class="hljs-comment"># 4) 起 khy → /model</span>
 khy</code></pre>
 <p>非默认端口用 <code>OLLAMA_HOST</code> 指过去（<strong>不是</strong> <code>GATEWAY_OLLAMA_BASE_URL</code>）。详见 <code>[DEPLOY-MAN-020]</code> 第二节。</p>
 <h3 id="路径-2-ide-桥接-用-ide-已有的配额">路径 2：IDE 桥接（用 IDE 已有的配额）<a class="anchor" href="#路径-2-ide-桥接-用-ide-已有的配额" aria-label="锚点">#</a></h3>
 <p>正在用 Claude Code / Cursor / Windsurf / VS Code 的话，桥接是零成本的——<code>detect()</code> 找的<br>就是这些 IDE 已经落在磁盘上的 CLI 或 token。配置细节与各 IDE 的 token 位置见 <code>[DEPLOY-MAN-021]</code>。</p>
 <p>最短检查：</p>
-<pre><code class="language-powershell">claude --version        # claude 适配器 detect() 就是查这个命令</code></pre>
+<pre><code class="language-powershell">claude <span class="hljs-literal">--version</span>        <span class="hljs-comment"># claude 适配器 detect() 就是查这个命令</span></code></pre>
 <h3 id="路径-3-api-key-api-适配器">路径 3：API Key（<code>api</code> 适配器）<a class="anchor" href="#路径-3-api-key-api-适配器" aria-label="锚点">#</a></h3>
 <p>在环境里放一个受支持的供应商 key，<code>api</code> 适配器的 <code>detect()</code> 就会通过。key 名清单与<br>配置方式见 <code>[DEPLOY-MAN-020]</code> 第三节。</p>
 <blockquote><p>红线：<strong>真 key 只经环境变量瞬时注入，绝不写进源码、配置模板或提交</strong>。本文与<br><code>[DEPLOY-MAN-020]</code>/<code>[DEPLOY-MAN-021]</code> 里出现的一切 key、secret 都是占位符。</p></blockquote>
 <hr>
 <h2 id="五-诊断顺序">五、诊断顺序<a class="anchor" href="#五-诊断顺序" aria-label="锚点">#</a></h2>
-<pre><code class="language-powershell">khy                     # 进 CLI
-gateway status          # 逐通道看 enabled / available，这是第一现场
-gateway test claude     # 单通道连通性 + 生成测试
-gateway config          # 交互式改网关配置（会写 .env）</code></pre>
+<pre><code class="language-powershell">khy                     <span class="hljs-comment"># 进 CLI</span>
+gateway status          <span class="hljs-comment"># 逐通道看 enabled / available，这是第一现场</span>
+gateway test claude     <span class="hljs-comment"># 单通道连通性 + 生成测试</span>
+gateway config          <span class="hljs-comment"># 交互式改网关配置（会写 .env）</span></code></pre>
 <p><code>gateway status</code> 才是判断依据：它把 enabled 与 available 分列出来，直接告出<br>「是被关掉了」还是「探测没通过」。</p>
 <table><thead><tr><th>现象</th><th>读法</th><th>处理</th></tr></thead><tbody><tr><td>所有通道 available=false</td><td>环境里没有任何可用凭据/服务</td><td>走第四节任一路径</td></tr><tr><td>某通道 enabled=false</td><td>有人设了 <code>GATEWAY_&lt;KEY&gt;_ENABLED=false</code></td><td>取消该环境变量</td></tr><tr><td><code>/model</code> 很久才出</td><td>逐个适配器探测累加</td><td>见 <code>docs/_报告/历史/2026-08-根目录归档-修复记录.md</code> 第二节的 <code>KHY_MODEL_*</code> 超时开关</td></tr><tr><td>探测阶段整体挂住</td><td>单适配器探测超时兜底</td><td>调低 <code>GATEWAY_INIT_TIMEOUT_MS</code>（默认 15000ms，下限 3000ms）</td></tr></tbody></table>
 <hr>

@@ -75,6 +75,7 @@ async function generate(prompt, options = {}) {
     adapter: 'warp',
     provider: 'Warp (relay)',
     model: 'warp-web',
+    tokenUsage: result.tokenUsage || { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
     attempts: [{ provider: 'Warp', success: true }],
   });
 }

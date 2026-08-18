@@ -104,9 +104,26 @@ test('strips a single-line <function=x>…</function> pair, keeps surrounding te
   assert.strictEqual(tcn.stripInlineToolCallNoise(input, ON), 'before  after');
 });
 
-// ---------------------------------------------------------------------------
-// Load-bearing guard: fenced code blocks are sacred.
-// ---------------------------------------------------------------------------
+test('strips KHY image bridge Read payload JSON but preserves ordinary file_path JSON', () => {
+  const win = '{"file_path":"C:\\\\Users\\\\mfplg075\\\\AppData\\\\Local\\\\Temp\\\\khy-cli-img-ab12cd34\\\\image-1-deadbeef.png"}';
+  const posix = '{"file_path":"/tmp/khy-cli-img-ab12cd34/image-2-cafebabe.jpg"}';
+  assert.strictEqual(tcn.stripInlineToolCallNoise(win, ON), '');
+  assert.strictEqual(tcn.stripInlineToolCallNoise(posix, ON), '');
+  assert.strictEqual(
+    tcn.stripInlineToolCallNoise('{"file_path":"C:\\\\project\\\\config.json"}', ON),
+    '{"file_path":"C:\\\\project\\\\config.json"}'
+  );
+  assert.strictEqual(
+    tcn.stripInlineToolCallNoise('{"file_path":"/tmp/khy-cli-img-ab12cd34/image.png","purpose":"example"}', ON),
+    '{"file_path":"/tmp/khy-cli-img-ab12cd34/image.png","purpose":"example"}'
+  );
+});
+
+test('preserves KHY image bridge JSON inside a fenced code block', () => {
+  const input = ['```json', '{"file_path":"/tmp/khy-cli-img-ab12cd34/image-1-deadbeef.png"}', '```'].join('\\n');
+  assert.strictEqual(tcn.stripInlineToolCallNoise(input, ON), input);
+});
+
 
 test('preserves identical JSON INSIDE a ``` fenced code block', () => {
   const input = [

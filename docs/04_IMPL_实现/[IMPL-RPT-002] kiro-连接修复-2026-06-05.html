@@ -45,11 +45,11 @@
 <h2 id="2-根因">2. 根因<a class="anchor" href="#2-根因" aria-label="锚点">#</a></h2>
 <h3 id="2-1-kiro-适配器依赖一个从未安装的-sdk">2.1 Kiro 适配器依赖一个从未安装的 SDK<a class="anchor" href="#2-1-kiro-适配器依赖一个从未安装的-sdk" aria-label="锚点">#</a></h3>
 <p>Kiro 走的是 AWS CodeWhisperer 的<strong>原生加密流式协议</strong>（<code>GenerateAssistantResponse</code>），不是 OpenAI 兼容接口。适配器通过 <code>@aws/codewhisperer-streaming-client</code> 与之通信，并在 <code>_cwStreamParser.js</code> 里惰性加载该 SDK：</p>
-<pre><code class="language-javascript">// services/backend/src/services/gateway/adapters/_cwStreamParser.js
-async function getCWModule() {
-  // ...
-  return await import('@aws/codewhisperer-streaming-client'); // 缺失时抛错
-  // throw new Error('CW SDK not installed. Run: cd backend &amp;&amp; npm install @aws/codewhisperer-streaming-client')
+<pre><code class="language-javascript"><span class="hljs-comment">// services/backend/src/services/gateway/adapters/_cwStreamParser.js</span>
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">getCWModule</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-comment">// ...</span>
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">await</span> <span class="hljs-keyword">import</span>(<span class="hljs-string">&#x27;@aws/codewhisperer-streaming-client&#x27;</span>); <span class="hljs-comment">// 缺失时抛错</span>
+  <span class="hljs-comment">// throw new Error(&#x27;CW SDK not installed. Run: cd backend &amp;&amp; npm install @aws/codewhisperer-streaming-client&#x27;)</span>
 }</code></pre>
 <p>问题：该 SDK <strong>既没有在 <code>package.json</code> 里声明为依赖，安装时也就不会被装进 <code>node_modules</code></strong>。于是 <code>getCWModule()</code> 每次都抛 <code>CW SDK not installed</code>，Kiro 通道直接 <code>unavailable</code>。</p>
 <h3 id="2-2-级联-failover-打到必然-404-的-openai-通道">2.2 级联 failover 打到必然 404 的 OpenAI 通道<a class="anchor" href="#2-2-级联-failover-打到必然-404-的-openai-通道" aria-label="锚点">#</a></h3>
@@ -59,35 +59,35 @@ async function getCWModule() {
 <h2 id="3-修复">3. 修复<a class="anchor" href="#3-修复" aria-label="锚点">#</a></h2>
 <h3 id="3-1-把-cw-sdk-声明为常规依赖">3.1 把 CW SDK 声明为常规依赖<a class="anchor" href="#3-1-把-cw-sdk-声明为常规依赖" aria-label="锚点">#</a></h3>
 <p><code>services/backend/package.json</code>：</p>
-<pre><code class="language-jsonc">&quot;dependencies&quot;: {
-  &quot;@aws/codewhisperer-streaming-client&quot;: &quot;^1.0.45&quot;,  // Kiro 原生流式协议 SDK
-  // ...
-}</code></pre>
+<pre><code class="language-jsonc"><span class="hljs-attr">&quot;dependencies&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;@aws/codewhisperer-streaming-client&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;^1.0.45&quot;</span><span class="hljs-punctuation">,</span>  <span class="hljs-comment">// Kiro 原生流式协议 SDK</span>
+  <span class="hljs-comment">// ...</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <p>该包是 AWS 公开发布的 npm 包，npmmirror 镜像已覆盖，国内安装无需访问 GitHub。声明为依赖后，常规 <code>npm install</code> 即可装好，<code>getCWModule()</code> 不再抛错。</p>
 <h3 id="3-2-引导期自愈-向后兼容老安装">3.2 引导期自愈（向后兼容老安装）<a class="anchor" href="#3-2-引导期自愈-向后兼容老安装" aria-label="锚点">#</a></h3>
 <p>仅靠 <code>package.json</code> 只能覆盖<strong>新装</strong>用户；已经装过、<code>node_modules</code> 里没有 CW SDK 的<strong>老安装</strong>不会自动补齐。为此在首启引导器加入标记位守卫的自愈逻辑。</p>
 <p><code>platform/khy_platform/_bootstrap.py</code>：</p>
-<pre><code class="language-python"># Kiro CodeWhisperer SDK 修复标记：避免每次启动重复检查/安装
-KIRO_CW_SDK_MARKER_FILE = &quot;.khy_kiro_cw_sdk_fixed&quot;
+<pre><code class="language-python"><span class="hljs-comment"># Kiro CodeWhisperer SDK 修复标记：避免每次启动重复检查/安装</span>
+KIRO_CW_SDK_MARKER_FILE = <span class="hljs-string">&quot;.khy_kiro_cw_sdk_fixed&quot;</span>
 
-def _has_cw_sdk(node_modules: Path) -&gt; bool:
-    &quot;&quot;&quot;Check if the Kiro CodeWhisperer streaming SDK is installed.&quot;&quot;&quot;
-    return _path_exists_safe(node_modules / &quot;@aws&quot; / &quot;codewhisperer-streaming-client&quot;)
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">_has_cw_sdk</span>(<span class="hljs-params">node_modules: Path</span>) -&gt; <span class="hljs-built_in">bool</span>:
+    <span class="hljs-string">&quot;&quot;&quot;Check if the Kiro CodeWhisperer streaming SDK is installed.&quot;&quot;&quot;</span>
+    <span class="hljs-keyword">return</span> _path_exists_safe(node_modules / <span class="hljs-string">&quot;@aws&quot;</span> / <span class="hljs-string">&quot;codewhisperer-streaming-client&quot;</span>)
 
-def _maybe_repair_kiro_cw_sdk(backend_dir: Path, marker: Path) -&gt; None:
-    &quot;&quot;&quot;Self-heal: install the Kiro CW SDK if missing (marker-guarded, runs once).&quot;&quot;&quot;
-    if marker.exists():
-        return
-    node_modules = backend_dir / &quot;node_modules&quot;
-    if _has_cw_sdk(node_modules):
-        _write_marker(marker, &quot;ok&quot;)
-        return
-    # Stream the install so the user sees progress instead of a frozen prompt.
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">_maybe_repair_kiro_cw_sdk</span>(<span class="hljs-params">backend_dir: Path, marker: Path</span>) -&gt; <span class="hljs-literal">None</span>:
+    <span class="hljs-string">&quot;&quot;&quot;Self-heal: install the Kiro CW SDK if missing (marker-guarded, runs once).&quot;&quot;&quot;</span>
+    <span class="hljs-keyword">if</span> marker.exists():
+        <span class="hljs-keyword">return</span>
+    node_modules = backend_dir / <span class="hljs-string">&quot;node_modules&quot;</span>
+    <span class="hljs-keyword">if</span> _has_cw_sdk(node_modules):
+        _write_marker(marker, <span class="hljs-string">&quot;ok&quot;</span>)
+        <span class="hljs-keyword">return</span>
+    <span class="hljs-comment"># Stream the install so the user sees progress instead of a frozen prompt.</span>
     rc = _run_npm_streaming(
-        [npm_cmd, &quot;install&quot;, &quot;@aws/codewhisperer-streaming-client&quot;, &quot;--no-audit&quot;, &quot;--no-fund&quot;],
+        [npm_cmd, <span class="hljs-string">&quot;install&quot;</span>, <span class="hljs-string">&quot;@aws/codewhisperer-streaming-client&quot;</span>, <span class="hljs-string">&quot;--no-audit&quot;</span>, <span class="hljs-string">&quot;--no-fund&quot;</span>],
         backend_dir, _NPM_TIMEOUT,
     )
-    _write_marker(marker, &quot;installed&quot; if rc == 0 and _has_cw_sdk(node_modules) else &quot;failed&quot;)</code></pre>
+    _write_marker(marker, <span class="hljs-string">&quot;installed&quot;</span> <span class="hljs-keyword">if</span> rc == <span class="hljs-number">0</span> <span class="hljs-keyword">and</span> _has_cw_sdk(node_modules) <span class="hljs-keyword">else</span> <span class="hljs-string">&quot;failed&quot;</span>)</code></pre>
 <p>接入 <code>ensure_bootstrapped()</code> 的<strong>两条路径</strong>：</p>
 <ul><li><strong>已引导分支</strong>：在可选依赖修复之后调用 <code>_maybe_repair_kiro_cw_sdk(...)</code>，让老用户下次启动时补齐。</li><li><strong>首次安装路径（step 6b）</strong>：在 step 6 之后调用，保证全新安装也显式校验一次。</li></ul>
 <p>标记文件 <code>.khy_kiro_cw_sdk_fixed</code> 确保只在缺失时检查/安装一次，不拖慢每次启动。</p>
@@ -101,14 +101,14 @@ def _maybe_repair_kiro_cw_sdk(backend_dir: Path, marker: Path) -&gt; None:
 <ul><li><strong>Kiro 可用</strong>：CW SDK 随安装到位（新装）或首启自愈（老装），不再 <code>CW SDK not installed</code>。</li><li><strong>不再级联 404</strong>：移除 <code>api.trae.ai</code> OpenAI 端点后，Kiro 失败不会再连锁触发一组注定 404 的通道，重试预算不被无谓耗尽。</li><li><strong>安装可见</strong>：<code>_run_npm_streaming</code> 让补装过程有进度与心跳，不再&quot;看起来卡死&quot;。</li></ul>
 <hr>
 <h2 id="5-验证">5. 验证<a class="anchor" href="#5-验证" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">python3 -m py_compile platform/khy_platform/_bootstrap.py    # 引导器语法
+<pre><code class="language-bash">python3 -m py_compile platform/khy_platform/_bootstrap.py    <span class="hljs-comment"># 引导器语法</span>
 node --check services/backend/src/services/multiFreeService.js
 node --check services/backend/src/services/apiKeyPool.js
 node --check services/backend/src/cli/handlers/gateway.js
 node --check services/backend/src/services/gateway/adapters/traeAdapter.js
 node --check services/backend/src/services/gateway/adapters/relayApiAdapter.js
 node --check services/ai-backend/src/services/gateway/adapters/traeAdapter.js
-# 全仓扫描：剩余 api.trae.ai 字样全部为解释性注释，无功能代码再使用裸 api.trae.ai</code></pre>
+<span class="hljs-comment"># 全仓扫描：剩余 api.trae.ai 字样全部为解释性注释，无功能代码再使用裸 api.trae.ai</span></code></pre>
 <p>全部通过。</p>
 <hr>
 <h2 id="6-涉及文件">6. 涉及文件<a class="anchor" href="#6-涉及文件" aria-label="锚点">#</a></h2>

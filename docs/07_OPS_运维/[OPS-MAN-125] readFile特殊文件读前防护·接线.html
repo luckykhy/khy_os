@@ -39,16 +39,16 @@
 <p>关键事实：<code>fs.statSync</code> 对 FIFO / 设备<strong>只读元数据、瞬时返回、绝不阻塞</strong>（已实测 0ms 返回，<br><code>isFIFO()=true</code>）。<code>readFile.execute</code> 早已算好 <code>stat</code>（用于 size / isDirectory），本层只消费它的<br>类型谓词（<code>isFIFO/isSocket/isCharacterDevice/isBlockDevice</code>），<strong>零额外 IO</strong>，且发生在任何会<br>阻塞的 <code>open/read</code>（detectFile / readTextFileSmart）之前。</p>
 <h2 id="修法-isdirectory-特判之后-detectfile-二进制守卫之前插入类型拦截">修法：isDirectory 特判之后、detectFile / 二进制守卫之前插入类型拦截<a class="anchor" href="#修法-isdirectory-特判之后-detectfile-二进制守卫之前插入类型拦截" aria-label="锚点">#</a></h2>
 <p><code>readFile.execute</code> 在 <code>if (stat.isDirectory())</code> 之后：</p>
-<pre><code class="language-js">try {
-  const { specialReadGuardEnabled, classifySpecialFile, buildSpecialFileRefusal } = require('./specialFileReadGuard');
-  if (specialReadGuardEnabled(process.env)) {
-    const _kind = classifySpecialFile(stat);      // 'fifo'|'socket'|'char-device'|'block-device'|null
-    if (_kind) {
-      return { success:false, error: buildSpecialFileRefusal({ kind:_kind, path:filePath, size:stat.size }),
-               specialFile:_kind, size:stat.size };
+<pre><code class="language-js"><span class="hljs-keyword">try</span> {
+  <span class="hljs-keyword">const</span> { specialReadGuardEnabled, classifySpecialFile, buildSpecialFileRefusal } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./specialFileReadGuard&#x27;</span>);
+  <span class="hljs-keyword">if</span> (<span class="hljs-title function_">specialReadGuardEnabled</span>(process.<span class="hljs-property">env</span>)) {
+    <span class="hljs-keyword">const</span> _kind = <span class="hljs-title function_">classifySpecialFile</span>(stat);      <span class="hljs-comment">// &#x27;fifo&#x27;|&#x27;socket&#x27;|&#x27;char-device&#x27;|&#x27;block-device&#x27;|null</span>
+    <span class="hljs-keyword">if</span> (_kind) {
+      <span class="hljs-keyword">return</span> { <span class="hljs-attr">success</span>:<span class="hljs-literal">false</span>, <span class="hljs-attr">error</span>: <span class="hljs-title function_">buildSpecialFileRefusal</span>({ <span class="hljs-attr">kind</span>:_kind, <span class="hljs-attr">path</span>:filePath, <span class="hljs-attr">size</span>:stat.<span class="hljs-property">size</span> }),
+               <span class="hljs-attr">specialFile</span>:_kind, <span class="hljs-attr">size</span>:stat.<span class="hljs-property">size</span> };
     }
   }
-} catch { /* 判定失败 → 回退历史读取行为 */ }</code></pre>
+} <span class="hljs-keyword">catch</span> { <span class="hljs-comment">/* 判定失败 → 回退历史读取行为 */</span> }</code></pre>
 <p><code>classifySpecialFile(stat)</code> 只认明确的 FIFO/套接字/字符设备/块设备；常规文件、目录、<br>stat 缺失 / 非对象 / 谓词非函数或抛错 → 一律 <code>null</code>（放行），绝不误伤常规文件。目录由<br>readFile 既有的 isDirectory 特判处理，本叶对目录返回 null（不接管）。</p>
 <h2 id="三层守卫顺序-都在内容读取之前-逐层放行到下一层">三层守卫顺序（都在内容读取之前，逐层放行到下一层）<a class="anchor" href="#三层守卫顺序-都在内容读取之前-逐层放行到下一层" aria-label="锚点">#</a></h2>
 <ol><li><strong>目录</strong>（fsReadErrorGuard.directoryReadMessage，KHY_FS_ERROR_HUMANIZE）。</li><li><strong>特殊文件</strong>（本层，KHY_READFILE_SPECIAL_GUARD，default-on）：FIFO/套接字/设备 → 快速拒绝，</li></ol>
@@ -62,13 +62,13 @@
 <h2 id="恒久红线">恒久红线<a class="anchor" href="#恒久红线" aria-label="锚点">#</a></h2>
 <ul><li>只按 stat 类型判定，不碰任何密钥；无重 IO（复用 readFile 已算好的 stat）。</li><li>真 key/token 永不进包、不落盘；pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本必须一致。</li></ul>
 <h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">npm run test:readfile-special-guard     # 纯叶单测(15 用例)
-npm run test:readfile-binary-guard      # OPS-121 无回归
-npm run test:readfile-format-route      # OPS-123 无回归
-# LIVE(带 timeout 防自身卡死):
-#   真 mkfifo → readFile.execute 4ms 返回 success:false(不再 6s+ 卡死);
-#   KHY_READFILE_SPECIAL_GUARD=0 + 同 FIFO → 回退历史行为(会卡死,timeout 佐证);
-#   常规文本文件 → 不受影响,照常读出。</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:readfile-special-guard     <span class="hljs-comment"># 纯叶单测(15 用例)</span>
+npm run <span class="hljs-built_in">test</span>:readfile-binary-guard      <span class="hljs-comment"># OPS-121 无回归</span>
+npm run <span class="hljs-built_in">test</span>:readfile-format-route      <span class="hljs-comment"># OPS-123 无回归</span>
+<span class="hljs-comment"># LIVE(带 timeout 防自身卡死):</span>
+<span class="hljs-comment">#   真 mkfifo → readFile.execute 4ms 返回 success:false(不再 6s+ 卡死);</span>
+<span class="hljs-comment">#   KHY_READFILE_SPECIAL_GUARD=0 + 同 FIFO → 回退历史行为(会卡死,timeout 佐证);</span>
+<span class="hljs-comment">#   常规文本文件 → 不受影响,照常读出。</span></code></pre>
       </article>
       <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-124] OCR成功路径向用户透明告知用了OCR.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-124] OCR 成功路径：向用户透明告知「用了 OCR」</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-126] OCR成功路径确定性脚注兜底告知用了OCR.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-126] OCR 成功路径——确定性脚注兜底告知「用了 OCR」</div></a></nav>
       <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>

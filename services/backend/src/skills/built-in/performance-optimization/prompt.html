@@ -43,25 +43,25 @@
 <p>Two complementary approaches — use both:</p>
 <ul><li><strong>Synthetic (Lighthouse, DevTools Performance tab):</strong> Controlled conditions, reproducible. Best for CI regression detection and isolating specific issues.</li><li><strong>RUM (web-vitals library, CrUX):</strong> Real user data in real conditions. Required to validate that a fix actually improved user experience.</li></ul>
 <p><strong>Frontend:</strong></p>
-<pre><code class="language-bash"># Synthetic: Lighthouse in Chrome DevTools (or CI)
-# Chrome DevTools → Performance tab → Record
-# Chrome DevTools MCP → Performance trace
+<pre><code class="language-bash"><span class="hljs-comment"># Synthetic: Lighthouse in Chrome DevTools (or CI)</span>
+<span class="hljs-comment"># Chrome DevTools → Performance tab → Record</span>
+<span class="hljs-comment"># Chrome DevTools MCP → Performance trace</span>
 
-# RUM: Web Vitals library in code
-import { onLCP, onINP, onCLS } from 'web-vitals';
+<span class="hljs-comment"># RUM: Web Vitals library in code</span>
+import { onLCP, onINP, onCLS } from <span class="hljs-string">&#x27;web-vitals&#x27;</span>;
 
 onLCP(console.log);
 onINP(console.log);
 onCLS(console.log);</code></pre>
 <p><strong>Backend:</strong></p>
-<pre><code class="language-bash"># Response time logging
-# Application Performance Monitoring (APM)
-# Database query logging with timing
+<pre><code class="language-bash"><span class="hljs-comment"># Response time logging</span>
+<span class="hljs-comment"># Application Performance Monitoring (APM)</span>
+<span class="hljs-comment"># Database query logging with timing</span>
 
-# Simple timing
-console.time('db-query');
+<span class="hljs-comment"># Simple timing</span>
+console.time(<span class="hljs-string">&#x27;db-query&#x27;</span>);
 const result = await db.query(...);
-console.timeEnd('db-query');</code></pre>
+console.timeEnd(<span class="hljs-string">&#x27;db-query&#x27;</span>);</code></pre>
 <h3 id="where-to-start-measuring">Where to Start Measuring<a class="anchor" href="#where-to-start-measuring" aria-label="锚点">#</a></h3>
 <p>Use the symptom to decide what to measure first:</p>
 <pre><code>What is slow?
@@ -91,150 +91,150 @@ console.timeEnd('db-query');</code></pre>
 <table><thead><tr><th>Symptom</th><th>Likely Cause</th><th>Investigation</th></tr></thead><tbody><tr><td>Slow API responses</td><td>N+1 queries, missing indexes, unoptimized queries</td><td>Check database query log</td></tr><tr><td>Memory growth</td><td>Leaked references, unbounded caches, large payloads</td><td>Heap snapshot analysis</td></tr><tr><td>CPU spikes</td><td>Synchronous heavy computation, regex backtracking</td><td>CPU profiling</td></tr><tr><td>High latency</td><td>Missing caching, redundant computation, network hops</td><td>Trace requests through the stack</td></tr></tbody></table>
 <h3 id="step-3-fix-common-anti-patterns">Step 3: Fix Common Anti-Patterns<a class="anchor" href="#step-3-fix-common-anti-patterns" aria-label="锚点">#</a></h3>
 <h4 id="n-1-queries-backend">N+1 Queries (Backend)<a class="anchor" href="#n-1-queries-backend" aria-label="锚点">#</a></h4>
-<pre><code class="language-typescript">// BAD: N+1 — one query per task for the owner
-const tasks = await db.tasks.findMany();
-for (const task of tasks) {
-  task.owner = await db.users.findUnique({ where: { id: task.ownerId } });
+<pre><code class="language-typescript"><span class="hljs-comment">// BAD: N+1 — one query per task for the owner</span>
+<span class="hljs-keyword">const</span> tasks = <span class="hljs-keyword">await</span> db.<span class="hljs-property">tasks</span>.<span class="hljs-title function_">findMany</span>();
+<span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> task <span class="hljs-keyword">of</span> tasks) {
+  task.<span class="hljs-property">owner</span> = <span class="hljs-keyword">await</span> db.<span class="hljs-property">users</span>.<span class="hljs-title function_">findUnique</span>({ <span class="hljs-attr">where</span>: { <span class="hljs-attr">id</span>: task.<span class="hljs-property">ownerId</span> } });
 }
 
-// GOOD: Single query with join/include
-const tasks = await db.tasks.findMany({
-  include: { owner: true },
+<span class="hljs-comment">// GOOD: Single query with join/include</span>
+<span class="hljs-keyword">const</span> tasks = <span class="hljs-keyword">await</span> db.<span class="hljs-property">tasks</span>.<span class="hljs-title function_">findMany</span>({
+  <span class="hljs-attr">include</span>: { <span class="hljs-attr">owner</span>: <span class="hljs-literal">true</span> },
 });</code></pre>
 <h4 id="unbounded-data-fetching">Unbounded Data Fetching<a class="anchor" href="#unbounded-data-fetching" aria-label="锚点">#</a></h4>
-<pre><code class="language-typescript">// BAD: Fetching all records
-const allTasks = await db.tasks.findMany();
+<pre><code class="language-typescript"><span class="hljs-comment">// BAD: Fetching all records</span>
+<span class="hljs-keyword">const</span> allTasks = <span class="hljs-keyword">await</span> db.<span class="hljs-property">tasks</span>.<span class="hljs-title function_">findMany</span>();
 
-// GOOD: Paginated with limits
-const tasks = await db.tasks.findMany({
-  take: 20,
-  skip: (page - 1) * 20,
-  orderBy: { createdAt: 'desc' },
+<span class="hljs-comment">// GOOD: Paginated with limits</span>
+<span class="hljs-keyword">const</span> tasks = <span class="hljs-keyword">await</span> db.<span class="hljs-property">tasks</span>.<span class="hljs-title function_">findMany</span>({
+  <span class="hljs-attr">take</span>: <span class="hljs-number">20</span>,
+  <span class="hljs-attr">skip</span>: (page - <span class="hljs-number">1</span>) * <span class="hljs-number">20</span>,
+  <span class="hljs-attr">orderBy</span>: { <span class="hljs-attr">createdAt</span>: <span class="hljs-string">&#x27;desc&#x27;</span> },
 });</code></pre>
 <h4 id="missing-image-optimization-frontend">Missing Image Optimization (Frontend)<a class="anchor" href="#missing-image-optimization-frontend" aria-label="锚点">#</a></h4>
-<pre><code class="language-html">&lt;!-- BAD: No dimensions, no format optimization --&gt;
-&lt;img src=&quot;/hero.jpg&quot; /&gt;
+<pre><code class="language-html"><span class="hljs-comment">&lt;!-- BAD: No dimensions, no format optimization --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">img</span> <span class="hljs-attr">src</span>=<span class="hljs-string">&quot;/hero.jpg&quot;</span> /&gt;</span>
 
-&lt;!-- GOOD: Hero / LCP image — art direction + resolution switching, high priority --&gt;
-&lt;!--
+<span class="hljs-comment">&lt;!-- GOOD: Hero / LCP image — art direction + resolution switching, high priority --&gt;</span>
+<span class="hljs-comment">&lt;!--
   Two techniques combined:
   - Art direction (media): different crop/composition per breakpoint
   - Resolution switching (srcset + sizes): right file size per screen density
---&gt;
-&lt;picture&gt;
-  &lt;!-- Mobile: portrait crop (8:10) --&gt;
-  &lt;source
-    media=&quot;(max-width: 767px)&quot;
-    srcset=&quot;/hero-mobile-400.avif 400w, /hero-mobile-800.avif 800w&quot;
-    sizes=&quot;100vw&quot;
-    width=&quot;800&quot;
-    height=&quot;1000&quot;
-    type=&quot;image/avif&quot;
-  /&gt;
-  &lt;source
-    media=&quot;(max-width: 767px)&quot;
-    srcset=&quot;/hero-mobile-400.webp 400w, /hero-mobile-800.webp 800w&quot;
-    sizes=&quot;100vw&quot;
-    width=&quot;800&quot;
-    height=&quot;1000&quot;
-    type=&quot;image/webp&quot;
-  /&gt;
-  &lt;!-- Desktop: landscape crop (2:1) --&gt;
-  &lt;source
-    srcset=&quot;/hero-800.avif 800w, /hero-1200.avif 1200w, /hero-1600.avif 1600w&quot;
-    sizes=&quot;(max-width: 1200px) 100vw, 1200px&quot;
-    width=&quot;1200&quot;
-    height=&quot;600&quot;
-    type=&quot;image/avif&quot;
-  /&gt;
-  &lt;source
-    srcset=&quot;/hero-800.webp 800w, /hero-1200.webp 1200w, /hero-1600.webp 1600w&quot;
-    sizes=&quot;(max-width: 1200px) 100vw, 1200px&quot;
-    width=&quot;1200&quot;
-    height=&quot;600&quot;
-    type=&quot;image/webp&quot;
-  /&gt;
-  &lt;img
-    src=&quot;/hero-desktop.jpg&quot;
-    width=&quot;1200&quot;
-    height=&quot;600&quot;
-    fetchpriority=&quot;high&quot;
-    alt=&quot;Hero image description&quot;
-  /&gt;
-&lt;/picture&gt;
+--&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">picture</span>&gt;</span>
+  <span class="hljs-comment">&lt;!-- Mobile: portrait crop (8:10) --&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">source</span>
+    <span class="hljs-attr">media</span>=<span class="hljs-string">&quot;(max-width: 767px)&quot;</span>
+    <span class="hljs-attr">srcset</span>=<span class="hljs-string">&quot;/hero-mobile-400.avif 400w, /hero-mobile-800.avif 800w&quot;</span>
+    <span class="hljs-attr">sizes</span>=<span class="hljs-string">&quot;100vw&quot;</span>
+    <span class="hljs-attr">width</span>=<span class="hljs-string">&quot;800&quot;</span>
+    <span class="hljs-attr">height</span>=<span class="hljs-string">&quot;1000&quot;</span>
+    <span class="hljs-attr">type</span>=<span class="hljs-string">&quot;image/avif&quot;</span>
+  /&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">source</span>
+    <span class="hljs-attr">media</span>=<span class="hljs-string">&quot;(max-width: 767px)&quot;</span>
+    <span class="hljs-attr">srcset</span>=<span class="hljs-string">&quot;/hero-mobile-400.webp 400w, /hero-mobile-800.webp 800w&quot;</span>
+    <span class="hljs-attr">sizes</span>=<span class="hljs-string">&quot;100vw&quot;</span>
+    <span class="hljs-attr">width</span>=<span class="hljs-string">&quot;800&quot;</span>
+    <span class="hljs-attr">height</span>=<span class="hljs-string">&quot;1000&quot;</span>
+    <span class="hljs-attr">type</span>=<span class="hljs-string">&quot;image/webp&quot;</span>
+  /&gt;</span>
+  <span class="hljs-comment">&lt;!-- Desktop: landscape crop (2:1) --&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">source</span>
+    <span class="hljs-attr">srcset</span>=<span class="hljs-string">&quot;/hero-800.avif 800w, /hero-1200.avif 1200w, /hero-1600.avif 1600w&quot;</span>
+    <span class="hljs-attr">sizes</span>=<span class="hljs-string">&quot;(max-width: 1200px) 100vw, 1200px&quot;</span>
+    <span class="hljs-attr">width</span>=<span class="hljs-string">&quot;1200&quot;</span>
+    <span class="hljs-attr">height</span>=<span class="hljs-string">&quot;600&quot;</span>
+    <span class="hljs-attr">type</span>=<span class="hljs-string">&quot;image/avif&quot;</span>
+  /&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">source</span>
+    <span class="hljs-attr">srcset</span>=<span class="hljs-string">&quot;/hero-800.webp 800w, /hero-1200.webp 1200w, /hero-1600.webp 1600w&quot;</span>
+    <span class="hljs-attr">sizes</span>=<span class="hljs-string">&quot;(max-width: 1200px) 100vw, 1200px&quot;</span>
+    <span class="hljs-attr">width</span>=<span class="hljs-string">&quot;1200&quot;</span>
+    <span class="hljs-attr">height</span>=<span class="hljs-string">&quot;600&quot;</span>
+    <span class="hljs-attr">type</span>=<span class="hljs-string">&quot;image/webp&quot;</span>
+  /&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">img</span>
+    <span class="hljs-attr">src</span>=<span class="hljs-string">&quot;/hero-desktop.jpg&quot;</span>
+    <span class="hljs-attr">width</span>=<span class="hljs-string">&quot;1200&quot;</span>
+    <span class="hljs-attr">height</span>=<span class="hljs-string">&quot;600&quot;</span>
+    <span class="hljs-attr">fetchpriority</span>=<span class="hljs-string">&quot;high&quot;</span>
+    <span class="hljs-attr">alt</span>=<span class="hljs-string">&quot;Hero image description&quot;</span>
+  /&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">picture</span>&gt;</span>
 
-&lt;!-- GOOD: Below-the-fold image — lazy loaded + async decoding --&gt;
-&lt;img
-  src=&quot;/content.webp&quot;
-  width=&quot;800&quot;
-  height=&quot;400&quot;
-  loading=&quot;lazy&quot;
-  decoding=&quot;async&quot;
-  alt=&quot;Content image description&quot;
-/&gt;</code></pre>
+<span class="hljs-comment">&lt;!-- GOOD: Below-the-fold image — lazy loaded + async decoding --&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">img</span>
+  <span class="hljs-attr">src</span>=<span class="hljs-string">&quot;/content.webp&quot;</span>
+  <span class="hljs-attr">width</span>=<span class="hljs-string">&quot;800&quot;</span>
+  <span class="hljs-attr">height</span>=<span class="hljs-string">&quot;400&quot;</span>
+  <span class="hljs-attr">loading</span>=<span class="hljs-string">&quot;lazy&quot;</span>
+  <span class="hljs-attr">decoding</span>=<span class="hljs-string">&quot;async&quot;</span>
+  <span class="hljs-attr">alt</span>=<span class="hljs-string">&quot;Content image description&quot;</span>
+/&gt;</span></code></pre>
 <h4 id="unnecessary-re-renders-react">Unnecessary Re-renders (React)<a class="anchor" href="#unnecessary-re-renders-react" aria-label="锚点">#</a></h4>
-<pre><code class="language-tsx">// BAD: Creates new object on every render, causing children to re-render
-function TaskList() {
-  return &lt;TaskFilters options={{ sortBy: 'date', order: 'desc' }} /&gt;;
+<pre><code class="language-tsx"><span class="hljs-comment">// BAD: Creates new object on every render, causing children to re-render</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">TaskList</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">TaskFilters</span> <span class="hljs-attr">options</span>=<span class="hljs-string">{{</span> <span class="hljs-attr">sortBy:</span> &#x27;<span class="hljs-attr">date</span>&#x27;, <span class="hljs-attr">order:</span> &#x27;<span class="hljs-attr">desc</span>&#x27; }} /&gt;</span></span>;
 }
 
-// GOOD: Stable reference
-const DEFAULT_OPTIONS = { sortBy: 'date', order: 'desc' } as const;
-function TaskList() {
-  return &lt;TaskFilters options={DEFAULT_OPTIONS} /&gt;;
+<span class="hljs-comment">// GOOD: Stable reference</span>
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">DEFAULT_OPTIONS</span> = { <span class="hljs-attr">sortBy</span>: <span class="hljs-string">&#x27;date&#x27;</span>, <span class="hljs-attr">order</span>: <span class="hljs-string">&#x27;desc&#x27;</span> } <span class="hljs-keyword">as</span> <span class="hljs-keyword">const</span>;
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">TaskList</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">TaskFilters</span> <span class="hljs-attr">options</span>=<span class="hljs-string">{DEFAULT_OPTIONS}</span> /&gt;</span></span>;
 }
 
-// Use React.memo for expensive components
-const TaskItem = React.memo(function TaskItem({ task }: Props) {
-  return &lt;div&gt;{/* expensive render */}&lt;/div&gt;;
+<span class="hljs-comment">// Use React.memo for expensive components</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title class_">TaskItem</span> = <span class="hljs-title class_">React</span>.<span class="hljs-title function_">memo</span>(<span class="hljs-keyword">function</span> <span class="hljs-title function_">TaskItem</span>(<span class="hljs-params">{ task }: <span class="hljs-title class_">Props</span></span>) {
+  <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">div</span>&gt;</span>{/* expensive render */}<span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span></span>;
 });
 
-// Use useMemo for expensive computations
-function TaskStats({ tasks }: Props) {
-  const stats = useMemo(() =&gt; calculateStats(tasks), [tasks]);
-  return &lt;div&gt;{stats.completed} / {stats.total}&lt;/div&gt;;
+<span class="hljs-comment">// Use useMemo for expensive computations</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">TaskStats</span>(<span class="hljs-params">{ tasks }: <span class="hljs-title class_">Props</span></span>) {
+  <span class="hljs-keyword">const</span> stats = <span class="hljs-title function_">useMemo</span>(<span class="hljs-function">() =&gt;</span> <span class="hljs-title function_">calculateStats</span>(tasks), [tasks]);
+  <span class="hljs-keyword">return</span> <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">div</span>&gt;</span>{stats.completed} / {stats.total}<span class="hljs-tag">&lt;/<span class="hljs-name">div</span>&gt;</span></span>;
 }</code></pre>
 <h4 id="large-bundle-size">Large Bundle Size<a class="anchor" href="#large-bundle-size" aria-label="锚点">#</a></h4>
-<pre><code class="language-typescript">// Modern bundlers (Vite, webpack 5+) handle named imports with tree-shaking automatically,
-// provided the dependency ships ESM and is marked `sideEffects: false` in package.json.
-// Profile before changing import styles — the real gains come from splitting and lazy loading.
+<pre><code class="language-typescript"><span class="hljs-comment">// Modern bundlers (Vite, webpack 5+) handle named imports with tree-shaking automatically,</span>
+<span class="hljs-comment">// provided the dependency ships ESM and is marked `sideEffects: false` in package.json.</span>
+<span class="hljs-comment">// Profile before changing import styles — the real gains come from splitting and lazy loading.</span>
 
-// GOOD: Dynamic import for heavy, rarely-used features
-const ChartLibrary = lazy(() =&gt; import('./ChartLibrary'));
+<span class="hljs-comment">// GOOD: Dynamic import for heavy, rarely-used features</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title class_">ChartLibrary</span> = <span class="hljs-title function_">lazy</span>(<span class="hljs-function">() =&gt;</span> <span class="hljs-keyword">import</span>(<span class="hljs-string">&#x27;./ChartLibrary&#x27;</span>));
 
-// GOOD: Route-level code splitting wrapped in Suspense
-const SettingsPage = lazy(() =&gt; import('./pages/Settings'));
+<span class="hljs-comment">// GOOD: Route-level code splitting wrapped in Suspense</span>
+<span class="hljs-keyword">const</span> <span class="hljs-title class_">SettingsPage</span> = <span class="hljs-title function_">lazy</span>(<span class="hljs-function">() =&gt;</span> <span class="hljs-keyword">import</span>(<span class="hljs-string">&#x27;./pages/Settings&#x27;</span>));
 
-function App() {
-  return (
-    &lt;Suspense fallback={&lt;Spinner /&gt;}&gt;
-      &lt;SettingsPage /&gt;
-    &lt;/Suspense&gt;
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">App</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">return</span> (
+    <span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">Suspense</span> <span class="hljs-attr">fallback</span>=<span class="hljs-string">{</span>&lt;<span class="hljs-attr">Spinner</span> /&gt;</span>}&gt;
+      <span class="hljs-tag">&lt;<span class="hljs-name">SettingsPage</span> /&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">Suspense</span>&gt;</span></span>
   );
 }</code></pre>
 <h4 id="missing-caching-backend">Missing Caching (Backend)<a class="anchor" href="#missing-caching-backend" aria-label="锚点">#</a></h4>
-<pre><code class="language-typescript">// Cache frequently-read, rarely-changed data
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-let cachedConfig: AppConfig | null = null;
-let cacheExpiry = 0;
+<pre><code class="language-typescript"><span class="hljs-comment">// Cache frequently-read, rarely-changed data</span>
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">CACHE_TTL</span> = <span class="hljs-number">5</span> * <span class="hljs-number">60</span> * <span class="hljs-number">1000</span>; <span class="hljs-comment">// 5 minutes</span>
+<span class="hljs-keyword">let</span> <span class="hljs-attr">cachedConfig</span>: <span class="hljs-title class_">AppConfig</span> | <span class="hljs-literal">null</span> = <span class="hljs-literal">null</span>;
+<span class="hljs-keyword">let</span> cacheExpiry = <span class="hljs-number">0</span>;
 
-async function getAppConfig(): Promise&lt;AppConfig&gt; {
-  if (cachedConfig &amp;&amp; Date.now() &lt; cacheExpiry) {
-    return cachedConfig;
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">getAppConfig</span>(<span class="hljs-params"></span>): <span class="hljs-title class_">Promise</span>&lt;<span class="hljs-title class_">AppConfig</span>&gt; {
+  <span class="hljs-keyword">if</span> (cachedConfig &amp;&amp; <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() &lt; cacheExpiry) {
+    <span class="hljs-keyword">return</span> cachedConfig;
   }
-  cachedConfig = await db.config.findFirst();
-  cacheExpiry = Date.now() + CACHE_TTL;
-  return cachedConfig;
+  cachedConfig = <span class="hljs-keyword">await</span> db.<span class="hljs-property">config</span>.<span class="hljs-title function_">findFirst</span>();
+  cacheExpiry = <span class="hljs-title class_">Date</span>.<span class="hljs-title function_">now</span>() + <span class="hljs-variable constant_">CACHE_TTL</span>;
+  <span class="hljs-keyword">return</span> cachedConfig;
 }
 
-// HTTP caching headers for static assets
-app.use('/static', express.static('public', {
-  maxAge: '1y',           // Cache for 1 year
-  immutable: true,        // Never revalidate (use content hashing in filenames)
+<span class="hljs-comment">// HTTP caching headers for static assets</span>
+app.<span class="hljs-title function_">use</span>(<span class="hljs-string">&#x27;/static&#x27;</span>, express.<span class="hljs-title function_">static</span>(<span class="hljs-string">&#x27;public&#x27;</span>, {
+  <span class="hljs-attr">maxAge</span>: <span class="hljs-string">&#x27;1y&#x27;</span>,           <span class="hljs-comment">// Cache for 1 year</span>
+  <span class="hljs-attr">immutable</span>: <span class="hljs-literal">true</span>,        <span class="hljs-comment">// Never revalidate (use content hashing in filenames)</span>
 }));
 
-// Cache-Control for API responses
-res.set('Cache-Control', 'public, max-age=300'); // 5 minutes</code></pre>
+<span class="hljs-comment">// Cache-Control for API responses</span>
+res.<span class="hljs-title function_">set</span>(<span class="hljs-string">&#x27;Cache-Control&#x27;</span>, <span class="hljs-string">&#x27;public, max-age=300&#x27;</span>); <span class="hljs-comment">// 5 minutes</span></code></pre>
 <h2 id="performance-budget">Performance Budget<a class="anchor" href="#performance-budget" aria-label="锚点">#</a></h2>
 <p>Set budgets and enforce them:</p>
 <pre><code>JavaScript bundle: &lt; 200KB gzipped (initial load)
@@ -245,10 +245,10 @@ API response time: &lt; 200ms (p95)
 Time to Interactive: &lt; 3.5s on 4G
 Lighthouse Performance score: ≥ 90</code></pre>
 <p><strong>Enforce in CI:</strong></p>
-<pre><code class="language-bash"># Bundle size check
+<pre><code class="language-bash"><span class="hljs-comment"># Bundle size check</span>
 npx bundlesize --config bundlesize.config.json
 
-# Lighthouse CI
+<span class="hljs-comment"># Lighthouse CI</span>
 npx lhci autorun</code></pre>
 <h2 id="see-also">See Also<a class="anchor" href="#see-also" aria-label="锚点">#</a></h2>
 <p>For detailed performance checklists, optimization commands, and anti-pattern reference, see <code>references/performance-checklist.md</code>.</p>

@@ -29,8 +29,10 @@ const MIXIN_METHODS = [
   '_invalidateFailoverOrderCache', '_orderAdaptersByDefaultRoutePreference',
   '_reorderAdaptersByModelProtocolHint', 'getCacheEconomyReport', 'getDefaultRouteRecommendation',
   '_maybePromoteProcessFailoverAdapters', '_generateWithAdapterIsolation', 'forceReconnect',
-  'refreshAdapters', '_enforceRateLimit', 'init', '_doInit', '_refreshModelsBackground',
+  'refreshAdapters', '_enforceRateLimit', 'init', '_doInit', '_warmupContextWindowCache',
+  '_refreshModelsBackground',
   '_resolveActiveChannelKey', '_syncChannelLifecycle', 'setActiveChannel', 'setModelContextWindow',
+  'setModelMaxOutputTokens', 'getModelMaxOutputTokens',
   'getModelContextWindow', '_resolveContextWindowAsync',
 ];
 

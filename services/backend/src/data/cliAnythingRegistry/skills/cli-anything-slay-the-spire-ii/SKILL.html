@@ -34,17 +34,17 @@
 <p>This CLI requires a bridge mod that runs inside the game process. Both the CLI<br>and the bridge are distributed from the same repository:</p>
 <pre><code>https://github.com/HKUDS/CLI-Anything</code></pre>
 <h3 id="1-install-the-cli">1. Install the CLI<a class="anchor" href="#1-install-the-cli" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">git clone https://github.com/HKUDS/CLI-Anything.git
-cd CLI-Anything/slay_the_spire_ii/agent-harness
+<pre><code class="language-bash">git <span class="hljs-built_in">clone</span> https://github.com/HKUDS/CLI-Anything.git
+<span class="hljs-built_in">cd</span> CLI-Anything/slay_the_spire_ii/agent-harness
 pip install -e .</code></pre>
 <h3 id="2-build-and-install-the-bridge-mod">2. Build and install the bridge mod<a class="anchor" href="#2-build-and-install-the-bridge-mod" aria-label="锚点">#</a></h3>
 <p>The bridge mod is a <code>.NET 9</code> plugin that must be compiled and installed into<br>the game directory. Full instructions are in the repository README, but the<br>short version is:</p>
-<pre><code class="language-bash">cd CLI-Anything/slay_the_spire_ii/agent-harness/bridge/plugin
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> CLI-Anything/slay_the_spire_ii/agent-harness/bridge/plugin
 ./build.sh
-cd ../install
+<span class="hljs-built_in">cd</span> ../install
 ./install_bridge.sh</code></pre>
 <p>If the build script cannot auto-detect the game data directory, set<br><code>STS2_GAME_DATA_DIR</code> explicitly:</p>
-<pre><code class="language-bash">STS2_GAME_DATA_DIR=&quot;/path/to/data_sts2&quot; ./build.sh</code></pre>
+<pre><code class="language-bash">STS2_GAME_DATA_DIR=<span class="hljs-string">&quot;/path/to/data_sts2&quot;</span> ./build.sh</code></pre>
 <h3 id="3-enable-the-mod-and-verify">3. Enable the mod and verify<a class="anchor" href="#3-enable-the-mod-and-verify" aria-label="锚点">#</a></h3>
 <p>Launch Slay the Spire 2 via Steam, enable the <code>STS2_Bridge</code> mod in the mod<br>manager, then verify the connection:</p>
 <pre><code class="language-bash">cli-anything-sts2 state</code></pre>
@@ -53,14 +53,14 @@ cd ../install
 <ul><li>Python 3.10+</li><li>Slay the Spire 2 (Steam) with <code>STS2_Bridge</code> mod enabled</li><li><code>.NET 9 SDK</code> (only needed to build the bridge mod)</li></ul>
 <h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
 <h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Read normalized game state (always start here)
+<pre><code class="language-bash"><span class="hljs-comment"># Read normalized game state (always start here)</span>
 cli-anything-sts2 state
 
-# Start interactive REPL mode (default)
+<span class="hljs-comment"># Start interactive REPL mode (default)</span>
 cli-anything-sts2
 
-# Show all available commands
-cli-anything-sts2 --help</code></pre>
+<span class="hljs-comment"># Show all available commands</span>
+cli-anything-sts2 --<span class="hljs-built_in">help</span></code></pre>
 <h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
 <h3 id="state-inspection">State Inspection<a class="anchor" href="#state-inspection" aria-label="锚点">#</a></h3>
 <table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>state</code></td><td>Normalized state with <code>decision</code> field</td></tr><tr><td><code>raw-state</code></td><td>Raw bridge JSON</td></tr></tbody></table>

@@ -8,6 +8,7 @@ __pycache__/
 # Build outputs
 dist/
 build/
+*.egg-info/
 # Exception: packaging/build/ holds CI build scripts (source, not output).
 # The broad build/ rule above must not swallow them, or the
 # Build Standalone Executables workflow fails with MODULE_NOT_FOUND.
@@ -64,7 +65,11 @@ tmp/
 *.seed
 
 # Platform packages
-platform/packages/
+platform/packages/*
+!platform/packages/shared/
+!platform/packages/shared/**
+!platform/packages/ui-shared/
+!platform/packages/ui-shared/**
 
 # Frontend build artifacts
 apps/ai-frontend/dist/

@@ -99,10 +99,10 @@
 <ul><li><code>Search({query: &quot;最新新闻&quot;})</code> → <code>_lookupKey</code> → <code>'search'</code> → <code>TOOL_ALIASES['search']</code> → <strong>grep 工具</strong></li><li>grep 在文件系统中搜不到新闻 → 返回空结果 → 模型放弃</li></ul>
 <h3 id="修复-4">修复<a class="anchor" href="#修复-4" aria-label="锚点">#</a></h3>
 <p><strong><code>claudeCompat.js</code></strong> — <code>normalizeToolCall()</code> 新增参数感知消歧：</p>
-<pre><code class="language-javascript">if (normalizedName === 'search' &amp;&amp; params) {
-  const hasWebParams = 'query' in params || 'q' in params;
-  const hasGrepParams = 'pattern' in params || 'regex' in params || 'path' in params;
-  if (hasWebParams &amp;&amp; !hasGrepParams) normalizedName = 'webSearch';
+<pre><code class="language-javascript"><span class="hljs-keyword">if</span> (normalizedName === <span class="hljs-string">&#x27;search&#x27;</span> &amp;&amp; params) {
+  <span class="hljs-keyword">const</span> hasWebParams = <span class="hljs-string">&#x27;query&#x27;</span> <span class="hljs-keyword">in</span> params || <span class="hljs-string">&#x27;q&#x27;</span> <span class="hljs-keyword">in</span> params;
+  <span class="hljs-keyword">const</span> hasGrepParams = <span class="hljs-string">&#x27;pattern&#x27;</span> <span class="hljs-keyword">in</span> params || <span class="hljs-string">&#x27;regex&#x27;</span> <span class="hljs-keyword">in</span> params || <span class="hljs-string">&#x27;path&#x27;</span> <span class="hljs-keyword">in</span> params;
+  <span class="hljs-keyword">if</span> (hasWebParams &amp;&amp; !hasGrepParams) normalizedName = <span class="hljs-string">&#x27;webSearch&#x27;</span>;
 }</code></pre>
 <ul><li>参数含 <code>query</code>/<code>q</code> → <code>webSearch</code>（网页搜索）</li><li>参数含 <code>pattern</code>/<code>regex</code>/<code>path</code> → <code>search</code>（文件搜索）</li></ul>
 <hr>
@@ -114,10 +114,10 @@
 <p>对比 Claude Code：CC 也启用鼠标追踪，但自行实现了完整的文字选择系统（anchor/focus、word/line 选择、OSC52 剪贴板、copy-on-select）。KHY 没有这套系统。</p>
 <h3 id="修复-5">修复<a class="anchor" href="#修复-5" aria-label="锚点">#</a></h3>
 <p><strong><code>keypressParser.js</code></strong> — 移除 <code>?1000h</code>（基础点击捕获），只保留 <code>?1002h</code>（button-event，含滚轮）+ <code>?1006h</code>（SGR 格式）：</p>
-<pre><code class="language-javascript">// 改前：
-this._stdout.write('\x1b[?1000h\x1b[?1002h\x1b[?1006h');
-// 改后：
-this._stdout.write('\x1b[?1002h\x1b[?1006h');</code></pre>
+<pre><code class="language-javascript"><span class="hljs-comment">// 改前：</span>
+<span class="hljs-variable language_">this</span>.<span class="hljs-property">_stdout</span>.<span class="hljs-title function_">write</span>(<span class="hljs-string">&#x27;\x1b[?1000h\x1b[?1002h\x1b[?1006h&#x27;</span>);
+<span class="hljs-comment">// 改后：</span>
+<span class="hljs-variable language_">this</span>.<span class="hljs-property">_stdout</span>.<span class="hljs-title function_">write</span>(<span class="hljs-string">&#x27;\x1b[?1002h\x1b[?1006h&#x27;</span>);</code></pre>
 <p>不捕获点击事件后，终端的原生文字选择/复制功能恢复正常，同时滚轮事件仍可正常工作。</p>
 <hr>
 <h2 id="涉及文件清单">涉及文件清单<a class="anchor" href="#涉及文件清单" aria-label="锚点">#</a></h2>

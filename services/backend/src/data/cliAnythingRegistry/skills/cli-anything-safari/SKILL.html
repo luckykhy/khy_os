@@ -43,7 +43,7 @@
 <h3 id="prerequisites">Prerequisites<a class="anchor" href="#prerequisites" aria-label="锚点">#</a></h3>
 <ol><li><strong>macOS</strong> — Safari MCP is macOS-only.</li><li><strong>Safari</strong> — already installed on macOS.</li><li><strong>Node.js 18+</strong> — <code>brew install node</code> or from https://nodejs.org/</li><li><strong>Python 3.10+</strong></li><li><strong>Enable Apple Events for Safari</strong>: Safari → Develop → Allow JavaScript from Apple Events</li></ol>
 <h3 id="install-the-cli">Install the CLI<a class="anchor" href="#install-the-cli" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cd safari/agent-harness
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> safari/agent-harness
 pip install -e .</code></pre>
 <p>The first <code>tool</code> call will download the <code>safari-mcp</code> npm package (one-time, a few MB).</p>
 <h2 id="command-structure">Command Structure<a class="anchor" href="#command-structure" aria-label="锚点">#</a></h2>
@@ -51,61 +51,61 @@ pip install -e .</code></pre>
 <table><thead><tr><th>Command</th><th>Purpose</th></tr></thead><tbody><tr><td><code>tool</code></td><td>Call any of safari-mcp's <strong>84 tools</strong> (dynamic, schema-driven)</td></tr><tr><td><code>tools</code></td><td>Inspect the bundled tool registry (<code>list</code>, <code>describe</code>, <code>count</code>)</td></tr><tr><td><code>raw</code></td><td>Escape hatch — call a tool by full name with raw JSON args</td></tr><tr><td><code>session</code></td><td>In-memory session state (last URL, current tab)</td></tr><tr><td><code>repl</code></td><td>Interactive REPL (default when no subcommand given)</td></tr></tbody></table>
 <h2 id="usage-examples">Usage Examples<a class="anchor" href="#usage-examples" aria-label="锚点">#</a></h2>
 <h3 id="discover-the-tool-surface">Discover the tool surface<a class="anchor" href="#discover-the-tool-surface" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Count of tools (sanity check — must match safari-mcp's registered tools)
+<pre><code class="language-bash"><span class="hljs-comment"># Count of tools (sanity check — must match safari-mcp&#x27;s registered tools)</span>
 cli-anything-safari tools count
-# → 84
+<span class="hljs-comment"># → 84</span>
 
-# List every tool
+<span class="hljs-comment"># List every tool</span>
 cli-anything-safari tools list
-cli-anything-safari tools list --filter click   # filter by substring
+cli-anything-safari tools list --filter click   <span class="hljs-comment"># filter by substring</span>
 
-# Full schema for one tool (JSON or human format)
+<span class="hljs-comment"># Full schema for one tool (JSON or human format)</span>
 cli-anything-safari tools describe safari_scroll
 cli-anything-safari --json tools describe safari_click</code></pre>
 <h3 id="call-a-tool-schema-driven">Call a tool (schema-driven)<a class="anchor" href="#call-a-tool-schema-driven" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Navigate
+<pre><code class="language-bash"><span class="hljs-comment"># Navigate</span>
 cli-anything-safari tool navigate --url https://example.com
 
-# Take a snapshot (preferred over screenshot — structured text with ref IDs)
+<span class="hljs-comment"># Take a snapshot (preferred over screenshot — structured text with ref IDs)</span>
 cli-anything-safari --json tool snapshot
 
-# Click by ref (refs come from snapshot; they expire on the next snapshot!)
+<span class="hljs-comment"># Click by ref (refs come from snapshot; they expire on the next snapshot!)</span>
 cli-anything-safari tool click --ref 0_5
 
-# Click by selector or visible text
-cli-anything-safari tool click --selector &quot;#submit&quot;
-cli-anything-safari tool click --text &quot;Log in&quot;
+<span class="hljs-comment"># Click by selector or visible text</span>
+cli-anything-safari tool click --selector <span class="hljs-string">&quot;#submit&quot;</span>
+cli-anything-safari tool click --text <span class="hljs-string">&quot;Log in&quot;</span>
 
-# Fill a field
-cli-anything-safari tool fill --selector &quot;#email&quot; --value &quot;user@example.com&quot;
+<span class="hljs-comment"># Fill a field</span>
+cli-anything-safari tool fill --selector <span class="hljs-string">&quot;#email&quot;</span> --value <span class="hljs-string">&quot;user@example.com&quot;</span>
 
-# Scroll by direction/amount (NOT x/y — note the schema!)
+<span class="hljs-comment"># Scroll by direction/amount (NOT x/y — note the schema!)</span>
 cli-anything-safari tool scroll --direction down --amount 500
 
-# Drag one element onto another
+<span class="hljs-comment"># Drag one element onto another</span>
 cli-anything-safari tool drag \
-    --source-selector &quot;.card&quot; \
-    --target-selector &quot;.trash&quot;
+    --source-selector <span class="hljs-string">&quot;.card&quot;</span> \
+    --target-selector <span class="hljs-string">&quot;.trash&quot;</span>
 
-# Screenshot — returns base64 JPEG in stdout. Decode with:
+<span class="hljs-comment"># Screenshot — returns base64 JPEG in stdout. Decode with:</span>
 cli-anything-safari --json tool screenshot --full-page \
-    | python3 -c &quot;import sys,json,base64; \
+    | python3 -c <span class="hljs-string">&quot;import sys,json,base64; \
         d=json.load(sys.stdin); \
-        open('/tmp/shot.jpg','wb').write(base64.b64decode(d['data']))&quot;
+        open(&#x27;/tmp/shot.jpg&#x27;,&#x27;wb&#x27;).write(base64.b64decode(d[&#x27;data&#x27;]))&quot;</span>
 
-# Save as PDF (this one writes to disk directly)
+<span class="hljs-comment"># Save as PDF (this one writes to disk directly)</span>
 cli-anything-safari tool save-pdf --path /tmp/page.pdf
 
-# Evaluate JavaScript (note: parameter is --script, not --code)
-cli-anything-safari tool evaluate --script &quot;document.title&quot;</code></pre>
+<span class="hljs-comment"># Evaluate JavaScript (note: parameter is --script, not --code)</span>
+cli-anything-safari tool evaluate --script <span class="hljs-string">&quot;document.title&quot;</span></code></pre>
 <h3 id="navigate-and-read-in-one-round-trip">Navigate and read in one round-trip<a class="anchor" href="#navigate-and-read-in-one-round-trip" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-safari --json tool navigate-and-read --url https://example.com</code></pre>
 <h3 id="form-fill-bulk">Form fill (bulk)<a class="anchor" href="#form-fill-bulk" aria-label="锚点">#</a></h3>
 <p><code>safari_fill_form</code> takes an <strong>array</strong> of <code>{selector, value}</code> objects.<br>Pass it as a JSON string:</p>
-<pre><code class="language-bash">cli-anything-safari tool fill-form --fields '[
+<pre><code class="language-bash">cli-anything-safari tool fill-form --fields <span class="hljs-string">&#x27;[
   {&quot;selector&quot;: &quot;#email&quot;,    &quot;value&quot;: &quot;user@example.com&quot;},
   {&quot;selector&quot;: &quot;#password&quot;, &quot;value&quot;: &quot;hunter2&quot;}
-]'</code></pre>
+]&#x27;</span></code></pre>
 <p>Run <code>cli-anything-safari tools describe safari_fill_form</code> to see the<br>exact schema, including any new fields safari-mcp adds upstream.</p>
 <h3 id="network-monitoring">Network monitoring<a class="anchor" href="#network-monitoring" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-safari tool start-network-capture
@@ -116,12 +116,12 @@ cli-anything-safari tool performance-metrics</code></pre>
 <pre><code class="language-bash">cli-anything-safari tool get-cookies
 cli-anything-safari tool set-cookie --name session --value abc123 --domain example.com
 cli-anything-safari tool local-storage --key theme
-# export-storage returns JSON to stdout — no --path arg. Pipe to a file:
+<span class="hljs-comment"># export-storage returns JSON to stdout — no --path arg. Pipe to a file:</span>
 cli-anything-safari --json tool export-storage &gt; /tmp/storage.json</code></pre>
 <h3 id="raw-json-escape-hatch">Raw JSON escape hatch<a class="anchor" href="#raw-json-escape-hatch" aria-label="锚点">#</a></h3>
 <p>When you need to pass a complex nested object or want to drive the CLI from<br>a pre-built JSON blob:</p>
 <pre><code class="language-bash">cli-anything-safari raw safari_evaluate \
-    --json-args '{&quot;code&quot;:&quot;[...document.querySelectorAll(\&quot;a\&quot;)].map(a =&gt; a.href)&quot;}'</code></pre>
+    --json-args <span class="hljs-string">&#x27;{&quot;code&quot;:&quot;[...document.querySelectorAll(\&quot;a\&quot;)].map(a =&gt; a.href)&quot;}&#x27;</span></code></pre>
 <h3 id="interactive-repl">Interactive REPL<a class="anchor" href="#interactive-repl" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-safari</code></pre>
 <p>The REPL banner prints the absolute path to this SKILL.md so agents can<br>self-discover capabilities.</p>
@@ -142,10 +142,10 @@ cli-anything-safari --json tools list</code></pre>
 <p>results, bullet lists for arrays, plain text otherwise</p>
 <ul><li><strong>Machine-readable</strong> (<code>--json</code> flag): structured JSON for agent</li></ul>
 <p>consumption</p>
-<pre><code class="language-bash"># Human output
+<pre><code class="language-bash"><span class="hljs-comment"># Human output</span>
 cli-anything-safari tool snapshot
 
-# JSON output for agents
+<span class="hljs-comment"># JSON output for agents</span>
 cli-anything-safari --json tool snapshot
 cli-anything-safari --json tools list
 cli-anything-safari --json tools describe safari_click</code></pre>
@@ -166,11 +166,11 @@ cli-anything-safari --json tools describe safari_click</code></pre>
 <h2 id="agent-specific-guidance">Agent-Specific Guidance<a class="anchor" href="#agent-specific-guidance" aria-label="锚点">#</a></h2>
 <h3 id="finding-the-right-tool">Finding the right tool<a class="anchor" href="#finding-the-right-tool" aria-label="锚点">#</a></h3>
 <p>Use the introspection commands. The CLI is <strong>guaranteed</strong> to reflect the<br>MCP server 1:1:</p>
-<pre><code class="language-bash"># Find all click-related tools
+<pre><code class="language-bash"><span class="hljs-comment"># Find all click-related tools</span>
 cli-anything-safari tools list --filter click
 
-# Get the full schema (including every argument with type, description,
-# required/optional, enum choices, defaults)
+<span class="hljs-comment"># Get the full schema (including every argument with type, description,</span>
+<span class="hljs-comment"># required/optional, enum choices, defaults)</span>
 cli-anything-safari --json tools describe safari_click</code></pre>
 <h3 id="tool-selection-strategy">Tool selection strategy<a class="anchor" href="#tool-selection-strategy" aria-label="锚点">#</a></h3>
 <ol><li><strong><code>tool snapshot</code></strong> over <code>tool screenshot</code> — structured text with ref IDs</li></ol>
@@ -203,7 +203,7 @@ cli-anything-safari --json tools describe safari_click</code></pre>
 <p>Safari MCP enforces per-session tab ownership upstream — tools cannot<br>operate on tabs the session did not open.</p>
 <h3 id="profile-isolation">Profile Isolation<a class="anchor" href="#profile-isolation" aria-label="锚点">#</a></h3>
 <p>Set <code>SAFARI_PROFILE</code> env var to use a separate Safari profile for<br>automation:</p>
-<pre><code class="language-bash">export SAFARI_PROFILE=&quot;Automation&quot;
+<pre><code class="language-bash"><span class="hljs-built_in">export</span> SAFARI_PROFILE=<span class="hljs-string">&quot;Automation&quot;</span>
 cli-anything-safari tool navigate --url https://example.com</code></pre>
 <p>This keeps cookies/logins/history separate from the user's main browsing.</p>
 <h3 id="javascript-execution">JavaScript Execution<a class="anchor" href="#javascript-execution" aria-label="锚点">#</a></h3>
@@ -213,7 +213,7 @@ cli-anything-safari tool navigate --url https://example.com</code></pre>
 <h2 id="regenerating-the-tool-registry">Regenerating the tool registry<a class="anchor" href="#regenerating-the-tool-registry" aria-label="锚点">#</a></h2>
 <p>If you upgrade <code>safari-mcp</code>, regenerate the bundled schema:</p>
 <pre><code class="language-bash">python scripts/extract_tools.py \
-    &quot;$(npm root -g)/safari-mcp/index.js&quot; \
+    <span class="hljs-string">&quot;<span class="hljs-subst">$(npm root -g)</span>/safari-mcp/index.js&quot;</span> \
     cli_anything/safari/resources/tools.json</code></pre>
 <p>The parity test (<code>test_parity.py</code>) pins the expected tool count; update<br>it when the upstream tool list changes.</p>
 <h2 id="more-information">More Information<a class="anchor" href="#more-information" aria-label="锚点">#</a></h2>

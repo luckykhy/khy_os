@@ -160,7 +160,7 @@ C-1 适配器路由：把 aiGateway.js:2115 的 score=basePriority×10+Σpenalty
     （臂回报=成功率×速度，cooldown 并入探索项）；保留 failoverOrderStore 作先验初值。
 C-4 统一断路器：废弃 aiGateway 内联指数退避，全栈改用 circuitBreaker.js 三态机。
 C-2 账号池：把 accountPool.js:3121 的粘性 MRU(ORDER BY last_used_at DESC)
-    改成真负载均衡（true LRU 或 power-of-two-choices），兑现 'Balance' 名称。
+    改成真负载均衡（true LRU 或 power-of-two-choices），兑现 &#x27;Balance&#x27; 名称。
 C-3 工作流抢占：给 workflowRunWorker 一个 quantum（每 N 步经 boulderState 落盘即让出），
     引入 ready-queue + 抢占，避免长 run 饿死短 run。
 

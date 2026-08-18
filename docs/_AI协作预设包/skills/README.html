@@ -33,17 +33,17 @@
 <h2 id="给人看-怎么安装到-khy">🧑 给人看 · 怎么安装到 khy<a class="anchor" href="#给人看-怎么安装到-khy" aria-label="锚点">#</a></h2>
 <p>每个 skill 是一个目录（含 <code>manifest.json</code> + <code>prompt.md</code>），khy 原生格式，装上后会有 <code>/</code> 斜杠命令。</p>
 <p><strong>方式 A：逐个导入（推荐，最稳）</strong></p>
-<pre><code class="language-bash"># 在仓库根目录，把某个 skill 目录导入
+<pre><code class="language-bash"><span class="hljs-comment"># 在仓库根目录，把某个 skill 目录导入</span>
 node services/backend/bin/khy.js skill import docs/_AI协作预设包/skills/khy-onboarding
 node services/backend/bin/khy.js skill import docs/_AI协作预设包/skills/khy-safe-change
-# ……其余同理</code></pre>
+<span class="hljs-comment"># ……其余同理</span></code></pre>
 <p><strong>方式 B：批量导入（一条命令装全部）</strong></p>
-<pre><code class="language-bash">for d in docs/_AI协作预设包/skills/*/; do
-  node services/backend/bin/khy.js skill import &quot;$d&quot;
-done</code></pre>
+<pre><code class="language-bash"><span class="hljs-keyword">for</span> d <span class="hljs-keyword">in</span> docs/_AI协作预设包/skills/*/; <span class="hljs-keyword">do</span>
+  node services/backend/bin/khy.js skill import <span class="hljs-string">&quot;<span class="hljs-variable">$d</span>&quot;</span>
+<span class="hljs-keyword">done</span></code></pre>
 <p><strong>方式 C：直接放进用户 skill 目录</strong>（khy 启动时自动发现）<br>把 <code>docs/_AI协作预设包/skills/</code> 下各目录拷到 <code>~/.khy/skills/</code> 即可。</p>
 <p><strong>装好后验证</strong>：</p>
-<pre><code class="language-bash">node services/backend/bin/khy.js skill list        # 应能看到 khy-onboarding 等</code></pre>
+<pre><code class="language-bash">node services/backend/bin/khy.js skill list        <span class="hljs-comment"># 应能看到 khy-onboarding 等</span></code></pre>
 <p>之后在对话里输入 <code>/khy-onboarding</code> 等即可激活；小模型也能在合适场景自动触发（除非该 skill 设了 disable-model-invocation，本集合默认允许模型调用）。</p>
 <blockquote><p>导入后 skill 落在 <code>~/.khy/skills/&lt;name&gt;/</code>，默认启用。要停用某个：<code>skill disable &lt;name&gt;</code>。</p></blockquote>
 <hr>

@@ -42,11 +42,11 @@
 <p><code>UNREADABLE_NOTE_MARKER</code> = <code>[图像无法读取]</code>），要求文本模型：① 明确告知「收到图但读不出」、<br>     <strong>绝不能说没收到图</strong>；② 给出换视觉模型 / 粘贴图中文字的可行方案；③ 绝不臆测图片内容。<br>     门关或畸形输入 → 返回 <code>null</code>，绝不抛。</p>
 <ol><li><strong><code>aiGatewayGenerateMethod.js</code>（Site 1，空 OCR else 分支）</strong>：在无条件剥图<strong>之前</strong>，当</li></ol>
 <p><code>buildVisionUnreadableNote</code> 返回 <code>null</code>（OCR 功能门关）时，退回 <code>buildStrippedImageFloorNote</code><br>   的最小底线：</p>
-<pre><code class="language-js">   if (!_unreadableNote) {
-     try {
-       _unreadableNote = require('./visionOcrFallback')
-         .buildStrippedImageFloorNote({ count: _imgCount, env: process.env });
-     } catch { /* 叶子不可用 → 门关等价,逐字节回退(剥图无痕) */ }
+<pre><code class="language-js">   <span class="hljs-keyword">if</span> (!_unreadableNote) {
+     <span class="hljs-keyword">try</span> {
+       _unreadableNote = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./visionOcrFallback&#x27;</span>)
+         .<span class="hljs-title function_">buildStrippedImageFloorNote</span>({ <span class="hljs-attr">count</span>: _imgCount, <span class="hljs-attr">env</span>: process.<span class="hljs-property">env</span> });
+     } <span class="hljs-keyword">catch</span> { <span class="hljs-comment">/* 叶子不可用 → 门关等价,逐字节回退(剥图无痕) */</span> }
    }</code></pre>
 <ol><li><strong><code>flagRegistry.js</code></strong>：登记</li></ol>
 <p><code>KHY_VISION_STRIP_IMAGE_FLOOR: { mode: 'default-on', off: 'CANON', default: true }</code>。</p>

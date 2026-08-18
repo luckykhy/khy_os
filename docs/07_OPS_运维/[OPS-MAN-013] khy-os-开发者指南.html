@@ -51,7 +51,7 @@ node --version
 npm --version</code></pre>
 <h2 id="3-开发环境初始化">3. 开发环境初始化<a class="anchor" href="#3-开发环境初始化" aria-label="锚点">#</a></h2>
 <h3 id="3-1-安装-python-依赖">3.1 安装 Python 依赖<a class="anchor" href="#3-1-安装-python-依赖" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">python3 -m pip install -e &quot;.[dev]&quot; --config-settings editable_mode=compat</code></pre>
+<pre><code class="language-bash">python3 -m pip install -e <span class="hljs-string">&quot;.[dev]&quot;</span> --config-settings editable_mode=compat</code></pre>
 <p><code>--config-settings editable_mode=compat</code> 让 editable 安装以“扫描 <code>platform/</code> 目录”的方式解析 Python 包，而不是把每个包的绝对路径冻结进查找器。这样目录重构后通常无需重装，原因见 3.3。</p>
 <h3 id="3-2-安装-node-依赖">3.2 安装 Node 依赖<a class="anchor" href="#3-2-安装-node-依赖" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">npm install
@@ -64,7 +64,7 @@ npm --prefix apps/ai-frontend install</code></pre>
 <ul><li>移动 <code>services/</code>、<code>apps/</code>、<code>quant/</code>、<code>kernel/</code>、<code>docs/</code> 等——只要不把两个 Python 包根目录移出 <code>platform/</code>——<strong>无需重跑 editable 安装</strong>。</li><li>在 <code>platform/</code> 下<strong>新增</strong>一个 Python 包，直接可导入，也无需重装。</li></ul>
 <p>唯一仍需重装的情况：把 <code>khy_platform</code> / <code>khy_os</code> 移出 <code>platform/</code>，或整体移动 <code>platform/</code>。此时执行：</p>
 <pre><code class="language-bash">npm run dev:install
-# 等价于：python3 scripts/dev-install.py</code></pre>
+<span class="hljs-comment"># 等价于：python3 scripts/dev-install.py</span></code></pre>
 <p><code>scripts/dev-install.py</code> 会自动定位 <code>khy</code> 命令背后的解释器（可用环境变量 <code>KHY_DEV_PYTHON</code> 覆盖），并以 compat 模式 <code>--force-reinstall</code> 重新生成安装。手动等价命令：</p>
 <pre><code class="language-bash">python3 -m pip install -e . --config-settings editable_mode=compat \
   --no-build-isolation --force-reinstall --no-deps</code></pre>
@@ -72,11 +72,11 @@ npm --prefix apps/ai-frontend install</code></pre>
 <h2 id="4-常见开发启动方式">4. 常见开发启动方式<a class="anchor" href="#4-常见开发启动方式" aria-label="锚点">#</a></h2>
 <h3 id="4-1-cli-联调">4.1 CLI 联调<a class="anchor" href="#4-1-cli-联调" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">python3 -m khy_platform.cli
-# 或
+<span class="hljs-comment"># 或</span>
 khy</code></pre>
 <h3 id="4-2-后端服务">4.2 后端服务<a class="anchor" href="#4-2-后端服务" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">npm --prefix services/backend run dev
-# 或
+<span class="hljs-comment"># 或</span>
 npm --prefix services/backend start</code></pre>
 <h3 id="4-3-交易前端">4.3 交易前端<a class="anchor" href="#4-3-交易前端" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">npm --prefix quant/khyquant/frontend run dev</code></pre>
@@ -89,7 +89,7 @@ khy gateway manage status</code></pre>
 <p>新增命令时按以下顺序：</p>
 <ol><li><code>services/backend/src/cli/commandSchema.js</code>：补充命令与子命令</li><li><code>services/backend/src/cli/aliases.js</code>：补充中文/拼音/英文别名</li><li><code>services/backend/src/cli/handlers/</code>：新增 handler</li><li><code>services/backend/src/cli/router.js</code>：在 <code>route()</code> 中接入分发</li></ol>
 <p>新增命令后至少执行：</p>
-<pre><code class="language-bash">npm --prefix services/backend test</code></pre>
+<pre><code class="language-bash">npm --prefix services/backend <span class="hljs-built_in">test</span></code></pre>
 <h2 id="6-ai-适配器开发规范-2-步">6. AI 适配器开发规范（2 步）<a class="anchor" href="#6-ai-适配器开发规范-2-步" aria-label="锚点">#</a></h2>
 <ol><li>在 <code>services/backend/src/services/gateway/adapters/</code> 新增 <code>yourAdapter.js</code>，实现统一 <code>generate(prompt, options)</code> 接口</li><li>在 <code>services/backend/src/services/gateway/aiGateway.js</code> 注册适配器</li></ol>
 <h2 id="7-质量检查与测试">7. 质量检查与测试<a class="anchor" href="#7-质量检查与测试" aria-label="锚点">#</a></h2>
@@ -98,7 +98,7 @@ khy gateway manage status</code></pre>
 npm run check:node-syntax
 npm run check:python-syntax
 npm run check:agent-rules
-npm --prefix services/backend test</code></pre>
+npm --prefix services/backend <span class="hljs-built_in">test</span></code></pre>
 <h3 id="7-2-全量检查-仓库定义">7.2 全量检查（仓库定义）<a class="anchor" href="#7-2-全量检查-仓库定义" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">npm run check:quality-gates
 ./run_tests.sh</code></pre>
@@ -109,7 +109,7 @@ npm --prefix services/backend test</code></pre>
 <p>兼容配置键（旧命名空间）：</p>
 <ul><li><code>KHY_BUGFIX_*</code>（仅作回退，建议逐步迁移到 <code>KHY_CHANGE_*</code>）</li></ul>
 <p>建议最小验证：</p>
-<pre><code class="language-bash">npm --prefix services/backend test -- services/backend/tests/services/bugfixRegressionGate.test.js services/backend/tests/services/agenticHarnessService.test.js</code></pre>
+<pre><code class="language-bash">npm --prefix services/backend <span class="hljs-built_in">test</span> -- services/backend/tests/services/bugfixRegressionGate.test.js services/backend/tests/services/agenticHarnessService.test.js</code></pre>
 <h2 id="8-版本与发布流程">8. 版本与发布流程<a class="anchor" href="#8-版本与发布流程" aria-label="锚点">#</a></h2>
 <p>版本号必须三处一致：</p>
 <ol><li><code>platform/khy_platform/__init__.py</code></li><li><code>pyproject.toml</code></li><li><code>services/backend/package.json</code></li></ol>
@@ -134,10 +134,10 @@ khy publish self-pypi --version &lt;x.y.z&gt;</code></pre>
 <p>建议在干净环境执行一次：</p>
 <ol><li><code>python -m pip install -U khy-os</code></li><li><code>khy --version</code></li><li><code>khy</code> 启动后确认 first-run setup 完成</li><li><code>khy gateway status</code></li><li><code>khy guanli</code>（确认管理页可正确打开）</li></ol>
 <p>若出现 seed 警告，做 strict 验证：</p>
-<pre><code class="language-powershell">$env:KHY_SEED_STRICT=&quot;true&quot;
+<pre><code class="language-powershell"><span class="hljs-variable">$env:KHY_SEED_STRICT</span>=<span class="hljs-string">&quot;true&quot;</span>
 node .\scripts\seed.js
-$LASTEXITCODE
-Remove-Item Env:KHY_SEED_STRICT</code></pre>
+<span class="hljs-variable">$LASTEXITCODE</span>
+<span class="hljs-built_in">Remove-Item</span> Env:KHY_SEED_STRICT</code></pre>
 <p>返回码 <code>0</code> 代表 seed 成功。</p>
 <h2 id="11-windows-一键构建本地推理运行时并打包-wheel">11. Windows 一键构建本地推理运行时并打包 Wheel<a class="anchor" href="#11-windows-一键构建本地推理运行时并打包-wheel" aria-label="锚点">#</a></h2>
 <p>适用场景：希望 <code>khy-os</code> 在 Windows 上不依赖系统已安装 Ollama，也能使用本地推理（通过内置 <code>ollama.exe + lib/ollama</code>）。</p>
@@ -146,30 +146,30 @@ Remove-Item Env:KHY_SEED_STRICT</code></pre>
 <ol><li><code>ollama-main.zip</code>（Ollama 源码包，脚本会自动调用其 <code>build_windows.ps1</code> 编译）</li><li>预编译运行时 zip（如 <code>Ollama.zip</code> / <code>ollama-windows-amd64.zip</code>），满足以下任一结构：<ul><li><code>&lt;root&gt;/ollama.exe</code> + <code>&lt;root&gt;/lib/ollama/*</code></li><li><code>&lt;root&gt;/dist/windows-amd64/ollama.exe</code> + <code>lib/ollama/*</code></li></ul></li></ol>
 <h3 id="11-2-一键执行-cpu-最小可用">11.2 一键执行（CPU 最小可用）<a class="anchor" href="#11-2-一键执行-cpu-最小可用" aria-label="锚点">#</a></h3>
 <p>在 Windows PowerShell（建议 Developer PowerShell for VS 2022）执行：</p>
-<pre><code class="language-powershell">cd &lt;Khy-OS 根目录&gt;
-powershell -ExecutionPolicy Bypass -File .\scripts\release\build-khy-wheel-with-ollama-runtime.ps1 `
-  -OllamaSource &quot;C:\path\ollama-main.zip&quot; `
-  -Arch amd64</code></pre>
+<pre><code class="language-powershell"><span class="hljs-built_in">cd</span> &lt;Khy<span class="hljs-literal">-OS</span> 根目录&gt;
+powershell <span class="hljs-literal">-ExecutionPolicy</span> Bypass <span class="hljs-operator">-File</span> .\scripts\release\<span class="hljs-built_in">build-khy</span><span class="hljs-literal">-wheel-with-ollama-runtime</span>.ps1 `
+  <span class="hljs-literal">-OllamaSource</span> <span class="hljs-string">&quot;C:\path\ollama-main.zip&quot;</span> `
+  <span class="hljs-literal">-Arch</span> amd64</code></pre>
 <p>该脚本会自动完成：</p>
 <ol><li>若输入为源码：编译 Ollama Windows 运行时（<code>cpu, ollama</code>）</li><li>若输入为预编译包：自动定位 <code>ollama.exe</code> 与 <code>lib/ollama</code></li><li>回填到 <code>services/backend/bin/ollama-runner/</code>：<ul><li><code>bin/ollama.exe</code></li><li><code>lib/ollama/*</code></li></ul></li><li>调用 <code>scripts/release/build-platform-wheel.ps1</code> 生成平台 wheel</li></ol>
 <h3 id="11-3-仅回填预编译包-不走源码编译">11.3 仅回填预编译包（不走源码编译）<a class="anchor" href="#11-3-仅回填预编译包-不走源码编译" aria-label="锚点">#</a></h3>
 <p>如果你已经有 <code>Ollama.zip</code>（内含 <code>ollama.exe</code> 和 <code>lib/ollama</code>），可直接执行：</p>
-<pre><code class="language-powershell">cd &lt;Khy-OS 根目录&gt;
-powershell -ExecutionPolicy Bypass -File .\scripts\release\build-khy-wheel-with-ollama-runtime.ps1 `
-  -OllamaSource &quot;C:\path\Ollama.zip&quot; `
-  -Arch amd64</code></pre>
+<pre><code class="language-powershell"><span class="hljs-built_in">cd</span> &lt;Khy<span class="hljs-literal">-OS</span> 根目录&gt;
+powershell <span class="hljs-literal">-ExecutionPolicy</span> Bypass <span class="hljs-operator">-File</span> .\scripts\release\<span class="hljs-built_in">build-khy</span><span class="hljs-literal">-wheel-with-ollama-runtime</span>.ps1 `
+  <span class="hljs-literal">-OllamaSource</span> <span class="hljs-string">&quot;C:\path\Ollama.zip&quot;</span> `
+  <span class="hljs-literal">-Arch</span> amd64</code></pre>
 <h3 id="11-4-含依赖包-可选">11.4 含依赖包（可选）<a class="anchor" href="#11-4-含依赖包-可选" aria-label="锚点">#</a></h3>
 <p>若需要同时生成运行时依赖（如 <code>vc_redist</code>）：</p>
-<pre><code class="language-powershell">powershell -ExecutionPolicy Bypass -File .\scripts\release\build-khy-wheel-with-ollama-runtime.ps1 `
-  -OllamaSource &quot;C:\path\ollama-main.zip&quot; `
-  -Arch amd64 `
-  -IncludeDeps</code></pre>
+<pre><code class="language-powershell">powershell <span class="hljs-literal">-ExecutionPolicy</span> Bypass <span class="hljs-operator">-File</span> .\scripts\release\<span class="hljs-built_in">build-khy</span><span class="hljs-literal">-wheel-with-ollama-runtime</span>.ps1 `
+  <span class="hljs-literal">-OllamaSource</span> <span class="hljs-string">&quot;C:\path\ollama-main.zip&quot;</span> `
+  <span class="hljs-literal">-Arch</span> amd64 `
+  <span class="hljs-literal">-IncludeDeps</span></code></pre>
 <h3 id="11-5-自定义-ollama-构建步骤-可选">11.5 自定义 Ollama 构建步骤（可选）<a class="anchor" href="#11-5-自定义-ollama-构建步骤-可选" aria-label="锚点">#</a></h3>
 <p>示例：尝试包含 CUDA 构建步骤（环境不满足会在 Ollama 脚本阶段报错）：</p>
-<pre><code class="language-powershell">powershell -ExecutionPolicy Bypass -File .\scripts\release\build-khy-wheel-with-ollama-runtime.ps1 `
-  -OllamaSource &quot;C:\path\ollama-main.zip&quot; `
-  -Arch amd64 `
-  -OllamaBuildSteps cpu,cuda12,cuda13,ollama</code></pre>
+<pre><code class="language-powershell">powershell <span class="hljs-literal">-ExecutionPolicy</span> Bypass <span class="hljs-operator">-File</span> .\scripts\release\<span class="hljs-built_in">build-khy</span><span class="hljs-literal">-wheel-with-ollama-runtime</span>.ps1 `
+  <span class="hljs-literal">-OllamaSource</span> <span class="hljs-string">&quot;C:\path\ollama-main.zip&quot;</span> `
+  <span class="hljs-literal">-Arch</span> amd64 `
+  <span class="hljs-literal">-OllamaBuildSteps</span> cpu,cuda12,cuda13,ollama</code></pre>
 <h3 id="11-6-输出产物">11.6 输出产物<a class="anchor" href="#11-6-输出产物" aria-label="锚点">#</a></h3>
 <ul><li><code>dist/*.whl</code>（平台 wheel）</li><li><code>dist/*.tar.gz</code>（sdist）</li></ul>
 <p>建议检查 wheel 内是否包含：</p>
@@ -184,18 +184,18 @@ powershell -ExecutionPolicy Bypass -File .\scripts\release\build-khy-wheel-with-
 <p><code>platforms</code> 中某平台为 <code>null</code>，或 <code>sha256</code> 为空，表示该平台<strong>未固定</strong>：运行时会<strong>无声回退到系统已安装的二进制</strong>，绝不报错中断。</p>
 <h3 id="12-2-触发方式">12.2 触发方式<a class="anchor" href="#12-2-触发方式" aria-label="锚点">#</a></h3>
 <ul><li>惰性（自动）：首次启动 ollama-runner（<code>localLLMService.startOllamaRunner</code>）或导入 gguf 模型（<code>modelImportService.importFromPath</code>）前自动调用 <code>runtimeProvisioner.ensureRuntime(name)</code>。</li><li>显式（手动预拉取 / 查看状态）：</li></ul>
-<pre><code class="language-bash">khy runtime status            # 查看 present/missing + 平台来源 + 是否已固定 SHA256
-khy runtime install           # 拉取全部运行时
-khy runtime install llama-cpp # 仅拉取指定运行时</code></pre>
+<pre><code class="language-bash">khy runtime status            <span class="hljs-comment"># 查看 present/missing + 平台来源 + 是否已固定 SHA256</span>
+khy runtime install           <span class="hljs-comment"># 拉取全部运行时</span>
+khy runtime install llama-cpp <span class="hljs-comment"># 仅拉取指定运行时</span></code></pre>
 <p>中文/拼音别名：<code>运行时</code>/<code>yunhangshi</code> → status；<code>安装运行时</code>/<code>runtimeinstall</code> → install。</p>
 <h3 id="12-3-镜像与代理-国内-隔离网络">12.3 镜像与代理（国内 / 隔离网络）<a class="anchor" href="#12-3-镜像与代理-国内-隔离网络" aria-label="锚点">#</a></h3>
 <ul><li><code>KHY_RUNTIME_MIRROR_BASE</code>：设置后，最终下载地址改为 <code>${KHY_RUNTIME_MIRROR_BASE}/${filename}</code>（同名文件走镜像）。</li><li><code>HTTPS_PROXY</code> / <code>HTTP_PROXY</code>：下载器（axios）自动识别，无需额外配置。</li></ul>
 <h3 id="12-4-固定-sha256-维护者-需-github-网络">12.4 固定 SHA256（维护者，需 GitHub 网络）<a class="anchor" href="#12-4-固定-sha256-维护者-需-github-网络" aria-label="锚点">#</a></h3>
 <p>清单出厂时 <code>sha256</code> 留空（安全回退）。维护者在可访问上游的环境执行 pin 脚本，下载各平台归档、计算并写回哈希：</p>
-<pre><code class="language-bash">node scripts/release/pin-runtime-binaries.js                 # 固定全部
-node scripts/release/pin-runtime-binaries.js ollama-runner   # 固定单个
-node scripts/release/pin-runtime-binaries.js --check         # 仅校验现有 pin，不写入（不符 exit 1）
-node scripts/release/pin-runtime-binaries.js --verify-layout # 额外解压并确认 sentinel 子目录</code></pre>
+<pre><code class="language-bash">node scripts/release/pin-runtime-binaries.js                 <span class="hljs-comment"># 固定全部</span>
+node scripts/release/pin-runtime-binaries.js ollama-runner   <span class="hljs-comment"># 固定单个</span>
+node scripts/release/pin-runtime-binaries.js --check         <span class="hljs-comment"># 仅校验现有 pin，不写入（不符 exit 1）</span>
+node scripts/release/pin-runtime-binaries.js --verify-layout <span class="hljs-comment"># 额外解压并确认 sentinel 子目录</span></code></pre>
 <p>该脚本同样识别 <code>KHY_RUNTIME_MIRROR_BASE</code> 与 <code>HTTPS_PROXY</code>。固定后提交清单即生效。</p>
 <h3 id="12-5-与第-11-节-windows-构建的关系">12.5 与第 11 节 Windows 构建的关系<a class="anchor" href="#12-5-与第-11-节-windows-构建的关系" aria-label="锚点">#</a></h3>
 <p>第 11 节的 Windows 一键脚本仍可把编译好的 <code>ollama.exe + lib/ollama</code> 回填到同一 <code>services/backend/bin/ollama-runner/</code> 路径，用于<strong>离线 wheel</strong>场景。两条路径互补：按需拉取面向联网首次使用，Windows 构建面向预置离线包。</p>

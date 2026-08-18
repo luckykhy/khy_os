@@ -12,6 +12,7 @@
 //   - 返回原始 Response,解析/错误展示交给调用方(与既有代码习惯一致,不改语义)。
 //
 // 设计为 fail-soft:token 读取失败不阻断请求;登出跳转包 try/catch。
+import { createAuthHeaders, fetchWithTimeout } from '@khy/ui-shared';
 import { useUserStore } from '@/stores/user';
 
 const DEFAULT_TIMEOUT = Number(import.meta.env.VITE_AI_HTTP_TIMEOUT_MS) || 30000;
@@ -63,55 +64,20 @@ export async function authedFetch(url, options = {}) {
   } = options;
 
   const token = readToken();
-  const mergedHeaders = { ...(headers || {}) };
-  if (token && !mergedHeaders.Authorization && !mergedHeaders.authorization) {
-    mergedHeaders.Authorization = `Bearer ${token}`;
-  }
+  const mergedHeaders = createAuthHeaders(token, headers || {});
 
-  // 组合内部超时与外部 signal:任一触发都中止。流式关闭超时。
-  const controller = new AbortController();
   const effectiveTimeout = stream ? 0 : Number.isFinite(timeout) ? timeout : DEFAULT_TIMEOUT;
-  let timer = null;
-  if (effectiveTimeout > 0) {
-    timer = setTimeout(() => {
-      try {
-        controller.abort(new DOMException('timeout', 'AbortError'));
-      } catch {
-        controller.abort();
-      }
-    }, effectiveTimeout);
-  }
-  if (externalSignal) {
-    if (externalSignal.aborted) {
-      try {
-        controller.abort(externalSignal.reason);
-      } catch {
-        controller.abort();
-      }
-    } else {
-      externalSignal.addEventListener(
-        'abort',
-        () => {
-          try {
-            controller.abort(externalSignal.reason);
-          } catch {
-            controller.abort();
-          }
-        },
-        { once: true }
-      );
-    }
-  }
 
-  try {
-    const res = await fetch(url, { ...rest, headers: mergedHeaders, signal: controller.signal });
-    if (res.status === 401 && !silent) {
-      handleUnauthorized();
-    }
-    return res;
-  } finally {
-    if (timer) clearTimeout(timer);
+  const res = await fetchWithTimeout(fetch, url, {
+    ...rest,
+    headers: mergedHeaders,
+    signal: externalSignal,
+    timeout: effectiveTimeout,
+  });
+  if (res.status === 401 && !silent) {
+    handleUnauthorized();
   }
+  return res;
 }
 
 export default authedFetch;

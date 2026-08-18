@@ -53,155 +53,155 @@
 <h3 id="3-1-ai-代理-api">3.1 AI 代理 API<a class="anchor" href="#3-1-ai-代理-api" aria-label="锚点">#</a></h3>
 <p>KHY OS 运行一个 <strong>OpenAI/Anthropic/Gemini 兼容</strong> 的代理服务器，你的应用用任何 AI SDK 都能直接调用。</p>
 <p><strong>启动代理：</strong></p>
-<pre><code class="language-bash">khy                    # 启动 KHY OS，代理自动运行在 9100 端口</code></pre>
+<pre><code class="language-bash">khy                    <span class="hljs-comment"># 启动 KHY OS，代理自动运行在 9100 端口</span></code></pre>
 <p><strong>Python (OpenAI SDK)：</strong></p>
-<pre><code class="language-python">from openai import OpenAI
+<pre><code class="language-python"><span class="hljs-keyword">from</span> openai <span class="hljs-keyword">import</span> OpenAI
 
 client = OpenAI(
-    base_url=&quot;http://127.0.0.1:9100/v1&quot;,
-    api_key=&quot;khy-your-token&quot;     # 从 ~/.khy/proxy_server_auth.json 读取
+    base_url=<span class="hljs-string">&quot;http://127.0.0.1:9100/v1&quot;</span>,
+    api_key=<span class="hljs-string">&quot;khy-your-token&quot;</span>     <span class="hljs-comment"># 从 ~/.khy/proxy_server_auth.json 读取</span>
 )
 
 resp = client.chat.completions.create(
-    model=&quot;claude/claude-sonnet-4-6&quot;,   # 或 ollama/qwen2.5:7b, trae/deepseek-v3
-    messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;你好&quot;}],
-    stream=True
+    model=<span class="hljs-string">&quot;claude/claude-sonnet-4-6&quot;</span>,   <span class="hljs-comment"># 或 ollama/qwen2.5:7b, trae/deepseek-v3</span>
+    messages=[{<span class="hljs-string">&quot;role&quot;</span>: <span class="hljs-string">&quot;user&quot;</span>, <span class="hljs-string">&quot;content&quot;</span>: <span class="hljs-string">&quot;你好&quot;</span>}],
+    stream=<span class="hljs-literal">True</span>
 )
-for chunk in resp:
-    print(chunk.choices[0].delta.content, end=&quot;&quot;)</code></pre>
+<span class="hljs-keyword">for</span> chunk <span class="hljs-keyword">in</span> resp:
+    <span class="hljs-built_in">print</span>(chunk.choices[<span class="hljs-number">0</span>].delta.content, end=<span class="hljs-string">&quot;&quot;</span>)</code></pre>
 <p><strong>Node.js (Anthropic SDK)：</strong></p>
-<pre><code class="language-javascript">import Anthropic from '@anthropic-ai/sdk';
+<pre><code class="language-javascript"><span class="hljs-keyword">import</span> <span class="hljs-title class_">Anthropic</span> <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;@anthropic-ai/sdk&#x27;</span>;
 
-const client = new Anthropic({
-  baseURL: 'http://127.0.0.1:9100',
-  apiKey: 'khy-your-token'
+<span class="hljs-keyword">const</span> client = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Anthropic</span>({
+  <span class="hljs-attr">baseURL</span>: <span class="hljs-string">&#x27;http://127.0.0.1:9100&#x27;</span>,
+  <span class="hljs-attr">apiKey</span>: <span class="hljs-string">&#x27;khy-your-token&#x27;</span>
 });
 
-const msg = await client.messages.create({
-  model: 'claude-sonnet-4-6',
-  max_tokens: 1024,
-  messages: [{ role: 'user', content: '你好' }]
+<span class="hljs-keyword">const</span> msg = <span class="hljs-keyword">await</span> client.<span class="hljs-property">messages</span>.<span class="hljs-title function_">create</span>({
+  <span class="hljs-attr">model</span>: <span class="hljs-string">&#x27;claude-sonnet-4-6&#x27;</span>,
+  <span class="hljs-attr">max_tokens</span>: <span class="hljs-number">1024</span>,
+  <span class="hljs-attr">messages</span>: [{ <span class="hljs-attr">role</span>: <span class="hljs-string">&#x27;user&#x27;</span>, <span class="hljs-attr">content</span>: <span class="hljs-string">&#x27;你好&#x27;</span> }]
 });</code></pre>
 <p><strong>curl：</strong></p>
 <pre><code class="language-bash">curl http://127.0.0.1:9100/v1/chat/completions \
-  -H &quot;Authorization: Bearer khy-your-token&quot; \
-  -H &quot;Content-Type: application/json&quot; \
-  -d '{&quot;model&quot;:&quot;claude/claude-sonnet-4-6&quot;,&quot;messages&quot;:[{&quot;role&quot;:&quot;user&quot;,&quot;content&quot;:&quot;你好&quot;}]}'</code></pre>
+  -H <span class="hljs-string">&quot;Authorization: Bearer khy-your-token&quot;</span> \
+  -H <span class="hljs-string">&quot;Content-Type: application/json&quot;</span> \
+  -d <span class="hljs-string">&#x27;{&quot;model&quot;:&quot;claude/claude-sonnet-4-6&quot;,&quot;messages&quot;:[{&quot;role&quot;:&quot;user&quot;,&quot;content&quot;:&quot;你好&quot;}]}&#x27;</span></code></pre>
 <h3 id="3-2-获取-auth-token">3.2 获取 Auth Token<a class="anchor" href="#3-2-获取-auth-token" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># 自动生成的 token 在这里
-cat ~/.khy/proxy_server_auth.json
+<pre><code class="language-bash"><span class="hljs-comment"># 自动生成的 token 在这里</span>
+<span class="hljs-built_in">cat</span> ~/.khy/proxy_server_auth.json
 
-# 或通过管理 API 创建专用 token
+<span class="hljs-comment"># 或通过管理 API 创建专用 token</span>
 curl -X POST http://127.0.0.1:9090/api/ai-gateway/customers \
-  -H &quot;Content-Type: application/json&quot; \
-  -d '{&quot;name&quot;:&quot;my-app&quot;,&quot;tier&quot;:&quot;standard&quot;}'</code></pre>
+  -H <span class="hljs-string">&quot;Content-Type: application/json&quot;</span> \
+  -d <span class="hljs-string">&#x27;{&quot;name&quot;:&quot;my-app&quot;,&quot;tier&quot;:&quot;standard&quot;}&#x27;</span></code></pre>
 <h3 id="3-3-模型路由规则">3.3 模型路由规则<a class="anchor" href="#3-3-模型路由规则" aria-label="锚点">#</a></h3>
 <p>在 <code>model</code> 字段中指定适配器前缀即可路由到不同后端：</p>
 <table><thead><tr><th>model 格式</th><th>路由到</th></tr></thead><tbody><tr><td><code>claude/claude-sonnet-4-6</code></td><td>Claude 适配器</td></tr><tr><td><code>ollama/qwen2.5:7b</code></td><td>本地 Ollama</td></tr><tr><td><code>trae/deepseek-v3</code></td><td>Trae IDE 适配器</td></tr><tr><td><code>kiro/claude-sonnet-4-6</code></td><td>Kiro 适配器</td></tr><tr><td><code>relay/gpt-4o</code></td><td>中转站</td></tr><tr><td><code>deepseek-chat</code></td><td>无前缀时走默认适配器</td></tr></tbody></table>
 <h3 id="3-4-管理-api">3.4 管理 API<a class="anchor" href="#3-4-管理-api" aria-label="锚点">#</a></h3>
 <p>端口 9090 提供完整的管理接口：</p>
-<pre><code class="language-bash"># 健康检查
+<pre><code class="language-bash"><span class="hljs-comment"># 健康检查</span>
 curl http://127.0.0.1:9090/api/health
 
-# 列出所有可用模型
+<span class="hljs-comment"># 列出所有可用模型</span>
 curl http://127.0.0.1:9090/api/models
 
-# 查看用量
+<span class="hljs-comment"># 查看用量</span>
 curl http://127.0.0.1:9090/api/usage
 
-# 查看所有工具定义
+<span class="hljs-comment"># 查看所有工具定义</span>
 curl http://127.0.0.1:9090/api/tools
 
-# 执行一个工具
+<span class="hljs-comment"># 执行一个工具</span>
 curl -X POST http://127.0.0.1:9090/api/tools/FileReadTool \
-  -H &quot;Content-Type: application/json&quot; \
-  -d '{&quot;file_path&quot;:&quot;/tmp/test.txt&quot;}'</code></pre>
+  -H <span class="hljs-string">&quot;Content-Type: application/json&quot;</span> \
+  -d <span class="hljs-string">&#x27;{&quot;file_path&quot;:&quot;/tmp/test.txt&quot;}&#x27;</span></code></pre>
 <hr>
 <h2 id="四-level-1-sdk-集成">四、Level 1 — SDK 集成<a class="anchor" href="#四-level-1-sdk-集成" aria-label="锚点">#</a></h2>
 <h3 id="4-1-node-js-sdk-khy-sdk">4.1 Node.js SDK (<code>@khy/sdk</code>)<a class="anchor" href="#4-1-node-js-sdk-khy-sdk" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># 在 KHY OS 仓库的 monorepo 中已可用
-cd packages/sdk</code></pre>
-<pre><code class="language-javascript">const { KhyClient } = require('@khy/sdk');
+<pre><code class="language-bash"><span class="hljs-comment"># 在 KHY OS 仓库的 monorepo 中已可用</span>
+<span class="hljs-built_in">cd</span> packages/sdk</code></pre>
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> { <span class="hljs-title class_">KhyClient</span> } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;@khy/sdk&#x27;</span>);
 
-// 连接到正在运行的 KHY 实例
-const khy = new KhyClient();
-await khy.connect();
+<span class="hljs-comment">// 连接到正在运行的 KHY 实例</span>
+<span class="hljs-keyword">const</span> khy = <span class="hljs-keyword">new</span> <span class="hljs-title class_">KhyClient</span>();
+<span class="hljs-keyword">await</span> khy.<span class="hljs-title function_">connect</span>();
 
-// 发送查询
-const stream = khy.query('帮我分析这段代码的性能问题', {
-  model: 'claude-sonnet-4-6',
-  tools: true             // 允许使用工具
+<span class="hljs-comment">// 发送查询</span>
+<span class="hljs-keyword">const</span> stream = khy.<span class="hljs-title function_">query</span>(<span class="hljs-string">&#x27;帮我分析这段代码的性能问题&#x27;</span>, {
+  <span class="hljs-attr">model</span>: <span class="hljs-string">&#x27;claude-sonnet-4-6&#x27;</span>,
+  <span class="hljs-attr">tools</span>: <span class="hljs-literal">true</span>             <span class="hljs-comment">// 允许使用工具</span>
 });
 
-for await (const event of stream) {
-  if (event.type === 'text') process.stdout.write(event.text);
-  if (event.type === 'tool_call') console.log('调用工具:', event.tool);
+<span class="hljs-keyword">for</span> <span class="hljs-keyword">await</span> (<span class="hljs-keyword">const</span> event <span class="hljs-keyword">of</span> stream) {
+  <span class="hljs-keyword">if</span> (event.<span class="hljs-property">type</span> === <span class="hljs-string">&#x27;text&#x27;</span>) process.<span class="hljs-property">stdout</span>.<span class="hljs-title function_">write</span>(event.<span class="hljs-property">text</span>);
+  <span class="hljs-keyword">if</span> (event.<span class="hljs-property">type</span> === <span class="hljs-string">&#x27;tool_call&#x27;</span>) <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&#x27;调用工具:&#x27;</span>, event.<span class="hljs-property">tool</span>);
 }</code></pre>
 <h3 id="4-2-python-sdk-khy-sdk-python">4.2 Python SDK (<code>@khy/sdk-python</code>)<a class="anchor" href="#4-2-python-sdk-khy-sdk-python" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cd packages/sdk-python
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> packages/sdk-python
 pip install -e .</code></pre>
-<pre><code class="language-python">from khy_sdk import KhyClient
+<pre><code class="language-python"><span class="hljs-keyword">from</span> khy_sdk <span class="hljs-keyword">import</span> KhyClient
 
 client = KhyClient()
-response = client.chat(&quot;分析这个策略的回撤风险&quot;)
-print(response.text)</code></pre>
+response = client.chat(<span class="hljs-string">&quot;分析这个策略的回撤风险&quot;</span>)
+<span class="hljs-built_in">print</span>(response.text)</code></pre>
 <h3 id="4-3-java-sdk-khy-sdk-java">4.3 Java SDK (<code>@khy/sdk-java</code>)<a class="anchor" href="#4-3-java-sdk-khy-sdk-java" aria-label="锚点">#</a></h3>
-<pre><code class="language-xml">&lt;dependency&gt;
-  &lt;groupId&gt;dev.khy&lt;/groupId&gt;
-  &lt;artifactId&gt;khy-sdk&lt;/artifactId&gt;
-&lt;/dependency&gt;</code></pre>
+<pre><code class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">dependency</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">groupId</span>&gt;</span>dev.khy<span class="hljs-tag">&lt;/<span class="hljs-name">groupId</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">artifactId</span>&gt;</span>khy-sdk<span class="hljs-tag">&lt;/<span class="hljs-name">artifactId</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">dependency</span>&gt;</span></code></pre>
 <h3 id="4-4-mcp-客户端">4.4 MCP 客户端<a class="anchor" href="#4-4-mcp-客户端" aria-label="锚点">#</a></h3>
 <p>你的应用可以通过 KHY OS 的 MCP 客户端连接任何 MCP 服务器：</p>
-<pre><code class="language-javascript">const { MCPClient } = require('@khy/sdk/mcp');
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> { <span class="hljs-title class_">MCPClient</span> } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;@khy/sdk/mcp&#x27;</span>);
 
-// 使用 KHY OS 已配置的 MCP 服务器
-const tools = await khy.mcp.listTools();
-const result = await khy.mcp.callTool('mcp__filesystem__read_file', {
-  path: '/tmp/data.csv'
+<span class="hljs-comment">// 使用 KHY OS 已配置的 MCP 服务器</span>
+<span class="hljs-keyword">const</span> tools = <span class="hljs-keyword">await</span> khy.<span class="hljs-property">mcp</span>.<span class="hljs-title function_">listTools</span>();
+<span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> khy.<span class="hljs-property">mcp</span>.<span class="hljs-title function_">callTool</span>(<span class="hljs-string">&#x27;mcp__filesystem__read_file&#x27;</span>, {
+  <span class="hljs-attr">path</span>: <span class="hljs-string">&#x27;/tmp/data.csv&#x27;</span>
 });</code></pre>
 <hr>
 <h2 id="五-level-2-技能贡献">五、Level 2 — 技能贡献<a class="anchor" href="#五-level-2-技能贡献" aria-label="锚点">#</a></h2>
 <p>技能是 KHY OS 中最轻量的复用单元 — 一个 prompt 模板 + 元数据。</p>
 <h3 id="5-1-创建技能">5.1 创建技能<a class="anchor" href="#5-1-创建技能" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">mkdir -p ~/.khy/skills/my-data-analyzer</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">mkdir</span> -p ~/.khy/skills/my-data-analyzer</code></pre>
 <p><strong><code>~/.khy/skills/my-data-analyzer/manifest.json</code>：</strong></p>
-<pre><code class="language-json">{
-  &quot;name&quot;: &quot;data-analyzer&quot;,
-  &quot;description&quot;: &quot;分析 CSV/JSON 数据文件，输出统计摘要和可视化建议&quot;,
-  &quot;trigger&quot;: &quot;analyze-data&quot;,
-  &quot;user_invocable&quot;: true,
-  &quot;tags&quot;: [&quot;data&quot;, &quot;analysis&quot;, &quot;visualization&quot;],
-  &quot;aliases&quot;: [&quot;分析数据&quot;, &quot;数据分析&quot;]
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;data-analyzer&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;description&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;分析 CSV/JSON 数据文件，输出统计摘要和可视化建议&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;trigger&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;analyze-data&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;user_invocable&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;tags&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;data&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;analysis&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;visualization&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;aliases&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;分析数据&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;数据分析&quot;</span><span class="hljs-punctuation">]</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <p><strong><code>~/.khy/skills/my-data-analyzer/prompt.md</code>：</strong></p>
 <pre><code class="language-markdown">You are a data analysis assistant. When the user provides a data file:
 
-1. Read the file using the FileReadTool
-2. Identify column types (numeric, categorical, datetime)
-3. Calculate summary statistics (mean, median, std, missing %)
-4. Suggest 3 visualizations with chart type rationale
-5. Output a structured report in markdown
+<span class="hljs-bullet">1.</span> Read the file using the FileReadTool
+<span class="hljs-bullet">2.</span> Identify column types (numeric, categorical, datetime)
+<span class="hljs-bullet">3.</span> Calculate summary statistics (mean, median, std, missing %)
+<span class="hljs-bullet">4.</span> Suggest 3 visualizations with chart type rationale
+<span class="hljs-bullet">5.</span> Output a structured report in markdown
 
 Focus on actionable insights, not just numbers.</code></pre>
 <p><strong>使用：</strong></p>
 <pre><code class="language-bash">khy
 &gt; /data-analyzer sales_2026.csv
-# 或
+<span class="hljs-comment"># 或</span>
 &gt; 分析数据 sales_2026.csv</code></pre>
 <h3 id="5-2-项目级技能">5.2 项目级技能<a class="anchor" href="#5-2-项目级技能" aria-label="锚点">#</a></h3>
 <p>放在项目目录下，仅对该项目生效：</p>
-<pre><code class="language-bash">mkdir -p .khy/skills/deploy-check
-# manifest.json + prompt.md 同上</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">mkdir</span> -p .khy/skills/deploy-check
+<span class="hljs-comment"># manifest.json + prompt.md 同上</span></code></pre>
 <h3 id="5-3-带-handler-的技能">5.3 带 Handler 的技能<a class="anchor" href="#5-3-带-handler-的技能" aria-label="锚点">#</a></h3>
 <p>需要自定义逻辑时，添加 <code>handler.js</code>：</p>
-<pre><code class="language-javascript">// .khy/skills/my-skill/handler.js
-module.exports = {
-  async execute(args, context) {
-    // context.tools — 可用工具
-    // context.ai    — AI 调用接口
-    // context.cwd   — 工作目录
-    const data = await context.tools.execute('FileReadTool', { file_path: args });
-    return { prompt: `分析以下数据:\n${data}` };
+<pre><code class="language-javascript"><span class="hljs-comment">// .khy/skills/my-skill/handler.js</span>
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = {
+  <span class="hljs-keyword">async</span> <span class="hljs-title function_">execute</span>(<span class="hljs-params">args, context</span>) {
+    <span class="hljs-comment">// context.tools — 可用工具</span>
+    <span class="hljs-comment">// context.ai    — AI 调用接口</span>
+    <span class="hljs-comment">// context.cwd   — 工作目录</span>
+    <span class="hljs-keyword">const</span> data = <span class="hljs-keyword">await</span> context.<span class="hljs-property">tools</span>.<span class="hljs-title function_">execute</span>(<span class="hljs-string">&#x27;FileReadTool&#x27;</span>, { <span class="hljs-attr">file_path</span>: args });
+    <span class="hljs-keyword">return</span> { <span class="hljs-attr">prompt</span>: <span class="hljs-string">`分析以下数据:\n<span class="hljs-subst">${data}</span>`</span> };
   }
 };</code></pre>
 <hr>
@@ -223,88 +223,88 @@ module.exports = {
     └── server.js             # MCP 服务器</code></pre>
 <h3 id="6-2-扩展清单">6.2 扩展清单<a class="anchor" href="#6-2-扩展清单" aria-label="锚点">#</a></h3>
 <p><strong><code>openclaw.plugin.json</code>：</strong></p>
-<pre><code class="language-json">{
-  &quot;name&quot;: &quot;my-khy-extension&quot;,
-  &quot;version&quot;: &quot;1.0.0&quot;,
-  &quot;description&quot;: &quot;为 KHY OS 添加数据分析能力&quot;,
-  &quot;author&quot;: &quot;your-name&quot;,
-  &quot;capabilities&quot;: [&quot;skill&quot;, &quot;gateway-plugin&quot;, &quot;mcp-server&quot;, &quot;cli-command&quot;],
-  &quot;entry&quot;: &quot;./src/index.js&quot;,
-  &quot;skills&quot;: [&quot;./skills/my-skill&quot;],
-  &quot;mcp&quot;: {
-    &quot;command&quot;: &quot;node&quot;,
-    &quot;args&quot;: [&quot;./mcp/server.js&quot;]
-  }
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;my-khy-extension&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;version&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1.0.0&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;description&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;为 KHY OS 添加数据分析能力&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;author&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;your-name&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;capabilities&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;skill&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;gateway-plugin&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;mcp-server&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;cli-command&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;entry&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;./src/index.js&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;skills&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;./skills/my-skill&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;mcp&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;command&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;node&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;args&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;./mcp/server.js&quot;</span><span class="hljs-punctuation">]</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <h3 id="6-3-注册-cli-命令">6.3 注册 CLI 命令<a class="anchor" href="#6-3-注册-cli-命令" aria-label="锚点">#</a></h3>
-<pre><code class="language-javascript">// src/index.js
-module.exports = function activate(ctx) {
-  ctx.commands.register({
-    name: 'analyze',
-    description: '数据分析命令',
-    handler: async (subCommand, args) =&gt; {
-      // 你的逻辑
-      return true;
+<pre><code class="language-javascript"><span class="hljs-comment">// src/index.js</span>
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = <span class="hljs-keyword">function</span> <span class="hljs-title function_">activate</span>(<span class="hljs-params">ctx</span>) {
+  ctx.<span class="hljs-property">commands</span>.<span class="hljs-title function_">register</span>({
+    <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;analyze&#x27;</span>,
+    <span class="hljs-attr">description</span>: <span class="hljs-string">&#x27;数据分析命令&#x27;</span>,
+    <span class="hljs-attr">handler</span>: <span class="hljs-title function_">async</span> (subCommand, args) =&gt; {
+      <span class="hljs-comment">// 你的逻辑</span>
+      <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
     }
   });
 };</code></pre>
 <h3 id="6-4-网关插件">6.4 网关插件<a class="anchor" href="#6-4-网关插件" aria-label="锚点">#</a></h3>
-<pre><code class="language-javascript">// plugins/my-gateway-plugin.js
-module.exports = {
-  name: 'my-analytics',
-  priority: 100,
-  enabled: true,
-  hooks: {
-    async onBeforeRequest(ctx, next) {
-      // 在所有 AI 请求前注入上下文
-      if (ctx.messages) {
-        ctx.messages.unshift({
-          role: 'system',
-          content: '当前用户的数据分析偏好: ...'
+<pre><code class="language-javascript"><span class="hljs-comment">// plugins/my-gateway-plugin.js</span>
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = {
+  <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;my-analytics&#x27;</span>,
+  <span class="hljs-attr">priority</span>: <span class="hljs-number">100</span>,
+  <span class="hljs-attr">enabled</span>: <span class="hljs-literal">true</span>,
+  <span class="hljs-attr">hooks</span>: {
+    <span class="hljs-keyword">async</span> <span class="hljs-title function_">onBeforeRequest</span>(<span class="hljs-params">ctx, next</span>) {
+      <span class="hljs-comment">// 在所有 AI 请求前注入上下文</span>
+      <span class="hljs-keyword">if</span> (ctx.<span class="hljs-property">messages</span>) {
+        ctx.<span class="hljs-property">messages</span>.<span class="hljs-title function_">unshift</span>({
+          <span class="hljs-attr">role</span>: <span class="hljs-string">&#x27;system&#x27;</span>,
+          <span class="hljs-attr">content</span>: <span class="hljs-string">&#x27;当前用户的数据分析偏好: ...&#x27;</span>
         });
       }
-      return next(ctx);
+      <span class="hljs-keyword">return</span> <span class="hljs-title function_">next</span>(ctx);
     },
-    async onAfterResponse(ctx, next) {
-      // 记录所有 AI 响应的 token 用量
-      console.log(`[analytics] ${ctx.model}: ${ctx.usage?.totalTokens} tokens`);
-      return next(ctx);
+    <span class="hljs-keyword">async</span> <span class="hljs-title function_">onAfterResponse</span>(<span class="hljs-params">ctx, next</span>) {
+      <span class="hljs-comment">// 记录所有 AI 响应的 token 用量</span>
+      <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">`[analytics] <span class="hljs-subst">${ctx.model}</span>: <span class="hljs-subst">${ctx.usage?.totalTokens}</span> tokens`</span>);
+      <span class="hljs-keyword">return</span> <span class="hljs-title function_">next</span>(ctx);
     }
   }
 };</code></pre>
 <h3 id="6-5-安装与发布">6.5 安装与发布<a class="anchor" href="#6-5-安装与发布" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># 本地开发模式（符号链接，实时生效）
-khy extension link /path/to/my-khy-extension
+<pre><code class="language-bash"><span class="hljs-comment"># 本地开发模式（符号链接，实时生效）</span>
+khy extension <span class="hljs-built_in">link</span> /path/to/my-khy-extension
 
-# 从 Git 仓库安装
+<span class="hljs-comment"># 从 Git 仓库安装</span>
 khy extension install https://github.com/user/my-khy-extension
 
-# 从扩展市场安装
+<span class="hljs-comment"># 从扩展市场安装</span>
 khy extension install my-khy-extension
 
-# 发布到扩展市场
+<span class="hljs-comment"># 发布到扩展市场</span>
 khy extension publish</code></pre>
 <hr>
 <h2 id="七-注册自定义工具">七、注册自定义工具<a class="anchor" href="#七-注册自定义工具" aria-label="锚点">#</a></h2>
 <h3 id="7-1-函数式定义">7.1 函数式定义<a class="anchor" href="#7-1-函数式定义" aria-label="锚点">#</a></h3>
-<pre><code class="language-javascript">const { defineTool } = require('@khy/plugin-sdk');
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> { defineTool } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;@khy/plugin-sdk&#x27;</span>);
 
-const myTool = defineTool({
-  name: 'DataFetchTool',
-  description: '从指定 API 拉取数据',
-  category: 'data',
-  risk: 'low',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      url: { type: 'string', description: 'API 地址' },
-      format: { type: 'string', enum: ['json', 'csv'], default: 'json' }
+<span class="hljs-keyword">const</span> myTool = <span class="hljs-title function_">defineTool</span>({
+  <span class="hljs-attr">name</span>: <span class="hljs-string">&#x27;DataFetchTool&#x27;</span>,
+  <span class="hljs-attr">description</span>: <span class="hljs-string">&#x27;从指定 API 拉取数据&#x27;</span>,
+  <span class="hljs-attr">category</span>: <span class="hljs-string">&#x27;data&#x27;</span>,
+  <span class="hljs-attr">risk</span>: <span class="hljs-string">&#x27;low&#x27;</span>,
+  <span class="hljs-attr">inputSchema</span>: {
+    <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;object&#x27;</span>,
+    <span class="hljs-attr">properties</span>: {
+      <span class="hljs-attr">url</span>: { <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;string&#x27;</span>, <span class="hljs-attr">description</span>: <span class="hljs-string">&#x27;API 地址&#x27;</span> },
+      <span class="hljs-attr">format</span>: { <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;string&#x27;</span>, <span class="hljs-attr">enum</span>: [<span class="hljs-string">&#x27;json&#x27;</span>, <span class="hljs-string">&#x27;csv&#x27;</span>], <span class="hljs-attr">default</span>: <span class="hljs-string">&#x27;json&#x27;</span> }
     },
-    required: ['url']
+    <span class="hljs-attr">required</span>: [<span class="hljs-string">&#x27;url&#x27;</span>]
   },
-  async execute({ url, format }) {
-    const resp = await fetch(url);
-    return format === 'csv' ? await resp.text() : await resp.json();
+  <span class="hljs-keyword">async</span> <span class="hljs-title function_">execute</span>(<span class="hljs-params">{ url, format }</span>) {
+    <span class="hljs-keyword">const</span> resp = <span class="hljs-keyword">await</span> <span class="hljs-title function_">fetch</span>(url);
+    <span class="hljs-keyword">return</span> format === <span class="hljs-string">&#x27;csv&#x27;</span> ? <span class="hljs-keyword">await</span> resp.<span class="hljs-title function_">text</span>() : <span class="hljs-keyword">await</span> resp.<span class="hljs-title function_">json</span>();
   }
 });</code></pre>
 <h3 id="7-2-工具在扩展中自动注册">7.2 工具在扩展中自动注册<a class="anchor" href="#7-2-工具在扩展中自动注册" aria-label="锚点">#</a></h3>
@@ -314,19 +314,19 @@ const myTool = defineTool({
 <p>KHY OS 完整支持 MCP 协议 (2024-11-05)，你可以让你的应用作为 MCP 服务器暴露数据。</p>
 <h3 id="8-1-配置已有-mcp-服务器">8.1 配置已有 MCP 服务器<a class="anchor" href="#8-1-配置已有-mcp-服务器" aria-label="锚点">#</a></h3>
 <p><strong><code>~/.khy/mcp.json</code>：</strong></p>
-<pre><code class="language-json">{
-  &quot;mcpServers&quot;: {
-    &quot;my-database&quot;: {
-      &quot;command&quot;: &quot;node&quot;,
-      &quot;args&quot;: [&quot;./my-mcp-server.js&quot;],
-      &quot;env&quot;: { &quot;DB_URL&quot;: &quot;postgres://localhost/mydb&quot; }
-    },
-    &quot;filesystem&quot;: {
-      &quot;command&quot;: &quot;npx&quot;,
-      &quot;args&quot;: [&quot;-y&quot;, &quot;@anthropic/mcp-server-filesystem&quot;, &quot;/data&quot;]
-    }
-  }
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;mcpServers&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;my-database&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;command&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;node&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;args&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;./my-mcp-server.js&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;env&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;DB_URL&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;postgres://localhost/mydb&quot;</span> <span class="hljs-punctuation">}</span>
+    <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;filesystem&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;command&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;npx&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;args&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;-y&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;@anthropic/mcp-server-filesystem&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;/data&quot;</span><span class="hljs-punctuation">]</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <h3 id="8-2-项目级配置">8.2 项目级配置<a class="anchor" href="#8-2-项目级配置" aria-label="锚点">#</a></h3>
 <p><strong><code>.khy/mcp.json</code></strong> (项目目录下)：仅在该项目中加载。</p>
 <h3 id="8-3-内建-mcp-工具">8.3 内建 MCP 工具<a class="anchor" href="#8-3-内建-mcp-工具" aria-label="锚点">#</a></h3>
@@ -334,28 +334,28 @@ const myTool = defineTool({
 <hr>
 <h2 id="九-实时监控接入">九、实时监控接入<a class="anchor" href="#九-实时监控接入" aria-label="锚点">#</a></h2>
 <h3 id="9-1-sse-订阅">9.1 SSE 订阅<a class="anchor" href="#9-1-sse-订阅" aria-label="锚点">#</a></h3>
-<pre><code class="language-javascript">const es = new EventSource('http://127.0.0.1:9090/api/ai-gateway/monitor/stream');
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> es = <span class="hljs-keyword">new</span> <span class="hljs-title class_">EventSource</span>(<span class="hljs-string">&#x27;http://127.0.0.1:9090/api/ai-gateway/monitor/stream&#x27;</span>);
 
-es.addEventListener('trace:start', (e) =&gt; {
-  const trace = JSON.parse(e.data);
-  console.log(`[请求开始] ${trace.adapter} / ${trace.model}`);
+es.<span class="hljs-title function_">addEventListener</span>(<span class="hljs-string">&#x27;trace:start&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">e</span>) =&gt;</span> {
+  <span class="hljs-keyword">const</span> trace = <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">parse</span>(e.<span class="hljs-property">data</span>);
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">`[请求开始] <span class="hljs-subst">${trace.adapter}</span> / <span class="hljs-subst">${trace.model}</span>`</span>);
 });
 
-es.addEventListener('trace:end', (e) =&gt; {
-  const trace = JSON.parse(e.data);
-  console.log(`[请求完成] ${trace.tokens} tokens, ${trace.latencyMs}ms`);
+es.<span class="hljs-title function_">addEventListener</span>(<span class="hljs-string">&#x27;trace:end&#x27;</span>, <span class="hljs-function">(<span class="hljs-params">e</span>) =&gt;</span> {
+  <span class="hljs-keyword">const</span> trace = <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">parse</span>(e.<span class="hljs-property">data</span>);
+  <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">`[请求完成] <span class="hljs-subst">${trace.tokens}</span> tokens, <span class="hljs-subst">${trace.latencyMs}</span>ms`</span>);
 });</code></pre>
 <h3 id="9-2-websocket-实时聊天">9.2 WebSocket 实时聊天<a class="anchor" href="#9-2-websocket-实时聊天" aria-label="锚点">#</a></h3>
-<pre><code class="language-javascript">const ws = new WebSocket('ws://127.0.0.1:9090/ws');
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> ws = <span class="hljs-keyword">new</span> <span class="hljs-title class_">WebSocket</span>(<span class="hljs-string">&#x27;ws://127.0.0.1:9090/ws&#x27;</span>);
 
-ws.onopen = () =&gt; {
-  ws.send(JSON.stringify({ type: 'auth', token: 'your-token' }));
-  ws.send(JSON.stringify({ type: 'chat', message: '你好' }));
+ws.<span class="hljs-property">onopen</span> = <span class="hljs-function">() =&gt;</span> {
+  ws.<span class="hljs-title function_">send</span>(<span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">stringify</span>({ <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;auth&#x27;</span>, <span class="hljs-attr">token</span>: <span class="hljs-string">&#x27;your-token&#x27;</span> }));
+  ws.<span class="hljs-title function_">send</span>(<span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">stringify</span>({ <span class="hljs-attr">type</span>: <span class="hljs-string">&#x27;chat&#x27;</span>, <span class="hljs-attr">message</span>: <span class="hljs-string">&#x27;你好&#x27;</span> }));
 };
 
-ws.onmessage = (e) =&gt; {
-  const msg = JSON.parse(e.data);
-  if (msg.type === 'text') process.stdout.write(msg.content);
+ws.<span class="hljs-property">onmessage</span> = <span class="hljs-function">(<span class="hljs-params">e</span>) =&gt;</span> {
+  <span class="hljs-keyword">const</span> msg = <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">parse</span>(e.<span class="hljs-property">data</span>);
+  <span class="hljs-keyword">if</span> (msg.<span class="hljs-property">type</span> === <span class="hljs-string">&#x27;text&#x27;</span>) process.<span class="hljs-property">stdout</span>.<span class="hljs-title function_">write</span>(msg.<span class="hljs-property">content</span>);
 };</code></pre>
 <hr>
 <h2 id="十-开发规范">十、开发规范<a class="anchor" href="#十-开发规范" aria-label="锚点">#</a></h2>
@@ -367,16 +367,16 @@ ws.onmessage = (e) =&gt; {
 <h3 id="10-3-配置位置">10.3 配置位置<a class="anchor" href="#10-3-配置位置" aria-label="锚点">#</a></h3>
 <table><thead><tr><th>范围</th><th>路径</th><th>说明</th></tr></thead><tbody><tr><td>全局</td><td><code>~/.khy/</code></td><td>用户级配置、SDK、MCP、扩展</td></tr><tr><td>项目</td><td><code>.khy/</code></td><td>项目级技能、MCP、配置覆盖</td></tr><tr><td>运行时</td><td><code>~/.khyquant/</code></td><td>Growth 数据、网关插件、运行状态</td></tr></tbody></table>
 <h3 id="10-4-测试你的接入">10.4 测试你的接入<a class="anchor" href="#10-4-测试你的接入" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># 检查 KHY OS 是否运行
+<pre><code class="language-bash"><span class="hljs-comment"># 检查 KHY OS 是否运行</span>
 curl http://127.0.0.1:9100/health
 
-# 检查你的扩展是否加载
+<span class="hljs-comment"># 检查你的扩展是否加载</span>
 khy extension list
 
-# 检查你的技能是否注册
+<span class="hljs-comment"># 检查你的技能是否注册</span>
 khy skill list
 
-# 检查你的 MCP 服务器是否连接
+<span class="hljs-comment"># 检查你的 MCP 服务器是否连接</span>
 khy mcp status</code></pre>
 <hr>
 <h2 id="十一-接入检查清单">十一、接入检查清单<a class="anchor" href="#十一-接入检查清单" aria-label="锚点">#</a></h2>

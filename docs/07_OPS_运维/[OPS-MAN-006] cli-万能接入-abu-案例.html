@@ -64,10 +64,10 @@
 └── builtin-agents/          # 预置 Agent</code></pre>
 <hr>
 <h2 id="2-接入命令">2. 接入命令<a class="anchor" href="#2-接入命令" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># 标准命令
+<pre><code class="language-bash"><span class="hljs-comment"># 标准命令</span>
 khy app cli-gen /home/kodehu03/Downloads/Abu-Cowork-main.zip --runtime node
 
-# 中文别名
+<span class="hljs-comment"># 中文别名</span>
 软件接入 /home/kodehu03/Downloads/Abu-Cowork-main.zip --runtime node
 工具生成 /home/kodehu03/Downloads/Abu-Cowork-main.zip --runtime node
 cli生成 /home/kodehu03/Downloads/Abu-Cowork-main.zip --runtime node</code></pre>
@@ -75,15 +75,15 @@ cli生成 /home/kodehu03/Downloads/Abu-Cowork-main.zip --runtime node</code></pr
 <hr>
 <h2 id="3-七阶段生成流水线">3. 七阶段生成流水线<a class="anchor" href="#3-七阶段生成流水线" aria-label="锚点">#</a></h2>
 <h3 id="stage-0-源码获取">Stage 0 — 源码获取<a class="anchor" href="#stage-0-源码获取" aria-label="锚点">#</a></h3>
-<pre><code class="language-json">{
-  &quot;software&quot;: &quot;abu-cowork&quot;,
-  &quot;sourcePath&quot;: &quot;~/.khy/cli-anything/generated/abu-cowork/source/&quot;,
-  &quot;language&quot;: &quot;javascript&quot;,
-  &quot;buildSystem&quot;: &quot;npm&quot;,
-  &quot;entryPoints&quot;: [&quot;src/main.tsx&quot;, &quot;src-tauri/src/main.rs&quot;],
-  &quot;hasTests&quot;: true,
-  &quot;hasDocs&quot;: true
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;software&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;abu-cowork&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;sourcePath&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;~/.khy/cli-anything/generated/abu-cowork/source/&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;language&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;javascript&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;buildSystem&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;npm&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;entryPoints&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;src/main.tsx&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;src-tauri/src/main.rs&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;hasTests&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;hasDocs&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span>
+<span class="hljs-punctuation">}</span></code></pre>
 <h3 id="stage-1-代码分析">Stage 1 — 代码分析<a class="anchor" href="#stage-1-代码分析" aria-label="锚点">#</a></h3>
 <p>AI 分析 Abu 源码后生成 SOP 文档，识别出以下可控能力域：</p>
 <table><thead><tr><th>能力域</th><th>来源模块</th><th>可 CLI 化操作</th></tr></thead><tbody><tr><td>Agent 任务</td><td><code>src/core/agent/</code></td><td>创建/运行/停止/列出 Agent 任务</td></tr><tr><td>技能管理</td><td><code>src/core/skill/</code> + <code>builtin-skills/</code></td><td>列出/搜索/运行/自进化技能</td></tr><tr><td>定时任务</td><td><code>src/core/scheduler/</code></td><td>创建/删除/启停 Cron 任务</td></tr><tr><td>会话管理</td><td><code>src/core/session/</code></td><td>列出/恢复/导出会话</td></tr><tr><td>IM 频道</td><td><code>src/core/im/</code></td><td>发送/接收/配置 IM 消息</td></tr><tr><td>工具调用</td><td><code>src/core/tools/</code></td><td>列出/搜索/调用注册工具</td></tr><tr><td>MCP 连接</td><td><code>src/core/mcp/</code></td><td>连接/断开 MCP 服务器</td></tr><tr><td>记忆系统</td><td><code>src/core/memdir/</code></td><td>读取/写入/搜索记忆</td></tr><tr><td>安全扫描</td><td><code>src/core/safety/</code></td><td>触发内容安全扫描</td></tr><tr><td>诊断</td><td><code>src/core/diagnostic/</code></td><td>系统自检、健康报告</td></tr></tbody></table>
@@ -123,13 +123,13 @@ name: cli-anything-abu
 description: AI desktop office assistant — manage agents, skills, schedules, IM channels, and sessions
 version: 1.0.0
 tags: [abu, desktop-assistant, agent, skill, scheduler, im, cli-anything]
-entry_point: cli-anything-abu
+<span class="hljs-section">entry<span class="hljs-emphasis">_point: cli-anything-abu
 ---
 You have access to cli-anything-abu, a command-line tool for controlling Abu (阿布) AI desktop assistant.
-...</code></pre>
+...</span></span></code></pre>
 <h3 id="stage-7-打包注册">Stage 7 — 打包注册<a class="anchor" href="#stage-7-打包注册" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">npm link                       # 全局注册 cli-anything-abu 命令
-khy app cli-sync               # 自动发现 + 注册到 KHY</code></pre>
+<pre><code class="language-bash">npm <span class="hljs-built_in">link</span>                       <span class="hljs-comment"># 全局注册 cli-anything-abu 命令</span>
+khy app cli-sync               <span class="hljs-comment"># 自动发现 + 注册到 KHY</span></code></pre>
 <p>注册结果：</p>
 <ul><li><strong>KHY App</strong>: <code>cli-anything-abu</code> (runtime: external)</li><li><strong>KHY Tool</strong>: <code>cli_anything__abu</code> (AI 对话可调用)</li><li><strong>KHY Skill</strong>: <code>~/.khy/skills/cli-anything-abu/manifest.json</code></li></ul>
 <hr>
@@ -137,31 +137,31 @@ khy app cli-sync               # 自动发现 + 注册到 KHY</code></pre>
 <p>Abu 是 Tauri 桌面应用，不是传统 CLI 工具。CLI-Anything 的 <code>backend.js</code> 按优先级使用三种通信方式：</p>
 <h3 id="4-1-http-api-首选">4.1 HTTP API（首选）<a class="anchor" href="#4-1-http-api-首选" aria-label="锚点">#</a></h3>
 <p>Abu 内置 <code>trigger_server.rs</code>，在本地端口暴露 HTTP 接口。</p>
-<pre><code class="language-javascript">// backend.js
-const BASE_URL = 'http://127.0.0.1:21222'; // Abu trigger server
+<pre><code class="language-javascript"><span class="hljs-comment">// backend.js</span>
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">BASE_URL</span> = <span class="hljs-string">&#x27;http://127.0.0.1:21222&#x27;</span>; <span class="hljs-comment">// Abu trigger server</span>
 
-async function callAbu(endpoint, payload) {
-  const resp = await fetch(`${BASE_URL}${endpoint}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+<span class="hljs-keyword">async</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">callAbu</span>(<span class="hljs-params">endpoint, payload</span>) {
+  <span class="hljs-keyword">const</span> resp = <span class="hljs-keyword">await</span> <span class="hljs-title function_">fetch</span>(<span class="hljs-string">`<span class="hljs-subst">${BASE_URL}</span><span class="hljs-subst">${endpoint}</span>`</span>, {
+    <span class="hljs-attr">method</span>: <span class="hljs-string">&#x27;POST&#x27;</span>,
+    <span class="hljs-attr">headers</span>: { <span class="hljs-string">&#x27;Content-Type&#x27;</span>: <span class="hljs-string">&#x27;application/json&#x27;</span> },
+    <span class="hljs-attr">body</span>: <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">stringify</span>(payload),
   });
-  return resp.json();
+  <span class="hljs-keyword">return</span> resp.<span class="hljs-title function_">json</span>();
 }</code></pre>
 <p>适用场景：Abu 正在运行时，所有实时操作（Agent 任务、IM 发送、工具调用）。</p>
 <h3 id="4-2-文件协议-离线操作">4.2 文件协议（离线操作）<a class="anchor" href="#4-2-文件协议-离线操作" aria-label="锚点">#</a></h3>
 <p>直接读写 Abu 的本地数据目录。</p>
-<pre><code class="language-javascript">// 路径约定
-const ABU_DATA = path.join(os.homedir(), 'Library', 'Application Support', 'com.abu.app');
-const MEMDIR   = path.join(ABU_DATA, 'memdir');
-const SKILLS   = path.join(ABU_DATA, 'skills');
-const SCHEDULE = path.join(ABU_DATA, 'schedules.json');</code></pre>
+<pre><code class="language-javascript"><span class="hljs-comment">// 路径约定</span>
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">ABU_DATA</span> = path.<span class="hljs-title function_">join</span>(os.<span class="hljs-title function_">homedir</span>(), <span class="hljs-string">&#x27;Library&#x27;</span>, <span class="hljs-string">&#x27;Application Support&#x27;</span>, <span class="hljs-string">&#x27;com.abu.app&#x27;</span>);
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">MEMDIR</span>   = path.<span class="hljs-title function_">join</span>(<span class="hljs-variable constant_">ABU_DATA</span>, <span class="hljs-string">&#x27;memdir&#x27;</span>);
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">SKILLS</span>   = path.<span class="hljs-title function_">join</span>(<span class="hljs-variable constant_">ABU_DATA</span>, <span class="hljs-string">&#x27;skills&#x27;</span>);
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">SCHEDULE</span> = path.<span class="hljs-title function_">join</span>(<span class="hljs-variable constant_">ABU_DATA</span>, <span class="hljs-string">&#x27;schedules.json&#x27;</span>);</code></pre>
 <p>适用场景：Abu 未运行时，读取/修改配置、记忆、技能定义。</p>
 <h3 id="4-3-tauri-cli-备选">4.3 Tauri CLI（备选）<a class="anchor" href="#4-3-tauri-cli-备选" aria-label="锚点">#</a></h3>
 <p>如果 Abu 暴露了 Tauri CLI 命令入口：</p>
-<pre><code class="language-javascript">const { execFileSync } = require('child_process');
-const result = execFileSync('abu', ['agent', 'run', '--task', task, '--json'], {
-  encoding: 'utf-8', timeout: 60000,
+<pre><code class="language-javascript"><span class="hljs-keyword">const</span> { execFileSync } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;child_process&#x27;</span>);
+<span class="hljs-keyword">const</span> result = <span class="hljs-title function_">execFileSync</span>(<span class="hljs-string">&#x27;abu&#x27;</span>, [<span class="hljs-string">&#x27;agent&#x27;</span>, <span class="hljs-string">&#x27;run&#x27;</span>, <span class="hljs-string">&#x27;--task&#x27;</span>, task, <span class="hljs-string">&#x27;--json&#x27;</span>], {
+  <span class="hljs-attr">encoding</span>: <span class="hljs-string">&#x27;utf-8&#x27;</span>, <span class="hljs-attr">timeout</span>: <span class="hljs-number">60000</span>,
 });</code></pre>
 <h3 id="协议选择逻辑">协议选择逻辑<a class="anchor" href="#协议选择逻辑" aria-label="锚点">#</a></h3>
 <pre><code>                      ┌──────────────┐
@@ -175,33 +175,33 @@ const result = execFileSync('abu', ['agent', 'run', '--task', task, '--json'], {
 <hr>
 <h2 id="5-使用示例">5. 使用示例<a class="anchor" href="#5-使用示例" aria-label="锚点">#</a></h2>
 <h3 id="5-1-cli-直接调用">5.1 CLI 直接调用<a class="anchor" href="#5-1-cli-直接调用" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Agent
-khy app cli-invoke abu agent run --task &quot;整理本周工作报告&quot; --json
+<pre><code class="language-bash"><span class="hljs-comment"># Agent</span>
+khy app cli-invoke abu agent run --task <span class="hljs-string">&quot;整理本周工作报告&quot;</span> --json
 khy app cli-invoke abu agent list --json
-khy app cli-invoke abu agent stop --id agent_0xa3f --json
+khy app cli-invoke abu agent stop --<span class="hljs-built_in">id</span> agent_0xa3f --json
 
-# Skill
+<span class="hljs-comment"># Skill</span>
 khy app cli-invoke abu skill list --json
 khy app cli-invoke abu skill run --name pdf --input report.pdf --json
-khy app cli-invoke abu skill search --query &quot;文档处理&quot; --json
+khy app cli-invoke abu skill search --query <span class="hljs-string">&quot;文档处理&quot;</span> --json
 
-# Schedule
-khy app cli-invoke abu schedule create --cron &quot;0 9 * * 1-5&quot; --task &quot;晨报汇总&quot; --json
+<span class="hljs-comment"># Schedule</span>
+khy app cli-invoke abu schedule create --cron <span class="hljs-string">&quot;0 9 * * 1-5&quot;</span> --task <span class="hljs-string">&quot;晨报汇总&quot;</span> --json
 khy app cli-invoke abu schedule list --json
-khy app cli-invoke abu schedule delete --id sched_01 --json
+khy app cli-invoke abu schedule delete --<span class="hljs-built_in">id</span> sched_01 --json
 
-# Session
+<span class="hljs-comment"># Session</span>
 khy app cli-invoke abu session list --json
-khy app cli-invoke abu session export --id sess_01 --format markdown --json
+khy app cli-invoke abu session <span class="hljs-built_in">export</span> --<span class="hljs-built_in">id</span> sess_01 --format markdown --json
 
-# IM
-khy app cli-invoke abu im send --channel feishu --message &quot;日报已生成&quot; --json
+<span class="hljs-comment"># IM</span>
+khy app cli-invoke abu im send --channel feishu --message <span class="hljs-string">&quot;日报已生成&quot;</span> --json
 khy app cli-invoke abu im channels --json
 
-# Memory
-khy app cli-invoke abu memory search --query &quot;用户偏好&quot; --json
+<span class="hljs-comment"># Memory</span>
+khy app cli-invoke abu memory search --query <span class="hljs-string">&quot;用户偏好&quot;</span> --json
 
-# Diagnostic
+<span class="hljs-comment"># Diagnostic</span>
 khy app cli-invoke abu diagnostic check --json</code></pre>
 <h3 id="5-2-ai-对话自动调用">5.2 AI 对话自动调用<a class="anchor" href="#5-2-ai-对话自动调用" aria-label="锚点">#</a></h3>
 <pre><code>用户: 帮我用阿布创建一个每天早上9点自动汇总邮件的定时任务
@@ -222,40 +222,40 @@ AI:   [调用 cli_anything__abu]
       → 返回: {&quot;status&quot;:&quot;success&quot;,&quot;data&quot;:{&quot;summary&quot;:&quot;...&quot;}}</code></pre>
 <h3 id="5-3-注册状态验证">5.3 注册状态验证<a class="anchor" href="#5-3-注册状态验证" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">khy app cli-list
-# 输出:
-# cli-anything-abu  v0.19.5  [public]  AI Desktop Assistant - agents, skills, scheduler, IM
+<span class="hljs-comment"># 输出:</span>
+<span class="hljs-comment"># cli-anything-abu  v0.19.5  [public]  AI Desktop Assistant - agents, skills, scheduler, IM</span>
 
 khy skill list
-# 输出:
-# cli-anything-abu  &quot;AI desktop office assistant&quot;  [cli-anything]
+<span class="hljs-comment"># 输出:</span>
+<span class="hljs-comment"># cli-anything-abu  &quot;AI desktop office assistant&quot;  [cli-anything]</span>
 
 agent工具
-# 同 khy app cli-list</code></pre>
+<span class="hljs-comment"># 同 khy app cli-list</span></code></pre>
 <hr>
 <h2 id="6-输出格式约定">6. 输出格式约定<a class="anchor" href="#6-输出格式约定" aria-label="锚点">#</a></h2>
 <p>所有命令支持 <code>--json</code> 参数，输出统一的 JSON 格式：</p>
 <h3 id="成功">成功<a class="anchor" href="#成功" aria-label="锚点">#</a></h3>
-<pre><code class="language-json">{
-  &quot;status&quot;: &quot;success&quot;,
-  &quot;command&quot;: &quot;agent.run&quot;,
-  &quot;data&quot;: {
-    &quot;id&quot;: &quot;agent_0xa3f&quot;,
-    &quot;task&quot;: &quot;整理本周工作报告&quot;,
-    &quot;state&quot;: &quot;running&quot;
-  },
-  &quot;metadata&quot;: {
-    &quot;duration_ms&quot;: 234,
-    &quot;abu_version&quot;: &quot;0.19.5&quot;
-  }
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;success&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;command&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;agent.run&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;agent_0xa3f&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;task&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;整理本周工作报告&quot;</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;state&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;running&quot;</span>
+  <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;metadata&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;duration_ms&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">234</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-attr">&quot;abu_version&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;0.19.5&quot;</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <h3 id="失败">失败<a class="anchor" href="#失败" aria-label="锚点">#</a></h3>
-<pre><code class="language-json">{
-  &quot;status&quot;: &quot;error&quot;,
-  &quot;command&quot;: &quot;agent.run&quot;,
-  &quot;error&quot;: &quot;Abu is not running&quot;,
-  &quot;code&quot;: &quot;ABU_NOT_RUNNING&quot;,
-  &quot;details&quot;: &quot;Start Abu desktop app first, or use file protocol for offline operations&quot;
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;error&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;command&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;agent.run&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;error&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Abu is not running&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;code&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ABU_NOT_RUNNING&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;details&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Start Abu desktop app first, or use file protocol for offline operations&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <hr>
 <h2 id="7-数据流全景">7. 数据流全景<a class="anchor" href="#7-数据流全景" aria-label="锚点">#</a></h2>
 <pre><code>┌─────────────┐     khy app cli-invoke abu ...     ┌──────────────────────┐

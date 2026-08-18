@@ -180,14 +180,15 @@ function createAdapterRuntimeDiagnosticsStore(adapterKey = '') {
     _cachedState = normalizedState;
     try {
       fs.writeFileSync(getFile(), `${JSON.stringify(normalizedState, null, 2)}\n`, 'utf-8');
-      _diskStamp = fs.statSync(getFile()).mtimeMs;
+      const stat = fs.statSync(getFile());
+      _diskStamp = { mtimeMs: stat.mtimeMs, ctimeMs: stat.ctimeMs, size: stat.size };
     } catch {
       /* best effort */
     }
   }
 
-  // mtime of the on-disk file backing _cachedState; 0 means "never validated".
-  let _diskStamp = 0;
+  // File signature used to detect external writes even when mtime precision is coarse.
+  let _diskStamp = null;
 
   function readState() {
     let state;
@@ -196,11 +197,15 @@ function createAdapterRuntimeDiagnosticsStore(adapterKey = '') {
       // JSON on every call: readDiagnostic() runs several times per request
       // (once per adapter) and the parse cost lands on the submit path.
       const st = fs.statSync(getFile());
-      if (_cachedState && st.mtimeMs === _diskStamp) {
+      const diskStamp = { mtimeMs: st.mtimeMs, ctimeMs: st.ctimeMs, size: st.size };
+      if (_cachedState && _diskStamp
+        && diskStamp.mtimeMs === _diskStamp.mtimeMs
+        && diskStamp.ctimeMs === _diskStamp.ctimeMs
+        && diskStamp.size === _diskStamp.size) {
         return _cachedState;
       }
       const raw = JSON.parse(fs.readFileSync(getFile(), 'utf-8'));
-      _diskStamp = st.mtimeMs;
+      _diskStamp = diskStamp;
       state = normalizeState(raw);
     } catch {
       state = createEmptyState();

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { isNetworkLikeError } from '@khy/ui-shared/http/errors';
 import { useUserStore } from '@/stores/user';
 import { httpStart, httpDone } from '@/composables/useGlobalLoading';
 import { notifyError, deriveErrorMessage } from '@/api/notify';
@@ -14,18 +15,6 @@ const request = axios.create({
 });
 
 const RETRYABLE_METHODS = new Set(['get', 'head', 'options']);
-
-function isNetworkLikeError(error) {
-  const lower = String(error?.message || '').toLowerCase();
-  return (
-    !error?.response &&
-    (lower.includes('network error') ||
-      lower.includes('failed to fetch') ||
-      lower.includes('timeout') ||
-      lower.includes('econnrefused') ||
-      error?.code === 'ECONNABORTED')
-  );
-}
 
 function getRequestUrl(error) {
   return String(error?.config?.url || '').trim();

@@ -43,17 +43,17 @@
 <h2 id="三-机制层-part-a-薄约定-非新注册表">三、机制层（Part A）：薄约定，非新注册表<a class="anchor" href="#三-机制层-part-a-薄约定-非新注册表" aria-label="锚点">#</a></h2>
 <h3 id="3-1-definetool-的-capability-元数据块">3.1 <code>defineTool</code> 的 <code>capability</code> 元数据块<a class="anchor" href="#3-1-definetool-的-capability-元数据块" aria-label="锚点">#</a></h3>
 <p><code>services/backend/src/tools/_baseTool.js</code>：<code>defineTool</code> 内部构造<strong>显式对象字面量、不 spread config</strong><br>（未知字段会被静默丢弃）。因此 <code>capability</code> 必须像 <code>_pendingCommands</code> 一样<strong>显式附加</strong>，<br>且必须在 <code>Object.freeze(tool)</code> <strong>之前</strong>：</p>
-<pre><code class="language-js">// ── Capability-as-code metadata (optional) ───────────────────────
-if (config.capability &amp;&amp; typeof config.capability === 'object') {
-  tool.capability = Object.freeze({ ...config.capability });
+<pre><code class="language-js"><span class="hljs-comment">// ── Capability-as-code metadata (optional) ───────────────────────</span>
+<span class="hljs-keyword">if</span> (config.<span class="hljs-property">capability</span> &amp;&amp; <span class="hljs-keyword">typeof</span> config.<span class="hljs-property">capability</span> === <span class="hljs-string">&#x27;object&#x27;</span>) {
+  tool.<span class="hljs-property">capability</span> = <span class="hljs-title class_">Object</span>.<span class="hljs-title function_">freeze</span>({ ...config.<span class="hljs-property">capability</span> });
 }
-return Object.freeze(tool);</code></pre>
+<span class="hljs-keyword">return</span> <span class="hljs-title class_">Object</span>.<span class="hljs-title function_">freeze</span>(tool);</code></pre>
 <p>字段约定：</p>
-<pre><code class="language-js">capability: {
-  summary:     '一句话能力说明（用户可见）',
-  learnedFrom: '&lt;时间&gt; 来源/教学场景',
-  tests:       ['tests/&lt;name&gt;.test.js'],        // 相对 backend 包根
-  surfaces:    ['cli', 'agent', 'mcp'],          // 该能力暴露的面
+<pre><code class="language-js"><span class="hljs-attr">capability</span>: {
+  <span class="hljs-attr">summary</span>:     <span class="hljs-string">&#x27;一句话能力说明（用户可见）&#x27;</span>,
+  <span class="hljs-attr">learnedFrom</span>: <span class="hljs-string">&#x27;&lt;时间&gt; 来源/教学场景&#x27;</span>,
+  <span class="hljs-attr">tests</span>:       [<span class="hljs-string">&#x27;tests/&lt;name&gt;.test.js&#x27;</span>],        <span class="hljs-comment">// 相对 backend 包根</span>
+  <span class="hljs-attr">surfaces</span>:    [<span class="hljs-string">&#x27;cli&#x27;</span>, <span class="hljs-string">&#x27;agent&#x27;</span>, <span class="hljs-string">&#x27;mcp&#x27;</span>],          <span class="hljs-comment">// 该能力暴露的面</span>
 }</code></pre>
 <p><strong>安全性</strong>：<code>toFunctionDef()</code> 只输出白名单 <code>{name, description, parameters, aliases?}</code>，<br><code>capability</code> <strong>永不泄漏给模型</strong>。元数据为普通可枚举属性，便于注册表过滤。</p>
 <h3 id="3-2-薄门面-services-backend-src-services-capabilityregistry-js">3.2 薄门面 <code>services/backend/src/services/capabilityRegistry.js</code><a class="anchor" href="#3-2-薄门面-services-backend-src-services-capabilityregistry-js" aria-label="锚点">#</a></h3>

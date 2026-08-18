@@ -1873,8 +1873,7 @@ function _detectAdjacentTablePairs(blocks, allLines) {
     if (i + 1 < blocks.length) {
       const gap = allLines.slice(blocks[i].endIdx, blocks[i + 1].startIdx);
       const nonBlank = gap.filter((l) => l.trim() !== '');
-      const isPair =
-        nonBlank.length === 0 || (nonBlank.length === 1 && displayWidth(nonBlank[0].trim()) <= 40);
+      const isPair = nonBlank.length === 0;
       if (isPair) {
         const label = nonBlank.length === 1 ? nonBlank[0].trim() : undefined;
         directives.push({ type: 'pair', left: blocks[i], right: blocks[i + 1], label });

@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
+    "@khy/ui-shared": "0.1.0",
     "@vue-flow/background": "^1.3.0",
     "@vue-flow/controls": "^1.1.2",
     "@vue-flow/core": "^1.41.0",

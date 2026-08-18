@@ -29,7 +29,7 @@
 <blockquote><p>本文件由 <code>scripts/hydration-doctor.js --gen-doc</code> 确定性生成，请勿手改；<br>规则改在 <code>scripts/lib/hydrationHealth.js</code> 的 <code>_RULES</code> / <code>CRITICAL_PACKAGES</code>，再重新生成。</p></blockquote>
 <h2 id="这份清单是干什么的">这份清单是干什么的<a class="anchor" href="#这份清单是干什么的" aria-label="锚点">#</a></h2>
 <p>khyos 两条离机渠道的包都<strong>不打包 <code>node_modules</code></strong>——后端 44 个依赖在<br><strong>首次运行时联网</strong> <code>npm install</code> 补齐（Node 运行时也是首启自动下便携版）。<br>这一步是新机还原<strong>最脆弱</strong>的一环：断网、registry 不通、半截下载、<br>workspace 软链断裂，都会让「装好了包却起不来」。本 doctor 专查这一步。</p>
-<pre><code class="language-bash">node scripts/hydration-doctor.js      # 或 npm run hydration-doctor</code></pre>
+<pre><code class="language-bash">node scripts/hydration-doctor.js      <span class="hljs-comment"># 或 npm run hydration-doctor</span></code></pre>
 <h2 id="与其他自检的分工-三层各管一段">与其他自检的分工（三层各管一段）<a class="anchor" href="#与其他自检的分工-三层各管一段" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>自检</th><th>回答的问题</th></tr></thead><tbody><tr><td><code>restore-check</code>（OPS-MAN-068）</td><td>这台机<strong>能不能开始</strong>还原？（Node/npm/tar/版本/目录可写）</td></tr><tr><td><code>verify-install</code>（OPS-MAN-069）</td><td>发出来的 <strong>bundle 源码</strong>齐不齐？（关键源码文件完整性）</td></tr><tr><td><code>hydration-doctor</code>（本清单）</td><td>首启<strong>hydrate 出来的依赖</strong>到底成没成？（含裂脑检测）</td></tr></tbody></table>
 <h2 id="最阴险的一种-裂脑-splitbrain">最阴险的一种：裂脑（splitbrain）<a class="anchor" href="#最阴险的一种-裂脑-splitbrain" aria-label="锚点">#</a></h2>

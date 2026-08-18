@@ -21,8 +21,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const { getBaseDataDir } = require('../../utils/dataHome');
-const probe = require('./toolCallingProbe');
+const { getBaseDataDir } = require('../../../../services/backend/src/utils/dataHome');
+const probe = require('../../../../services/backend/src/services/gateway/toolCallingProbe');
 
 const SCHEMA_VERSION = 1;
 

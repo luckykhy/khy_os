@@ -30,81 +30,81 @@
 <h2 id="table-of-contents">Table of Contents<a class="anchor" href="#table-of-contents" aria-label="锚点">#</a></h2>
 <ul><li><a href="#test-structure-arrange-act-assert">Test Structure (Arrange-Act-Assert)</a></li><li><a href="#test-naming-conventions">Test Naming Conventions</a></li><li><a href="#common-assertions">Common Assertions</a></li><li><a href="#mocking-patterns">Mocking Patterns</a></li><li><a href="#reactcomponent-testing">React/Component Testing</a></li><li><a href="#api--integration-testing">API / Integration Testing</a></li><li><a href="#e2e-testing-playwright">E2E Testing (Playwright)</a></li><li><a href="#test-anti-patterns">Test Anti-Patterns</a></li></ul>
 <h2 id="test-structure-arrange-act-assert">Test Structure (Arrange-Act-Assert)<a class="anchor" href="#test-structure-arrange-act-assert" aria-label="锚点">#</a></h2>
-<pre><code class="language-typescript">it('describes expected behavior', () =&gt; {
-  // Arrange: Set up test data and preconditions
-  const input = { title: 'Test Task', priority: 'high' };
+<pre><code class="language-typescript"><span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;describes expected behavior&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-comment">// Arrange: Set up test data and preconditions</span>
+  <span class="hljs-keyword">const</span> input = { <span class="hljs-attr">title</span>: <span class="hljs-string">&#x27;Test Task&#x27;</span>, <span class="hljs-attr">priority</span>: <span class="hljs-string">&#x27;high&#x27;</span> };
 
-  // Act: Perform the action being tested
-  const result = createTask(input);
+  <span class="hljs-comment">// Act: Perform the action being tested</span>
+  <span class="hljs-keyword">const</span> result = <span class="hljs-title function_">createTask</span>(input);
 
-  // Assert: Verify the outcome
-  expect(result.title).toBe('Test Task');
-  expect(result.priority).toBe('high');
-  expect(result.status).toBe('pending');
+  <span class="hljs-comment">// Assert: Verify the outcome</span>
+  <span class="hljs-title function_">expect</span>(result.<span class="hljs-property">title</span>).<span class="hljs-title function_">toBe</span>(<span class="hljs-string">&#x27;Test Task&#x27;</span>);
+  <span class="hljs-title function_">expect</span>(result.<span class="hljs-property">priority</span>).<span class="hljs-title function_">toBe</span>(<span class="hljs-string">&#x27;high&#x27;</span>);
+  <span class="hljs-title function_">expect</span>(result.<span class="hljs-property">status</span>).<span class="hljs-title function_">toBe</span>(<span class="hljs-string">&#x27;pending&#x27;</span>);
 });</code></pre>
 <h2 id="test-naming-conventions">Test Naming Conventions<a class="anchor" href="#test-naming-conventions" aria-label="锚点">#</a></h2>
-<pre><code class="language-typescript">// Pattern: [unit] [expected behavior] [condition]
-describe('TaskService.createTask', () =&gt; {
-  it('creates a task with default pending status', () =&gt; {});
-  it('throws ValidationError when title is empty', () =&gt; {});
-  it('trims whitespace from title', () =&gt; {});
-  it('generates a unique ID for each task', () =&gt; {});
+<pre><code class="language-typescript"><span class="hljs-comment">// Pattern: [unit] [expected behavior] [condition]</span>
+<span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;TaskService.createTask&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;creates a task with default pending status&#x27;</span>, <span class="hljs-function">() =&gt;</span> {});
+  <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;throws ValidationError when title is empty&#x27;</span>, <span class="hljs-function">() =&gt;</span> {});
+  <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;trims whitespace from title&#x27;</span>, <span class="hljs-function">() =&gt;</span> {});
+  <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;generates a unique ID for each task&#x27;</span>, <span class="hljs-function">() =&gt;</span> {});
 });</code></pre>
 <h2 id="common-assertions">Common Assertions<a class="anchor" href="#common-assertions" aria-label="锚点">#</a></h2>
-<pre><code class="language-typescript">// Equality
-expect(result).toBe(expected);           // Strict equality (===)
-expect(result).toEqual(expected);        // Deep equality (objects/arrays)
-expect(result).toStrictEqual(expected);  // Deep equality + type matching
+<pre><code class="language-typescript"><span class="hljs-comment">// Equality</span>
+<span class="hljs-title function_">expect</span>(result).<span class="hljs-title function_">toBe</span>(expected);           <span class="hljs-comment">// Strict equality (===)</span>
+<span class="hljs-title function_">expect</span>(result).<span class="hljs-title function_">toEqual</span>(expected);        <span class="hljs-comment">// Deep equality (objects/arrays)</span>
+<span class="hljs-title function_">expect</span>(result).<span class="hljs-title function_">toStrictEqual</span>(expected);  <span class="hljs-comment">// Deep equality + type matching</span>
 
-// Truthiness
-expect(result).toBeTruthy();
-expect(result).toBeFalsy();
-expect(result).toBeNull();
-expect(result).toBeDefined();
-expect(result).toBeUndefined();
+<span class="hljs-comment">// Truthiness</span>
+<span class="hljs-title function_">expect</span>(result).<span class="hljs-title function_">toBeTruthy</span>();
+<span class="hljs-title function_">expect</span>(result).<span class="hljs-title function_">toBeFalsy</span>();
+<span class="hljs-title function_">expect</span>(result).<span class="hljs-title function_">toBeNull</span>();
+<span class="hljs-title function_">expect</span>(result).<span class="hljs-title function_">toBeDefined</span>();
+<span class="hljs-title function_">expect</span>(result).<span class="hljs-title function_">toBeUndefined</span>();
 
-// Numbers
-expect(result).toBeGreaterThan(5);
-expect(result).toBeLessThanOrEqual(10);
-expect(result).toBeCloseTo(0.3, 5);      // Floating point
+<span class="hljs-comment">// Numbers</span>
+<span class="hljs-title function_">expect</span>(result).<span class="hljs-title function_">toBeGreaterThan</span>(<span class="hljs-number">5</span>);
+<span class="hljs-title function_">expect</span>(result).<span class="hljs-title function_">toBeLessThanOrEqual</span>(<span class="hljs-number">10</span>);
+<span class="hljs-title function_">expect</span>(result).<span class="hljs-title function_">toBeCloseTo</span>(<span class="hljs-number">0.3</span>, <span class="hljs-number">5</span>);      <span class="hljs-comment">// Floating point</span>
 
-// Strings
-expect(result).toMatch(/pattern/);
-expect(result).toContain('substring');
+<span class="hljs-comment">// Strings</span>
+<span class="hljs-title function_">expect</span>(result).<span class="hljs-title function_">toMatch</span>(<span class="hljs-regexp">/pattern/</span>);
+<span class="hljs-title function_">expect</span>(result).<span class="hljs-title function_">toContain</span>(<span class="hljs-string">&#x27;substring&#x27;</span>);
 
-// Arrays / Objects
-expect(array).toContain(item);
-expect(array).toHaveLength(3);
-expect(object).toHaveProperty('key', 'value');
+<span class="hljs-comment">// Arrays / Objects</span>
+<span class="hljs-title function_">expect</span>(array).<span class="hljs-title function_">toContain</span>(item);
+<span class="hljs-title function_">expect</span>(array).<span class="hljs-title function_">toHaveLength</span>(<span class="hljs-number">3</span>);
+<span class="hljs-title function_">expect</span>(<span class="hljs-built_in">object</span>).<span class="hljs-title function_">toHaveProperty</span>(<span class="hljs-string">&#x27;key&#x27;</span>, <span class="hljs-string">&#x27;value&#x27;</span>);
 
-// Errors
-expect(() =&gt; fn()).toThrow();
-expect(() =&gt; fn()).toThrow(ValidationError);
-expect(() =&gt; fn()).toThrow('specific message');
+<span class="hljs-comment">// Errors</span>
+<span class="hljs-title function_">expect</span>(<span class="hljs-function">() =&gt;</span> <span class="hljs-title function_">fn</span>()).<span class="hljs-title function_">toThrow</span>();
+<span class="hljs-title function_">expect</span>(<span class="hljs-function">() =&gt;</span> <span class="hljs-title function_">fn</span>()).<span class="hljs-title function_">toThrow</span>(<span class="hljs-title class_">ValidationError</span>);
+<span class="hljs-title function_">expect</span>(<span class="hljs-function">() =&gt;</span> <span class="hljs-title function_">fn</span>()).<span class="hljs-title function_">toThrow</span>(<span class="hljs-string">&#x27;specific message&#x27;</span>);
 
-// Async
-await expect(asyncFn()).resolves.toBe(value);
-await expect(asyncFn()).rejects.toThrow(Error);</code></pre>
+<span class="hljs-comment">// Async</span>
+<span class="hljs-keyword">await</span> <span class="hljs-title function_">expect</span>(<span class="hljs-title function_">asyncFn</span>()).<span class="hljs-property">resolves</span>.<span class="hljs-title function_">toBe</span>(value);
+<span class="hljs-keyword">await</span> <span class="hljs-title function_">expect</span>(<span class="hljs-title function_">asyncFn</span>()).<span class="hljs-property">rejects</span>.<span class="hljs-title function_">toThrow</span>(<span class="hljs-title class_">Error</span>);</code></pre>
 <h2 id="mocking-patterns">Mocking Patterns<a class="anchor" href="#mocking-patterns" aria-label="锚点">#</a></h2>
 <h3 id="mock-functions">Mock Functions<a class="anchor" href="#mock-functions" aria-label="锚点">#</a></h3>
-<pre><code class="language-typescript">const mockFn = jest.fn();
-mockFn.mockReturnValue(42);
-mockFn.mockResolvedValue({ data: 'test' });
-mockFn.mockImplementation((x) =&gt; x * 2);
+<pre><code class="language-typescript"><span class="hljs-keyword">const</span> mockFn = jest.<span class="hljs-title function_">fn</span>();
+mockFn.<span class="hljs-title function_">mockReturnValue</span>(<span class="hljs-number">42</span>);
+mockFn.<span class="hljs-title function_">mockResolvedValue</span>({ <span class="hljs-attr">data</span>: <span class="hljs-string">&#x27;test&#x27;</span> });
+mockFn.<span class="hljs-title function_">mockImplementation</span>(<span class="hljs-function">(<span class="hljs-params">x</span>) =&gt;</span> x * <span class="hljs-number">2</span>);
 
-expect(mockFn).toHaveBeenCalled();
-expect(mockFn).toHaveBeenCalledWith('arg1', 'arg2');
-expect(mockFn).toHaveBeenCalledTimes(3);</code></pre>
+<span class="hljs-title function_">expect</span>(mockFn).<span class="hljs-title function_">toHaveBeenCalled</span>();
+<span class="hljs-title function_">expect</span>(mockFn).<span class="hljs-title function_">toHaveBeenCalledWith</span>(<span class="hljs-string">&#x27;arg1&#x27;</span>, <span class="hljs-string">&#x27;arg2&#x27;</span>);
+<span class="hljs-title function_">expect</span>(mockFn).<span class="hljs-title function_">toHaveBeenCalledTimes</span>(<span class="hljs-number">3</span>);</code></pre>
 <h3 id="mock-modules">Mock Modules<a class="anchor" href="#mock-modules" aria-label="锚点">#</a></h3>
-<pre><code class="language-typescript">// Mock an entire module
-jest.mock('./database', () =&gt; ({
-  query: jest.fn().mockResolvedValue([{ id: 1, title: 'Test' }]),
+<pre><code class="language-typescript"><span class="hljs-comment">// Mock an entire module</span>
+jest.<span class="hljs-title function_">mock</span>(<span class="hljs-string">&#x27;./database&#x27;</span>, <span class="hljs-function">() =&gt;</span> ({
+  <span class="hljs-attr">query</span>: jest.<span class="hljs-title function_">fn</span>().<span class="hljs-title function_">mockResolvedValue</span>([{ <span class="hljs-attr">id</span>: <span class="hljs-number">1</span>, <span class="hljs-attr">title</span>: <span class="hljs-string">&#x27;Test&#x27;</span> }]),
 }));
 
-// Mock specific exports
-jest.mock('./utils', () =&gt; ({
-  ...jest.requireActual('./utils'),
-  generateId: jest.fn().mockReturnValue('test-id'),
+<span class="hljs-comment">// Mock specific exports</span>
+jest.<span class="hljs-title function_">mock</span>(<span class="hljs-string">&#x27;./utils&#x27;</span>, <span class="hljs-function">() =&gt;</span> ({
+  ...jest.<span class="hljs-title function_">requireActual</span>(<span class="hljs-string">&#x27;./utils&#x27;</span>),
+  <span class="hljs-attr">generateId</span>: jest.<span class="hljs-title function_">fn</span>().<span class="hljs-title function_">mockReturnValue</span>(<span class="hljs-string">&#x27;test-id&#x27;</span>),
 }));</code></pre>
 <h3 id="mock-at-boundaries-only">Mock at Boundaries Only<a class="anchor" href="#mock-at-boundaries-only" aria-label="锚点">#</a></h3>
 <pre><code>Mock these:                    Don't mock these:
@@ -114,91 +114,91 @@ jest.mock('./utils', () =&gt; ({
 ├── External API calls         ├── Validation functions
 └── Time/Date (when needed)    └── Pure functions</code></pre>
 <h2 id="react-component-testing">React/Component Testing<a class="anchor" href="#react-component-testing" aria-label="锚点">#</a></h2>
-<pre><code class="language-tsx">import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+<pre><code class="language-tsx"><span class="hljs-keyword">import</span> { render, screen, fireEvent, waitFor } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;@testing-library/react&#x27;</span>;
 
-describe('TaskForm', () =&gt; {
-  it('submits the form with entered data', async () =&gt; {
-    const onSubmit = jest.fn();
-    render(&lt;TaskForm onSubmit={onSubmit} /&gt;);
+<span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;TaskForm&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;submits the form with entered data&#x27;</span>, <span class="hljs-title function_">async</span> () =&gt; {
+    <span class="hljs-keyword">const</span> onSubmit = jest.<span class="hljs-title function_">fn</span>();
+    <span class="hljs-title function_">render</span>(<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">TaskForm</span> <span class="hljs-attr">onSubmit</span>=<span class="hljs-string">{onSubmit}</span> /&gt;</span></span>);
 
-    // Find elements by accessible role/label (not test IDs)
-    await screen.findByRole('textbox', { name: /title/i });
-    fireEvent.change(screen.getByRole('textbox', { name: /title/i }), {
-      target: { value: 'New Task' },
+    <span class="hljs-comment">// Find elements by accessible role/label (not test IDs)</span>
+    <span class="hljs-keyword">await</span> screen.<span class="hljs-title function_">findByRole</span>(<span class="hljs-string">&#x27;textbox&#x27;</span>, { <span class="hljs-attr">name</span>: <span class="hljs-regexp">/title/i</span> });
+    fireEvent.<span class="hljs-title function_">change</span>(screen.<span class="hljs-title function_">getByRole</span>(<span class="hljs-string">&#x27;textbox&#x27;</span>, { <span class="hljs-attr">name</span>: <span class="hljs-regexp">/title/i</span> }), {
+      <span class="hljs-attr">target</span>: { <span class="hljs-attr">value</span>: <span class="hljs-string">&#x27;New Task&#x27;</span> },
     });
-    fireEvent.click(screen.getByRole('button', { name: /create/i }));
+    fireEvent.<span class="hljs-title function_">click</span>(screen.<span class="hljs-title function_">getByRole</span>(<span class="hljs-string">&#x27;button&#x27;</span>, { <span class="hljs-attr">name</span>: <span class="hljs-regexp">/create/i</span> }));
 
-    await waitFor(() =&gt; {
-      expect(onSubmit).toHaveBeenCalledWith({ title: 'New Task' });
+    <span class="hljs-keyword">await</span> <span class="hljs-title function_">waitFor</span>(<span class="hljs-function">() =&gt;</span> {
+      <span class="hljs-title function_">expect</span>(onSubmit).<span class="hljs-title function_">toHaveBeenCalledWith</span>({ <span class="hljs-attr">title</span>: <span class="hljs-string">&#x27;New Task&#x27;</span> });
     });
   });
 
-  it('shows validation error for empty title', async () =&gt; {
-    render(&lt;TaskForm onSubmit={jest.fn()} /&gt;);
+  <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;shows validation error for empty title&#x27;</span>, <span class="hljs-title function_">async</span> () =&gt; {
+    <span class="hljs-title function_">render</span>(<span class="language-xml"><span class="hljs-tag">&lt;<span class="hljs-name">TaskForm</span> <span class="hljs-attr">onSubmit</span>=<span class="hljs-string">{jest.fn()}</span> /&gt;</span></span>);
 
-    fireEvent.click(screen.getByRole('button', { name: /create/i }));
+    fireEvent.<span class="hljs-title function_">click</span>(screen.<span class="hljs-title function_">getByRole</span>(<span class="hljs-string">&#x27;button&#x27;</span>, { <span class="hljs-attr">name</span>: <span class="hljs-regexp">/create/i</span> }));
 
-    expect(await screen.findByText(/title is required/i)).toBeInTheDocument();
+    <span class="hljs-title function_">expect</span>(<span class="hljs-keyword">await</span> screen.<span class="hljs-title function_">findByText</span>(<span class="hljs-regexp">/title is required/i</span>)).<span class="hljs-title function_">toBeInTheDocument</span>();
   });
 });</code></pre>
 <h2 id="api-integration-testing">API / Integration Testing<a class="anchor" href="#api-integration-testing" aria-label="锚点">#</a></h2>
-<pre><code class="language-typescript">import request from 'supertest';
-import { app } from '../src/app';
+<pre><code class="language-typescript"><span class="hljs-keyword">import</span> request <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;supertest&#x27;</span>;
+<span class="hljs-keyword">import</span> { app } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;../src/app&#x27;</span>;
 
-describe('POST /api/tasks', () =&gt; {
-  it('creates a task and returns 201', async () =&gt; {
-    const response = await request(app)
-      .post('/api/tasks')
-      .send({ title: 'Test Task' })
-      .set('Authorization', `Bearer ${testToken}`)
-      .expect(201);
+<span class="hljs-title function_">describe</span>(<span class="hljs-string">&#x27;POST /api/tasks&#x27;</span>, <span class="hljs-function">() =&gt;</span> {
+  <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;creates a task and returns 201&#x27;</span>, <span class="hljs-title function_">async</span> () =&gt; {
+    <span class="hljs-keyword">const</span> response = <span class="hljs-keyword">await</span> <span class="hljs-title function_">request</span>(app)
+      .<span class="hljs-title function_">post</span>(<span class="hljs-string">&#x27;/api/tasks&#x27;</span>)
+      .<span class="hljs-title function_">send</span>({ <span class="hljs-attr">title</span>: <span class="hljs-string">&#x27;Test Task&#x27;</span> })
+      .<span class="hljs-title function_">set</span>(<span class="hljs-string">&#x27;Authorization&#x27;</span>, <span class="hljs-string">`Bearer <span class="hljs-subst">${testToken}</span>`</span>)
+      .<span class="hljs-title function_">expect</span>(<span class="hljs-number">201</span>);
 
-    expect(response.body).toMatchObject({
-      id: expect.any(String),
-      title: 'Test Task',
-      status: 'pending',
+    <span class="hljs-title function_">expect</span>(response.<span class="hljs-property">body</span>).<span class="hljs-title function_">toMatchObject</span>({
+      <span class="hljs-attr">id</span>: expect.<span class="hljs-title function_">any</span>(<span class="hljs-title class_">String</span>),
+      <span class="hljs-attr">title</span>: <span class="hljs-string">&#x27;Test Task&#x27;</span>,
+      <span class="hljs-attr">status</span>: <span class="hljs-string">&#x27;pending&#x27;</span>,
     });
   });
 
-  it('returns 422 for invalid input', async () =&gt; {
-    const response = await request(app)
-      .post('/api/tasks')
-      .send({ title: '' })
-      .set('Authorization', `Bearer ${testToken}`)
-      .expect(422);
+  <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;returns 422 for invalid input&#x27;</span>, <span class="hljs-title function_">async</span> () =&gt; {
+    <span class="hljs-keyword">const</span> response = <span class="hljs-keyword">await</span> <span class="hljs-title function_">request</span>(app)
+      .<span class="hljs-title function_">post</span>(<span class="hljs-string">&#x27;/api/tasks&#x27;</span>)
+      .<span class="hljs-title function_">send</span>({ <span class="hljs-attr">title</span>: <span class="hljs-string">&#x27;&#x27;</span> })
+      .<span class="hljs-title function_">set</span>(<span class="hljs-string">&#x27;Authorization&#x27;</span>, <span class="hljs-string">`Bearer <span class="hljs-subst">${testToken}</span>`</span>)
+      .<span class="hljs-title function_">expect</span>(<span class="hljs-number">422</span>);
 
-    expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    <span class="hljs-title function_">expect</span>(response.<span class="hljs-property">body</span>.<span class="hljs-property">error</span>.<span class="hljs-property">code</span>).<span class="hljs-title function_">toBe</span>(<span class="hljs-string">&#x27;VALIDATION_ERROR&#x27;</span>);
   });
 
-  it('returns 401 without authentication', async () =&gt; {
-    await request(app)
-      .post('/api/tasks')
-      .send({ title: 'Test' })
-      .expect(401);
+  <span class="hljs-title function_">it</span>(<span class="hljs-string">&#x27;returns 401 without authentication&#x27;</span>, <span class="hljs-title function_">async</span> () =&gt; {
+    <span class="hljs-keyword">await</span> <span class="hljs-title function_">request</span>(app)
+      .<span class="hljs-title function_">post</span>(<span class="hljs-string">&#x27;/api/tasks&#x27;</span>)
+      .<span class="hljs-title function_">send</span>({ <span class="hljs-attr">title</span>: <span class="hljs-string">&#x27;Test&#x27;</span> })
+      .<span class="hljs-title function_">expect</span>(<span class="hljs-number">401</span>);
   });
 });</code></pre>
 <h2 id="e2e-testing-playwright">E2E Testing (Playwright)<a class="anchor" href="#e2e-testing-playwright" aria-label="锚点">#</a></h2>
-<pre><code class="language-typescript">import { test, expect } from '@playwright/test';
+<pre><code class="language-typescript"><span class="hljs-keyword">import</span> { test, expect } <span class="hljs-keyword">from</span> <span class="hljs-string">&#x27;@playwright/test&#x27;</span>;
 
-test('user can create and complete a task', async ({ page }) =&gt; {
-  // Navigate and authenticate
-  await page.goto('/');
-  await page.fill('[name=&quot;email&quot;]', 'test@example.com');
-  await page.fill('[name=&quot;password&quot;]', 'testpass123');
-  await page.click('button:has-text(&quot;Log in&quot;)');
+<span class="hljs-title function_">test</span>(<span class="hljs-string">&#x27;user can create and complete a task&#x27;</span>, <span class="hljs-title function_">async</span> ({ page }) =&gt; {
+  <span class="hljs-comment">// Navigate and authenticate</span>
+  <span class="hljs-keyword">await</span> page.<span class="hljs-title function_">goto</span>(<span class="hljs-string">&#x27;/&#x27;</span>);
+  <span class="hljs-keyword">await</span> page.<span class="hljs-title function_">fill</span>(<span class="hljs-string">&#x27;[name=&quot;email&quot;]&#x27;</span>, <span class="hljs-string">&#x27;test@example.com&#x27;</span>);
+  <span class="hljs-keyword">await</span> page.<span class="hljs-title function_">fill</span>(<span class="hljs-string">&#x27;[name=&quot;password&quot;]&#x27;</span>, <span class="hljs-string">&#x27;testpass123&#x27;</span>);
+  <span class="hljs-keyword">await</span> page.<span class="hljs-title function_">click</span>(<span class="hljs-string">&#x27;button:has-text(&quot;Log in&quot;)&#x27;</span>);
 
-  // Create a task
-  await page.click('button:has-text(&quot;New Task&quot;)');
-  await page.fill('[name=&quot;title&quot;]', 'Buy groceries');
-  await page.click('button:has-text(&quot;Create&quot;)');
+  <span class="hljs-comment">// Create a task</span>
+  <span class="hljs-keyword">await</span> page.<span class="hljs-title function_">click</span>(<span class="hljs-string">&#x27;button:has-text(&quot;New Task&quot;)&#x27;</span>);
+  <span class="hljs-keyword">await</span> page.<span class="hljs-title function_">fill</span>(<span class="hljs-string">&#x27;[name=&quot;title&quot;]&#x27;</span>, <span class="hljs-string">&#x27;Buy groceries&#x27;</span>);
+  <span class="hljs-keyword">await</span> page.<span class="hljs-title function_">click</span>(<span class="hljs-string">&#x27;button:has-text(&quot;Create&quot;)&#x27;</span>);
 
-  // Verify task appears
-  await expect(page.locator('text=Buy groceries')).toBeVisible();
+  <span class="hljs-comment">// Verify task appears</span>
+  <span class="hljs-keyword">await</span> <span class="hljs-title function_">expect</span>(page.<span class="hljs-title function_">locator</span>(<span class="hljs-string">&#x27;text=Buy groceries&#x27;</span>)).<span class="hljs-title function_">toBeVisible</span>();
 
-  // Complete the task
-  await page.click('[aria-label=&quot;Complete Buy groceries&quot;]');
-  await expect(page.locator('text=Buy groceries')).toHaveCSS(
-    'text-decoration-line', 'line-through'
+  <span class="hljs-comment">// Complete the task</span>
+  <span class="hljs-keyword">await</span> page.<span class="hljs-title function_">click</span>(<span class="hljs-string">&#x27;[aria-label=&quot;Complete Buy groceries&quot;]&#x27;</span>);
+  <span class="hljs-keyword">await</span> <span class="hljs-title function_">expect</span>(page.<span class="hljs-title function_">locator</span>(<span class="hljs-string">&#x27;text=Buy groceries&#x27;</span>)).<span class="hljs-title function_">toHaveCSS</span>(
+    <span class="hljs-string">&#x27;text-decoration-line&#x27;</span>, <span class="hljs-string">&#x27;line-through&#x27;</span>
   );
 });</code></pre>
 <h2 id="test-anti-patterns">Test Anti-Patterns<a class="anchor" href="#test-anti-patterns" aria-label="锚点">#</a></h2>

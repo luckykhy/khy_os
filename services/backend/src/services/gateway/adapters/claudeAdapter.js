@@ -964,7 +964,7 @@ function applyAgenticGuidancePrefix(prompt, rawUserMessage, options) {
 
 function looksLikeSimpleGreeting(input = '') {
   try {
-    const { isGreeting } = require('../../services/khyUpgradeRuntime');
+    const { isGreeting } = require('../../khyUpgradeRuntime');
     return isGreeting(input);
   } catch {
     // Fallback: minimal inline check if runtime not loadable
@@ -2888,6 +2888,14 @@ async function generate(prompt, options = {}) {
       return buildSuccess(result.content, {
         adapter: 'claude',
         provider: `Claude Direct (${options.model || process.env.ANTHROPIC_MODEL || MODELS.sonnet})`,
+        model: result.model || options.model || process.env.ANTHROPIC_MODEL || MODELS.sonnet,
+        tokenUsage: result.tokenUsage || (result.usage
+          ? {
+              inputTokens: result.usage.input_tokens || 0,
+              outputTokens: result.usage.output_tokens || 0,
+              totalTokens: (result.usage.input_tokens || 0) + (result.usage.output_tokens || 0),
+            }
+          : null),
         mode: 'direct',
         passthrough: !!result.passthrough,
         toolSummary: result.toolSummary,

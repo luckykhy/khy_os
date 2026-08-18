@@ -50,373 +50,373 @@
 <h2 id="三-核心设计模式精华-代码级参考">三、核心设计模式精华 — 代码级参考<a class="anchor" href="#三-核心设计模式精华-代码级参考" aria-label="锚点">#</a></h2>
 <h3 id="3-1-流式换行门控-deepseek-linebuffer">3.1 流式换行门控 (DeepSeek <code>LineBuffer</code>)<a class="anchor" href="#3-1-流式换行门控-deepseek-linebuffer" aria-label="锚点">#</a></h3>
 <p><strong>原理</strong>: 流式文本到达时，只释放到最后一个 <code>\n</code> 为止的前缀，防止不完整 Markdown（半截代码围栏 `<code> </code>`<code> </code>`）被渲染器看到。</p>
-<pre><code class="language-rust">// DeepSeek — crates/tui/src/tui/streaming/line_buffer.rs
-pub struct LineBuffer {
-    pending: String,
+<pre><code class="language-rust"><span class="hljs-comment">// DeepSeek — crates/tui/src/tui/streaming/line_buffer.rs</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-keyword">struct</span> <span class="hljs-title class_">LineBuffer</span> {
+    pending: <span class="hljs-type">String</span>,
 }
 
-impl LineBuffer {
-    pub fn push(&amp;mut self, delta: &amp;str) {
-        self.pending.push_str(delta);
+<span class="hljs-keyword">impl</span> <span class="hljs-title class_">LineBuffer</span> {
+    <span class="hljs-keyword">pub</span> <span class="hljs-keyword">fn</span> <span class="hljs-title function_">push</span>(&amp;<span class="hljs-keyword">mut</span> <span class="hljs-keyword">self</span>, delta: &amp;<span class="hljs-type">str</span>) {
+        <span class="hljs-keyword">self</span>.pending.<span class="hljs-title function_ invoke__">push_str</span>(delta);
     }
 
-    /// 只释放到最后一个 '\n'，尾部留在缓冲区
-    pub fn take_committable(&amp;mut self) -&gt; String {
-        let Some(last_nl) = self.pending.rfind('\n') else {
-            return String::new(); // 没有换行 → 不释放
+    <span class="hljs-comment">/// 只释放到最后一个 &#x27;\n&#x27;，尾部留在缓冲区</span>
+    <span class="hljs-keyword">pub</span> <span class="hljs-keyword">fn</span> <span class="hljs-title function_">take_committable</span>(&amp;<span class="hljs-keyword">mut</span> <span class="hljs-keyword">self</span>) <span class="hljs-punctuation">-&gt;</span> <span class="hljs-type">String</span> {
+        <span class="hljs-keyword">let</span> <span class="hljs-variable">Some</span>(last_nl) = <span class="hljs-keyword">self</span>.pending.<span class="hljs-title function_ invoke__">rfind</span>(<span class="hljs-string">&#x27;<span class="hljs-char escape_">\n</span>&#x27;</span>) <span class="hljs-keyword">else</span> {
+            <span class="hljs-keyword">return</span> <span class="hljs-type">String</span>::<span class="hljs-title function_ invoke__">new</span>(); <span class="hljs-comment">// 没有换行 → 不释放</span>
         };
-        self.pending.drain(..=last_nl).collect()
+        <span class="hljs-keyword">self</span>.pending.<span class="hljs-title function_ invoke__">drain</span>(..=last_nl).<span class="hljs-title function_ invoke__">collect</span>()
     }
 
-    /// 流结束时释放所有剩余内容
-    pub fn flush(&amp;mut self) -&gt; String {
-        std::mem::take(&amp;mut self.pending)
+    <span class="hljs-comment">/// 流结束时释放所有剩余内容</span>
+    <span class="hljs-keyword">pub</span> <span class="hljs-keyword">fn</span> <span class="hljs-title function_">flush</span>(&amp;<span class="hljs-keyword">mut</span> <span class="hljs-keyword">self</span>) <span class="hljs-punctuation">-&gt;</span> <span class="hljs-type">String</span> {
+        std::mem::<span class="hljs-title function_ invoke__">take</span>(&amp;<span class="hljs-keyword">mut</span> <span class="hljs-keyword">self</span>.pending)
     }
 }</code></pre>
 <p><strong>KHY 移植 (<code>repl.js</code> 新增 <code>LineBuffer</code> 类)</strong>:</p>
-<pre><code class="language-js">class LineBuffer {
-  constructor() { this._pending = ''; }
+<pre><code class="language-js"><span class="hljs-keyword">class</span> <span class="hljs-title class_">LineBuffer</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params"></span>) { <span class="hljs-variable language_">this</span>.<span class="hljs-property">_pending</span> = <span class="hljs-string">&#x27;&#x27;</span>; }
 
-  push(delta) { this._pending += delta; }
+  <span class="hljs-title function_">push</span>(<span class="hljs-params">delta</span>) { <span class="hljs-variable language_">this</span>.<span class="hljs-property">_pending</span> += delta; }
 
-  takeCommittable() {
-    const idx = this._pending.lastIndexOf('\n');
-    if (idx &lt; 0) return '';
-    const result = this._pending.slice(0, idx + 1);
-    this._pending = this._pending.slice(idx + 1);
-    return result;
+  <span class="hljs-title function_">takeCommittable</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-keyword">const</span> idx = <span class="hljs-variable language_">this</span>.<span class="hljs-property">_pending</span>.<span class="hljs-title function_">lastIndexOf</span>(<span class="hljs-string">&#x27;\n&#x27;</span>);
+    <span class="hljs-keyword">if</span> (idx &lt; <span class="hljs-number">0</span>) <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;&#x27;</span>;
+    <span class="hljs-keyword">const</span> result = <span class="hljs-variable language_">this</span>.<span class="hljs-property">_pending</span>.<span class="hljs-title function_">slice</span>(<span class="hljs-number">0</span>, idx + <span class="hljs-number">1</span>);
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_pending</span> = <span class="hljs-variable language_">this</span>.<span class="hljs-property">_pending</span>.<span class="hljs-title function_">slice</span>(idx + <span class="hljs-number">1</span>);
+    <span class="hljs-keyword">return</span> result;
   }
 
-  flush() {
-    const result = this._pending;
-    this._pending = '';
-    return result;
+  <span class="hljs-title function_">flush</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-keyword">const</span> result = <span class="hljs-variable language_">this</span>.<span class="hljs-property">_pending</span>;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_pending</span> = <span class="hljs-string">&#x27;&#x27;</span>;
+    <span class="hljs-keyword">return</span> result;
   }
 }</code></pre>
 <hr>
 <h3 id="3-2-自适应分块策略-deepseek-adaptivechunkingpolicy">3.2 自适应分块策略 (DeepSeek <code>AdaptiveChunkingPolicy</code>)<a class="anchor" href="#3-2-自适应分块策略-deepseek-adaptivechunkingpolicy" aria-label="锚点">#</a></h3>
 <p><strong>原理</strong>: 双档 Smooth/CatchUp + 迟滞控制器。不同的进入/退出阈值防止状态边界振荡。</p>
-<pre><code class="language-rust">// DeepSeek — crates/tui/src/tui/streaming/chunking.rs
-// 进入 CatchUp: queue≥160行 或 最老块≥1200ms
-const ENTER_QUEUE_DEPTH_LINES: usize = 160;
-const ENTER_OLDEST_AGE: Duration = Duration::from_millis(1_200);
-// 退出 CatchUp: queue&lt;32行 且 最老块&lt;300ms，持续≥250ms
-const EXIT_QUEUE_DEPTH_LINES: usize = 32;
-const EXIT_OLDEST_AGE: Duration = Duration::from_millis(300);
-const EXIT_HOLD: Duration = Duration::from_millis(250);
-// 退出后冷却期 250ms 阻止立即再进入
-const REENTER_CATCH_UP_HOLD: Duration = Duration::from_millis(250);
-// 严重积压绕过冷却: queue≥640行 或 最老块≥4000ms
-const SEVERE_QUEUE_DEPTH_LINES: usize = 640;
-const SEVERE_OLDEST_AGE: Duration = Duration::from_millis(4_000);</code></pre>
+<pre><code class="language-rust"><span class="hljs-comment">// DeepSeek — crates/tui/src/tui/streaming/chunking.rs</span>
+<span class="hljs-comment">// 进入 CatchUp: queue≥160行 或 最老块≥1200ms</span>
+<span class="hljs-keyword">const</span> ENTER_QUEUE_DEPTH_LINES: <span class="hljs-type">usize</span> = <span class="hljs-number">160</span>;
+<span class="hljs-keyword">const</span> ENTER_OLDEST_AGE: Duration = Duration::<span class="hljs-title function_ invoke__">from_millis</span>(<span class="hljs-number">1_200</span>);
+<span class="hljs-comment">// 退出 CatchUp: queue&lt;32行 且 最老块&lt;300ms，持续≥250ms</span>
+<span class="hljs-keyword">const</span> EXIT_QUEUE_DEPTH_LINES: <span class="hljs-type">usize</span> = <span class="hljs-number">32</span>;
+<span class="hljs-keyword">const</span> EXIT_OLDEST_AGE: Duration = Duration::<span class="hljs-title function_ invoke__">from_millis</span>(<span class="hljs-number">300</span>);
+<span class="hljs-keyword">const</span> EXIT_HOLD: Duration = Duration::<span class="hljs-title function_ invoke__">from_millis</span>(<span class="hljs-number">250</span>);
+<span class="hljs-comment">// 退出后冷却期 250ms 阻止立即再进入</span>
+<span class="hljs-keyword">const</span> REENTER_CATCH_UP_HOLD: Duration = Duration::<span class="hljs-title function_ invoke__">from_millis</span>(<span class="hljs-number">250</span>);
+<span class="hljs-comment">// 严重积压绕过冷却: queue≥640行 或 最老块≥4000ms</span>
+<span class="hljs-keyword">const</span> SEVERE_QUEUE_DEPTH_LINES: <span class="hljs-type">usize</span> = <span class="hljs-number">640</span>;
+<span class="hljs-keyword">const</span> SEVERE_OLDEST_AGE: Duration = Duration::<span class="hljs-title function_ invoke__">from_millis</span>(<span class="hljs-number">4_000</span>);</code></pre>
 <p><strong>KHY 移植 (<code>lineBuffer.js</code> 新增)</strong>:</p>
-<pre><code class="language-js">const CHUNKING = {
-  ENTER_LINES: 160, ENTER_AGE_MS: 1200,
-  EXIT_LINES: 32, EXIT_AGE_MS: 300, EXIT_HOLD_MS: 250,
-  REENTER_HOLD_MS: 250,
-  SEVERE_LINES: 640, SEVERE_AGE_MS: 4000,
+<pre><code class="language-js"><span class="hljs-keyword">const</span> <span class="hljs-variable constant_">CHUNKING</span> = {
+  <span class="hljs-attr">ENTER_LINES</span>: <span class="hljs-number">160</span>, <span class="hljs-attr">ENTER_AGE_MS</span>: <span class="hljs-number">1200</span>,
+  <span class="hljs-attr">EXIT_LINES</span>: <span class="hljs-number">32</span>, <span class="hljs-attr">EXIT_AGE_MS</span>: <span class="hljs-number">300</span>, <span class="hljs-attr">EXIT_HOLD_MS</span>: <span class="hljs-number">250</span>,
+  <span class="hljs-attr">REENTER_HOLD_MS</span>: <span class="hljs-number">250</span>,
+  <span class="hljs-attr">SEVERE_LINES</span>: <span class="hljs-number">640</span>, <span class="hljs-attr">SEVERE_AGE_MS</span>: <span class="hljs-number">4000</span>,
 };
 
-class AdaptiveChunker {
-  constructor() {
-    this.mode = 'smooth'; // 'smooth' | 'catchup'
-    this._exitSince = null;
-    this._lastExitAt = 0;
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">AdaptiveChunker</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">mode</span> = <span class="hljs-string">&#x27;smooth&#x27;</span>; <span class="hljs-comment">// &#x27;smooth&#x27; | &#x27;catchup&#x27;</span>
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_exitSince</span> = <span class="hljs-literal">null</span>;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_lastExitAt</span> = <span class="hljs-number">0</span>;
   }
 
-  decide(queuedLines, oldestAgeMs, now = Date.now()) {
-    if (this.mode === 'smooth') {
-      const severe = queuedLines &gt;= CHUNKING.SEVERE_LINES || oldestAgeMs &gt;= CHUNKING.SEVERE_AGE_MS;
-      const enter = queuedLines &gt;= CHUNKING.ENTER_LINES || oldestAgeMs &gt;= CHUNKING.ENTER_AGE_MS;
-      if (severe || (enter &amp;&amp; now - this._lastExitAt &gt; CHUNKING.REENTER_HOLD_MS)) {
-        this.mode = 'catchup';
-        this._exitSince = null;
+  <span class="hljs-title function_">decide</span>(<span class="hljs-params">queuedLines, oldestAgeMs, now = <span class="hljs-built_in">Date</span>.now()</span>) {
+    <span class="hljs-keyword">if</span> (<span class="hljs-variable language_">this</span>.<span class="hljs-property">mode</span> === <span class="hljs-string">&#x27;smooth&#x27;</span>) {
+      <span class="hljs-keyword">const</span> severe = queuedLines &gt;= <span class="hljs-variable constant_">CHUNKING</span>.<span class="hljs-property">SEVERE_LINES</span> || oldestAgeMs &gt;= <span class="hljs-variable constant_">CHUNKING</span>.<span class="hljs-property">SEVERE_AGE_MS</span>;
+      <span class="hljs-keyword">const</span> enter = queuedLines &gt;= <span class="hljs-variable constant_">CHUNKING</span>.<span class="hljs-property">ENTER_LINES</span> || oldestAgeMs &gt;= <span class="hljs-variable constant_">CHUNKING</span>.<span class="hljs-property">ENTER_AGE_MS</span>;
+      <span class="hljs-keyword">if</span> (severe || (enter &amp;&amp; now - <span class="hljs-variable language_">this</span>.<span class="hljs-property">_lastExitAt</span> &gt; <span class="hljs-variable constant_">CHUNKING</span>.<span class="hljs-property">REENTER_HOLD_MS</span>)) {
+        <span class="hljs-variable language_">this</span>.<span class="hljs-property">mode</span> = <span class="hljs-string">&#x27;catchup&#x27;</span>;
+        <span class="hljs-variable language_">this</span>.<span class="hljs-property">_exitSince</span> = <span class="hljs-literal">null</span>;
       }
-    } else {
-      const low = queuedLines &lt; CHUNKING.EXIT_LINES &amp;&amp; oldestAgeMs &lt; CHUNKING.EXIT_AGE_MS;
-      if (low) {
-        if (!this._exitSince) this._exitSince = now;
-        if (now - this._exitSince &gt;= CHUNKING.EXIT_HOLD_MS) {
-          this.mode = 'smooth';
-          this._lastExitAt = now;
+    } <span class="hljs-keyword">else</span> {
+      <span class="hljs-keyword">const</span> low = queuedLines &lt; <span class="hljs-variable constant_">CHUNKING</span>.<span class="hljs-property">EXIT_LINES</span> &amp;&amp; oldestAgeMs &lt; <span class="hljs-variable constant_">CHUNKING</span>.<span class="hljs-property">EXIT_AGE_MS</span>;
+      <span class="hljs-keyword">if</span> (low) {
+        <span class="hljs-keyword">if</span> (!<span class="hljs-variable language_">this</span>.<span class="hljs-property">_exitSince</span>) <span class="hljs-variable language_">this</span>.<span class="hljs-property">_exitSince</span> = now;
+        <span class="hljs-keyword">if</span> (now - <span class="hljs-variable language_">this</span>.<span class="hljs-property">_exitSince</span> &gt;= <span class="hljs-variable constant_">CHUNKING</span>.<span class="hljs-property">EXIT_HOLD_MS</span>) {
+          <span class="hljs-variable language_">this</span>.<span class="hljs-property">mode</span> = <span class="hljs-string">&#x27;smooth&#x27;</span>;
+          <span class="hljs-variable language_">this</span>.<span class="hljs-property">_lastExitAt</span> = now;
         }
-      } else {
-        this._exitSince = null;
+      } <span class="hljs-keyword">else</span> {
+        <span class="hljs-variable language_">this</span>.<span class="hljs-property">_exitSince</span> = <span class="hljs-literal">null</span>;
       }
     }
-    return this.mode;
+    <span class="hljs-keyword">return</span> <span class="hljs-variable language_">this</span>.<span class="hljs-property">mode</span>;
   }
 }</code></pre>
 <hr>
 <h3 id="3-3-统一-errorenvelope-deepseek-error-taxonomy-rs">3.3 统一 ErrorEnvelope (DeepSeek <code>error_taxonomy.rs</code>)<a class="anchor" href="#3-3-统一-errorenvelope-deepseek-error-taxonomy-rs" aria-label="锚点">#</a></h3>
 <p><strong>原理</strong>: 跨子系统边界传递的统一错误信封，携带分类/严重性/可恢复性/错误码/消息。</p>
-<pre><code class="language-rust">// DeepSeek — crates/tui/src/error_taxonomy.rs
-pub enum ErrorCategory {
+<pre><code class="language-rust"><span class="hljs-comment">// DeepSeek — crates/tui/src/error_taxonomy.rs</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-keyword">enum</span> <span class="hljs-title class_">ErrorCategory</span> {
     Network, Authentication, Authorization, RateLimit,
     Timeout, InvalidInput, Parse, Tool, State, Internal,
 }
-pub enum ErrorSeverity { Info, Warning, Error, Critical }
+<span class="hljs-keyword">pub</span> <span class="hljs-keyword">enum</span> <span class="hljs-title class_">ErrorSeverity</span> { Info, Warning, Error, Critical }
 
-pub struct ErrorEnvelope {
-    pub category: ErrorCategory,
-    pub severity: ErrorSeverity,
-    pub recoverable: bool,
-    pub code: String,
-    pub message: String,
+<span class="hljs-keyword">pub</span> <span class="hljs-keyword">struct</span> <span class="hljs-title class_">ErrorEnvelope</span> {
+    <span class="hljs-keyword">pub</span> category: ErrorCategory,
+    <span class="hljs-keyword">pub</span> severity: ErrorSeverity,
+    <span class="hljs-keyword">pub</span> recoverable: <span class="hljs-type">bool</span>,
+    <span class="hljs-keyword">pub</span> code: <span class="hljs-type">String</span>,
+    <span class="hljs-keyword">pub</span> message: <span class="hljs-type">String</span>,
 }</code></pre>
 <p><strong>KHY 移植 (<code>backend/src/services/errorEnvelope.js</code> 新建)</strong>:</p>
-<pre><code class="language-js">'use strict';
+<pre><code class="language-js"><span class="hljs-meta">&#x27;use strict&#x27;</span>;
 
-const CATEGORY = Object.freeze({
-  NETWORK: 'network', AUTH: 'authentication', AUTHZ: 'authorization',
-  RATE_LIMIT: 'rate_limit', TIMEOUT: 'timeout', INPUT: 'invalid_input',
-  PARSE: 'parse', TOOL: 'tool', STATE: 'state', INTERNAL: 'internal',
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">CATEGORY</span> = <span class="hljs-title class_">Object</span>.<span class="hljs-title function_">freeze</span>({
+  <span class="hljs-attr">NETWORK</span>: <span class="hljs-string">&#x27;network&#x27;</span>, <span class="hljs-attr">AUTH</span>: <span class="hljs-string">&#x27;authentication&#x27;</span>, <span class="hljs-attr">AUTHZ</span>: <span class="hljs-string">&#x27;authorization&#x27;</span>,
+  <span class="hljs-attr">RATE_LIMIT</span>: <span class="hljs-string">&#x27;rate_limit&#x27;</span>, <span class="hljs-attr">TIMEOUT</span>: <span class="hljs-string">&#x27;timeout&#x27;</span>, <span class="hljs-attr">INPUT</span>: <span class="hljs-string">&#x27;invalid_input&#x27;</span>,
+  <span class="hljs-attr">PARSE</span>: <span class="hljs-string">&#x27;parse&#x27;</span>, <span class="hljs-attr">TOOL</span>: <span class="hljs-string">&#x27;tool&#x27;</span>, <span class="hljs-attr">STATE</span>: <span class="hljs-string">&#x27;state&#x27;</span>, <span class="hljs-attr">INTERNAL</span>: <span class="hljs-string">&#x27;internal&#x27;</span>,
 });
 
-const SEVERITY = Object.freeze({ INFO: 'info', WARNING: 'warning', ERROR: 'error', CRITICAL: 'critical' });
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">SEVERITY</span> = <span class="hljs-title class_">Object</span>.<span class="hljs-title function_">freeze</span>({ <span class="hljs-attr">INFO</span>: <span class="hljs-string">&#x27;info&#x27;</span>, <span class="hljs-attr">WARNING</span>: <span class="hljs-string">&#x27;warning&#x27;</span>, <span class="hljs-attr">ERROR</span>: <span class="hljs-string">&#x27;error&#x27;</span>, <span class="hljs-attr">CRITICAL</span>: <span class="hljs-string">&#x27;critical&#x27;</span> });
 
-class ErrorEnvelope {
-  constructor(category, severity, recoverable, code, message) {
-    this.category = category;
-    this.severity = severity;
-    this.recoverable = recoverable;
-    this.code = code;
-    this.message = message;
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">ErrorEnvelope</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params">category, severity, recoverable, code, message</span>) {
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">category</span> = category;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">severity</span> = severity;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">recoverable</span> = recoverable;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">code</span> = code;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">message</span> = message;
   }
 
-  static transient(msg) {
-    return new ErrorEnvelope(CATEGORY.INTERNAL, SEVERITY.WARNING, true, 'transient', msg);
+  <span class="hljs-keyword">static</span> <span class="hljs-title function_">transient</span>(<span class="hljs-params">msg</span>) {
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ErrorEnvelope</span>(<span class="hljs-variable constant_">CATEGORY</span>.<span class="hljs-property">INTERNAL</span>, <span class="hljs-variable constant_">SEVERITY</span>.<span class="hljs-property">WARNING</span>, <span class="hljs-literal">true</span>, <span class="hljs-string">&#x27;transient&#x27;</span>, msg);
   }
-  static fatal(msg) {
-    return new ErrorEnvelope(CATEGORY.INTERNAL, SEVERITY.ERROR, false, 'fatal', msg);
+  <span class="hljs-keyword">static</span> <span class="hljs-title function_">fatal</span>(<span class="hljs-params">msg</span>) {
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ErrorEnvelope</span>(<span class="hljs-variable constant_">CATEGORY</span>.<span class="hljs-property">INTERNAL</span>, <span class="hljs-variable constant_">SEVERITY</span>.<span class="hljs-property">ERROR</span>, <span class="hljs-literal">false</span>, <span class="hljs-string">&#x27;fatal&#x27;</span>, msg);
   }
-  static fatalAuth(msg) {
-    return new ErrorEnvelope(CATEGORY.AUTH, SEVERITY.CRITICAL, false, 'auth_fatal', msg);
+  <span class="hljs-keyword">static</span> <span class="hljs-title function_">fatalAuth</span>(<span class="hljs-params">msg</span>) {
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ErrorEnvelope</span>(<span class="hljs-variable constant_">CATEGORY</span>.<span class="hljs-property">AUTH</span>, <span class="hljs-variable constant_">SEVERITY</span>.<span class="hljs-property">CRITICAL</span>, <span class="hljs-literal">false</span>, <span class="hljs-string">&#x27;auth_fatal&#x27;</span>, msg);
   }
-  static contextOverflow(msg) {
-    return new ErrorEnvelope(CATEGORY.INPUT, SEVERITY.ERROR, true, 'context_overflow', msg);
+  <span class="hljs-keyword">static</span> <span class="hljs-title function_">contextOverflow</span>(<span class="hljs-params">msg</span>) {
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ErrorEnvelope</span>(<span class="hljs-variable constant_">CATEGORY</span>.<span class="hljs-property">INPUT</span>, <span class="hljs-variable constant_">SEVERITY</span>.<span class="hljs-property">ERROR</span>, <span class="hljs-literal">true</span>, <span class="hljs-string">&#x27;context_overflow&#x27;</span>, msg);
   }
-  static network(msg) {
-    return new ErrorEnvelope(CATEGORY.NETWORK, SEVERITY.WARNING, true, 'network_transient', msg);
+  <span class="hljs-keyword">static</span> <span class="hljs-title function_">network</span>(<span class="hljs-params">msg</span>) {
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">ErrorEnvelope</span>(<span class="hljs-variable constant_">CATEGORY</span>.<span class="hljs-property">NETWORK</span>, <span class="hljs-variable constant_">SEVERITY</span>.<span class="hljs-property">WARNING</span>, <span class="hljs-literal">true</span>, <span class="hljs-string">&#x27;network_transient&#x27;</span>, msg);
   }
 }
 
-module.exports = { ErrorEnvelope, CATEGORY, SEVERITY };</code></pre>
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = { <span class="hljs-title class_">ErrorEnvelope</span>, <span class="hljs-variable constant_">CATEGORY</span>, <span class="hljs-variable constant_">SEVERITY</span> };</code></pre>
 <hr>
 <h3 id="3-4-原子写入-检查点-deepseek-session-manager-rs">3.4 原子写入+检查点 (DeepSeek <code>session_manager.rs</code>)<a class="anchor" href="#3-4-原子写入-检查点-deepseek-session-manager-rs" aria-label="锚点">#</a></h3>
 <p><strong>原理</strong>: tmp 文件 + fsync + rename 三步实现崩溃安全原子写入。</p>
 <p><strong>KHY 移植 (<code>sessionPersistence.js</code> 修改)</strong>:</p>
-<pre><code class="language-js">const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const crypto = require('crypto');
+<pre><code class="language-js"><span class="hljs-keyword">const</span> fs = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;fs&#x27;</span>);
+<span class="hljs-keyword">const</span> path = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;path&#x27;</span>);
+<span class="hljs-keyword">const</span> os = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;os&#x27;</span>);
+<span class="hljs-keyword">const</span> crypto = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;crypto&#x27;</span>);
 
-function writeAtomic(filePath, data) {
-  const dir = path.dirname(filePath);
-  const tmpPath = path.join(dir, `.tmp-${crypto.randomBytes(6).toString('hex')}`);
-  const fd = fs.openSync(tmpPath, 'w', 0o600);
-  try {
-    fs.writeSync(fd, typeof data === 'string' ? data : JSON.stringify(data, null, 2));
-    fs.fsyncSync(fd);           // 刷到磁盘
-  } finally {
-    fs.closeSync(fd);
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">writeAtomic</span>(<span class="hljs-params">filePath, data</span>) {
+  <span class="hljs-keyword">const</span> dir = path.<span class="hljs-title function_">dirname</span>(filePath);
+  <span class="hljs-keyword">const</span> tmpPath = path.<span class="hljs-title function_">join</span>(dir, <span class="hljs-string">`.tmp-<span class="hljs-subst">${crypto.randomBytes(<span class="hljs-number">6</span>).toString(<span class="hljs-string">&#x27;hex&#x27;</span>)}</span>`</span>);
+  <span class="hljs-keyword">const</span> fd = fs.<span class="hljs-title function_">openSync</span>(tmpPath, <span class="hljs-string">&#x27;w&#x27;</span>, <span class="hljs-number">0o600</span>);
+  <span class="hljs-keyword">try</span> {
+    fs.<span class="hljs-title function_">writeSync</span>(fd, <span class="hljs-keyword">typeof</span> data === <span class="hljs-string">&#x27;string&#x27;</span> ? data : <span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">stringify</span>(data, <span class="hljs-literal">null</span>, <span class="hljs-number">2</span>));
+    fs.<span class="hljs-title function_">fsyncSync</span>(fd);           <span class="hljs-comment">// 刷到磁盘</span>
+  } <span class="hljs-keyword">finally</span> {
+    fs.<span class="hljs-title function_">closeSync</span>(fd);
   }
-  fs.renameSync(tmpPath, filePath);  // 原子替换
+  fs.<span class="hljs-title function_">renameSync</span>(tmpPath, filePath);  <span class="hljs-comment">// 原子替换</span>
 }
 
-function saveCheckpoint(session) {
-  const checkpointDir = path.join(os.homedir(), '.khyquant', 'sessions', 'checkpoints');
-  fs.mkdirSync(checkpointDir, { recursive: true });
-  writeAtomic(path.join(checkpointDir, 'latest.json'), session);
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">saveCheckpoint</span>(<span class="hljs-params">session</span>) {
+  <span class="hljs-keyword">const</span> checkpointDir = path.<span class="hljs-title function_">join</span>(os.<span class="hljs-title function_">homedir</span>(), <span class="hljs-string">&#x27;.khyquant&#x27;</span>, <span class="hljs-string">&#x27;sessions&#x27;</span>, <span class="hljs-string">&#x27;checkpoints&#x27;</span>);
+  fs.<span class="hljs-title function_">mkdirSync</span>(checkpointDir, { <span class="hljs-attr">recursive</span>: <span class="hljs-literal">true</span> });
+  <span class="hljs-title function_">writeAtomic</span>(path.<span class="hljs-title function_">join</span>(checkpointDir, <span class="hljs-string">&#x27;latest.json&#x27;</span>), session);
 }</code></pre>
 <hr>
 <h3 id="3-5-首次引导流程-deepseek-onboardingstate">3.5 首次引导流程 (DeepSeek <code>OnboardingState</code>)<a class="anchor" href="#3-5-首次引导流程-deepseek-onboardingstate" aria-label="锚点">#</a></h3>
 <p><strong>原理</strong>: 5 步状态机，根据引导标记和运行时状态决定入口点。</p>
-<pre><code class="language-rust">// DeepSeek — crates/tui/src/tui/app.rs
-enum OnboardingState { Welcome, Language, ApiKey, TrustDirectory, Tips, None }
+<pre><code class="language-rust"><span class="hljs-comment">// DeepSeek — crates/tui/src/tui/app.rs</span>
+<span class="hljs-keyword">enum</span> <span class="hljs-title class_">OnboardingState</span> { Welcome, Language, ApiKey, TrustDirectory, Tips, <span class="hljs-literal">None</span> }
 
-fn initial_onboarding_state(skip, was_onboarded, needs_key, needs_trust) -&gt; OnboardingState {
-    if skip || (was_onboarded &amp;&amp; !needs_key &amp;&amp; !needs_trust) { return None; }
-    if was_onboarded &amp;&amp; needs_key { return ApiKey; }
-    if was_onboarded &amp;&amp; needs_trust { return TrustDirectory; }
+<span class="hljs-keyword">fn</span> <span class="hljs-title function_">initial_onboarding_state</span>(skip, was_onboarded, needs_key, needs_trust) <span class="hljs-punctuation">-&gt;</span> OnboardingState {
+    <span class="hljs-keyword">if</span> skip || (was_onboarded &amp;&amp; !needs_key &amp;&amp; !needs_trust) { <span class="hljs-keyword">return</span> <span class="hljs-literal">None</span>; }
+    <span class="hljs-keyword">if</span> was_onboarded &amp;&amp; needs_key { <span class="hljs-keyword">return</span> ApiKey; }
+    <span class="hljs-keyword">if</span> was_onboarded &amp;&amp; needs_trust { <span class="hljs-keyword">return</span> TrustDirectory; }
     Welcome
 }</code></pre>
 <p><strong>KHY 移植 (<code>backend/src/cli/onboarding.js</code> 新建)</strong>:</p>
-<pre><code class="language-js">'use strict';
+<pre><code class="language-js"><span class="hljs-meta">&#x27;use strict&#x27;</span>;
 
-const STATES = ['welcome', 'language', 'apiKey', 'trustDir', 'tips', 'done'];
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">STATES</span> = [<span class="hljs-string">&#x27;welcome&#x27;</span>, <span class="hljs-string">&#x27;language&#x27;</span>, <span class="hljs-string">&#x27;apiKey&#x27;</span>, <span class="hljs-string">&#x27;trustDir&#x27;</span>, <span class="hljs-string">&#x27;tips&#x27;</span>, <span class="hljs-string">&#x27;done&#x27;</span>];
 
-function determineOnboardingState({ skip, wasOnboarded, needsApiKey, needsTrust }) {
-  if (skip || (wasOnboarded &amp;&amp; !needsApiKey &amp;&amp; !needsTrust)) return 'done';
-  if (wasOnboarded &amp;&amp; needsApiKey) return 'apiKey';
-  if (wasOnboarded &amp;&amp; needsTrust) return 'trustDir';
-  return 'welcome';
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">determineOnboardingState</span>(<span class="hljs-params">{ skip, wasOnboarded, needsApiKey, needsTrust }</span>) {
+  <span class="hljs-keyword">if</span> (skip || (wasOnboarded &amp;&amp; !needsApiKey &amp;&amp; !needsTrust)) <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;done&#x27;</span>;
+  <span class="hljs-keyword">if</span> (wasOnboarded &amp;&amp; needsApiKey) <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;apiKey&#x27;</span>;
+  <span class="hljs-keyword">if</span> (wasOnboarded &amp;&amp; needsTrust) <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;trustDir&#x27;</span>;
+  <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;welcome&#x27;</span>;
 }
 
-class OnboardingWizard {
-  constructor(opts) {
-    this.state = determineOnboardingState(opts);
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">OnboardingWizard</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params">opts</span>) {
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">state</span> = <span class="hljs-title function_">determineOnboardingState</span>(opts);
   }
 
-  advance() {
-    const idx = STATES.indexOf(this.state);
-    this.state = idx &lt; STATES.length - 1 ? STATES[idx + 1] : 'done';
-    return this.state;
+  <span class="hljs-title function_">advance</span>(<span class="hljs-params"></span>) {
+    <span class="hljs-keyword">const</span> idx = <span class="hljs-variable constant_">STATES</span>.<span class="hljs-title function_">indexOf</span>(<span class="hljs-variable language_">this</span>.<span class="hljs-property">state</span>);
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">state</span> = idx &lt; <span class="hljs-variable constant_">STATES</span>.<span class="hljs-property">length</span> - <span class="hljs-number">1</span> ? <span class="hljs-variable constant_">STATES</span>[idx + <span class="hljs-number">1</span>] : <span class="hljs-string">&#x27;done&#x27;</span>;
+    <span class="hljs-keyword">return</span> <span class="hljs-variable language_">this</span>.<span class="hljs-property">state</span>;
   }
 
-  isDone() { return this.state === 'done'; }
+  <span class="hljs-title function_">isDone</span>(<span class="hljs-params"></span>) { <span class="hljs-keyword">return</span> <span class="hljs-variable language_">this</span>.<span class="hljs-property">state</span> === <span class="hljs-string">&#x27;done&#x27;</span>; }
 }
 
-module.exports = { OnboardingWizard, determineOnboardingState };</code></pre>
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = { <span class="hljs-title class_">OnboardingWizard</span>, determineOnboardingState };</code></pre>
 <hr>
 <h3 id="3-6-并行工具安全分类-hermes">3.6 并行工具安全分类 (Hermes)<a class="anchor" href="#3-6-并行工具安全分类-hermes" aria-label="锚点">#</a></h3>
 <p><strong>原理</strong>: 将工具分三类——只读可并行、写入按路径分区、交互强制串行。</p>
-<pre><code class="language-python"># Hermes — run_agent.py
-_NEVER_PARALLEL_TOOLS = frozenset({&quot;clarify&quot;})
-_PARALLEL_SAFE_TOOLS = frozenset({
-    &quot;read_file&quot;, &quot;search_files&quot;, &quot;session_search&quot;,
-    &quot;vision_analyze&quot;, &quot;web_extract&quot;, &quot;web_search&quot;,
+<pre><code class="language-python"><span class="hljs-comment"># Hermes — run_agent.py</span>
+_NEVER_PARALLEL_TOOLS = <span class="hljs-built_in">frozenset</span>({<span class="hljs-string">&quot;clarify&quot;</span>})
+_PARALLEL_SAFE_TOOLS = <span class="hljs-built_in">frozenset</span>({
+    <span class="hljs-string">&quot;read_file&quot;</span>, <span class="hljs-string">&quot;search_files&quot;</span>, <span class="hljs-string">&quot;session_search&quot;</span>,
+    <span class="hljs-string">&quot;vision_analyze&quot;</span>, <span class="hljs-string">&quot;web_extract&quot;</span>, <span class="hljs-string">&quot;web_search&quot;</span>,
 })
-_PATH_SCOPED_TOOLS = frozenset({&quot;read_file&quot;, &quot;write_file&quot;, &quot;patch&quot;})
-_MAX_TOOL_WORKERS = 8</code></pre>
+_PATH_SCOPED_TOOLS = <span class="hljs-built_in">frozenset</span>({<span class="hljs-string">&quot;read_file&quot;</span>, <span class="hljs-string">&quot;write_file&quot;</span>, <span class="hljs-string">&quot;patch&quot;</span>})
+_MAX_TOOL_WORKERS = <span class="hljs-number">8</span></code></pre>
 <p><strong>KHY 移植 (<code>toolPipeline.js</code> 增强)</strong>:</p>
-<pre><code class="language-js">const PARALLEL_SAFE = new Set(['Read', 'Glob', 'Grep', 'WebSearch', 'WebFetch', 'LSPTool']);
-const NEVER_PARALLEL = new Set(['AskUserQuestion', 'PermissionDialog']);
-const PATH_SCOPED = new Set(['Read', 'Edit', 'Write']);
-const MAX_PARALLEL = 8;
+<pre><code class="language-js"><span class="hljs-keyword">const</span> <span class="hljs-variable constant_">PARALLEL_SAFE</span> = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Set</span>([<span class="hljs-string">&#x27;Read&#x27;</span>, <span class="hljs-string">&#x27;Glob&#x27;</span>, <span class="hljs-string">&#x27;Grep&#x27;</span>, <span class="hljs-string">&#x27;WebSearch&#x27;</span>, <span class="hljs-string">&#x27;WebFetch&#x27;</span>, <span class="hljs-string">&#x27;LSPTool&#x27;</span>]);
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">NEVER_PARALLEL</span> = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Set</span>([<span class="hljs-string">&#x27;AskUserQuestion&#x27;</span>, <span class="hljs-string">&#x27;PermissionDialog&#x27;</span>]);
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">PATH_SCOPED</span> = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Set</span>([<span class="hljs-string">&#x27;Read&#x27;</span>, <span class="hljs-string">&#x27;Edit&#x27;</span>, <span class="hljs-string">&#x27;Write&#x27;</span>]);
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">MAX_PARALLEL</span> = <span class="hljs-number">8</span>;
 
-function classifyParallelism(toolCalls) {
-  if (toolCalls.some(tc =&gt; NEVER_PARALLEL.has(tc.name))) return 'serial';
-  if (toolCalls.every(tc =&gt; PARALLEL_SAFE.has(tc.name))) return 'parallel';
-  // 写入工具按目标路径分区
-  const pathGroups = new Map();
-  for (const tc of toolCalls) {
-    if (PATH_SCOPED.has(tc.name)) {
-      const p = tc.args?.file_path || tc.args?.path || '__default__';
-      if (!pathGroups.has(p)) pathGroups.set(p, []);
-      pathGroups.get(p).push(tc);
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">classifyParallelism</span>(<span class="hljs-params">toolCalls</span>) {
+  <span class="hljs-keyword">if</span> (toolCalls.<span class="hljs-title function_">some</span>(<span class="hljs-function"><span class="hljs-params">tc</span> =&gt;</span> <span class="hljs-variable constant_">NEVER_PARALLEL</span>.<span class="hljs-title function_">has</span>(tc.<span class="hljs-property">name</span>))) <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;serial&#x27;</span>;
+  <span class="hljs-keyword">if</span> (toolCalls.<span class="hljs-title function_">every</span>(<span class="hljs-function"><span class="hljs-params">tc</span> =&gt;</span> <span class="hljs-variable constant_">PARALLEL_SAFE</span>.<span class="hljs-title function_">has</span>(tc.<span class="hljs-property">name</span>))) <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;parallel&#x27;</span>;
+  <span class="hljs-comment">// 写入工具按目标路径分区</span>
+  <span class="hljs-keyword">const</span> pathGroups = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Map</span>();
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> tc <span class="hljs-keyword">of</span> toolCalls) {
+    <span class="hljs-keyword">if</span> (<span class="hljs-variable constant_">PATH_SCOPED</span>.<span class="hljs-title function_">has</span>(tc.<span class="hljs-property">name</span>)) {
+      <span class="hljs-keyword">const</span> p = tc.<span class="hljs-property">args</span>?.<span class="hljs-property">file_path</span> || tc.<span class="hljs-property">args</span>?.<span class="hljs-property">path</span> || <span class="hljs-string">&#x27;__default__&#x27;</span>;
+      <span class="hljs-keyword">if</span> (!pathGroups.<span class="hljs-title function_">has</span>(p)) pathGroups.<span class="hljs-title function_">set</span>(p, []);
+      pathGroups.<span class="hljs-title function_">get</span>(p).<span class="hljs-title function_">push</span>(tc);
     }
   }
-  // 不同路径可以并行，同路径串行
-  return pathGroups.size &gt; 1 ? 'path_partitioned' : 'serial';
+  <span class="hljs-comment">// 不同路径可以并行，同路径串行</span>
+  <span class="hljs-keyword">return</span> pathGroups.<span class="hljs-property">size</span> &gt; <span class="hljs-number">1</span> ? <span class="hljs-string">&#x27;path_partitioned&#x27;</span> : <span class="hljs-string">&#x27;serial&#x27;</span>;
 }</code></pre>
 <hr>
 <h3 id="3-7-goal-持久化-judge-循环-hermes">3.7 Goal 持久化 + Judge 循环 (Hermes)<a class="anchor" href="#3-7-goal-持久化-judge-循环-hermes" aria-label="锚点">#</a></h3>
 <p><strong>原理</strong>: <code>/goal</code> 设置跨轮次目标，每轮结束后辅助模型 judge 判定是否完成，fail-open 设计。</p>
-<pre><code class="language-python"># Hermes — hermes_cli/goals.py
-@dataclass
-class GoalState:
-    goal: str
-    status: str = &quot;active&quot;           # active | paused | done | cleared
-    turns_used: int = 0
-    max_turns: int = 50              # 预算
-    subgoals: List[str] = field(default_factory=list)
+<pre><code class="language-python"><span class="hljs-comment"># Hermes — hermes_cli/goals.py</span>
+<span class="hljs-meta">@dataclass</span>
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">GoalState</span>:
+    goal: <span class="hljs-built_in">str</span>
+    status: <span class="hljs-built_in">str</span> = <span class="hljs-string">&quot;active&quot;</span>           <span class="hljs-comment"># active | paused | done | cleared</span>
+    turns_used: <span class="hljs-built_in">int</span> = <span class="hljs-number">0</span>
+    max_turns: <span class="hljs-built_in">int</span> = <span class="hljs-number">50</span>              <span class="hljs-comment"># 预算</span>
+    subgoals: <span class="hljs-type">List</span>[<span class="hljs-built_in">str</span>] = field(default_factory=<span class="hljs-built_in">list</span>)
 
-def judge_goal(goal, last_response, *, timeout=10, subgoals=None):
-    &quot;&quot;&quot;调用辅助模型判定目标是否完成。fail-open: 任何错误返回 'continue'。&quot;&quot;&quot;
-    # ... 构建 prompt, 调用 auxiliary LLM, 解析 verdict ...
-    return (verdict, reason, parse_failed)  # &quot;done&quot; | &quot;continue&quot; | &quot;skipped&quot;</code></pre>
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">judge_goal</span>(<span class="hljs-params">goal, last_response, *, timeout=<span class="hljs-number">10</span>, subgoals=<span class="hljs-literal">None</span></span>):
+    <span class="hljs-string">&quot;&quot;&quot;调用辅助模型判定目标是否完成。fail-open: 任何错误返回 &#x27;continue&#x27;。&quot;&quot;&quot;</span>
+    <span class="hljs-comment"># ... 构建 prompt, 调用 auxiliary LLM, 解析 verdict ...</span>
+    <span class="hljs-keyword">return</span> (verdict, reason, parse_failed)  <span class="hljs-comment"># &quot;done&quot; | &quot;continue&quot; | &quot;skipped&quot;</span></code></pre>
 <hr>
 <h3 id="3-8-权限通配符匹配-opencode">3.8 权限通配符匹配 (OpenCode)<a class="anchor" href="#3-8-权限通配符匹配-opencode" aria-label="锚点">#</a></h3>
 <p><strong>原理</strong>: last-match-wins 语义，支持 <code>*</code> 和 <code>?</code> 通配符。</p>
-<pre><code class="language-ts">// OpenCode — packages/opencode/src/permission/evaluate.ts
-export function evaluate(permission: string, pattern: string, ...rulesets: Rule[][]): Rule {
-  const rules = rulesets.flat()
-  const match = rules.findLast(
-    (rule) =&gt; Wildcard.match(permission, rule.permission) &amp;&amp; Wildcard.match(pattern, rule.pattern),
+<pre><code class="language-ts"><span class="hljs-comment">// OpenCode — packages/opencode/src/permission/evaluate.ts</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">function</span> <span class="hljs-title function_">evaluate</span>(<span class="hljs-params"><span class="hljs-attr">permission</span>: <span class="hljs-built_in">string</span>, <span class="hljs-attr">pattern</span>: <span class="hljs-built_in">string</span>, ...<span class="hljs-attr">rulesets</span>: <span class="hljs-title class_">Rule</span>[][]</span>): <span class="hljs-title class_">Rule</span> {
+  <span class="hljs-keyword">const</span> rules = rulesets.<span class="hljs-title function_">flat</span>()
+  <span class="hljs-keyword">const</span> match = rules.<span class="hljs-title function_">findLast</span>(
+    <span class="hljs-function">(<span class="hljs-params">rule</span>) =&gt;</span> <span class="hljs-title class_">Wildcard</span>.<span class="hljs-title function_">match</span>(permission, rule.<span class="hljs-property">permission</span>) &amp;&amp; <span class="hljs-title class_">Wildcard</span>.<span class="hljs-title function_">match</span>(pattern, rule.<span class="hljs-property">pattern</span>),
   )
-  return match ?? { action: &quot;ask&quot;, permission, pattern: &quot;*&quot; }
+  <span class="hljs-keyword">return</span> match ?? { <span class="hljs-attr">action</span>: <span class="hljs-string">&quot;ask&quot;</span>, permission, <span class="hljs-attr">pattern</span>: <span class="hljs-string">&quot;*&quot;</span> }
 }</code></pre>
 <hr>
 <h3 id="3-9-prompt-注入防护-hermes">3.9 Prompt 注入防护 (Hermes)<a class="anchor" href="#3-9-prompt-注入防护-hermes" aria-label="锚点">#</a></h3>
 <p><strong>原理</strong>: 加载上下文文件前用正则+不可见字符检测扫描注入模式。</p>
-<pre><code class="language-python"># Hermes — agent/prompt_builder.py
+<pre><code class="language-python"><span class="hljs-comment"># Hermes — agent/prompt_builder.py</span>
 _CONTEXT_THREAT_PATTERNS = [
-    (r'ignore\s+(previous|all|above|prior)\s+instructions', &quot;prompt_injection&quot;),
-    (r'do\s+not\s+tell\s+the\s+user', &quot;deception_hide&quot;),
-    (r'system\s+prompt\s+override', &quot;sys_prompt_override&quot;),
-    (r'curl\s+[^\n]*\$\{?\w*(KEY|TOKEN|SECRET)', &quot;exfil_curl&quot;),
-    (r'cat\s+[^\n]*(\.env|credentials|\.netrc)', &quot;read_secrets&quot;),
-    # ... 共 10 种模式
+    (<span class="hljs-string">r&#x27;ignore\s+(previous|all|above|prior)\s+instructions&#x27;</span>, <span class="hljs-string">&quot;prompt_injection&quot;</span>),
+    (<span class="hljs-string">r&#x27;do\s+not\s+tell\s+the\s+user&#x27;</span>, <span class="hljs-string">&quot;deception_hide&quot;</span>),
+    (<span class="hljs-string">r&#x27;system\s+prompt\s+override&#x27;</span>, <span class="hljs-string">&quot;sys_prompt_override&quot;</span>),
+    (<span class="hljs-string">r&#x27;curl\s+[^\n]*\$\{?\w*(KEY|TOKEN|SECRET)&#x27;</span>, <span class="hljs-string">&quot;exfil_curl&quot;</span>),
+    (<span class="hljs-string">r&#x27;cat\s+[^\n]*(\.env|credentials|\.netrc)&#x27;</span>, <span class="hljs-string">&quot;read_secrets&quot;</span>),
+    <span class="hljs-comment"># ... 共 10 种模式</span>
 ]
-_CONTEXT_INVISIBLE_CHARS = {'\u200b', '\u200c', '\u200d', '\u2060', '\ufeff', ...}
+_CONTEXT_INVISIBLE_CHARS = {<span class="hljs-string">&#x27;\u200b&#x27;</span>, <span class="hljs-string">&#x27;\u200c&#x27;</span>, <span class="hljs-string">&#x27;\u200d&#x27;</span>, <span class="hljs-string">&#x27;\u2060&#x27;</span>, <span class="hljs-string">&#x27;\ufeff&#x27;</span>, ...}
 
-def _scan_context_content(content, filename):
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">_scan_context_content</span>(<span class="hljs-params">content, filename</span>):
     findings = []
-    for char in _CONTEXT_INVISIBLE_CHARS:
-        if char in content: findings.append(f&quot;invisible U+{ord(char):04X}&quot;)
-    for pattern, pid in _CONTEXT_THREAT_PATTERNS:
-        if re.search(pattern, content, re.IGNORECASE): findings.append(pid)
-    if findings:
-        return f&quot;[BLOCKED: {filename} — {', '.join(findings)}]&quot;
-    return content</code></pre>
+    <span class="hljs-keyword">for</span> char <span class="hljs-keyword">in</span> _CONTEXT_INVISIBLE_CHARS:
+        <span class="hljs-keyword">if</span> char <span class="hljs-keyword">in</span> content: findings.append(<span class="hljs-string">f&quot;invisible U+<span class="hljs-subst">{<span class="hljs-built_in">ord</span>(char):04X}</span>&quot;</span>)
+    <span class="hljs-keyword">for</span> pattern, pid <span class="hljs-keyword">in</span> _CONTEXT_THREAT_PATTERNS:
+        <span class="hljs-keyword">if</span> re.search(pattern, content, re.IGNORECASE): findings.append(pid)
+    <span class="hljs-keyword">if</span> findings:
+        <span class="hljs-keyword">return</span> <span class="hljs-string">f&quot;[BLOCKED: <span class="hljs-subst">{filename}</span> — <span class="hljs-subst">{<span class="hljs-string">&#x27;, &#x27;</span>.join(findings)}</span>]&quot;</span>
+    <span class="hljs-keyword">return</span> content</code></pre>
 <hr>
 <h3 id="3-10-终端色深检测-deepseek">3.10 终端色深检测 (DeepSeek)<a class="anchor" href="#3-10-终端色深检测-deepseek" aria-label="锚点">#</a></h3>
 <p><strong>原理</strong>: 逐级探测 <code>COLORTERM</code> → <code>WT_SESSION</code> → <code>TERM_PROGRAM</code> → <code>TERM</code>，三级降级。</p>
-<pre><code class="language-rust">// DeepSeek — crates/tui/src/palette.rs
-pub fn detect() -&gt; ColorDepth {
-    if env(&quot;COLORTERM&quot;) contains &quot;truecolor&quot; or &quot;24bit&quot; → TrueColor
-    if env(&quot;WT_SESSION&quot;) exists → TrueColor  // Windows Terminal
-    if env(&quot;TERM_PROGRAM&quot;) contains &quot;iterm|wezterm|vscode|warp&quot; → TrueColor
-    if env(&quot;TERM&quot;) contains &quot;256&quot; → Ansi256
-    if TERM is empty or &quot;dumb&quot; → Ansi16
-    else → Ansi256  // 保守默认
+<pre><code class="language-rust"><span class="hljs-comment">// DeepSeek — crates/tui/src/palette.rs</span>
+<span class="hljs-keyword">pub</span> <span class="hljs-keyword">fn</span> <span class="hljs-title function_">detect</span>() <span class="hljs-punctuation">-&gt;</span> ColorDepth {
+    <span class="hljs-keyword">if</span> <span class="hljs-title function_ invoke__">env</span>(<span class="hljs-string">&quot;COLORTERM&quot;</span>) contains <span class="hljs-string">&quot;truecolor&quot;</span> or <span class="hljs-string">&quot;24bit&quot;</span> → TrueColor
+    <span class="hljs-keyword">if</span> <span class="hljs-title function_ invoke__">env</span>(<span class="hljs-string">&quot;WT_SESSION&quot;</span>) exists → TrueColor  <span class="hljs-comment">// Windows Terminal</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-title function_ invoke__">env</span>(<span class="hljs-string">&quot;TERM_PROGRAM&quot;</span>) contains <span class="hljs-string">&quot;iterm|wezterm|vscode|warp&quot;</span> → TrueColor
+    <span class="hljs-keyword">if</span> <span class="hljs-title function_ invoke__">env</span>(<span class="hljs-string">&quot;TERM&quot;</span>) contains <span class="hljs-string">&quot;256&quot;</span> → Ansi256
+    <span class="hljs-keyword">if</span> TERM is empty or <span class="hljs-string">&quot;dumb&quot;</span> → Ansi16
+    <span class="hljs-keyword">else</span> → Ansi256  <span class="hljs-comment">// 保守默认</span>
 }</code></pre>
 <p><strong>KHY 移植 (<code>backend/src/cli/palette.js</code> 新建)</strong>:</p>
-<pre><code class="language-js">function detectColorDepth() {
-  const ct = (process.env.COLORTERM || '').toLowerCase();
-  if (ct.includes('truecolor') || ct.includes('24bit')) return 'truecolor';
-  if (process.env.WT_SESSION) return 'truecolor';
-  const tp = (process.env.TERM_PROGRAM || '').toLowerCase();
-  if (/iterm|wezterm|vscode|warp|ghostty/.test(tp)) return 'truecolor';
-  const term = (process.env.TERM || '').toLowerCase();
-  if (term.includes('256')) return 'ansi256';
-  if (!term || term === 'dumb') return 'ansi16';
-  return 'ansi256';
+<pre><code class="language-js"><span class="hljs-keyword">function</span> <span class="hljs-title function_">detectColorDepth</span>(<span class="hljs-params"></span>) {
+  <span class="hljs-keyword">const</span> ct = (process.<span class="hljs-property">env</span>.<span class="hljs-property">COLORTERM</span> || <span class="hljs-string">&#x27;&#x27;</span>).<span class="hljs-title function_">toLowerCase</span>();
+  <span class="hljs-keyword">if</span> (ct.<span class="hljs-title function_">includes</span>(<span class="hljs-string">&#x27;truecolor&#x27;</span>) || ct.<span class="hljs-title function_">includes</span>(<span class="hljs-string">&#x27;24bit&#x27;</span>)) <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;truecolor&#x27;</span>;
+  <span class="hljs-keyword">if</span> (process.<span class="hljs-property">env</span>.<span class="hljs-property">WT_SESSION</span>) <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;truecolor&#x27;</span>;
+  <span class="hljs-keyword">const</span> tp = (process.<span class="hljs-property">env</span>.<span class="hljs-property">TERM_PROGRAM</span> || <span class="hljs-string">&#x27;&#x27;</span>).<span class="hljs-title function_">toLowerCase</span>();
+  <span class="hljs-keyword">if</span> (<span class="hljs-regexp">/iterm|wezterm|vscode|warp|ghostty/</span>.<span class="hljs-title function_">test</span>(tp)) <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;truecolor&#x27;</span>;
+  <span class="hljs-keyword">const</span> term = (process.<span class="hljs-property">env</span>.<span class="hljs-property">TERM</span> || <span class="hljs-string">&#x27;&#x27;</span>).<span class="hljs-title function_">toLowerCase</span>();
+  <span class="hljs-keyword">if</span> (term.<span class="hljs-title function_">includes</span>(<span class="hljs-string">&#x27;256&#x27;</span>)) <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;ansi256&#x27;</span>;
+  <span class="hljs-keyword">if</span> (!term || term === <span class="hljs-string">&#x27;dumb&#x27;</span>) <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;ansi16&#x27;</span>;
+  <span class="hljs-keyword">return</span> <span class="hljs-string">&#x27;ansi256&#x27;</span>;
 }</code></pre>
 <hr>
 <h3 id="3-11-system-主题自动推导-opencode">3.11 System 主题自动推导 (OpenCode)<a class="anchor" href="#3-11-system-主题自动推导-opencode" aria-label="锚点">#</a></h3>
 <p><strong>原理</strong>: 从终端 16 色调色板推导完整 40+ token 主题，背景设为透明继承终端透明度。</p>
-<pre><code class="language-ts">// OpenCode — packages/opencode/src/cli/cmd/tui/context/theme.tsx
-function generateSystem(colors, mode) {
-  const bg = RGBA.fromHex(colors.defaultBackground ?? colors.palette[0])
-  const transparent = RGBA.fromValues(bg.r, bg.g, bg.b, 0) // 关键：透明背景
-  const grays = generateGrayScale(bg, isDark)
-  return {
-    primary: col(6),      // cyan
-    secondary: col(5),    // magenta
-    error: col(1),        // red
-    success: col(2),      // green
-    background: transparent,
-    // diff 颜色：alpha 混合
-    diffAddedBg: tint(bg, green, 0.22),
-    diffRemovedBg: tint(bg, red, 0.22),
+<pre><code class="language-ts"><span class="hljs-comment">// OpenCode — packages/opencode/src/cli/cmd/tui/context/theme.tsx</span>
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">generateSystem</span>(<span class="hljs-params">colors, mode</span>) {
+  <span class="hljs-keyword">const</span> bg = <span class="hljs-variable constant_">RGBA</span>.<span class="hljs-title function_">fromHex</span>(colors.<span class="hljs-property">defaultBackground</span> ?? colors.<span class="hljs-property">palette</span>[<span class="hljs-number">0</span>])
+  <span class="hljs-keyword">const</span> transparent = <span class="hljs-variable constant_">RGBA</span>.<span class="hljs-title function_">fromValues</span>(bg.<span class="hljs-property">r</span>, bg.<span class="hljs-property">g</span>, bg.<span class="hljs-property">b</span>, <span class="hljs-number">0</span>) <span class="hljs-comment">// 关键：透明背景</span>
+  <span class="hljs-keyword">const</span> grays = <span class="hljs-title function_">generateGrayScale</span>(bg, isDark)
+  <span class="hljs-keyword">return</span> {
+    <span class="hljs-attr">primary</span>: <span class="hljs-title function_">col</span>(<span class="hljs-number">6</span>),      <span class="hljs-comment">// cyan</span>
+    <span class="hljs-attr">secondary</span>: <span class="hljs-title function_">col</span>(<span class="hljs-number">5</span>),    <span class="hljs-comment">// magenta</span>
+    <span class="hljs-attr">error</span>: <span class="hljs-title function_">col</span>(<span class="hljs-number">1</span>),        <span class="hljs-comment">// red</span>
+    <span class="hljs-attr">success</span>: <span class="hljs-title function_">col</span>(<span class="hljs-number">2</span>),      <span class="hljs-comment">// green</span>
+    <span class="hljs-attr">background</span>: transparent,
+    <span class="hljs-comment">// diff 颜色：alpha 混合</span>
+    <span class="hljs-attr">diffAddedBg</span>: <span class="hljs-title function_">tint</span>(bg, green, <span class="hljs-number">0.22</span>),
+    <span class="hljs-attr">diffRemovedBg</span>: <span class="hljs-title function_">tint</span>(bg, red, <span class="hljs-number">0.22</span>),
   }
 }</code></pre>
 <hr>
 <h3 id="3-12-帧率限制器-deepseek">3.12 帧率限制器 (DeepSeek)<a class="anchor" href="#3-12-帧率限制器-deepseek" aria-label="锚点">#</a></h3>
 <p><strong>原理</strong>: 双档 120fps/30fps，<code>clamp_deadline</code> 将请求时刻推迟到不违反帧率上限的最早允许时刻。</p>
 <p><strong>KHY 移植 (<code>backend/src/cli/frameRateLimiter.js</code> 新建)</strong>:</p>
-<pre><code class="language-js">const MIN_INTERVAL_MS = 8.33;        // 120 FPS
-const LOW_MOTION_INTERVAL_MS = 33.33; // 30 FPS
+<pre><code class="language-js"><span class="hljs-keyword">const</span> <span class="hljs-variable constant_">MIN_INTERVAL_MS</span> = <span class="hljs-number">8.33</span>;        <span class="hljs-comment">// 120 FPS</span>
+<span class="hljs-keyword">const</span> <span class="hljs-variable constant_">LOW_MOTION_INTERVAL_MS</span> = <span class="hljs-number">33.33</span>; <span class="hljs-comment">// 30 FPS</span>
 
-class FrameRateLimiter {
-  constructor(lowMotion = false) {
-    this._lastEmit = 0;
-    this._lowMotion = lowMotion;
+<span class="hljs-keyword">class</span> <span class="hljs-title class_">FrameRateLimiter</span> {
+  <span class="hljs-title function_">constructor</span>(<span class="hljs-params">lowMotion = <span class="hljs-literal">false</span></span>) {
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_lastEmit</span> = <span class="hljs-number">0</span>;
+    <span class="hljs-variable language_">this</span>.<span class="hljs-property">_lowMotion</span> = lowMotion;
   }
 
-  canDraw(now = Date.now()) {
-    const interval = this._lowMotion ? LOW_MOTION_INTERVAL_MS : MIN_INTERVAL_MS;
-    return now - this._lastEmit &gt;= interval;
+  <span class="hljs-title function_">canDraw</span>(<span class="hljs-params">now = <span class="hljs-built_in">Date</span>.now()</span>) {
+    <span class="hljs-keyword">const</span> interval = <span class="hljs-variable language_">this</span>.<span class="hljs-property">_lowMotion</span> ? <span class="hljs-variable constant_">LOW_MOTION_INTERVAL_MS</span> : <span class="hljs-variable constant_">MIN_INTERVAL_MS</span>;
+    <span class="hljs-keyword">return</span> now - <span class="hljs-variable language_">this</span>.<span class="hljs-property">_lastEmit</span> &gt;= interval;
   }
 
-  markEmitted(now = Date.now()) { this._lastEmit = now; }
+  <span class="hljs-title function_">markEmitted</span>(<span class="hljs-params">now = <span class="hljs-built_in">Date</span>.now()</span>) { <span class="hljs-variable language_">this</span>.<span class="hljs-property">_lastEmit</span> = now; }
 
-  timeUntilNext(now = Date.now()) {
-    const interval = this._lowMotion ? LOW_MOTION_INTERVAL_MS : MIN_INTERVAL_MS;
-    const elapsed = now - this._lastEmit;
-    return elapsed &gt;= interval ? 0 : interval - elapsed;
+  <span class="hljs-title function_">timeUntilNext</span>(<span class="hljs-params">now = <span class="hljs-built_in">Date</span>.now()</span>) {
+    <span class="hljs-keyword">const</span> interval = <span class="hljs-variable language_">this</span>.<span class="hljs-property">_lowMotion</span> ? <span class="hljs-variable constant_">LOW_MOTION_INTERVAL_MS</span> : <span class="hljs-variable constant_">MIN_INTERVAL_MS</span>;
+    <span class="hljs-keyword">const</span> elapsed = now - <span class="hljs-variable language_">this</span>.<span class="hljs-property">_lastEmit</span>;
+    <span class="hljs-keyword">return</span> elapsed &gt;= interval ? <span class="hljs-number">0</span> : interval - elapsed;
   }
 }</code></pre>
 <hr>

@@ -3137,7 +3137,7 @@ function useQueryBridge(hostHandlers = {}) {
     // checkpointId below, so behavior is byte-identical to the pre-scope flow.
     let _scope = { restoreConversation: true, restoreCode: true };
     try {
-      _scope = require('../../rewindScope').resolveRewindScope(scope, target, process.env);
+      _scope = require('../rewindScope').resolveRewindScope(scope, target, process.env);
     } catch {
       /* fail-soft: default both */
     }

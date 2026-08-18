@@ -51,35 +51,35 @@
 <hr>
 <h2 id="4-提交-pr-前的本地自检">4. 提交 PR 前的本地自检<a class="anchor" href="#4-提交-pr-前的本地自检" aria-label="锚点">#</a></h2>
 <p>按代价从低到高排列，都是零安装的仓库内脚本：</p>
-<pre><code class="language-bash"># 1) 变更安全（与 CI 阻断项完全一致的调用方式）
+<pre><code class="language-bash"><span class="hljs-comment"># 1) 变更安全（与 CI 阻断项完全一致的调用方式）</span>
 node scripts/ci/check-change-safety.js --changed --promote=sensitive-paths
 
-# 2) 想看完整的严格结论（含所有建议项）
+<span class="hljs-comment"># 2) 想看完整的严格结论（含所有建议项）</span>
 node scripts/ci/check-change-safety.js --changed --strict-warnings
 
-# 3) 多生态版本同步（khy-os 与 ai-backend 两套版本各自内部必须一致）
+<span class="hljs-comment"># 3) 多生态版本同步（khy-os 与 ai-backend 两套版本各自内部必须一致）</span>
 node scripts/ci/check-version-sync.js
 
-# 4) AI 协作规则 / 叶子模块契约
+<span class="hljs-comment"># 4) AI 协作规则 / 叶子模块契约</span>
 node scripts/ci/check-agent-rules.js --changed
 node scripts/ci/check-leaf-contract.js --changed
 
-# 5) 全仓 JS 语法（约 4700 个文件，本地耗时可达数分钟）
+<span class="hljs-comment"># 5) 全仓 JS 语法（约 4700 个文件，本地耗时可达数分钟）</span>
 node scripts/ci/check-node-syntax.js
 
-# 6) 变更到的 Python 文件语法（纯标准库 py_compile，无需 pip install）
+<span class="hljs-comment"># 6) 变更到的 Python 文件语法（纯标准库 py_compile，无需 pip install）</span>
 python scripts/ci/check-python-syntax.py &lt;改动的 .py 文件...&gt;
 
-# 7) 后端代码风格与测试
-cd services/backend
-npx eslint &lt;你改动或新增的文件...&gt; --max-warnings 0   # 新增文件必须零问题，见 §5
-npm test
-npm run test:node
+<span class="hljs-comment"># 7) 后端代码风格与测试</span>
+<span class="hljs-built_in">cd</span> services/backend
+npx eslint &lt;你改动或新增的文件...&gt; --max-warnings 0   <span class="hljs-comment"># 新增文件必须零问题，见 §5</span>
+npm <span class="hljs-built_in">test</span>
+npm run <span class="hljs-built_in">test</span>:node
 
-# 8) 前端（改了 apps/ai-frontend 或 software/khyquant/frontend 时）
-cd apps/ai-frontend &amp;&amp; npm test &amp;&amp; npm run test:node   # vitest 14 文件 / 162 用例 + node:test
+<span class="hljs-comment"># 8) 前端（改了 apps/ai-frontend 或 software/khyquant/frontend 时）</span>
+<span class="hljs-built_in">cd</span> apps/ai-frontend &amp;&amp; npm <span class="hljs-built_in">test</span> &amp;&amp; npm run <span class="hljs-built_in">test</span>:node   <span class="hljs-comment"># vitest 14 文件 / 162 用例 + node:test</span>
 npm run build --prefix apps/ai-frontend
-node scripts/ci/check-frontend-size.js                 # 产物体积对比基线（报告态）</code></pre>
+node scripts/ci/check-frontend-size.js                 <span class="hljs-comment"># 产物体积对比基线（报告态）</span></code></pre>
 <p><strong>工具链现状请勿误信旧文档</strong>：</p>
 <ul><li>JavaScript：ESLint 9（flat config，<code>services/backend/eslint.config.js</code>）+ Prettier，已配置可用。</li><li>Python：CI 中只有 <code>py_compile</code> 语法检查。<strong>flake8 / black 并未配置</strong>（仓库内不存在</li></ul>
 <p><code>.flake8</code>、<code>setup.cfg</code>、<code>tox.ini</code>，<code>pyproject.toml</code> 里也没有对应段落）。</p>
@@ -93,9 +93,9 @@ node scripts/ci/check-frontend-size.js                 # 产物体积对比基�
 <hr>
 <h2 id="6-代码审查要求">6. 代码审查要求<a class="anchor" href="#6-代码审查要求" aria-label="锚点">#</a></h2>
 <p><strong>归属</strong>：由 <a href=".github/CODEOWNERS"><code>.github/CODEOWNERS</code></a> 决定，该文件是生成产物 ——<br>真源是 <code>docs/_维护者/维护映射表.json</code>（区域与路径）+ <a href=".github/maintainers.json"><code>.github/maintainers.json</code></a>（区域 → GitHub 账号）。</p>
-<pre><code class="language-bash"># 给某个区域分配维护者：编辑 .github/maintainers.json 的 areaOwners，然后
+<pre><code class="language-bash"><span class="hljs-comment"># 给某个区域分配维护者：编辑 .github/maintainers.json 的 areaOwners，然后</span>
 node scripts/maintenance/gen-codeowners.js
-# 映射表新增/删除了 area：
+<span class="hljs-comment"># 映射表新增/删除了 area：</span>
 node scripts/maintenance/gen-codeowners.js --sync-roster</code></pre>
 <p>请<strong>不要手改 <code>.github/CODEOWNERS</code></strong> —— <code>codeowners.yml</code> 工作流会检测漂移并失败。</p>
 <blockquote><p>当前 111 个区域全部尚未分配具体维护者，统一由全局兜底 owner 接管。这是刻意的：<br>GitHub 对无效 owner 的处理是<strong>静默忽略</strong>，写 110 个假账号看起来很完整，实际一条都不生效。<br>名册填一个，CODEOWNERS 就多生效一条。</p></blockquote>
@@ -119,9 +119,9 @@ node scripts/maintenance/gen-codeowners.js --sync-roster</code></pre>
 <hr>
 <h2 id="9-离线协作-双机同步">9. 离线协作（双机同步）<a class="anchor" href="#9-离线协作-双机同步" aria-label="锚点">#</a></h2>
 <p>本项目支持无远端的 bundle 交换（<code>.bat</code> 与 <code>.sh</code> 双平台配对）：</p>
-<pre><code class="language-bash">scripts/sync/export-sync.sh                                  # Windows: scripts\sync\export-sync.bat
-scripts/sync/import-sync.sh --bundle &lt;file&gt; --merge           # Windows: import-sync.bat
-scripts\sync\merge-contributions.bat &lt;bundle1&gt; &lt;bundle2&gt; ...  # 多人合入（仅 .bat）</code></pre>
+<pre><code class="language-bash">scripts/sync/export-sync.sh                                  <span class="hljs-comment"># Windows: scripts\sync\export-sync.bat</span>
+scripts/sync/import-sync.sh --bundle &lt;file&gt; --merge           <span class="hljs-comment"># Windows: import-sync.bat</span>
+scripts\<span class="hljs-built_in">sync</span>\merge-contributions.bat &lt;bundle1&gt; &lt;bundle2&gt; ...  <span class="hljs-comment"># 多人合入（仅 .bat）</span></code></pre>
 <hr>
 <h2 id="10-发布">10. 发布<a class="anchor" href="#10-发布" aria-label="锚点">#</a></h2>
 <p>发布由维护者执行。流程文档：</p>
@@ -129,7 +129,7 @@ scripts\sync\merge-contributions.bat &lt;bundle1&gt; &lt;bundle2&gt; ...  # 多�
 <p>贡献者只需注意一点：<strong>改动版本号时多处必须同步</strong>，以 <code>node scripts/ci/check-version-sync.js</code><br>的结论为准（仓库存在两套独立版本线：<code>khy-os</code> 与 <code>ai-backend</code>），PR 门禁会校验。</p>
 <p>变更日志写在根目录 <a href="CHANGELOG.html"><code>CHANGELOG.md</code></a>。发版时预置条目：</p>
 <pre><code class="language-bash">node scripts/release/changelog-new.js &lt;version&gt;
-node scripts/release/changelog-new.js --check   # 校验顶部版本 == pyproject 版本</code></pre>
+node scripts/release/changelog-new.js --check   <span class="hljs-comment"># 校验顶部版本 == pyproject 版本</span></code></pre>
       </article>
       <nav class="pager"><span></span><span></span></nav>
       <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>

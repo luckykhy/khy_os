@@ -49,7 +49,7 @@ const NATIVE_TOOL_USE_ADAPTERS = Object.freeze([
 const SMALL_MODEL_HINTS = /(mini|lite|flash|haiku|small|7b|8b|3b|1\.5b|nano|tiny)/i;
 
 // 收敛到 utils/trimLowerNullish 单一真源(逐字节委托,调用点不变)
-const _norm = require('../../utils/trimLowerNullish');
+const _norm = require('../../../../services/backend/src/utils/trimLowerNullish');
 
 /**
  * 门控(默认开;仅 0/false/off/no 关,大小写/空白不敏感)。
@@ -66,7 +66,7 @@ function isEnabled(env = process.env) {
  * @param {string} raw
  * @returns {Set<string>}
  */
-const parseModelListEnv = require('../../utils/parseListToSet');
+const parseModelListEnv = require('../../../../services/backend/src/utils/parseListToSet');
 
 /**
  * 适配器维度:该 adapter 是否具备原生 function calling 通道。

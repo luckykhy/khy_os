@@ -39,12 +39,12 @@
 <ul><li>纯叶 <code>services/backend/src/services/gateway/ocrRescueStatusNotice.js</code>:<ul><li><code>isRescueStatusEnabled(env)</code> — 读门 <code>KHY_OCR_RESCUE_STATUS</code>(异常保守 false,绝不抛)。</li><li><code>buildOcrRescueStatus({ count, adapterName, env })</code> — 门开且 <code>count&gt;0</code> 时返回实时状态串</li></ul></li></ul>
 <p><code>检测到图片输入：{adapterName} 不支持图像识别，已降级用本地 OCR 成功提取 {N 张图片}文本并据此作答</code>;<br>    门关 / count 非正 / 畸形 → <code>null</code>(调用方据此决定是否 emitStatus);零 IO,绝不抛。</p>
 <ul><li>接线 <code>aiGatewayGenerateMethod.js</code> Site3 OCR-成功分支(options 重建后):</li></ul>
-<pre><code class="language-js">  try {
-    const _msg = require('./ocrRescueStatusNotice').buildOcrRescueStatus({
-      count: ocrTexts.length, adapterName: adapterDisplayName, env: process.env,
+<pre><code class="language-js">  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">const</span> _msg = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./ocrRescueStatusNotice&#x27;</span>).<span class="hljs-title function_">buildOcrRescueStatus</span>({
+      <span class="hljs-attr">count</span>: ocrTexts.<span class="hljs-property">length</span>, <span class="hljs-attr">adapterName</span>: adapterDisplayName, <span class="hljs-attr">env</span>: process.<span class="hljs-property">env</span>,
     });
-    if (_msg) emitStatus(_msg);
-  } catch { /* fail-soft:叶不可用则按历史静默 */ }</code></pre>
+    <span class="hljs-keyword">if</span> (_msg) <span class="hljs-title function_">emitStatus</span>(_msg);
+  } <span class="hljs-keyword">catch</span> { <span class="hljs-comment">/* fail-soft:叶不可用则按历史静默 */</span> }</code></pre>
 <p>门关 → 叶返 null → 不 emitStatus → 逐字节回退「Site3 成功分支静默」。</p>
 <ul><li><code>flagRegistry.js</code> 登记 <code>KHY_OCR_RESCUE_STATUS: { mode: 'default-on', off: 'CANON', default: true }</code>。</li></ul>
 <h3 id="三层正交-全服务-无感明显告知用户用了-ocr">三层正交(全服务「无感明显告知用户用了 OCR」)<a class="anchor" href="#三层正交-全服务-无感明显告知用户用了-ocr" aria-label="锚点">#</a></h3>

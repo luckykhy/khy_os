@@ -94,7 +94,7 @@ class ArenaManager {
       )
     );
 
-    const totalMs = Date.now() - startTime;
+    const totalMs = Math.max(1, Date.now() - startTime);
 
     // Generate diff summary
     const summary = generateArenaSummary(prompt, entries);

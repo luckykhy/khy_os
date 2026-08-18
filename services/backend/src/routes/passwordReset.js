@@ -13,9 +13,7 @@ const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const { authMiddleware } = require('../middleware/auth');
 const { User } = require('../models');
-
-const bcrypt = require('bcryptjs');
-
+const { normalizeLoginIdentifier, validatePassword } = require('../services/authPolicy');
 const authSessionService = require('../services/authSessionService');
 
 // Strict rate limit for password reset to prevent brute-force attacks
@@ -86,7 +84,9 @@ router.post('/get-question', resetLimiter, async (req, res) => {
  */
 router.post('/reset', resetLimiter, async (req, res) => {
   try {
-    const { username, securityAnswer, newPassword } = req.body;
+    const username = normalizeLoginIdentifier(req.body.username);
+    const securityAnswer = String(req.body.securityAnswer || '');
+    const newPassword = String(req.body.newPassword || '');
 
     // 验证必填字段
     if (!username || !securityAnswer || !newPassword) {
@@ -96,11 +96,11 @@ router.post('/reset', resetLimiter, async (req, res) => {
       });
     }
 
-    // 验证新密码强度
-    if (newPassword.length < 6) {
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
       return res.status(400).json({
         success: false,
-        message: '新密码长度至少为6位',
+        message: passwordError,
       });
     }
 

@@ -45,53 +45,53 @@
 <h3 id="top-level-commands">Top-level commands<a class="anchor" href="#top-level-commands" aria-label="锚点">#</a></h3>
 <table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>status</code></td><td>Check if WireMock is running</td></tr><tr><td><code>reset</code></td><td>Full reset: stubs + requests + scenarios</td></tr><tr><td><code>shutdown</code></td><td>Gracefully shut down the WireMock server</td></tr></tbody></table>
 <h2 id="key-examples">Key Examples<a class="anchor" href="#key-examples" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># Check connectivity
+<pre><code class="language-bash"><span class="hljs-comment"># Check connectivity</span>
 cli-anything-wiremock status
 
-# Create a stub using quick form
-cli-anything-wiremock stub quick GET /api/users 200 --body '[{&quot;id&quot;:1}]'
+<span class="hljs-comment"># Create a stub using quick form</span>
+cli-anything-wiremock stub quick GET /api/users 200 --body <span class="hljs-string">&#x27;[{&quot;id&quot;:1}]&#x27;</span>
 
-# Create a stub using full JSON
-cli-anything-wiremock stub create '{
+<span class="hljs-comment"># Create a stub using full JSON</span>
+cli-anything-wiremock stub create <span class="hljs-string">&#x27;{
   &quot;request&quot;: {&quot;method&quot;: &quot;POST&quot;, &quot;url&quot;: &quot;/api/orders&quot;},
   &quot;response&quot;: {&quot;status&quot;: 201, &quot;body&quot;: &quot;{\&quot;id\&quot;:99}&quot;}
-}'
+}&#x27;</span>
 
-# Verify a POST was made exactly once
-cli-anything-wiremock --json request count '{&quot;method&quot;:&quot;POST&quot;,&quot;url&quot;:&quot;/api/orders&quot;}'
-# → {&quot;count&quot;: 1}
+<span class="hljs-comment"># Verify a POST was made exactly once</span>
+cli-anything-wiremock --json request count <span class="hljs-string">&#x27;{&quot;method&quot;:&quot;POST&quot;,&quot;url&quot;:&quot;/api/orders&quot;}&#x27;</span>
+<span class="hljs-comment"># → {&quot;count&quot;: 1}</span>
 
-# Scenario: advance state
-cli-anything-wiremock scenario set &quot;cart-flow&quot; &quot;item-added&quot;
+<span class="hljs-comment"># Scenario: advance state</span>
+cli-anything-wiremock scenario <span class="hljs-built_in">set</span> <span class="hljs-string">&quot;cart-flow&quot;</span> <span class="hljs-string">&quot;item-added&quot;</span>
 
-# Record a real backend
+<span class="hljs-comment"># Record a real backend</span>
 cli-anything-wiremock record start https://api.example.com
-# ... make requests ...
+<span class="hljs-comment"># ... make requests ...</span>
 cli-anything-wiremock record stop</code></pre>
 <h2 id="agent-guidance">Agent Guidance<a class="anchor" href="#agent-guidance" aria-label="锚点">#</a></h2>
 <h3 id="always-use-json-in-agent-contexts">Always use <code>--json</code> in agent contexts<a class="anchor" href="#always-use-json-in-agent-contexts" aria-label="锚点">#</a></h3>
 <p>Use <code>--json</code> for all invocations in scripts or agent tool calls. JSON output varies by command type (these are distinct response types, not an envelope wrapping all responses):</p>
-<pre><code class="language-bash"># Data commands return raw WireMock API JSON directly:
-cli-anything-wiremock --json stub quick GET /api/hello 200 --body '{&quot;hello&quot;:&quot;world&quot;}'
-# → {&quot;id&quot;: &quot;abc-123&quot;, &quot;request&quot;: {...}, &quot;response&quot;: {...}, ...}
+<pre><code class="language-bash"><span class="hljs-comment"># Data commands return raw WireMock API JSON directly:</span>
+cli-anything-wiremock --json stub quick GET /api/hello 200 --body <span class="hljs-string">&#x27;{&quot;hello&quot;:&quot;world&quot;}&#x27;</span>
+<span class="hljs-comment"># → {&quot;id&quot;: &quot;abc-123&quot;, &quot;request&quot;: {...}, &quot;response&quot;: {...}, ...}</span>
 
 cli-anything-wiremock --json stub list
-# → {&quot;mappings&quot;: [...], &quot;total&quot;: N}
+<span class="hljs-comment"># → {&quot;mappings&quot;: [...], &quot;total&quot;: N}</span>
 
-# Void commands (delete, reset, save) return:
-# → {&quot;status&quot;: &quot;ok&quot;}
+<span class="hljs-comment"># Void commands (delete, reset, save) return:</span>
+<span class="hljs-comment"># → {&quot;status&quot;: &quot;ok&quot;}</span>
 
-# Errors return:
-# → {&quot;status&quot;: &quot;error&quot;, &quot;message&quot;: &quot;Connection refused&quot;}</code></pre>
+<span class="hljs-comment"># Errors return:</span>
+<span class="hljs-comment"># → {&quot;status&quot;: &quot;error&quot;, &quot;message&quot;: &quot;Connection refused&quot;}</span></code></pre>
 <h3 id="connection-via-environment">Connection via environment<a class="anchor" href="#connection-via-environment" aria-label="锚点">#</a></h3>
 <p>Set connection params via environment variables before calling any command:</p>
-<pre><code class="language-bash">export WIREMOCK_HOST=localhost
-export WIREMOCK_PORT=8080</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">export</span> WIREMOCK_HOST=localhost
+<span class="hljs-built_in">export</span> WIREMOCK_PORT=8080</code></pre>
 <h3 id="workflow-pattern-for-test-verification">Workflow pattern for test verification<a class="anchor" href="#workflow-pattern-for-test-verification" aria-label="锚点">#</a></h3>
 <ol><li>Set up stubs before running the system under test:</li></ol>
-<pre><code class="language-bash">   cli-anything-wiremock --json stub quick POST /api/payment 200 --body '{&quot;success&quot;:true}'</code></pre>
+<pre><code class="language-bash">   cli-anything-wiremock --json stub quick POST /api/payment 200 --body <span class="hljs-string">&#x27;{&quot;success&quot;:true}&#x27;</span></code></pre>
 <ol><li>Run the system under test.</li><li>Verify interactions:</li></ol>
-<pre><code class="language-bash">   cli-anything-wiremock --json request count '{&quot;method&quot;:&quot;POST&quot;,&quot;url&quot;:&quot;/api/payment&quot;}'</code></pre>
+<pre><code class="language-bash">   cli-anything-wiremock --json request count <span class="hljs-string">&#x27;{&quot;method&quot;:&quot;POST&quot;,&quot;url&quot;:&quot;/api/payment&quot;}&#x27;</span></code></pre>
 <ol><li>Clean up:</li></ol>
 <pre><code class="language-bash">   cli-anything-wiremock reset</code></pre>
 <h3 id="error-handling">Error handling<a class="anchor" href="#error-handling" aria-label="锚点">#</a></h3>

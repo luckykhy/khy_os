@@ -36,41 +36,41 @@
 <ul><li><strong>Project Management</strong>: Organize experiments with named projects</li><li><strong>5 Task Types</strong>: Classification, regression, multiclass, multilabel variants</li><li><strong>Model Tracking</strong>: Automatic performance history and rankings</li><li><strong>Smart Storage</strong>: Analyze usage and clean up underperformers</li><li><strong>JSON API</strong>: Full automation support with <code>--json</code> flag</li></ul>
 <h2 id="common-commands">Common Commands<a class="anchor" href="#common-commands" aria-label="锚点">#</a></h2>
 <h3 id="project-management">Project Management<a class="anchor" href="#project-management" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Create a new project
+<pre><code class="language-bash"><span class="hljs-comment"># Create a new project</span>
 project create --name drug_discovery
 
-# List all projects
+<span class="hljs-comment"># List all projects</span>
 project list
 
-# Switch to a project
+<span class="hljs-comment"># Switch to a project</span>
 project switch --name drug_discovery</code></pre>
 <h3 id="training">Training<a class="anchor" href="#training" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Train a classification model
+<pre><code class="language-bash"><span class="hljs-comment"># Train a classification model</span>
 train --data-path train.csv --target-col active --task-type classification --epochs 10
 
-# Train a regression model
+<span class="hljs-comment"># Train a regression model</span>
 train --data-path train.csv --target-col affinity --task-type regression --epochs 10</code></pre>
 <h3 id="model-management">Model Management<a class="anchor" href="#model-management" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># List all trained models
+<pre><code class="language-bash"><span class="hljs-comment"># List all trained models</span>
 models list
 
-# Show model details and performance
-models show --model-id &lt;id&gt;
+<span class="hljs-comment"># Show model details and performance</span>
+models show --model-id &lt;<span class="hljs-built_in">id</span>&gt;
 
-# Rank models by performance
+<span class="hljs-comment"># Rank models by performance</span>
 models rank</code></pre>
 <h3 id="storage-cleanup">Storage &amp; Cleanup<a class="anchor" href="#storage-cleanup" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Analyze storage usage
+<pre><code class="language-bash"><span class="hljs-comment"># Analyze storage usage</span>
 storage analyze
 
-# Automatic cleanup of poor performers
+<span class="hljs-comment"># Automatic cleanup of poor performers</span>
 cleanup auto
 
-# Manual cleanup with criteria
+<span class="hljs-comment"># Manual cleanup with criteria</span>
 cleanup manual --max-models 10 --min-score 0.7</code></pre>
 <h3 id="prediction">Prediction<a class="anchor" href="#prediction" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Make predictions with a trained model
-predict --model-id &lt;id&gt; --data-path test.csv</code></pre>
+<pre><code class="language-bash"><span class="hljs-comment"># Make predictions with a trained model</span>
+predict --model-id &lt;<span class="hljs-built_in">id</span>&gt; --data-path test.csv</code></pre>
 <h2 id="data-format">Data Format<a class="anchor" href="#data-format" aria-label="锚点">#</a></h2>
 <p>CSV files must contain:</p>
 <ul><li><code>SMILES</code> column: Molecular structures in SMILES format</li><li>Target column(s): Values to predict (name specified via <code>--target-col</code>)</li></ul>
@@ -85,11 +85,11 @@ CC(C)O,1</code></pre>
 <p>Add <code>--json</code> flag to any command for machine-readable output:</p>
 <pre><code class="language-bash">python3 -m cli_anything.unimol_tools --json models list</code></pre>
 <p>Output format:</p>
-<pre><code class="language-json">{
-  &quot;status&quot;: &quot;success&quot;,
-  &quot;data&quot;: [...],
-  &quot;message&quot;: &quot;...&quot;
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;success&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;data&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>...<span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;message&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;...&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <h2 id="interactive-mode">Interactive Mode<a class="anchor" href="#interactive-mode" aria-label="锚点">#</a></h2>
 <p>Launch without commands for interactive REPL:</p>
 <pre><code class="language-bash">python3 -m cli_anything.unimol_tools</code></pre>
@@ -101,14 +101,14 @@ CC(C)O,1</code></pre>
 <h2 id="requirements">Requirements<a class="anchor" href="#requirements" aria-label="锚点">#</a></h2>
 <ul><li>Python 3.8+</li><li>PyTorch 1.12+</li><li>Uni-Mol Tools backend</li><li>4GB+ RAM (8GB+ recommended for training)</li></ul>
 <h2 id="installation">Installation<a class="anchor" href="#installation" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">cd unimol_tools/agent-harness
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> unimol_tools/agent-harness
 pip install -e .</code></pre>
 <h2 id="documentation">Documentation<a class="anchor" href="#documentation" aria-label="锚点">#</a></h2>
 <ul><li><strong>SOP</strong>: <span class="deadlink" title="目标不存在：../UNIMOL_TOOLS.html">UNIMOL_TOOLS.md</span></li><li><strong>Quick Start</strong>: <span class="deadlink" title="目标不存在：../docs/guides/02-QUICK-START.html">docs/guides/02-QUICK-START.md</span></li><li><strong>Full Documentation</strong>: <span class="deadlink" title="目标不存在：../docs/README.html">docs/README.md</span></li></ul>
 <h2 id="testing">Testing<a class="anchor" href="#testing" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">cd docs/test
-bash run_tests.sh --unit -v    # Unit tests (67 tests)
-bash run_tests.sh --full -v    # Full test suite</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> docs/test
+bash run_tests.sh --unit -v    <span class="hljs-comment"># Unit tests (67 tests)</span>
+bash run_tests.sh --full -v    <span class="hljs-comment"># Full test suite</span></code></pre>
 <h2 id="performance-tips">Performance Tips<a class="anchor" href="#performance-tips" aria-label="锚点">#</a></h2>
 <ul><li>Start with 10 epochs for initial experiments</li><li>Use smaller batch sizes if memory is limited</li><li>Monitor storage with <code>storage analyze</code></li><li>Use <code>models rank</code> to identify best performers</li><li>Clean up regularly with <code>cleanup auto</code></li></ul>
 <h2 id="troubleshooting">Troubleshooting<a class="anchor" href="#troubleshooting" aria-label="锚点">#</a></h2>

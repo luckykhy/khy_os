@@ -33,7 +33,7 @@
 <h2 id="prerequisites">Prerequisites<a class="anchor" href="#prerequisites" aria-label="锚点">#</a></h2>
 <ol><li><strong>macOS + iTerm2</strong> running: <code>brew install --cask iterm2</code></li><li><strong>Python API enabled</strong>: iTerm2 → Preferences → General → Magic → Enable Python API</li><li><strong>Install</strong>: <code>pip install cli-anything-iterm2</code> (or <code>pip install -e .</code> from source)</li></ol>
 <h2 id="basic-syntax">Basic Syntax<a class="anchor" href="#basic-syntax" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">cli-anything-iterm2 [--json] &lt;group&gt; &lt;command&gt; [OPTIONS] [ARGS]</code></pre>
+<pre><code class="language-bash">cli-anything-iterm2 [--json] &lt;group&gt; &lt;<span class="hljs-built_in">command</span>&gt; [OPTIONS] [ARGS]</code></pre>
 <p>Always use <code>--json</code> for machine-readable output (required for agent use).</p>
 <h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>Group</th><th>Purpose</th></tr></thead><tbody><tr><td><code>app</code></td><td>App status, workspace snapshot, context management, app-level variables, modal dialogs, file panels</td></tr><tr><td><code>window</code></td><td>Create, list, close, resize, fullscreen windows</td></tr><tr><td><code>tab</code></td><td>Create, list, close, activate tabs; navigate split panes by direction</td></tr><tr><td><code>session</code></td><td>Send text, inject raw bytes, read screen, full scrollback, split panes, prompt detection</td></tr><tr><td><code>profile</code></td><td>List profiles, get profile details, list/apply color presets</td></tr><tr><td><code>arrangement</code></td><td>Save and restore window layouts</td></tr><tr><td><code>tmux</code></td><td>Full tmux -CC integration: bootstrap, connections, windows, commands</td></tr><tr><td><code>broadcast</code></td><td>Sync keystrokes across panes via broadcast domains</td></tr><tr><td><code>menu</code></td><td>Invoke any iTerm2 menu item programmatically</td></tr><tr><td><code>pref</code></td><td>Read/write global iTerm2 preferences; list all valid keys; tmux settings</td></tr></tbody></table>
@@ -42,25 +42,25 @@
 <pre><code class="language-bash">cli-anything-iterm2 --json app snapshot</code></pre>
 <p>Returns name, current directory, foreground process, <code>user.role</code> label, and last visible output line for every session across all windows.</p>
 <p><strong>Naming convention</strong> — label panes when setting up a workspace so you can find them later:</p>
-<pre><code class="language-bash">cli-anything-iterm2 session set-var user.role &quot;api-server&quot;
-cli-anything-iterm2 session set-var user.role &quot;log-tail&quot;
-cli-anything-iterm2 session set-var user.role &quot;editor&quot;</code></pre>
+<pre><code class="language-bash">cli-anything-iterm2 session set-var user.role <span class="hljs-string">&quot;api-server&quot;</span>
+cli-anything-iterm2 session set-var user.role <span class="hljs-string">&quot;log-tail&quot;</span>
+cli-anything-iterm2 session set-var user.role <span class="hljs-string">&quot;editor&quot;</span></code></pre>
 <p><code>app snapshot</code> will surface these roles alongside process and path, giving you a full picture in one call.</p>
 <h2 id="typical-agent-workflow">Typical Agent Workflow<a class="anchor" href="#typical-agent-workflow" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># 1. Orient — snapshot every session: name, path, process, role, last output line
+<pre><code class="language-bash"><span class="hljs-comment"># 1. Orient — snapshot every session: name, path, process, role, last output line</span>
 cli-anything-iterm2 --json app snapshot
 
-# 2. Establish context (saves window/tab/session IDs for subsequent commands)
+<span class="hljs-comment"># 2. Establish context (saves window/tab/session IDs for subsequent commands)</span>
 cli-anything-iterm2 app current
 
-# 3. Interact — no --session-id needed once context is set
-cli-anything-iterm2 session send &quot;git status&quot;
-cli-anything-iterm2 --json session scrollback --tail 200 --strip
+<span class="hljs-comment"># 3. Interact — no --session-id needed once context is set</span>
+cli-anything-iterm2 session send <span class="hljs-string">&quot;git status&quot;</span>
+cli-anything-iterm2 --json session scrollback --<span class="hljs-built_in">tail</span> 200 --strip
 
-# 4. Create a multi-pane workspace — label panes so snapshot identifies them later
-cli-anything-iterm2 session split --vertical --use-as-context
-cli-anything-iterm2 session send &quot;python3 -m http.server 8000&quot;
-cli-anything-iterm2 session set-var user.role &quot;http-server&quot;</code></pre>
+<span class="hljs-comment"># 4. Create a multi-pane workspace — label panes so snapshot identifies them later</span>
+cli-anything-iterm2 session <span class="hljs-built_in">split</span> --vertical --use-as-context
+cli-anything-iterm2 session send <span class="hljs-string">&quot;python3 -m http.server 8000&quot;</span>
+cli-anything-iterm2 session set-var user.role <span class="hljs-string">&quot;http-server&quot;</span></code></pre>
 <h2 id="reference-files">Reference Files<a class="anchor" href="#reference-files" aria-label="锚点">#</a></h2>
 <p>Read only what the task requires — each file is a single narrow concern (~10–30 lines):</p>
 <table><thead><tr><th>File</th><th>Read when you need...</th></tr></thead><tbody><tr><td><code>references/session-io.md</code></td><td>Send text, inject bytes, read screen/scrollback, get selection</td></tr><tr><td><code>references/session-control.md</code></td><td>Split panes, activate/close sessions, resize, rename, session variables</td></tr><tr><td><code>references/session-shell-integration.md</code></td><td>wait-prompt, wait-command-end, get-prompt; reliable send→wait→read pattern</td></tr><tr><td><code>references/layout-window-tab.md</code></td><td>Create/close/resize windows and tabs, navigate split panes</td></tr><tr><td><code>references/layout-arrangement.md</code></td><td>Save and restore window layouts</td></tr><tr><td><code>references/app-context.md</code></td><td><strong>Snapshot</strong> (orientation), status, context management, app vars, modal dialogs, file panels</td></tr><tr><td><code>references/profile-pref.md</code></td><td>Profiles list/get/presets, preferences read/write, tmux pref shortcuts</td></tr><tr><td><code>references/broadcast-menu.md</code></td><td>Broadcast keystrokes to multiple panes, invoke menu items</td></tr><tr><td><code>references/tmux-commands.md</code></td><td>All tmux CLI commands (bootstrap, send, tabs, create-window, set-visible)</td></tr><tr><td><code>references/tmux-guide.md</code></td><td>Full tmux -CC workflow, pane→session ID mapping</td></tr><tr><td><code>references/json-session.md</code></td><td><code>--json</code> schemas for session, window, tab, screen, scrollback, inject</td></tr><tr><td><code>references/json-tmux-app.md</code></td><td><code>--json</code> schemas for tmux, app dialogs, preferences, errors</td></tr></tbody></table>

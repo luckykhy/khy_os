@@ -31,20 +31,20 @@
 <h1 id="cli-hub-meta-skill">CLI-Hub Meta-Skill<a class="anchor" href="#cli-hub-meta-skill" aria-label="锚点">#</a></h1>
 <p>CLI-Hub is a marketplace of agent-native command-line interfaces that make professional software accessible to AI agents.</p>
 <h2 id="quick-start">Quick Start<a class="anchor" href="#quick-start" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># Install the CLI Hub package manager
+<pre><code class="language-bash"><span class="hljs-comment"># Install the CLI Hub package manager</span>
 pip install cli-anything-hub
 
-# Browse all available CLIs
+<span class="hljs-comment"># Browse all available CLIs</span>
 cli-hub list
 
-# Search by category or keyword
+<span class="hljs-comment"># Search by category or keyword</span>
 cli-hub search image
-cli-hub search &quot;3d modeling&quot;
+cli-hub search <span class="hljs-string">&quot;3d modeling&quot;</span>
 
-# Install a CLI
+<span class="hljs-comment"># Install a CLI</span>
 cli-hub install gimp
 
-# Show details for a CLI
+<span class="hljs-comment"># Show details for a CLI</span>
 cli-hub info gimp</code></pre>
 <h2 id="live-catalog">Live Catalog<a class="anchor" href="#live-catalog" aria-label="锚点">#</a></h2>
 <p><strong>URL</strong>: <a href="https://reeceyang.sgp1.cdn.digitaloceanspaces.com/SKILL.md" target="_blank" rel="noopener"><code>https://reeceyang.sgp1.cdn.digitaloceanspaces.com/SKILL.md</code></a></p>
@@ -60,10 +60,10 @@ cli-hub info gimp</code></pre>
 <p>Some installed harnesses also support preview workflows. The command split is:</p>
 <ul><li><code>cli-anything-&lt;software&gt; preview ...</code> creates or updates real preview artifacts</li><li><code>cli-hub previews ...</code> inspects, renders, watches, or opens those existing artifacts</li></ul>
 <p>Use:</p>
-<pre><code class="language-bash"># From the harness side: publish preview state
+<pre><code class="language-bash"><span class="hljs-comment"># From the harness side: publish preview state</span>
 cli-anything-blender --json --project scene.blend-cli.json preview capture --recipe quick
 
-# From cli-hub: inspect or open the resulting bundle or live session
+<span class="hljs-comment"># From cli-hub: inspect or open the resulting bundle or live session</span>
 cli-hub previews inspect /path/to/bundle-or-session
 cli-hub previews html /path/to/bundle-or-session -o page.html
 cli-hub previews watch /path/to/session --open
@@ -74,16 +74,16 @@ cli-hub previews open /path/to/bundle-or-session</code></pre>
 <ol><li><strong>Install cli-hub</strong>: <code>pip install cli-anything-hub</code></li><li><strong>Find your tool</strong>: <code>cli-hub search &lt;keyword&gt;</code> or <code>cli-hub list -c &lt;category&gt;</code></li><li><strong>Install</strong>: <code>cli-hub install &lt;name&gt;</code> (installs the <code>cli-anything-&lt;name&gt;</code> pip package)</li><li><strong>Run</strong>: <code>cli-anything-&lt;name&gt;</code> for REPL, or <code>cli-anything-&lt;name&gt; &lt;command&gt;</code> for one-shot</li><li><strong>JSON output</strong>: All CLIs support <code>--json</code> flag for machine-readable output</li><li><strong>Preview-capable CLIs</strong>: use <code>cli-anything-&lt;name&gt; preview ... --json</code> to publish,</li></ol>
 <p>then <code>cli-hub previews ...</code> to inspect or open the result</p>
 <h2 id="example-workflow">Example Workflow<a class="anchor" href="#example-workflow" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># Install the hub
+<pre><code class="language-bash"><span class="hljs-comment"># Install the hub</span>
 pip install cli-anything-hub
 
-# Find what you need
+<span class="hljs-comment"># Find what you need</span>
 cli-hub search video
 
-# Install it
+<span class="hljs-comment"># Install it</span>
 cli-hub install kdenlive
 
-# Use it with JSON output
+<span class="hljs-comment"># Use it with JSON output</span>
 cli-anything-kdenlive --json project create --name my-project</code></pre>
 <h2 id="more-info">More Info<a class="anchor" href="#more-info" aria-label="锚点">#</a></h2>
 <ul><li>Live Catalog: https://reeceyang.sgp1.cdn.digitaloceanspaces.com/SKILL.md</li><li>Web Hub: https://clianything.cc</li><li>Repository: https://github.com/HKUDS/CLI-Anything</li></ul>

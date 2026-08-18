@@ -37,16 +37,16 @@
 <pre><code class="language-bash">python -m pip install -U khy-os
 khy --version</code></pre>
 <p>Windows PowerShell 示例：</p>
-<pre><code class="language-powershell">python.exe -m pip install -U khy-os
-khy --version</code></pre>
+<pre><code class="language-powershell">python.exe <span class="hljs-literal">-m</span> pip install <span class="hljs-literal">-U</span> khy<span class="hljs-literal">-os</span>
+khy <span class="hljs-literal">--version</span></code></pre>
 <h3 id="2-2-升级到最新版本">2.2 升级到最新版本<a class="anchor" href="#2-2-升级到最新版本" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">python -m pip install --upgrade khy-os
 khy --version</code></pre>
 <h3 id="2-3-可选依赖安装">2.3 可选依赖安装<a class="anchor" href="#2-3-可选依赖安装" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">python -m pip install -U &quot;khy-os[data]&quot;
-python -m pip install -U &quot;khy-os[ml]&quot;
-python -m pip install -U &quot;khy-os[doc]&quot;
-python -m pip install -U &quot;khy-os[full]&quot;</code></pre>
+<pre><code class="language-bash">python -m pip install -U <span class="hljs-string">&quot;khy-os[data]&quot;</span>
+python -m pip install -U <span class="hljs-string">&quot;khy-os[ml]&quot;</span>
+python -m pip install -U <span class="hljs-string">&quot;khy-os[doc]&quot;</span>
+python -m pip install -U <span class="hljs-string">&quot;khy-os[full]&quot;</span></code></pre>
 <p>说明：大模型权重/推理二进制（如 <code>.gguf</code>、<code>ollama</code> 运行时）不会打进 pip 包，需要按需另行安装。</p>
 <h2 id="3-首次启动流程说明">3. 首次启动流程说明<a class="anchor" href="#3-首次启动流程说明" aria-label="锚点">#</a></h2>
 <p>第一次执行 <code>khy</code> 会自动触发初始化流程（first-run setup）：</p>
@@ -85,7 +85,7 @@ khy db status</code></pre>
 <ul><li><code>khyguanli</code></li><li><code>guanli</code></li><li><code>aiguanli</code></li></ul>
 <p>在系统 Shell 中推荐：</p>
 <pre><code class="language-bash">khy guanli
-# 或
+<span class="hljs-comment"># 或</span>
 khy gateway manage open</code></pre>
 <p>打开逻辑：</p>
 <ol><li>先探测主站管理页 <code>/admin/ai-gateway</code></li><li>主站不可用时自动回退到独立守护会话（daemon）</li><li>输出 <code>http://127.0.0.1:9090/admin/ai-gateway</code> 及保活直链</li></ol>
@@ -103,13 +103,13 @@ khy gateway manage open --daemon</code></pre>
 <p>建议做一次严格检查：</p>
 <ol><li>定位 pip 安装的 backend 目录</li><li>手动执行 strict seed</li></ol>
 <p>定位命令：</p>
-<pre><code class="language-bash">python -c &quot;import pathlib,khy_platform;site=pathlib.Path(khy_platform.__file__).resolve().parent.parent;print(site/'khy_os'/'bundled'/'backend')&quot;</code></pre>
+<pre><code class="language-bash">python -c <span class="hljs-string">&quot;import pathlib,khy_platform;site=pathlib.Path(khy_platform.__file__).resolve().parent.parent;print(site/&#x27;khy_os&#x27;/&#x27;bundled&#x27;/&#x27;backend&#x27;)&quot;</span></code></pre>
 <p>Windows PowerShell 严格执行示例：</p>
-<pre><code class="language-powershell">cd &lt;上一步输出路径&gt;
-$env:KHY_SEED_STRICT=&quot;true&quot;
+<pre><code class="language-powershell"><span class="hljs-built_in">cd</span> &lt;上一步输出路径&gt;
+<span class="hljs-variable">$env:KHY_SEED_STRICT</span>=<span class="hljs-string">&quot;true&quot;</span>
 node .\scripts\seed.js
-$LASTEXITCODE
-Remove-Item Env:KHY_SEED_STRICT</code></pre>
+<span class="hljs-variable">$LASTEXITCODE</span>
+<span class="hljs-built_in">Remove-Item</span> Env:KHY_SEED_STRICT</code></pre>
 <ul><li><code>0</code>：seed 成功</li><li><code>1</code>：seed 失败，按报错继续修复</li></ul>
 <h2 id="7-常见问题排查">7. 常见问题排查<a class="anchor" href="#7-常见问题排查" aria-label="锚点">#</a></h2>
 <h3 id="7-1-windows-出现-the-system-cannot-find-the-path-specified">7.1 Windows 出现 <code>The system cannot find the path specified.</code><a class="anchor" href="#7-1-windows-出现-the-system-cannot-find-the-path-specified" aria-label="锚点">#</a></h3>
@@ -161,7 +161,7 @@ npm run check:node-syntax
 npm run check:python-syntax</code></pre>
 <ol><li>提交改动</li></ol>
 <pre><code class="language-bash">git add -- .
-git commit -m &quot;release: private vX.Y.Z&quot;</code></pre>
+git commit -m <span class="hljs-string">&quot;release: private vX.Y.Z&quot;</span></code></pre>
 <ol><li>配置私有仓库远程（首次）</li></ol>
 <pre><code class="language-bash">git remote add origin-private git@github.com:Program-master-leader/KHY-OS.git</code></pre>
 <p>如果已存在 <code>origin-private</code>，改用：</p>
@@ -176,7 +176,7 @@ git commit -m &quot;release: private vX.Y.Z&quot;</code></pre>
 <ol><li>推送到私有仓库</li></ol>
 <pre><code class="language-bash">git push -u origin-private release/private-vX.Y.Z</code></pre>
 <ol><li>创建私有版本标签并推送</li></ol>
-<pre><code class="language-bash">git tag -a vX.Y.Z-private -m &quot;private release vX.Y.Z&quot;
+<pre><code class="language-bash">git tag -a vX.Y.Z-private -m <span class="hljs-string">&quot;private release vX.Y.Z&quot;</span>
 git push origin-private vX.Y.Z-private</code></pre>
 <ol><li>可选：使用内置发布命令（等价能力）</li></ol>
 <pre><code class="language-bash">khy publish git-push --platform github --repo Program-master-leader/KHY-OS --remote origin-private --set-upstream</code></pre>

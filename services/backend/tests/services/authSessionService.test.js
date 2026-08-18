@@ -138,6 +138,36 @@ describe('authSessionService', () => {
     expect(result.session).toBe(session);
   });
 
+  test('rejects session JWTs that are not access tokens', async () => {
+    const session = makeSession();
+    const token = jwt.sign(
+      { userId: 7, sessionId: session.id, tokenVersion: 1, tokenType: 'refresh' },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    const result = await authSessionService.authenticateAccessToken(token);
+
+    expect(result.ok).toBe(false);
+    expect(result.code).toBe('invalid_token');
+    expect(User.findByPk).not.toHaveBeenCalled();
+    expect(AuthSession.findByPk).not.toHaveBeenCalled();
+  });
+
+  test('rejects session JWTs with no token type', async () => {
+    const session = makeSession();
+    const token = jwt.sign(
+      { userId: 7, sessionId: session.id, tokenVersion: 1 },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    const result = await authSessionService.authenticateAccessToken(token);
+
+    expect(result.ok).toBe(false);
+    expect(result.code).toBe('invalid_token');
+  });
+
   test('rejects legacy token after invalidation timestamp', async () => {
     const user = makeUser();
     const token = jwt.sign(

@@ -120,7 +120,7 @@ function _checkableFromText(text, pathRedosGuard = true) {
   const identRe = /\b[A-Za-z][A-Za-z0-9_]{4,}\b/g;
   while ((m = identRe.exec(rawNoPaths)) !== null) {
     const id = m[0];
-    const codey = /[_0-9]/.test(id) || (/[a-z]/.test(id) && /[A-Z]/.test(id));
+    const codey = /[_0-9]/.test(id) || /[a-z][A-Z]/.test(id);
     if (codey) {
       add(id, [id]);
     }

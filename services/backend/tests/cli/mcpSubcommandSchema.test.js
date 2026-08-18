@@ -18,12 +18,12 @@ const { parseInput } = require('../../src/cli/router');
 test('ROUTER_SUB_COMMANDS.mcp 注册了全部管理子命令', () => {
   const subs = schema.getRouterSubCommands().mcp || [];
   for (const expected of ['governance', 'gov', 'add', 'remove', 'rm',
-    'presets', 'preset', 'serve', 'list', 'show', 'test', 'enable', 'disable']) {
+    'presets', 'preset', 'serve', 'list', 'show', 'test', 'enable', 'disable', 'eco', 'ecosystem', '生态']) {
     assert.ok(subs.includes(expected), `mcp 子命令应包含 ${expected}`);
   }
 });
 
-test('khy mcp presets / show / test / enable / disable 解析出 subCommand', () => {
+test('khy mcp presets / show / test / enable / disable / eco 解析出 subCommand', () => {
   const cases = [
     ['mcp presets', 'presets', []],
     ['mcp preset', 'preset', []],
@@ -31,6 +31,9 @@ test('khy mcp presets / show / test / enable / disable 解析出 subCommand', ()
     ['mcp test filesystem', 'test', ['filesystem']],
     ['mcp enable github', 'enable', ['github']],
     ['mcp disable github', 'disable', ['github']],
+    ['mcp eco', 'eco', []],
+    ['mcp ecosystem', 'ecosystem', []],
+    ['mcp 生态', '生态', []],
     ['mcp list', 'list', []],
   ];
   for (const [line, sub, args] of cases) {
@@ -48,7 +51,7 @@ test('routerDispatchSlash 的 mcp case 把新子命令路由给 handlers/mcp', a
   // `list` 落在只读状态视图之外不走 handler?不——`list` 由 mcp case 下方只读视图消费,仍不算
   // ROUTER_NOT_HANDLED(命令本身被 mcp case 拦截)。这里断言:新子命令都能被 mcp case 拦截
   // (返回非哨兵),不泄漏到主 switch。真实 handler 的 IO 副作用由 handlers/mcp 的叶子测试覆盖。
-  for (const sub of ['presets', 'preset', 'show', 'test', 'enable', 'disable']) {
+  for (const sub of ['presets', 'preset', 'show', 'test', 'enable', 'disable', 'eco', 'ecosystem', '生态']) {
     const r = await dispatchSlashCommand('mcp', {
       subCommand: sub, args: [], options: {}, rawCommandToken: '', parsed: {}, context: {},
       printError() {}, printHelp() {}, printInfo() {}, printTable() {}, printSuccess() {},

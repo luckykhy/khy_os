@@ -23,7 +23,7 @@
     <div class="content">
       <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-068] 仓库层级板块规范</div>
       <header class="hero reveal"><h1>[DESIGN-ARCH-068] 仓库层级板块规范</h1></header>
-      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-068-仓库层级板块规范">[DESIGN-ARCH-068] 仓库层级板块规范</a></li><li class="lvl-2"><a href="#一-层级表-l0-l6">一、层级表（L0–L6）</a></li><li class="lvl-3"><a href="#1-1-l3-与-l4-的分界-最容易混的一条">1.1 L3 与 L4 的分界（最容易混的一条）</a></li><li class="lvl-3"><a href="#1-2-横切层-不编号">1.2 横切层（不编号）</a></li><li class="lvl-2"><a href="#二-依赖方向-允许边白名单">二、依赖方向（允许边白名单）</a></li><li class="lvl-3"><a href="#2-1-实测存量-基线-本轮不修">2.1 实测存量（基线，本轮不修）</a></li><li class="lvl-2"><a href="#三-命名的三条轴">三、命名的三条轴</a></li><li class="lvl-3"><a href="#3-1-docs-两轴的读法">3.1 `docs/` 两轴的读法</a></li><li class="lvl-3"><a href="#3-2-根目录白名单">3.2 根目录白名单</a></li><li class="lvl-2"><a href="#四-板块-module-轴-l2-内部的功能切分">四、板块（module）轴 —— L2 内部的功能切分</a></li><li class="lvl-2"><a href="#五-任务入口命名规约">五、任务入口命名规约</a></li><li class="lvl-3"><a href="#5-1-两条硬规则">5.1 两条硬规则</a></li><li class="lvl-2"><a href="#六-放东西的决策流程">六、放东西的决策流程</a></li><li class="lvl-2"><a href="#七-守卫与验证">七、守卫与验证</a></li><li class="lvl-2"><a href="#关联">关联</a></li></ul></nav>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-068-仓库层级板块规范">[DESIGN-ARCH-068] 仓库层级板块规范</a></li><li class="lvl-2"><a href="#一-层级表-l0-l6">一、层级表（L0–L6）</a></li><li class="lvl-3"><a href="#1-1-l3-与-l4-的分界-最容易混的一条">1.1 L3 与 L4 的分界（最容易混的一条）</a></li><li class="lvl-3"><a href="#1-2-横切层-不编号">1.2 横切层（不编号）</a></li><li class="lvl-3"><a href="#1-3-根级生成目录">1.3 根级生成目录</a></li><li class="lvl-2"><a href="#二-依赖方向-允许边白名单">二、依赖方向（允许边白名单）</a></li><li class="lvl-3"><a href="#2-1-实测存量-基线-本轮不修">2.1 实测存量（基线，本轮不修）</a></li><li class="lvl-2"><a href="#三-命名的三条轴">三、命名的三条轴</a></li><li class="lvl-3"><a href="#3-1-docs-两轴的读法">3.1 `docs/` 两轴的读法</a></li><li class="lvl-3"><a href="#3-2-根目录白名单">3.2 根目录白名单</a></li><li class="lvl-2"><a href="#四-板块-module-轴-l2-内部的功能切分">四、板块（module）轴 —— L2 内部的功能切分</a></li><li class="lvl-2"><a href="#五-任务入口命名规约">五、任务入口命名规约</a></li><li class="lvl-3"><a href="#5-1-两条硬规则">5.1 两条硬规则</a></li><li class="lvl-2"><a href="#六-放东西的决策流程">六、放东西的决策流程</a></li><li class="lvl-2"><a href="#七-守卫与验证">七、守卫与验证</a></li><li class="lvl-2"><a href="#关联">关联</a></li></ul></nav>
       <article class="doc-body">
 <p>&lt;!-- 文档分类: DESIGN-ARCH-068 | 阶段: 设计 | 原路径: 新建 --&gt;</p>
 <h1 id="design-arch-068-仓库层级板块规范">[DESIGN-ARCH-068] 仓库层级板块规范<a class="anchor" href="#design-arch-068-仓库层级板块规范" aria-label="锚点">#</a></h1>
@@ -42,6 +42,8 @@
 <h3 id="1-2-横切层-不编号">1.2 横切层（不编号）<a class="anchor" href="#1-2-横切层-不编号" aria-label="锚点">#</a></h3>
 <p>服务于所有层，不参与 L0–L6 的依赖判定：</p>
 <table><thead><tr><th>目录</th><th>职责</th></tr></thead><tbody><tr><td><code>scripts/</code></td><td>工程任务：CI 守卫、文档站、发布、便携版、恢复、诊断、基准</td></tr><tr><td><code>packaging/</code></td><td>打包清单与<strong>板块切分</strong>（见第二节）</td></tr><tr><td><code>docs/</code></td><td>全部文档（两轴命名见第三节）</td></tr><tr><td><code>alpine/</code></td><td>Alpine 镜像的 etc 覆盖层</td></tr><tr><td><code>_source/</code></td><td>加密源码快照与恢复说明</td></tr></tbody></table>
+<h3 id="1-3-根级生成目录">1.3 根级生成目录<a class="anchor" href="#1-3-根级生成目录" aria-label="锚点">#</a></h3>
+<p><code>build/</code>、<code>dist/</code> 与 <code>*.egg-info/</code> 是构建或打包工具生成的临时产物，不属于 L0-L6 或横切源码层。它们必须保持在 <code>.gitignore</code> 中，层级守卫仅通过封闭的 <code>GENERATED_TOP_LEVEL_DIRS</code> 集合排除；新增生成目录时须同步补充忽略规则和守卫集合。</p>
 <hr>
 <h2 id="二-依赖方向-允许边白名单">二、依赖方向（允许边白名单）<a class="anchor" href="#二-依赖方向-允许边白名单" aria-label="锚点">#</a></h2>
 <p><strong>不是</strong>「只允许自上而下」。真实依赖图不是全序 —— Python 启动器在 L1 却要 spawn L2 的 Node 进程，而 L2 的 ai-backend 又要用 L1 的共享包。因此本节用<strong>允许边白名单</strong>，每条边都附实测依据：</p>
@@ -53,29 +55,29 @@
 <table><thead><tr><th>类别</th><th>处数</th><th>性质</th></tr></thead><tbody><tr><td>纯 re-export 壳（<code>L2 → L4</code>）</td><td>57</td><td><strong>容忍</strong>：兼容别名，不计入违规</td></tr><tr><td>跨 workspace 深层相对 require</td><td>43</td><td>违规存量，进基线</td></tr><tr><td>指向不存在路径的深层 require</td><td>24</td><td><strong>潜伏崩溃</strong>，进基线</td></tr></tbody></table>
 <p><strong>① <code>L2 → L4</code> 的 re-export 壳（57 处，容忍）</strong></p>
 <p><code>services/backend/src/{models,controllers,cli/handlers}/</code> 下有大量一行文件：</p>
-<pre><code class="language-js">// services/backend/src/models/Instrument.js —— 整个文件就这一行
-module.exports = require('../../../../software/khyquant/models/Instrument');</code></pre>
+<pre><code class="language-js"><span class="hljs-comment">// services/backend/src/models/Instrument.js —— 整个文件就这一行</span>
+<span class="hljs-variable language_">module</span>.<span class="hljs-property">exports</span> = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../../../../software/khyquant/models/Instrument&#x27;</span>);</code></pre>
 <p>这是刻意的<strong>路径别名</strong>：<code>services/backend</code> 对外保持自己稳定的模块路径，实现归 <code>software/khyquant</code> 所有。它不引入逻辑耦合，因此守卫按「整个文件（去注释去空行）恰好是一句 <code>module.exports = require(…)</code>」豁免。<strong>壳里一旦写进任何逻辑，豁免立即失效</strong>并计为违规——这是豁免能安全存在的前提。</p>
 <p><strong>② <code>services/ai-backend</code> → <code>services/backend</code>（违规存量的主体）</strong></p>
-<pre><code class="language-js">// services/ai-backend/src/routes/aiGatewayAdmin.js
-const normalizeCompatibility = require('../../../backend/src/utils/normalizeCompatibility');
-// services/ai-backend/src/services/gateway/userModelCatalogGraph.js
-const modelCapability = require('../../../../backend/src/services/gateway/modelCapability');</code></pre>
+<pre><code class="language-js"><span class="hljs-comment">// services/ai-backend/src/routes/aiGatewayAdmin.js</span>
+<span class="hljs-keyword">const</span> normalizeCompatibility = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../../../backend/src/utils/normalizeCompatibility&#x27;</span>);
+<span class="hljs-comment">// services/ai-backend/src/services/gateway/userModelCatalogGraph.js</span>
+<span class="hljs-keyword">const</span> modelCapability = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../../../../backend/src/services/gateway/modelCapability&#x27;</span>);</code></pre>
 <p>这类引用把两个<strong>独立版本轨道</strong>的包（ai-backend 走轨道 2，backend 走轨道 1，见 <code>AGENTS.md</code>「版本同步」）在源码层焊死，任何一侧移动文件都会静默断裂。</p>
 <p><strong>拆解方向</strong>：被共用的都是纯函数工具（<code>parseBoolean</code>、<code>maskSecret</code>、<code>ensureDirSync</code>、<code>httpError</code>、<code>normalizeAuthToken</code>…）与网关元数据（<code>modelCapability</code>、<code>modelTier</code>、<code>providerPresets</code>）。应下沉到 <code>platform/packages/shared</code>（即 <code>@khy/shared</code>），两侧都按包名导入。</p>
 <p><strong>③ 指向不存在路径的深层 require（24 处，真 bug）</strong></p>
 <p>守卫顺带查出的一类<strong>已经断了但没人发现</strong>的引用 —— 搬迁文件时 <code>../</code> 级数算错，而调用点是惰性 require（写在函数体里）或被 <code>try/catch</code> 包着，所以启动期不报错，只在跑到那条命令时才炸。已确认的例子：</p>
-<pre><code class="language-js">// software/khyquant/handlers/data.js:9 —— 解析到 software/services/…（不存在）
-const marketDataService = require('../../services/marketDataService');
-//   同目录树下真身在 software/khyquant/services/marketDataService.js（应为 ../services/…）
+<pre><code class="language-js"><span class="hljs-comment">// software/khyquant/handlers/data.js:9 —— 解析到 software/services/…（不存在）</span>
+<span class="hljs-keyword">const</span> marketDataService = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../../services/marketDataService&#x27;</span>);
+<span class="hljs-comment">//   同目录树下真身在 software/khyquant/services/marketDataService.js（应为 ../services/…）</span>
 
-// software/khyquant/services/gateway/toolCapabilityStore.js:24 —— 顶层 require，加载即崩
-const { getBaseDataDir } = require('../../utils/dataHome');
-//   software/khyquant/utils/ 下只有 5 个文件，没有 dataHome
+<span class="hljs-comment">// software/khyquant/services/gateway/toolCapabilityStore.js:24 —— 顶层 require，加载即崩</span>
+<span class="hljs-keyword">const</span> { getBaseDataDir } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../../utils/dataHome&#x27;</span>);
+<span class="hljs-comment">//   software/khyquant/utils/ 下只有 5 个文件，没有 dataHome</span>
 
-// services/backend/src/cli/sessionColorState.js:31 —— 被 try/catch 吞掉，功能静默降级
-require('../../services/session/sessionForestService')
-//   真身在 services/backend/src/services/session/（应为 ../services/…）</code></pre>
+<span class="hljs-comment">// services/backend/src/cli/sessionColorState.js:31 —— 被 try/catch 吞掉，功能静默降级</span>
+<span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;../../services/session/sessionForestService&#x27;</span>)
+<span class="hljs-comment">//   真身在 services/backend/src/services/session/（应为 ../services/…）</span></code></pre>
 <p><strong>现状处理</strong>：三类都记入 <code>scripts/ci/repo-layout-baseline.json</code>，<strong>只允许下降不允许上升</strong>。全量清单用 <code>npm run check:layout -- --list=unresolved-require</code>（或 <code>--list=cross-layer-require</code>）打印。真修是独立一轮工作，不在本规范的引入范围内。</p>
 <hr>
 <h2 id="三-命名的三条轴">三、命名的三条轴<a class="anchor" href="#三-命名的三条轴" aria-label="锚点">#</a></h2>
@@ -105,7 +107,7 @@ require('../../services/session/sessionForestService')
 <table><thead><tr><th>域</th><th>含义</th><th>落地脚本</th></tr></thead><tbody><tr><td><code>check:</code></td><td>CI 守卫，会亮红灯</td><td><code>scripts/ci/*</code></td></tr><tr><td><code>docs:</code></td><td>文档站构建与体检</td><td><code>scripts/docs/*</code></td></tr><tr><td><code>test:</code></td><td>测试</td><td><code>scripts/tests/*</code>、各 workspace</td></tr><tr><td><code>gate:</code></td><td>发布门</td><td><code>scripts/release/*</code></td></tr><tr><td><code>restore:</code></td><td>源码恢复流程</td><td><code>scripts/restore/*</code></td></tr><tr><td><code>portable:</code></td><td>便携版构建打包</td><td><code>scripts/portable/*</code></td></tr><tr><td><code>maintainer:</code></td><td>维护映射表相关</td><td><code>scripts/ci/print-maintainer-map.js</code></td></tr><tr><td><code>maintenance:</code></td><td>生成类维护动作</td><td><code>scripts/maintenance/*</code></td></tr><tr><td><code>bench:</code></td><td>性能基准</td><td><code>scripts/bench/*</code></td></tr><tr><td><code>hooks:</code> / <code>verify:</code></td><td>安装与自检</td><td><code>scripts/install/*</code></td></tr></tbody></table>
 <h3 id="5-1-两条硬规则">5.1 两条硬规则<a class="anchor" href="#5-1-两条硬规则" aria-label="锚点">#</a></h3>
 <ol><li><strong>每个入口必须指向一个已存在的脚本文件。</strong> 引入本规范时实测：文档与 CI 共引用 174 个 <code>npm run</code> 目标，其中 145 个在任何 <code>package.json</code> 里都不存在——27 个 <code>scripts/ci/*</code>、9 个 <code>scripts/docs/*</code>、18 个 <code>scripts/restore/*</code> 全部不可发现、不可执行，<code>[OPS-MAN-169]</code> 那份「做完的定义」验收清单整份跑不通。守卫规则 <code>dangling-task</code> 就是为此而设。</li><li><strong>不为单个测试文件建入口。</strong> 「跑某一个测试」用 <code>npm run test:one -- &lt;path&gt;</code>，不再为每个场景登记一个 <code>test:&lt;场景名&gt;</code>。此前积累了约 100 个这类目标（<code>test:ocr-*</code>、<code>test:vision-*</code>、<code>test:restore-*</code>、<code>test:maintainer-*</code>），全部有名无实。</li></ol>
-<p><strong>补齐后的现状（2026-08-15）</strong>：根 <code>package.json</code> 现有约 90 条 curated 入口，<code>dangling-task</code> 从 145 降至 <strong>119</strong>；余下 119 个里约 95 个是第 2 条刻意不提供的 <code>test:&lt;单场景&gt;</code>，其余是旧名（<code>restore-plan</code> → <code>restore:plan</code>、<code>triage</code> → <code>maintainer:triage</code>、<code>gen-triage-doc</code> → <code>maintenance:triage-doc</code> 等）与<strong>至今无实现</strong>的目标（<code>check:quality-gates</code>、<code>maintenance:generate</code>…）。两类都只登记进基线、<strong>不伪造入口</strong>。旧名→新名对照表见 <code>[OPS-MAN-174] 任务入口总表</code> 第九节。</p>
+<p><strong>补齐后的现状（2026-08-15）</strong>：根 <code>package.json</code> 现有约 90 条 curated 入口，<code>dangling-task</code> 从 145 降至 <strong>119</strong>；余下 119 个里约 95 个是第 2 条刻意不提供的 <code>test:&lt;单场景&gt;</code>，其余是旧名（<code>restore-plan</code> → <code>restore:plan</code>、<code>triage</code> → <code>maintainer:triage</code>、<code>gen-triage-doc</code> → <code>maintenance:triage-doc</code> 等）与<strong>至今无实现</strong>的目标（<code>maintenance:generate</code> 等）。两类都只登记进基线、<strong>不伪造入口</strong>。<code>check:quality-gates</code> 已由 <code>scripts/quality-gate/index.js</code> 实现，不再属于缺失入口。旧名→新名对照表见 <code>[OPS-MAN-174] 任务入口总表</code> 第九节。</p>
 <p>完整入口清单见 <code>[OPS-MAN-174] 任务入口总表</code>。</p>
 <hr>
 <h2 id="六-放东西的决策流程">六、放东西的决策流程<a class="anchor" href="#六-放东西的决策流程" aria-label="锚点">#</a></h2>
@@ -128,17 +130,17 @@ require('../../services/session/sessionForestService')
    └ 先改本文第一节 + check-repo-layout.js 的层级清单，否则守卫 layer-registry 会拦住</code></pre>
 <hr>
 <h2 id="七-守卫与验证">七、守卫与验证<a class="anchor" href="#七-守卫与验证" aria-label="锚点">#</a></h2>
-<pre><code class="language-powershell">npm run check:layout                                    # 本规范的强制执行者
-npm run check:layout -- --list=unresolved-require        # 打印某条发现的全量清单
-npm run check:layout -- --update-baseline                # 修完一批后下调基线（绝不上调）
-node --test scripts/tests/check-repo-layout.test.js</code></pre>
+<pre><code class="language-powershell">npm run check:layout                                    <span class="hljs-comment"># 本规范的强制执行者</span>
+npm run check:layout <span class="hljs-literal">--</span> <span class="hljs-literal">--list</span>=unresolved<span class="hljs-literal">-require</span>        <span class="hljs-comment"># 打印某条发现的全量清单</span>
+npm run check:layout <span class="hljs-literal">--</span> <span class="hljs-literal">--update-baseline</span>                <span class="hljs-comment"># 修完一批后下调基线（绝不上调）</span>
+node <span class="hljs-literal">--test</span> scripts/tests/check<span class="hljs-literal">-repo-layout</span>.test.js</code></pre>
 <p><code>scripts/ci/check-repo-layout.js</code> 的七条规则：</p>
 <table><thead><tr><th>id</th><th>规则</th><th>级别</th></tr></thead><tbody><tr><td><code>root-whitelist</code></td><td>根目录说明性 <code>.md</code>/<code>.txt</code> 须在 <code>[MGMT-STD-001]</code> §1.3 白名单内</td><td>error</td></tr><tr><td><code>docs-index-first</code></td><td>每个 <code>docs/</code> 分类目录须有排序首位的 <code>00_INDEX_*</code>（CP-4/CP-5）</td><td>error</td></tr><tr><td><code>layer-registry</code></td><td>顶层目录须登记在本文第一节的 L0–L6 或横切层清单里</td><td>error</td></tr><tr><td><code>dangling-task</code></td><td>被跟踪文件里的 <code>npm run &lt;目标&gt;</code> 须能解析到已定义脚本</td><td>warning + 基线</td></tr><tr><td><code>cross-layer-require</code></td><td>跨 workspace 的深层相对 <code>require</code>（纯 re-export 壳豁免）</td><td>warning + 基线</td></tr><tr><td><code>unresolved-require</code></td><td>深层相对 <code>require</code> 指向磁盘上不存在的路径</td><td>warning + 基线</td></tr><tr><td><code>docs-index-complete</code></td><td>阶段目录里的文档须出现在主索引 <code>docs/00_INDEX_文档索引.md</code>（CP-3）</td><td>warning + 基线</td></tr></tbody></table>
 <p><code>docs-index-first</code> 只管「每个目录有没有就近索引」，管不到「主入口漏没漏链」——后者是 <code>docs-index-complete</code>。<br>该规则对 <code>02_CONCEPTS_概念入门/</code> 与 <code>09_STORY_修仙学AI/</code> <strong>豁免</strong>：这两个小白向目录的可达性由<br><code>scripts/docs/check_beginner_docs.js</code>（禁孤儿页/禁死链/禁死胡同）保证，比主索引点名更强；主索引只链其目录入口。</p>
 <p>四条 warning 规则用 <code>scripts/ci/repo-layout-baseline.json</code> 记录已知违规数，<strong>只降不升</strong>（与仓库既有的 <code>frontend-size-baseline.json</code>、duplication 基线同一套路）。超过基线即自动升为 error。</p>
 <p>本守卫<strong>刻意全仓扫描</strong>，不接受 <code>--changed</code>：层级是仓库的全局属性，只看改动集会漏掉「别人搬走了索引文件」这类破坏。</p>
 <p><strong>一处盲区（新增文件时务必注意）</strong>：<code>dangling-task</code> 与 <code>cross-layer-require</code> 走 <code>git grep</code>，只看<strong>被跟踪</strong>内容 —— 新文件在 <code>git add</code> 之前它一个字都读不到。后果是：一份新文档里写的 <code>npm run &lt;还不存在的目标&gt;</code> 在本地扫描时不计数，等它进了索引/提交才突然把计数顶到基线以上、把 warning 变成 CI 的 error。<strong>新增文档后自查一次</strong>：</p>
-<pre><code class="language-bash">git grep -I -o -h --untracked -E 'npm run [a-zA-Z0-9:_-]+' | sort -u</code></pre>
+<pre><code class="language-bash">git grep -I -o -h --untracked -E <span class="hljs-string">&#x27;npm run [a-zA-Z0-9:_-]+&#x27;</span> | <span class="hljs-built_in">sort</span> -u</code></pre>
 <p>尤其别在正文里把占位符写成 <code>npm run X</code> 或 <code>npm run test:&lt;单场景&gt;</code> —— 正则 <code>[a-zA-Z0-9:_-]+</code> 会把 <code>X</code>、<code>test:</code> 当成真目标名。占位符一律写 <code>npm run &lt;目标&gt;</code>；引用历史旧名时（如本仓 <code>[OPS-MAN-174]</code> 第九节的旧名→新名对照表）<strong>去掉 <code>npm run </code> 前缀</strong>，只写目标名本身。</p>
 <p><strong>CI 接线</strong>：<code>.github/workflows/pr-gate.yml</code> 的 <code>Check repo layout</code> 步骤跑</p>
 <pre><code class="language-bash">node scripts/ci/check-repo-layout.js --promote=root-whitelist,docs-index-first,layer-registry</code></pre>

@@ -6,11 +6,11 @@
  * Provides developer tools: deploy, ci, proxy, plugin-dev, etc.
  */
 
-process.env.KHY_MODULE = 'khy-tools';
 process.env.KHY_MODE = 'standalone';
 
 const path = require('path');
 const fs = require('fs');
+const { handleStandaloneInfo } = require('./standalone-info');
 
 const BACKEND_ROOT = process.env.KHY_BACKEND_ROOT
   || path.resolve(__dirname, '../../../services/backend');
@@ -27,15 +27,21 @@ function bootstrap() {
 }
 
 async function main() {
+  const args = process.argv.slice(2);
+  if (handleStandaloneInfo(
+    'khy-tools',
+    'Developer tools for deployment, CI, plugins, maintenance, and diagnostics.',
+    'khy-tools <command> [args...]',
+    args
+  )) return;
+
   bootstrap();
 
   try {
     // Windows spawn hardening
     try {
-      require(path.join(BACKEND_ROOT, 'src/bootstrap/windowsSpawnHardening')).installWindowsSpawnHardening();
+      require('../../../services/backend/src/bootstrap/windowsSpawnHardening').installWindowsSpawnHardening();
     } catch { /* best effort */ }
-
-    const args = process.argv.slice(2);
 
     if (args.length === 0) {
       // Show available tools
@@ -50,7 +56,7 @@ async function main() {
     }
 
     // Route to handler
-    const router = require(path.join(BACKEND_ROOT, 'src/cli/router'));
+    const router = require('../../../services/backend/src/cli/router');
     await router.route(args[0], args.slice(1));
   } catch (err) {
     console.error(`khy-tools startup failed: ${err.message}`);

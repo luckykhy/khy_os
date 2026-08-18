@@ -49,13 +49,12 @@ const C = {
  */
 function resolveBundleRoot() {
   const candidates = [
-    path.join(ROOT, 'platform', 'khy_os', 'bundled'), // pip 源树 / 已装 wheel 内亦是此结构
-    path.join(ROOT, 'packaging', 'npm', 'bundled'), // npm 源树
-    ROOT, // 开发树：关键路径直接挂在仓库根下
+    path.join(ROOT, 'platform', 'khy_platform', 'bundled'),
+    path.join(ROOT, 'packaging', 'npm', 'bundled'),
   ];
   for (const c of candidates) {
     try {
-      if (fs.existsSync(path.join(c, 'services', 'backend', 'package.json'))) return c;
+      if (fs.existsSync(path.join(c, 'runtime', 'khy', 'bundle.mjs'))) return c;
     } catch {
       /* fail-soft，继续下一个 */
     }

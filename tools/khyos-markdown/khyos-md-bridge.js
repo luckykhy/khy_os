@@ -679,6 +679,7 @@ function startBridge(opts = {}) {
 
   const handler = createHandler({
     token, htmlPath, projectRoot,
+    vendorDir: opts.vendorDir,
     // 全局工具模式:把目标文件路径下沉给 handler,使 /api/list 默认列「该文件所在目录」(KHY_MD_SIDEBAR_CURRENT_DIR)。
     targetPath: opts.targetPath,
     onPing: autoShutdown ? kick : undefined,

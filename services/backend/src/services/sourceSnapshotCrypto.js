@@ -26,19 +26,30 @@ const SNAPSHOT_ENC_NAME = 'khy-os-source.tar.gz.enc';
 const SNAPSHOT_META_NAME = 'snapshot.json';
 const RESTORE_DOC_NAME = 'RESTORE_WINDOWS.md';
 
-// Default passphrase used when no explicit secret is supplied. Source publishing
-// and restore are no longer password-gated: the build embeds the snapshot under
-// this fixed key and `khy restore` decrypts with it automatically, so real source
-// always ships and always restores without any user input. An explicit
-// KHY_SOURCE_PUBLISH_SECRET / --secret still overrides it. The value matches the
-// historical built-in study secret so snapshots produced before this change
-// (encrypted with `khy2026`) keep restoring with no extra step.
+// Legacy passphrase retained for snapshots produced before per-version keys.
+// New immutable releases derive a distinct built-in key from release version +
+// this value; explicit KHY_SOURCE_PUBLISH_SECRET / --secret still overrides it.
+// Neither the derived key nor an explicit secret is written to package metadata.
 const DEFAULT_SOURCE_SECRET = 'khy2026';
 
-/** Resolve an effective secret, falling back to the password-free default. */
+/** Resolve an effective secret, falling back to the legacy snapshot key. */
 function resolveSourceSecret(secret) {
   const s = secret == null ? '' : String(secret).trim();
   return s || DEFAULT_SOURCE_SECRET;
+}
+
+/**
+ * Resolve the built-in key for one immutable release version. The key is derived
+ * at runtime so it never appears in a payload manifest or install ledger. Empty
+ * versions retain the legacy key for old snapshots and build fixtures.
+ */
+function resolveVersionSourceSecret(version) {
+  const v = version == null ? '' : String(version).trim();
+  if (!v) return DEFAULT_SOURCE_SECRET;
+  return crypto
+    .createHash('sha256')
+    .update(`khy-source-snapshot:${v}:${DEFAULT_SOURCE_SECRET}`, 'utf8')
+    .digest('hex');
 }
 
 const ALGO = 'aes-256-gcm';
@@ -135,6 +146,7 @@ module.exports = {
   SCRYPT,
   deriveKey,
   resolveSourceSecret,
+  resolveVersionSourceSecret,
   encrypt,
   decrypt,
   sha256Hex,

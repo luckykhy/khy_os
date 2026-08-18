@@ -29,13 +29,13 @@
 <h2 id="背景-能力存在但没接线">背景（能力存在但没接线）<a class="anchor" href="#背景-能力存在但没接线" aria-label="锚点">#</a></h2>
 <p><code>services/backend/src/services/sessionFileRepair.js</code> 是一枚<strong>全实现且有单测</strong>的叶子<br>（<code>repairSessionFile</code> / <code>tryParsePartialJson</code> / <code>extractValidMessages</code> / <code>validateSession</code><br>/ <code>validateSessionFile</code>），但此前<strong>唯一的消费者是它自己的单测</strong>——生产代码里没有任何<br>路径调用它。这正是送别礼要清理的「能力存在，但没接线」孤儿叶。</p>
 <p>同时，<code>sessionPersistence.restoreSession</code> 的「退回 JSON 快照」兜底路径此前是：</p>
-<pre><code class="language-js">try {
-  const raw = fs.readFileSync(_filePath(sessionId), 'utf-8');
-  return { ...JSON.parse(raw), _source: 'json' };
-} catch {
-  const checkpoint = loadCheckpoint(sessionId);
-  if (checkpoint) return { ...checkpoint, _source: 'checkpoint' };
-  return null;
+<pre><code class="language-js"><span class="hljs-keyword">try</span> {
+  <span class="hljs-keyword">const</span> raw = fs.<span class="hljs-title function_">readFileSync</span>(<span class="hljs-title function_">_filePath</span>(sessionId), <span class="hljs-string">&#x27;utf-8&#x27;</span>);
+  <span class="hljs-keyword">return</span> { ...<span class="hljs-title class_">JSON</span>.<span class="hljs-title function_">parse</span>(raw), <span class="hljs-attr">_source</span>: <span class="hljs-string">&#x27;json&#x27;</span> };
+} <span class="hljs-keyword">catch</span> {
+  <span class="hljs-keyword">const</span> checkpoint = <span class="hljs-title function_">loadCheckpoint</span>(sessionId);
+  <span class="hljs-keyword">if</span> (checkpoint) <span class="hljs-keyword">return</span> { ...checkpoint, <span class="hljs-attr">_source</span>: <span class="hljs-string">&#x27;checkpoint&#x27;</span> };
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">null</span>;
 }</code></pre>
 <p>即：JSON 快照一旦损坏/截断（写盘中途断电、磁盘满写坏、传输截断），<code>JSON.parse</code> 抛错<br>→ <strong>整段会话直接丢给 checkpoint 或 null</strong>。这与送别礼诉求「换电脑/换系统后<strong>完整的<br>简单的还原</strong>」直接冲突——本可 salvage 的会话被整段丢弃。</p>
 <h2 id="接线">接线<a class="anchor" href="#接线" aria-label="锚点">#</a></h2>

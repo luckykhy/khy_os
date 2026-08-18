@@ -32,7 +32,7 @@
 <p>端到端采齐(本 CLI 接线)：</p>
 <pre><code>授权门(该不该自驱) + 检测器/消解器(矛盾/恢复链) + 学习应用器(跨会话该跳哪步) + 追索(被禁怎么解锁)
   -&gt; deriveNextAction -&gt; { status, action, command, actor, why }</code></pre>
-<pre><code class="language-bash">node scripts/restore-navigate.js --json   # 陌生机器上的自驱 agent 读它决定下一步</code></pre>
+<pre><code class="language-bash">node scripts/restore-navigate.js --json   <span class="hljs-comment"># 陌生机器上的自驱 agent 读它决定下一步</span></code></pre>
 <h2 id="决策序-安全优先-木桶短板-最危险的先说话">决策序：安全优先(木桶短板，最危险的先说话)<a class="anchor" href="#决策序-安全优先-木桶短板-最危险的先说话" aria-label="锚点">#</a></h2>
 <p>按<strong>风险从高到低</strong>逐档短路，第一个命中的档决定唯一裁决：</p>
 <table><thead><tr><th>档</th><th>条件</th><th>裁决</th></tr></thead><tbody><tr><td>1</td><td>授权门 <code>forbidden</code></td><td>交人：走 recourse 最省一步(agent 绝不自驱被禁场景)</td></tr><tr><td>2</td><td>硬矛盾(<code>!safeToAutodrive</code> 且 <code>!autoResolvable</code>)</td><td>交人：<code>firstHumanMove</code></td></tr><tr><td>3</td><td>可自动消解且<strong>已 authorized</strong></td><td>自驱：第一条 <strong>LIVE</strong> plan move(尊重学习跳过)</td></tr><tr><td>3′</td><td>可自动消解但授权门判 <strong>ask-first</strong></td><td>给出<strong>同一条</strong>建议下一步，但 <code>status=ask-first</code>、<code>actor=human</code>：<strong>每步须人工确认</strong>，绝不静默自驱</td></tr><tr><td>4</td><td>计划为空且已还原(全绿)</td><td>DONE：无需动作</td></tr><tr><td>5</td><td>其它(样本不足 / 判定不清 / 畸形)</td><td>保守交人：看 <code>--json</code> 自行决定</td></tr></tbody></table>

@@ -46,39 +46,39 @@
 <h2 id="修复">修复<a class="anchor" href="#修复" aria-label="锚点">#</a></h2>
 <h3 id="1-setup-py-打包-ai-frontend">1. setup.py — 打包 ai-frontend/<a class="anchor" href="#1-setup-py-打包-ai-frontend" aria-label="锚点">#</a></h3>
 <p>在 <code>BuildWithBundle.run()</code> 中添加 <code>ai-frontend/</code> copytree：</p>
-<pre><code class="language-python">ai_frontend_src = ROOT / &quot;ai-frontend&quot;
-ai_frontend_dst = bundled / &quot;ai-frontend&quot;
-if ai_frontend_src.exists():
+<pre><code class="language-python">ai_frontend_src = ROOT / <span class="hljs-string">&quot;ai-frontend&quot;</span>
+ai_frontend_dst = bundled / <span class="hljs-string">&quot;ai-frontend&quot;</span>
+<span class="hljs-keyword">if</span> ai_frontend_src.exists():
     shutil.copytree(
         ai_frontend_src, ai_frontend_dst,
-        ignore=shutil.ignore_patterns(*EXCLUDE_PATTERNS, 'node_modules'),
+        ignore=shutil.ignore_patterns(*EXCLUDE_PATTERNS, <span class="hljs-string">&#x27;node_modules&#x27;</span>),
     )</code></pre>
 <p><code>MANIFEST.in</code> 同步添加 <code>recursive-include ai-frontend *</code> + <code>prune ai-frontend/node_modules</code>。</p>
 <h3 id="2-bootstrap-py-ai-frontend-npm-install">2. _bootstrap.py — ai-frontend npm install<a class="anchor" href="#2-bootstrap-py-ai-frontend-npm-install" aria-label="锚点">#</a></h3>
 <p>在 <code>_ensure_npm_install()</code> 的 <code>finally</code> 块中添加 ai-frontend 依赖安装：</p>
-<pre><code class="language-python">ai_frontend_dir = backend_dir.parent / &quot;ai-frontend&quot;
-if ai_frontend_dir.exists() and (ai_frontend_dir / &quot;package.json&quot;).exists():
-    nm = ai_frontend_dir / &quot;node_modules&quot;
-    lock = nm / &quot;.package-lock.json&quot;
-    if not _path_exists_safe(nm) or not _path_exists_safe(lock):
+<pre><code class="language-python">ai_frontend_dir = backend_dir.parent / <span class="hljs-string">&quot;ai-frontend&quot;</span>
+<span class="hljs-keyword">if</span> ai_frontend_dir.exists() <span class="hljs-keyword">and</span> (ai_frontend_dir / <span class="hljs-string">&quot;package.json&quot;</span>).exists():
+    nm = ai_frontend_dir / <span class="hljs-string">&quot;node_modules&quot;</span>
+    lock = nm / <span class="hljs-string">&quot;.package-lock.json&quot;</span>
+    <span class="hljs-keyword">if</span> <span class="hljs-keyword">not</span> _path_exists_safe(nm) <span class="hljs-keyword">or</span> <span class="hljs-keyword">not</span> _path_exists_safe(lock):
         subprocess.run(
-            [npm_cmd, &quot;install&quot;, &quot;--no-audit&quot;, &quot;--no-fund&quot;],
-            cwd=str(ai_frontend_dir), timeout=_NPM_TIMEOUT,
+            [npm_cmd, <span class="hljs-string">&quot;install&quot;</span>, <span class="hljs-string">&quot;--no-audit&quot;</span>, <span class="hljs-string">&quot;--no-fund&quot;</span>],
+            cwd=<span class="hljs-built_in">str</span>(ai_frontend_dir), timeout=_NPM_TIMEOUT,
             **_subprocess_kwargs(),
         )</code></pre>
 <h3 id="3-ai-manage-daemon-js-解析参数-静态回退">3. ai-manage-daemon.js — 解析参数 + 静态回退<a class="anchor" href="#3-ai-manage-daemon-js-解析参数-静态回退" aria-label="锚点">#</a></h3>
 <p>解析 <code>--frontend-dist-dir</code> 参数：</p>
-<pre><code class="language-js">const frontendDistDir = parseStringArg(argv, '--frontend-dist-dir', '');</code></pre>
+<pre><code class="language-js"><span class="hljs-keyword">const</span> frontendDistDir = <span class="hljs-title function_">parseStringArg</span>(argv, <span class="hljs-string">&#x27;--frontend-dist-dir&#x27;</span>, <span class="hljs-string">&#x27;&#x27;</span>);</code></pre>
 <p><code>resolveFrontend()</code> 失败后回退到静态托管：</p>
-<pre><code class="language-js">if (!frontend.available &amp;&amp; frontendDistDir) {
-    const staticResult = aiManagementServer.configureFrontendStatic({
-        distDir: frontendDistDir,
+<pre><code class="language-js"><span class="hljs-keyword">if</span> (!frontend.<span class="hljs-property">available</span> &amp;&amp; frontendDistDir) {
+    <span class="hljs-keyword">const</span> staticResult = aiManagementServer.<span class="hljs-title function_">configureFrontendStatic</span>({
+        <span class="hljs-attr">distDir</span>: frontendDistDir,
     });
-    if (staticResult.enabled) {
-        frontend.available = true;
-        frontend.managed = true;
-        frontend.port = apiPort;        // 静态文件从 API 端口提供
-        frontend.reason = 'static-dist';
+    <span class="hljs-keyword">if</span> (staticResult.<span class="hljs-property">enabled</span>) {
+        frontend.<span class="hljs-property">available</span> = <span class="hljs-literal">true</span>;
+        frontend.<span class="hljs-property">managed</span> = <span class="hljs-literal">true</span>;
+        frontend.<span class="hljs-property">port</span> = apiPort;        <span class="hljs-comment">// 静态文件从 API 端口提供</span>
+        frontend.<span class="hljs-property">reason</span> = <span class="hljs-string">&#x27;static-dist&#x27;</span>;
     }
 }</code></pre>
 <h3 id="4-gateway-js-修正提示信息">4. gateway.js — 修正提示信息<a class="anchor" href="#4-gateway-js-修正提示信息" aria-label="锚点">#</a></h3>
@@ -94,20 +94,20 @@ if ai_frontend_dir.exists() and (ai_frontend_dir / &quot;package.json&quot;).exi
 <h2 id="修改文件">修改文件<a class="anchor" href="#修改文件" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>文件</th><th>改动</th></tr></thead><tbody><tr><td><code>setup.py</code></td><td><code>BuildWithBundle.run()</code> 添加 ai-frontend copytree</td></tr><tr><td><code>MANIFEST.in</code></td><td>添加 ai-frontend include + prune node_modules</td></tr><tr><td><code>khy_platform/_bootstrap.py</code></td><td><code>_ensure_npm_install()</code> finally 块安装 ai-frontend 依赖</td></tr><tr><td><code>backend/scripts/ai-manage-daemon.js</code></td><td>解析 <code>--frontend-dist-dir</code> + 静态回退</td></tr><tr><td><code>backend/src/cli/handlers/gateway.js</code></td><td>修正 &quot;未就绪&quot; 提示信息</td></tr></tbody></table>
 <h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># 正常模式（有 node_modules）
+<pre><code class="language-bash"><span class="hljs-comment"># 正常模式（有 node_modules）</span>
 khy gateway manage
-# → 前端: http://127.0.0.1:8090
+<span class="hljs-comment"># → 前端: http://127.0.0.1:8090</span>
 
-# 模拟 pip 场景（无 node_modules）
-mv ai-frontend/node_modules ai-frontend/_bak
+<span class="hljs-comment"># 模拟 pip 场景（无 node_modules）</span>
+<span class="hljs-built_in">mv</span> ai-frontend/node_modules ai-frontend/_bak
 khy gateway manage stop &amp;&amp; khy gateway manage start --daemon
-# → 前端: http://127.0.0.1:9090 (静态 dist 回退)
-curl -s http://127.0.0.1:9090/admin/ai-gateway | head -1
-# → &lt;!DOCTYPE html&gt;
+<span class="hljs-comment"># → 前端: http://127.0.0.1:9090 (静态 dist 回退)</span>
+curl -s http://127.0.0.1:9090/admin/ai-gateway | <span class="hljs-built_in">head</span> -1
+<span class="hljs-comment"># → &lt;!DOCTYPE html&gt;</span>
 
-# 恢复
+<span class="hljs-comment"># 恢复</span>
 khy gateway manage stop
-mv ai-frontend/_bak ai-frontend/node_modules</code></pre>
+<span class="hljs-built_in">mv</span> ai-frontend/_bak ai-frontend/node_modules</code></pre>
       </article>
       <nav class="pager"><a class="prev" href="../../docs/04_IMPL_实现/[IMPL-RPT-017] 守护进程端口发现修复.html"><div class="dir">← 上一篇</div><div class="ttl">守护进程端口发现机制 — 设计文档与学习指南</div></a><a class="next" href="../../docs/04_IMPL_实现/[IMPL-RPT-019] 终端提示符泄漏与交付空行修复-2026-05-31.html"><div class="dir">下一篇 →</div><div class="ttl">终端提示符泄漏与交付空行修复报告</div></a></nav>
       <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>

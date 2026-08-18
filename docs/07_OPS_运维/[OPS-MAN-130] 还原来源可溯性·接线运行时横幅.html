@@ -51,16 +51,16 @@
 <p>渲染是纯函数、可单测；严重度路由（printWarn vs printInfo）留给 <code>publish.js</code>。</p>
 <h2 id="修法-handlerestore-成功横幅后追加诚实行">修法：handleRestore 成功横幅后追加诚实行<a class="anchor" href="#修法-handlerestore-成功横幅后追加诚实行" aria-label="锚点">#</a></h2>
 <p><code>publish.js</code> <code>handleRestore</code>（require 处 + 门助手 <code>_restoreProvenanceEnabled</code> + 横幅块之后）：</p>
-<pre><code class="language-js">// 来源可溯性诚实行（门 default-on）
-if (_restoreProvenanceEnabled()) {
-  try {
-    const _pv = assessRestoreProvenance(result.header);
-    const _pl = buildProvenanceBannerLine(_pv);
-    if (_pl &amp;&amp; _pl.line) {
-      if (_pl.severity === 'warn') printWarn(_pl.line);
-      else printInfo(_pl.line);
+<pre><code class="language-js"><span class="hljs-comment">// 来源可溯性诚实行（门 default-on）</span>
+<span class="hljs-keyword">if</span> (<span class="hljs-title function_">_restoreProvenanceEnabled</span>()) {
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">const</span> _pv = <span class="hljs-title function_">assessRestoreProvenance</span>(result.<span class="hljs-property">header</span>);
+    <span class="hljs-keyword">const</span> _pl = <span class="hljs-title function_">buildProvenanceBannerLine</span>(_pv);
+    <span class="hljs-keyword">if</span> (_pl &amp;&amp; _pl.<span class="hljs-property">line</span>) {
+      <span class="hljs-keyword">if</span> (_pl.<span class="hljs-property">severity</span> === <span class="hljs-string">&#x27;warn&#x27;</span>) <span class="hljs-title function_">printWarn</span>(_pl.<span class="hljs-property">line</span>);
+      <span class="hljs-keyword">else</span> <span class="hljs-title function_">printInfo</span>(_pl.<span class="hljs-property">line</span>);
     }
-  } catch { /* 来源把关异常 → 不打行，横幅字节等价旧行为 */ }
+  } <span class="hljs-keyword">catch</span> { <span class="hljs-comment">/* 来源把关异常 → 不打行，横幅字节等价旧行为 */</span> }
 }</code></pre>
 <p>纯诊断叠加：<strong>绝不改变还原成败、绝不 <code>_markFailure</code></strong>；证据不足 / 门关 / 抛错 → 不打行（字节等价）。</p>
 <h2 id="门控-fail-soft">门控 / fail-soft<a class="anchor" href="#门控-fail-soft" aria-label="锚点">#</a></h2>
@@ -72,14 +72,14 @@ if (_restoreProvenanceEnabled()) {
 <p>静默误导变成诚实标注，不改变还原本身的成败。</p>
 <ul><li>只读来源字符串，绝不碰任何密钥；pip <code>khy-os</code> 与 npm <code>@khy-os/khy-os</code> 版本必须一致。</li><li>本叶逻辑须与 dev 叶 <code>scripts/lib/restoreProvenance.js</code> 判定链保持一致（同一诚实标准的两处实现）。</li></ul>
 <h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">npm run test:restore-provenance-check     # 纯叶 + 横幅渲染单测(22 用例)
-npm run test:restore-archive-check        # OPS-128 无回归
-npm run test:restore-preflight            # OPS-119 无回归
-# LIVE(真 encrypt + 真 tar.gz 驱动真实 handleRestore):
-#   默认脏工作树快照(includesUncommitted=true) → 横幅追加 warn 行「= 提交 X + 未提交增量，不等于干净提交」;
-#   includesUncommitted=false → info 行「可证等于干净提交 X」;
-#   KHY_RESTORE_PROVENANCE=0 → 横幅不附来源行(字节等价旧行为);
-#   缺 gitCommit → info 行「无从溯源」(保守 no-provenance)。</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:restore-provenance-check     <span class="hljs-comment"># 纯叶 + 横幅渲染单测(22 用例)</span>
+npm run <span class="hljs-built_in">test</span>:restore-archive-check        <span class="hljs-comment"># OPS-128 无回归</span>
+npm run <span class="hljs-built_in">test</span>:restore-preflight            <span class="hljs-comment"># OPS-119 无回归</span>
+<span class="hljs-comment"># LIVE(真 encrypt + 真 tar.gz 驱动真实 handleRestore):</span>
+<span class="hljs-comment">#   默认脏工作树快照(includesUncommitted=true) → 横幅追加 warn 行「= 提交 X + 未提交增量，不等于干净提交」;</span>
+<span class="hljs-comment">#   includesUncommitted=false → info 行「可证等于干净提交 X」;</span>
+<span class="hljs-comment">#   KHY_RESTORE_PROVENANCE=0 → 横幅不附来源行(字节等价旧行为);</span>
+<span class="hljs-comment">#   缺 gitCommit → info 行「无从溯源」(保守 no-provenance)。</span></code></pre>
       </article>
       <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-129] readFile伪文件系统有界超时读·接线.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-129] readFile 伪文件系统（/proc·/sys）有界超时读 · 接线（让 khy 不再因读到会阻塞的 /proc 伪文件而永久卡死）</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-131] 重复代码检测门与公共测试脚手架.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-MAN-131] 重复代码检测门 + OCR 网关公共测试脚手架</div></a></nav>
       <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>

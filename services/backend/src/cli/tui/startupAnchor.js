@@ -1,8 +1,8 @@
 'use strict';
 
 /**
- * startupAnchor — pure leaf that anchors the TUI's FIRST frame to the BOTTOM
- * of the screen. Zero IO, deterministic, never throws.
+ * startupAnchor — optional pure leaf that anchors the TUI's FIRST frame to the
+ * BOTTOM of the screen. Zero IO, deterministic, never throws.
  *
  * Why: ink renders the live region at the current cursor position and flows
  * top-down, so on a fresh session in a tall terminal the prompt + footer sit
@@ -28,33 +28,33 @@
  * from the last row and the terminal scrolls the content into place exactly as
  * before.
  *
- * Gate: KHY_TUI_ANCHOR_BOTTOM, DEFAULT ON — only an explicit off-writing
- * (0/false/off/no, case-insensitive, trimmed; same口径 as railLayout/_off)
- * disables it. Non-TTY streams (pipes/CI redirects) always get '' so the pad
- * can never pollute captured output. Rows resolve through the SAME single
- * sources the rest of the TUI uses: sidebarLayout.stickyDim (trichotomy) and
- * sidebarLayout.fallbackRows for unknown/garbage — never a local literal.
- * The row count is clamped to >= 2 so a degenerate 1-row terminal stays safe.
+ * Gate: KHY_TUI_ANCHOR_BOTTOM, DEFAULT OFF. Moving to an absolute bottom row
+ * separates pre-TUI output (notably the login line) from the welcome banner by
+ * the unused height of a tall terminal. Explicit 1/true/on/yes preserves the
+ * old bottom-anchor layout for terminals that need it. Non-TTY streams always
+ * get '' so the anchor can never pollute captured output. Rows resolve through
+ * the SAME single sources the rest of the TUI uses: sidebarLayout.stickyDim
+ * (trichotomy) and sidebarLayout.fallbackRows for unknown/garbage.
  */
 
 const sidebarLayout = require('./sidebarLayout');
 
-/** Off-writings shared with sidebarLayout / railLayout / FooterBar. */
-function _off(env, name) {
+/** Explicit on-writings; an unset switch keeps startup output contiguous. */
+function _on(env, name) {
   const v = String((env && env[name]) || '')
     .trim()
     .toLowerCase();
-  return v === '0' || v === 'false' || v === 'off' || v === 'no';
+  return v === '1' || v === 'true' || v === 'on' || v === 'yes';
 }
 
 /**
- * Env-only half of the gate: ON unless KHY_TUI_ANCHOR_BOTTOM is an explicit
- * off-writing. Split out so callers/tests can pin the switch independently.
+ * Env-only half of the gate: OFF unless KHY_TUI_ANCHOR_BOTTOM is explicitly
+ * enabled. Split out so callers/tests can pin the switch independently.
  * @param {NodeJS.ProcessEnv} [env]
  * @returns {boolean}
  */
 function anchorBottomEnabled(env = process.env) {
-  return !_off(env, 'KHY_TUI_ANCHOR_BOTTOM');
+  return _on(env, 'KHY_TUI_ANCHOR_BOTTOM');
 }
 
 /**

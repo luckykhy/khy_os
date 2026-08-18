@@ -7,6 +7,7 @@ const path = require('path');
 const { PassThrough } = require('stream');
 const { EventEmitter } = require('events');
 const { spawnSync } = require('child_process');
+const { PRIMARY } = require('../src/constants/models');
 
 function canBindLoopbackSync() {
   const probe = `
@@ -289,6 +290,7 @@ describeWithLoopback('gateway adapters stability', () => {
 
   test('ollama adapter aborts in-flight request on abortSignal', async () => {
     jest.resetModules();
+    const freeMemSpy = jest.spyOn(os, 'freemem').mockReturnValue(16 * 1024 ** 3);
 
     const server = http.createServer((req, res) => {
       if (req.method === 'POST' && req.url === '/api/chat') {
@@ -296,7 +298,7 @@ describeWithLoopback('gateway adapters stability', () => {
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({
             message: { content: 'late response' },
-            model: 'qwen3.5:4b',
+            model: PRIMARY.localBrain,
           }));
         }, 1500);
         delayed.unref?.();
@@ -306,7 +308,7 @@ describeWithLoopback('gateway adapters stability', () => {
       }
       if (req.method === 'GET' && req.url === '/api/tags') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ models: [{ name: 'qwen3.5:4b' }] }));
+        res.end(JSON.stringify({ models: [{ name: PRIMARY.localBrain }] }));
         return;
       }
       res.writeHead(404, { 'Content-Type': 'application/json' });
@@ -316,7 +318,7 @@ describeWithLoopback('gateway adapters stability', () => {
     const { port, httpHost } = await listenOnRandomPort(server);
     process.env.OLLAMA_HOST = `http://${httpHost}:${port}`;
     process.env.OLLAMA_AUTO_START = 'false';
-    process.env.OLLAMA_MODEL = 'qwen3.5:4b';
+    process.env.OLLAMA_MODEL = PRIMARY.localBrain;
 
     const ollamaAdapter = require('../src/services/gateway/adapters/ollamaAdapter');
     ollamaAdapter.destroy();
@@ -334,6 +336,7 @@ describeWithLoopback('gateway adapters stability', () => {
       });
     } finally {
       clearTimeout(abortTimer);
+      freeMemSpy.mockRestore();
       await closeServer(server);
     }
 
@@ -346,6 +349,7 @@ describeWithLoopback('gateway adapters stability', () => {
 
   test('ollama adapter persists runtime diagnostics for HTTP failures', async () => {
     jest.resetModules();
+    const freeMemSpy = jest.spyOn(os, 'freemem').mockReturnValue(16 * 1024 ** 3);
 
     const tempDataHome = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-ollama-runtime-'));
     process.env.KHY_DATA_HOME = tempDataHome;
@@ -363,7 +367,7 @@ describeWithLoopback('gateway adapters stability', () => {
       }
       if (req.method === 'GET' && req.url === '/api/tags') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ models: [{ name: 'qwen3.5:4b' }] }));
+        res.end(JSON.stringify({ models: [{ name: PRIMARY.localBrain }] }));
         return;
       }
       res.writeHead(404, { 'Content-Type': 'application/json' });
@@ -373,7 +377,7 @@ describeWithLoopback('gateway adapters stability', () => {
     const { port, httpHost } = await listenOnRandomPort(server);
     process.env.OLLAMA_HOST = `http://${httpHost}:${port}`;
     process.env.OLLAMA_AUTO_START = 'false';
-    process.env.OLLAMA_MODEL = 'qwen3.5:4b';
+    process.env.OLLAMA_MODEL = PRIMARY.localBrain;
 
     let ollamaAdapter = require('../src/services/gateway/adapters/ollamaAdapter');
     ollamaAdapter.destroy();
@@ -403,6 +407,7 @@ describeWithLoopback('gateway adapters stability', () => {
         phase: 'response',
       });
     } finally {
+      freeMemSpy.mockRestore();
       await closeServer(server);
     }
   });
@@ -1288,6 +1293,7 @@ describeWithLoopback('gateway adapters stability', () => {
     process.env.GATEWAY_CODEX_OPENAI_FALLBACK_ENABLED = 'true';
 
     const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-codex-home-'));
+    const homedirSpy = jest.spyOn(os, 'homedir').mockReturnValue(tmpHome);
     const codexDir = path.join(tmpHome, '.codex');
     fs.mkdirSync(codexDir, { recursive: true });
     fs.writeFileSync(path.join(codexDir, 'config.toml'), [
@@ -1317,7 +1323,7 @@ describeWithLoopback('gateway adapters stability', () => {
       child.stdin = new PassThrough();
       child.kill = jest.fn(() => true);
 
-      const isOpenAIFallback = args.includes('model_provider="openai"');
+      const isOpenAIFallback = args.some((arg) => String(arg).includes('model_provider="openai"'));
       setImmediate(() => {
         if (isOpenAIFallback) {
           child.stdout.write('fallback success');
@@ -1351,6 +1357,7 @@ describeWithLoopback('gateway adapters stability', () => {
     else process.env.GATEWAY_CODEX_JSON = oldJson;
     if (oldFallbackEnabled === undefined) delete process.env.GATEWAY_CODEX_OPENAI_FALLBACK_ENABLED;
     else process.env.GATEWAY_CODEX_OPENAI_FALLBACK_ENABLED = oldFallbackEnabled;
+    homedirSpy.mockRestore();
 
     expect(result.success).toBe(true);
     expect(String(result.provider || '')).toContain('openai-fallback');
@@ -1379,21 +1386,26 @@ describeWithLoopback('gateway adapters stability', () => {
       return { status: 1, error: new Error('unsupported') };
     });
 
-    const spawn = jest.fn((cmd) => {
+    const spawn = jest.fn((cmd, args = []) => {
       const child = new EventEmitter();
       child.stdout = new PassThrough();
       child.stderr = new PassThrough();
       child.stdin = new PassThrough();
       child.kill = jest.fn(() => true);
+      const invokedTool = args.includes('claude') || args.includes('claude.cmd')
+        ? 'claude'
+        : args.includes('codex') || args.includes('codex.cmd')
+          ? 'codex'
+          : cmd;
 
-      if (cmd === 'claude') {
+      if (invokedTool === 'claude') {
         setImmediate(() => {
           child.stderr.write('exit 1');
           child.emit('close', 1);
         });
         return child;
       }
-      if (cmd === 'codex') {
+      if (invokedTool === 'codex') {
         setImmediate(() => {
           child.stdout.write('codex ok');
           child.emit('close', 0);
@@ -1498,6 +1510,7 @@ describeWithLoopback('gateway adapters stability', () => {
 
   test('ollama adapter classifies generic "canceled" as process (not user-cancel)', async () => {
     jest.resetModules();
+    const freeMemSpy = jest.spyOn(os, 'freemem').mockReturnValue(16 * 1024 ** 3);
 
     const server = http.createServer((req, res) => {
       if (req.method === 'POST' && req.url === '/api/chat') {
@@ -1507,7 +1520,7 @@ describeWithLoopback('gateway adapters stability', () => {
       }
       if (req.method === 'GET' && req.url === '/api/tags') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ models: [{ name: 'qwen3.5:4b' }] }));
+        res.end(JSON.stringify({ models: [{ name: PRIMARY.localBrain }] }));
         return;
       }
       res.writeHead(404, { 'Content-Type': 'application/json' });
@@ -1517,7 +1530,7 @@ describeWithLoopback('gateway adapters stability', () => {
     const { port, httpHost } = await listenOnRandomPort(server);
     process.env.OLLAMA_HOST = `http://${httpHost}:${port}`;
     process.env.OLLAMA_AUTO_START = 'false';
-    process.env.OLLAMA_MODEL = 'qwen3.5:4b';
+    process.env.OLLAMA_MODEL = PRIMARY.localBrain;
 
     const ollamaAdapter = require('../src/services/gateway/adapters/ollamaAdapter');
     ollamaAdapter.destroy();
@@ -1526,6 +1539,7 @@ describeWithLoopback('gateway adapters stability', () => {
     try {
       result = await ollamaAdapter.generate('hello', { timeoutMs: 3000 });
     } finally {
+      freeMemSpy.mockRestore();
       await closeServer(server);
     }
 

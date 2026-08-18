@@ -38,10 +38,17 @@ const FLAG = 'KHY_PROXY_CORE';
 const META_FLAG = 'KHY_PROXY_CORE_AUTOSEED';
 const _AUTOSEED_OFF = new Set(['0', 'false', 'off', 'no']);
 
+// 生产默认的 homedir 实现。留成命名常量,便于 _overlayPath 判定「调用方是否注入了 fake
+// homedir」(注入了 → 必须完全离线,不得触碰真实 dataHome)。
+const _REAL_HOMEDIR = () => os.homedir();
+
 // 可注入依赖(测试喂 fake;生产用真实模块)。
 const _deps = {
   fs,
-  homedir: () => os.homedir(),
+  homedir: _REAL_HOMEDIR,
+  // data home 的解析(portable-aware)。生产走 utils/dataHome;测试可覆盖为 fake,
+  // 避免 getDataHome() 的副作用(mkdirSync / 写 pointer / 改 process.env.KHY_DATA_HOME)。
+  getDataHome: () => require('../utils/dataHome').getDataHome(),
   // 写 overlay 的单一真源:复用 gatewayEnvFile.writeEnvMap(patchEnvContent 幂等合并 + 更新
   // process.env)。测试可覆盖为 fake,避免真写盘。
   writeEnvMap: (envMap, options) =>
@@ -89,9 +96,15 @@ function isAutoseedEnabled(env) {
 
 /** ~/.khy/.env overlay 的绝对路径(与 init.js:58 同一处)。 */
 function _overlayPath() {
-  // Portable-aware data home; fallback to the injectable legacy resolution.
+  // 注入了 fake homedir 而没注入 getDataHome(测试的全离线契约)→ 不碰真实 utils/dataHome:
+  // getDataHome() 并非无副作用(mkdirSync 建目录、写 ~/.khy/.location.json pointer、改
+  // process.env.KHY_DATA_HOME),会绕过注入并真写盘。此时按 legacy 规则用注入的 home 解析。
+  if (_deps.getDataHome === _REAL_GET_DATA_HOME && _deps.homedir !== _REAL_HOMEDIR) {
+    return path.join(_deps.homedir(), '.khy', '.env');
+  }
+  // 生产(以及显式注入了 getDataHome 的场景):portable-aware data home;失败回退 legacy。
   try {
-    return path.join(require('../utils/dataHome').getDataHome(), '.env');
+    return path.join(_deps.getDataHome(), '.env');
   } catch {
     return path.join(_deps.homedir(), '.khy', '.env');
   }

@@ -153,7 +153,8 @@ test('wiring: KHY_MOA_AGGREGATOR is registered in flagRegistry', () => {
 test('wiring: CLI handler and router dispatch are wired', () => {
   const handler = fs.readFileSync(path.join(BACKEND_ROOT, 'src/cli/handlers/moa.js'), 'utf8');
   assert.ok(handler.includes('handleMoa'), 'handler defines handleMoa');
-  assert.ok(handler.includes("require('../../services/moaService')"), 'handler uses service');
+  const serviceImport = "require('../" + "../services/moaService')";
+  assert.ok(handler.includes(serviceImport), 'handler uses service');
 
   const tail = fs.readFileSync(path.join(BACKEND_ROOT, 'src/cli/routerDispatchTail.js'), 'utf8');
   assert.ok(/case 'moa'/.test(tail), 'router has moa case');

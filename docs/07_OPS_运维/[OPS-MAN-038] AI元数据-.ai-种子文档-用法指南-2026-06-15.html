@@ -76,16 +76,16 @@
 <p>幂等意味着：已链接则返回空、不会每次提交都产生噪音。手动触发：<code>khy metadata link</code>。</p>
 <hr>
 <h2 id="7-cli-速查-khy-metadata-别名-meta-maintain">7. CLI 速查（<code>khy metadata</code>，别名 <code>meta</code> / <code>maintain</code>）<a class="anchor" href="#7-cli-速查-khy-metadata-别名-meta-maintain" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">khy metadata                 # = gen：对当前目录生成，已存在则跳过
-khy metadata gen [--force] [path]      # 生成（--force 覆盖已有）
-khy metadata refresh [--force] [path]  # 随变化就地更新（非破坏；人工 .ai/ 只刷新派生骨架）
-khy metadata check [path]    # 缺失或 stale 时退出非零 —— 用作 CI / 提交前门禁
-khy metadata show [path]     # 打印各文件存在状态 + 归属 + 是否最新
-khy metadata link [path]     # 让 AI 入口文件指向 .ai/
-khy metadata hook &lt;install|uninstall|status&gt; [path]  # 装/卸 git pre-commit 自动刷新钩子</code></pre>
+<pre><code class="language-bash">khy metadata                 <span class="hljs-comment"># = gen：对当前目录生成，已存在则跳过</span>
+khy metadata gen [--force] [path]      <span class="hljs-comment"># 生成（--force 覆盖已有）</span>
+khy metadata refresh [--force] [path]  <span class="hljs-comment"># 随变化就地更新（非破坏；人工 .ai/ 只刷新派生骨架）</span>
+khy metadata check [path]    <span class="hljs-comment"># 缺失或 stale 时退出非零 —— 用作 CI / 提交前门禁</span>
+khy metadata show [path]     <span class="hljs-comment"># 打印各文件存在状态 + 归属 + 是否最新</span>
+khy metadata <span class="hljs-built_in">link</span> [path]     <span class="hljs-comment"># 让 AI 入口文件指向 .ai/</span>
+khy metadata hook &lt;install|uninstall|status&gt; [path]  <span class="hljs-comment"># 装/卸 git pre-commit 自动刷新钩子</span></code></pre>
 <p><strong>推荐工作流</strong>：</p>
-<pre><code class="language-bash">khy metadata gen             # 首次：补齐三件套
-khy metadata hook install    # 装钩子：此后每次 git commit 自动 refresh 并 git add .ai/，无需 AI</code></pre>
+<pre><code class="language-bash">khy metadata gen             <span class="hljs-comment"># 首次：补齐三件套</span>
+khy metadata hook install    <span class="hljs-comment"># 装钩子：此后每次 git commit 自动 refresh 并 git add .ai/，无需 AI</span></code></pre>
 <ul><li><code>hook install</code> 检测到已有<strong>非 khy</strong> 的 pre-commit 钩子时<strong>不覆盖</strong>，而是打印片段让你手工合并。</li><li><code>check</code> 退出码为 1 时适合卡在 CI：保证元数据不与代码脱节。</li></ul>
 <hr>
 <h2 id="8-环境变量-全部有界-有安全默认">8. 环境变量（全部有界、有安全默认）<a class="anchor" href="#8-环境变量-全部有界-有安全默认" aria-label="锚点">#</a></h2>
@@ -104,20 +104,20 @@ khy metadata hook install    # 装钩子：此后每次 git commit 自动 refres
 <p>读者据此<strong>按需展开真实代码</strong>，逻辑关联不被破坏 —— 正是 Agent 范式优于 RAG 的体现。</p>
 <hr>
 <h2 id="10-快速上手清单">10. 快速上手清单<a class="anchor" href="#10-快速上手清单" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash"># 1. 看看当前项目的元数据状态
+<pre><code class="language-bash"><span class="hljs-comment"># 1. 看看当前项目的元数据状态</span>
 khy metadata show
 
-# 2. 没有就生成
+<span class="hljs-comment"># 2. 没有就生成</span>
 khy metadata gen
 
-# 3. 装钩子，让它随提交自动保鲜
+<span class="hljs-comment"># 3. 装钩子，让它随提交自动保鲜</span>
 khy metadata hook install
 
-# 4. 改完代码后（若没装钩子）手动刷新
+<span class="hljs-comment"># 4. 改完代码后（若没装钩子）手动刷新</span>
 khy metadata refresh
 
-# 5. CI 里加一道门禁
-khy metadata check    # 退出码非零即代表元数据过期/缺失</code></pre>
+<span class="hljs-comment"># 5. CI 里加一道门禁</span>
+khy metadata check    <span class="hljs-comment"># 退出码非零即代表元数据过期/缺失</span></code></pre>
 <p>读三件套时记住一句话：<br><strong><code>MAP</code> 告诉你「在哪」，<code>CONTEXT</code> 告诉你「连着谁」，<code>GUARDS</code> 告诉你「别碰啥」。</strong></p>
       </article>
       <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-037] pip安装后-完整还原与全功能开启指南.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-MAN-037] pip 安装后：完整还原项目 · 开启全部功能</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-039] 文档排版-用法指南-2026-06-12.html"><div class="dir">下一篇 →</div><div class="ttl">文档排版用法指南：让 agent 写出格式精确的 Word</div></a></nav>

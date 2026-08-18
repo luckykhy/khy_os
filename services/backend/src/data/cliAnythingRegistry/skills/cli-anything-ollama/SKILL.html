@@ -37,21 +37,21 @@
 <ul><li>Python 3.10+</li><li>Ollama must be installed and running (<code>ollama serve</code>)</li></ul>
 <h2 id="usage">Usage<a class="anchor" href="#usage" aria-label="锚点">#</a></h2>
 <h3 id="basic-commands">Basic Commands<a class="anchor" href="#basic-commands" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Show help
-cli-anything-ollama --help
+<pre><code class="language-bash"><span class="hljs-comment"># Show help</span>
+cli-anything-ollama --<span class="hljs-built_in">help</span>
 
-# Start interactive REPL mode
+<span class="hljs-comment"># Start interactive REPL mode</span>
 cli-anything-ollama
 
-# List available models
+<span class="hljs-comment"># List available models</span>
 cli-anything-ollama model list
 
-# Run with JSON output (for agent consumption)
+<span class="hljs-comment"># Run with JSON output (for agent consumption)</span>
 cli-anything-ollama --json model list</code></pre>
 <h3 id="repl-mode">REPL Mode<a class="anchor" href="#repl-mode" aria-label="锚点">#</a></h3>
 <p>When invoked without a subcommand, the CLI enters an interactive REPL session:</p>
 <pre><code class="language-bash">cli-anything-ollama
-# Enter commands interactively with tab-completion and history</code></pre>
+<span class="hljs-comment"># Enter commands interactively with tab-completion and history</span></code></pre>
 <h2 id="command-groups">Command Groups<a class="anchor" href="#command-groups" aria-label="锚点">#</a></h2>
 <h3 id="model">Model<a class="anchor" href="#model" aria-label="锚点">#</a></h3>
 <p>Model management commands.</p>
@@ -70,39 +70,39 @@ cli-anything-ollama --json model list</code></pre>
 <table><thead><tr><th>Command</th><th>Description</th></tr></thead><tbody><tr><td><code>status</code></td><td>Show current session state</td></tr><tr><td><code>history</code></td><td>Show chat history for current session</td></tr></tbody></table>
 <h2 id="examples">Examples<a class="anchor" href="#examples" aria-label="锚点">#</a></h2>
 <h3 id="list-and-pull-models">List and Pull Models<a class="anchor" href="#list-and-pull-models" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># List available models
+<pre><code class="language-bash"><span class="hljs-comment"># List available models</span>
 cli-anything-ollama model list
 
-# Pull a model
+<span class="hljs-comment"># Pull a model</span>
 cli-anything-ollama model pull llama3.2
 
-# Show model details
+<span class="hljs-comment"># Show model details</span>
 cli-anything-ollama model show llama3.2</code></pre>
 <h3 id="generate-text">Generate Text<a class="anchor" href="#generate-text" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Stream text (default)
-cli-anything-ollama generate text --model llama3.2 --prompt &quot;Explain quantum computing in one sentence&quot;
+<pre><code class="language-bash"><span class="hljs-comment"># Stream text (default)</span>
+cli-anything-ollama generate text --model llama3.2 --prompt <span class="hljs-string">&quot;Explain quantum computing in one sentence&quot;</span>
 
-# Non-streaming with JSON output (for agents)
-cli-anything-ollama --json generate text --model llama3.2 --prompt &quot;Hello&quot; --no-stream</code></pre>
+<span class="hljs-comment"># Non-streaming with JSON output (for agents)</span>
+cli-anything-ollama --json generate text --model llama3.2 --prompt <span class="hljs-string">&quot;Hello&quot;</span> --no-stream</code></pre>
 <h3 id="chat">Chat<a class="anchor" href="#chat" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Single-turn chat
-cli-anything-ollama generate chat --model llama3.2 --message &quot;user:What is Python?&quot;
+<pre><code class="language-bash"><span class="hljs-comment"># Single-turn chat</span>
+cli-anything-ollama generate chat --model llama3.2 --message <span class="hljs-string">&quot;user:What is Python?&quot;</span>
 
-# Multi-turn chat
+<span class="hljs-comment"># Multi-turn chat</span>
 cli-anything-ollama generate chat --model llama3.2 \
-  --message &quot;user:What is Python?&quot; \
-  --message &quot;user:How does it compare to JavaScript?&quot;
+  --message <span class="hljs-string">&quot;user:What is Python?&quot;</span> \
+  --message <span class="hljs-string">&quot;user:How does it compare to JavaScript?&quot;</span>
 
-# Chat from JSON file
+<span class="hljs-comment"># Chat from JSON file</span>
 cli-anything-ollama generate chat --model llama3.2 --file messages.json</code></pre>
 <h3 id="embeddings">Embeddings<a class="anchor" href="#embeddings" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">cli-anything-ollama embed text --model nomic-embed-text --input &quot;Hello world&quot;
-cli-anything-ollama embed text --model nomic-embed-text --input &quot;Hello&quot; --input &quot;World&quot;</code></pre>
+<pre><code class="language-bash">cli-anything-ollama embed text --model nomic-embed-text --input <span class="hljs-string">&quot;Hello world&quot;</span>
+cli-anything-ollama embed text --model nomic-embed-text --input <span class="hljs-string">&quot;Hello&quot;</span> --input <span class="hljs-string">&quot;World&quot;</span></code></pre>
 <h3 id="interactive-repl-session">Interactive REPL Session<a class="anchor" href="#interactive-repl-session" aria-label="锚点">#</a></h3>
 <p>Start an interactive session for exploratory use.</p>
 <pre><code class="language-bash">cli-anything-ollama
-# Enter commands interactively
-# Use 'help' to see available commands</code></pre>
+<span class="hljs-comment"># Enter commands interactively</span>
+<span class="hljs-comment"># Use &#x27;help&#x27; to see available commands</span></code></pre>
 <h3 id="connect-to-remote-host">Connect to Remote Host<a class="anchor" href="#connect-to-remote-host" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">cli-anything-ollama --host http://192.168.1.100:11434 model list</code></pre>
 <h2 id="state-management">State Management<a class="anchor" href="#state-management" aria-label="锚点">#</a></h2>
@@ -111,10 +111,10 @@ cli-anything-ollama embed text --model nomic-embed-text --input &quot;Hello&quot
 <h2 id="output-formats">Output Formats<a class="anchor" href="#output-formats" aria-label="锚点">#</a></h2>
 <p>All commands support dual output modes:</p>
 <ul><li><strong>Human-readable</strong> (default): Tables, colors, formatted text</li><li><strong>Machine-readable</strong> (<code>--json</code> flag): Structured JSON for agent consumption</li></ul>
-<pre><code class="language-bash"># Human output
+<pre><code class="language-bash"><span class="hljs-comment"># Human output</span>
 cli-anything-ollama model list
 
-# JSON output for agents
+<span class="hljs-comment"># JSON output for agents</span>
 cli-anything-ollama --json model list</code></pre>
 <h2 id="for-ai-agents">For AI Agents<a class="anchor" href="#for-ai-agents" aria-label="锚点">#</a></h2>
 <p>When using this CLI programmatically:</p>

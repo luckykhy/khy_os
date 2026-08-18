@@ -68,7 +68,7 @@
 <h2 id="五-实施改动">五、实施改动<a class="anchor" href="#五-实施改动" aria-label="锚点">#</a></h2>
 <h3 id="5-1-busy-prompt-可见性状态化">5.1 busy prompt 可见性状态化<a class="anchor" href="#5-1-busy-prompt-可见性状态化" aria-label="锚点">#</a></h3>
 <p>在 <code>repl.js</code> 与 <code>liteRepl.js</code> 中都引入了可见性状态：</p>
-<pre><code class="language-js">let _busyPromptVisible = false;</code></pre>
+<pre><code class="language-js"><span class="hljs-keyword">let</span> _busyPromptVisible = <span class="hljs-literal">false</span>;</code></pre>
 <p>同时补充统一清理函数：</p>
 <ul><li><code>repl.js</code>：<code>_clearVisibleBusyPromptLine()</code></li><li><code>liteRepl.js</code>：<code>_clearVisibleBusyPromptLine()</code></li></ul>
 <p>设计原则是：</p>
@@ -88,7 +88,7 @@
 <p><code>backend/src/cli/liteRepl.js</code> 的主要交付路径更直接：</p>
 <ol><li><code>renderer.printStepLine('success', 'AI 回复', ...)</code></li><li>输出 token/meta</li><li>渲染正文</li></ol>
 <p>本次在步骤头和正文之间显式加入：</p>
-<pre><code class="language-js">console.log('');</code></pre>
+<pre><code class="language-js"><span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-string">&#x27;&#x27;</span>);</code></pre>
 <p>确保 <code>AI 回复</code> 头部和正文始终隔开。</p>
 <h3 id="5-5-one-shot-路径统一">5.5 one-shot 路径统一<a class="anchor" href="#5-5-one-shot-路径统一" aria-label="锚点">#</a></h3>
 <p>此前 one-shot 路径也存在同样问题：</p>
@@ -111,7 +111,7 @@
 <h2 id="七-验证结果">七、验证结果<a class="anchor" href="#七-验证结果" aria-label="锚点">#</a></h2>
 <h3 id="7-1-定向测试">7.1 定向测试<a class="anchor" href="#7-1-定向测试" aria-label="锚点">#</a></h3>
 <p>执行：</p>
-<pre><code class="language-bash">npm --prefix backend test -- --runInBand \
+<pre><code class="language-bash">npm --prefix backend <span class="hljs-built_in">test</span> -- --runInBand \
   backend/tests/cli/repl.deliverySpacing.test.js \
   backend/tests/cli/repl.busyPromptRendering.test.js \
   backend/tests/cli/liteRepl.rendering.test.js \
@@ -119,7 +119,7 @@
 <p>结果：</p>
 <ul><li>4 个 test suite 通过</li><li>13/13 tests 通过</li></ul>
 <p>one-shot 补充后再次执行：</p>
-<pre><code class="language-bash">npm --prefix backend test -- --runInBand \
+<pre><code class="language-bash">npm --prefix backend <span class="hljs-built_in">test</span> -- --runInBand \
   backend/tests/cli/repl.deliverySpacing.test.js \
   backend/tests/cli/repl.busyPromptRendering.test.js</code></pre>
 <p>结果：</p>

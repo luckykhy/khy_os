@@ -152,16 +152,16 @@ function classifyError(status, message = '') {
   if (/timeout|timed?\s*out|deadline/.test(lower)) {
     return 'timeout';
   }
-  if (/permission|denied|forbidden|401|403/.test(lower)) {
+  if (/permission|denied|forbidden/.test(lower)) {
     return 'auth';
   }
-  if (/rate\s*limit|429|throttl/.test(lower)) {
+  if (/rate\s*limit|throttl/.test(lower)) {
     return 'rate_limit';
   }
-  if (/server\s*error|500|502|503|504/.test(lower)) {
+  if (/server\s*error/.test(lower)) {
     return 'server_error';
   }
-  if (/not\s*found|404/.test(lower)) {
+  if (/not\s*found/.test(lower)) {
     return 'model_not_found';
   }
 

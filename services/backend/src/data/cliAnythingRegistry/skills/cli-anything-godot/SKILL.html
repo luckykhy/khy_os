@@ -36,55 +36,55 @@
 <ul><li>Godot 4.x on PATH (or set GODOT_BIN env var)</li></ul>
 <h2 id="commands">Commands<a class="anchor" href="#commands" aria-label="锚点">#</a></h2>
 <h3 id="project-management">Project Management<a class="anchor" href="#project-management" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Create a new Godot project
-cli-anything-godot project create &lt;path&gt; [--name &quot;My Game&quot;]
+<pre><code class="language-bash"><span class="hljs-comment"># Create a new Godot project</span>
+cli-anything-godot project create &lt;path&gt; [--name <span class="hljs-string">&quot;My Game&quot;</span>]
 
-# Get project info (name, features, main scene)
+<span class="hljs-comment"># Get project info (name, features, main scene)</span>
 cli-anything-godot --json -p &lt;project&gt; project info
 
-# List all scenes
+<span class="hljs-comment"># List all scenes</span>
 cli-anything-godot --json -p &lt;project&gt; project scenes
 
-# List all scripts
+<span class="hljs-comment"># List all scripts</span>
 cli-anything-godot --json -p &lt;project&gt; project scripts
 
-# List all resources
+<span class="hljs-comment"># List all resources</span>
 cli-anything-godot --json -p &lt;project&gt; project resources
 
-# Re-import project resources
+<span class="hljs-comment"># Re-import project resources</span>
 cli-anything-godot -p &lt;project&gt; project reimport</code></pre>
 <h3 id="scene-operations">Scene Operations<a class="anchor" href="#scene-operations" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Create a new scene with root node type
+<pre><code class="language-bash"><span class="hljs-comment"># Create a new scene with root node type</span>
 cli-anything-godot -p &lt;project&gt; scene create scenes/Level1.tscn --root-type Node3D
 
-# Read scene structure (nodes, resources, connections)
-cli-anything-godot --json -p &lt;project&gt; scene read scenes/Level1.tscn
+<span class="hljs-comment"># Read scene structure (nodes, resources, connections)</span>
+cli-anything-godot --json -p &lt;project&gt; scene <span class="hljs-built_in">read</span> scenes/Level1.tscn
 
-# Add a child node to a scene
-cli-anything-godot -p &lt;project&gt; scene add-node scenes/Level1.tscn --name Player --type CharacterBody3D --parent .</code></pre>
+<span class="hljs-comment"># Add a child node to a scene</span>
+cli-anything-godot -p &lt;project&gt; scene add-node scenes/Level1.tscn --name Player --<span class="hljs-built_in">type</span> CharacterBody3D --parent .</code></pre>
 <h3 id="gdscript-execution">GDScript Execution<a class="anchor" href="#gdscript-execution" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Run a GDScript file (must extend SceneTree)
+<pre><code class="language-bash"><span class="hljs-comment"># Run a GDScript file (must extend SceneTree)</span>
 cli-anything-godot -p &lt;project&gt; script run tools/build_navmesh.gd
 
-# Run inline GDScript code
-cli-anything-godot -p &lt;project&gt; script inline 'print(ProjectSettings.get_setting(&quot;application/config/name&quot;))'
+<span class="hljs-comment"># Run inline GDScript code</span>
+cli-anything-godot -p &lt;project&gt; script inline <span class="hljs-string">&#x27;print(ProjectSettings.get_setting(&quot;application/config/name&quot;))&#x27;</span>
 
-# Validate GDScript syntax
+<span class="hljs-comment"># Validate GDScript syntax</span>
 cli-anything-godot -p &lt;project&gt; script validate scripts/player.gd</code></pre>
 <h3 id="export">Export<a class="anchor" href="#export" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># List configured export presets
-cli-anything-godot --json -p &lt;project&gt; export presets
+<pre><code class="language-bash"><span class="hljs-comment"># List configured export presets</span>
+cli-anything-godot --json -p &lt;project&gt; <span class="hljs-built_in">export</span> presets
 
-# Export all presets
-cli-anything-godot -p &lt;project&gt; export build
+<span class="hljs-comment"># Export all presets</span>
+cli-anything-godot -p &lt;project&gt; <span class="hljs-built_in">export</span> build
 
-# Export a specific preset
-cli-anything-godot -p &lt;project&gt; export build --preset &quot;Windows Desktop&quot; --output build/game.exe</code></pre>
+<span class="hljs-comment"># Export a specific preset</span>
+cli-anything-godot -p &lt;project&gt; <span class="hljs-built_in">export</span> build --preset <span class="hljs-string">&quot;Windows Desktop&quot;</span> --output build/game.exe</code></pre>
 <h3 id="engine">Engine<a class="anchor" href="#engine" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># Check Godot availability and binary path
+<pre><code class="language-bash"><span class="hljs-comment"># Check Godot availability and binary path</span>
 cli-anything-godot --json engine status
 
-# Get engine version
+<span class="hljs-comment"># Get engine version</span>
 cli-anything-godot engine version</code></pre>
 <h2 id="json-mode">JSON Mode<a class="anchor" href="#json-mode" aria-label="锚点">#</a></h2>
 <p>Add <code>--json</code> flag to any command for structured JSON output suitable for agent consumption:</p>

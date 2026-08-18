@@ -79,15 +79,15 @@
 <hr>
 <h2 id="4-接入接缝-最小侵入-对齐-arch-025-027-029-先例">4. 接入接缝（最小侵入，对齐 ARCH-025/027/029 先例）<a class="anchor" href="#4-接入接缝-最小侵入-对齐-arch-025-027-029-先例" aria-label="锚点">#</a></h2>
 <p>本子系统自带闭环 + 文档化接缝，不外科改写 6k 行的 <code>aiGateway.js</code>：</p>
-<pre><code class="language-js">const lease = require('.../gatewayLogLease');
-lease.install();                                  // 进程启动一次（env 门控）
-lease.installProcessGuards();                      // 全局安全网
+<pre><code class="language-js"><span class="hljs-keyword">const</span> lease = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;.../gatewayLogLease&#x27;</span>);
+lease.<span class="hljs-title function_">install</span>();                                  <span class="hljs-comment">// 进程启动一次（env 门控）</span>
+lease.<span class="hljs-title function_">installProcessGuards</span>();                      <span class="hljs-comment">// 全局安全网</span>
 
-await lease.runForAdapter('kiro', () =&gt; gateway.chat(...));      // 请求路径绑定活跃适配器
-const { result, error } = await lease.runSandboxed('kiro', () =&gt; refreshToken());  // Token 刷新静默
-lease.guardBackground('kiro', () =&gt; probeHealth());             // 后台 rejection 不冒泡
-lease.emit('kiro', 'warn', 'Token refresh failed, falling back'); // 适配器显式打日志
-await lease.runStatusQuery(() =&gt; buildGatewayStatus());          // /gateways 全量可见</code></pre>
+<span class="hljs-keyword">await</span> lease.<span class="hljs-title function_">runForAdapter</span>(<span class="hljs-string">&#x27;kiro&#x27;</span>, <span class="hljs-function">() =&gt;</span> gateway.<span class="hljs-title function_">chat</span>(...));      <span class="hljs-comment">// 请求路径绑定活跃适配器</span>
+<span class="hljs-keyword">const</span> { result, error } = <span class="hljs-keyword">await</span> lease.<span class="hljs-title function_">runSandboxed</span>(<span class="hljs-string">&#x27;kiro&#x27;</span>, <span class="hljs-function">() =&gt;</span> <span class="hljs-title function_">refreshToken</span>());  <span class="hljs-comment">// Token 刷新静默</span>
+lease.<span class="hljs-title function_">guardBackground</span>(<span class="hljs-string">&#x27;kiro&#x27;</span>, <span class="hljs-function">() =&gt;</span> <span class="hljs-title function_">probeHealth</span>());             <span class="hljs-comment">// 后台 rejection 不冒泡</span>
+lease.<span class="hljs-title function_">emit</span>(<span class="hljs-string">&#x27;kiro&#x27;</span>, <span class="hljs-string">&#x27;warn&#x27;</span>, <span class="hljs-string">&#x27;Token refresh failed, falling back&#x27;</span>); <span class="hljs-comment">// 适配器显式打日志</span>
+<span class="hljs-keyword">await</span> lease.<span class="hljs-title function_">runStatusQuery</span>(<span class="hljs-function">() =&gt;</span> <span class="hljs-title function_">buildGatewayStatus</span>());          <span class="hljs-comment">// /gateways 全量可见</span></code></pre>
 <p>建议落点：网关请求入口包 <code>runForAdapter</code>；适配器 init/refresh 包 <code>runSandboxed</code>；<br>探活/定时刷新包 <code>guardBackground</code>；状态端点 <code>aiManagementServer.js:1545</code> 包 <code>runStatusQuery</code>。</p>
 <hr>
 <h2 id="5-防呆铁律-与-goal-原文逐条对应">5. 防呆铁律（与 Goal 原文逐条对应）<a class="anchor" href="#5-防呆铁律-与-goal-原文逐条对应" aria-label="锚点">#</a></h2>

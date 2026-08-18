@@ -19,7 +19,7 @@ function fixture() {
   const required = process.platform === 'win32'
     ? ['runtime/node/node.exe', 'runtime/python/python.exe']
     : ['runtime/node/bin/node', 'runtime/python/bin/python3'];
-  required.push('services/backend/bin/khy.js', 'web/ai/index.html', 'web/quant/index.html');
+  required.push('runtime/khy/bundle.mjs', 'web/ai/index.html', 'web/quant/index.html');
   for (const relative of [launcher, ...required]) {
     const absolute = path.join(root, ...relative.split('/'));
     fs.mkdirSync(path.dirname(absolute), { recursive: true });

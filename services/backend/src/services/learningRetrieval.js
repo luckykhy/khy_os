@@ -27,10 +27,11 @@ const https = require('https');
 const os = require('os');
 const path = require('path');
 
-const { PRIMARY: MODELS } = require('../constants/models');
+const embeddingClient = require('./embeddingClient');
 
-// Model-name SSOT: embedding model default flows from constants/models.js
-// (env KHY_LEARN_EMBED_MODEL still overrides first).
+// Model-name SSOT: the embedding model default flows from constants/models.js
+// (env KHY_LEARN_EMBED_MODEL still overrides first). Both are resolved inside
+// embeddingClient.embedModel() — this module no longer keeps its own copy.
 
 // ── env 配置（带边界） ───────────────────────────────────────────────
 function _envStr(name, def) {
@@ -72,12 +73,14 @@ const MAX_TOTAL_CHUNKS = _envInt('KHY_LEARN_MAX_TOTAL_CHUNKS', 4000, 50, 50000);
 
 const PROBE_TIMEOUT_MS = _envInt('KHY_LEARN_PROBE_TIMEOUT_MS', 1200, 200, 15000);
 const FETCH_TIMEOUT_MS = _envInt('KHY_LEARN_FETCH_TIMEOUT_MS', 4000, 500, 60000);
-const EMBED_TIMEOUT_MS = _envInt('KHY_LEARN_EMBED_TIMEOUT_MS', 4000, 500, 60000);
-const EMBED_MAX_TEXTS = _envInt('KHY_LEARN_EMBED_MAX_TEXTS', 16, 2, 64);
 
 const DOCS_BASE_URL = _envStr('KHY_LEARN_DOCS_BASE_URL', '');
+// Snapshotted at load, deliberately: /learn's env contract is "KHY_LEARN_* is
+// read once at require time" and its tests pin that (they set env, require, then
+// restore env before asserting). embeddingClient reads live env by default — the
+// right behavior for long-lived callers like memory recall — so /learn hands its
+// snapshot in explicitly rather than the two silently disagreeing.
 const EMBED_URL = _envStr('KHY_LEARN_EMBED_URL', '');
-const EMBED_MODEL = _envStr('KHY_LEARN_EMBED_MODEL', MODELS.embedding);
 
 // Portable-aware app home resolved at load (legacy const semantics preserved).
 function _appHome() {
@@ -453,72 +456,15 @@ function lexicalSearch(query, corpus, limit) {
 }
 
 // ── 向量（混合 RAG，可选） ───────────────────────────────────────────
-function _gatewayBase() {
-  const url = _envStr('KHY_GATEWAY_URL', '');
-  if (url) {
-    return url.replace(/\/+$/, '');
-  }
-  const host = _envStr('PROXY_HOST', '127.0.0.1');
-  const port = _envStr('PROXY_PORT', '9100');
-  return `http://${host}:${port}`;
-}
+// 端点解析 / 探活 / 嵌入全部委托给 services/embeddingClient（铁律 F2 的 SSOT）。
+// 这里曾经有一份自己的 _gatewayBase / _gatewayToken / _ollamaHost / _embedEndpoints
+// / _embedTexts 实现，与记忆侧那份是双真源；两份的探活口径还不一致（本文件只探
+// 主机根路径，于是「Ollama 在跑但 embedding 模型没 pull」被误报为可用）。收成一处后
+// /learn 与记忆检索共用同一套端点优先级、同一套模型级探活、同一份超时纪律。
 
-function _gatewayToken() {
-  const t = _envStr('PROXY_AUTH_TOKEN', '');
-  if (t) {
-    return t;
-  }
-  try {
-    let p;
-    try {
-      p = path.join(require('../utils/dataHome').getDataHome(), 'proxy_server_auth.json');
-    } catch {
-      p = path.join(os.homedir(), '.khy', 'proxy_server_auth.json');
-    }
-    const j = JSON.parse(fs.readFileSync(p, 'utf-8'));
-    return j && j.authToken ? String(j.authToken) : '';
-  } catch {
-    return '';
-  }
-}
-
-function _ollamaHost() {
-  // Read the live env first so a runtime OLLAMA_HOST change takes effect, then
-  // fall back to the canonical default in constants/serviceDefaults (the single
-  // source of truth — never hardcode the host:port literal here).
-  let h = _envStr('OLLAMA_HOST', '');
-  if (!h) {
-    try {
-      h = require('../constants/serviceDefaults').OLLAMA_HOST || '';
-    } catch {
-      /* ignore */
-    }
-  }
-  return String(h || '').replace(/\/+$/, '');
-}
-
-// Ordered embedding endpoint candidates. style 'ollama' uses /api/embeddings
-// (single prompt); style 'openai' uses /v1/embeddings (input array).
+/** 有序端点候选（保留导出形状，实现已迁至 embeddingClient）。 */
 function _embedEndpoints() {
-  const list = [];
-  if (EMBED_URL) {
-    const style = /\/api\/embed/.test(EMBED_URL) ? 'ollama' : 'openai';
-    list.push({ kind: 'env', url: EMBED_URL, style, headers: {} });
-  }
-  list.push({
-    kind: 'ollama',
-    url: `${_ollamaHost()}/api/embeddings`,
-    style: 'ollama',
-    headers: {},
-  });
-  const token = _gatewayToken();
-  list.push({
-    kind: 'gateway',
-    url: `${_gatewayBase()}/v1/embeddings`,
-    style: 'openai',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-  return list;
+  return embeddingClient.embedEndpoints({ envUrl: EMBED_URL });
 }
 
 function _requestModule(urlStr) {
@@ -552,53 +498,11 @@ function _httpGet(urlStr, timeoutMs, headers) {
     req.setTimeout(timeoutMs, () => {
       try {
         req.destroy();
-      } catch {}
-      finish(null);
-    });
-    req.end();
-  });
-}
-
-function _httpPostJson(urlStr, obj, timeoutMs, headers) {
-  return new Promise((resolve) => {
-    let done = false;
-    const finish = (v) => {
-      if (!done) {
-        done = true;
-        resolve(v);
+      } catch {
+        /* already gone */
       }
-    };
-    let req;
-    const payload = Buffer.from(JSON.stringify(obj), 'utf-8');
-    const h = Object.assign(
-      { 'Content-Type': 'application/json', 'Content-Length': payload.length },
-      headers || {}
-    );
-    try {
-      req = _requestModule(urlStr).request(urlStr, { method: 'POST', headers: h }, (res) => {
-        const bufs = [];
-        res.on('data', (d) => bufs.push(d));
-        res.on('end', () => {
-          let json = null;
-          try {
-            json = JSON.parse(Buffer.concat(bufs).toString('utf-8'));
-          } catch {
-            json = null;
-          }
-          finish({ status: res.statusCode || 0, json });
-        });
-      });
-    } catch {
-      return finish(null);
-    }
-    req.on('error', () => finish(null));
-    req.setTimeout(timeoutMs, () => {
-      try {
-        req.destroy();
-      } catch {}
       finish(null);
     });
-    req.write(payload);
     req.end();
   });
 }
@@ -609,86 +513,36 @@ async function _probeUrl(urlStr, timeoutMs) {
   return !!(r && r.status > 0);
 }
 
+/**
+ * 是否可以走向量重排。判据交给 embeddingClient.isAvailable()：它对本地 Ollama 端点
+ * 会核对 `/api/tags` 里模型**是否真的装了**，而不是只看主机可达 —— 后者会让
+ * `/learn` 宣称进入模式3，然后每次 embed 都 404 再静默回落到词法。
+ */
 async function isEmbeddingReachable() {
   if (!RAG_ENABLED) {
     return false;
   }
-  for (const ep of _embedEndpoints()) {
-    try {
-      const u = new URL(ep.url);
-      const probe = `${u.protocol}//${u.host}/`;
-      if (await _probeUrl(probe, PROBE_TIMEOUT_MS)) {
-        return true;
-      }
-    } catch {
-      /* try next */
-    }
+  try {
+    const r = await embeddingClient.isAvailable({ envUrl: EMBED_URL });
+    return !!(r && r.available);
+  } catch {
+    return false;
   }
-  return false;
 }
 
 // Embed an array of texts via the first working endpoint. Returns array of
 // vectors aligned to `texts`, or null if no endpoint produced usable vectors.
 async function _embedTexts(texts) {
-  const slice = texts.slice(0, EMBED_MAX_TEXTS);
-  for (const ep of _embedEndpoints()) {
-    try {
-      if (ep.style === 'openai') {
-        const r = await _httpPostJson(
-          ep.url,
-          { model: EMBED_MODEL, input: slice },
-          EMBED_TIMEOUT_MS,
-          ep.headers
-        );
-        const data = r && r.json && Array.isArray(r.json.data) ? r.json.data : null;
-        if (data && data.length === slice.length && data.every((d) => Array.isArray(d.embedding))) {
-          return data.map((d) => d.embedding);
-        }
-      } else {
-        // ollama: one prompt per call
-        const vecs = [];
-        let ok = true;
-        for (const t of slice) {
-          const r = await _httpPostJson(
-            ep.url,
-            { model: EMBED_MODEL, prompt: t },
-            EMBED_TIMEOUT_MS,
-            ep.headers
-          );
-          const emb = r && r.json && Array.isArray(r.json.embedding) ? r.json.embedding : null;
-          if (!emb) {
-            ok = false;
-            break;
-          }
-          vecs.push(emb);
-        }
-        if (ok && vecs.length === slice.length) {
-          return vecs;
-        }
-      }
-    } catch {
-      /* try next endpoint */
-    }
+  try {
+    return await embeddingClient.embedTexts(texts, { envUrl: EMBED_URL });
+  } catch {
+    return null;
   }
-  return null;
 }
 
+/** 余弦相似度（转发到 embeddingClient，保持 _internals.cosine 的既有形状）。 */
 function _cosine(a, b) {
-  if (!a || !b || a.length !== b.length) {
-    return 0;
-  }
-  let dot = 0,
-    na = 0,
-    nb = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i];
-    na += a[i] * a[i];
-    nb += b[i] * b[i];
-  }
-  if (na === 0 || nb === 0) {
-    return 0;
-  }
-  return dot / (Math.sqrt(na) * Math.sqrt(nb));
+  return embeddingClient.cosine(a, b);
 }
 
 // ── 网络补取（模式2） ────────────────────────────────────────────────
@@ -832,7 +686,10 @@ async function buildContext(query, opts = {}) {
     try {
       const texts = [query, ...lexical.map((x) => x.chunk.text)];
       const vecs = await _embedTexts(texts);
-      if (vecs && vecs.length === Math.min(texts.length, EMBED_MAX_TEXTS) && vecs.length >= 2) {
+      // Cap comes from embeddingClient so this check can never drift from the
+      // slice embedTexts actually applied.
+      const cap = embeddingClient.maxTexts();
+      if (vecs && vecs.length === Math.min(texts.length, cap) && vecs.length >= 2) {
         const qv = vecs[0];
         const maxLex = Math.max(...lexical.map((x) => x.score)) || 1;
         const blended = lexical.slice(0, vecs.length - 1).map((x, i) => {

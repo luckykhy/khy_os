@@ -64,13 +64,13 @@
 <ul><li><strong>优先级</strong>: P1</li><li><strong>收益</strong>: 效率提升，减少记忆负担</li><li><strong>工作量</strong>: 中（~100 行）</li><li><strong>实现位置</strong>: <code>backend/src/cli/repl.js</code> readline completer</li><li><strong>方案</strong>:<ol><li>注册 readline <code>completer</code> 回调</li><li><code>/</code> 开头匹配 slash 命令列表</li><li>已输入命令名后，匹配子命令列表</li><li>支持文件路径补全（<code>./</code> 或 <code>~/</code> 开头时）</li></ol></li><li><strong>参考</strong>: DeepSeek TUI <code>src/repl/completer.ts</code></li></ul>
 <h3 id="g7-动态-spinner-文案">G7 — 动态 spinner 文案<a class="anchor" href="#g7-动态-spinner-文案" aria-label="锚点">#</a></h3>
 <ul><li><strong>优先级</strong>: P1</li><li><strong>收益</strong>: 用户感知进度，减少 &quot;卡住了吗&quot; 的疑虑</li><li><strong>工作量</strong>: 小（~40 行）</li><li><strong>实现位置</strong>: <code>backend/src/cli/hudRenderer.js</code> + <code>aiRenderer.js</code></li><li><strong>方案</strong>:<ol><li>维护阶段 → 文案映射表：</li></ol></li></ul>
-<pre><code class="language-js">     const PHASE_LABELS = {
-       'tool:grep': '正在搜索代码...',
-       'tool:read': '正在读取文件...',
-       'tool:edit': '正在编辑文件...',
-       'tool:bash': '正在执行命令...',
-       'thinking': '正在分析...',
-       'generating': '正在生成回复...',
+<pre><code class="language-js">     <span class="hljs-keyword">const</span> <span class="hljs-variable constant_">PHASE_LABELS</span> = {
+       <span class="hljs-string">&#x27;tool:grep&#x27;</span>: <span class="hljs-string">&#x27;正在搜索代码...&#x27;</span>,
+       <span class="hljs-string">&#x27;tool:read&#x27;</span>: <span class="hljs-string">&#x27;正在读取文件...&#x27;</span>,
+       <span class="hljs-string">&#x27;tool:edit&#x27;</span>: <span class="hljs-string">&#x27;正在编辑文件...&#x27;</span>,
+       <span class="hljs-string">&#x27;tool:bash&#x27;</span>: <span class="hljs-string">&#x27;正在执行命令...&#x27;</span>,
+       <span class="hljs-string">&#x27;thinking&#x27;</span>: <span class="hljs-string">&#x27;正在分析...&#x27;</span>,
+       <span class="hljs-string">&#x27;generating&#x27;</span>: <span class="hljs-string">&#x27;正在生成回复...&#x27;</span>,
      };</code></pre>
 <ol><li>工具调用事件触发时更新 spinner 文案</li><li>无事件时默认 &quot;思考中...&quot;</li></ol>
 <h3 id="g8-意图模糊澄清-超时降级">G8 — 意图模糊澄清 + 超时降级<a class="anchor" href="#g8-意图模糊澄清-超时降级" aria-label="锚点">#</a></h3>
@@ -79,12 +79,12 @@
 <ul><li><strong>优先级</strong>: P2</li><li><strong>收益</strong>: 信息密度提升，配置管理时减少来回查看</li><li><strong>工作量</strong>: 大（需要终端分栏渲染）</li><li><strong>实现位置</strong>: <code>backend/src/cli/ui/previewPanel.js</code>（新建）</li><li><strong>方案</strong>:<ol><li>利用终端宽度，左侧选项列表占 50%，右侧 preview 占 50%</li><li>光标移动时实时更新右侧内容</li><li>需要自定义 inquirer prompt 或使用 ink 组件</li><li>降级方案：终端宽度 &lt; 80 时不显示 preview</li></ol></li><li><strong>参考</strong>: Claude Code <code>AskUserQuestionTool</code> preview 机制</li></ul>
 <h3 id="g10-意图预分类增强">G10 — 意图预分类增强<a class="anchor" href="#g10-意图预分类增强" aria-label="锚点">#</a></h3>
 <ul><li><strong>优先级</strong>: P2</li><li><strong>收益</strong>: 自然语言入口，降低学习曲线</li><li><strong>工作量</strong>: 中（~80 行）</li><li><strong>实现位置</strong>: <code>backend/src/services/inputPreprocessor.js</code></li><li><strong>方案</strong>:<ol><li>扩展关键词 → 命令映射表：</li></ol></li></ul>
-<pre><code class="language-js">     const INTENT_MAP = {
-       '密钥|key|apikey|api_key': 'gateway config',
-       '模型|model': 'gateway status',
-       '代理|proxy|clash': 'gateway config',  // 跳到代理配置子项
-       '初始化|init|setup': 'init',
-       '帮助|help|怎么用': 'help',
+<pre><code class="language-js">     <span class="hljs-keyword">const</span> <span class="hljs-variable constant_">INTENT_MAP</span> = {
+       <span class="hljs-string">&#x27;密钥|key|apikey|api_key&#x27;</span>: <span class="hljs-string">&#x27;gateway config&#x27;</span>,
+       <span class="hljs-string">&#x27;模型|model&#x27;</span>: <span class="hljs-string">&#x27;gateway status&#x27;</span>,
+       <span class="hljs-string">&#x27;代理|proxy|clash&#x27;</span>: <span class="hljs-string">&#x27;gateway config&#x27;</span>,  <span class="hljs-comment">// 跳到代理配置子项</span>
+       <span class="hljs-string">&#x27;初始化|init|setup&#x27;</span>: <span class="hljs-string">&#x27;init&#x27;</span>,
+       <span class="hljs-string">&#x27;帮助|help|怎么用&#x27;</span>: <span class="hljs-string">&#x27;help&#x27;</span>,
      };</code></pre>
 <ol><li>匹配到时提示 &quot;检测到你可能想执行 <code>gateway config</code>，已跳转&quot;</li><li>多匹配时走 G8 澄清流程</li></ol>
 <hr>

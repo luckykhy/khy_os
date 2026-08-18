@@ -992,6 +992,44 @@ async function buildContextSummary(droppedMessages, opts = {}) {
 }
 
 /**
+ * Logger handed to the compressor so its own skip/degrade lines have somewhere
+ * to land when no CLI renderer is registered (headless server, cron, tests).
+ * Returns null rather than throwing if the logger module is unavailable.
+ */
+function _compactionLogger() {
+  try {
+    return require('../utils/logger');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Report a compaction fallback through the compressor's transparency seam, so
+ * this file and contextCompressor emit through ONE channel (same notice
+ * renderer, same audit tool names) instead of two that can drift apart.
+ *
+ * @param {string} reason - Stable reason code recorded in the audit row
+ * @param {string} text - 中文 one-liner carrying 动作 + 目标 + 进度
+ * @param {object} facts - Quantities for the audit row
+ * @param {'warn'|'error'} [level='warn']
+ */
+function _reportCompactionFallback(reason, text, facts, level = 'warn') {
+  try {
+    require('./contextCompressor').reportCompactionDegrade(
+      reason,
+      text,
+      { ...facts, stage: 'buildSlidingWindow' },
+      _compactionLogger(),
+      0,
+      level
+    );
+  } catch {
+    /* transparency layer unavailable — the fallback itself still proceeds */
+  }
+}
+
+/**
  * 滑窗压缩。薄包装:保证 onPhase 的终止符 `done/100` 在**任何**出口恰好发一次。
  *
  * 为何需要:内层在正常路径上确实会发 done(AI 摘要成功 / legacy 尾部贪心结束),但
@@ -1115,6 +1153,7 @@ async function _buildSlidingWindowCore(messages, tokenLimit = CONTEXT_TOKEN_LIMI
   // The AI summary is the long pole (a model round-trip); signal it before the
   // call so the bar can ease forward while the request is in flight.
   emitPhase('summarizing', 45);
+  let compressorError = null;
   try {
     const { compress } = require('./contextCompressor');
     const compressResult = await compress(arr, {
@@ -1124,13 +1163,32 @@ async function _buildSlidingWindowCore(messages, tokenLimit = CONTEXT_TOKEN_LIMI
       contextWindowTokens: maxTokens,
       // If prior layers already pruned, increase preserve ratio to avoid over-compression
       preserveRatioOverride: guardAlreadyPruned ? 0.5 : undefined,
+      // Route the compressor's own skip/degrade lines somewhere: without this it
+      // has no logger, so even its pre-existing logger.info skip notices were
+      // dead on this — the primary production — path.
+      logger: _compactionLogger(),
     });
     if (compressResult.summaryGenerated) {
       emitPhase('done', 100);
       return compressResult.compressed;
     }
-  } catch {
-    /* contextCompressor not available, fall through to legacy */
+  } catch (err) {
+    // A missing module and a compressor that threw mid-summary are NOT the same
+    // event, and collapsing them into one silent catch is why a broken
+    // compression chain looked exactly like an absent optional dependency.
+    compressorError = err;
+  }
+  if (compressorError) {
+    const kerr = require('../utils/khyError').toKhyError(
+      compressorError,
+      'CONTEXT_COMPRESS_FAILED'
+    );
+    _reportCompactionFallback(
+      kerr.code === 'MODULE_NOT_FOUND' ? 'compressor-unavailable' : 'compressor-threw',
+      `[上下文压缩] 摘要压缩链路失败（${kerr.message.slice(0, 80)}），已降级为尾部截断，${arr.length} 条消息按 ${maxTokens} tokens 预算重新裁剪`,
+      { errorCode: kerr.code, messageCount: arr.length, budgetTokens: maxTokens },
+      'error'
+    );
   }
 
   // Legacy fallback: tail-greedy cutoff
@@ -1157,6 +1215,19 @@ async function _buildSlidingWindowCore(messages, tokenLimit = CONTEXT_TOKEN_LIMI
   if (dropped.length > 0) {
     const summary = await buildContextSummary(dropped, { maxTokens });
     kept = [{ role: 'system', content: summary }, ...kept];
+    // 尾部截断真的丢掉了消息 —— 这是用户唯一能察觉「早期对话不见了」的时刻,
+    // 必须说清丢了多少、留了多少。只在确实丢弃时报告,避免正常路径刷屏。
+    _reportCompactionFallback(
+      'legacy-tail-truncation',
+      `[上下文压缩] 已降级为尾部截断，保留最近 ${kept.length - 1}/${arr.length} 条消息，折叠 ${dropped.length} 条为摘要（预算 ${usableBudget} tokens）`,
+      {
+        keptCount: kept.length - 1,
+        droppedCount: dropped.length,
+        messageCount: arr.length,
+        budgetTokens: usableBudget,
+      },
+      'warn'
+    );
   }
 
   while (estimateTokens(kept.map((m) => m.content).join('\n')) > maxTokens && kept.length > 1) {
@@ -1845,6 +1916,7 @@ async function runNaturalToolCall(call, context = {}) {
 // it without importing this runtime ([DESIGN-ARCH-051] §6.8). Re-exported below
 // with byte-identical names/behavior.
 const { isCreativeRequest, lockTemperature, lockTopP } = require('./samplingPolicy');
+const { isFlagEnabled } = require('./flagRegistry');
 
 /**
  * Local output post-processor — enforces formatting rules that were
@@ -1908,13 +1980,18 @@ async function makeSystemPrompt(
   const modelId =
     modelInfo.model || process.env.GATEWAY_PREFERRED_MODEL || process.env.OLLAMA_MODEL || 'auto';
   const adapter = modelInfo.adapter || process.env.GATEWAY_PREFERRED_ADAPTER || 'auto';
+  const suppliedContextWindow = Number(promptRuntimeOpts.contextWindow);
+  const promptContextWindow =
+    Number.isFinite(suppliedContextWindow) && suppliedContextWindow > 0
+      ? suppliedContextWindow
+      : require('../constants/contextWindowDefaults').LARGE_FAMILY_CONTEXT_WINDOW;
 
   // Model-capability tier → harness profile. Same spine the tool-use loop uses
   // (modelTier.js). `lean` verbosity (T0 frontier only) drops the weak-model
   // hand-holding scaffolding sections below; T1/T2/T3 keep today's full prompt.
   const _modelTier = require('./modelTier');
   const _harnessProfile = _modelTier.harnessProfile(_modelTier.resolveTier(modelId), {
-    contextWindow: promptRuntimeOpts.contextWindow,
+    contextWindow: promptContextWindow,
   });
   const _lean = _harnessProfile.promptVerbosity === 'lean';
   // Short-context (small-window) models also drop the multi-KB hand-holding
@@ -2059,7 +2136,7 @@ async function makeSystemPrompt(
         // Inline modular defaults output style to senior-engineer; match it here
         // (getOutputStyleConfig disables on off/none/false/0 → null).
         outputStyleName: process.env.KHY_OUTPUT_STYLE || 'senior-engineer',
-        contextWindowTokens: promptRuntimeOpts.contextWindow,
+        contextWindowTokens: promptContextWindow,
         hasNativeToolUse,
         isLowTierModel,
         compactPrompt: _compactPrompt,
@@ -2219,8 +2296,16 @@ async function makeSystemPrompt(
       /* tools not loaded yet */
     }
 
-    sections.push(getToneAndStyleSection());
-    sections.push(getOutputEfficiencySection());
+    // KHY_PROMPT_UNIFIED_OUTPUT: merge output/tone sections into one
+    const unifiedOutput = isFlagEnabled('KHY_PROMPT_UNIFIED_OUTPUT', process.env);
+    if (unifiedOutput) {
+      // Unified mode: merge Tone and style + Output efficiency into one section
+      sections.push(getUnifiedOutputAndToneSection());
+    } else {
+      // Original full mode (flag off = byte-for-byte rollback)
+      sections.push(getToneAndStyleSection());
+      sections.push(getOutputEfficiencySection());
+    }
 
     // Dynamic boundary
     sections.push(SYSTEM_PROMPT_DYNAMIC_BOUNDARY);

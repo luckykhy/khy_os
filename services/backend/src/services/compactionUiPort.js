@@ -25,6 +25,7 @@
 let _resultRenderer = null; // (data) => void                     from cli/aiRenderer
 let _hudSignals = null; // { setCompacting, clearCompacting }  from cli/hudRenderer
 let _todoRenderer = null; // (todos) => void                    from cli/hudRenderer
+let _noticeRenderer = null; // ({level, text}) => void            from cli/aiRenderer
 
 // ── #1 compaction result render (cli/aiRenderer.printCompactionResult) ──
 
@@ -112,11 +113,48 @@ function emitTodoUpdate(todos) {
   }
 }
 
+// ── #4 compaction notice lines (skip / degrade / failure transparency) ──
+// The compression chain has a dozen early-return and catch paths. Each one is a
+// state the user is entitled to see — "上下文压缩被跳过" must never look
+// identical to "上下文压缩成功". This channel carries those one-line notices
+// out of the services layer without letting it reach into cli/formatters.
+
+/**
+ * Register the compaction-notice renderer. Called by cli/aiRenderer on load.
+ * @param {(notice:{level:string, text:string}) => void} fn
+ */
+function registerCompactionNoticeRenderer(fn) {
+  _noticeRenderer = typeof fn === 'function' ? fn : null;
+}
+
+/**
+ * Emit a one-line notice about a compaction skip / degrade / failure.
+ *
+ * The caller MUST treat `false` as "the user did not see this" and fall back to
+ * its own logger — a compaction failure that reaches nobody is the exact defect
+ * this channel exists to close.
+ *
+ * @param {{level:'info'|'success'|'warn'|'error', text:string}} notice
+ * @returns {boolean} true if rendered, false if degraded (no renderer / threw).
+ */
+function emitCompactionNotice(notice) {
+  if (!_noticeRenderer || !notice || !notice.text) {
+    return false;
+  }
+  try {
+    _noticeRenderer({ level: notice.level || 'info', text: String(notice.text) });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** @internal Reset registrations for testing. */
 function _resetForTest() {
   _resultRenderer = null;
   _hudSignals = null;
   _todoRenderer = null;
+  _noticeRenderer = null;
 }
 
 module.exports = {
@@ -127,5 +165,7 @@ module.exports = {
   signalCompactingDone,
   registerHudTodoRenderer,
   emitTodoUpdate,
+  registerCompactionNoticeRenderer,
+  emitCompactionNotice,
   _resetForTest,
 };

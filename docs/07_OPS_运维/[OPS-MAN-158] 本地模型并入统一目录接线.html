@@ -31,28 +31,28 @@
 <p>它的文件头明写「for the per-user catalog」,但<strong>此前零生产消费者</strong>:统一目录<br><code>modelCatalogGraph.buildCatalogGraph</code>(chat / image / video 三源的 authoritative 超集)从不<br>并入本地模型。本地模型能力完全休眠——典型的「能力存在,但没接线」。</p>
 <h2 id="改动-全-additive-门关字节回退">改动(全 additive · 门关字节回退)<a class="anchor" href="#改动-全-additive-门关字节回退" aria-label="锚点">#</a></h2>
 <p>在 <code>buildCatalogGraph</code> 追加第 4 源(继 §1 chat / §2 image / §3 video 之后),把<br><code>localOllamaProbe.fetchLocalModels()</code> 的结果作 <code>source:'local'</code> 边并入:</p>
-<pre><code class="language-js">if (live &amp;&amp; _localModelCatalogEnabled()) {
-  try {
-    const { fetchLocalModels } = require('./localOllamaProbe');   // 惰性
-    const probe = await fetchLocalModels();
-    if (probe &amp;&amp; probe.running &amp;&amp; Array.isArray(probe.models)) {
-      const seenLocal = new Set();
-      for (const m of probe.models) {
-        const model = m &amp;&amp; m.id;
-        if (!model || seenLocal.has(model)) continue;
-        seenLocal.add(model);
-        edges.push({
-          provider: 'ollama', providerLabel: 'ollama (local)', model,
-          keyIds: [], keyCount: 0,
-          capability: modelCapability.classifyCapability(model),
-          tier: modelTier.resolveTier(model),
-          status: 'active', connectionMode: 'direct', isDefault: false,
-          source: 'local',
+<pre><code class="language-js"><span class="hljs-keyword">if</span> (live &amp;&amp; <span class="hljs-title function_">_localModelCatalogEnabled</span>()) {
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">const</span> { fetchLocalModels } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./localOllamaProbe&#x27;</span>);   <span class="hljs-comment">// 惰性</span>
+    <span class="hljs-keyword">const</span> probe = <span class="hljs-keyword">await</span> <span class="hljs-title function_">fetchLocalModels</span>();
+    <span class="hljs-keyword">if</span> (probe &amp;&amp; probe.<span class="hljs-property">running</span> &amp;&amp; <span class="hljs-title class_">Array</span>.<span class="hljs-title function_">isArray</span>(probe.<span class="hljs-property">models</span>)) {
+      <span class="hljs-keyword">const</span> seenLocal = <span class="hljs-keyword">new</span> <span class="hljs-title class_">Set</span>();
+      <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> m <span class="hljs-keyword">of</span> probe.<span class="hljs-property">models</span>) {
+        <span class="hljs-keyword">const</span> model = m &amp;&amp; m.<span class="hljs-property">id</span>;
+        <span class="hljs-keyword">if</span> (!model || seenLocal.<span class="hljs-title function_">has</span>(model)) <span class="hljs-keyword">continue</span>;
+        seenLocal.<span class="hljs-title function_">add</span>(model);
+        edges.<span class="hljs-title function_">push</span>({
+          <span class="hljs-attr">provider</span>: <span class="hljs-string">&#x27;ollama&#x27;</span>, <span class="hljs-attr">providerLabel</span>: <span class="hljs-string">&#x27;ollama (local)&#x27;</span>, model,
+          <span class="hljs-attr">keyIds</span>: [], <span class="hljs-attr">keyCount</span>: <span class="hljs-number">0</span>,
+          <span class="hljs-attr">capability</span>: modelCapability.<span class="hljs-title function_">classifyCapability</span>(model),
+          <span class="hljs-attr">tier</span>: modelTier.<span class="hljs-title function_">resolveTier</span>(model),
+          <span class="hljs-attr">status</span>: <span class="hljs-string">&#x27;active&#x27;</span>, <span class="hljs-attr">connectionMode</span>: <span class="hljs-string">&#x27;direct&#x27;</span>, <span class="hljs-attr">isDefault</span>: <span class="hljs-literal">false</span>,
+          <span class="hljs-attr">source</span>: <span class="hljs-string">&#x27;local&#x27;</span>,
         });
       }
-      sources.localModels = seenLocal.size;
+      sources.<span class="hljs-property">localModels</span> = seenLocal.<span class="hljs-property">size</span>;
     }
-  } catch { /* local probe optional; never breaks catalog assembly */ }
+  } <span class="hljs-keyword">catch</span> { <span class="hljs-comment">/* local probe optional; never breaks catalog assembly */</span> }
 }</code></pre>
 <h3 id="关键不变量">关键不变量<a class="anchor" href="#关键不变量" aria-label="锚点">#</a></h3>
 <ol><li><strong>仅 <code>live</code> 发现时探测</strong>:本地模型只能靠探测「正在运行的服务器」得知——没有静态清单能说</li></ol>

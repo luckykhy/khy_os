@@ -28,5 +28,6 @@ package-dir = { khy_platform = "platform/khy_platform" }
 packages = ["khy_platform"]
 
 [tool.setuptools.package-data]
-# Mirrors PACKAGE_RESOURCE_INCLUDES in scripts/release/pip_packaging_rules.py.
-khy_platform = ["_resources/dev-constraints.txt", "_resources/tray-icon.png"]
+# The Python launcher ships the standalone Node bundle as its only Node runtime
+# payload. Source checkout mode still resolves the repository backend directly.
+khy_platform = ["_resources/dev-constraints.txt", "_resources/tray-icon.png", "bundled/runtime/khy/bundle.mjs"]

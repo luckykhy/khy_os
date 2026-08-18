@@ -53,6 +53,10 @@ const DIRECTIVE_REGISTRY = Object.freeze({
     label: '配置 khy vs 安装第三方工具歧义护栏(别装第三方、把参数映射到 khy)',
   },
   flowPriority: { tier: 'guard', label: '流程优先(操作类任务先检索沉淀流程,失败断点接管并自愈)' },
+  // 插件注册点 PromptSection(Block B)追加的段落。归入 guard 而非 protocol 是刻意的:
+  // 插件文本不应参与「多协议协调头 / 协议互斥仲裁」的计数与取舍,否则装一个插件就会改变
+  // 既有协议的编排结论。作为 guard 它只是被前置注入的附加约束,既有指令逐字不变。
+  pluginPromptSection: { tier: 'guard', label: '插件注册点追加段落(PromptSection hook,只增不改)' },
 
   // —— protocol:工作流协议,后注入并参与协调 ——
   intent: { tier: 'protocol', label: '意图模式(goal/coding/analyze/…)' },

@@ -42,8 +42,8 @@
 <p>归档时逐个核对过，下表五个变量在代码中真实生效：</p>
 <table><thead><tr><th>变量</th><th>作用</th><th>定义处</th></tr></thead><tbody><tr><td><code>KHY_MODEL_QUICK_FAIL</code></td><td>快速失败模式，跳过耗时初始化</td><td><code>gatewayModelChoices.js:164</code></td></tr><tr><td><code>KHY_MODEL_OVERALL_TIMEOUT_MS</code></td><td>模型清单构建的整体超时</td><td><code>gatewayModelChoices.js:267</code></td></tr><tr><td><code>KHY_MODEL_BUILD_TIMEOUT_MS</code></td><td>构建阶段超时</td><td><code>gatewayModelChoices.js:694</code></td></tr><tr><td><code>KHY_MODEL_PROBE_TIMEOUT_MS</code></td><td>单适配器连通性探测超时</td><td><code>gateway.js:2087</code></td></tr><tr><td><code>KHY_MODEL_PROBE_GENERATION_TIMEOUT_MS</code></td><td>生成能力探测超时</td><td><code>gateway.js:2097</code></td></tr></tbody></table>
 <p><code>/model</code> 慢的时候，缩短探测超时通常比禁用适配器更划算：</p>
-<pre><code class="language-powershell">$env:KHY_MODEL_QUICK_FAIL = &quot;true&quot;
-$env:KHY_MODEL_PROBE_TIMEOUT_MS = &quot;2000&quot;
+<pre><code class="language-powershell"><span class="hljs-variable">$env:KHY_MODEL_QUICK_FAIL</span> = <span class="hljs-string">&quot;true&quot;</span>
+<span class="hljs-variable">$env:KHY_MODEL_PROBE_TIMEOUT_MS</span> = <span class="hljs-string">&quot;2000&quot;</span>
 khy</code></pre>
 <p>不想进菜单也可以绕开：<code>gateway status</code> 看通道状态、<code>gateway config</code> 直接配。</p>
 <blockquote><p><strong>遗留</strong>：这五个开关<strong>尚未登记进 flag registry</strong>（<code>scripts/ci/check-flag-registry.js</code> 的真源表），因此也不在 <code>[OPS-MAN-058] 环境开关与文档命名规范</code> 的清单里。补登记是独立一项工作，不在本次归档范围内。</p></blockquote>

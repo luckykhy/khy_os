@@ -492,7 +492,7 @@ class MultiFreeService {
       headers: {
         Authorization: `Bearer ${provider.apiKey}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': require('../constants/serviceDefaults').HTTP_REFERER,
+        'HTTP-Referer': require('../../../services/backend/src/constants/serviceDefaults').HTTP_REFERER,
         'X-Title': 'khy OS'
       },
       timeout: 30000

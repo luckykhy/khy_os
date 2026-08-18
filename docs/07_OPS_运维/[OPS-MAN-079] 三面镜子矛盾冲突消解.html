@@ -34,9 +34,9 @@
 <ol><li><code>restore-resolve</code>（本文件）<strong>消解</strong>——把那记一刀切的红灯，升级成一套*有原则、</li></ol>
 <p>有序、安全优先*的恢复程序，并<strong>精确标出</strong>自动化在哪一步必须交人。</p>
 <p>检测只回答「矛不矛盾」；消解回答「矛盾了，agent 该怎么安全地一步步解开、到哪必须停手」。<br>这正是 khy 此前缺的 agent 创新点：系统不再只亮红灯，而是主动交出一份可自驱的恢复链。</p>
-<pre><code class="language-bash">node scripts/restore-resolve.js --json   # landing agent 先读这个
-# autoResolvable=true → 按 moves 顺序自主消解后继续自动还原
-# autoResolvable=false → 跑到 firstHumanMove 即止步交人</code></pre>
+<pre><code class="language-bash">node scripts/restore-resolve.js --json   <span class="hljs-comment"># landing agent 先读这个</span>
+<span class="hljs-comment"># autoResolvable=true → 按 moves 顺序自主消解后继续自动还原</span>
+<span class="hljs-comment"># autoResolvable=false → 跑到 firstHumanMove 即止步交人</span></code></pre>
 <h2 id="为什么不能把矛盾全丢给人">为什么不能把矛盾全丢给人<a class="anchor" href="#为什么不能把矛盾全丢给人" aria-label="锚点">#</a></h2>
 <p>检测器出于安全，对任何硬矛盾都盖一句「止步交人」。但矛盾其实分层：</p>
 <ul><li><strong>瞬时/竞态读数</strong>（装到一半时抢跑）→ 最便宜的解法是重探一次，可能直接消失；</li><li><strong>单面镜子自相矛盾</strong>（顶层布尔与明细清单打架）→ 采信一手证据即当场化解，无需外部动作；</li><li><strong>跨镜子真分歧</strong>（两面都自洽却结论互斥）→ 安全优先采信更悲观者并跑其补救；</li><li>只有<strong>重探不消失、且补救本身越界</strong>（重装/查安装路径）的，才真正需要人。</li></ul>

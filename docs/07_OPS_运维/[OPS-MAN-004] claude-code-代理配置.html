@@ -39,15 +39,15 @@ kiro / trae / codex / ollama / ...
 <ul><li>Claude Code 以为自己在调用 Claude 模型，实际由 KHY 透明代理到可用的 IDE 适配器</li><li>适配器级联优先级：kiro → cursor → trae → claude → codex → ollama → relay_api → api</li><li>每个适配器自动选择最佳可用模型，无需手动指定</li></ul>
 <h2 id="推荐-khy-claude-一键启动-零残留">推荐：<code>khy claude</code> 一键启动（零残留）<a class="anchor" href="#推荐-khy-claude-一键启动-零残留" aria-label="锚点">#</a></h2>
 <p>下面「快速开始」一节是<strong>手动</strong>配置环境变量的底层路径，便于你理解原理。日常使用更推荐一条命令 <code>khy claude</code>——它自动把代理相关环境变量<strong>只注入到子进程</strong>里再拉起 <code>claude</code>，<strong>不写任何 settings.json、不污染你原生的 <code>claude</code> 认证</strong>：你退出后，直接敲 <code>claude</code> 仍然用回原来的官方账号。</p>
-<pre><code class="language-bash">khy claude            # 用 KHY 网关拉起 Claude Code（零残留 env 注入）
-khy claude --list     # 只列出当前可用模型后退出
-khy claude --model kiro/claude-sonnet-4.6   # 指定主模型直接启动</code></pre>
+<pre><code class="language-bash">khy claude            <span class="hljs-comment"># 用 KHY 网关拉起 Claude Code（零残留 env 注入）</span>
+khy claude --list     <span class="hljs-comment"># 只列出当前可用模型后退出</span>
+khy claude --model kiro/claude-sonnet-4.6   <span class="hljs-comment"># 指定主模型直接启动</span></code></pre>
 <h3 id="混合模式-主模型与子智能体分走不同来源">混合模式：主模型与子智能体分走不同来源<a class="anchor" href="#混合模式-主模型与子智能体分走不同来源" aria-label="锚点">#</a></h3>
 <p>当你<strong>手里有外部 Anthropic 官方额度</strong>（<code>ANTHROPIC_AUTH_TOKEN</code> / <code>ANTHROPIC_API_KEY</code> 不以 <code>khy-</code> 开头）时，可以让「主控模型」和「子智能体（sub-agent）」走不同来源，省着用官方额度：</p>
 <table><thead><tr><th>命令</th><th>主控模型</th><th>子智能体</th><th>适合</th></tr></thead><tbody><tr><td><code>khy claude --hybrid</code></td><td><strong>外部 Anthropic</strong>（官方 Opus/Sonnet）</td><td><strong>KHY 网关</strong>（IDE 适配器）</td><td>主控要最强官方模型，子任务用 KHY 省额度</td></tr><tr><td><code>khy claude --hybrid-sub</code></td><td><strong>KHY 网关</strong></td><td><strong>外部 Anthropic</strong>（官方 Sonnet）</td><td>主控用 KHY，仅子智能体偶尔借官方模型</td></tr></tbody></table>
 <blockquote><p>混合模式要求你已配置外部 Anthropic 认证；若检测到只有 <code>khy-</code> 开头的 token，会自动回退为普通模式并给出提示。</p></blockquote>
 <h3 id="marshal-皇权特许-强制任命任意在线模型为主控"><code>--marshal</code>：皇权特许，强制任命任意在线模型为主控<a class="anchor" href="#marshal-皇权特许-强制任命任意在线模型为主控" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash">khy claude --marshal kiro/claude-opus-4.6   # 强制把某个在线模型任命为「元帅」（主控）</code></pre>
+<pre><code class="language-bash">khy claude --marshal kiro/claude-opus-4.6   <span class="hljs-comment"># 强制把某个在线模型任命为「元帅」（主控）</span></code></pre>
 <p><code>--marshal</code> 注入 <code>KHY_MARSHAL</code>，只校验该模型在线且协议可用，不做能力门控——把任意在线模型抬为主控控制器。</p>
 <blockquote><p>实现：Python 启动器 <code>platform/khy_platform/cli.py</code>（<code>_run_claude_code_launcher</code>、<code>_build_khy_proxy_env</code>）。它把 <code>ANTHROPIC_BASE_URL</code> / <code>ANTHROPIC_AUTH_TOKEN</code> / 模型变量等只 <code>update</code> 进子进程 env 后 <code>subprocess.run</code>，从不落盘——这正是「零残留」的代码依据。</p></blockquote>
 <h2 id="快速开始">快速开始<a class="anchor" href="#快速开始" aria-label="锚点">#</a></h2>
@@ -63,50 +63,50 @@ khy claude --model kiro/claude-sonnet-4.6   # 指定主模型直接启动</code>
 <blockquote><p>忘记 token 可随时运行 <code>khy proxy status</code> 查看。</p></blockquote>
 <h3 id="3-配置-claude-code-环境变量">3. 配置 Claude Code 环境变量<a class="anchor" href="#3-配置-claude-code-环境变量" aria-label="锚点">#</a></h3>
 <h4 id="linux-macos">Linux / macOS<a class="anchor" href="#linux-macos" aria-label="锚点">#</a></h4>
-<pre><code class="language-bash">export ANTHROPIC_BASE_URL=http://127.0.0.1:9100
-export ANTHROPIC_API_KEY=khy-你的token
+<pre><code class="language-bash"><span class="hljs-built_in">export</span> ANTHROPIC_BASE_URL=http://127.0.0.1:9100
+<span class="hljs-built_in">export</span> ANTHROPIC_API_KEY=khy-你的token
 claude</code></pre>
 <p>写入 <code>~/.bashrc</code> 或 <code>~/.zshrc</code> 永久生效：</p>
-<pre><code class="language-bash">echo 'export ANTHROPIC_BASE_URL=http://127.0.0.1:9100' &gt;&gt; ~/.bashrc
-echo 'export ANTHROPIC_API_KEY=khy-你的token' &gt;&gt; ~/.bashrc
-source ~/.bashrc</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">echo</span> <span class="hljs-string">&#x27;export ANTHROPIC_BASE_URL=http://127.0.0.1:9100&#x27;</span> &gt;&gt; ~/.bashrc
+<span class="hljs-built_in">echo</span> <span class="hljs-string">&#x27;export ANTHROPIC_API_KEY=khy-你的token&#x27;</span> &gt;&gt; ~/.bashrc
+<span class="hljs-built_in">source</span> ~/.bashrc</code></pre>
 <h4 id="windows-powershell">Windows (PowerShell)<a class="anchor" href="#windows-powershell" aria-label="锚点">#</a></h4>
 <p>临时生效：</p>
-<pre><code class="language-powershell">$env:ANTHROPIC_BASE_URL = &quot;http://127.0.0.1:9100&quot;
-$env:ANTHROPIC_API_KEY = &quot;khy-你的token&quot;
+<pre><code class="language-powershell"><span class="hljs-variable">$env:ANTHROPIC_BASE_URL</span> = <span class="hljs-string">&quot;http://127.0.0.1:9100&quot;</span>
+<span class="hljs-variable">$env:ANTHROPIC_API_KEY</span> = <span class="hljs-string">&quot;khy-你的token&quot;</span>
 claude</code></pre>
 <p>永久生效（写入用户环境变量，需重开终端）：</p>
-<pre><code class="language-powershell">[System.Environment]::SetEnvironmentVariable(&quot;ANTHROPIC_BASE_URL&quot;, &quot;http://127.0.0.1:9100&quot;, &quot;User&quot;)
-[System.Environment]::SetEnvironmentVariable(&quot;ANTHROPIC_API_KEY&quot;, &quot;khy-你的token&quot;, &quot;User&quot;)</code></pre>
+<pre><code class="language-powershell">[<span class="hljs-type">System.Environment</span>]::SetEnvironmentVariable(<span class="hljs-string">&quot;ANTHROPIC_BASE_URL&quot;</span>, <span class="hljs-string">&quot;http://127.0.0.1:9100&quot;</span>, <span class="hljs-string">&quot;User&quot;</span>)
+[<span class="hljs-type">System.Environment</span>]::SetEnvironmentVariable(<span class="hljs-string">&quot;ANTHROPIC_API_KEY&quot;</span>, <span class="hljs-string">&quot;khy-你的token&quot;</span>, <span class="hljs-string">&quot;User&quot;</span>)</code></pre>
 <h3 id="4-验证">4. 验证<a class="anchor" href="#4-验证" aria-label="锚点">#</a></h3>
-<pre><code class="language-bash"># 检查代理健康状态
+<pre><code class="language-bash"><span class="hljs-comment"># 检查代理健康状态</span>
 curl http://127.0.0.1:9100/health
 
-# 查看可用模型列表
-curl -H &quot;Authorization: Bearer khy-你的token&quot; http://127.0.0.1:9100/v1/models</code></pre>
+<span class="hljs-comment"># 查看可用模型列表</span>
+curl -H <span class="hljs-string">&quot;Authorization: Bearer khy-你的token&quot;</span> http://127.0.0.1:9100/v1/models</code></pre>
 <h2 id="指定特定模型-可选">指定特定模型（可选）<a class="anchor" href="#指定特定模型-可选" aria-label="锚点">#</a></h2>
 <p>默认情况下，Claude Code 发送的请求会由 KHY 自动级联到第一个可用的 IDE 适配器，适配器自动选择最佳模型。</p>
 <p>如需精确控制，可以设置 <code>ANTHROPIC_MODEL</code> 环境变量，使用 <code>适配器/模型名</code> 语法：</p>
-<pre><code class="language-bash"># 使用 Trae 中的 DeepSeek
-export ANTHROPIC_MODEL=trae/deepseek-v3
+<pre><code class="language-bash"><span class="hljs-comment"># 使用 Trae 中的 DeepSeek</span>
+<span class="hljs-built_in">export</span> ANTHROPIC_MODEL=trae/deepseek-v3
 
-# 使用 Codex 中的 GPT-5.3
-export ANTHROPIC_MODEL=codex/gpt-5.3-codex
+<span class="hljs-comment"># 使用 Codex 中的 GPT-5.3</span>
+<span class="hljs-built_in">export</span> ANTHROPIC_MODEL=codex/gpt-5.3-codex
 
-# 使用 Kiro 中的模型
-export ANTHROPIC_MODEL=kiro/claude-sonnet-4.6
+<span class="hljs-comment"># 使用 Kiro 中的模型</span>
+<span class="hljs-built_in">export</span> ANTHROPIC_MODEL=kiro/claude-sonnet-4.6
 
-# 使用本地 Ollama 模型
-export ANTHROPIC_MODEL=ollama/qwen2.5:32b</code></pre>
+<span class="hljs-comment"># 使用本地 Ollama 模型</span>
+<span class="hljs-built_in">export</span> ANTHROPIC_MODEL=ollama/qwen2.5:32b</code></pre>
 <p>也可通过 <code>PROXY_MODEL_ROUTE_MAP</code> 环境变量配置自定义路由规则：</p>
-<pre><code class="language-bash"># 将所有 claude-sonnet 请求路由到 trae 的 deepseek
-export PROXY_MODEL_ROUTE_MAP='claude-sonnet-4-*=trae:deepseek-v3'</code></pre>
+<pre><code class="language-bash"><span class="hljs-comment"># 将所有 claude-sonnet 请求路由到 trae 的 deepseek</span>
+<span class="hljs-built_in">export</span> PROXY_MODEL_ROUTE_MAP=<span class="hljs-string">&#x27;claude-sonnet-4-*=trae:deepseek-v3&#x27;</span></code></pre>
 <h2 id="代理管理">代理管理<a class="anchor" href="#代理管理" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">khy proxy start       # 启动代理（默认端口 9100）
-khy proxy stop        # 停止代理
-khy proxy status      # 查看代理状态和 auth token
-khy proxy token       # 管理 auth token
-khy proxy client add &lt;名称&gt;  # 为新客户端创建专属 token</code></pre>
+<pre><code class="language-bash">khy proxy start       <span class="hljs-comment"># 启动代理（默认端口 9100）</span>
+khy proxy stop        <span class="hljs-comment"># 停止代理</span>
+khy proxy status      <span class="hljs-comment"># 查看代理状态和 auth token</span>
+khy proxy token       <span class="hljs-comment"># 管理 auth token</span>
+khy proxy client add &lt;名称&gt;  <span class="hljs-comment"># 为新客户端创建专属 token</span></code></pre>
 <p>自定义端口：</p>
 <pre><code class="language-bash">PROXY_PORT=8080 khy proxy start</code></pre>
 <h2 id="支持的协议">支持的协议<a class="anchor" href="#支持的协议" aria-label="锚点">#</a></h2>
@@ -122,8 +122,8 @@ khy proxy client add &lt;名称&gt;  # 为新客户端创建专属 token</code><
 <ul><li>Kiro: <code>%APPDATA%/Kiro/</code></li><li>Trae: <code>%APPDATA%/Trae/</code></li></ul>
 <h3 id="想用其他端口">想用其他端口<a class="anchor" href="#想用其他端口" aria-label="锚点">#</a></h3>
 <pre><code class="language-bash">PROXY_PORT=8443 khy proxy start
-# 相应修改 ANTHROPIC_BASE_URL
-export ANTHROPIC_BASE_URL=http://127.0.0.1:8443</code></pre>
+<span class="hljs-comment"># 相应修改 ANTHROPIC_BASE_URL</span>
+<span class="hljs-built_in">export</span> ANTHROPIC_BASE_URL=http://127.0.0.1:8443</code></pre>
       </article>
       <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-003] ai-管理-访问与登录.html"><div class="dir">← 上一篇</div><div class="ttl">KHY AI 管理页访问与登录说明</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-005] claude-code-规则到-khy-映射表.html"><div class="dir">下一篇 →</div><div class="ttl">Claude Code 规则到 KHY 映射表</div></a></nav>
       <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>

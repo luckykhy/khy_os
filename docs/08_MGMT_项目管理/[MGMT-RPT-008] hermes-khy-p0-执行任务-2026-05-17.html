@@ -68,10 +68,10 @@
 <h2 id="推荐落地节奏-两周">推荐落地节奏（两周）<a class="anchor" href="#推荐落地节奏-两周" aria-label="锚点">#</a></h2>
 <ol><li>第 1-3 天：完成 P0-1（命令 SSoT）+ 测试收敛  </li><li>第 4-7 天：完成 P0-2（adapter registry）+ 网关回归  </li><li>第 8-14 天：完成 P0-3（插件生命周期）+ 兼容迁移</li></ol>
 <h2 id="最小回归命令建议">最小回归命令建议<a class="anchor" href="#最小回归命令建议" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">cd backend
-npm test -- tests/cli
-npm test -- tests/gateway
-npm test -- tests/plugins</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> backend
+npm <span class="hljs-built_in">test</span> -- tests/cli
+npm <span class="hljs-built_in">test</span> -- tests/gateway
+npm <span class="hljs-built_in">test</span> -- tests/plugins</code></pre>
 <hr>
 <h2 id="可直接提单的-issue-模板">可直接提单的 Issue 模板<a class="anchor" href="#可直接提单的-issue-模板" aria-label="锚点">#</a></h2>
 <p>以下模板可直接复制到 GitHub/GitLab Issue。</p>
@@ -87,10 +87,10 @@ npm test -- tests/plugins</code></pre>
 <p><strong>Acceptance Criteria</strong></p>
 <ul><li>仅修改 schema 即可驱动路由与 slash 菜单更新。</li><li><code>backend/tests/cli/*.test.js</code> 全绿，新增一致性测试通过。</li><li><code>khy help</code>、<code>/</code> 菜单、别名调用无行为回归。</li></ul>
 <p><strong>Verification Commands</strong></p>
-<pre><code class="language-bash">cd backend
-npm test -- tests/cli/router.test.js
-npm test -- tests/cli/commandRegistry.test.js
-npm test -- tests/cli/commandSchema.consistency.test.js</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> backend
+npm <span class="hljs-built_in">test</span> -- tests/cli/router.test.js
+npm <span class="hljs-built_in">test</span> -- tests/cli/commandRegistry.test.js
+npm <span class="hljs-built_in">test</span> -- tests/cli/commandSchema.consistency.test.js</code></pre>
 <p><strong>Definition of Done</strong></p>
 <ul><li>PR 合并前附测试结果与影响范围说明。</li></ul>
 <h3 id="issue-模板-b-p0-2-网关适配器注册中心-adapter-registry">Issue 模板 B — P0-2 网关适配器注册中心（Adapter Registry）<a class="anchor" href="#issue-模板-b-p0-2-网关适配器注册中心-adapter-registry" aria-label="锚点">#</a></h3>
@@ -105,10 +105,10 @@ npm test -- tests/cli/commandSchema.consistency.test.js</code></pre>
 <p><strong>Acceptance Criteria</strong></p>
 <ul><li>内建 adapter 全部通过 registry 暴露。</li><li>无需改 <code>aiGateway.js</code> 即可注入并调用测试 adapter。</li><li><code>backend/tests/gateway/*.test.js</code> 无回归失败。</li></ul>
 <p><strong>Verification Commands</strong></p>
-<pre><code class="language-bash">cd backend
-npm test -- tests/gateway/adapterRegistry.test.js
-npm test -- tests/gateway/aiGateway.adapterRegistry.integration.test.js
-npm test -- tests/gateway</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> backend
+npm <span class="hljs-built_in">test</span> -- tests/gateway/adapterRegistry.test.js
+npm <span class="hljs-built_in">test</span> -- tests/gateway/aiGateway.adapterRegistry.integration.test.js
+npm <span class="hljs-built_in">test</span> -- tests/gateway</code></pre>
 <p><strong>Definition of Done</strong></p>
 <ul><li>PR 提供迁移说明（旧逻辑到 registry 的映射表）。</li></ul>
 <h3 id="issue-模板-c-p0-3-插件生命周期收敛-unified-plugin-lifecycle">Issue 模板 C — P0-3 插件生命周期收敛（Unified Plugin Lifecycle）<a class="anchor" href="#issue-模板-c-p0-3-插件生命周期收敛-unified-plugin-lifecycle" aria-label="锚点">#</a></h3>
@@ -123,9 +123,9 @@ npm test -- tests/gateway</code></pre>
 <p><strong>Acceptance Criteria</strong></p>
 <ul><li>同一插件在 CLI/Gateway 由同一状态源控制。</li><li><code>enable/disable/reload</code> 行为一致，无状态漂移。</li><li>插件失败不影响主流程，日志可定位到插件与 hook。</li></ul>
 <p><strong>Verification Commands</strong></p>
-<pre><code class="language-bash">cd backend
-npm test -- tests/plugins/lifecycle.integration.test.js
-npm test -- tests/plugins</code></pre>
+<pre><code class="language-bash"><span class="hljs-built_in">cd</span> backend
+npm <span class="hljs-built_in">test</span> -- tests/plugins/lifecycle.integration.test.js
+npm <span class="hljs-built_in">test</span> -- tests/plugins</code></pre>
 <p><strong>Definition of Done</strong></p>
 <ul><li>PR 包含兼容策略说明与后续淘汰时间线建议。</li></ul>
       </article>

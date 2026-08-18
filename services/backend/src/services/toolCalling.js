@@ -60,6 +60,9 @@ const {
 
 // flag 中央注册表:门控 KHY_MCP_RESULT_NORMALIZE(默认开)从声明式真源解析,不再 inline `_off`。
 const flagRegistry = require('./flagRegistry');
+// 插件按需激活(门控 KHY_PLUGIN_LAZY_LOAD,默认开):纯叶子——扩展工具不常驻注册表,
+// 仅在 executeTool 正常解析落空后按名懒加载并注册(见 if(!descriptor) 前)。零环,无副作用。
+const pluginContribResolver = require('./plugins/pluginContribResolver');
 // App-launch pure leaves (fail-soft: a missing bundled copy must never crash the
 // tool layer — both have byte-identical fallbacks baked in).
 //   - winAppPaths: parse Windows `App Paths` registry into installed-app records
@@ -92,7 +95,8 @@ const _INTERNAL_ARG_KEYS = [
 
 // ── Per-tool capability policy ────────────────────────────────────
 let _toolPolicyCache = null;
-let _toolPolicyCacheMtime = 0;
+let _toolPolicyCachePath = '';
+let _toolPolicyCacheSource = null;
 
 function _loadToolPolicy() {
   // Portable-aware default; env override stays highest-priority.
@@ -111,16 +115,21 @@ function _loadToolPolicy() {
     return null;
   }
   try {
-    const st = fs.statSync(policyPath);
-    if (_toolPolicyCache && st.mtimeMs === _toolPolicyCacheMtime) {
+    const rawSource = fs.readFileSync(policyPath, 'utf-8');
+    if (
+      _toolPolicyCache &&
+      _toolPolicyCachePath === policyPath &&
+      _toolPolicyCacheSource === rawSource
+    ) {
       return _toolPolicyCache;
     }
-    const raw = JSON.parse(fs.readFileSync(policyPath, 'utf-8'));
+    const raw = JSON.parse(rawSource);
     _toolPolicyCache = raw;
-    _toolPolicyCacheMtime = st.mtimeMs;
+    _toolPolicyCachePath = policyPath;
+    _toolPolicyCacheSource = rawSource;
     return raw;
   } catch {
-    return _toolPolicyCache || null;
+    return _toolPolicyCachePath === policyPath ? _toolPolicyCache : null;
   }
 }
 
@@ -1579,7 +1588,7 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
   // [P1#3] 参数命名统一:逐工具跨词映射(normalizeToolParams)+ 路径键归一之后,
   // 再补「同词不同大小写」的 snake/camel 两种拼写,使定义侧统一成 snake_case 后,
   // 读取 camelCase 的旧工具仍能取到值。门控 KHY_TOOL_PARAM_NAMING(默认开)。
-  const normalizedParams = require('./toolParamNaming').expandParamAliases(
+  let normalizedParams = require('./toolParamNaming').expandParamAliases(
     _normalizePathLikeParams(normalizeToolParams(normalizedName, params))
   );
 
@@ -1687,6 +1696,27 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
     const _healed = await _maybeRouteSelfHeal(normalizedName, normalizedParams, traceContext);
     if (_healed && _healed.handled) {
       return _healed.result;
+    }
+  }
+
+  // ── 插件按需激活 (gate KHY_PLUGIN_LAZY_LOAD, default-on) ─────────────
+  // executeTool 正常解析(registry/builtin/claude-compat/plugin__)已全部落空时,才问
+  // pluginContribResolver 是否拥有该工具名。若拥有:懒加载扩展 entry(首次调用才
+  // require,模块体无副作用执行)并按 defineTool 契约注册进静态注册表,随后重新解析,
+  // 走标准 Priority-3 `source:'registry'` 路径。双门故障关闭(flagRegistry 门 && 扩展
+  // enabled)任何一个不过 → 返回 null → 落到下方 fail-closed 的模糊修复/unknown-tool。
+  // 铁律:绝不新建 executeTool 的旁路入口;真实 builtin/registry 同名工具必然已在上方解析,
+  // 永远先赢;门关时此处与"插件未安装"逐字节同构(零侧效应)。
+  if (!descriptor) {
+    if (
+      flagRegistry.isFlagEnabled('KHY_PLUGIN_LAZY_LOAD', process.env) &&
+      pluginContribResolver.ownsTool(normalizedName)
+    ) {
+      const _activated = await pluginContribResolver.activateContributedTool(normalizedName);
+      if (_activated) {
+        descriptor =
+          _resolveToolDescriptor(normalizedName) || _resolveToolDescriptor(toolName) || null;
+      }
     }
   }
 
@@ -3237,29 +3267,38 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
 /**
  * Get the tool definitions in Claude/OpenAI function-calling format.
  * Used when sending messages to AI models that support tool use.
+ *
+ * @param {{nameFilter?: (name: string) => boolean}} [options] when given, only
+ *   tools whose name passes the filter are considered. Callers that curate the
+ *   list anyway (lightweight-conversation turns keep 16 of ~160) pass it so the
+ *   registry never runs `isEnabled()` — i.e. never shells out to
+ *   python/where/git — for tools that are about to be discarded.
  */
-function getToolDefinitions() {
-  const defs = _allTools.map((tool) => ({
-    name: tool.name,
-    description: tool.description,
-    parameters: {
-      type: 'object',
-      properties: Object.fromEntries(
-        Object.entries(tool.parameters || {}).map(([key, spec]) => [
-          key,
-          { type: spec.type || 'string', description: spec.description || '' },
-        ])
-      ),
-      required: Object.entries(tool.parameters || {})
-        .filter(([, spec]) => spec.required)
-        .map(([key]) => key),
-    },
-  }));
+function getToolDefinitions(options = {}) {
+  const _nameFilter = typeof options.nameFilter === 'function' ? options.nameFilter : null;
+  const defs = _allTools
+    .filter((tool) => !_nameFilter || _nameFilter(tool.name))
+    .map((tool) => ({
+      name: tool.name,
+      description: tool.description,
+      parameters: {
+        type: 'object',
+        properties: Object.fromEntries(
+          Object.entries(tool.parameters || {}).map(([key, spec]) => [
+            key,
+            { type: spec.type || 'string', description: spec.description || '' },
+          ])
+        ),
+        required: Object.entries(tool.parameters || {})
+          .filter(([, spec]) => spec.required)
+          .map(([key]) => key),
+      },
+    }));
 
   const registry = _getToolRegistry();
   if (registry && typeof registry.getEnabledDefinitions === 'function') {
     try {
-      defs.push(...registry.getEnabledDefinitions());
+      defs.push(...registry.getEnabledDefinitions({ nameFilter: _nameFilter || undefined }));
     } catch {
       /* best effort */
     }
@@ -3281,7 +3320,9 @@ function getToolDefinitions() {
     );
   }
 
-  defs.push(...getClaudeCompatToolDefinitions());
+  defs.push(
+    ...getClaudeCompatToolDefinitions().filter((d) => !_nameFilter || _nameFilter(d && d.name))
+  );
 
   // Deduplicate: normalize snake_case/camelCase to catch duplicates like
   // shell_command vs shellCommand, data_fetch vs dataFetch, etc.

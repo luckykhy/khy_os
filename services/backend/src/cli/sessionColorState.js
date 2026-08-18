@@ -28,11 +28,11 @@ function _seedOnce() {
   }
   _loaded = true; // 无论成败只播种一次
   try {
-    const sessionId = require('../../services/session/sessionForestService').getCurrentSessionId();
+    const sessionId = require('../services/session/sessionForestService').getCurrentSessionId();
     if (!sessionId) {
       return;
     }
-    const meta = require('../../services/sessionPersistence').loadSessionMeta(sessionId);
+    const meta = require('../services/sessionPersistence').loadSessionMeta(sessionId);
     const c = meta && meta.metadata && meta.metadata.color;
     if (c && String(c).toLowerCase() !== 'default') {
       _color = String(c).toLowerCase();

@@ -18,6 +18,7 @@ const os = require('os');
 const path = require('path');
 
 const { safeKill } = require('../tools/platformUtils');
+const { safeReadJsonSync, safeWriteJsonSync } = require('./configGuard');
 
 const VOICE_SETTINGS_KEY = 'voiceEnabled';
 const VOICE_PROVIDER_KEY = 'voiceProvider';
@@ -509,7 +510,7 @@ function getVoiceSettings() {
       settingsFile = path.join(os.homedir(), '.khy', 'settings.json');
     }
     if (fs.existsSync(settingsFile)) {
-      const settings = JSON.parse(fs.readFileSync(settingsFile, 'utf-8'));
+      const { data: settings } = safeReadJsonSync(settingsFile, { schema: {}, silent: true });
       return {
         enabled: settings[VOICE_SETTINGS_KEY] === true,
         provider: settings[VOICE_PROVIDER_KEY] || null,
@@ -536,11 +537,10 @@ function setVoiceEnabled(enabled) {
     }
 
     let settings = {};
-    if (fs.existsSync(settingsFile)) {
-      settings = JSON.parse(fs.readFileSync(settingsFile, 'utf-8'));
-    }
+    const { data: existingSettings } = safeReadJsonSync(settingsFile, { schema: {}, silent: true });
+    settings = existingSettings || {};
     settings[VOICE_SETTINGS_KEY] = enabled;
-    fs.writeFileSync(settingsFile, JSON.stringify(settings, null, 2), 'utf-8');
+    safeWriteJsonSync(settingsFile, settings);
   } catch {
     /* ignore */
   }

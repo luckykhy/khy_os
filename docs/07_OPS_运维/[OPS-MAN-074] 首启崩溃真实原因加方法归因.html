@@ -53,9 +53,9 @@
 <p>等危险动作（<code>_DANGER_TOKENS</code> 自检守此线，命中则整条放弃、回退 <code>null</code>）。</p>
 <ol><li>改完跑：<code>npm run test:startup-failure-explain</code>（node:test，须全绿）。</li></ol>
 <h2 id="验证">验证<a class="anchor" href="#验证" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">npm run test:startup-failure-explain
-# 或直接
-node --test services/backend/tests/bootstrap/startupFailureExplain.test.js</code></pre>
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:startup-failure-explain
+<span class="hljs-comment"># 或直接</span>
+node --<span class="hljs-built_in">test</span> services/backend/tests/bootstrap/startupFailureExplain.test.js</code></pre>
 <h2 id="相关">相关<a class="anchor" href="#相关" aria-label="锚点">#</a></h2>
 <ul><li><code>platform/khy_platform/cli.py:2305</code>（文件缺失情形的姊妹归因，本件补依赖不齐情形）</li><li><code>scripts/lib/hydrationHealth.js</code>（同源归因逻辑，doctor 路径；本件把它带到崩溃路径）</li><li>[OPS-MAN-070] hydration 健康自检、[OPS-MAN-073] 离机渠道启动入口契约</li></ul>
       </article>

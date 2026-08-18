@@ -40,7 +40,13 @@ async function createDefaultAdmin() {
       ON CONFLICT (username) DO NOTHING
       RETURNING id, username, role
     `,
-      [creds.username, adminPasswordHash, 'admin@khy-quant.com', 'admin', 'active']
+      [
+        creds.username,
+        adminPasswordHash,
+        credGen.resolveDefaultAdminEmail(creds.username),
+        'admin',
+        'active',
+      ]
     );
 
     if (adminResult.rows.length > 0) {

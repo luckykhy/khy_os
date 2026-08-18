@@ -38,17 +38,17 @@
 <p>任一时刻 COM2 只接一个客户端（QEMU unix socket server 单连接），所以<br>side a 与 side b 二选一连，不同时连。</p>
 <hr>
 <h2 id="先决条件">先决条件<a class="anchor" href="#先决条件" aria-label="锚点">#</a></h2>
-<pre><code class="language-bash">make -C kernel            # 构建 ISO（产物 kernel/build/khy-os-kernel.iso）</code></pre>
+<pre><code class="language-bash">make -C kernel            <span class="hljs-comment"># 构建 ISO（产物 kernel/build/khy-os-kernel.iso）</span></code></pre>
 <p>启动带 agent 串口的 KHY-OS（COM1 走 stdio 给人，COM2 走 unix socket 给 agent）：</p>
-<pre><code class="language-bash">make -C kernel run-agent  # COM2 默认 = /tmp/khy-agent.sock（AGENT_SOCK 可改）</code></pre>
+<pre><code class="language-bash">make -C kernel run-agent  <span class="hljs-comment"># COM2 默认 = /tmp/khy-agent.sock（AGENT_SOCK 可改）</span></code></pre>
 <hr>
 <h2 id="路线-a-内置-agent-项目-ai-网关-真模型决策">路线 A：内置 agent + 项目 AI 网关（真模型决策）<a class="anchor" href="#路线-a-内置-agent-项目-ai-网关-真模型决策" aria-label="锚点">#</a></h2>
 <p>让 OS 里的 <code>ai &lt;自然语言&gt;</code> 和 <code>agentask &lt;问题&gt;</code> 由真实大模型作答。</p>
 <ol><li>起项目 AI 网关（OpenAI 兼容，默认 <code>127.0.0.1:9100</code>，token 在</li></ol>
 <p><code>~/.khy/proxy_server_auth.json</code> 自动生成）。</p>
 <ol><li>跑内置 agent：</li></ol>
-<pre><code class="language-bash">   node kernel/bridge/khy-agent-run.js              # 连 /tmp/khy-agent.sock
-   # 或显式：node kernel/bridge/khy-agent-run.js --socket /tmp/khy-agent.sock</code></pre>
+<pre><code class="language-bash">   node kernel/bridge/khy-agent-run.js              <span class="hljs-comment"># 连 /tmp/khy-agent.sock</span>
+   <span class="hljs-comment"># 或显式：node kernel/bridge/khy-agent-run.js --socket /tmp/khy-agent.sock</span></code></pre>
 <ol><li>在 OS 的 COM1 shell 里：</li></ol>
 <pre><code>   ai use model claude/claude-sonnet-4-6     # 选模型，落 /disk/etc/agent.conf
    ai 帮我把当前模型告诉我                            # GET，回显配置
@@ -61,15 +61,15 @@
 <h2 id="路线-b-外部-agent-claude-code-经-mcp-驱动-os">路线 B：外部 agent（Claude Code）经 MCP 驱动 OS<a class="anchor" href="#路线-b-外部-agent-claude-code-经-mcp-驱动-os" aria-label="锚点">#</a></h2>
 <p>让 Claude Code 直接 list/read/write KHY-OS 文件、看进程、读配置。</p>
 <p>仓库根已带 <code>.mcp.json</code>（project-scoped），声明了 <code>khy-os</code> MCP server：</p>
-<pre><code class="language-json">{
-  &quot;mcpServers&quot;: {
-    &quot;khy-os&quot;: {
-      &quot;command&quot;: &quot;node&quot;,
-      &quot;args&quot;: [&quot;kernel/bridge/khy-mcp.js&quot;, &quot;--socket&quot;, &quot;/tmp/khy-agent.sock&quot;],
-      &quot;env&quot;: { &quot;KHY_MCP_CONNECT_TIMEOUT_MS&quot;: &quot;60000&quot; }
-    }
-  }
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;mcpServers&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+    <span class="hljs-attr">&quot;khy-os&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span>
+      <span class="hljs-attr">&quot;command&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;node&quot;</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;args&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;kernel/bridge/khy-mcp.js&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;--socket&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;/tmp/khy-agent.sock&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+      <span class="hljs-attr">&quot;env&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;KHY_MCP_CONNECT_TIMEOUT_MS&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;60000&quot;</span> <span class="hljs-punctuation">}</span>
+    <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <p>在仓库根开 Claude Code，它会发现该 server（首次需在 <code>/mcp</code> 里批准 project server）。<br>或手动注册：</p>
 <pre><code class="language-bash">claude mcp add khy-os -- node kernel/bridge/khy-mcp.js --socket /tmp/khy-agent.sock</code></pre>
 <p><code>khy-mcp.js</code> 会<strong>等待 COM2 socket 出现</strong>（上限 <code>KHY_MCP_CONNECT_TIMEOUT_MS</code>，默认 30s，<br>.mcp.json 里设 60s），所以先开 Claude Code 再 <code>make run-agent</code> 也能自动挂上。</p>

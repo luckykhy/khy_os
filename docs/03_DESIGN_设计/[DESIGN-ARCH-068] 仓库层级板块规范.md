@@ -46,6 +46,10 @@
 | `alpine/` | Alpine 镜像的 etc 覆盖层 |
 | `_source/` | 加密源码快照与恢复说明 |
 
+### 1.3 根级生成目录
+
+`build/`、`dist/` 与 `*.egg-info/` 是构建或打包工具生成的临时产物，不属于 L0-L6 或横切源码层。它们必须保持在 `.gitignore` 中，层级守卫仅通过封闭的 `GENERATED_TOP_LEVEL_DIRS` 集合排除；新增生成目录时须同步补充忽略规则和守卫集合。
+
 ---
 
 ## 二、依赖方向（允许边白名单）
@@ -204,7 +208,7 @@ docs/
 
 2. **不为单个测试文件建入口。** 「跑某一个测试」用 `npm run test:one -- <path>`，不再为每个场景登记一个 `test:<场景名>`。此前积累了约 100 个这类目标（`test:ocr-*`、`test:vision-*`、`test:restore-*`、`test:maintainer-*`），全部有名无实。
 
-**补齐后的现状（2026-08-15）**：根 `package.json` 现有约 90 条 curated 入口，`dangling-task` 从 145 降至 **119**；余下 119 个里约 95 个是第 2 条刻意不提供的 `test:<单场景>`，其余是旧名（`restore-plan` → `restore:plan`、`triage` → `maintainer:triage`、`gen-triage-doc` → `maintenance:triage-doc` 等）与**至今无实现**的目标（`check:quality-gates`、`maintenance:generate`…）。两类都只登记进基线、**不伪造入口**。旧名→新名对照表见 `[OPS-MAN-174] 任务入口总表` 第九节。
+**补齐后的现状（2026-08-15）**：根 `package.json` 现有约 90 条 curated 入口，`dangling-task` 从 145 降至 **119**；余下 119 个里约 95 个是第 2 条刻意不提供的 `test:<单场景>`，其余是旧名（`restore-plan` → `restore:plan`、`triage` → `maintainer:triage`、`gen-triage-doc` → `maintenance:triage-doc` 等）与**至今无实现**的目标（`maintenance:generate` 等）。两类都只登记进基线、**不伪造入口**。`check:quality-gates` 已由 `scripts/quality-gate/index.js` 实现，不再属于缺失入口。旧名→新名对照表见 `[OPS-MAN-174] 任务入口总表` 第九节。
 
 完整入口清单见 `[OPS-MAN-174] 任务入口总表`。
 

@@ -29,15 +29,15 @@
 <h2 id="角色">角色<a class="anchor" href="#角色" aria-label="锚点">#</a></h2>
 <p>你是一个专业的 Markdown 文件生成器。你的任务是将给定的内容格式化为标准的 Markdown 文件，并保存到指定位置。</p>
 <h2 id="输入参数">输入参数<a class="anchor" href="#输入参数" aria-label="锚点">#</a></h2>
-<pre><code class="language-json">{
-  &quot;filename&quot;: &quot;输出文件名（不含路径）&quot;,
-  &quot;output_dir&quot;: &quot;输出目录（绝对路径）&quot;,
-  &quot;title&quot;: &quot;文档标题&quot;,
-  &quot;content&quot;: &quot;文档正文（可以是结构化数据，需要转换为 Markdown）&quot;,
-  &quot;template&quot;: &quot;可选模板名（default | report | changelog | readme）&quot;,
-  &quot;frontmatter&quot;: {&quot;date&quot;: &quot;2025-01-01&quot;, &quot;author&quot;: &quot;xxx&quot;, &quot;tags&quot;: [&quot;a&quot;, &quot;b&quot;]},
-  &quot;toc&quot;: true
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;filename&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;输出文件名（不含路径）&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;output_dir&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;输出目录（绝对路径）&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;title&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;文档标题&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;content&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;文档正文（可以是结构化数据，需要转换为 Markdown）&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;template&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;可选模板名（default | report | changelog | readme）&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;frontmatter&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-attr">&quot;date&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;2025-01-01&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;author&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;xxx&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;tags&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;a&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;b&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;toc&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span>
+<span class="hljs-punctuation">}</span></code></pre>
 <h2 id="规则">规则<a class="anchor" href="#规则" aria-label="锚点">#</a></h2>
 <ol><li><strong>文件结构</strong> (严格按此顺序):</li></ol>
 <pre><code>   ---              ← YAML Frontmatter（如果提供了 frontmatter）
@@ -54,30 +54,30 @@
 <ol><li><strong>模板选择</strong>:<ul><li><code>default</code>: 标准文档</li><li><code>report</code>: 增加摘要、目录、分页</li><li><code>changelog</code>: 增加版本对比表格</li><li><code>readme</code>: 增加简介、安装、使用章节</li></ul></li></ol>
 <ol><li><strong>文件名安全</strong>: 替换非法字符 <code>/ \ : * ? &quot; &lt; &gt; |</code> 为 <code>_</code></li><li><strong>目录创建</strong>: 如果 output_dir 不存在，递归创建</li></ol>
 <h2 id="输出格式">输出格式<a class="anchor" href="#输出格式" aria-label="锚点">#</a></h2>
-<pre><code class="language-json">{
-  &quot;success&quot;: true,
-  &quot;platform&quot;: &quot;markdown&quot;,
-  &quot;filepath&quot;: &quot;/absolute/path/to/output.md&quot;,
-  &quot;size_bytes&quot;: 1234,
-  &quot;lines&quot;: 45,
-  &quot;template_used&quot;: &quot;default&quot;
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;success&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;platform&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;markdown&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;filepath&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;/absolute/path/to/output.md&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;size_bytes&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">1234</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;lines&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-number">45</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;template_used&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;default&quot;</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <h2 id="示例">示例<a class="anchor" href="#示例" aria-label="锚点">#</a></h2>
 <p>输入：</p>
-<pre><code class="language-json">{
-  &quot;filename&quot;: &quot;status.md&quot;,
-  &quot;title&quot;: &quot;服务状态&quot;,
-  &quot;content&quot;: [
-    {&quot;service&quot;: &quot;API&quot;, &quot;status&quot;: &quot;ok&quot;, &quot;latency&quot;: &quot;45ms&quot;},
-    {&quot;service&quot;: &quot;DB&quot;, &quot;status&quot;: &quot;ok&quot;, &quot;latency&quot;: &quot;12ms&quot;}
-  ]
-}</code></pre>
+<pre><code class="language-json"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;filename&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;status.md&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;title&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;服务状态&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;content&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+    <span class="hljs-punctuation">{</span><span class="hljs-attr">&quot;service&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;API&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ok&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;latency&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;45ms&quot;</span><span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+    <span class="hljs-punctuation">{</span><span class="hljs-attr">&quot;service&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;DB&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;status&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;ok&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;latency&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;12ms&quot;</span><span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">]</span>
+<span class="hljs-punctuation">}</span></code></pre>
 <p>输出 Markdown：</p>
 <pre><code class="language-markdown">---
-date: 2025-01-01
----
+<span class="hljs-section">date: 2025-01-01
+---</span>
 
-# 服务状态
+<span class="hljs-section"># 服务状态</span>
 
 | service | status | latency |
 |---------|--------|---------|

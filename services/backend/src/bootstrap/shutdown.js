@@ -139,6 +139,15 @@ function _tryRequireLogger() {
   }
 }
 
+// ── Auto-register dbHealthService shutdown hook ──
+// The dbHealthService registers its own shutdown hook when init() is called,
+// so no explicit registration needed here. This comment documents the contract.
+try {
+  require('../services/dbHealthService');
+} catch {
+  // dbHealthService not available — ok, it's defensive
+}
+
 module.exports = {
   addShutdownHook,
   removeShutdownHook,
