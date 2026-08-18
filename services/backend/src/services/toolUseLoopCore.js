@@ -2015,6 +2015,48 @@ function _resolveAutoWebSearchMode(userMessage, requestedMode = 'auto') {
   return 'general';
 }
 
+/**
+ * First-turn pure greeting? Single source of truth is textHeuristics.isGreeting
+ * (same predicate aiChatCore uses), plus "nothing else is going on in this turn".
+ *
+ * Deliberately NOT content matching beyond the shared greeting predicate: a
+ * greeting that carries a task ('你好,帮我读 README' — >24 chars, contains a path)
+ * fails isGreeting and keeps every tool. Later turns, subagents, plan/study mode
+ * and image turns are excluded because they either have real work to do or are
+ * not the first turn at all.
+ *
+ * Gate: KHY_GREETING_NO_TOOLS (default on); off → byte-identical legacy path.
+ * @param {string} userMessage
+ * @param {object} options runToolUseLoop options
+ * @returns {boolean}
+ */
+function _isPureFirstTurnGreeting(userMessage, options = {}) {
+  try {
+    const off = ['0', 'false', 'off', 'no'].includes(
+      String(process.env.KHY_GREETING_NO_TOOLS || '')
+        .trim()
+        .toLowerCase()
+    );
+    if (off) {
+      return false;
+    }
+    const chatOpts = options.chatOpts || {};
+    if (options.planMode || chatOpts._isFollowUp || chatOpts._agentContext || chatOpts._isSubagent) {
+      return false;
+    }
+    if (Array.isArray(options.initialMessages) && options.initialMessages.length > 0) {
+      return false;
+    }
+    if (Array.isArray(chatOpts.images) && chatOpts.images.length > 0) {
+      return false;
+    }
+    const { isGreeting } = require('./textHeuristics');
+    return isGreeting(String(userMessage || '').trim());
+  } catch {
+    return false; // fail-soft: 判定失败 → 今日行为(正常进循环)
+  }
+}
+
 // ── Main Loop ──────────────────────────────────────────────────────
 
 /**
@@ -2087,6 +2129,31 @@ async function runToolUseLoop(userMessage, options = {}) {
 
   if (!chat || typeof chat !== 'function') {
     throw new Error('toolUseLoop: chat function is required');
+  }
+
+  // 首轮纯问候:一次 chat、零工具派发、零迭代循环。
+  // 这条 guard 必须在 intentGate / 桌面工具预揭示 / 注册表加载 / 能力评估 / 解析之前,
+  // 因为那些步骤本身就是「一句你好却做一堆无用的事」——探测子进程、揭示 ComputerUse、
+  // 评估执行能力。Ink TUI、经典 REPL、headless native loop 共用本函数,所以 aiChatCore
+  // 的自然语言 loop guard 拦不住这条路径上的结构化 tool_use(截图里的 Bash 就是这么来的)。
+  // 判定与 aiChatCore._pureFirstTurnGreeting 同源(textHeuristics.isGreeting + 空历史),
+  // 不做内容匹配;带任务的问候、后续轮、子代理/计划模式一律不命中。
+  if (_isPureFirstTurnGreeting(userMessage, options)) {
+    const greetingResult = await chat(String(userMessage || ''), {
+      ...chatOpts,
+      _pureFirstTurnGreeting: true,
+      _forceNoTools: true,
+      _intentToolChoice: undefined,
+      _isFollowUp: false,
+    });
+    return {
+      finalResponse: String((greetingResult && greetingResult.reply) || ''),
+      toolCallLog: [],
+      iterations: 1,
+      provider: greetingResult && greetingResult.provider,
+      tokenUsage: greetingResult && greetingResult.tokenUsage,
+      pureGreeting: true,
+    };
   }
 
   // Shadow FSM instance for this run (observation only; may be null, fail-soft).

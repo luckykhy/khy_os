@@ -52,12 +52,38 @@ describe('lightweight conversation tool curation', () => {
     jest.restoreAllMocks();
   });
 
-  test('greeting ships a small curated tool set, not the full catalog', async () => {
+  test('first-turn pure greeting ships no tools at all', async () => {
     delete process.env.KHY_GREETING_FASTPATH; // 走真实模型路径,才有 tools 可断言
     const { ai, calls } = setupAiModule();
     ai.clearHistory();
 
     await ai.chat('你好', {});
+
+    expect(calls.length).toBeGreaterThan(0);
+    // 裁剪到「核心集」还不够:核心集里留着 Bash/Read/搜索,模型拿到就会把一句「你好」
+    // 当成「先了解一下仓库」的开场并真的去跑命令。招呼要的只是一句自然回复。
+    expect(toolNamesOf(calls[0])).toEqual([]);
+  });
+
+  // 首次全量注入要跑一遍注册表的 isEnabled() 探测(where/git rev-parse… 实测 ~1.4s),
+  // 默认 5s 在冷启动的机器上会假失败,给这条足够的余量。
+  test('a greeting that carries a task keeps its tools', async () => {
+    delete process.env.KHY_GREETING_FASTPATH;
+    const { ai, calls } = setupAiModule();
+    ai.clearHistory();
+
+    await ai.chat('你好，帮我读一下 services/backend/package.json', {});
+
+    expect(calls.length).toBeGreaterThan(0);
+    expect(toolNamesOf(calls[0]).length).toBeGreaterThan(0);
+  }, 30000);
+
+  test('non-greeting lightweight chat still gets the curated core set', async () => {
+    delete process.env.KHY_GREETING_FASTPATH;
+    const { ai, calls } = setupAiModule();
+    ai.clearHistory();
+
+    await ai.chat('讲个笑话吧', {});
 
     expect(calls.length).toBeGreaterThan(0);
     const names = toolNamesOf(calls[0]);
@@ -66,13 +92,22 @@ describe('lightweight conversation tool curation', () => {
 
     // 逃生舱:模型仍能按需检索到其余工具
     expect(names).toContain('toolSearch');
-    // 日常按需核心仍在
-    expect(names).toContain('Read');
-    expect(names).toContain('WebSearch');
-    // 与招呼无关的重工具应被裁掉
+    // 与闲聊无关的重工具应被裁掉
     expect(names).not.toContain('backtest');
     expect(names).not.toContain('deploy');
     expect(names).not.toContain('security_scan');
+  });
+
+  test('KHY_GREETING_NO_TOOLS=false restores tools for greetings', async () => {
+    delete process.env.KHY_GREETING_FASTPATH;
+    process.env.KHY_GREETING_NO_TOOLS = 'false';
+    const { ai, calls } = setupAiModule();
+    ai.clearHistory();
+
+    await ai.chat('你好', {});
+
+    expect(calls.length).toBeGreaterThan(0);
+    expect(toolNamesOf(calls[0]).length).toBeGreaterThan(0);
   });
 
   test('a real task request still gets the full tool catalog', async () => {
@@ -87,13 +122,15 @@ describe('lightweight conversation tool curation', () => {
     expect(names.length).toBeGreaterThan(40);
   });
 
-  test('kill switch restores full injection for greetings', async () => {
+  test('kill switch restores full injection for lightweight chat', async () => {
     delete process.env.KHY_GREETING_FASTPATH;
     process.env.KHY_LIGHT_TOOL_CURATION = 'false';
     const { ai, calls } = setupAiModule();
     ai.clearHistory();
 
-    await ai.chat('你好', {});
+    // 用非问候的轻量输入:招呼的零工具由 KHY_GREETING_NO_TOOLS 管(能力边界),
+    // 与这里的 token 裁剪开关是两回事,关掉裁剪并不会把工具还给招呼。
+    await ai.chat('讲个笑话吧', {});
 
     expect(calls.length).toBeGreaterThan(0);
     expect(toolNamesOf(calls[0]).length).toBeGreaterThan(40);

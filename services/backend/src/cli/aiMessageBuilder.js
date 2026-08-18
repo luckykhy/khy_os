@@ -313,37 +313,49 @@ async function _gatewayGenerate(
   } catch {
     _lightCurate = false; /* fail-soft: 判定失败 → 全量注入(今日行为) */
   }
+  // 首轮纯问候:**一个工具都不注入**(判定在 aiChatCore 的 _pureFirstTurnGreeting 一处做完)。
+  // 与上面的轻量裁剪不是一回事:那是省 token 的优化,核心集里仍留着 Bash/Read/Glob/Grep/
+  // WebSearch/toolSearch,而模型拿到这些就会把一句「你好」当成「先了解一下仓库」的开场,
+  // 真的去跑命令(用户截图里的两个 Bash)。招呼要的只是一句自然回复。这里连注册表都不加载,
+  // isEnabled() 探测不发生,toolSearch 也不在场——模型无从重新拿回工具。
+  const _greetingNoTools = Boolean(
+    opts._pureFirstTurnGreeting && !opts._isFollowUp && !opts._agentContext
+  );
   try {
-    const { getToolDefinitions } = require('../services/toolCalling');
-    toolDefs = getToolDefinitions(
-      _lightCurate ? { nameFilter: _isLightweightConversationTool } : {}
-    );
-    if (process.env.KHY_DEBUG_TOOLS === '1') {
-      console.error(
-        `[DEBUG-PROFILE] BEFORE filter: ${toolDefs.length} defs, CU=${toolDefs.some((t) => (t.name || t.function?.name) === 'ComputerUse')}, DC=${toolDefs.some((t) => (t.name || t.function?.name) === 'DesktopControl')}, toolFilter=${opts._agentContext?.toolFilter || '(none)'}`
+    if (_greetingNoTools) {
+      toolDefs = undefined;
+    } else {
+      const { getToolDefinitions } = require('../services/toolCalling');
+      toolDefs = getToolDefinitions(
+        _lightCurate ? { nameFilter: _isLightweightConversationTool } : {}
       );
-    }
-    // Apply tool profile filter from agent context (e.g. 'explore' → read-only tools)
-    if (opts._agentContext?.toolFilter) {
-      const { filterToolsByProfile } = require('../tools/toolProfile');
-      const toolsMap = new Map(toolDefs.map((t) => [t.name || t.function?.name, t]));
-      const filtered = filterToolsByProfile(toolsMap, opts._agentContext.toolFilter);
-      const before = toolDefs.length;
-      toolDefs = [...filtered.values()];
-      const after = toolDefs.length;
       if (process.env.KHY_DEBUG_TOOLS === '1') {
         console.error(
-          `[DEBUG-PROFILE] _gw profileFilter=${opts._agentContext.toolFilter} ${before}->${after}`
+          `[DEBUG-PROFILE] BEFORE filter: ${toolDefs.length} defs, CU=${toolDefs.some((t) => (t.name || t.function?.name) === 'ComputerUse')}, DC=${toolDefs.some((t) => (t.name || t.function?.name) === 'DesktopControl')}, toolFilter=${opts._agentContext?.toolFilter || '(none)'}`
         );
-        const cu = toolDefs.find((t) => (t.name || t.function?.name) === 'ComputerUse');
-        const dc = toolDefs.find((t) => (t.name || t.function?.name) === 'DesktopControl');
-        console.error(`[DEBUG-PROFILE] After filter: CU=${!!cu} DC=${!!dc}`);
       }
-    }
-    // Apply disallowedTools denylist as secondary safety layer
-    if (opts._agentContext?.disallowedTools?.length > 0) {
-      const deny = new Set(opts._agentContext.disallowedTools);
-      toolDefs = toolDefs.filter((t) => !deny.has(t.name) && !deny.has(t.function?.name));
+      // Apply tool profile filter from agent context (e.g. 'explore' → read-only tools)
+      if (opts._agentContext?.toolFilter) {
+        const { filterToolsByProfile } = require('../tools/toolProfile');
+        const toolsMap = new Map(toolDefs.map((t) => [t.name || t.function?.name, t]));
+        const filtered = filterToolsByProfile(toolsMap, opts._agentContext.toolFilter);
+        const before = toolDefs.length;
+        toolDefs = [...filtered.values()];
+        const after = toolDefs.length;
+        if (process.env.KHY_DEBUG_TOOLS === '1') {
+          console.error(
+            `[DEBUG-PROFILE] _gw profileFilter=${opts._agentContext.toolFilter} ${before}->${after}`
+          );
+          const cu = toolDefs.find((t) => (t.name || t.function?.name) === 'ComputerUse');
+          const dc = toolDefs.find((t) => (t.name || t.function?.name) === 'DesktopControl');
+          console.error(`[DEBUG-PROFILE] After filter: CU=${!!cu} DC=${!!dc}`);
+        }
+      }
+      // Apply disallowedTools denylist as secondary safety layer
+      if (opts._agentContext?.disallowedTools?.length > 0) {
+        const deny = new Set(opts._agentContext.disallowedTools);
+        toolDefs = toolDefs.filter((t) => !deny.has(t.name) && !deny.has(t.function?.name));
+      }
     }
   } catch {
     toolDefs = undefined;
