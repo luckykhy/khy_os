@@ -88,8 +88,21 @@ coverage/
 .cache/
 
 # Large binary archives (encrypted snapshot & prebuild)
-_source/khy-os-source.tar.gz.enc
+# 注意：含 `/` 的模式锚定在仓库根，`_source/...` 只挡得住根级 _source/，
+# 挡不住 services/backend/_source/ —— 用 `**/` 前缀覆盖任意层级。
+**/_source/*.tar.gz.enc
 _bs3_prebuild.tar.gz
+
+# 可再生构建产物：committed 副本一律由源码重建，不进 git。
+#   bundled/runtime/khy/bundle.mjs —— esbuild 产物，发布前由 assemble 脚本重建：
+#     pip: scripts/release/assemble-pip-runtime.js（先 rmSync 整树再重建）
+#     npm: packaging/npm/scripts/assemble.js（prepack 每次发包前跑）
+#   git checkout 下 platform/khy_platform/cli.py 优先走源码树，从不读这两个文件。
+platform/khy_platform/bundled/
+packaging/npm/bundled/
+#   apps/ai-frontend/public/vendor/ —— tools/khyos-markdown/vendor/ 的字节级镜像，
+#   由 apps/ai-frontend 的 predev/prebuild 钩子调 sync-md-vendor.mjs 自动同步。
+apps/ai-frontend/public/vendor/
 
 
 # Debug/test artifacts

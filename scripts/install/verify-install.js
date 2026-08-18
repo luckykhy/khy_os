@@ -62,6 +62,21 @@ function resolveBundleRoot() {
   return null;
 }
 
+/**
+ * 这是源码 checkout，还是一份已装副本？
+ * 锚点用 services/backend/bin/khy.js —— 源码树里它一定在，而 pip wheel / npm 包
+ * 里只有 bundled/runtime/khy/bundle.mjs，没有 services/ 源码树
+ * （platform/khy_platform/cli.py 的 is_standalone_bundle 判定同源）。
+ * 探不到一律当作「已装副本」，即保守地继续做完整性校验。绝不抛。
+ */
+function isSourceCheckout() {
+  try {
+    return fs.existsSync(path.join(ROOT, 'services', 'backend', 'bin', 'khy.js'));
+  } catch {
+    return false;
+  }
+}
+
 /** 对每条关键路径 stat 是否存在。bundleRoot 为 null 时全部记 false。绝不抛。 */
 function probeInstalledBundle(bundleRoot) {
   const probes = {};
@@ -84,6 +99,30 @@ function probeInstalledBundle(bundleRoot) {
 /** 定位 + 探测 + 判断 + 彩色打印。返回退出码（0=完整，1=不完整）。不抛。 */
 function runVerifyInstall(opts = {}) {
   const bundleRoot = resolveBundleRoot();
+  // 源码 checkout 且 bundle 尚未构建：这不是「装坏了」，而是「还没 assemble」。
+  // bundled/ 已是 gitignore 的构建产物（发布链路 npm prepack / assemble-pip-runtime.js
+  // 每次都重建），源码树下 cli.py 也从不读它，所以这里判定为「不适用」而非「不完整」。
+  // 已装副本（无 services/ 源码树）行为完全不变：缺一即 exit 1。
+  if (bundleRoot === null && isSourceCheckout()) {
+    if (opts.json) {
+      process.stdout.write(
+        JSON.stringify(
+          { bundleRoot: null, sourceCheckout: true, probes: {}, verdict: { intact: true, skipped: true, summary: '源码树：bundled/ 为构建产物，跳过已装副本自检' } },
+          null,
+          2
+        ) + '\n'
+      );
+      return 0;
+    }
+    process.stdout.write(
+      `${C.bold}Khy-OS 已装副本完整性自检${C.reset}\n` +
+        `${C.dim}渠道：pip ${PIP_PKG_NAME} / npm ${NPM_PKG_NAME}（仅有的两条离机渠道）${C.reset}\n\n` +
+        `${C.cyan}○ 源码 checkout：bundled/ 是构建产物，本机尚未构建 —— 跳过${C.reset}\n\n` +
+        `${C.dim}  本自检针对「装进来的副本」；源码树请直接跑源码（services/backend/bin/khy.js）。${C.reset}\n` +
+        `${C.dim}  需要产出 bundle 时：node packaging/build/esbuild-modules.js --module khy --prod${C.reset}\n`
+    );
+    return 0;
+  }
   const probes = probeInstalledBundle(bundleRoot);
   const verdict = assessInstallIntegrity(probes, { bundleResolved: bundleRoot !== null });
   if (opts.json) {
