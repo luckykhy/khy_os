@@ -125,6 +125,15 @@ describe('aiGateway api pool strategy', () => {
     gw._clearAdapterFailure = () => {};
     gw._recordAdapterFailure = () => {};
     gw._shouldSerializeAdapter = () => false;
+    // 首次用到一个「未实测」通道时，网关会 fire-and-forget 起一个工具调用能力探测
+    // （aiGatewayGenerateMethod.js:2575 → _maybeBackgroundProbeToolCalling →
+    // verifyToolCalling → 嵌套 this.generate）。它不被 await：本机（win32/Node 24）
+    // 上那次嵌套调用总在用例断言之后才落地，ubuntu/Node 22 上则常常抢在前面 ——
+    // 于是 mockAdapter.generate 被调 2 次、pickById 被调 2 次（各自一套全新的
+    // attemptedPoolKeyIds，所以两次都挑中 k2），而 markSuccess 仍只有 1 次。表现
+    // 就是「本机绿、门禁红且时红时绿」。本用例断言的是池内选键，与能力探测无关，
+    // 按本 helper 既有做法把它一并打桩，让调用次数变成确定的。
+    gw._maybeBackgroundProbeToolCalling = () => {};
     gw.refreshAdapters = async () => {};
     return { gw, mockAdapter };
   }
