@@ -1,20 +1,40 @@
 'use strict';
 
+/**
+ * detect() 的 Windows 分支：只做「可执行文件在不在」的探测，绝不读剪贴板内容。
+ *
+ * 模拟 Windows 必须同时改两处，只改一处会在 Linux/macOS 上红：
+ *   - `os.platform()` —— adapter 自己的平台分支读它（选择走 POWERSHELL_BINS 循环）；
+ *   - `process.platform` —— platformUtils.searchExecutable 读它来决定查找命令是
+ *     `where` 还是 `which`（platformUtils.js:31）。它不经过 os 模块，所以 doMock('os')
+ *     管不到；漏掉它的话，被 mock 的 execFileSync 在非 Windows 上会收到 `which`，
+ *     断言 `where` 就落空 —— 而这跟 adapter 的行为毫无关系，纯属模拟不完整。
+ */
+
+const REAL_PLATFORM_DESC = Object.getOwnPropertyDescriptor(process, 'platform');
+
+/** 把整个进程视角伪装成 Windows（os 模块 + process.platform）。 */
+function mockWindows() {
+  Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+  jest.doMock('os', () => ({
+    ...jest.requireActual('os'),
+    platform: () => 'win32',
+  }));
+}
+
 describe('clipboardRelayAdapter detect on Windows', () => {
   afterEach(() => {
+    Object.defineProperty(process, 'platform', REAL_PLATFORM_DESC);
     jest.resetModules();
     jest.clearAllMocks();
   });
 
   test('detect succeeds when pwsh is available without reading clipboard', () => {
-    const execFileSync = jest.fn(() => 'C:\\Program Files\\PowerShell\\pwsh.exe');
+    const execFileSync = jest.fn(() => 'C:\Program Files\PowerShell\pwsh.exe');
     const execSync = jest.fn();
     const exec = jest.fn();
 
-    jest.doMock('os', () => ({
-      ...jest.requireActual('os'),
-      platform: () => 'win32',
-    }));
+    mockWindows();
     jest.doMock('child_process', () => ({
       execFileSync,
       execSync,
@@ -40,14 +60,11 @@ describe('clipboardRelayAdapter detect on Windows', () => {
     const execFileSync = jest
       .fn()
       .mockImplementationOnce(() => { throw new Error('pwsh not found'); })
-      .mockImplementationOnce(() => 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe');
+      .mockImplementationOnce(() => 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe');
     const execSync = jest.fn();
     const exec = jest.fn();
 
-    jest.doMock('os', () => ({
-      ...jest.requireActual('os'),
-      platform: () => 'win32',
-    }));
+    mockWindows();
     jest.doMock('child_process', () => ({
       execFileSync,
       execSync,
@@ -77,10 +94,7 @@ describe('clipboardRelayAdapter detect on Windows', () => {
     const execSync = jest.fn();
     const exec = jest.fn();
 
-    jest.doMock('os', () => ({
-      ...jest.requireActual('os'),
-      platform: () => 'win32',
-    }));
+    mockWindows();
     jest.doMock('child_process', () => ({
       execFileSync,
       execSync,

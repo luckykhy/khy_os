@@ -17,6 +17,18 @@ function stripAnsi(text = '') {
   return String(text).replace(/\x1b\[[0-9;]*m/g, '');
 }
 
+// 代码块的底色块用 chalk.bgAnsi256(237) 绘制（markdownRenderer.js 里的 `shade`）。
+// 实际吐出的 SGR 由 chalk.level 决定，而 level 由环境嗅探决定，不是本仓库能控制的：
+//   level 3 -> \x1b[48;2;58;58;58m    level 2 -> \x1b[48;5;237m    level 1 -> \x1b[40m
+// 本机 Windows 走 supports-color 的 win32 分支恒为 3；GitHub Actions 上
+// supports-color@7.2.0 的 CI 分支（index.js:84）一见到 GITHUB_ACTIONS 就 return 1，
+// 连本文件顶上的 FORCE_COLOR=3 都不认。所以断言「有背景色」而不是「有 256 色背景」，
+// 否则测到的是 chalk 的环境嗅探结果，而不是渲染器的行为。
+const BG_INTRODUCER = /\x1b\[(?:48;|4[0-7]m|10[0-7]m)/;
+function hasShadedBackground(text = '') {
+  return BG_INTRODUCER.test(String(text));
+}
+
 function captureConsoleLogs(run) {
   const original = console.log;
   const lines = [];
@@ -380,9 +392,9 @@ describe('aiRenderer mermaid mindmap rendering', () => {
     const rendered = renderAiResponse(input);
     const plain = stripAnsi(rendered);
     // Code blocks now render as a shaded panel (ANSI background color) with NO
-    // box-drawing borders. The `[48;` background introducer proves it fell back
-    // to a code block (256-color or truecolor depending on level).
-    expect(rendered).toContain('[48;');
+    // box-drawing borders. A background-color introducer (any depth) proves it
+    // fell back to a code block.
+    expect(hasShadedBackground(rendered)).toBe(true);
     expect(plain).not.toContain('╭');
     expect(plain).not.toContain('│');
     expect(plain).toContain('erDiagram');
@@ -392,7 +404,7 @@ describe('aiRenderer mermaid mindmap rendering', () => {
     const input = '```mermaid\nmindmap\n```';
     const rendered = renderAiResponse(input);
     const plain = stripAnsi(rendered);
-    expect(rendered).toContain('[48;');
+    expect(hasShadedBackground(rendered)).toBe(true);
     expect(plain).not.toContain('╭');
     expect(plain).toContain('mindmap');
   });
