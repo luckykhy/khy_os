@@ -333,11 +333,16 @@ describe('Reliability: Fail-Soft Patterns', () => {
     const { safeExec } = require('../../src/services/resourceGuard');
     // safeExec uses execSync with a timeout — on timeout the command is killed.
     // Exit code varies by platform (137 on Unix via SIGKILL, 1 on Windows).
-    const result = safeExec({
-      cmd: process.execPath,
-      args: ['-e', 'setTimeout(() => {}, 10000)'],
-      timeoutMs: 500,
-    });
+    // safeExec(command: string, opts) —— 第一个参数是 shell 命令串，不是
+    // { cmd, args } 对象，超时键叫 timeout 不叫 timeoutMs（resourceGuard.js:234-243）。
+    // 传对象时本机不报错纯属侥幸：win32 上跳过 ulimit 包装，对象一路走到 try 里的
+    // execSync 才炸，被 catch 成非零 exitCode，断言照样过；Linux 上会先走
+    // `command.replace(...)`（resourceGuard.js:256/273，在 try 之外）→ 直接
+    // TypeError: command.replace is not a function。
+    // 命令串里不放反引号和 ${}：Linux 上它会被塞进 bash -c '...'，两者都会被展开。
+    const sleepCmd =
+      '"' + process.execPath + '" -e "setTimeout(() => {}, 10000)"';
+    const result = safeExec(sleepCmd, { timeout: 500 });
     assert.ok(result.exitCode !== 0, 'safeExec should return non-zero exitCode on timeout');
     assert.ok(result.stderr.includes('killed') || result.stderr.includes('timeout') || result.exitCode !== 0,
       `safeExec should indicate timeout/kill, got exitCode=${result.exitCode}, stderr=${result.stderr}`);

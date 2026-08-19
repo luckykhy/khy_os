@@ -81,14 +81,19 @@ describe('atMentionInject + references', () => {
     // resolveMentionAbs returns null (no alias) → falls to absolute-path branch
     svc.resolveMentionAbs.mockReturnValue(null);
     svc.isWithinBoundary.mockReturnValue(false); // outside boundary
-    // /-rooted path: the `@[\w./-]+` token regex cannot capture a Windows
-    // drive-letter path (`:` / `\` not in the class — a pre-existing platform
-    // quirk), so /-rooted mentions are what exercise the absolute branch.
+    // mention 的 token 正则是 `@[\w./-]+`，抓不到盘符路径（`:` 与 `\` 都不在字符类里）。
+    // 直接用 path.join(tmp, …) 拼出的 `C:\…` 在 Windows 上会被截成 `@/C` —— 一个不
+    // 存在的路径，于是「当然不会注入」，用例变成空转。这正是它长期本机绿、Linux 门禁
+    // 红的原因：真正的绕过（边界拒绝后落进 legacy 兜底、把绝对路径原样读出来）在
+    // Windows 上被这个截断掩盖了。所以剥掉盘符前缀，用「当前盘的绝对 POSIX 路径」，
+    // 两个平台都真正走绝对路径分支。（tmpdir 与 cwd 不同盘时解析不到文件 → 断言仍成立，
+    // 只是退回空转，不会误红。）
     const outside = path.join(tmp, 'unrelated', 'secret.txt');
     fs.mkdirSync(path.dirname(outside), { recursive: true });
     fs.writeFileSync(outside, 'SECRET CONTENT', 'utf-8');
-    const posixPath = outside.split(path.sep).join('/');
-    const out = resolveAtMentions(`show @/${posixPath.replace(/^\//, '')}`, { cwd });
+    const driveRelative = outside.slice(path.parse(outside).root.length);
+    const mentionPath = '/' + driveRelative.split(path.sep).join('/');
+    const out = resolveAtMentions(`show @${mentionPath}`, { cwd });
     // Path refused → treated as unresolvable mention → no injection.
     expect(out.changed).toBe(false);
     expect(out.text).not.toContain('SECRET CONTENT');
