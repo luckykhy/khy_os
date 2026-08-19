@@ -24,7 +24,12 @@
  * winston-daily-rotate-file audit file.
  *
  * Escape hatch: `KHY_TEST_USE_REAL_LOG_DIR=1 npx jest` leaves resolution alone.
- * An explicit `KHY_LOG_DIR` from the caller also wins.
+ *
+ * Precedence note: `KHY_LOG_DIR` ranks BELOW `KHY_LOG_HOME`/`KHY_DATA_HOME` in
+ * the shared resolver, because it is this test hook rather than a deployment
+ * knob. jest.taskStoreIsolation.setup.js already pins `KHY_DATA_HOME` to a temp
+ * dir, so under a normal run the logs land in `<temp data home>/logs` and this
+ * file is the backstop for runs with `KHY_TEST_USE_REAL_DATA_HOME=1`.
  */
 
 const fs = require('fs');
