@@ -2,7 +2,7 @@ name: Docker CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
     tags: ['v*']
   workflow_dispatch:
     inputs:
@@ -14,6 +14,13 @@ permissions:
   contents: read
   packages: write      # push to GHCR
   attestations: write  # provenance attestation (GHCR)
+  id-token: write      # required by attest-build-provenance for OIDC signing
+
+# 本流水线包含 arm64 的 QEMU 交叉构建，是仓库里最贵的常规流水线之一。
+# 分支 push 可以取消旧运行；tag 构建绝不取消 —— 那是不可重放的发布产物。
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 env:
   REGISTRY: ghcr.io
