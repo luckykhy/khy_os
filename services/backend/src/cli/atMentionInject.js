@@ -134,6 +134,11 @@ function resolveAtMentions(text, opts = {}) {
       // the content-injection half of References; the @-picker completion half
       // lives in replSession.js / useCompletions.js. Never throws.
       let resolvedPath = null;
+      // 「边界明确拒绝」必须和「没作出决定」区分开：两者都只让 resolvedPath 停在
+      // null，而下面的 legacy 兜底会把绝对路径原样赋回去，于是边界判定彻底白做 ——
+      // 正是本文件下方注释里说的 "previously this bypassed the permission layer
+      // entirely" 那个 bug 又原地复活。
+      let boundaryRefused = false;
       try {
         const { resolveMentionAbs, isWithinBoundary } = require('../services/referencesService');
         const refAbs = resolveMentionAbs(mention.relPath, cwd, opts);
@@ -148,12 +153,19 @@ function resolveAtMentions(text, opts = {}) {
           // (previously this bypassed the permission layer entirely).
           if (isWithinBoundary(mention.relPath, cwd, opts)) {
             resolvedPath = mention.relPath;
+          } else {
+            boundaryRefused = true;
           }
         }
       } catch {
         /* referencesService unavailable → fall through to legacy */
       }
 
+      // 被边界拒绝 → 按「无法解析的 mention」处理：不注入、原文保留 @ 前缀，
+      // 且绝不走下面的兜底。
+      if (boundaryRefused) {
+        continue;
+      }
       if (!resolvedPath) {
         resolvedPath = path.isAbsolute(mention.relPath)
           ? mention.relPath
