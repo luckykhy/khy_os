@@ -31,6 +31,7 @@ const path = require('path');
 const zlib = require('zlib');
 
 const _formatBytesAtom = require('../utils/formatBytes');
+const { LOGS, CHECKPOINT } = require('../constants/serviceDefaults');
 
 // Lazily resolve the legacy-compatible app home (portable-aware).
 // No local caching: preserves getAppHome() live-resolve semantics.
@@ -89,7 +90,9 @@ const TRAJECTORY_MAX_AGE_D = (() => {
   return 30;
 })();
 const TASK_OUTPUT_MAX_AGE_H = 24;
-const CKPT_MAX_TOTAL_MB = 500;
+// Global checkpoint quota. Sourced from serviceDefaults so KHY_CHECKPOINT_MAX_TOTAL_MB
+// is the single override point; the historical 500MB default is unchanged.
+const CKPT_MAX_TOTAL_MB = CHECKPOINT.MAX_TOTAL_MB;
 
 // Paths derived from well-known locations (portable-aware via dataHome).
 function _khyHome() {
@@ -492,6 +495,22 @@ function getStorageReport() {
   // Checkpoints
   const ckptRoot = path.join(_baseDir(), 'checkpoints');
   report.checkpoints = { size: safeTreeSize(ckptRoot) };
+
+  const runtimeLogRoot = _runtimeLogRoot();
+  const runtimeArchiveDir = path.join(runtimeLogRoot, 'archive');
+  const runtimeLogLayout = String(process.env.KHY_LOG_LAYOUT || 'active').toLowerCase();
+  const activeLogSize = safeTreeSize(path.join(runtimeLogRoot, 'active'));
+  const archiveLogSize = safeTreeSize(runtimeArchiveDir);
+  const legacyLogSize = runtimeLogLayout === 'legacy'
+    ? Math.max(0, safeTreeSize(runtimeLogRoot) - archiveLogSize)
+    : 0;
+  report.runtimeLogs = {
+    size: activeLogSize + legacyLogSize + archiveLogSize,
+    activeSize: activeLogSize,
+    legacySize: legacyLogSize,
+    archiveSize: archiveLogSize,
+    path: runtimeLogRoot,
+  };
 
   // Task outputs
   const taskDir = path.join(_khyHome(), 'tmp', 'tasks');
@@ -962,64 +981,270 @@ function cleanTaskOutputs() {
   return { removed, bytes };
 }
 
+// ── Runtime logger archives ─────────────────────────────────────────────
+
+function _runtimeLogRoot() {
+  // Same precedence as the shared resolver, so cleanup and the logger can never
+  // disagree about which tree they own.
+  if (process.env.KHY_LOG_HOME) return path.resolve(process.env.KHY_LOG_HOME);
+  if (process.env.KHY_DATA_HOME) return path.join(path.resolve(process.env.KHY_DATA_HOME), 'logs');
+  if (process.env.KHYQUANT_DATA_HOME) return path.join(path.resolve(process.env.KHYQUANT_DATA_HOME), 'logs');
+  if (process.env.KHY_LOG_DIR) return path.resolve(process.env.KHY_LOG_DIR);
+  return path.join(_khyHome(), 'logs');
+}
+
+// A gzip member is a 10-byte header plus an 8-byte trailer, so any gzip at or
+// below 20 bytes is gzip-of-nothing (20) or a truncated header (10) — either way
+// it carries no log lines. Checking only for `size === 0` let both survive every
+// sweep: the live archive still holds a 10-byte `app-2026-08-17.log.gz.dup-1`.
+const EMPTY_GZIP_MAX_BYTES = 20;
+const GZIP_MAGIC = [0x1f, 0x8b];
+
+/**
+ * Payload-free archive residue: an empty file, or a *gzip* small enough to hold
+ * no data. The gzip magic check is what makes the rule safe — the suffix cannot
+ * be trusted in either direction. `.gz.dup-N` is still a gzip, and a short file
+ * merely *named* `.gz` may be something else entirely; deleting it on size alone
+ * would be a guess. Only the first two bytes settle it.
+ */
+function _isSpentArchive(filePath, size) {
+  if (size === 0) return true;
+  if (size > EMPTY_GZIP_MAX_BYTES) return false;
+  let fd;
+  try {
+    fd = fs.openSync(filePath, 'r');
+    const head = Buffer.alloc(GZIP_MAGIC.length);
+    const read = fs.readSync(fd, head, 0, head.length, 0);
+    return read === head.length && head[0] === GZIP_MAGIC[0] && head[1] === GZIP_MAGIC[1];
+  } catch {
+    return false;
+  } finally {
+    if (fd !== undefined) { try { fs.closeSync(fd); } catch { /* skip */ } }
+  }
+}
+
+function _isRuntimeLogFile(name) {
+  return /^(?:app|error)-\d{4}-\d{2}-\d{2}\.log(?:\.\d+)?(?:\.gz)?$/i.test(name);
+}
+
+function _isCurrentRuntimeLog(name) {
+  const date = new Date().toISOString().slice(0, 10);
+  return name === 'app-' + date + '.log' || name === 'error-' + date + '.log';
+}
+
+function _compressRuntimeLog(sourcePath, archiveDir) {
+  const name = path.basename(sourcePath);
+  const archiveName = name.endsWith('.gz') ? name : name + '.gz';
+  let archivePath = path.join(archiveDir, archiveName);
+  const collides = fs.existsSync(archivePath);
+  if (collides) {
+    // Same rotated name in both the legacy root and active/. Keep both payloads
+    // rather than let one silently overwrite the other — but never mint a
+    // .dup-N for a source that holds no data.
+    if (_isSpentArchive(sourcePath, safeSize(sourcePath))) {
+      fs.unlinkSync(sourcePath);
+      return { moved: true, bytes: 0 };
+    }
+    let suffix = 1;
+    do {
+      archivePath = path.join(archiveDir, archiveName + '.dup-' + suffix);
+      suffix++;
+    } while (fs.existsSync(archivePath));
+  }
+  if (name.endsWith('.gz')) {
+    fs.renameSync(sourcePath, archivePath);
+    return { moved: true, bytes: 0 };
+  }
+  const content = fs.readFileSync(sourcePath);
+  if (content.length === 0) {
+    fs.unlinkSync(sourcePath);
+    return { moved: true, bytes: 0 };
+  }
+  const tmp = path.join(archiveDir, '.' + archiveName + '.tmp-' + process.pid);
+  fs.writeFileSync(tmp, zlib.gzipSync(content));
+  fs.renameSync(tmp, archivePath);
+  fs.unlinkSync(sourcePath);
+  return { moved: true, bytes: content.length - safeSize(archivePath) };
+}
+
+/** Move rotated logs to archive and enforce archive retention. */
+function cleanRuntimeLogs(root = _runtimeLogRoot(), policy = LOGS) {
+  const archiveDir = path.join(root, 'archive');
+  const activeDirs = [root, path.join(root, 'active')];
+  let removed = 0;
+  let bytes = 0;
+  let archived = 0;
+
+  for (const activeDir of activeDirs) {
+    if (!fs.existsSync(activeDir)) continue;
+    for (const name of safeLs(activeDir)) {
+      const sourcePath = path.join(activeDir, name);
+      let stat;
+      try { stat = fs.statSync(sourcePath); } catch { continue; }
+      if (!stat.isFile()) continue;
+      // Ownership before deletion: only files this sweep owns are candidates, and
+      // today's log is never one of them. A brand-new active log is legitimately
+      // zero bytes for a moment, and the spent-archive rule must not race it.
+      if (!_isRuntimeLogFile(name) || _isCurrentRuntimeLog(name)) continue;
+      if (_isSpentArchive(sourcePath, stat.size)) {
+        try { fs.unlinkSync(sourcePath); removed++; bytes += stat.size; } catch { /* skip */ }
+        continue;
+      }
+      try {
+        fs.mkdirSync(archiveDir, { recursive: true });
+        const result = _compressRuntimeLog(sourcePath, archiveDir);
+        archived += result.moved ? 1 : 0;
+        bytes += Math.max(0, result.bytes || 0);
+      } catch {
+        /* Preserve source if compression or rename fails. */
+      }
+    }
+  }
+
+  const maxAgeMs = Math.max(0, policy.KEEP_DAYS) * 86400000;
+  const files = [];
+  for (const name of safeLs(archiveDir)) {
+    const filePath = path.join(archiveDir, name);
+    try {
+      const stat = fs.statSync(filePath);
+      if (!stat.isFile()) continue;
+      if (_isSpentArchive(filePath, stat.size) || (maxAgeMs > 0 && Date.now() - stat.mtimeMs > maxAgeMs)) {
+        fs.unlinkSync(filePath);
+        removed++;
+        bytes += stat.size;
+      } else {
+        files.push({ path: filePath, size: stat.size, mtime: stat.mtimeMs });
+      }
+    } catch { /* skip */ }
+  }
+  files.sort((a, b) => a.mtime - b.mtime);
+  let totalSize = files.reduce((sum, file) => sum + file.size, 0);
+  const overflow = Math.max(0, files.length - Math.max(0, policy.MAX_FILES));
+  for (let index = 0; index < files.length; index++) {
+    if (index >= overflow && totalSize <= policy.MAX_SIZE_BYTES) break;
+    const file = files[index];
+    try {
+      fs.unlinkSync(file.path);
+      totalSize -= file.size;
+      removed++;
+      bytes += file.size;
+    } catch { /* skip */ }
+  }
+  return { removed, archived, bytes, root, archiveDir };
+}
+
 // ── Checkpoint storage cap ─────────────────────────────────────────────
 
-function cleanCheckpointStorage() {
+function cleanCheckpointStorage(maxTotalMb = CKPT_MAX_TOTAL_MB) {
   const ckptRoot = path.join(_baseDir(), 'checkpoints');
   if (!fs.existsSync(ckptRoot)) {
     return { removed: 0, bytes: 0 };
   }
 
-  const maxBytes = CKPT_MAX_TOTAL_MB * 1024 * 1024;
+  const maxBytes = maxTotalMb * 1024 * 1024;
   let totalSize = safeTreeSize(ckptRoot);
   if (totalSize <= maxBytes) {
     return { removed: 0, bytes: 0, currentSize: totalSize };
   }
 
-  // Collect all checkpoint data files across all projects, sorted oldest first
-  let removed = 0,
-    bytes = 0;
-  const allFiles = [];
-  for (const projDir of safeLs(ckptRoot)) {
-    const projPath = path.join(ckptRoot, projDir);
+  // CAS objects are owned by manifest entries. Never delete an object merely
+  // because its mtime is old: another checkpoint may still reference it.
+  const projects = [];
+  for (const projectName of safeLs(ckptRoot)) {
+    const projectDir = path.join(ckptRoot, projectName);
     try {
-      if (!fs.statSync(projPath).isDirectory()) {
-        continue;
+      if (!fs.statSync(projectDir).isDirectory()) continue;
+      const manifestPath = path.join(projectDir, 'manifest.json');
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+      if (Array.isArray(manifest.checkpoints)) {
+        projects.push({ projectDir, manifest });
       }
     } catch {
-      continue;
-    }
-    for (const f of safeLs(projPath)) {
-      if (f === 'manifest.json') {
-        continue;
-      }
-      const fp = path.join(projPath, f);
-      try {
-        const st = fs.statSync(fp);
-        if (st.isFile()) {
-          allFiles.push({ path: fp, size: st.size, mtime: st.mtimeMs });
-        }
-      } catch {
-        /* skip */
-      }
+      /* Legacy or incomplete project directory: leave it untouched. */
     }
   }
-  allFiles.sort((a, b) => a.mtime - b.mtime);
 
-  for (const file of allFiles) {
-    if (totalSize <= maxBytes) {
-      break;
+  const removedEntries = [];
+  for (const project of projects) {
+    project.manifest.checkpoints.sort((a, b) => {
+      const left = Date.parse(a.timestamp || '') || 0;
+      const right = Date.parse(b.timestamp || '') || 0;
+      return left - right;
+    });
+  }
+
+  while (totalSize > maxBytes) {
+    let candidate = null;
+    for (const project of projects) {
+      const entry = project.manifest.checkpoints[0];
+      if (!entry) continue;
+      if (!candidate || (Date.parse(entry.timestamp || '') || 0) < candidate.time) {
+        candidate = { project, entry, time: Date.parse(entry.timestamp || '') || 0 };
+      }
+    }
+    if (!candidate) break;
+
+    const { project, entry } = candidate;
+    project.manifest.checkpoints.shift();
+    const files = [
+      path.join(project.projectDir, entry.id + '.patch'),
+      path.join(project.projectDir, entry.id + '.tar.gz'),
+      path.join(project.projectDir, entry.id + '.stash.json'),
+    ];
+    for (const filePath of files) {
+      try {
+        const stat = fs.statSync(filePath);
+        fs.unlinkSync(filePath);
+        totalSize -= stat.size;
+        removedEntries.push({ filePath, bytes: stat.size });
+      } catch {
+        /* CAS entries have no materialized file. */
+      }
     }
     try {
-      fs.unlinkSync(file.path);
-      totalSize -= file.size;
-      bytes += file.size;
-      removed++;
+      fs.writeFileSync(
+        path.join(project.projectDir, 'manifest.json'),
+        JSON.stringify(project.manifest, null, 2),
+        'utf8'
+      );
     } catch {
-      /* skip */
+      /* Keep the in-memory selection; the next pass can retry safely. */
+    }
+
+    const referenced = new Set();
+    for (const remaining of project.manifest.checkpoints) {
+      for (const object of remaining.objects || []) {
+        if (object && typeof object.digest === 'string') referenced.add(object.digest);
+      }
+    }
+    for (const object of entry.objects || []) {
+      const digest = object && object.digest;
+      if (!digest || referenced.has(digest)) continue;
+      const objectPath = path.join(
+        project.projectDir,
+        'objects',
+        'sha256',
+        digest.slice(0, 2),
+        digest + '.gz'
+      );
+      try {
+        const stat = fs.statSync(objectPath);
+        fs.unlinkSync(objectPath);
+        totalSize -= stat.size;
+        removedEntries.push({ filePath: objectPath, bytes: stat.size });
+      } catch {
+        /* skip missing or malformed objects */
+      }
     }
   }
-  return { removed, bytes };
+
+  const bytes = removedEntries.reduce((sum, item) => sum + item.bytes, 0);
+  return {
+    removed: removedEntries.length,
+    bytes,
+    currentSize: Math.max(0, totalSize),
+    checkpoints: removedEntries.filter((item) => /\.(?:patch|tar\.gz|stash\.json)$/.test(item.filePath)).length,
+  };
 }
 
 // ── Run all cleanup ─────────────────────────────────────────────────────
@@ -1180,6 +1405,7 @@ function runCleanup(options = {}) {
     trajectories: recordCleanupTarget(metrics, 'trajectories', () => cleanTrajectories()),
     taskOutputs: recordCleanupTarget(metrics, 'task-outputs', () => cleanTaskOutputs()),
     checkpoints: recordCleanupTarget(metrics, 'checkpoints', () => cleanCheckpointStorage()),
+    runtimeLogs: recordCleanupTarget(metrics, 'runtime-logs', () => cleanRuntimeLogs()),
   };
 
   // Clean backend temp/intermediate directories
@@ -1352,6 +1578,12 @@ function runCleanup(options = {}) {
     );
     freedBytes += results.taskOutputs.bytes || 0;
   }
+  if (results.runtimeLogs.removed > 0 || results.runtimeLogs.archived > 0) {
+    results.summary.actions.push(
+      `Runtime logs: ${results.runtimeLogs.archived || 0} archived, ${results.runtimeLogs.removed || 0} removed`
+    );
+    freedBytes += results.runtimeLogs.bytes || 0;
+  }
   if (results.checkpoints.removed > 0) {
     results.summary.actions.push(
       `Removed ${results.checkpoints.removed} checkpoint files (${humanSize(results.checkpoints.bytes)})`
@@ -1456,6 +1688,7 @@ module.exports = {
   cleanTrajectories,
   cleanTaskOutputs,
   cleanCheckpointStorage,
+  cleanRuntimeLogs,
   cleanBackendDir,
   cleanOsTempFiles,
   getLastCleanupReport,
