@@ -3,7 +3,7 @@
 /**
  * Unit tests for instrumentSyncService.
  *
- * Mocks database models, child_process, and node-cron to test
+ * Mocks database models and child_process to test
  * pure logic: sync state tracking, status reporting, guard against
  * concurrent sync.
  */
@@ -11,10 +11,6 @@
 jest.mock('../../src/models/Instrument', () => ({
   findAll: jest.fn().mockResolvedValue([]),
   bulkCreate: jest.fn().mockResolvedValue([]),
-}));
-
-jest.mock('node-cron', () => ({
-  schedule: jest.fn().mockReturnValue({ stop: jest.fn() }),
 }));
 
 jest.mock('child_process', () => ({
