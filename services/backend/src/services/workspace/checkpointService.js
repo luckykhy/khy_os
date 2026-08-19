@@ -36,6 +36,7 @@ const _execAsync = promisify(exec);
 const _ensureDir = require('../../utils/ensureDirSync');
 const _formatBytesAtom = require('../../utils/formatBytes');
 const gitDetector = require('../gitExecutableDetector');
+const checkpointObjects = require('./checkpointObjectStore');
 
 /** 解析 git 二进制路径:win32 时检测命中显式路径 → 返回它;否则 'git'。绝不抛。 */
 function _gitBin() {
@@ -139,6 +140,45 @@ async function _gitExecAsync(args, cwd) {
   return String(stdout).trim();
 }
 
+function _checkpointStorageMode(options = {}) {
+  return String(options.storageMode || process.env.KHY_CHECKPOINT_STORAGE_MODE || 'legacy')
+    .trim()
+    .toLowerCase();
+}
+
+function _storeCheckpointPayload(ckptDir, id, mode, result, storageMode) {
+  if (storageMode !== 'cas') return result;
+  const extension = mode === 'git-diff' ? '.patch' : mode === 'tar-full' ? '.tar.gz' : null;
+  if (!extension) return result;
+  const payloadPath = path.join(ckptDir, id + extension);
+  const payload = fs.readFileSync(payloadPath);
+  const object = checkpointObjects.putBuffer(ckptDir, payload);
+  fs.unlinkSync(payloadPath);
+  return { ...result, storage: 'cas', objects: [object] };
+}
+
+function _materializeCheckpointPayload(ckptDir, entry) {
+  if (entry.storage !== 'cas' || !Array.isArray(entry.objects) || entry.objects.length !== 1) {
+    return null;
+  }
+  const extension = entry.mode === 'git-diff' ? '.patch' : entry.mode === 'tar-full' ? '.tar.gz' : null;
+  if (!extension) return null;
+  const payload = checkpointObjects.readBuffer(ckptDir, entry.objects[0]);
+  const temporary = path.join(ckptDir, '.' + entry.id + extension + '.restore-' + process.pid);
+  fs.writeFileSync(temporary, payload);
+  return temporary;
+}
+
+function _referencedObjectDigests(manifest) {
+  const refs = new Set();
+  for (const checkpoint of manifest.checkpoints || []) {
+    for (const object of checkpoint.objects || []) {
+      if (object && typeof object.digest === 'string') refs.add(object.digest);
+    }
+  }
+  return refs;
+}
+
 function _generateId() {
   const now = new Date();
   const ts = now.toISOString().replace(/[-:T]/g, '').slice(0, 14);
@@ -173,6 +213,7 @@ function saveCheckpoint(projectDir, options = {}) {
     options.mode === 'auto' || !options.mode ? (isGit ? 'git-diff' : 'tar-full') : options.mode;
 
   let result;
+  const storageMode = _checkpointStorageMode(options);
 
   switch (mode) {
     case 'git-diff':
@@ -188,6 +229,8 @@ function saveCheckpoint(projectDir, options = {}) {
       throw new Error(`Unknown checkpoint mode: ${mode}`);
   }
 
+  result = _storeCheckpointPayload(ckptDir, id, mode, result, storageMode);
+
   const entry = {
     id,
     mode,
@@ -197,6 +240,9 @@ function saveCheckpoint(projectDir, options = {}) {
     commitHash: isGit ? _safeGitHead(resolvedDir) : null,
     files: result.files,
     size: result.size,
+    ...(result.storage === 'cas'
+      ? { schemaVersion: 2, storage: 'cas', objects: result.objects }
+      : {}),
   };
 
   manifest.checkpoints.push(entry);
@@ -204,7 +250,7 @@ function saveCheckpoint(projectDir, options = {}) {
   // Enforce max checkpoints — remove oldest if over limit
   while (manifest.checkpoints.length > MAX_CHECKPOINTS) {
     const old = manifest.checkpoints.shift();
-    _removeCheckpointFiles(ckptDir, old);
+    _removeCheckpointEntry(ckptDir, manifest, old);
   }
 
   _saveManifest(ckptDir, manifest);
@@ -262,7 +308,9 @@ async function _saveGitDiffAsync(projectDir, ckptDir, id) {
   const untracked = untrackedRaw ? untrackedRaw.split('\n').filter(Boolean) : [];
 
   const patchPath = path.join(ckptDir, `${id}.patch`);
-  let patchContent = diff;
+  // _gitExec trims stdout for command-style callers; a unified diff requires
+  // a final newline or `git apply` reports a corrupt patch.
+  let patchContent = diff && !diff.endsWith('\n') ? diff + '\n' : diff;
 
   if (untracked.length > 0) {
     patchContent += '\n# UNTRACKED FILES (must be manually restored):\n';
@@ -395,6 +443,7 @@ async function saveCheckpointAsync(projectDir, options = {}) {
     options.mode === 'auto' || !options.mode ? (isGit ? 'git-diff' : 'tar-full') : options.mode;
 
   let result;
+  const storageMode = _checkpointStorageMode(options);
 
   switch (mode) {
     case 'git-diff':
@@ -410,6 +459,8 @@ async function saveCheckpointAsync(projectDir, options = {}) {
       throw new Error(`Unknown checkpoint mode: ${mode}`);
   }
 
+  result = _storeCheckpointPayload(ckptDir, id, mode, result, storageMode);
+
   const entry = {
     id,
     mode,
@@ -419,6 +470,9 @@ async function saveCheckpointAsync(projectDir, options = {}) {
     commitHash: isGit ? await _safeGitHeadAsync(resolvedDir) : null,
     files: result.files,
     size: result.size,
+    ...(result.storage === 'cas'
+      ? { schemaVersion: 2, storage: 'cas', objects: result.objects }
+      : {}),
   };
 
   manifest.checkpoints.push(entry);
@@ -426,7 +480,7 @@ async function saveCheckpointAsync(projectDir, options = {}) {
   // Enforce max checkpoints — remove oldest if over limit
   while (manifest.checkpoints.length > MAX_CHECKPOINTS) {
     const old = manifest.checkpoints.shift();
-    _removeCheckpointFiles(ckptDir, old);
+    _removeCheckpointEntry(ckptDir, manifest, old);
   }
 
   _saveManifest(ckptDir, manifest);
@@ -440,7 +494,9 @@ function _saveGitDiff(projectDir, ckptDir, id) {
   const untracked = untrackedRaw ? untrackedRaw.split('\n').filter(Boolean) : [];
 
   const patchPath = path.join(ckptDir, `${id}.patch`);
-  let patchContent = diff;
+  // _gitExec trims stdout for command-style callers; a unified diff requires
+  // a final newline or `git apply` reports a corrupt patch.
+  let patchContent = diff && !diff.endsWith('\n') ? diff + '\n' : diff;
 
   // Append untracked files as a comment block
   if (untracked.length > 0) {
@@ -583,20 +639,28 @@ function restoreCheckpoint(projectDir, checkpointId, options = {}) {
     };
   }
 
-  switch (entry.mode) {
-    case 'git-diff':
-      return _restoreGitDiff(resolvedDir, ckptDir, entry);
-    case 'git-stash':
-      return _restoreGitStash(resolvedDir, ckptDir, entry);
-    case 'tar-full':
-      return _restoreTarFull(resolvedDir, ckptDir, entry);
-    default:
-      throw new Error(`Unknown checkpoint mode: ${entry.mode}`);
+  let temporaryPayload = null;
+  try {
+    temporaryPayload = _materializeCheckpointPayload(ckptDir, entry);
+    switch (entry.mode) {
+      case 'git-diff':
+        return _restoreGitDiff(resolvedDir, ckptDir, entry, temporaryPayload);
+      case 'git-stash':
+        return _restoreGitStash(resolvedDir, ckptDir, entry);
+      case 'tar-full':
+        return _restoreTarFull(resolvedDir, ckptDir, entry, temporaryPayload);
+      default:
+        throw new Error(`Unknown checkpoint mode: ${entry.mode}`);
+    }
+  } finally {
+    if (temporaryPayload) {
+      try { fs.unlinkSync(temporaryPayload); } catch { /* best effort */ }
+    }
   }
 }
 
-function _restoreGitDiff(projectDir, ckptDir, entry) {
-  const patchPath = path.join(ckptDir, `${entry.id}.patch`);
+function _restoreGitDiff(projectDir, ckptDir, entry, payloadPath = null) {
+  const patchPath = payloadPath || path.join(ckptDir, `${entry.id}.patch`);
   if (!fs.existsSync(patchPath)) {
     throw new Error(`Patch file missing: ${patchPath}`);
   }
@@ -648,8 +712,8 @@ function _restoreGitStash(projectDir, ckptDir, entry) {
   return { restored: true, mode: 'git-stash', message: `Applied stash: ${entry.message}` };
 }
 
-function _restoreTarFull(projectDir, ckptDir, entry) {
-  const tarPath = path.join(ckptDir, `${entry.id}.tar.gz`);
+function _restoreTarFull(projectDir, ckptDir, entry, payloadPath = null) {
+  const tarPath = payloadPath || path.join(ckptDir, `${entry.id}.tar.gz`);
   if (!fs.existsSync(tarPath)) {
     throw new Error(`Tar file missing: ${tarPath}`);
   }
@@ -695,14 +759,21 @@ function diffCheckpoint(projectDir, checkpointId) {
   }
 
   if (entry.mode === 'git-diff') {
-    const patchPath = path.join(ckptDir, `${entry.id}.patch`);
-    if (!fs.existsSync(patchPath)) {
-      throw new Error('Patch file missing');
+    const temporaryPayload = _materializeCheckpointPayload(ckptDir, entry);
+    const patchPath = temporaryPayload || path.join(ckptDir, `${entry.id}.patch`);
+    try {
+      if (!fs.existsSync(patchPath)) {
+        throw new Error('Patch file missing');
+      }
+      const patch = fs.readFileSync(patchPath, 'utf-8');
+      const additions = (patch.match(/^\+[^+]/gm) || []).length;
+      const deletions = (patch.match(/^-[^-]/gm) || []).length;
+      return { diff: patch, stats: { additions, deletions } };
+    } finally {
+      if (temporaryPayload) {
+        try { fs.unlinkSync(temporaryPayload); } catch { /* best effort */ }
+      }
     }
-    const patch = fs.readFileSync(patchPath, 'utf-8');
-    const additions = (patch.match(/^\+[^+]/gm) || []).length;
-    const deletions = (patch.match(/^-[^-]/gm) || []).length;
-    return { diff: patch, stats: { additions, deletions } };
   }
 
   if (entry.mode === 'tar-full') {
@@ -736,7 +807,7 @@ function deleteCheckpoint(projectDir, checkpointId) {
   }
 
   const [entry] = manifest.checkpoints.splice(idx, 1);
-  _removeCheckpointFiles(ckptDir, entry);
+  _removeCheckpointEntry(ckptDir, manifest, entry);
   _saveManifest(ckptDir, manifest);
   return true;
 }
@@ -755,7 +826,7 @@ function cleanupCheckpoints(projectDir, keep = 10) {
   let removed = 0;
   while (manifest.checkpoints.length > keep) {
     const old = manifest.checkpoints.shift();
-    _removeCheckpointFiles(ckptDir, old);
+    _removeCheckpointEntry(ckptDir, manifest, old);
     removed++;
   }
 
@@ -777,6 +848,15 @@ function _removeCheckpointFiles(ckptDir, entry) {
       /* ignore */
     }
   }
+}
+
+function _removeCheckpointEntry(ckptDir, manifest, entry) {
+  _removeCheckpointFiles(ckptDir, entry);
+  const referenced = _referencedObjectDigests(manifest);
+  const orphaned = (entry.objects || [])
+    .map((object) => object && object.digest)
+    .filter((digest) => digest && !referenced.has(digest));
+  checkpointObjects.removeIfUnreferenced(ckptDir, orphaned);
 }
 
 // ─── Utility ───────────────────────────────────────────────────────────────
