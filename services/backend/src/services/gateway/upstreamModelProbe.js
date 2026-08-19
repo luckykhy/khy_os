@@ -16,8 +16,6 @@
  */
 'use strict';
 
-const { ProxyAgent } = require('undici');
-
 const { fetchWithTimeout } = require('../fetchTimeout');
 
 /**
@@ -41,11 +39,19 @@ function buildProxyDispatcher(proxyUrl, label) {
     return undefined;
   }
   try {
+    // undici 惰性加载：它不是本包声明的依赖，本机能解析到纯属 workspace 提升的
+    // 巧合（根 node_modules 里那份 undici 是 @vercel/blob 的 devDependency）。
+    // 放在模块顶层 require，会让「压根没配代理」的绝大多数调用方也在加载期一起
+    // 炸掉 —— 而本文件的契约是「探测失败即降级、绝不抛」。同一个依赖在
+    // src/utils/proxyDispatcherAgent.js 里早就是这个惰性写法，这里对齐它。
+    const { ProxyAgent } = require('undici');
     return new ProxyAgent(raw);
   } catch (err) {
-    console.warn(
-      `[proxy] ${label || 'model-probe'} 代理地址无效（${(err && err.code) || 'invalid'}），模型探测回退直连`
-    );
+    const reason =
+      err && err.code === 'MODULE_NOT_FOUND'
+        ? 'undici 不可用'
+        : `代理地址无效（${(err && err.code) || 'invalid'}）`;
+    console.warn(`[proxy] ${label || 'model-probe'} ${reason}，模型探测回退直连`);
     return undefined;
   }
 }
