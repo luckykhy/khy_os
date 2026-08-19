@@ -206,7 +206,8 @@ async function _restore(args, options) {
     return true;
   }
   printSuccess(
-    `恢复完成:从 ${res.id} 写回 ${res.restored.sqlite} 个库 / ${res.restored.file} 个文件`
+    `恢复完成:从 ${res.id} 写回 ${res.restored.sqlite} 个库 / ${res.restored.file} 个文件` +
+      (res.restored.cold ? `,冷归档摊回 ${res.restored.cold} 个文件` : '')
   );
   if (res.preBackupId) {
     printInfo(`回退备份(恢复前的现状):${res.preBackupId} — 若恢复选错了,可用它退回`);

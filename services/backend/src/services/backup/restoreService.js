@@ -36,11 +36,12 @@
 const fs = require('fs');
 const path = require('path');
 
-const { BACKUP } = require('../../constants/serviceDefaults');
+const { BACKUP, COLD_EXPORT } = require('../../constants/serviceDefaults');
 const dh = require('../../utils/dataHome');
 const plan = require('./backupAssetPlan');
 const { restoreSqliteInPlace } = require('./sqliteHotCopy');
 const backupService = require('./backupService');
+const cold = require('./coldExportService');
 
 // ── 内部工具 ─────────────────────────────────────────────────────────────
 
@@ -105,6 +106,24 @@ function resolveEntryDestination(entry, homeByRole) {
       return { ok: false, dest: '', reason: `备份集里的库不在资产清单中: ${target}` };
     }
     return { ok: true, dest: path.join(homeDir, asset.rel), reason: '' };
+  }
+
+  if (e.kind === 'cold-export') {
+    // target 是 `cold/<role>-<dirName>.jsonl.gz`,落点是**目录**(<home>/<dirName>),
+    // 因为一份归档里装着那个目录下的多个文件。dirName 从文件名反解:
+    // 剥掉 `<role>-` 前缀和 `.jsonl.gz` 后缀。
+    const base = path.basename(target);
+    const rolePrefix = `${role}-`;
+    if (!target.startsWith(`${COLD_EXPORT.SUBDIR}/`) || !base.startsWith(rolePrefix)) {
+      return { ok: false, dest: '', reason: `冷归档 target 前缀与角色不符: ${target}` };
+    }
+    const dirName = base.slice(rolePrefix.length).replace(/.jsonl.gz$/i, '');
+    // 只认备份时判定为「冷」的那批目录名。归档可能来自别处,不能让它指定任意目录:
+    // 一个 target 写着 `user-.ssh.jsonl.gz` 的归档就能往家目录里任意写文件。
+    if (!dirName || !plan.classifyColdDir(dirName, true).cold) {
+      return { ok: false, dest: '', reason: `冷归档目录不在冷导出清单中: ${target}` };
+    }
+    return { ok: true, dest: path.join(homeDir, dirName), reason: '' };
   }
 
   // file:`home-<role>/<相对路径>`
@@ -294,7 +313,7 @@ function precheckRestore(id, opts = {}) {
  * @param {string[]} [opts.kinds] 只恢复这些 kind(默认 ['sqlite','file'])
  * @param {Function} [opts.onProgress] (msg) => void
  * @returns {Promise<{ok: boolean, id: string, dryRun: boolean, preBackupId: string,
- *                    restored: {sqlite: number, file: number}, failed: Array<{target: string, reason: string}>,
+ *                    restored: {sqlite: number, file: number, cold: number}, failed: Array<{target: string, reason: string}>,
  *                    skipped: Array<{target: string, reason: string}>, manualSteps: string[],
  *                    warnings: string[], blockers: string[], error: string|null}>}
  */
@@ -304,7 +323,7 @@ async function restoreBackup(id, opts = {}) {
     id: '',
     dryRun: !!opts.dryRun,
     preBackupId: '',
-    restored: { sqlite: 0, file: 0 },
+    restored: { sqlite: 0, file: 0, cold: 0 },
     failed: [],
     skipped: [],
     manualSteps: [],
@@ -330,7 +349,11 @@ async function restoreBackup(id, opts = {}) {
 
     const manifest = pre.manifest;
     const entries = Array.isArray(manifest.entries) ? manifest.entries : [];
-    const kinds = Array.isArray(opts.kinds) && opts.kinds.length ? opts.kinds : ['sqlite', 'file'];
+    // 'cold-export' **必须**在默认集合里。冷导出后那批文件只存在于归档中(备份端
+    // 把它们从逐文件复制清单里去掉了),默认不恢复就是默认丢数据 —— 而且 restored
+    // 计数看起来一切正常,没有任何人会发现。
+    const kinds =
+      Array.isArray(opts.kinds) && opts.kinds.length ? opts.kinds : ['sqlite', 'file', 'cold-export'];
     report(`恢复 ${pre.id}:预检通过,清单 ${entries.length} 项,开始规划落点`);
 
     // 规划:先把所有落点算清楚,再决定是否落盘(dry-run 就停在这里)。
@@ -401,6 +424,23 @@ async function restoreBackup(id, opts = {}) {
             report(`写回 SQLite ${path.basename(job.dest)}:已删除 ${r.removedSidecars.length} 个旧 WAL/SHM 边车文件`);
           }
         }
+      } else if (job.entry.kind === 'cold-export') {
+        report(`摊回冷归档 ${path.basename(job.entry.target)}:${job.entry.records || 0} 条记录`);
+        const r = cold.expandColdArchive({
+          archiveAbs: job.src,
+          destDir: job.dest,
+          fileMode: BACKUP.FILE_MODE,
+        });
+        if (!r.ok) {
+          out.failed.push({ target: String(job.entry.target), reason: r.error });
+        } else {
+          out.restored.cold += r.files;
+          // 部分记录摊不回去 ≠ 整份失败,但绝不能静默:归档里少一条审计记录
+          // 和删掉一条审计记录,后果是一样的。
+          for (const sk of r.skipped) {
+            out.warnings.push(`冷归档 ${path.basename(job.entry.target)} 跳过 ${sk.path}: ${sk.reason}`);
+          }
+        }
       } else {
         const r = _placeFile(job.src, job.dest);
         if (!r.ok) {
@@ -452,7 +492,8 @@ async function restoreBackup(id, opts = {}) {
       out.error = `${out.failed.length} 项写回失败(其余已恢复);回退备份: ${out.preBackupId || '(无)'}`;
     }
     report(
-      `恢复 ${pre.id}:${out.ok ? '完成' : '部分完成'} — 库 ${out.restored.sqlite} 个 / 文件 ${out.restored.file} 个,` +
+      `恢复 ${pre.id}:${out.ok ? '完成' : '部分完成'} — 库 ${out.restored.sqlite} 个 / 文件 ${out.restored.file} 个` +
+        (out.restored.cold ? `(含冷归档摊回 ${out.restored.cold} 个)` : '') + `,` +
         `失败 ${out.failed.length},跳过 ${out.skipped.length}`
     );
     return out;

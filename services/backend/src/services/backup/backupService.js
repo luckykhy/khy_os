@@ -22,6 +22,7 @@
  *   <root>/<id>/db/<name>.db           VACUUM INTO 产物
  *   <root>/<id>/db/postgres.dump       仅 DB_MODE=postgres
  *   <root>/<id>/home-<role>/<相对路径>  逐文件原子复制
+ *   <root>/<id>/cold/<role>-<dir>.jsonl.gz  冷归档(可选,见 createBackup 的冷导出阶段)
  *   <root>/<id>/.complete              **最后**写。没有它 = 写到一半崩了 → BROKEN
  *
  * 契约:fail-soft 返回结构化结果,绝不把异常抛给 CLI;任何**部分成功**都必须在
@@ -34,13 +35,14 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const { BACKUP } = require('../../constants/serviceDefaults');
+const { BACKUP, COLD_EXPORT } = require('../../constants/serviceDefaults');
 const dh = require('../../utils/dataHome');
 const sr = require('../../utils/storageRoots');
 const atomicWriteJson = require('../../utils/atomicWriteJson');
 const plan = require('./backupAssetPlan');
 const mf = require('./backupManifest');
 const { hotCopySqlite } = require('./sqliteHotCopy');
+const cold = require('./coldExportService');
 
 // ── 内部工具 ─────────────────────────────────────────────────────────────
 
@@ -296,6 +298,8 @@ async function dumpPostgres(targetFile, opts = {}) {
  * @param {Array}  [opts.homes] 注入家目录(测试用)
  * @param {Function} [opts.onProgress] (msg) => void,状态文本带动作+目标+进度
  * @param {boolean} [opts.allowPartial=false] 主库备份失败时是否仍产出备份集
+ * @param {boolean} [opts.includeCold] 显式开启冷导出(不设则取 COLD_EXPORT.ENABLED);
+ *   两种情况都**只在 full 级生效**,理由见冷导出阶段的注释
  * @param {number} [opts.nowMs] 注入时间(测试用)
  * @returns {Promise<{ok: boolean, id: string, dir: string, manifest: object|null,
  *                    warnings: string[], error: string|null}>}
@@ -417,15 +421,103 @@ async function createBackup(opts = {}) {
       );
     }
 
+    // ── 2.5) 冷导出(可选)────────────────────────────────────────────────
+    //
+    // 只在 full 级生效。core 级本来就把 audit/receipts/… 整个剪掉(见
+    // backupAssetPlan.FULL_ONLY_DIR_REASONS),此时开冷导出会把 core 备份集
+    // 悄悄变大 —— 那与"core = 权威且体积可控"的承诺正好相反。
+    //
+    // 产出的 coveredHome 是"已被归档、不必再逐文件复制"的家目录相对路径集合。
+    // 粒度是**文件**不是目录:窗口过滤按记录判定,一个文件里可能既有冷记录也有
+    // 今天刚追加的热记录,按目录短路会静默丢掉后者。详见 coldExportService 顶部。
+    const coldOn =
+      tier === plan.TIER_FULL &&
+      (opts.includeCold === undefined ? COLD_EXPORT.ENABLED : Boolean(opts.includeCold));
+    /** @type {Map<string, Set<string>>} role -> 已归档的家目录相对路径 */
+    const coveredByRole = new Map();
+    if (coldOn) {
+      for (const home of homes) {
+        let dirNames;
+        try {
+          dirNames = fs
+            .readdirSync(home.dir, { withFileTypes: true })
+            .filter((e) => e.isDirectory() && !e.isSymbolicLink())
+            .map((e) => e.name);
+        } catch {
+          // 家目录读不动,后面的逐文件复制会各自记录原因,这里不重复报。
+          continue;
+        }
+        for (const dirName of dirNames) {
+          const c = plan.classifyColdDir(dirName, true);
+          if (!c.cold) continue;
+          report(`冷导出 ${home.role}:${dirName}:扫描中`);
+          const res = cold.exportColdDir({
+            sourceDir: path.join(home.dir, dirName),
+            setDir,
+            role: home.role,
+            dirName,
+            nowMs,
+            windowDays: COLD_EXPORT.WINDOW_DAYS,
+            dirMode: BACKUP.DIR_MODE,
+            fileMode: BACKUP.FILE_MODE,
+          });
+          if (!res.ok) {
+            // 冷导出失败**绝不**升级为整次备份失败:它是一条体积优化路径,
+            // 退回逐文件复制就是完整的。但必须留痕,否则下次没人知道它没跑。
+            out.warnings.push(`冷导出失败 ${home.role}:${dirName} — ${res.error}`);
+            excluded.push({ path: `${home.role}:${dirName}`, reason: `冷导出失败: ${res.error}` });
+            continue;
+          }
+          if (!res.exported) continue;
+
+          entries.push(
+            mf.makeEntry({
+              kind: 'cold-export',
+              home: home.role,
+              source: path.join(home.dir, dirName),
+              target: res.target,
+              bytes: res.bytes,
+              sha256: res.sha256,
+              compression: 'gzip',
+              records: res.records,
+              sourceFiles: res.sourceFiles,
+              window: { days: COLD_EXPORT.WINDOW_DAYS, untilMs: nowMs },
+            })
+          );
+
+          let set = coveredByRole.get(home.role);
+          if (!set) {
+            set = new Set();
+            coveredByRole.set(home.role, set);
+          }
+          for (const rel of res.coveredFiles) set.add(`${dirName}/${rel}`);
+          report(
+            `冷导出 ${home.role}:${dirName}:完成 ${res.records} 条 / ${res.bytes} B,` +
+              `折叠 ${res.coveredFiles.length}/${res.sourceFiles} 个文件,热窗口内保留 ${res.skippedRecent} 条`
+          );
+        }
+      }
+    }
+
     // ── 3) 逐文件复制(JSON / JSONL / 其它状态文件)────────────────────────
     for (const home of homes) {
       const collected = collectHomeFiles(home.dir, home.role, tier, root);
       excluded.push(...collected.excluded);
-      const total = collected.files.length;
+      // 已整份进冷归档的文件不再复制一遍 —— 同一份数据收两次,备份集就白治了。
+      // 留在 excluded 里而不是无声跳过:manifest 必须能解释每一个"没收"的文件。
+      const covered = coveredByRole.get(home.role);
+      const pending = covered
+        ? collected.files.filter((f) => {
+            if (!covered.has(f.rel)) return true;
+            excluded.push({ path: `${home.role}:${f.rel}`, reason: '已整份并入冷归档(cold-export)' });
+            return false;
+          })
+        : collected.files;
+      const total = pending.length;
       report(`复制 ${home.role} 家目录:${total} 个文件待处理`);
       let done = 0;
       let failed = 0;
-      for (const f of collected.files) {
+      for (const f of pending) {
         const targetRel = _posix(path.join(`${BACKUP.HOME_SUBDIR_PREFIX}${home.role}`, f.rel));
         const targetAbs = path.join(setDir, targetRel);
         try {

@@ -94,6 +94,104 @@ const FULL_ONLY_FILE_REASONS = Object.freeze({
   'audit.jsonl': '审计流水,core 级不收',
 });
 
+// ── 冷导出:哪些目录可以用「按时间窗口的逻辑导出」代替逐文件复制 ──────────
+// 全部取自 FULL_ONLY_DIR_REASONS —— 冷导出治的正是那批「体积大、只增不改、
+// 绝大多数记录再也不会被读」的历史流水。core 级本来就不收它们,所以冷导出
+// **只在 full 级或显式 includeCold 时**才有意义。
+//
+// 关键约束:被冷导出的东西不再逐文件复制 —— 两者是同一份数据的两种表示,同时收
+// 等于把备份集体积翻倍,而体积正是这件事要治的东西。
+//
+// 但短路的粒度是**文件**而不是目录(见 coldExportService 的 coveredFiles)。窗口
+// 过滤按记录判定,一个文件里完全可能既有 40 天前的冷记录、也有今天刚追加的热记录;
+// 按目录短路会把那些热记录连同文件一起从备份集里抹掉,而 manifest 上看不出任何异常。
+// 只有「每条记录都进了归档」的文件才从复制清单里去掉。
+const COLD_EXPORT_DIR_REASONS = Object.freeze({
+  audit: '审计流水:只增不改,按时间窗口冷封存',
+  receipts: '工具调用凭据流水:只增不改,按时间窗口冷封存',
+  events: '事件流水:只增不改,按时间窗口冷封存',
+  telemetry: '遥测流水:只增不改,按时间窗口冷封存',
+  training: '训练样本:只增不改,按时间窗口冷封存',
+  cognitive_snapshots: '认知快照流水:只增不改,按时间窗口冷封存',
+});
+
+/**
+ * 记录级时间戳提取。冷导出按时间窗口取记录,而每种流水的时间字段名都不一样。
+ *
+ * **取不到时间戳的记录一律判定为「留下」(返回 NaN,调用方据此不过滤)**,
+ * 绝不因为读不懂就丢掉。冷导出是归档,不是清洗 —— 把一条格式意外的审计记录
+ * 悄悄滤掉,和删除证据没有区别,而且没有任何人会发现。
+ *
+ * @param {*} record 已解析的 JSON 对象
+ * @returns {number} 毫秒时间戳;无法判定返回 NaN
+ */
+function recordTimeMs(record) {
+  try {
+    if (!record || typeof record !== 'object') return NaN;
+    for (const key of ['ts', 'timestamp', 'time', 'createdAt', 'created_at', 'at', 'date']) {
+      if (!(key in record)) continue;
+      const raw = record[key];
+      if (typeof raw === 'number' && Number.isFinite(raw)) {
+        // 十位数是秒级 epoch,十三位是毫秒级。判错会把 1970 和 2026 搞反,
+        // 而窗口过滤一旦搞反就是整段流水被丢。
+        return raw < 1e11 ? raw * 1000 : raw;
+      }
+      const t = Date.parse(String(raw));
+      if (Number.isFinite(t)) return t;
+    }
+    return NaN;
+  } catch {
+    return NaN;
+  }
+}
+
+/**
+ * 一条记录是否落在冷导出窗口内。
+ *
+ * 语义:窗口是「最近 windowDays 天」的**补集** —— 冷导出封存的是**旧**记录。
+ * 时间戳不可判定(NaN)时返回 true:见 recordTimeMs 的理由,宁可多存也不静默丢。
+ *
+ * @param {number} timeMs 记录时间;NaN 表示不可判定
+ * @param {number} nowMs 当前时间(注入,保持确定性)
+ * @param {number} windowDays 0 或负数 = 不设窗口,全部收录
+ * @returns {boolean}
+ */
+function withinColdWindow(timeMs, nowMs, windowDays) {
+  try {
+    const days = Number(windowDays);
+    if (!Number.isFinite(days) || days <= 0) return true;
+    if (!Number.isFinite(timeMs)) return true;
+    const now = Number.isFinite(Number(nowMs)) ? Number(nowMs) : 0;
+    if (now <= 0) return true;
+    return now - timeMs > days * 24 * 60 * 60 * 1000;
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * 目录是否走冷导出。只在启用冷导出时问这个问题;未启用时返回 not-cold,
+ * 让既有的 classifyDir 分级逻辑原样生效。
+ *
+ * @param {string} name 目录名
+ * @param {boolean} enabled 冷导出是否启用
+ * @returns {{cold: boolean, reason: string}}
+ */
+function classifyColdDir(name, enabled) {
+  const out = { cold: false, reason: '' };
+  try {
+    if (!enabled) return out;
+    const n = String(name == null ? '' : name).trim().toLowerCase();
+    const reason = COLD_EXPORT_DIR_REASONS[n];
+    if (!reason) return out;
+    out.cold = true;
+    out.reason = reason;
+    return out;
+  } catch {
+    return out;
+  }
+}
+
 // ── 排除:确切文件名(缓存 / 派生物 / 别的域)────────────────────────────
 const EXCLUDED_FILE_REASONS = Object.freeze({
   // 派生物:能由已安装文件或环境重新算出来
@@ -241,6 +339,10 @@ module.exports = {
   EXCLUDED_DIR_REASONS,
   FULL_ONLY_DIR_REASONS,
   FULL_ONLY_FILE_REASONS,
+  COLD_EXPORT_DIR_REASONS,
+  recordTimeMs,
+  withinColdWindow,
+  classifyColdDir,
   EXCLUDED_FILE_REASONS,
   EXCLUDED_FILE_PATTERNS,
   normalizeTier,
