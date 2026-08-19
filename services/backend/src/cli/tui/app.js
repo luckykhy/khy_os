@@ -116,14 +116,26 @@ async function startInkApp(options = {}) {
     if (_pad) _realOut.write(_pad);
   } catch { /* cosmetic — never block the TUI on the pad */ }
 
-  // Mouse-button layer (KHY_MOUSE_BUTTONS, default win32-on; see mouseButtons.js):
-  // request SGR mouse tracking so `<Box onClick/onMouseUp/…>` buttons — e.g. the
-  // mic voice button on the prompt — are clickable. Non-TTY streams stay off so
-  // piped output is never polluted. Enabled BEFORE ink mounts so no click is lost.
-  // The exit hooks restore the terminal on every exit path (a terminal left in
-  // mouse-tracking mode silently breaks click-to-select for the next command).
+  // Mouse layer. Two separate things happen here, in this order:
+  //
+  // 1. UNCONDITIONAL sanitize. Mouse tracking is a sticky terminal mode: a khy
+  //    session killed hard (SIGKILL / closed window) never ran its exit hook, so
+  //    the terminal stays in tracking mode and the user loses wheel-scroll and
+  //    click-drag selection in EVERY later command — with no way to guess why.
+  //    disableBytes() resets all tracking modes; DECRST on a mode that was never
+  //    set is a no-op, so writing it unconditionally costs nothing and heals a
+  //    terminal a previous crash left broken.
+  // 2. Opt-in enable. KHY_MOUSE_BUTTONS is OFF by default on every platform
+  //    (see mouseButtons.js「为什么默认全关」): tracking is exclusive, so buying
+  //    clickable <Box onClick> buttons costs the user scrollback + copy. The two
+  //    clickable elements both have keyboard equivalents (Alt+M for the mic, Esc
+  //    to clear pending images), so the default keeps the terminal intact.
+  //    Enabled BEFORE ink mounts so no click is lost; exit hooks restore.
   try {
     const mouseButtons = require('./mouseButtons');
+    if (_realOut.isTTY) {
+      _realOut.write(mouseButtons.disableBytes());
+    }
     if (mouseButtons.mouseButtonsEnabled(process.env, process.platform) && _realOut.isTTY) {
       const _hover = mouseButtons.mouseHoverEnabled(process.env);
       _realOut.write(mouseButtons.enableBytes({ hover: _hover }));
@@ -131,7 +143,7 @@ async function startInkApp(options = {}) {
       const offMouse = () => {
         if (_mouseHooked) return;
         _mouseHooked = true;
-        try { _realOut.write(mouseButtons.disableBytes({ hover: _hover })); } catch { /* terminal already gone */ }
+        try { _realOut.write(mouseButtons.disableBytes()); } catch { /* terminal already gone */ }
       };
       process.once('exit', offMouse);
       process.once('SIGINT', offMouse);
@@ -168,21 +180,22 @@ async function startInkApp(options = {}) {
   // classic-mode work in this process can use inquirer normally again.
   delete process.env.KHY_INK_TUI_ACTIVE;
 
-  // Tear down the pinned topic bar (块3): restore the full-screen scroll region
-  // and clear row 1 so the shell prompt returns to a normal terminal. The mount
+  // Tear down the pinned topic bar (块3): restore the terminal window title
+  // (it is OSC-based, not a DECSTBM scroll region — see runtime/topicBar.js). The mount
   // effect's cleanup and the process exit hook also call this; disable() is
   // idempotent, so a final explicit call here covers a clean waitUntilExit return.
   try { require('./runtime/topicBar').disable(); } catch { /* terminal already gone */ }
   // Same for the right rail: blank the reserved gutter so no board fragment
   // outlives the session (the module's own exit hook covers hard exits).
   try { require('./runtime/sidebarRail').disable(); } catch { /* terminal already gone */ }
-  // Same for mouse tracking: leave the terminal out of mouse-tracking mode so
-  // the next command can click-to-select again (exit hooks cover hard exits).
+  // Same for mouse tracking: leave the terminal out of tracking mode so the next
+  // command can wheel-scroll and click-to-select again. Written UNCONDITIONALLY,
+  // not behind mouseButtonsEnabled() — gating it means a session that ran with the
+  // gate on, then had the env flipped off mid-life (or an older build that enabled
+  // a mode this build no longer knows about) walks away leaving the terminal broken.
   try {
     const _mouseButtons = require('./mouseButtons');
-    if (_mouseButtons.mouseButtonsEnabled(process.env, process.platform)) {
-      _realOut.write(_mouseButtons.disableBytes({ hover: _mouseButtons.mouseHoverEnabled(process.env) }));
-    }
+    _realOut.write(_mouseButtons.disableBytes());
   } catch { /* terminal already gone */ }
 
   // Print the resume hint now that ink has released the terminal. Without this

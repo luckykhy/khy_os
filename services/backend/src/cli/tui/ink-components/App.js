@@ -724,9 +724,28 @@ function App({ options = {} }) {
     []
   );
 
-  // Wheel input is already consumed by SGR tracking before Ink sees it. Disable
-  // tracking immediately after the event so the terminal receives the next wheel
-  // event natively; restore after a short idle window for button clicks.
+  // 原生透传的两个 ref:是否正处于透传态 + 恢复追踪的定时器。这两个**曾经整个缺失**:
+  // enterNativePassthrough 第一行 `mouseNativeRestoreTimer.current` 就 ReferenceError,
+  // 而 dispatcher 的 fireNative() 把 onNative 包在 fail-soft 的 try/catch 里 —— 异常被
+  // 静默吞掉,于是「关掉追踪、把这次滚轮/拖选交还终端」这一步一次都没有真正执行过。
+  // 用户侧的表现就是彻底「滚不动、选不中」,而不是偶尔失灵:每一个滚轮事件都进了
+  // stdin、被 dispatcher 吃掉,终端一个都没收到。
+  const mouseNativeRef = React.useRef(false);
+  const mouseNativeRestoreTimer = React.useRef(null);
+
+  // Native passthrough. Tracking is exclusive: the wheel notch / drag that got us
+  // here was already delivered to stdin, so the terminal never saw it and there is
+  // no way to hand it back — that first notch is simply lost. What we CAN do is get
+  // out of the way for everything after it, by resetting tracking and staying out
+  // until the user shows they want the buttons again.
+  //
+  // The window used to be 250ms, which made slow reading-speed scrolling (one notch
+  // every few hundred ms) lose EVERY notch: each one re-armed tracking before the
+  // next arrived. 1500ms covers a normal scroll-and-read cadence; each event
+  // re-arms the timer, so a continuous scroll never re-enables mid-gesture.
+  // exitNativePassthrough (below) is the other half: any keystroke means the user is
+  // back at the prompt, so tracking returns immediately instead of waiting out the
+  // idle window. KHY_MOUSE_NATIVE_MS overrides the window.
   const enterNativePassthrough = React.useCallback(() => {
     if (!_mouse || !process.stdout || !process.stdout.isTTY) {
       return;
@@ -737,12 +756,12 @@ function App({ options = {} }) {
     if (!mouseNativeRef.current) {
       mouseNativeRef.current = true;
       try {
-        process.stdout.write(_mouse.disableBytes({ hover: _mouse.mouseHoverEnabled(process.env) }));
+        process.stdout.write(_mouse.disableBytes());
       } catch {
         /* fail-soft */
       }
     }
-    let ms = 250;
+    let ms = 1500;
     try {
       const raw = Number(process.env.KHY_MOUSE_NATIVE_MS);
       if (Number.isFinite(raw) && raw > 0) {
@@ -760,6 +779,27 @@ function App({ options = {} }) {
         /* fail-soft */
       }
     }, ms);
+  }, []);
+  // Keystroke = the user is typing at the prompt again, not reading scrollback →
+  // reclaim tracking now rather than waiting out the idle window. No-op when we are
+  // not currently in passthrough, so it is safe to call on every key.
+  const exitNativePassthrough = React.useCallback(() => {
+    if (!mouseNativeRef.current) {
+      return;
+    }
+    if (mouseNativeRestoreTimer.current) {
+      clearTimeout(mouseNativeRestoreTimer.current);
+      mouseNativeRestoreTimer.current = null;
+    }
+    mouseNativeRef.current = false;
+    if (!_mouse || !process.stdout || !process.stdout.isTTY) {
+      return;
+    }
+    try {
+      process.stdout.write(_mouse.enableBytes({ hover: _mouse.mouseHoverEnabled(process.env) }));
+    } catch {
+      /* fail-soft */
+    }
   }, []);
   React.useEffect(
     () => () => {
@@ -3439,6 +3479,11 @@ function App({ options = {} }) {
         }
         return;
       }
+
+      // 0a) Anything that is not a mouse sequence is a keystroke: the user is back
+      //     at the prompt, so end any native passthrough now instead of waiting out
+      //     the idle window. No-op unless we are actually in passthrough.
+      exitNativePassthrough();
 
       // 0) Model picker overlay owns input while mounted (its own useInput drives
       //    navigation/selection); yield so there is no double-handling.
