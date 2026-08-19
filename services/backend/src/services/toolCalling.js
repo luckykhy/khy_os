@@ -986,15 +986,7 @@ async function _executeCompatTool(compatCanonicalName, params = {}, traceContext
     const timeoutMs = Math.min(Math.max(Number(normalizedParams.timeout) || 15000, 1000), 60000);
     const maxChars = Math.min(Math.max(Number(normalizedParams.max_chars) || 20000, 1000), 200000);
     const { fetchWithSsrfGuard } = require('./fetchTimeout');
-    let fetchFn = typeof fetch === 'function' ? fetch : null;
-    if (!fetchFn) {
-      try {
-        const mod = await import('node-fetch');
-        fetchFn = mod.default || mod;
-      } catch {
-        return { success: false, error: 'No fetch implementation available for webFetch' };
-      }
-    }
+    const fetchFn = fetch;
 
     const response = await fetchWithSsrfGuard(
       (signal) =>
