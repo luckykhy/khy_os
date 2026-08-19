@@ -120,18 +120,22 @@
   },
   "devDependencies": {
     "@opentelemetry/exporter-trace-otlp-http": "^0.207.0",
+    "@opentelemetry/instrumentation-express": "^0.56.0",
+    "@opentelemetry/instrumentation-http": "^0.207.0",
+    "@opentelemetry/sdk-node": "^0.207.0",
     "@opentelemetry/sdk-trace-base": "^2.2.0",
     "c8": "^10.1.3",
     "esbuild": "^0.25.12",
-    "javascript-obfuscator": "^5.4.2",
     "node-cron": "^4.2.1"
+  },
+  "//overrides": "iconv-lite 收敛成单份：发布 bundle 由 esbuild 按解析路径内联，同一个包装在几个 node_modules 下就被打进去几遍。0.6.3 是 whatwg-encoding/encoding-sniffer 点名要的版本；body-parser/raw-body（~0.4.24）与 @inquirer/external-editor（^0.7.0）只用 decode/encodingExists，三个版本签名一致。",
+  "overrides": {
+    "iconv-lite": "0.6.3",
+    "@inquirer/external-editor": {
+      "iconv-lite": "0.6.3"
+    }
   },
   "allowScripts": {
     "better-sqlite3@12.9.0": true
-  },
-  "dependencies": {
-    "@opentelemetry/instrumentation-express": "^0.56.0",
-    "@opentelemetry/instrumentation-http": "^0.207.0",
-    "@opentelemetry/sdk-node": "^0.207.0"
   }
 }

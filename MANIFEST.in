@@ -19,7 +19,6 @@ recursive-include kernel/iso *
 recursive-include kernel/vendor *
 recursive-include kernel/alpine *
 recursive-include scripts *
-recursive-include tools/khyos-markdown *
 
 # Include standalone files required by build/runtime packaging.
 include kernel/Makefile
@@ -34,7 +33,6 @@ include apps/ai-frontend/package-lock.json
 include software/khyquant/frontend/package-lock.json
 include README.md
 include AGENTS.md
-include scripts/obfuscate.js
 
 # Exclude internal credentials docs and local env files.
 exclude docs/INTERNAL_CREDENTIALS.md
@@ -44,13 +42,13 @@ exclude backend/.env
 exclude .env
 
 # Exclude heavy / generated / sensitive content.
-prune extensions/khy-trae-bridge/node_modules
+prune extensions/bridges/khy-trae-bridge/node_modules
 prune services/backend/node_modules
 prune services/backend/vendor
 prune services/backend/_source
 prune services/ai-backend/node_modules
-prune tools/khyos-markdown/muya-embed/node_modules
-prune tools/khyos-markdown/vendor
+prune extensions/tools/khy-markdown/muya-embed/node_modules
+prune extensions/tools/khy-markdown/vendor
 prune apps/ai-frontend/node_modules
 prune services/backend/models
 prune services/backend/logs
@@ -79,7 +77,7 @@ prune scripts/tests
 prune services/ai-backend/test
 prune software/khyquant/tests
 prune platform/packages/shared/tests
-prune tools/khyos-markdown/test
+prune extensions/tools/khy-markdown/test
 prune apps/ai-frontend/test
 prune kernel/build
 prune kernel/iso/output
