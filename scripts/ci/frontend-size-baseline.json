@@ -21,9 +21,9 @@
   "apps": {
     "apps/ai-frontend": {
       "dist": "dist",
-      "note": "vendor 为 public/vendor/khyos-muya.{js,css}，合计约 10.5 MB，占产物八成。",
+      "note": "vendor 为 public/vendor/khyos-muya.{js,css}，合计约 10.5 MB，占产物八成。 vendorBytes 于 2026-08-19 从 11033299 下调到 11029173：旧值是从 git 检出的副本量的，Windows 的 core.autocrlf 把 khyos-muya.js 撑大了 4112 字节。vendor/ 现已不进 git，由 muya-embed/build.mjs 按需重建，新值 = MANIFEST.json 的 totalBytes(11028959) + 清单自身(214)，跨平台逐字节可复现。",
       "appAssetsBytes": 2723684,
-      "vendorBytes": 11033299,
+      "vendorBytes": 11029173,
       "fileCount": 138
     },
     "software/khyquant/frontend": {

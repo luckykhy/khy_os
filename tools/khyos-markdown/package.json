@@ -9,6 +9,8 @@
     "khyos-md-mcp": "./khyos-md-mcp.js"
   },
   "scripts": {
+    "prepack": "node muya-embed/ensure-vendor.mjs --required",
+    "vendor:ensure": "node muya-embed/ensure-vendor.mjs",
     "start": "node khyos-md-bridge.js",
     "dev": "node khyos-md-bridge.js --no-open",
     "mcp": "node khyos-md-mcp.js",

@@ -70,6 +70,13 @@ if [[ "$SKIP_BUILD" == '0' ]]; then
   info "Assembling standalone zero-dependency runtime..."
   node scripts/release/assemble-pip-runtime.js
 
+  # docs/_assets/mermaid.min.js 不进 git（.gitignore「可再生构建产物」段）。
+  # MANIFEST.in 走的是工作树而非 git，所以打 sdist 前必须先重建，否则
+  # pip_packaging_rules.py:173 承诺的「docs/_assets 全留，khy docs:build 可按需
+  # 重生成离线站」就成了空头支票 —— 站是生成了，图表全白。
+  info "Ensuring offline mermaid bundle exists..."
+  node scripts/docs/mermaid-embed/ensure-mermaid.mjs --required
+
   info "Verifying MANIFEST.in sync..."
   python3 scripts/release/check_manifest_sync.py
 

@@ -10,12 +10,14 @@
  * @pattern Builder
  */
 import { existsSync, mkdirSync, statSync, copyFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(here, '..'); // apps/ai-frontend
 const srcDir = resolve(appRoot, '../../tools/khyos-markdown/vendor');
+const ensureScript = resolve(appRoot, '../../tools/khyos-markdown/muya-embed/ensure-vendor.mjs');
 const destDir = resolve(appRoot, 'public/vendor');
 const ASSETS = ['khyos-muya.js', 'khyos-muya.css', 'MANIFEST.json'];
 
@@ -30,9 +32,23 @@ function upToDate(src, dest) {
   }
 }
 
+/** 真源缺失时先让它自己重建一次（vendor/ 不进 git,新克隆第一次跑必然缺）。
+ *  fail-soft:离线或 npm 不可用时只 warn,由调用方决定是否降级。 */
+function ensureSource() {
+  if (existsSync(srcDir)) return true;
+  console.warn('[sync-md-vendor] source missing — rebuilding from tools/khyos-markdown/muya-embed/');
+  try {
+    execFileSync(process.execPath, [ensureScript], { stdio: 'inherit' });
+  } catch (err) {
+    console.warn(`[sync-md-vendor] rebuild failed: ${err && err.message}`);
+  }
+  return existsSync(srcDir);
+}
+
 function main() {
-  if (!existsSync(srcDir)) {
+  if (!ensureSource()) {
     console.warn(`[sync-md-vendor] source missing: ${srcDir} — skip (runtime falls back to inline renderer)`);
+    console.warn('[sync-md-vendor] fix: node tools/khyos-markdown/muya-embed/ensure-vendor.mjs');
     return;
   }
   try {
