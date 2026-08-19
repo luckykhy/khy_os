@@ -19,7 +19,11 @@
  * @module services/backup/backupManifest
  */
 
-const ENTRY_KINDS = Object.freeze(['sqlite', 'pgdump', 'file']);
+// 'cold-export' 是**追加**的 kind,不是替换:旧 manifest 里没有它,读旧备份的代码
+// 走的是既有三条分支,一条都没动。恢复端按 kind 分派,遇到不认识的 kind 会跳过并
+// 留痕(见 restoreService 的 --kinds 过滤),所以老版本读新备份集也不会崩,
+// 只是恢复不出冷数据 —— 这正是可接受的降级方向。
+const ENTRY_KINDS = Object.freeze(['sqlite', 'pgdump', 'file', 'cold-export']);
 
 /** 备份集 id:`<紧凑 UTC 时间戳>-<随机后缀>`,按字典序排序即等于按时间排序。 */
 const ID_RE = /^(\d{8}T\d{6}Z)-([0-9a-f]{6,})$/;
@@ -92,6 +96,15 @@ function makeEntry(spec = {}) {
   };
   if (spec.journalMode) {
     e.journalMode = String(spec.journalMode);
+  }
+  if (e.kind === 'cold-export') {
+    // 这四个字段只对冷归档有意义,所以只在该 kind 上出现,不给其它 entry 添噪。
+    // records 尤其重要:一份 0 记录的归档不该存在(exportColdDir 不产它),
+    // 但如果哪天真的出现了,manifest 要能让 verify 一眼看出来。
+    e.compression = String(spec.compression || 'gzip');
+    e.records = Number.isFinite(Number(spec.records)) ? Number(spec.records) : 0;
+    e.sourceFiles = Number.isFinite(Number(spec.sourceFiles)) ? Number(spec.sourceFiles) : 0;
+    e.window = spec.window && typeof spec.window === 'object' ? { ...spec.window } : {};
   }
   return e;
 }
@@ -169,6 +182,17 @@ function validateManifest(obj) {
         }
         if (!Number.isFinite(Number(e.bytes)) || Number(e.bytes) < 0) {
           errors.push(`entries[${i}].bytes 非法`);
+        }
+        if (e.kind === 'cold-export') {
+          // 空归档是**契约违反**而不是空数据:导出器在 records===0 时根本不写文件,
+          // 所以 manifest 里出现一条 records=0 的 cold-export,只可能是记账错了。
+          // 放行它等于让 verify 通过一份恢复不出任何东西的归档。
+          if (!Number.isFinite(Number(e.records)) || Number(e.records) <= 0) {
+            errors.push(`entries[${i}].records 非法(冷归档必须至少含 1 条记录)`);
+          }
+          if (Number(e.bytes) <= 0) {
+            errors.push(`entries[${i}].bytes 为 0(冷归档不应为空文件)`);
+          }
         }
       });
     }

@@ -275,6 +275,38 @@ const BACKUP = Object.freeze({
   INCLUDE_VAULT: false,
 });
 
+// Runtime storage retention. Layout switches remain additive so deployments can roll back without moving live data.
+const LOGS = Object.freeze({
+  LAYOUT: process.env.KHY_LOG_LAYOUT || 'active',
+  KEEP_DAYS: parseInt(process.env.KHY_LOG_KEEP_DAYS || '14', 10),
+  MAX_FILES: parseInt(process.env.KHY_LOG_MAX_FILES || '40', 10),
+  MAX_SIZE_BYTES: parseInt(process.env.KHY_LOG_MAX_SIZE_BYTES || String(120 * 1024 * 1024), 10),
+});
+const CHECKPOINT = Object.freeze({
+  STORAGE_MODE: process.env.KHY_CHECKPOINT_STORAGE_MODE || 'legacy',
+  MAX_TOTAL_MB: parseInt(process.env.KHY_CHECKPOINT_MAX_TOTAL_MB || '500', 10),
+});
+// 冷导出:把 audit/receipts/events 这类「只增不改」的历史流水压成单个 .jsonl.gz,
+// 代替逐文件复制 —— 代价几乎全在**文件数**而不是字节数:audit 一个目录就是
+// 1300+ 个小文件,每个都要一次 copy、一次 stat、一次 sha256、一条 manifest entry。
+//
+// 默认关闭是刻意的:它改变的是**备份集的形状**,恢复端要按 kind 分派才拿得回来。
+// 先让 full 级备份的人显式开一段时间、验证 verify/restore 无碍,再谈默认打开。
+const COLD_EXPORT = Object.freeze({
+  ENABLED: process.env.KHY_COLD_EXPORT_ENABLED === '1',
+  // 冷归档**不单独设保留期**。它躺在备份集内部(<set>/cold/…),随所属集一起被
+  // pruneBackups 按 KEEP_COUNT/KEEP_DAYS 删除 —— 这是唯一正确的粒度:单独删掉一份
+  // 归档会让 manifest 指向不存在的文件,verify 当场失败,而那批数据**只存在于**
+  // 归档里(备份端已把它们从逐文件复制清单去掉),删了就没了。
+  // 保留期语义在 BACKUP.KEEP_COUNT / BACKUP.KEEP_DAYS,别在这里再开一个。
+  // 记录进入「冷」的年龄门槛:比这更新的记录不进归档,留在原地逐文件收。
+  // 热窗口内的流水还在被追加,把它折叠进 gz 会让 restore 之后的增量写入
+  // 落到一个刚被整体覆盖过的目录上。与备份保留期无关,独立可调。
+  WINDOW_DAYS: parseInt(process.env.KHY_COLD_EXPORT_WINDOW_DAYS || '30', 10),
+  // 归档在备份集内的子目录。与 DB_SUBDIR / HOME_SUBDIR_PREFIX 同级,restore 按它寻址。
+  SUBDIR: 'cold',
+});
+
 // ── API key 池冷却/退避单一真源(services/apiKeyPool.js) ─────────────────────
 // F5「默认值进 constants,不许散落硬编码」的落点。这四个值原先内联在 apiKeyPool.js
 // 顶部且**没有任何 env 覆盖**:某 provider 抖动一阵把 key 推到最高退避级后,用户除了
@@ -453,6 +485,10 @@ const exported = {
   VOICE_SILENCE_TIMEOUT_MS,
   // 数据备份与恢复单一真源(khy backup;保留策略/根目录/分级默认值)
   BACKUP,
+  // Runtime storage retention and rollback policy.
+  LOGS,
+  CHECKPOINT,
+  COLD_EXPORT,
   // API key 池冷却/退避单一真源(services/apiKeyPool.js)
   API_KEY_POOL,
   UPDATE,
