@@ -76,11 +76,11 @@ function buildPayloadAssets(options = {}) {
     // 失败。--required：构建不出来即红灯，绝不发一个残缺的 Release。
     execFileSync(
       process.execPath,
-      [path.join(root, 'tools', 'khyos-markdown', 'muya-embed', 'ensure-vendor.mjs'), '--required'],
+      [path.join(root, 'extensions', 'khy-markdown', 'muya-embed', 'ensure-vendor.mjs'), '--required'],
       { cwd: root, stdio: 'inherit' }
     );
 
-    const vendorDir = path.join(root, 'tools', 'khyos-markdown', 'vendor');
+    const vendorDir = path.join(root, 'extensions', 'khy-markdown', 'vendor');
     const vendorFiles = [
       ['MANIFEST.json', 'markdown-vendor-manifest.json'],
       ['khyos-muya.js', 'markdown-vendor-muya.js'],
