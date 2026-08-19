@@ -74,6 +74,9 @@ khy doctor                 <span class="hljs-comment"># 系统健康检查</span
 .\scripts\portable\run.ps1 build            <span class="hljs-comment"># npm run build</span>
 .\scripts\portable\run.ps1 shell            <span class="hljs-comment"># 进入带 node/npm 环境的 PowerShell</span></code></pre>
 <p>Linux / macOS 使用 <code>./khy.sh</code>。便携模式详见 <a href="docs/06_DEPLOY_部署/PORTABLE.html">PORTABLE.md</a>。</p>
+<p>仓库<strong>不跟踪可再生的构建产物</strong>：Markdown 工作台的 muya WYSIWYG 引擎（<code>tools/khyos-markdown/vendor/</code>）<br>与离线文档站的图表引擎（<code>docs/_assets/mermaid.min.js</code>）都由同级源码按需重建。开发路径 fail-soft<br>（缺失时自动回退），发布路径硬失败。想立刻补齐：</p>
+<pre><code class="language-bash">node tools/khyos-markdown/muya-embed/ensure-vendor.mjs   <span class="hljs-comment"># muya 所见即所得引擎（约 11 MB）</span>
+npm run docs:mermaid                                     <span class="hljs-comment"># 文档站 Mermaid 图表引擎（约 3.3 MB）</span></code></pre>
 <h2 id="快速开始-开发者">快速开始（开发者）<a class="anchor" href="#快速开始-开发者" aria-label="锚点">#</a></h2>
 <h3 id="启动后端">启动后端<a class="anchor" href="#启动后端" aria-label="锚点">#</a></h3>
 <pre><code class="language-powershell"><span class="hljs-built_in">cd</span> services\backend
@@ -168,6 +171,7 @@ node scripts\seed.js               <span class="hljs-comment"># 或：完整种�
 <blockquote><p>顶层七个目录的<strong>层级定位（L0–L6）、允许的依赖方向、以及新文件该放哪一层</strong>，<br>真源是 <a href="docs/03_DESIGN_设计/[DESIGN-ARCH-068]%20仓库层级板块规范.html"><code>docs/03_DESIGN_设计/[DESIGN-ARCH-068] 仓库层级板块规范.md</code></a>，<br>由 <code>npm run check:layout</code> 强制执行。新增文件或新增顶层目录前先读它。</p></blockquote>
 <h2 id="文档导航">文档导航<a class="anchor" href="#文档导航" aria-label="锚点">#</a></h2>
 <ul><li>文档总索引：<a href="docs/00_INDEX_文档索引.html">docs/00_INDEX_文档索引.md</a></li><li>概念入门（Agent / Tool Calling / MCP / LLM 等）：<code>docs/02_CONCEPTS_概念入门/</code></li><li>设计与实现记录：<code>docs/03_DESIGN_设计/</code>、<code>docs/04_IMPL_实现/</code></li><li>部署与运维手册：<code>docs/06_DEPLOY_部署/</code>、<code>docs/07_OPS_运维/</code></li></ul>
+<blockquote><p>离线文档站（<code>docs/**/*.html</code>）随仓库提供，可直接用浏览器打开。但它的图表引擎<br><code>docs/_assets/mermaid.min.js</code> 是构建产物、不进 git：<strong>首次克隆后跑一次 <code>npm run docs:build</code></strong>，<br>Mermaid 图表才会渲染。在此之前图表区域留白 —— <code>docs/_assets/docs-site.js</code> 已做优雅降级，<br>不会报错，其余正文与导航一切正常。</p></blockquote>
 <h2 id="版本同步">版本同步<a class="anchor" href="#版本同步" aria-label="锚点">#</a></h2>
 <p>版本号由 <code>scripts/ci/check-version-sync.js</code> 强制校验（pre-commit / CI）。升级版本时必须同步更新以下<strong>三处真源</strong>，且保持完全一致：</p>
 <ol><li><code>pyproject.toml</code> → <code>[project] version</code></li><li><code>packaging/npm/package.json</code> → <code>version</code></li><li><code>services/backend/package.json</code> → <code>version</code></li></ol>

@@ -3,6 +3,9 @@
 > 本索引为文档总入口，按「阶段 → 类型 → 序号」归类，命名格式 `[阶段-类型-序号] 中文名`（更新于 2026-08-17）。
 > 各阶段目录另设 `00_INDEX_*` 分类索引作为该目录的就近导航入口。
 
+> 📈 **首次克隆后请跑一次 `npm run docs:build`**：图表引擎 `docs/_assets/mermaid.min.js`
+> 是 `scripts/docs/mermaid-embed/` 的构建产物、不进 git，在重建之前所有 Mermaid 图表区域留白。
+
 ## 阶段总览
 
 | 序号 | 阶段目录 | 文档数 | 本索引已列 |
@@ -133,11 +136,13 @@
 - [`DESIGN-ARCH-067` opencode高含金量功能教学与khy-os差距补齐路线](03_DESIGN_设计/%5BDESIGN-ARCH-067%5D%20opencode高含金量功能教学与khy-os差距补齐路线.md)
 - [`DESIGN-ARCH-067` 动态模型差异化适配引擎](03_DESIGN_设计/%5BDESIGN-ARCH-067%5D%20动态模型差异化适配引擎.md) ⚠️ 编号与上一条冲突，待重编
 - [`DESIGN-ARCH-068` 仓库层级板块规范](03_DESIGN_设计/%5BDESIGN-ARCH-068%5D%20仓库层级板块规范.md) — **顶层目录 L0–L6 分层、允许依赖边、`docs/` 两轴命名、任务入口命名的单一真源**；新增文件或新增顶层目录前先读它，由 `npm run check:layout` 强制
+- [`DESIGN-ARCH-069` 拓展契约与核心边界规范](03_DESIGN_设计/%5BDESIGN-ARCH-069%5D%20拓展契约与核心边界规范.md) — **「什么是核、什么是拓展」的单一真源**：核 = 壳+漏斗+网关；一个拓展 = 一个目录 + 一份 `khy.extension.json`；五个拓展根与优先级；发现→惰性激活→停用；删目录即消失。`[DESIGN-ARCH-068]` 是其上位法，由 `npm run check:layout` 的 `extension-contract` 规则强制
 - [`DESIGN-OTHER-001` Khyos-数学重塑-实施提示词链](03_DESIGN_设计/%5BDESIGN-OTHER-001%5D%20Khyos-数学重塑-实施提示词链.md)
 - [`DESIGN-OTHER-002` _cbssp_分阶段防闪退提示词](03_DESIGN_设计/%5BDESIGN-OTHER-002%5D%20_cbssp_分阶段防闪退提示词.md)
 - [`DESIGN-OTHER-003` khy-系统提示词结构图](03_DESIGN_设计/%5BDESIGN-OTHER-003%5D%20khy-系统提示词结构图.md)
 - [`DESIGN-OTHER-004` 特性访问-提示词胶囊-2026-06-01](03_DESIGN_设计/%5BDESIGN-OTHER-004%5D%20特性访问-提示词胶囊-2026-06-01.md)
 - [`DESIGN-RESEARCH`（未编号）跨Agent技能MCP统一管理-阶段一调研](03_DESIGN_设计/%5BDESIGN-RESEARCH%5D%20跨Agent技能MCP统一管理-阶段一调研.md) — 只读调研：现有 `ccMcpBridge`/`ocMcpBridge`/`*SkillBridge` 只发现不写入，缺 agent 注册表与统一 import 原语；立法清单冻结前不动代码
+- [`DESIGN-LEGISLATION`（未编号）跨Agent技能MCP统一管理-阶段二立法清单](03_DESIGN_设计/%5BDESIGN-LEGISLATION%5D%20跨Agent技能MCP统一管理-阶段二立法清单.md) — 阶段三实现的冻结依据：`khy unify` 的 export/import/list/sync 范围、MCP 与技能 bridge 注册表、存量纳管写入口；依据阶段一调研 §1-§5 与铁律 F1-F8
 
 历史未编号件（保留原名，重命名须同步改写全部入站引用，属独立一轮工作）：
 

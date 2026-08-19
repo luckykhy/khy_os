@@ -141,7 +141,7 @@ npm run build --prefix apps/ai-frontend</code></pre>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
 <ul><li>you changed startup/network/task execution</li><li>you need a fast changed-file gate</li><li>you need to verify handoff guardrails</li></ul>
 <p><strong>先读这些文件：</strong></p>
-<ul><li><code>AGENTS.md</code></li><li><code>CONTRIBUTING.md</code></li><li><code>scripts/check-agent-rules.js</code></li><li><code>scripts/check-change-safety.js</code></li><li><code>scripts/install-git-hooks.js</code></li><li><code>scripts/ci/check-version-sync.js</code></li><li><code>scripts/ci/check-node-syntax.js</code></li><li><code>scripts/ci/check-python-syntax.py</code></li></ul>
+<ul><li><code>AGENTS.md</code></li><li><code>CONTRIBUTING.md</code></li><li><code>scripts/ci/check-agent-rules.js</code></li><li><code>scripts/ci/check-change-safety.js</code></li><li><code>scripts/install/install-git-hooks.js</code></li><li><code>scripts/ci/check-version-sync.js</code></li><li><code>scripts/ci/check-node-syntax.js</code></li><li><code>scripts/ci/check-python-syntax.py</code></li></ul>
 <p><strong>参考文档：</strong></p>
 <ul><li>AGENTS.md</li><li>CONTRIBUTING.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
@@ -152,11 +152,11 @@ npm run check:quality-gates</code></pre>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
 <ul><li>you need a fixed, repeatable release path (check → build → audit → publish → verify)</li><li>an upgrade broke something and you must roll back to the last known-good version</li><li>you need to know which version is the current stable baseline</li><li>release artifacts or the post-release check regressed</li></ul>
 <p><strong>先读这些文件：</strong></p>
-<ul><li><code>maintenance/stable-release.json</code></li><li><code>maintenance/lib/ops.js</code></li><li><code>maintenance/lib/ops-lib.js</code></li><li><code>services/backend/src/cli/handlers/publish.js</code></li><li><code>scripts/release/build-and-audit-pip-purity.sh</code></li><li><code>scripts/ci/check-version-sync.js</code></li><li><code>maintenance/tests/ops-lib.test.js</code></li></ul>
+<ul><li><code>services/backend/src/cli/handlers/publish.js</code></li><li><code>scripts/release/build-and-audit-pip-purity.sh</code></li><li><code>scripts/ci/check-version-sync.js</code></li></ul>
 <p><strong>参考文档：</strong></p>
-<ul><li>docs/_传承/KHY-OS-传承书.md</li><li>docs/06_DEPLOY_部署/[DEPLOY-MAN-011] pip-docker-打包部署.md</li><li>maintenance/README.md</li></ul>
+<ul><li>docs/_传承/KHY-OS-传承书.md</li><li>docs/06_DEPLOY_部署/[DEPLOY-MAN-011] pip-docker-打包部署.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">node --<span class="hljs-built_in">test</span> maintenance/tests/ops-lib.test.js maintenance/tests/ops.integration.test.js
+<pre><code class="language-bash">npm run <span class="hljs-built_in">test</span>:one -- services/backend/tests/publish.sourceReleaseMode.test.js services/backend/tests/publish.dbPreflight.test.js
 npm run check:version-sync</code></pre>
 <hr>
 <h3 id="build-best-environment-self-check-repair-probes-env-optimize">Build Best Environment (Self-check / Repair / Probes)  <code>env-optimize</code><a class="anchor" href="#build-best-environment-self-check-repair-probes-env-optimize" aria-label="锚点">#</a></h3>
@@ -993,7 +993,7 @@ node --check services/backend/src/cli/cacheWarning.js</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-152] 交付门人类可读报告落盘接线.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">node services/backend/tests/services/deliveryGateReporter.test.js
+<pre><code class="language-bash">node --<span class="hljs-built_in">test</span> services/backend/tests/services/deliveryGateReporter.test.js
 node --check services/backend/src/services/agenticHarnessService.js
 node --check services/backend/src/services/flagRegistry.js</code></pre>
 <hr>
@@ -1005,7 +1005,7 @@ node --check services/backend/src/services/flagRegistry.js</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-153] 会话快照损坏兜底修复接线.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">node services/backend/tests/services/sessionFileRepairWiring.test.js
+<pre><code class="language-bash">node --<span class="hljs-built_in">test</span> services/backend/tests/services/sessionFileRepairWiring.test.js
 node --check services/backend/src/services/sessionPersistence.js
 node --check services/backend/src/services/flagRegistry.js</code></pre>
 <hr>
@@ -1017,7 +1017,7 @@ node --check services/backend/src/services/flagRegistry.js</code></pre>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-154] 任务模板执行手册注入接线.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
-<pre><code class="language-bash">node services/backend/tests/services/taskTemplateHintWiring.test.js
+<pre><code class="language-bash">node --<span class="hljs-built_in">test</span> services/backend/tests/services/taskTemplateHintWiring.test.js
 node --check services/backend/src/services/agenticHarnessService.js
 node --check services/backend/src/services/flagRegistry.js</code></pre>
 <hr>
