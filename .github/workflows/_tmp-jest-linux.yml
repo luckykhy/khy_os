@@ -1,0 +1,35 @@
+# 临时诊断流水线 —— 用完即删。
+# 目的：拿到 dual-channel-release.yml 的 Jest 门禁在 **Node 22 / ubuntu** 上的真实失败根因。
+# 上一版用了 lts/*（Node 24），与发布门禁实际使用的 22 不一致，那份清单不作数。
+# 仓库的 Actions 日志需要 admin 才能读，但 check-run annotations 是公开可读的，
+# 所以把结论用 ::error:: 吐出来；并按「失败首行」做直方图，避免逐条列举被长度上限截断。
+name: _tmp jest linux
+
+on:
+  push:
+    branches: [chore/repo-layer-taxonomy]
+
+permissions:
+  contents: read
+
+jobs:
+  jest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'   # 与 dual-channel-release.yml 对齐，这是门禁的真实环境
+
+      # 不能加 --ignore-scripts：better-sqlite3 是原生模块，依赖 postinstall 构建。
+      - run: npm ci
+        working-directory: services/backend
+
+      # || true：要的是完整清单，而不是停在第一个失败。
+      - name: Jest
+        working-directory: services/backend
+        run: npx jest --ci --passWithNoTests --json --outputFile=/tmp/jest.json > /tmp/jest.txt 2>&1 || true
+
+      - name: Report
+        run: node .github/workflows/_tmp-jest-report.js /tmp/jest.json
