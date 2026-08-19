@@ -23,6 +23,10 @@ const ANY_DIR_EXCLUDES = new Set([
   '__pycache__', '.pytest_cache', '.cache', 'coverage', '.nyc_output',
 ]);
 const SECRET_OR_STATE_RE = /(?:^|\/)(?:\.env(?:\..*)?|[^/]+\.(?:db|db-wal|db-shm|sqlite|sqlite3|log|pid|pyc))$/i;
+// source map 单独一条，不并进 SECRET_OR_STATE_RE：它既不是密钥也不是运行期状态，
+// 排除它的理由是体积和源码泄露（khy 那份 map 有 66.9 MB，是 bundle 的 3.5 倍），
+// 混进去会让那条正则的名字开始说谎，下一个人就不知道该往哪加规则了。
+const DEBUG_SYMBOL_RE = /\.(?:map|js\.map|mjs\.map|css\.map)$/i;
 
 function currentTarget() {
   return {
@@ -109,6 +113,14 @@ function requireFile(file, label, errors) {
   }
 }
 
+/** 多选一：任一存在即可。用于同时支持 npm / pnpm 两种 lockfile。 */
+function requireAnyFile(files, label, errors) {
+  const found = files.some((file) => file && fs.existsSync(file) && fs.statSync(file).isFile());
+  if (!found) {
+    errors.push(`${label} missing: ${files.join(' | ')}`);
+  }
+}
+
 function requireDir(dir, label, errors) {
   if (!dir || !fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) {
     errors.push(`${label} missing: ${dir || '<not specified>'}`);
@@ -122,7 +134,14 @@ function validateInputs(options, inputs) {
   if (options.kind === 'portable-dev') {
     requireDir(options.npmCache, 'npm offline cache', errors);
     requireDir(options.pipCache, 'pip offline cache', errors);
-    requireFile(path.join(ROOT, 'package-lock.json'), 'root lockfile', errors);
+    // 迁移期两套安装布局并存，所以这里问的是「有没有一份可复现的锁」，
+    // 而不是「有没有 package-lock.json」。写死 npm 那一份会让 pnpm 侧的
+    // clean checkout 明明可以 --frozen-lockfile 装出来，却被便携构建拒收。
+    requireAnyFile(
+      [path.join(ROOT, 'package-lock.json'), path.join(ROOT, 'pnpm-lock.yaml')],
+      'root lockfile (package-lock.json 或 pnpm-lock.yaml)',
+      errors,
+    );
     requireDir(path.join(ROOT, 'node_modules'), 'root workspace dependencies', errors);
     requireDir(path.join(ROOT, 'apps', 'ai-frontend', 'node_modules'), 'AI frontend dependencies', errors);
     requireDir(path.join(ROOT, 'software', 'khyquant', 'frontend', 'node_modules'), 'quant frontend dependencies', errors);
@@ -149,7 +168,14 @@ function isExcludedSource(relative, entry) {
   if (segments.length === 1 && entry.isDirectory() && ROOT_EXCLUDES.has(entry.name)) return true;
   if (entry.isDirectory() && ANY_DIR_EXCLUDES.has(entry.name)) return true;
   if (entry.isFile() && SECRET_OR_STATE_RE.test(normalized)) return true;
+  if (entry.isFile() && DEBUG_SYMBOL_RE.test(normalized)) return true;
   return false;
+}
+
+/** 前端 dist 的拷贝过滤：vite 构建会在产物里留 .map，便携包不需要它们。 */
+function distAssetFilter(relative, entry) {
+  if (entry.isFile() && DEBUG_SYMBOL_RE.test(relative.split(path.sep).join('/'))) return false;
+  return true;
 }
 
 function copyTree(source, destination, options = {}) {
@@ -338,7 +364,9 @@ function runtimeSourceFilter(relative, entry) {
   if (normalized === 'node_modules' || normalized.startsWith('node_modules/')) return true;
   if (roots.some(root => normalized === root || normalized.startsWith(`${root}/`))) return true;
   if (entry.isDirectory()) return roots.some(root => root.startsWith(`${normalized}/`));
-  return ['package.json', 'package-lock.json'].includes(normalized);
+  // 锁文件一并带进便携包：装它的人要能复现同一棵依赖树。两种锁都放行，
+  // 带哪一份由工作树里实际存在哪一份决定。
+  return ['package.json', 'package-lock.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml'].includes(normalized);
 }
 
 function buildRuntime(options, inputs) {
@@ -348,8 +376,14 @@ function buildRuntime(options, inputs) {
   fs.copyFileSync(inputs.runtimeBundle, path.join(runtimeDir, 'bundle.mjs'));
   copyTree(options.nodeRuntime, path.join(artifactDir, 'runtime', 'node'), { skipSymlinks: false });
   copyTree(options.pythonRuntime, path.join(artifactDir, 'runtime', 'python'), { skipSymlinks: false });
-  copyTree(inputs.aiFrontend, path.join(artifactDir, 'web', 'ai'), { skipSymlinks: false });
-  copyTree(inputs.quantFrontend, path.join(artifactDir, 'web', 'quant'), { skipSymlinks: false });
+  copyTree(inputs.aiFrontend, path.join(artifactDir, 'web', 'ai'), {
+    skipSymlinks: false,
+    filter: distAssetFilter,
+  });
+  copyTree(inputs.quantFrontend, path.join(artifactDir, 'web', 'quant'), {
+    skipSymlinks: false,
+    filter: distAssetFilter,
+  });
   fs.mkdirSync(path.join(artifactDir, 'config'), { recursive: true });
   fs.writeFileSync(path.join(artifactDir, 'config', 'env.example'), [
     '# Optional runtime overrides',
@@ -449,6 +483,7 @@ module.exports = {
   resolveInputs,
   validateInputs,
   isExcludedSource,
+  distAssetFilter,
   runtimeSourceFilter,
   copyTree,
   writeLaunchers,

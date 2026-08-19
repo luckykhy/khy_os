@@ -1,6 +1,8 @@
 'use strict';
 
 /**
+ * @pattern Memento, Visitor
+ *
  * coldExportService.js — 冷数据封存(把只增不改的历史流水压成单个 .jsonl.gz)。
  *
  * **做 IO**(文件系统 + zlib)。判定规则(哪些目录算冷、记录时间怎么读、窗口怎么算)

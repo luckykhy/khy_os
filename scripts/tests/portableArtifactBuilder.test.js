@@ -10,6 +10,7 @@ const {
   parseArgs,
   resolveInputs,
   isExcludedSource,
+  distAssetFilter,
   runtimeSourceFilter,
   copyTree,
   writeLaunchers,
@@ -44,6 +45,23 @@ test('source filter excludes state, secrets and generated databases', () => {
   assert.equal(isExcludedSource('services/backend/data/live.db-wal', dirent('live.db-wal', 'file')), true);
   assert.equal(isExcludedSource('services/backend/src/server.js', dirent('server.js', 'file')), false);
   assert.equal(isExcludedSource('node_modules/pkg/index.js', dirent('index.js', 'file')), false);
+});
+
+test('debug symbols never reach a portable artifact', () => {
+  // khy 那份 map 有 66.9 MB，是 bundle 本身的 3.5 倍；前端 dist 里也有一批。
+  // 它们进便携包既是体积也是源码泄露，而两条拷贝路径（源码树和前端 dist）
+  // 用的是不同的 filter，所以两边都要盯。
+  assert.equal(isExcludedSource('web/assets/app.js.map', dirent('app.js.map', 'file')), true);
+  assert.equal(isExcludedSource('runtime/khy/bundle.mjs.map', dirent('bundle.mjs.map', 'file')), true);
+  assert.equal(distAssetFilter('assets/index-a1b2.css.map', dirent('index-a1b2.css.map', 'file')), false);
+  assert.equal(distAssetFilter('assets/index-a1b2.js.map', dirent('index-a1b2.js.map', 'file')), false);
+
+  // 名字里带 "map" 的源码和资源必须活下来——误杀一个会让便携包直接跑不起来，
+  // 比多带几 MB 严重得多。
+  assert.equal(isExcludedSource('src/mapper/roadmap.js', dirent('roadmap.js', 'file')), false);
+  assert.equal(isExcludedSource('public/sitemap.xml', dirent('sitemap.xml', 'file')), false);
+  assert.equal(distAssetFilter('assets/index-a1b2.js', dirent('index-a1b2.js', 'file')), true);
+  assert.equal(distAssetFilter('assets', dirent('assets', 'dir')), true);
 });
 
 test('runtime source filter is retained only for legacy callers and excludes generated state', () => {
