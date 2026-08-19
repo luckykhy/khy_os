@@ -93,6 +93,15 @@ khy doctor                 # 系统健康检查
 
 Linux / macOS 使用 `./khy.sh`。便携模式详见 [PORTABLE.md](docs/06_DEPLOY_部署/PORTABLE.md)。
 
+仓库**不跟踪可再生的构建产物**：Markdown 工作台的 muya WYSIWYG 引擎（`tools/khyos-markdown/vendor/`）
+与离线文档站的图表引擎（`docs/_assets/mermaid.min.js`）都由同级源码按需重建。开发路径 fail-soft
+（缺失时自动回退），发布路径硬失败。想立刻补齐：
+
+```bash
+node tools/khyos-markdown/muya-embed/ensure-vendor.mjs   # muya 所见即所得引擎（约 11 MB）
+npm run docs:mermaid                                     # 文档站 Mermaid 图表引擎（约 3.3 MB）
+```
+
 ## 快速开始（开发者）
 
 ### 启动后端
@@ -246,6 +255,11 @@ khy-os/
 - 概念入门（Agent / Tool Calling / MCP / LLM 等）：`docs/02_CONCEPTS_概念入门/`
 - 设计与实现记录：`docs/03_DESIGN_设计/`、`docs/04_IMPL_实现/`
 - 部署与运维手册：`docs/06_DEPLOY_部署/`、`docs/07_OPS_运维/`
+
+> 离线文档站（`docs/**/*.html`）随仓库提供，可直接用浏览器打开。但它的图表引擎
+> `docs/_assets/mermaid.min.js` 是构建产物、不进 git：**首次克隆后跑一次 `npm run docs:build`**，
+> Mermaid 图表才会渲染。在此之前图表区域留白 —— `docs/_assets/docs-site.js` 已做优雅降级，
+> 不会报错，其余正文与导航一切正常。
 
 ## 版本同步
 
