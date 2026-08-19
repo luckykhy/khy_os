@@ -71,6 +71,15 @@ function buildPayloadAssets(options = {}) {
       ...copyAsset(path.join(snapshotDir, relativePath), outDir, asset),
     }));
 
+    // vendor/ 不进 git（.gitignore「可再生构建产物」段），发布机上必须先由源码重建，
+    // 否则 markdown-vendor payload 会缺 asset，pip 用户首次打开 Markdown 工作台就下载
+    // 失败。--required：构建不出来即红灯，绝不发一个残缺的 Release。
+    execFileSync(
+      process.execPath,
+      [path.join(root, 'tools', 'khyos-markdown', 'muya-embed', 'ensure-vendor.mjs'), '--required'],
+      { cwd: root, stdio: 'inherit' }
+    );
+
     const vendorDir = path.join(root, 'tools', 'khyos-markdown', 'vendor');
     const vendorFiles = [
       ['MANIFEST.json', 'markdown-vendor-manifest.json'],

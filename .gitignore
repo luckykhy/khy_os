@@ -49,6 +49,10 @@ khy-Trajectory/
 .khy_*
 .agnes-test-*/
 
+# Local git worktrees created by Claude Code (EnterWorktree). Never a repo artifact:
+# .claude/worktrees/<name> was once committed as a mode-160000 gitlink by accident.
+.claude/worktrees/
+
 # IDE / OS artifacts
 .idea/
 .vscode/
@@ -103,9 +107,27 @@ packaging/npm/bundled/
 #   apps/ai-frontend/public/vendor/ —— tools/khyos-markdown/vendor/ 的字节级镜像，
 #   由 apps/ai-frontend 的 predev/prebuild 钩子调 sync-md-vendor.mjs 自动同步。
 apps/ai-frontend/public/vendor/
+#   tools/khyos-markdown/vendor/ —— muya WYSIWYG 引擎的 esbuild 自打包产物（11 MB），
+#   源码是同级 muya-embed/（@muyajs/core@0.2.0 + build.mjs），重建逐字节可复现。
+#   守卫 muya-embed/ensure-vendor.mjs 挂在三处：khyos-markdown 的 prepack、
+#   scripts/release/build-payload-assets.js（Release 的 markdown-vendor payload）、
+#   apps/ai-frontend 的 sync-md-vendor.mjs（fail-soft，缺则回退内联渲染器）。
+#   打包层早已 prune 它：MANIFEST.in + pip_packaging_rules.py:SDIST_PRUNE_DIRS。
+#   附带收益：跟踪时 Windows 的 autocrlf 会在检出时把它撑大 4112 字节。
+tools/khyos-markdown/vendor/
+#   docs/_assets/mermaid.min.js —— mermaid@11.15.0 的 esbuild 自打包产物（3.3 MB），
+#   源码是 scripts/docs/mermaid-embed/；由 npm run docs:build 的 ensure 步骤重建。
+#   同目录的 docs-site.css / docs-site.js / hljs-*.css 是手写源码，继续跟踪。
+docs/_assets/mermaid.min.js
 
 
 # Debug/test artifacts
+#   ai-gateway-failures.json —— jest --json --outputFile 的残留汇总，无生产者。
+ai-gateway-failures.json
+#   publish/ —— scripts/release/build-payload-assets.js 的默认输出目录（--out 不给时），
+#   一跑就是 38 MB 的 Release 资产（加密源码快照 + muya 产物）。此前**未被忽略**，
+#   任何一次 `git add -A` 都会把它整包提交进来。
+publish/
 _dbg_*
 _repl_*
 _smoke_*
