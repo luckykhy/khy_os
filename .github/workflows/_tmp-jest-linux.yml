@@ -1,0 +1,44 @@
+# 临时诊断流水线 —— 用完即删。
+# 第四次启用：验证本轮 11 个失败的修复（5 个平台/环境假设 + 6 个真实失败）之后，
+# dual-channel-release.yml 的 Jest 门禁在 **Node 22 / ubuntu** 上是否真全绿。
+# 修前基线：8 suite / 11 用例失败（更早的基线是 26 suite / 160 用例）。
+# 这次 reporter 额外吐「全文」分片：剩下的失败只有个位数，签名不够用了。
+# 仓库的 Actions 日志需要 admin 才能读，但 check-run annotations 是公开可读的。
+name: _tmp jest linux
+
+on:
+  push:
+    branches: [chore/repo-layer-taxonomy]
+
+permissions:
+  contents: read
+
+jobs:
+  jest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'   # 与 dual-channel-release.yml 对齐，这是门禁的真实环境
+
+      # 不能加 --ignore-scripts：better-sqlite3 是原生模块，依赖 postinstall 构建。
+      - run: npm ci
+        working-directory: services/backend
+
+      # 顺手把「undici 到底装没装」记下来 —— 这是修复的因果链，不能只看测试结果。
+      - name: Probe undici resolution
+        working-directory: services/backend
+        run: |
+          echo "resolve: $(node -e "try{console.log(require.resolve('undici'))}catch(e){console.log('解析不到: '+e.code)}")"
+          echo "self:    $([ -d node_modules/undici ] && echo 存在 || echo 不存在)"
+          echo "root:    $([ -d ../../node_modules/undici ] && echo 存在 || echo 不存在)"
+
+      # || true：要的是完整清单，而不是停在第一个失败。
+      - name: Jest
+        working-directory: services/backend
+        run: npx jest --ci --passWithNoTests --json --outputFile=/tmp/jest.json > /tmp/jest.txt 2>&1 || true
+
+      - name: Report
+        run: node .github/workflows/_tmp-jest-report.js /tmp/jest.json
