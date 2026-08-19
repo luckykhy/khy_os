@@ -85,6 +85,15 @@ async function runHook(hook, context) {
     return _runFunctionHook(hook, context);
   }
 
+  // 声明成 function 但 handler 不可调用 → 明确报错，而**不是**掉进下面的命令分支。
+  // 之前是掉下去的：hook.command 为 undefined，platformShell(undefined) 产出
+  // argv 尾部一个 null，Linux 上等于 `bash -c null` —— 子进程立刻以 127 退出，我们
+  // 随后往它 stdin 写 JSON 就撞上 EPIPE。既白起一个 shell，又把一个配置错误伪装成
+  // 「hook 执行失败」。
+  if (hook.type === 'function') {
+    return { action: 'allow', error: 'Function hook has no callable handler' };
+  }
+
   // Command-based hooks: spawn child process
   return _runCommandHook(hook, context);
 }
@@ -145,6 +154,11 @@ async function _runFunctionHook(hook, context) {
 async function _runCommandHook(hook, context) {
   const HOOK_MAX_BUFFER = 512 * 1024; // 512 KB max per stream
   const hookTimeoutMs = hook.timeout || 10000;
+  // 没有命令就不要起 shell：spawn 一个 argv 尾部为 null 的 cmd/bash 只会立刻失败，
+  // 而且失败信息完全不指向真正的原因（hook 定义缺 command）。
+  if (!String(hook.command || '').trim()) {
+    return { action: 'allow', error: 'Command hook has no command' };
+  }
   return new Promise((resolve) => {
     const sh = platformShell(hook.command);
     const child = spawn(sh.cmd, sh.args, {
@@ -229,12 +243,22 @@ async function _runCommandHook(hook, context) {
       });
     });
 
-    // Send context as JSON on stdin
+    // Send context as JSON on stdin.
+    // stdin 的写入失败是**异步**的：命令 hook 只要不读 stdin 就先退出，Linux 上内核
+    // 回 EPIPE，Node 把它作为 stdin 流的 error 事件抛出 —— 同步 try/catch 抓不到（原注释
+    // 那句 `broken pipe is fine` 写的是意图，实现却拦不住），没有监听器就升级成
+    // uncaughtException。safeRunHook 的 try/catch 也救不了：异常发生在别的 tick，不在
+    // await 的调用栈里。于是它会被 jest 记到「当时正在跑的那个用例」头上 —— 哪怕那个
+    // 用例根本没起过子进程，甚至不在同一个文件（worker 进程跨文件复用）。Windows 的
+    // 命名管道时序不同，几乎不触发，所以长期只在 Linux 门禁上红。
+    child.stdin.on('error', () => {
+      /* EPIPE / ERR_STREAM_DESTROYED：hook 不读 stdin 就退出，属正常路径 */
+    });
     try {
       child.stdin.write(JSON.stringify(context));
       child.stdin.end();
     } catch {
-      /* broken pipe is fine */
+      /* 同步失败（stdin 已 destroyed）同样忽略 */
     }
   });
 }

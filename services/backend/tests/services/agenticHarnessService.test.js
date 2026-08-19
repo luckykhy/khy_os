@@ -187,7 +187,12 @@ describe('agenticHarnessService', () => {
       provider: 'mock',
     });
 
-    const harness = createAgenticHarness();
+    // 用例断言的是「回归门禁如何裁决」，不是「冷却等多久」。默认
+    // continuationCooldownMs 是 1500ms 的真实 setTimeout：本机整例约 1.6s 还在 5s
+    // 超时线内，ubuntu runner 上多 worker 争 CPU 时定时器回调被推后，直接撞
+    // 「Exceeded timeout of 5000 ms」—— 门禁红、本机绿，跟被测逻辑无关。同文件的
+    // retry 用例早就用 retryMinDelayMs: 1 消掉了同类等待，这里对齐它。
+    const harness = createAgenticHarness({ continuationCooldownMs: 0 });
     const result = await harness.run({
       userMessage: 'please fix bug in parser',
       chat: async () => ({ reply: 'unused' }),
