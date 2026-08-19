@@ -128,18 +128,22 @@ test('parseSgrMouse: null on non-mouse / non-string', () => {
 });
 
 // ── gates ───────────────────────────────────────────────────────────────────
-test('mouseButtonsEnabled: win32 defaults on and other platforms default off', () => {
-  assert.equal(mouseButtonsEnabled({}, 'win32'), true);
+test('mouseButtonsEnabled: defaults OFF on every platform (tracking is exclusive)', () => {
+  // 追踪态一开,终端就收不到滚轮与拖选 —— 那是「翻页」和「复制」两个基础能力。
+  // 收益只有两个可点元素,且都有键位替代,所以默认必须关,包括 win32。
+  assert.equal(mouseButtonsEnabled({}, 'win32'), false);
   assert.equal(mouseButtonsEnabled({}, 'linux'), false);
   assert.equal(mouseButtonsEnabled({}, 'darwin'), false);
 });
 
-test('mouseButtonsEnabled: explicit env overrides platform defaults', () => {
-  assert.equal(mouseButtonsEnabled({ KHY_MOUSE_BUTTONS: '1' }, 'linux'), true);
-  assert.equal(mouseButtonsEnabled({ KHY_MOUSE_BUTTONS: 'on' }, 'darwin'), true);
-  assert.equal(mouseButtonsEnabled({ KHY_MOUSE_BUTTONS: 'yes' }, 'win32'), true);
-  for (const v of ['0', 'false', 'off', 'no', 'OFF']) {
-    assert.equal(mouseButtonsEnabled({ KHY_MOUSE_BUTTONS: v }, 'win32'), false, v);
+test('mouseButtonsEnabled: explicit env is the only way in, on any platform', () => {
+  for (const p of ['win32', 'linux', 'darwin']) {
+    assert.equal(mouseButtonsEnabled({ KHY_MOUSE_BUTTONS: '1' }, p), true, p);
+    assert.equal(mouseButtonsEnabled({ KHY_MOUSE_BUTTONS: 'on' }, p), true, p);
+    assert.equal(mouseButtonsEnabled({ KHY_MOUSE_BUTTONS: 'yes' }, p), true, p);
+    for (const v of ['0', 'false', 'off', 'no', 'OFF', '', 'unexpected']) {
+      assert.equal(mouseButtonsEnabled({ KHY_MOUSE_BUTTONS: v }, p), false, p + '/' + v);
+    }
   }
 });
 
@@ -153,12 +157,27 @@ test('mouseHoverEnabled: default off, explicit truthy on', () => {
 });
 
 // ── enable/disable bytes ────────────────────────────────────────────────────
-test('enableBytes/disableBytes: exact terminal modes', () => {
-  assert.equal(enableBytes({ hover: false }), '\x1b[?1000h\x1b[?1006h');
-  assert.equal(enableBytes({ hover: true }), '\x1b[?1000h\x1b[?1006h\x1b[?1003h');
-  assert.equal(disableBytes({ hover: false }), '\x1b[?1000l\x1b[?1006l');
-  assert.equal(disableBytes({ hover: true }), '\x1b[?1000l\x1b[?1006l\x1b[?1003l');
-  assert.equal(enableBytes(), '\x1b[?1000h\x1b[?1006h');
+test('enableBytes: 1002 (not 1000) so drag is reported at all', () => {
+  // 1000 只报按下/松开,一个位移事件都不报 → dispatcher 的选择透传在真终端里
+  // 永远不会触发(它靠 isMotion 判定拖拽)。1002 只在按住键时报位移,恰好够用。
+  assert.equal(enableBytes({ hover: false }), '\x1b[?1002h\x1b[?1006h');
+  assert.equal(enableBytes({ hover: true }), '\x1b[?1002h\x1b[?1006h\x1b[?1003h');
+  assert.equal(enableBytes(), '\x1b[?1002h\x1b[?1006h');
+});
+
+test('disableBytes: resets every mode enableBytes can set, regardless of hover', () => {
+  // 「只关自己开过的」写法埋雷:开 1002 而关 1000 会把终端留在追踪态,用户之后
+  // 每条命令都没有滚轮和复制。DECRST 打在没开过的模式上是 no-op,多关零成本。
+  const expected = '\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l';
+  assert.equal(disableBytes({ hover: false }), expected);
+  assert.equal(disableBytes({ hover: true }), expected);
+  assert.equal(disableBytes(), expected);
+  // 回归护栏:enableBytes 能开的每一个模式号,disableBytes 都必须关掉。
+  for (const on of [enableBytes({ hover: false }), enableBytes({ hover: true })]) {
+    for (const mode of on.match(/\?\d+(?=h)/g) || []) {
+      assert.ok(expected.includes(mode + 'l'), 'disableBytes 漏关 ' + mode);
+    }
+  }
 });
 
 // ── collectLayout ───────────────────────────────────────────────────────────

@@ -33,11 +33,21 @@
  * 与 caretGeometry.js 的 parentNode 链累加同源;命中测试只需跳过 internal_static
  * 子树(静态区早已滚入 scrollback,不可点)。
  *
- * ── 门控 ───────────────────────────────────────────────────────────────────
- *   KHY_MOUSE_BUTTONS  默认 win32 开、其他平台关；显式 env 可跨平台覆盖。
- *                     Windows 下滚轮事件由 dispatcher 临时切回终端原生模式。
- *   KHY_MOUSE_HOVER   默认关:只启用 1000+1006 的点击，避免 1003 任意移动事件
- *                     持续占用终端输入；显式设为 1/true/on/yes 才启用悬停。
+ * ── 门控:为什么默认全关 ──────────────────────────────────────────────────
+ * 终端的鼠标追踪是**独占**的:一旦开启,滚轮与按住拖动都被送进本进程的 stdin,
+ * 终端自己再也收不到 —— 用户同时失去「滚轮翻 scrollback」和「拖选复制」这两个最
+ * 基础的终端能力。下面的 dispatcher 有一套「识别到滚动/选择意图就临时关追踪」的
+ * 透传补偿,但它补不回触发的那一下:那个事件已经进了 stdin、终端没收到,无法回灌。
+ * 于是慢速一格一格地滚(阅读时最常见的滚法)每一格都被吞掉;拖选的**起点**也在按
+ * 下那一刻就丢了,原生选择只能从中途接管,选出来的范围是错的。
+ *
+ * 收益侧只有两个可点元素(麦克风按钮、待发图片的 ×),且麦克风有等价键位 Alt+M、
+ * 图片有 Esc 清除。拿「少按一个键」换掉「滚动 + 复制」不成比例,所以:
+ *
+ *   KHY_MOUSE_BUTTONS  **默认全平台关**;显式 1/true/on/yes 才开点击层(开了就
+ *                     接受上述滚动/选择退化,dispatcher 只能尽力补偿)。
+ *   KHY_MOUSE_HOVER   默认关:悬停高亮要 1003「任意移动」追踪,那是 60~120Hz 的
+ *                     事件洪流、持续占用终端输入;显式 1/true/on/yes 才启用。
  * 两者都沿用 0/false/off/no 关闭口径(sidebarLayout/railLayout 同款)。
  */
 
@@ -69,7 +79,7 @@ function isMouseSequence(input) {
  * @returns {{button:number, col:number, row:number, isPress:boolean, isRelease:boolean, isMotion:boolean, isWheel:boolean}|null}
  *   col/row 为 0-based 屏幕坐标;button 为 SGR 按钮码(0=左键,2=右键,
  *   64=滚轮上,65=滚轮下;shift/meta/ctrl 以 4/8/16 叠加在低位);
- *   isMotion 表示携带位移位(32)的移动/拖拽事件(仅 1003 追踪时出现);
+ *   isMotion 表示携带位移位(32)的移动/拖拽事件(1002 只在按住键时报,1003 连空移动也报);
  *   isWheel 表示滚轮事件(SGR 按钮 64/65,可带修饰位)。
  */
 function parseSgrMouse(input) {
@@ -99,17 +109,14 @@ function parseSgrMouse(input) {
 }
 
 /**
- * 鼠标按钮层总闸。默认 win32 开、其他平台关；显式 env 覆盖默认值。
+ * 鼠标按钮层总闸。**默认全平台关**,只有显式 env 才开 —— 见头部「为什么默认全关」:
+ * 追踪态是独占的,开着就没有滚轮翻页与拖选复制,而透传补偿补不回触发事件本身。
  * @param {NodeJS.ProcessEnv} [env]
- * @param {string} [platform]
+ * @param {string} [_platform] 保留形参:平台已不参与判定,仅为不破坏既有调用点签名
  * @returns {boolean}
  */
-function mouseButtonsEnabled(env = process.env, platform = process.platform) {
-  const raw = String((env && env.KHY_MOUSE_BUTTONS) || '').trim();
-  if (raw !== '') {
-    return !OFF_VALUES.includes(raw.toLowerCase());
-  }
-  return platform === 'win32';
+function mouseButtonsEnabled(env = process.env, _platform = process.platform) {
+  return _on(env, 'KHY_MOUSE_BUTTONS');
 }
 
 /**
@@ -122,13 +129,19 @@ function mouseHoverEnabled(env = process.env) {
 }
 
 /**
- * 启用鼠标追踪的 ANSI 字节:1000(按钮事件)+ 1006(SGR 坐标),悬停开则加 1003。
- * 写入 stdout(交给 ink 的 stdout)即可,终端立即生效。
+ * 启用鼠标追踪的 ANSI 字节。写进 stdout(交给 ink 的 stdout)即可,终端立即生效。
+ *
+ * 用 **1002(button-event)而不是 1000(X11 basic)**:1000 只报「按下 / 松开」,
+ * 一个位移事件都不报,于是 dispatcher 的选择透传(pendingSelect + 按住拖动 → 关
+ * 追踪把这次拖拽交还终端)在真实终端里**永远不会触发** —— 单测里那条用例之所以
+ * 绿,是因为它自己伪造了一个位移事件。1002 只在「有键按住时」报位移,恰好够判定
+ * 拖拽,又不像 1003 连空移动都报(那是 60~120Hz 洪流)。1006 是 SGR 坐标编码,
+ * 与追踪模式正交,两者都要。
  * @param {{hover?: boolean}} [opts]
  * @returns {string}
  */
 function enableBytes({ hover = false } = {}) {
-  let out = '\x1b[?1000h\x1b[?1006h';
+  let out = '\x1b[?1002h\x1b[?1006h';
   if (hover) {
     out += '\x1b[?1003h';
   }
@@ -136,17 +149,18 @@ function enableBytes({ hover = false } = {}) {
 }
 
 /**
- * 停用鼠标追踪的 ANSI 字节(与 enableBytes 对称的 `l` 模式),退出时必调,
- * 否则终端停留在追踪态,用户失去鼠标选择文本能力。
- * @param {{hover?: boolean}} [opts]
+ * 停用鼠标追踪的 ANSI 字节。退出时必调,否则终端停留在追踪态,用户在**之后每一条
+ * 命令**里都失去滚轮与拖选(被 hard kill 的旧会话就是这样把终端留坏的)。
+ *
+ * 无条件复位 1000/1002/1003 三个追踪模式,不看 hover:「只关自己开过的那些」这种
+ * 对称写法埋过雷 —— 开的是 1002 而关的是 1000,终端就留在追踪态。DECRST 打在本来
+ * 就没开的模式上是 no-op,多关几个零成本,少关一个就是一个坏掉的终端。也因此它可
+ * 以当「无条件消毒」用:不确定终端是否被上一个进程留在追踪态时,直接写它。
+ * @param {{hover?: boolean}} [_opts] 保留形参:已无条件全关,仅为不破坏既有调用点
  * @returns {string}
  */
-function disableBytes({ hover = false } = {}) {
-  let out = '\x1b[?1000l\x1b[?1006l';
-  if (hover) {
-    out += '\x1b[?1003l';
-  }
-  return out;
+function disableBytes(_opts) {
+  return '\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l';
 }
 
 /**
