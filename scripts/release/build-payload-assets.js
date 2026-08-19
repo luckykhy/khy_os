@@ -38,6 +38,21 @@ function copyAsset(source, outDir, asset) {
   return { asset, sha256: sha256File(destination), size: stat.size };
 }
 
+// markdown 拓展正在从 tools/khyos-markdown 改名到 extensions/khy-markdown，而改名尚未落到
+// 提交树 —— 写死任一侧都会在另一侧 ENOENT（发布流水线是在 tag 的干净检出上跑的，
+// 拿不到工作树里那份暂存的改名）。所以按存在性解析，改名前后都能工作。
+function resolveMarkdownExtensionDir(root) {
+  const candidates = [
+    path.join(root, 'extensions', 'khy-markdown'),
+    path.join(root, 'tools', 'khyos-markdown'),
+  ];
+  const found = candidates.find((dir) => fs.existsSync(path.join(dir, 'muya-embed', 'ensure-vendor.mjs')));
+  if (!found) {
+    throw new Error(`markdown extension not found; looked under: ${candidates.join(', ')}`);
+  }
+  return found;
+}
+
 function buildPayloadAssets(options = {}) {
   const root = path.resolve(options.root || ROOT);
   const version = String(options.version || '').trim();
@@ -74,13 +89,14 @@ function buildPayloadAssets(options = {}) {
     // vendor/ 不进 git（.gitignore「可再生构建产物」段），发布机上必须先由源码重建，
     // 否则 markdown-vendor payload 会缺 asset，pip 用户首次打开 Markdown 工作台就下载
     // 失败。--required：构建不出来即红灯，绝不发一个残缺的 Release。
+    const markdownDir = resolveMarkdownExtensionDir(root);
     execFileSync(
       process.execPath,
-      [path.join(root, 'extensions', 'khy-markdown', 'muya-embed', 'ensure-vendor.mjs'), '--required'],
+      [path.join(markdownDir, 'muya-embed', 'ensure-vendor.mjs'), '--required'],
       { cwd: root, stdio: 'inherit' }
     );
 
-    const vendorDir = path.join(root, 'extensions', 'khy-markdown', 'vendor');
+    const vendorDir = path.join(markdownDir, 'vendor');
     const vendorFiles = [
       ['MANIFEST.json', 'markdown-vendor-manifest.json'],
       ['khyos-muya.js', 'markdown-vendor-muya.js'],
@@ -117,4 +133,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { MANIFEST_ASSET, buildPayloadAssets, copyAsset, parseArgs, sha256File };
+module.exports = { MANIFEST_ASSET, buildPayloadAssets, copyAsset, parseArgs, resolveMarkdownExtensionDir, sha256File };
