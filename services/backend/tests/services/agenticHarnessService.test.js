@@ -27,6 +27,17 @@ jest.mock('../../src/services/projectMemoryService', () => ({
   saveSessionTrace: jest.fn(),
 }));
 
+// verificationAgent 必须打桩：它不是纯逻辑，verify() 会 spawnSync 真实外部进程 ——
+// `node -c <file>`、`<包管理器> run <script>`（VERIFICATION_TIMEOUT = 60s/步）、
+// linter、pytest。本用例的 toolCallLog 里有一条 editFile，于是 uniqueFiles 非空，
+// 真的会跑起来。Windows 上 spawnSync('npm', …) 不走 shell、npm 是 npm.cmd → 立刻
+// ENOENT，两趟验证各 74ms，所以本机看不出问题；Linux 上 npm 是真可执行文件，于是
+// 在 jest 进程里**递归拉起整套测试**，用例直接撞 5s 超时线（门禁上就是这么红的，
+// 且与 continuationCooldownMs 无关）。单元测试不该 spawn 任何真实进程，这里按本
+// 文件既有做法把它一并 mock 掉。
+jest.mock('../../src/services/verificationAgent', () => ({
+  verify: jest.fn(() => ({ passed: true, summary: 'mocked verification', steps: [] })),
+}));
 jest.mock('../../src/services/changeRegressionGate', () => ({
   prepareBugfixRegressionGate: jest.fn(),
   evaluateBugfixRegressionGate: jest.fn(),
