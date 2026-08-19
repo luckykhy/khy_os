@@ -43,8 +43,8 @@ class FinlightNewsService {
     }
 
     try {
-      // Dynamic import of node-fetch for Node.js < 18 compatibility
-      const fetchFn = typeof fetch !== 'undefined' ? fetch : (await import('node-fetch')).default;
+      // Node >= 20 (package engines): global fetch is unconditionally present.
+      const fetchFn = fetch;
 
       const response = await fetchFn(FINLIGHT_API_URL, {
         method: 'POST',
