@@ -130,7 +130,12 @@ jobs:
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}},enable=${{ startsWith(github.ref, 'refs/tags/v') }}
-            type=sha,prefix={{branch}}-
+            # {{branch}} 在 tag 事件上是空串，prefix 会退化成裸 "-"，产出 "-sha-abc1234"。
+            # OCI 规定 tag 不得以 "-" 开头，而 metadata-action 的清洗只替换非法字符
+            # 序列、不会剥掉行首的 "-" —— 于是每一次 tag 推送都在 push 那步直接失败，
+            # 而分支推送（{{branch}} 非空）永远正常。所以两种事件必须分开出 tag。
+            type=sha,prefix={{branch}}-,enable=${{ github.ref_type == 'branch' }}
+            type=sha,prefix=sha-,enable=${{ github.ref_type == 'tag' }}
 
       - name: Create multi-arch manifest and push tags
         working-directory: /tmp/digests
@@ -138,8 +143,10 @@ jobs:
           set -euo pipefail
           ls -1 | grep -qE '^[0-9a-f]{64}$' || { echo '::error::没有拿到任何平台 digest'; exit 1; }
           echo "参与合并的 digest： $(ls -1 | tr '\n' ' ')"
-          docker buildx imagetools create \
-            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+          tag_args=$(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON")
+          [ -n "$tag_args" ] || { echo '::error::metadata-action 没产出任何 tag，拒绝推一个无 tag 的清单'; exit 1; }
+          echo "将要打的 tag： $tag_args"
+          docker buildx imagetools create $tag_args \
             $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
 
       - name: Resolve index digest
