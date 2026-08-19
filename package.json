@@ -37,10 +37,12 @@
     "check:lifecycle-policy": "node scripts/ci/check-lifecycle-policy.js",
     "check:moonbit-layout": "node scripts/ci/check-moonbit-layout.js",
     "check:frontend-size": "node scripts/ci/check-frontend-size.js",
+    "check:build-artifacts": "node scripts/ci/check-build-artifacts.js",
+    "check:runtime-placement": "node scripts/ci/check-runtime-placement.js",
     "check:json-schemas": "node scripts/ci/validate-json-schemas.js",
     "check:protocol-contracts": "node scripts/ci/validate-protocol-contracts.js",
     "check:reliability": "node scripts/ci/validate-reliability.js",
-    "check:structure": "npm run check:layout && npm run check:json-schemas && npm run check:node-syntax",
+    "check:structure": "npm run check:layout && npm run check:json-schemas && npm run check:node-syntax && npm run check:build-artifacts && npm run check:runtime-placement",
     "check:changed": "npm run check:change-safety && npm run check:agent-rules && npm run check:leaf-contract",
     "//docs": "── 文档站构建与体检（scripts/docs/*）──",
     "docs:build": "node scripts/docs/mermaid-embed/ensure-mermaid.mjs && node scripts/docs/build_docs_site.js",
@@ -113,7 +115,8 @@
     "bench:git-spawn": "node scripts/bench/git_spawn_bench.js",
     "//diagnostics": "── 诊断（scripts/diagnostics/*）──",
     "doctor:hydration": "node scripts/diagnostics/hydration-doctor.js",
-    "doctor:model-types": "node scripts/diagnostics/model-type-providers.js"
+    "doctor:model-types": "node scripts/diagnostics/model-type-providers.js",
+    "doctor:storage": "node scripts/diagnostics/storage-baseline.js"
   },
   "devDependencies": {
     "@opentelemetry/exporter-trace-otlp-http": "^0.207.0",
