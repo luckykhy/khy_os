@@ -366,7 +366,13 @@ function spawnWithIdleTimeout(command, args, opts = {}) {
       if (rawSink && Buffer.isBuffer(d)) {
         rawSink(d);
       }
-      const text = decoder ? decoder.write(d) : String(d || '');
+      // `Buffer.isBuffer` guard, not just `decoder`: the iconv decoders index a
+      // byte table, so handing them an already-decoded string is meaningless in
+      // any version — 0.4.x silently produced garbage, 0.6.x throws
+      // ("invalid decoding table value undefined"). A throw here lands inside a
+      // 'data' listener and takes the whole spawn down, which this module's
+      // fail-soft contract forbids. Bytes get decoded; anything else is text.
+      const text = decoder && Buffer.isBuffer(d) ? decoder.write(d) : String(d || '');
       if (text) {
         setAcc(appendCapped(getAcc(), text, meta));
         recentTail = (recentTail + text).slice(-500);
