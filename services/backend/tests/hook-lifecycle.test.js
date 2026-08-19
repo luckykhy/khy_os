@@ -40,8 +40,23 @@ group('1. HookRegistry — new events defined', () => {
   test('PostCompact event exists', () => {
     assert.ok(registry.events.includes('PostCompact'));
   });
-  test('all 9 events present', () => {
-    assert.strictEqual(registry.events.length, 9);
+  test('registry exposes exactly the documented event list', () => {
+    // 显式清单而不是数量：新增事件时这条和 group 11 的字段白名单断言会一起红，
+    // 逼着作者同时在 hookRunner.CMD_HOOK_ALLOWED_FIELDS 里补条目 —— 否则新事件
+    // 会静默走 filterCommandOutput 的「未知事件原样透传」分支，绕过输出过滤。
+    assert.deepStrictEqual(registry.events, [
+      'PreToolUse',
+      'PostToolUse',
+      'PrePrompt',
+      'PostResponse',
+      'PreCompact',
+      'PostCompact',
+      'Stop',
+      'SubAgentStart',
+      'SubAgentEnd',
+      'ToolPermission',
+      'PromptSection',
+    ]);
   });
 });
 

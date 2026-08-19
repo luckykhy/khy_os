@@ -35,6 +35,14 @@ const CMD_HOOK_ALLOWED_FIELDS = {
   Stop: ['stopReason'],
   SubAgentStart: [],
   SubAgentEnd: [],
+  // 插件注册点(Block B)。command hook 的 JSON 输出必须逐事件白名单化：缺了条目
+  // filterCommandOutput 会走 `!allowed -> 原样透传` 分支，等于对这两个事件完全
+  // 不过滤 —— 而它们恰恰最不能放开(一个决定权限裁决，一个往系统提示词里塞文本)。
+  // 字段取自 hookContribSeams 的读取契约：
+  //   applyToolPermissionHooks 只读 res.context.decision(block 走退出码 2，不经输出)
+  //   collectPromptSections   只读 res.context.sections / res.context.section
+  ToolPermission: ['decision'],
+  PromptSection: ['sections', 'section'],
 };
 
 /**
