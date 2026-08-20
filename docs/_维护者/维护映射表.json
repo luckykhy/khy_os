@@ -293,7 +293,7 @@
         "CONTRIBUTING.md",
         "scripts/ci/check-agent-rules.js",
         "scripts/ci/check-change-safety.js",
-        "scripts/install/install-git-hooks.js",
+        "extensions/scripts/khy-installer/install-git-hooks.js",
         "scripts/ci/check-version-sync.js",
         "scripts/ci/check-node-syntax.js",
         "scripts/ci/check-python-syntax.py",
@@ -394,7 +394,7 @@
       ],
       "paths": [
         "scripts/lib/maintainerTriage.js",
-        "scripts/diagnostics/triage.js",
+        "extensions/scripts/khy-diagnostics/triage.js",
         "scripts/tests/maintainerTriage.test.js",
         "docs/_维护者/维护映射表.json"
       ],

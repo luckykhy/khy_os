@@ -33,7 +33,7 @@ multiboot2 / GRUB 镜像，本质上需要 GNU/ELF 工具链 + `grub-mkrescue`�
 | 名称 | 产物 | 构建方式 | 本方案对象 |
 | --- | --- | --- | --- |
 | **自研内核 ISO** `khy-os-kernel.iso` | C+NASM+MoonBit freestanding 内核 | `make -C kernel iso` → `khy os build` | ✅ 是 |
-| Alpine 发行版 ISO | Linux 发行镜像 | `scripts/alpine/*`（Docker/PowerShell） | ❌ 否（独立组件） |
+| Alpine 发行版 ISO | Linux 发行镜像 | `extensions/scripts/khy-alpine-iso/*`（Docker/PowerShell） | ❌ 否（独立组件） |
 
 内核源码里的 `pe.c` / `wincompat.c` 是**运行时**在内核内加载 Windows PE 可执行体的功能，
 与「在 Windows 上构建」无关。

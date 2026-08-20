@@ -307,6 +307,6 @@ Khy-OS 对外暴露单一入口（`khy` CLI / Web UI / REST API），将内核�
 - `backend/src/services/documentSnippetService.js`
 - ... (17 个省略)
 - `scripts/ci/generate-pattern-registry.js`
-- `scripts/install/check-boot-capability.sh`
+- `extensions/scripts/khy-installer/check-boot-capability.sh`
 - `scripts/release/check-pip-dist-size.sh`
 

@@ -4,15 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>KHY Trae Bridge · Khy-OS 文档</title>
-<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
-<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
 </head>
 <body>
 <div class="topbar">
   <button class="menu-toggle" aria-label="菜单">☰</button>
-  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
   <span class="spacer"></span>
-  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
 </div>
 <div class="layout">
   <aside class="sidebar" id="sidebar">
@@ -21,7 +21,7 @@
   </aside>
   <main class="main">
     <div class="content">
-      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>extensions<span class="sep">›</span>khy-trae-bridge<span class="sep">›</span>KHY Trae Bridge</div>
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>extensions<span class="sep">›</span>bridges<span class="sep">›</span>khy-trae-bridge<span class="sep">›</span>KHY Trae Bridge</div>
       <header class="hero reveal"><h1>KHY Trae Bridge</h1></header>
       <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khy-trae-bridge">KHY Trae Bridge</a></li><li class="lvl-2"><a href="#架构">架构</a></li><li class="lvl-2"><a href="#目录结构">目录结构</a></li><li class="lvl-2"><a href="#安装-windows">安装（Windows）</a></li><li class="lvl-3"><a href="#方式一-从预构建-vsix-安装-推荐">方式一：从预构建 VSIX 安装（推荐）</a></li><li class="lvl-3"><a href="#方式二-从源码打包后安装">方式二：从源码打包后安装</a></li><li class="lvl-2"><a href="#使用方法">使用方法</a></li><li class="lvl-3"><a href="#自动模式-零配置">自动模式（零配置）</a></li><li class="lvl-3"><a href="#手动同步">手动同步</a></li><li class="lvl-3"><a href="#查看日志">查看日志</a></li><li class="lvl-2"><a href="#刷新策略">刷新策略</a></li><li class="lvl-2"><a href="#auth-json-格式">auth.json 格式</a></li><li class="lvl-2"><a href="#区域检测">区域检测</a></li><li class="lvl-2"><a href="#故障排查">故障排查</a></li><li class="lvl-3"><a href="#扩展安装后没反应">扩展安装后没反应</a></li><li class="lvl-3"><a href="#khy-cli-没有拾取到-token">KHY CLI 没有拾取到 token</a></li><li class="lvl-3"><a href="#手动验证-token-是否有效">手动验证 token 是否有效</a></li><li class="lvl-2"><a href="#卸载">卸载</a></li><li class="lvl-3"><a href="#从-trae-卸载">从 Trae 卸载</a></li><li class="lvl-3"><a href="#清理残留文件">清理残留文件</a></li><li class="lvl-2"><a href="#开发者信息">开发者信息</a></li></ul></nav>
       <article class="doc-body">
@@ -56,12 +56,12 @@
 <ol><li>打开 <strong>Trae</strong></li><li>按 <code>Ctrl+Shift+X</code> 打开扩展面板</li><li>点击面板右上角 <strong><code>···</code></strong> → <strong>从 VSIX 安装...</strong>（Install from VSIX）</li><li>选择文件：<code>extensionsridges\khy-trae-bridge\khy-trae-bridge-0.2.1.vsix</code></li><li>等待安装完成 → 重启 Trae</li></ol>
 <p>或使用命令行：</p>
 <pre><code class="language-powershell"><span class="hljs-comment"># Trae CLI（如果已配置 PATH）</span>
-trae <span class="hljs-literal">--install-extension</span> extensions\khy<span class="hljs-literal">-trae-bridge</span>\khy<span class="hljs-literal">-trae-bridge-0</span>.<span class="hljs-number">2.1</span>.vsix
+trae <span class="hljs-literal">--install-extension</span> extensionsridges\khy<span class="hljs-literal">-trae-bridge</span>\khy<span class="hljs-literal">-trae-bridge-0</span>.<span class="hljs-number">2.1</span>.vsix
 
 <span class="hljs-comment"># 也可能是</span>
-code <span class="hljs-literal">--install-extension</span> extensions\khy<span class="hljs-literal">-trae-bridge</span>\khy<span class="hljs-literal">-trae-bridge-0</span>.<span class="hljs-number">2.1</span>.vsix</code></pre>
+code <span class="hljs-literal">--install-extension</span> extensionsridges\khy<span class="hljs-literal">-trae-bridge</span>\khy<span class="hljs-literal">-trae-bridge-0</span>.<span class="hljs-number">2.1</span>.vsix</code></pre>
 <h3 id="方式二-从源码打包后安装">方式二：从源码打包后安装<a class="anchor" href="#方式二-从源码打包后安装" aria-label="锚点">#</a></h3>
-<pre><code class="language-powershell"><span class="hljs-built_in">cd</span> extensions\khy<span class="hljs-literal">-trae-bridge</span>
+<pre><code class="language-powershell"><span class="hljs-built_in">cd</span> extensionsridges\khy<span class="hljs-literal">-trae-bridge</span>
 
 <span class="hljs-comment"># 安装打包工具</span>
 npm install <span class="hljs-literal">--save-dev</span> @vscode/vsce
@@ -132,14 +132,14 @@ khy ai status
 <h2 id="开发者信息">开发者信息<a class="anchor" href="#开发者信息" aria-label="锚点">#</a></h2>
 <ul><li><strong>激活方式</strong>：<code>onStartupFinished</code>（不阻塞 Trae 启动）</li><li><strong>依赖</strong>：零运行时依赖，仅使用 VS Code API + Node.js 内置模块</li><li><strong>体积</strong>：打包后 ~4 KB</li><li><strong>兼容性</strong>：VS Code / Trae / 任何兼容 VS Code 扩展 API 的 IDE</li></ul>
       </article>
-      <nav class="pager"><a class="prev" href="../../extensions/tools/khy-markdown/README.html"><div class="dir">← 上一篇</div><div class="ttl">khyosMarkdown</div></a><span></span></nav>
+      <nav class="pager"><span></span><a class="next" href="../../../extensions/scripts/khy-installer/setup/README.html"><div class="dir">下一篇 →</div><div class="ttl">extensions/scripts/khy-installer/setup/ — 一次性上手脚本</div></a></nav>
       <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
     </div>
   </main>
 </div>
-<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="extensions/bridges/khy-trae-bridge/README.html";</script>
-<script src="../../docs/_assets/nav-data.js"></script>
-<script src="../../docs/_assets/mermaid.min.js"></script>
-<script src="../../docs/_assets/docs-site.js"></script>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="extensions/bridges/khy-trae-bridge/README.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
 </body>
 </html>

@@ -240,7 +240,7 @@ trace-events.jsonl            — 全局追踪流
 |------|------|
 | **文档渲染输出** | `docs/`（`.md` 的渲染产物） |
 | **前端入口** | `apps/ai-frontend/index.html` |
-| **工具页面** | `tools/khyos-markdown/` |
+| **工具页面** | `extensions/tools/khy-markdown/` |
 
 **协议约束：**
 

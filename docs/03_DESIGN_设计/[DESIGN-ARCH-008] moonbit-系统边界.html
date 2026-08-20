@@ -34,7 +34,7 @@
 <h2 id="当前-khy-os-映射">当前 Khy OS 映射<a class="anchor" href="#当前-khy-os-映射" aria-label="锚点">#</a></h2>
 <ul><li>宿主机层：<ul><li><code>khy_platform/cli.py</code></li><li><code>backend/bin/khy.js</code></li><li><code>backend/src/services/*</code>（I/O、网络、编排）</li></ul></li><li>MoonBit/WASM 层：<ul><li><code>backend/wasm-indicators/</code>（纯指标算法）</li><li><code>backend/src/services/wasmAppService.js</code>（WASM 应用导出执行）</li><li><code>scripts/moonbit/run-wasm-indicators-tests-offline.sh</code>（离线验证）</li></ul></li></ul>
 <h2 id="构建与交付">构建与交付<a class="anchor" href="#构建与交付" aria-label="锚点">#</a></h2>
-<ul><li>统一组件构建入口：<ul><li><code>scripts/build-khy-os.sh</code></li></ul></li><li>VMware 镜像规划/构建：<ul><li><code>scripts/khytogo/make-khytogo.sh --mode vmware-plan|vmware-create</code></li></ul></li><li>便携包：<ul><li><code>scripts/portable/build-usb-portable.sh</code></li></ul></li></ul>
+<ul><li>统一组件构建入口：<ul><li><code>scripts/build-khy-os.sh</code></li></ul></li><li>VMware 镜像规划/构建：<ul><li><code>extensions/scripts/khy-portable/khytogo/make-khytogo.sh --mode vmware-plan|vmware-create</code></li></ul></li><li>便携包：<ul><li><code>extensions/scripts/khy-portable/build-usb-portable.sh</code></li></ul></li></ul>
 <h2 id="wasm-abi">WASM ABI<a class="anchor" href="#wasm-abi" aria-label="锚点">#</a></h2>
 <ul><li><code>numeric-v1</code>：向导出函数传入位置式数值参数。</li><li><code>string-v2</code>：宿主机编码 UTF-8 载荷并传入 <code>(ptr,len)</code>，模块以 <code>i64</code> 返回打包后的 <code>(ptr,len)</code>。</li><li><code>json-v2</code>：宿主机通过 <code>string-v2</code> 传输发送 JSON 字符串，并强制执行 JSON 输出解析。</li></ul>
 <h2 id="设计准则">设计准则<a class="anchor" href="#设计准则" aria-label="锚点">#</a></h2>

@@ -77,14 +77,14 @@ khy iso build --output C:\khy\dist\khy-os.iso
 如果你是在克隆的源码树中操作，以下等效命令同样有效：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\alpine\windows-iso-preflight.ps1 -Output dist\khy-os.iso
-powershell -ExecutionPolicy Bypass -File scripts\alpine\build-iso-windows.ps1 -Output dist\khy-os.iso
+powershell -ExecutionPolicy Bypass -File extensions\scripts\khy-alpine-iso\windows-iso-preflight.ps1 -Output dist\khy-os.iso
+powershell -ExecutionPolicy Bypass -File extensions\scripts\khy-alpine-iso\build-iso-windows.ps1 -Output dist\khy-os.iso
 ```
 
 仅在需要使 Docker 缓存失效时才强制执行完整重建：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\alpine\build-iso-windows.ps1 -Output dist\khy-os.iso -NoCache
+powershell -ExecutionPolicy Bypass -File extensions\scripts\khy-alpine-iso\build-iso-windows.ps1 -Output dist\khy-os.iso -NoCache
 ```
 
 ### 2.4 验证产物
@@ -150,13 +150,13 @@ khy ai status
 快速环境参考：
 
 ```bash
-bash scripts/khytogo/make-khytogo.sh --mode vmware-plan
+bash extensions/scripts/khy-portable/khytogo/make-khytogo.sh --mode vmware-plan
 ```
 
 ### 3.2 查看镜像方案
 
 ```bash
-bash scripts/khytogo/make-khytogo.sh \
+bash extensions/scripts/khy-portable/khytogo/make-khytogo.sh \
   --mode vmware-plan \
   --image-path dist/khy-os-vmware.raw \
   --image-size-gib 32 \
@@ -169,7 +169,7 @@ bash scripts/khytogo/make-khytogo.sh \
 ### 3.3 构建 raw 镜像及可选的 VMDK
 
 ```bash
-sudo bash scripts/khytogo/make-khytogo.sh \
+sudo bash extensions/scripts/khy-portable/khytogo/make-khytogo.sh \
   --mode vmware-create \
   --image-path dist/khy-os-vmware.raw \
   --image-size-gib 32 \
@@ -182,7 +182,7 @@ sudo bash scripts/khytogo/make-khytogo.sh \
 替代封装脚本：
 
 ```bash
-sudo bash scripts/install/install-khy.sh \
+sudo bash extensions/scripts/khy-installer/install-khy.sh \
   --as system \
   --system-mode vmware-create \
   --image-path dist/khy-os-vmware.raw \

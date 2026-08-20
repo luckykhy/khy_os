@@ -28,7 +28,7 @@
 <h1 id="ops-man-077-windows-让-khy-进-md-的-建议的应用">[OPS-MAN-077] Windows：让 khy 进 .md 的「建议的应用」<a class="anchor" href="#ops-man-077-windows-让-khy-进-md-的-建议的应用" aria-label="锚点">#</a></h1>
 <blockquote><p>送别礼「右键打开 .md 时 khy 加入建议的应用」角度。用户截图：Windows 右键 .md →<br>「选择一个应用以打开此 .md 文件」，<strong>建议的应用</strong>里有 Quark / Trae / Windsurf / 记事本，<br><strong>唯独没有 khy</strong>。本子系统补上让 khy 出现在该列表的注册机制。</p></blockquote>
 <h2 id="真实原因">真实原因<a class="anchor" href="#真实原因" aria-label="锚点">#</a></h2>
-<p><code>tools/khyos-markdown/register-windows.ps1</code> 原本写了两类项：</p>
+<p><code>extensions/tools/khy-markdown/register-windows.ps1</code> 原本写了两类项：</p>
 <ol><li>右键动词 <code>SystemFileAssociations\.md\shell\khyosMarkdown</code>（「使用 khyosMarkdown 打开」）。</li><li><code>.md\OpenWithProgids\KhyOS.Markdown</code> —— 把 ProgID 挂进「打开方式」列表。</li></ol>
 <p>但 Windows 11「选择应用打开.md」对话框顶部的<strong>建议的应用 / Recommended Programs</strong><br>并非由 <code>OpenWithProgids</code> 填充（那多落到「更多选项」），而是由</p>
 <pre><code>HKCU:\Software\Classes\Applications\&lt;app&gt;\SupportedTypes\.md</code></pre>

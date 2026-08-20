@@ -24,9 +24,9 @@ khy（GATEWAY_API_POOL_PROVIDER=qoder）
 ## 三、核心文件
 | 文件 | 职责 |
 |------|------|
-| scripts/qoder-bridge/qoder_bridge.py | 本地 HTTP 服务，OpenAI 协议转译为 qodercli 子进程调用 |
-| scripts/qoder-bridge/start_qoder_bridge.ps1 | 幂等启动器，检测 3000 端口后拉起 pythonw 进程 |
-| scripts/qoder-bridge/install_autostart.ps1 | 每台机器 clone 后运行一次，动态生成 vbs 并装入 Startup 文件夹（不硬编码路径） |
+| extensions/scripts/khy-qoder-bridge/qoder_bridge.py | 本地 HTTP 服务，OpenAI 协议转译为 qodercli 子进程调用 |
+| extensions/scripts/khy-qoder-bridge/start_qoder_bridge.ps1 | 幂等启动器，检测 3000 端口后拉起 pythonw 进程 |
+| extensions/scripts/khy-qoder-bridge/install_autostart.ps1 | 每台机器 clone 后运行一次，动态生成 vbs 并装入 Startup 文件夹（不硬编码路径） |
 | ~/.khyquant/custom_providers.json | 注册 qoder 池（12 个模型） |
 | ~/.khyquant/api_keys.json | key=qoder-local（本地哨兵，无需真实鉴权） |
 
@@ -70,7 +70,7 @@ PROXY_MODEL_ROUTE_MAP 中每个 qoder 模型均 target=api:qoder:<model>，stric
 
 ## 七、排障指南
 - ECONNREFUSED 127.0.0.1:3000 -> 桥接未运行，运行 install_autostart.ps1 生成的
-  vbs 或直接 python scripts/qoder-bridge/qoder_bridge.py
+  vbs 或直接 python extensions/scripts/khy-qoder-bridge/qoder_bridge.py
 - 502 -> 查看 logs/bridge_stdout.log，常见原因 qodercli 未登录（运行 qodercli login）
 - 模型列表无 Qoder -> 确认 custom_providers.json 存在 poolKey=qoder，重启 khy
 - 自启动未生效 -> 重新运行 install_autostart.ps1，用 wscript.exe 手动测试生成的 vbs

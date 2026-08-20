@@ -90,7 +90,7 @@ trace-events.jsonl            — 全局追踪流</code></pre>
 <hr>
 <h4 id="html-html-渲染输出">HTML (.html) — 渲染输出<a class="anchor" href="#html-html-渲染输出" aria-label="锚点">#</a></h4>
 <p><strong>适用场景：</strong></p>
-<table><thead><tr><th>用途</th><th>目录</th></tr></thead><tbody><tr><td><strong>文档渲染输出</strong></td><td><code>docs/</code>（<code>.md</code> 的渲染产物）</td></tr><tr><td><strong>前端入口</strong></td><td><code>apps/ai-frontend/index.html</code></td></tr><tr><td><strong>工具页面</strong></td><td><code>tools/khyos-markdown/</code></td></tr></tbody></table>
+<table><thead><tr><th>用途</th><th>目录</th></tr></thead><tbody><tr><td><strong>文档渲染输出</strong></td><td><code>docs/</code>（<code>.md</code> 的渲染产物）</td></tr><tr><td><strong>前端入口</strong></td><td><code>apps/ai-frontend/index.html</code></td></tr><tr><td><strong>工具页面</strong></td><td><code>extensions/tools/khy-markdown/</code></td></tr></tbody></table>
 <p><strong>协议约束：</strong></p>
 <ol><li><code>docs/</code> 下的 <code>.html</code> 是 <code>.md</code> 的渲染产物，<strong>禁止手动编辑</strong>，由 <code>docs_site.py</code> 自动生成</li><li>前端 <code>index.html</code> <strong>必须</strong>包含 <code>&lt;meta charset=&quot;utf-8&quot;&gt;</code></li><li>禁止使用内联 <code>&lt;style&gt;</code> 和 <code>&lt;script&gt;</code>（除非是单文件工具）</li></ol>
 <hr>

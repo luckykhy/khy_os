@@ -117,8 +117,8 @@ khy gateway status
 快速检查：
 
 ```bash
-bash scripts/khytogo/make-khytogo.sh --mode vmware-plan
+bash extensions/scripts/khy-portable/khytogo/make-khytogo.sh --mode vmware-plan
 ```
 
-> 注意：`scripts/khytogo/` 属**源码树**脚本。纯 `pip install` 的用户安装目录里没有它——
+> 注意：`extensions/scripts/khy-portable/khytogo/` 属**源码树**脚本。纯 `pip install` 的用户安装目录里没有它——
 > 先 `khy restore`（还原可读源码树）或 `git clone` 仓库后，再在源码树根目录执行。

@@ -149,15 +149,15 @@ npm run portable:build:runtime -- \
 <p>构建器拒绝缺失的运行时、缓存、lockfile 或 workspace/前端依赖，并排除 <code>.env*</code>、数据库、日志、凭据、运行状态和旧输出目录。</p>
 <h2 id="校验与打包">校验与打包<a class="anchor" href="#校验与打包" aria-label="锚点">#</a></h2>
 <p>构建完成后，先校验目录产物：</p>
-<pre><code class="language-sh">node scripts/portable/portable-health-check.js --artifact dist/portable/ARTIFACT_DIR</code></pre>
+<pre><code class="language-sh">node extensions/scripts/khy-portable/portable-health-check.js --artifact dist/portable/ARTIFACT_DIR</code></pre>
 <p>校验内容包括：</p>
 <ul><li><code>MANIFEST.json</code> schema、kind、OS 和 CPU；</li><li>每个载荷文件的大小与 SHA-256；</li><li><code>SHA256SUMS</code> 自身的路径集合、manifest 摘要和载荷摘要；</li><li>启动器、运行时、可执行文件和两个前端入口的完整性；</li><li>目标平台必须与执行校验的主机一致。</li></ul>
 <p>只有通过校验的 artifact 才能压缩：</p>
-<pre><code class="language-sh">node scripts/portable/pack-portable.js --artifact dist/portable/ARTIFACT_DIR</code></pre>
+<pre><code class="language-sh">node extensions/scripts/khy-portable/pack-portable.js --artifact dist/portable/ARTIFACT_DIR</code></pre>
 <p>预览而不生成压缩包：</p>
-<pre><code class="language-sh">node scripts/portable/pack-portable.js --artifact dist/portable/ARTIFACT_DIR --dry-run</code></pre>
+<pre><code class="language-sh">node extensions/scripts/khy-portable/pack-portable.js --artifact dist/portable/ARTIFACT_DIR --dry-run</code></pre>
 <p>自定义压缩包输出目录：</p>
-<pre><code class="language-sh">node scripts/portable/pack-portable.js --artifact dist/portable/ARTIFACT_DIR --out dist/releases</code></pre>
+<pre><code class="language-sh">node extensions/scripts/khy-portable/pack-portable.js --artifact dist/portable/ARTIFACT_DIR --out dist/releases</code></pre>
 <p>打包器在压缩前重新验证 manifest，检测到文件缺失、篡改或额外摘要条目时立即终止。</p>
 <h2 id="数据与宿主隔离">数据与宿主隔离<a class="anchor" href="#数据与宿主隔离" aria-label="锚点">#</a></h2>
 <p>启动器以自身所在目录为 <code>KHY_PORTABLE_ROOT</code>，并统一设置：</p>
@@ -167,12 +167,12 @@ npm run portable:build:runtime -- \
 <ol><li>退出该便携实例，确保数据库和后台进程已关闭。</li><li>复制整个 artifact 目录；需要保留状态时包含 <code>state/.khy/</code>。</li><li>从新目录执行 <code>launch.bat</code> 或 <code>launch.sh</code>。</li><li>运行 artifact health check，确认文件完整性和目标平台匹配。</li></ol>
 <p><code>MANIFEST.json</code> 描述发布载荷，不包含运行后在 <code>state/</code> 中新增的用户状态。升级时建议解压新的只读产物，再显式复制或迁移旧 <code>state/.khy/</code>；不要用新压缩包直接覆盖正在使用的目录。</p>
 <h2 id="与源码启动的区别">与源码启动的区别<a class="anchor" href="#与源码启动的区别" aria-label="锚点">#</a></h2>
-<p>仓库根目录的 <code>khy.bat</code>、<code>khy.sh</code>、<code>scripts/portable/run.ps1</code> 和旧同步脚本仍服务于源码开发、自举或兼容流程。它们不是可发布 artifact 的替代品，也不构成“目标机无预装运行时、离线启动”的交付证明。</p>
-<p>发布和验收只以 <code>scripts/portable/build-portable-artifact.js</code> 生成、带完整 manifest 且通过 <code>portable-health-check.js --artifact</code> 的目录为准。</p>
+<p>仓库根目录的 <code>khy.bat</code>、<code>khy.sh</code>、<code>extensions/scripts/khy-portable/run.ps1</code> 和旧同步脚本仍服务于源码开发、自举或兼容流程。它们不是可发布 artifact 的替代品，也不构成“目标机无预装运行时、离线启动”的交付证明。</p>
+<p>发布和验收只以 <code>extensions/scripts/khy-portable/build-portable-artifact.js</code> 生成、带完整 manifest 且通过 <code>portable-health-check.js --artifact</code> 的目录为准。</p>
 <h3 id="源码目录下的三种启动档位">源码目录下的三种启动档位<a class="anchor" href="#源码目录下的三种启动档位" aria-label="锚点">#</a></h3>
 <p>&lt;!-- 本小节由根目录 PORTABLE_GUIDE.md 归并而来（归档日期 2026-08-15）。 --&gt;</p>
 <p>把源码文件夹整份拷到另一台机器后，按「要不要 Web 界面」选档位：</p>
-<table><thead><tr><th>启动方式</th><th>起了什么</th><th>需要后端</th><th>Web 界面</th></tr></thead><tbody><tr><td><code>khy</code> / <code>.\khy.bat</code> / <code>./khy.sh</code></td><td>仅 CLI（轻量）</td><td>否</td><td>无</td></tr><tr><td><code>scripts\setup\start-backend.bat</code></td><td>后端 API + 认证</td><td>是</td><td>无（只有 API）</td></tr><tr><td><code>scripts\setup\start-all.bat</code></td><td>后端 + 前端，各开一个窗口</td><td>是</td><td>http://localhost:3000</td></tr></tbody></table>
+<table><thead><tr><th>启动方式</th><th>起了什么</th><th>需要后端</th><th>Web 界面</th></tr></thead><tbody><tr><td><code>khy</code> / <code>.\khy.bat</code> / <code>./khy.sh</code></td><td>仅 CLI（轻量）</td><td>否</td><td>无</td></tr><tr><td><code>extensions\scripts\khy-installer\setup\start-backend.bat</code></td><td>后端 API + 认证</td><td>是</td><td>无（只有 API）</td></tr><tr><td><code>extensions\scripts\khy-installer\setup\start-all.bat</code></td><td>后端 + 前端，各开一个窗口</td><td>是</td><td>http://localhost:3000</td></tr></tbody></table>
 <p>后端 API 在 http://localhost:5000。三档都不需要先跑任何 setup 脚本来建账号——<br><strong>CLI 的自动登录不依赖后端</strong>（凭据在本机现场生成），详见<br><code>docs/07_OPS_运维/[OPS-MAN-175] 首次运行自动登录与凭据.md</code>。需要 Web 界面登录、<br>注册新用户或访问数据库时才必须起后端。</p>
 <p>跨机器配置全局 <code>khy</code> 命令：运行 <code>portable-setup.bat</code>（Windows）/ <code>portable-setup.sh</code>，<br>重开终端后 <code>khy --version</code> 验证。脚本自动探测当前项目位置，不需要手写路径。</p>
 <h2 id="故障排除">故障排除<a class="anchor" href="#故障排除" aria-label="锚点">#</a></h2>

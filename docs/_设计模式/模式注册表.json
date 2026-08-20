@@ -98,44 +98,16 @@
   "services/ai-backend/src/services/gateway/appLaunchInterceptor.js": [
     "Facade"
   ],
-  "services/ai-backend/src/services/gateway/example_plugins/cache-plugin.js": [
-    "Facade"
-  ],
-  "services/ai-backend/src/services/gateway/example_plugins/cost-guard.js": [
-    "Facade"
-  ],
   "services/ai-backend/src/services/gateway/oauthManager.js": [
     "Singleton"
   ],
   "services/ai-backend/src/services/gateway/pluginChain.js": [
     "Chain of Responsibility"
   ],
-  "services/ai-backend/src/services/gateway/protocolConverter/anthropic.js": [
-    "Adapter"
-  ],
-  "services/ai-backend/src/services/gateway/protocolConverter/canonical.js": [
-    "Adapter"
-  ],
-  "services/ai-backend/src/services/gateway/protocolConverter/codex.js": [
-    "Adapter"
-  ],
-  "services/ai-backend/src/services/gateway/protocolConverter/formats.js": [
-    "Adapter",
-    "Flyweight"
-  ],
-  "services/ai-backend/src/services/gateway/protocolConverter/gemini.js": [
-    "Adapter"
-  ],
-  "services/ai-backend/src/services/gateway/protocolConverter/grok.js": [
-    "Adapter"
-  ],
   "services/ai-backend/src/services/gateway/protocolConverter/index.js": [
     "Adapter",
     "Bridge",
     "Facade"
-  ],
-  "services/ai-backend/src/services/gateway/protocolConverter/openai.js": [
-    "Adapter"
   ],
   "services/ai-backend/src/services/gateway/proxyServer.js": [
     "Proxy",
@@ -350,42 +322,6 @@
   "services/backend/migrations/fix-instruments-name-nullable.js": [
     "Command"
   ],
-  "services/backend/ml/check_model_features.py": [
-    "Template Method"
-  ],
-  "services/backend/ml/data_collector.py": [
-    "Command",
-    "Template Method"
-  ],
-  "services/backend/ml/distillation/__init__.py": [
-    "Template Method"
-  ],
-  "services/backend/ml/distillation/generate_labels.py": [
-    "Template Method"
-  ],
-  "services/backend/ml/feature_engineer.py": [
-    "Template Method"
-  ],
-  "services/backend/ml/predict.py": [
-    "Command",
-    "Template Method"
-  ],
-  "services/backend/ml/retrain_distilled.py": [
-    "Command",
-    "Template Method"
-  ],
-  "services/backend/ml/retrain_with_18_features.py": [
-    "Command",
-    "Template Method"
-  ],
-  "services/backend/ml/train_18_features.py": [
-    "Command",
-    "Template Method"
-  ],
-  "services/backend/ml/trainer.py": [
-    "Command",
-    "Template Method"
-  ],
   "services/backend/reset-database.js": [
     "Strategy"
   ],
@@ -517,16 +453,9 @@
     "Singleton",
     "Template Method"
   ],
-  "services/backend/src/bridge/bridgeClient.js": [
-    "Bridge"
-  ],
   "services/backend/src/bridge/bridgeServer.js": [
     "Bridge",
     "Singleton"
-  ],
-  "services/backend/src/bridge/stateSync.js": [
-    "Bridge",
-    "Memento"
   ],
   "services/backend/src/buddy/companion.js": [
     "Strategy"
@@ -560,9 +489,6 @@
   ],
   "services/backend/src/cli/commandRegistry.js": [
     "Singleton"
-  ],
-  "services/backend/src/cli/commandSchema.js": [
-    "Interpreter"
   ],
   "services/backend/src/cli/errorSummary.js": [
     "Command"
@@ -613,9 +539,6 @@
     "Command"
   ],
   "services/backend/src/cli/handlers/init.js": [
-    "Command"
-  ],
-  "services/backend/src/cli/handlers/learning.js": [
     "Command"
   ],
   "services/backend/src/cli/handlers/linux.js": [
@@ -674,14 +597,8 @@
   "services/backend/src/cli/lineBuffer.js": [
     "Iterator"
   ],
-  "services/backend/src/cli/liteRepl.js": [
-    "Mediator"
-  ],
   "services/backend/src/cli/menu.js": [
     "Composite"
-  ],
-  "services/backend/src/cli/nonInteractive.js": [
-    "Command"
   ],
   "services/backend/src/cli/onboarding.js": [
     "Facade"
@@ -697,9 +614,6 @@
   ],
   "services/backend/src/cli/repl.js": [
     "Mediator"
-  ],
-  "services/backend/src/cli/riskConfirm.js": [
-    "Command"
   ],
   "services/backend/src/cli/router.js": [
     "Mediator"
@@ -732,16 +646,10 @@
   "services/backend/src/cli/ui/permissionDialog.js": [
     "Command"
   ],
-  "services/backend/src/cli/ui/progressBar.js": [
-    "Command"
-  ],
   "services/backend/src/config/database.js": [
     "Flyweight"
   ],
   "services/backend/src/config/env.js": [
-    "Flyweight"
-  ],
-  "services/backend/src/config/referencePrices.js": [
     "Flyweight"
   ],
   "services/backend/src/config/settingsWhitelist.js": [
@@ -1066,12 +974,6 @@
   "services/backend/src/services/adaptiveOutput.js": [
     "Strategy"
   ],
-  "services/backend/src/services/adataMarketService.py": [
-    "Facade"
-  ],
-  "services/backend/src/services/adataService.py": [
-    "Facade"
-  ],
   "services/backend/src/services/adminService.js": [
     "Facade"
   ],
@@ -1087,9 +989,6 @@
   "services/backend/src/services/agenticHarnessService.js": [
     "Composite"
   ],
-  "services/backend/src/services/agentsight/discover.js": [
-    "Visitor"
-  ],
   "services/backend/src/services/agentsight/genaiEvents.js": [
     "Observer"
   ],
@@ -1101,9 +1000,6 @@
     "Observer"
   ],
   "services/backend/src/services/akshareDataService.js": [
-    "Facade"
-  ],
-  "services/backend/src/services/akshareService.py": [
     "Facade"
   ],
   "services/backend/src/services/akshareUpdater.js": [
@@ -1157,9 +1053,6 @@
   ],
   "services/backend/src/services/boulderState.js": [
     "Singleton"
-  ],
-  "services/backend/src/services/brokerService.js": [
-    "Facade"
   ],
   "services/backend/src/services/bugfixRegressionGate.js": [
     "State"
@@ -1234,9 +1127,6 @@
   "services/backend/src/services/comprehensiveDataService.js": [
     "Facade"
   ],
-  "services/backend/src/services/comprehensiveDataStaticConfig.js": [
-    "Facade"
-  ],
   "services/backend/src/services/concurrencyLimiter.js": [
     "State"
   ],
@@ -1277,18 +1167,11 @@
   "services/backend/src/services/customProviderRegistry.js": [
     "Singleton"
   ],
-  "services/backend/src/services/daemonClient.js": [
-    "Facade"
-  ],
   "services/backend/src/services/daemonEntry.js": [
     "Facade"
   ],
   "services/backend/src/services/daemonManager.js": [
     "Singleton"
-  ],
-  "services/backend/src/services/data_source.py": [
-    "Command",
-    "Template Method"
   ],
   "services/backend/src/services/dedupeCache.js": [
     "Singleton"
@@ -1313,9 +1196,6 @@
   ],
   "services/backend/src/services/documentSnippetService.js": [
     "Visitor"
-  ],
-  "services/backend/src/services/efinanceService.py": [
-    "Facade"
   ],
   "services/backend/src/services/enhancedMockDataService.js": [
     "Facade"
@@ -1353,19 +1233,11 @@
   "services/backend/src/services/freeStockDataService.js": [
     "Facade"
   ],
-  "services/backend/src/services/futuresTickDataService.js": [
-    "Facade"
-  ],
   "services/backend/src/services/gateway/adapters/_abortHelpers.js": [
     "Facade"
   ],
   "services/backend/src/services/gateway/adapters/_adapterUtils.js": [
     "Facade"
-  ],
-  "services/backend/src/services/gateway/adapters/_baseAdapter.js": [
-    "Adapter",
-    "Factory Method",
-    "Template Method"
   ],
   "services/backend/src/services/gateway/adapters/_errorClassifiers.js": [
     "Interpreter"
@@ -1455,12 +1327,6 @@
   "services/backend/src/services/gateway/customerRegistry.js": [
     "Singleton"
   ],
-  "services/backend/src/services/gateway/example_plugins/cache-plugin.js": [
-    "Facade"
-  ],
-  "services/backend/src/services/gateway/example_plugins/cost-guard.js": [
-    "Facade"
-  ],
   "services/backend/src/services/gateway/keySelector.js": [
     "Iterator"
   ],
@@ -1476,32 +1342,10 @@
   "services/backend/src/services/gateway/pluginChain.js": [
     "Chain of Responsibility"
   ],
-  "services/backend/src/services/gateway/protocolConverter/anthropic.js": [
-    "Adapter"
-  ],
-  "services/backend/src/services/gateway/protocolConverter/canonical.js": [
-    "Adapter"
-  ],
-  "services/backend/src/services/gateway/protocolConverter/codex.js": [
-    "Adapter"
-  ],
-  "services/backend/src/services/gateway/protocolConverter/formats.js": [
-    "Adapter",
-    "Flyweight"
-  ],
-  "services/backend/src/services/gateway/protocolConverter/gemini.js": [
-    "Adapter"
-  ],
-  "services/backend/src/services/gateway/protocolConverter/grok.js": [
-    "Adapter"
-  ],
   "services/backend/src/services/gateway/protocolConverter/index.js": [
     "Adapter",
     "Bridge",
     "Facade"
-  ],
-  "services/backend/src/services/gateway/protocolConverter/openai.js": [
-    "Adapter"
   ],
   "services/backend/src/services/gateway/proxyServer.js": [
     "Proxy",
@@ -1523,29 +1367,11 @@
   "services/backend/src/services/gateway/safeJsonParse.js": [
     "Interpreter"
   ],
-  "services/backend/src/services/gateway/streamingToolCallParser.js": [
-    "Iterator"
-  ],
   "services/backend/src/services/gateway/tlsSidecar/index.js": [
     "Facade"
   ],
   "services/backend/src/services/gateway/tlsSidecar/installer.js": [
     "Facade"
-  ],
-  "services/backend/src/services/get_all_index_codes.py": [
-    "Template Method"
-  ],
-  "services/backend/src/services/get_all_instruments_by_type.py": [
-    "Template Method"
-  ],
-  "services/backend/src/services/get_all_instruments_from_cache.py": [
-    "Template Method"
-  ],
-  "services/backend/src/services/get_all_stock_codes.py": [
-    "Template Method"
-  ],
-  "services/backend/src/services/get_instruments_stock_index_only.py": [
-    "Template Method"
   ],
   "services/backend/src/services/gettingStartedService.js": [
     "Facade"
@@ -1568,27 +1394,11 @@
   "services/backend/src/services/heartbeatCooldown.js": [
     "Observer"
   ],
-  "services/backend/src/services/heartbeatRunner.js": [
-    "Observer"
-  ],
-  "services/backend/src/services/ifindService.py": [
-    "Facade"
-  ],
   "services/backend/src/services/imageService.js": [
     "Facade"
   ],
   "services/backend/src/services/imageToWebService.js": [
     "Facade"
-  ],
-  "services/backend/src/services/indicators/benchmark.js": [
-    "Strategy"
-  ],
-  "services/backend/src/services/indicators/fastIndicators.js": [
-    "Strategy"
-  ],
-  "services/backend/src/services/indicators/index.js": [
-    "Facade",
-    "Strategy"
   ],
   "services/backend/src/services/inputPreprocessor.js": [
     "Facade"
@@ -1602,9 +1412,6 @@
   "services/backend/src/services/instrumentSyncService.js": [
     "Facade"
   ],
-  "services/backend/src/services/intelligentStrategyAdapter.js": [
-    "Adapter"
-  ],
   "services/backend/src/services/intentGate.js": [
     "State"
   ],
@@ -1616,9 +1423,6 @@
   ],
   "services/backend/src/services/khyUpgradeRuntime.js": [
     "Template Method"
-  ],
-  "services/backend/src/services/khyshareService.py": [
-    "Facade"
   ],
   "services/backend/src/services/klineDataService.js": [
     "Facade"
@@ -1649,9 +1453,6 @@
   ],
   "services/backend/src/services/mcp/types.js": [
     "Flyweight"
-  ],
-  "services/backend/src/services/mcpClient.js": [
-    "Facade"
   ],
   "services/backend/src/services/mediaTranscriptionService.js": [
     "Facade"
@@ -1737,24 +1538,8 @@
   "services/backend/src/services/query/compactPipeline.js": [
     "Builder"
   ],
-  "services/backend/src/services/query/queryConfig.js": [
-    "Builder"
-  ],
-  "services/backend/src/services/query/queryDeps.js": [
-    "Facade"
-  ],
-  "services/backend/src/services/query/queryState.js": [
-    "Builder",
-    "Singleton"
-  ],
-  "services/backend/src/services/query/stopHooks.js": [
-    "Facade"
-  ],
   "services/backend/src/services/query/streamingToolExecutor.js": [
     "Iterator"
-  ],
-  "services/backend/src/services/query/tokenBudget.js": [
-    "Strategy"
   ],
   "services/backend/src/services/queryEngine.js": [
     "Facade"
@@ -1868,9 +1653,6 @@
   "services/backend/src/services/skillSearch.js": [
     "Visitor"
   ],
-  "services/backend/src/services/smartAIService.js": [
-    "Facade"
-  ],
   "services/backend/src/services/smartTruncation.js": [
     "Strategy"
   ],
@@ -1888,9 +1670,6 @@
   ],
   "services/backend/src/services/strategyEngine.js": [
     "Strategy"
-  ],
-  "services/backend/src/services/strategyMonitor.js": [
-    "Observer"
   ],
   "services/backend/src/services/strategyRecommender.js": [
     "Strategy"
@@ -1910,21 +1689,8 @@
   "services/backend/src/services/tdxFormulaEngine.js": [
     "Interpreter"
   ],
-  "services/backend/src/services/tdxInterpreter.js": [
-    "Interpreter"
-  ],
-  "services/backend/src/services/tdxPythonBridge.js": [
-    "Bridge",
-    "Interpreter"
-  ],
   "services/backend/src/services/telemetryService.js": [
     "Decorator"
-  ],
-  "services/backend/src/services/tickBacktestEngine.js": [
-    "Facade"
-  ],
-  "services/backend/src/services/tickDataAdapter.js": [
-    "Adapter"
   ],
   "services/backend/src/services/timeFormat.js": [
     "Facade"
@@ -1962,9 +1728,6 @@
   "services/backend/src/services/toolLoopDetector.js": [
     "Facade"
   ],
-  "services/backend/src/services/toolPipeline.js": [
-    "Chain of Responsibility"
-  ],
   "services/backend/src/services/toolSandbox.js": [
     "Proxy"
   ],
@@ -1988,9 +1751,6 @@
   ],
   "services/backend/src/services/ultraplanService.js": [
     "Facade"
-  ],
-  "services/backend/src/services/updateRunner.js": [
-    "Template Method"
   ],
   "services/backend/src/services/usageFormatter.js": [
     "Facade"
@@ -2166,10 +1926,6 @@
     "Command",
     "Facade"
   ],
-  "services/backend/src/tools/NotebookEditTool/index.js": [
-    "Command",
-    "Facade"
-  ],
   "services/backend/src/tools/PowerShellTool/index.js": [
     "Command",
     "Facade"
@@ -2285,9 +2041,6 @@
   "services/backend/src/tools/_taskStore.js": [
     "Memento"
   ],
-  "services/backend/src/tools/agentTool.js": [
-    "Command"
-  ],
   "services/backend/src/tools/backtest.js": [
     "Command"
   ],
@@ -2337,9 +2090,6 @@
   "services/backend/src/tools/lintCode.js": [
     "Command"
   ],
-  "services/backend/src/tools/lsp.js": [
-    "Command"
-  ],
   "services/backend/src/tools/manageDeps.js": [
     "Command"
   ],
@@ -2368,9 +2118,6 @@
     "Command"
   ],
   "services/backend/src/tools/search.js": [
-    "Command"
-  ],
-  "services/backend/src/tools/sendMessageTool.js": [
     "Command"
   ],
   "services/backend/src/tools/shellClassifier.js": [
@@ -2404,17 +2151,11 @@
   "services/backend/src/tools/writeFile.js": [
     "Command"
   ],
-  "services/backend/src/utils/arrayChunk.js": [
-    "Strategy"
-  ],
   "services/backend/src/utils/dataHome.js": [
     "Strategy"
   ],
   "services/backend/src/utils/expressAsyncPatch.js": [
     "Decorator"
-  ],
-  "services/backend/src/utils/lineEndings.js": [
-    "Strategy"
   ],
   "services/backend/src/utils/logger.js": [
     "Decorator"
@@ -2441,9 +2182,6 @@
     "Strategy"
   ],
   "services/backend/src/utils/systemEncoding.js": [
-    "Strategy"
-  ],
-  "services/backend/src/utils/xdg.js": [
     "Strategy"
   ],
   "services/backend/src/vim/motions.js": [
@@ -2503,510 +2241,6 @@
   ],
   "services/backend/wasm-indicators/indicators_wbtest.mbt": [
     "Strategy",
-    "Template Method"
-  ],
-  "frontend/capacitor.config.ts": [
-    "Flyweight"
-  ],
-  "frontend/eslint.config.js": [
-    "Visitor"
-  ],
-  "frontend/src/App.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/api/admin.js": [
-    "Proxy"
-  ],
-  "frontend/src/api/auth.js": [
-    "Proxy"
-  ],
-  "frontend/src/api/instruments.js": [
-    "Proxy"
-  ],
-  "frontend/src/api/largeTasks.js": [
-    "Proxy"
-  ],
-  "frontend/src/api/marketData.js": [
-    "Proxy"
-  ],
-  "frontend/src/api/request.js": [
-    "Proxy"
-  ],
-  "frontend/src/api/settings.js": [
-    "Proxy"
-  ],
-  "frontend/src/api/strategy.js": [
-    "Proxy"
-  ],
-  "frontend/src/api/trade.js": [
-    "Proxy"
-  ],
-  "frontend/src/components/ApiExample.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/ApiKeyManager.vue": [
-    "Composite",
-    "Observer",
-    "Singleton"
-  ],
-  "frontend/src/components/BottomDrawer.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/ChannelHealthIndicator.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/CleanKLineChart.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/CollapsiblePositionBar.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/ComprehensiveDataViewer.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/DataSourceIndicator.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/EnhancedKLineChart.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/EnhancedPositionsPanel.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/EnhancedTradingPanel.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/FirstLaunchLoader.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/GlobalErrorBoundary.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/InstrumentSelector.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/InstrumentTable.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/IntelligentStrategySelector.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/JavaScriptEditor.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/LightweightKLineChart.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/LiveTradingCenter.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/MobileLayout.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/MobileNav.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/MobileStrategySelector.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/MobileSymbolSelector.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/MobileToast.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/ModernTradingPanel.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/OfflineIndicator.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/PositionsPanel.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/ProfessionalTradeHistory.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/ProfessionalTradingChart.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/PwaUpdatePrompt.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/PythonEditor.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/RealTimeKLineChart.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/RecentTradesPanel.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/SendKeyBinding.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/SimpleKLineChart.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/SimpleTradingInterface.css": [
-    "Flyweight"
-  ],
-  "frontend/src/components/SimpleTradingInterface.js": [
-    "Strategy"
-  ],
-  "frontend/src/components/SimpleTradingInterface.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/StrategyKLineChart.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/StrategyManager.vue": [
-    "Composite",
-    "Observer",
-    "Singleton"
-  ],
-  "frontend/src/components/SyncNotification.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/TdxFormulaEditor.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/TestBot.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/TradingAgentsBotSimple.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/components/UnifiedTradingInterface.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/composables/useChannelHealth.js": [
-    "Observer"
-  ],
-  "frontend/src/composables/useDashboardHandover.js": [
-    "Observer"
-  ],
-  "frontend/src/composables/useDashboardLanAccess.js": [
-    "Observer"
-  ],
-  "frontend/src/composables/useDashboardQuotes.js": [
-    "Observer"
-  ],
-  "frontend/src/composables/useFuturesTickData.js": [
-    "Observer"
-  ],
-  "frontend/src/composables/useOnlineStatus.js": [
-    "Observer"
-  ],
-  "frontend/src/composables/useResponsive.ts": [
-    "Observer"
-  ],
-  "frontend/src/composables/useStreamChat.js": [
-    "Observer"
-  ],
-  "frontend/src/composables/useTouchGestures.ts": [
-    "Observer"
-  ],
-  "frontend/src/config/api.dev.js": [
-    "Flyweight"
-  ],
-  "frontend/src/config/api.js": [
-    "Flyweight"
-  ],
-  "frontend/src/main.js": [
-    "Facade"
-  ],
-  "frontend/src/plugins/mobileToast.ts": [
-    "Flyweight"
-  ],
-  "frontend/src/plugins/pluginManager.js": [
-    "Factory Method"
-  ],
-  "frontend/src/router/index.js": [
-    "Strategy"
-  ],
-  "frontend/src/services/dataSourceService.js": [
-    "Facade"
-  ],
-  "frontend/src/services/intelligentStrategyAdapter.js": [
-    "Adapter"
-  ],
-  "frontend/src/services/intelligentStrategyService.js": [
-    "Facade"
-  ],
-  "frontend/src/services/localAuthService.js": [
-    "Memento"
-  ],
-  "frontend/src/services/marketDataService.js": [
-    "Facade"
-  ],
-  "frontend/src/services/priceDataService.js": [
-    "Facade"
-  ],
-  "frontend/src/services/wasm/wasmBridge.js": [
-    "Bridge"
-  ],
-  "frontend/src/services/websocket.js": [
-    "Observer"
-  ],
-  "frontend/src/services/websocketService.js": [
-    "Observer"
-  ],
-  "frontend/src/stores/analysis.js": [
-    "Memento",
-    "Singleton"
-  ],
-  "frontend/src/stores/strategyStore.js": [
-    "Memento",
-    "Singleton"
-  ],
-  "frontend/src/stores/user.js": [
-    "Memento",
-    "Singleton"
-  ],
-  "frontend/src/styles/mobile-scroll.css": [
-    "Flyweight"
-  ],
-  "frontend/src/styles/mobile.css": [
-    "Flyweight"
-  ],
-  "frontend/src/styles/responsive.css": [
-    "Flyweight"
-  ],
-  "frontend/src/styles/theme.css": [
-    "Flyweight"
-  ],
-  "frontend/src/utils/arrayGuards.js": [
-    "Strategy"
-  ],
-  "frontend/src/utils/chartCleanup.js": [
-    "Strategy"
-  ],
-  "frontend/src/utils/clientMode.js": [
-    "Strategy"
-  ],
-  "frontend/src/utils/connectionMode.js": [
-    "Strategy"
-  ],
-  "frontend/src/utils/device.js": [
-    "Strategy"
-  ],
-  "frontend/src/utils/errorMessage.js": [
-    "Strategy"
-  ],
-  "frontend/src/utils/indicators.js": [
-    "Strategy"
-  ],
-  "frontend/src/utils/localEncrypt.js": [
-    "Strategy"
-  ],
-  "frontend/src/utils/markdown.js": [
-    "Strategy"
-  ],
-  "frontend/src/utils/mobileChartConfig.ts": [
-    "Flyweight"
-  ],
-  "frontend/src/utils/networkMonitor.js": [
-    "Observer"
-  ],
-  "frontend/src/utils/performanceOptimizer.ts": [
-    "Flyweight"
-  ],
-  "frontend/src/utils/request.js": [
-    "Strategy"
-  ],
-  "frontend/src/utils/requestInterceptor.js": [
-    "Proxy"
-  ],
-  "frontend/src/utils/sandboxExecute.js": [
-    "Strategy"
-  ],
-  "frontend/src/utils/simpleTradingHelpers.js": [
-    "Strategy"
-  ],
-  "frontend/src/utils/simpleTradingMarketData.js": [
-    "Strategy"
-  ],
-  "frontend/src/utils/simpleTradingSignalGenerator.js": [
-    "Strategy"
-  ],
-  "frontend/src/utils/tickCsvParser.js": [
-    "Iterator"
-  ],
-  "frontend/src/utils/tvTime.js": [
-    "Adapter"
-  ],
-  "frontend/src/views/AdminAnnouncements.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/views/AdminDashboard.vue": [
-    "Composite",
-    "Facade",
-    "Observer"
-  ],
-  "frontend/src/views/AdminFeedback.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/views/AdminLayout.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/views/AdminLogin.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/views/AdminLogs.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/views/AdminSystem.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/views/AdminUsers.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/views/Announcements.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/views/ApiKeyManage.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/views/BacktestAnalysis.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/views/BacktestDetail.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/views/Dashboard.vue": [
-    "Composite",
-    "Facade",
-    "Observer"
-  ],
-  "frontend/src/views/DataReplay.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/views/DataSourceManagement-Multi.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/views/DataSourceManagement.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/views/Debug.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/views/Feedback.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/views/ForgotPassword.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/views/Layout.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/views/Login.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/views/MarketQuotes.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/views/Profile.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/views/Register.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/views/SmartTrading.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/views/Strategies.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/views/Trades.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/views/Trading.css": [
-    "Flyweight"
-  ],
-  "frontend/src/views/Trading.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "frontend/src/views/admin/Dashboard.vue": [
-    "Composite",
-    "Facade",
-    "Observer"
-  ],
-  "frontend/vite.config.js": [
-    "Builder"
-  ],
-  "install.ps1": [
-    "Template Method"
-  ],
-  "install.sh": [
     "Template Method"
   ],
   "kernel/boot/boot.asm": [
@@ -3199,326 +2433,24 @@
   "kernel/src/wm.h": [
     "Strategy"
   ],
-  "khy_os/__init__.py": [
-    "Template Method"
-  ],
-  "khy_platform/__init__.py": [
-    "Template Method"
-  ],
-  "khy_platform/__main__.py": [
-    "Template Method"
-  ],
-  "khy_platform/_bootstrap.py": [
-    "Template Method"
-  ],
-  "khy_platform/bundle_tools.py": [
-    "Template Method"
-  ],
-  "khy_platform/cli.py": [
-    "Command"
-  ],
-  "packages/backend/khy_quant_backend/__init__.py": [
-    "Template Method"
-  ],
-  "packages/backend/khy_quant_backend/_bootstrap.py": [
-    "Template Method"
-  ],
-  "packages/backend/khy_quant_backend/cli.py": [
-    "Command"
-  ],
-  "packages/frontend/khy_quant_frontend/__init__.py": [
-    "Template Method"
-  ],
-  "packages/khy-chain/bridge/chainService.js": [
-    "Bridge"
-  ],
-  "packages/khy-chain/service/app.py": [
-    "Template Method"
-  ],
-  "packages/khy-chain/service/chains.py": [
-    "Template Method"
-  ],
-  "packages/khy-chain/service/test_chains.py": [
-    "Template Method"
-  ],
-  "packages/khy-hello/src/index.js": [
-    "Strategy"
-  ],
-  "packages/khy-quant/frontend/dev/DevApp.vue": [
-    "Composite",
-    "Observer"
-  ],
-  "packages/khy-quant/frontend/dev/main.js": [
-    "Facade"
-  ],
-  "packages/khy-quant/frontend/index.js": [
-    "Strategy"
-  ],
-  "packages/khy-quant/frontend/vite.config.js": [
-    "Builder"
-  ],
-  "packages/khy-quant/src/commands/analyze.js": [
-    "Command"
-  ],
-  "packages/khy-quant/src/commands/backtest.js": [
-    "Command"
-  ],
-  "packages/khy-quant/src/commands/data.js": [
-    "Command"
-  ],
-  "packages/khy-quant/src/commands/quote.js": [
-    "Command"
-  ],
-  "packages/khy-quant/src/commands/strategy.js": [
-    "Command"
-  ],
-  "packages/khy-quant/src/index.js": [
-    "Strategy"
-  ],
-  "packages/khy-quant/src/services/index.js": [
-    "Facade"
-  ],
-  "packages/khy-quant/src/tools/index.js": [
-    "Facade"
-  ],
-  "packages/moonbit-plugin-sdk/cmd/weather-demo/main.mbt": [
-    "Facade",
-    "Strategy"
-  ],
-  "packages/moonbit-plugin-sdk/khy_sys.mbt": [
-    "Strategy"
-  ],
-  "packages/plugin-sdk/src/index.js": [
-    "Abstract Factory"
-  ],
-  "packages/plugin-sdk/src/testing.js": [
-    "Strategy"
-  ],
-  "packages/plugin-sdk/src/types.d.ts": [
-    "Flyweight"
-  ],
-  "packages/sdk-python/src/khy_sdk/__init__.py": [
-    "Template Method"
-  ],
-  "packages/sdk-python/src/khy_sdk/errors.py": [
-    "Template Method"
-  ],
-  "packages/sdk-python/src/khy_sdk/protocol.py": [
-    "Template Method"
-  ],
-  "packages/sdk-python/src/khy_sdk/query.py": [
-    "Template Method"
-  ],
-  "packages/sdk-python/src/khy_sdk/sync_query.py": [
-    "Template Method"
-  ],
-  "packages/sdk-python/src/khy_sdk/transport.py": [
-    "Bridge"
-  ],
-  "packages/sdk-python/src/khy_sdk/types.py": [
-    "Flyweight"
-  ],
-  "packages/sdk-python/tests/__init__.py": [
-    "Template Method"
-  ],
-  "packages/sdk-python/tests/test_sdk.py": [
-    "Template Method"
-  ],
-  "packages/sdk/src/asyncStream.js": [
-    "Iterator"
-  ],
-  "packages/sdk/src/bridgeTransport.js": [
-    "Bridge"
-  ],
-  "packages/sdk/src/constants.js": [
-    "Strategy"
-  ],
-  "packages/sdk/src/conversation.js": [
-    "Strategy"
-  ],
-  "packages/sdk/src/daemonClient.js": [
-    "Strategy"
-  ],
-  "packages/sdk/src/errors.js": [
-    "Strategy"
-  ],
-  "packages/sdk/src/index.js": [
-    "Strategy"
-  ],
-  "packages/sdk/src/jsonLines.js": [
-    "Iterator"
-  ],
-  "packages/sdk/src/logger.js": [
-    "Decorator"
-  ],
-  "packages/sdk/src/mcp.js": [
-    "Strategy"
-  ],
-  "packages/sdk/src/processTransport.js": [
-    "Bridge"
-  ],
-  "packages/sdk/src/query.js": [
-    "Strategy"
-  ],
-  "packages/sdk/src/sseParser.js": [
-    "Iterator"
-  ],
-  "packages/sdk/src/types.d.ts": [
-    "Flyweight"
-  ],
-  "packages/sdk/src/validation.js": [
-    "Strategy"
-  ],
-  "packages/sdk/testing/index.js": [
-    "Strategy"
-  ],
-  "packages/shared/config/database.js": [
-    "Flyweight"
-  ],
-  "packages/shared/config/env.js": [
-    "Flyweight"
-  ],
-  "packages/shared/config/sqliteCompat.js": [
-    "Adapter",
-    "Flyweight"
-  ],
-  "packages/shared/src/config/database.js": [
-    "Flyweight"
-  ],
-  "packages/shared/src/config/env.js": [
-    "Flyweight"
-  ],
-  "packages/shared/src/config/sqliteCompat.js": [
-    "Adapter",
-    "Flyweight"
-  ],
-  "packages/shared/src/index.js": [
-    "Strategy"
-  ],
-  "packages/shared/src/middleware/auth.js": [
-    "Proxy"
-  ],
-  "packages/shared/src/middleware/errorHandler.js": [
-    "Chain of Responsibility",
-    "Proxy"
-  ],
-  "packages/shared/src/middleware/rateLimit.js": [
-    "Proxy"
-  ],
-  "packages/shared/src/models/AIAccount.js": [
-    "Strategy"
-  ],
-  "packages/shared/src/models/AISuggestion.js": [
-    "Strategy"
-  ],
-  "packages/shared/src/models/Announcement.js": [
-    "Strategy"
-  ],
-  "packages/shared/src/models/AnnouncementRead.js": [
-    "Strategy"
-  ],
-  "packages/shared/src/models/ApiKey.js": [
-    "Strategy"
-  ],
-  "packages/shared/src/models/Backtest.js": [
-    "Strategy"
-  ],
-  "packages/shared/src/models/BankTransfer.js": [
-    "Strategy"
-  ],
-  "packages/shared/src/models/Feedback.js": [
-    "Strategy"
-  ],
-  "packages/shared/src/models/Instrument.js": [
-    "Strategy"
-  ],
-  "packages/shared/src/models/KlineCache.js": [
-    "Strategy"
-  ],
-  "packages/shared/src/models/KlineData.js": [
-    "Strategy"
-  ],
-  "packages/shared/src/models/MarketData.js": [
-    "Strategy"
-  ],
-  "packages/shared/src/models/Signal.js": [
-    "Strategy"
-  ],
-  "packages/shared/src/models/Strategy.js": [
-    "Strategy"
-  ],
-  "packages/shared/src/models/SystemSetting.js": [
-    "Strategy"
-  ],
-  "packages/shared/src/models/Trade.js": [
-    "Strategy"
-  ],
-  "packages/shared/src/models/User.js": [
-    "Strategy"
-  ],
-  "packages/shared/src/models/UserFavorite.js": [
-    "Strategy"
-  ],
-  "packages/shared/src/models/UserLog.js": [
-    "Strategy"
-  ],
-  "packages/shared/src/models/Watchlist.js": [
-    "Strategy"
-  ],
-  "packages/shared/src/models/index.js": [
-    "Facade"
-  ],
-  "packages/shared/src/services/cacheService.js": [
-    "Singleton"
-  ],
-  "packages/shared/src/utils/apiKeyHash.js": [
-    "Strategy"
-  ],
-  "packages/shared/src/utils/logger.js": [
-    "Decorator"
-  ],
-  "packages/vscode-extension/src/extension.js": [
-    "Strategy"
-  ],
-  "pip-install.ps1": [
-    "Template Method"
-  ],
-  "run_tests.sh": [
+  "extensions/scripts/khy-alpine-iso/build-iso-docker.ps1": [
     "Command",
     "Template Method"
   ],
-  "scripts/ab-compare.js": [
+  "extensions/scripts/khy-alpine-iso/build-iso-docker.sh": [
+    "Command",
+    "Template Method"
+  ],
+  "extensions/scripts/khy-alpine-iso/build-iso-windows.ps1": [
+    "Command",
+    "Template Method"
+  ],
+  "extensions/scripts/khy-alpine-iso/build-khy-os-iso.sh": [
+    "Command",
+    "Template Method"
+  ],
+  "extensions/scripts/khy-alpine-iso/windows-iso-preflight.ps1": [
     "Command"
-  ],
-  "scripts/ab-dual-dev.js": [
-    "Command"
-  ],
-  "scripts/alpine/build-iso-docker.ps1": [
-    "Command",
-    "Template Method"
-  ],
-  "scripts/alpine/build-iso-docker.sh": [
-    "Command",
-    "Template Method"
-  ],
-  "scripts/alpine/build-iso-windows.ps1": [
-    "Command",
-    "Template Method"
-  ],
-  "scripts/alpine/build-khy-os-iso.sh": [
-    "Command",
-    "Template Method"
-  ],
-  "scripts/alpine/windows-iso-preflight.ps1": [
-    "Command"
-  ],
-  "scripts/build-khy-os.sh": [
-    "Command",
-    "Template Method"
-  ],
-  "scripts/check-agent-rules.js": [
-    "Command",
-    "Visitor"
   ],
   "scripts/ci/annotate-patterns.js": [
     "Visitor",
@@ -3564,36 +2496,28 @@
   "scripts/ci/run-python.js": [
     "Template Method"
   ],
-  "scripts/deploy-server.sh": [
-    "Command",
-    "Template Method"
-  ],
-  "scripts/install/check-boot-capability.sh": [
+  "extensions/scripts/khy-installer/check-boot-capability.sh": [
     "Command",
     "Visitor"
   ],
-  "scripts/install/install-khy-cli.sh": [
+  "extensions/scripts/khy-installer/install-khy-cli.sh": [
     "Command"
   ],
-  "scripts/install/install-khy.sh": [
+  "extensions/scripts/khy-installer/install-khy.sh": [
     "Command"
   ],
-  "scripts/khytogo/make-khytogo.sh": [
+  "extensions/scripts/khy-portable/khytogo/make-khytogo.sh": [
     "Command"
   ],
   "scripts/moonbit/run-wasm-indicators-tests-offline.sh": [
     "Command",
     "Template Method"
   ],
-  "scripts/obfuscate.js": [
-    "Command",
-    "Strategy"
-  ],
-  "scripts/portable/build-usb-portable.sh": [
+  "extensions/scripts/khy-portable/build-usb-portable.sh": [
     "Command",
     "Template Method"
   ],
-  "scripts/portable/install-portable-cli.sh": [
+  "extensions/scripts/khy-portable/install-portable-cli.sh": [
     "Command"
   ],
   "scripts/release/build-khy-wheel-with-ollama-runtime.ps1": [
@@ -3618,13 +2542,92 @@
   "scripts/release/publish-from-pip-dual.ps1": [
     "Command"
   ],
-  "setup.py": [
+  "extensions/tools/khy-markdown/khyos-md-bridge.js": [
+    "Bridge"
+  ],
+  "extensions/tools/khy-markdown/khyos-md-mcp.js": [
+    "Strategy"
+  ],
+  "extensions/tools/khy-markdown/muya-embed/stubs/file-icons/index.js": [
+    "Strategy"
+  ],
+  "extensions/tools/khy-markdown/register-linux.sh": [
+    "Command",
     "Template Method"
   ],
-  "todo/__init__.py": [
+  "extensions/tools/khy-markdown/register-windows.ps1": [
+    "Command",
     "Template Method"
   ],
-  "upgrade_khy.sh": [
+  "extensions/tools/khy-markdown/test/bridge.test.js": [
+    "Bridge"
+  ],
+  "extensions/tools/khy-markdown/test/mcp-smoke.js": [
+    "Strategy"
+  ],
+  "extensions/tools/khy-markdown/test/parser.test.js": [
+    "Strategy"
+  ],
+  "extensions/tools/khy-markdown/unregister-linux.sh": [
+    "Command",
     "Template Method"
+  ],
+  "extensions/tools/khy-markdown/unregister-windows.ps1": [
+    "Command",
+    "Template Method"
+  ],
+  "services/backend/src/services/extensions/extensionRoots.js": [
+    "Facade"
+  ],
+  "services/backend/src/services/extensions/markdownWorkbench.js": [
+    "Facade",
+    "Strategy"
+  ],
+  "scripts/ci/check-build-artifacts.js": [
+    "Template Method",
+    "Visitor"
+  ],
+  "scripts/ci/check-runtime-placement.js": [
+    "Template Method",
+    "Visitor"
+  ],
+  "extensions/tools/khy-notebook/index.js": [
+    "Command",
+    "Facade"
+  ],
+  "services/backend/src/services/backup/coldExportService.js": [
+    "Memento",
+    "Visitor"
+  ],
+  "scripts/release/lib/runtimeStaging.js": [
+    "Builder",
+    "Template Method"
+  ],
+  "scripts/lib/runtimePlacementGuard.js": [
+    "Strategy",
+    "Chain of Responsibility"
+  ],
+  "scripts/lib/storageBaseline.js": [
+    "Facade",
+    "Visitor"
+  ],
+  "scripts/lib/buildArtifactGuard.js": [
+    "Strategy",
+    "Chain of Responsibility"
+  ],
+  "extensions/scripts/khy-diagnostics/storage-baseline.js": [
+    "Template Method",
+    "Visitor"
+  ],
+  "services/backend/src/services/workspace/checkpointObjectStore.js": [
+    "Flyweight",
+    "Memento"
+  ],
+  "platform/packages/shared/src/utils/storagePaths.js": [
+    "Chain of Responsibility",
+    "Strategy"
+  ],
+  "platform/packages/shared/src/utils/logger.js": [
+    "Decorator"
   ]
 }

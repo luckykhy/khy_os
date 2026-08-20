@@ -4,15 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>khyosMarkdown · Khy-OS 文档</title>
-<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
-<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
 </head>
 <body>
 <div class="topbar">
   <button class="menu-toggle" aria-label="菜单">☰</button>
-  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
   <span class="spacer"></span>
-  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
 </div>
 <div class="layout">
   <aside class="sidebar" id="sidebar">
@@ -21,7 +21,7 @@
   </aside>
   <main class="main">
     <div class="content">
-      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>extensions<span class="sep">›</span>khy-markdown<span class="sep">›</span>khyosMarkdown</div>
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>extensions<span class="sep">›</span>tools<span class="sep">›</span>khy-markdown<span class="sep">›</span>khyosMarkdown</div>
       <header class="hero reveal"><h1>khyosMarkdown</h1></header>
       <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#khyosmarkdown">khyosMarkdown</a></li><li class="lvl-2"><a href="#特性">特性</a></li><li class="lvl-2"><a href="#独立安装">独立安装</a></li><li class="lvl-3"><a href="#方式一-npx-直接运行-无需安装">方式一：npx 直接运行（无需安装）</a></li><li class="lvl-3"><a href="#方式二-全局安装">方式二：全局安装</a></li><li class="lvl-3"><a href="#方式三-注册为系统默认-md-编辑器">方式三：注册为系统默认 .md 编辑器</a></li><li class="lvl-3"><a href="#方式四-作为-khy-os-内置工具">方式四：作为 khy-os 内置工具</a></li><li class="lvl-2"><a href="#命令行用法">命令行用法</a></li><li class="lvl-2"><a href="#mcp-集成-供-ai-agent-调用">MCP 集成（供 AI Agent 调用）</a></li><li class="lvl-3"><a href="#提供的工具">提供的工具</a></li><li class="lvl-3"><a href="#配置示例-claude-desktop-cursor-qoder">配置示例（Claude Desktop / Cursor / Qoder）</a></li><li class="lvl-2"><a href="#目录文件">目录文件</a></li><li class="lvl-2"><a href="#为什么需要桥接器-cors-绝路">为什么需要桥接器（CORS 绝路）</a></li><li class="lvl-2"><a href="#开发">开发</a></li><li class="lvl-2"><a href="#宪法红线-已落地">宪法红线（已落地）</a></li></ul></nav>
       <article class="doc-body">
@@ -83,14 +83,14 @@ node khyos-md-bridge.js  <span class="hljs-comment"># 启动开发服务</span><
 <h2 id="宪法红线-已落地">宪法红线（已落地）<a class="anchor" href="#宪法红线-已落地" aria-label="锚点">#</a></h2>
 <ol><li><strong>零外部依赖</strong>：<code>khyosMarkdown.html</code> 不加载任何外部 CSS/JS/字体；MD 解析器自带。</li><li><strong>跨域绝路</strong>：经桥接器同源服务，彻底消除 <code>file://</code> CORS；右键打开绝不因 CORS 读取失败。</li><li><strong>路径免疫</strong>：路径经 <code>encodeURIComponent</code> + WHATWG URL 解码，空格/中文/特殊字符不断裂。</li><li><strong>系统纯净</strong>：注册仅写用户级（HKCU / <code>~/.local</code>），无 UAC、无 sudo；卸载脚本零残留。</li></ol>
       </article>
-      <nav class="pager"><span></span><a class="next" href="../../extensions/bridges/khy-trae-bridge/README.html"><div class="dir">下一篇 →</div><div class="ttl">KHY Trae Bridge</div></a></nav>
+      <nav class="pager"><a class="prev" href="../../../extensions/scripts/khy-installer/setup/README.html"><div class="dir">← 上一篇</div><div class="ttl">extensions/scripts/khy-installer/setup/ — 一次性上手脚本</div></a><span></span></nav>
       <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
     </div>
   </main>
 </div>
-<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="extensions/tools/khy-markdown/README.html";</script>
-<script src="../../docs/_assets/nav-data.js"></script>
-<script src="../../docs/_assets/mermaid.min.js"></script>
-<script src="../../docs/_assets/docs-site.js"></script>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="extensions/tools/khy-markdown/README.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
 </body>
 </html>

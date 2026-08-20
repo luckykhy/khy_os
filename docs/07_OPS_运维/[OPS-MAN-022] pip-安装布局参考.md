@@ -116,7 +116,7 @@ PY
 - `khy publish npm-dir-bundle` 会导出 `npm-install/backend` 为 Docker 部署入口。
 - `khy publish origin-code --install npm` 会尽可能从 npm 安装目录还原：
   - `backend/`（必有）
-  - `frontend/`, `docs/`, `alpine/`, `scripts/alpine/`, `packages/shared/`（若安装目录中存在）
+  - `frontend/`, `docs/`, `alpine/`, `extensions/scripts/khy-alpine-iso/`, `packages/shared/`（若安装目录中存在）
 
 常用命令：
 

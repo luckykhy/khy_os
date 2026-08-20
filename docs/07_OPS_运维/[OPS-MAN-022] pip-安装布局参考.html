@@ -87,7 +87,7 @@ PY</code></pre>
 <ul><li><code>INSTALL_LAYOUT.md</code>（可读）</li><li><code>INSTALL_LAYOUT.json</code>（可解析）</li></ul>
 <h2 id="7-npm-安装场景说明">7. npm 安装场景说明<a class="anchor" href="#7-npm-安装场景说明" aria-label="锚点">#</a></h2>
 <p>当在 npm 安装场景下导出时（自动探测或 <code>--install npm</code>）：</p>
-<ul><li><code>khy publish npm-dir-bundle</code> 会导出 <code>npm-install/backend</code> 为 Docker 部署入口。</li><li><code>khy publish origin-code --install npm</code> 会尽可能从 npm 安装目录还原：<ul><li><code>backend/</code>（必有）</li><li><code>frontend/</code>, <code>docs/</code>, <code>alpine/</code>, <code>scripts/alpine/</code>, <code>packages/shared/</code>（若安装目录中存在）</li></ul></li></ul>
+<ul><li><code>khy publish npm-dir-bundle</code> 会导出 <code>npm-install/backend</code> 为 Docker 部署入口。</li><li><code>khy publish origin-code --install npm</code> 会尽可能从 npm 安装目录还原：<ul><li><code>backend/</code>（必有）</li><li><code>frontend/</code>, <code>docs/</code>, <code>alpine/</code>, <code>extensions/scripts/khy-alpine-iso/</code>, <code>packages/shared/</code>（若安装目录中存在）</li></ul></li></ul>
 <p>常用命令：</p>
 <pre><code class="language-bash">khy publish npm-dir-bundle --npm-root /path/to/npm-install-root
 khy publish origin-code --install npm --npm-root /path/to/npm-install-root</code></pre>

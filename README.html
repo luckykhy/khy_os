@@ -70,9 +70,9 @@ khy doctor                 <span class="hljs-comment"># 系统健康检查</span
 .\khy.bat
 
 <span class="hljs-comment"># 或使用 PowerShell 便携化启动脚本（npm workspaces monorepo）</span>
-.\extensions\scripts\khy-portable\run.ps1                  <span class="hljs-comment"># 等价于 npm run dev</span>
-.\extensions\scripts\khy-portable\run.ps1 build            <span class="hljs-comment"># npm run build</span>
-.\extensions\scripts\khy-portable\run.ps1 shell            <span class="hljs-comment"># 进入带 node/npm 环境的 PowerShell</span></code></pre>
+.\extensions\scripts\khy<span class="hljs-literal">-portable</span>\run.ps1                  <span class="hljs-comment"># 等价于 npm run dev</span>
+.\extensions\scripts\khy<span class="hljs-literal">-portable</span>\run.ps1 build            <span class="hljs-comment"># npm run build</span>
+.\extensions\scripts\khy<span class="hljs-literal">-portable</span>\run.ps1 shell            <span class="hljs-comment"># 进入带 node/npm 环境的 PowerShell</span></code></pre>
 <p>Linux / macOS 使用 <code>./khy.sh</code>。便携模式详见 <a href="docs/06_DEPLOY_部署/PORTABLE.html">PORTABLE.md</a>。</p>
 <p>仓库<strong>不跟踪可再生的构建产物</strong>：Markdown 工作台的 muya WYSIWYG 引擎（<code>extensions/tools/khy-markdown/vendor/</code>）<br>与离线文档站的图表引擎（<code>docs/_assets/mermaid.min.js</code>）都由同级源码按需重建。开发路径 fail-soft<br>（缺失时自动回退），发布路径硬失败。想立刻补齐：</p>
 <pre><code class="language-bash">node extensions/tools/khy-markdown/muya-embed/ensure-vendor.mjs   <span class="hljs-comment"># muya 所见即所得引擎（约 11 MB）</span>

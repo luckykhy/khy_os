@@ -35,7 +35,7 @@
 <h2 id="二-架构">二、架构<a class="anchor" href="#二-架构" aria-label="锚点">#</a></h2>
 <p>khy（GATEWAY_API_POOL_PROVIDER=qoder）<br>  -&gt; custom provider 池（custom_providers.json）<br>        -&gt; http://127.0.0.1:3000/v1  &lt;- qoder_bridge.py 监听<br>              -&gt; qodercli.exe（随 qoder_agent_sdk 安装，路径因机器而异）<br>                    -&gt; Qoder AI 云端模型</p>
 <h2 id="三-核心文件">三、核心文件<a class="anchor" href="#三-核心文件" aria-label="锚点">#</a></h2>
-<table><thead><tr><th>文件</th><th>职责</th></tr></thead><tbody><tr><td>scripts/qoder-bridge/qoder_bridge.py</td><td>本地 HTTP 服务，OpenAI 协议转译为 qodercli 子进程调用</td></tr><tr><td>scripts/qoder-bridge/start_qoder_bridge.ps1</td><td>幂等启动器，检测 3000 端口后拉起 pythonw 进程</td></tr><tr><td>scripts/qoder-bridge/install_autostart.ps1</td><td>每台机器 clone 后运行一次，动态生成 vbs 并装入 Startup 文件夹（不硬编码路径）</td></tr><tr><td>~/.khyquant/custom_providers.json</td><td>注册 qoder 池（12 个模型）</td></tr><tr><td>~/.khyquant/api_keys.json</td><td>key=qoder-local（本地哨兵，无需真实鉴权）</td></tr></tbody></table>
+<table><thead><tr><th>文件</th><th>职责</th></tr></thead><tbody><tr><td>extensions/scripts/khy-qoder-bridge/qoder_bridge.py</td><td>本地 HTTP 服务，OpenAI 协议转译为 qodercli 子进程调用</td></tr><tr><td>extensions/scripts/khy-qoder-bridge/start_qoder_bridge.ps1</td><td>幂等启动器，检测 3000 端口后拉起 pythonw 进程</td></tr><tr><td>extensions/scripts/khy-qoder-bridge/install_autostart.ps1</td><td>每台机器 clone 后运行一次，动态生成 vbs 并装入 Startup 文件夹（不硬编码路径）</td></tr><tr><td>~/.khyquant/custom_providers.json</td><td>注册 qoder 池（12 个模型）</td></tr><tr><td>~/.khyquant/api_keys.json</td><td>key=qoder-local（本地哨兵，无需真实鉴权）</td></tr></tbody></table>
 <h2 id="四-实现内容">四、实现内容<a class="anchor" href="#四-实现内容" aria-label="锚点">#</a></h2>
 <h3 id="4-1-qoder-bridge-py">4.1 qoder_bridge.py<a class="anchor" href="#4-1-qoder-bridge-py" aria-label="锚点">#</a></h3>
 <p>监听 127.0.0.1:3000，三个端点：GET /health、GET /v1/models（12 个模型）、<br>POST /v1/chat/completions（调用 qodercli 子进程，300s 超时，解析 JSON 输出包装为<br>标准 chat.completion 响应）。默认模型 auto，未知模型 ID 透传给 qodercli 处理。</p>
@@ -51,7 +51,7 @@
 <p>桥接健康检查、模型列表、端到端对话、开机自启、幂等保护均已在一台 Windows<br>机器上验证通过（详见开发过程记录）。</p>
 <h2 id="七-排障指南">七、排障指南<a class="anchor" href="#七-排障指南" aria-label="锚点">#</a></h2>
 <ul><li>ECONNREFUSED 127.0.0.1:3000 -&gt; 桥接未运行，运行 install_autostart.ps1 生成的</li></ul>
-<p>vbs 或直接 python scripts/qoder-bridge/qoder_bridge.py</p>
+<p>vbs 或直接 python extensions/scripts/khy-qoder-bridge/qoder_bridge.py</p>
 <ul><li>502 -&gt; 查看 logs/bridge_stdout.log，常见原因 qodercli 未登录（运行 qodercli login）</li><li>模型列表无 Qoder -&gt; 确认 custom_providers.json 存在 poolKey=qoder，重启 khy</li><li>自启动未生效 -&gt; 重新运行 install_autostart.ps1，用 wscript.exe 手动测试生成的 vbs</li></ul>
 <h2 id="八-注意事项">八、注意事项<a class="anchor" href="#八-注意事项" aria-label="锚点">#</a></h2>
 <ol><li>qodercli 路径通过 QODERCLI_PATH 环境变量覆盖，默认按 sys.executable 推导。</li><li>端口 3000 与 khy backend（3001）不冲突，可通过 QODER_BRIDGE_PORT 改端口。</li><li>当前非流式：等待 qodercli 完整退出后才返回响应。</li><li>qodercli JSON 输出的 token 用量字段目前恒为 0，khy 侧统计对该通道无效。</li></ol>

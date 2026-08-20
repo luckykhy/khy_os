@@ -72,6 +72,7 @@
 | [DESIGN-ARCH-067] opencode高含金量功能教学与khy-os差距补齐路线.md | opencode 12 项功能对照教学；References/LSP 诊断/权限 auto 三项差距分阶段补齐 | 定稿 |
 | [DESIGN-ARCH-067] 动态模型差异化适配引擎.md | 动态模型差异化适配引擎（**编号与上一行冲突，待重编**） | 定稿·编号冲突 |
 | [DESIGN-ARCH-068] 仓库层级板块规范.md | 顶层目录 L0–L6 分层 + 允许依赖边 + docs 两轴 + 任务入口命名（层级单一真源） | 定稿 |
+| [DESIGN-ARCH-069] 拓展契约与核心边界规范.md | 核=壳+漏斗+网关；拓展=一目录一 manifest；根优先级+惰性激活+删目录即消失（拓展契约单一真源） | 定稿 |
 | [DESIGN-OTHER-001] Khyos-数学重塑-实施提示词链.md | 数学重塑提示词链 | 定稿 |
 | [DESIGN-OTHER-002] _cbssp_分阶段防闪退提示词.md | 分阶段防闪退提示 | 草稿 |
 | [DESIGN-OTHER-003] khy-系统提示词结构图.md | 系统提示词结构图 | 定稿 |
@@ -94,6 +95,10 @@
 > **`[DESIGN-ARCH-068]` 是「新代码/新目录该放哪一层、能依赖谁」的单一真源**，
 > 由 `npm run check:layout` 的 `layer-registry` 规则强制执行。`AGENTS.md`、`README.md`、
 > `[OPS-MAN-169]` 均指向它，不重复其内容。
+>
+> **`[DESIGN-ARCH-069]` 是「这东西该进核还是该做成拓展」的单一真源**，是 `068` 的下位法：
+> `068` 管顶层目录属于哪一层，`069` 只把 L5 `extensions/` 内部的契约写细（manifest 形状、
+> 根优先级、惰性激活、删目录即消失）。由同一守卫的 `extension-contract` 规则强制执行。
 >
 > **编号缺陷（如实登记，本轮不重编）**：`[DESIGN-ARCH-067]` 被两份文档同时占用
 > （`opencode高含金量功能教学…` 与 `动态模型差异化适配引擎`），违反 [MGMT-STD-001]

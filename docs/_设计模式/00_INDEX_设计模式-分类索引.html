@@ -30,7 +30,9 @@
 <h2 id="一-分类内容边界">一、分类内容边界<a class="anchor" href="#一-分类内容边界" aria-label="锚点">#</a></h2>
 <p>本目录（<code>docs/_设计模式/</code>）收容<strong>设计模式注册表等机器可读数据</strong>（JSON），供模式图谱与学习流程消费，非人工撰写说明文档。</p>
 <h2 id="二-文件清单">二、文件清单<a class="anchor" href="#二-文件清单" aria-label="锚点">#</a></h2>
-<table><thead><tr><th>文件名(含编号)</th><th>核心职责(10字内)</th><th>状态</th></tr></thead><tbody><tr><td>模式注册表.json</td><td>设计模式注册表</td><td>机器生成</td></tr></tbody></table>
+<table><thead><tr><th>文件名(含编号)</th><th>核心职责(10字内)</th><th>状态</th></tr></thead><tbody><tr><td>模式注册表.json</td><td>设计模式注册表</td><td>机器生成 + 手工补录，守卫把关</td></tr></tbody></table>
+<p><strong>注册表怎么改</strong>：批量重生成走 <code>npm run maintenance:pattern-registry</code>（<code>generate-pattern-registry.js</code> 按启发式分类，<strong>不</strong>读源码里的 <code>@pattern</code> 注解）；单个文件补标注直接改本 JSON，并在源文件头部写上同样的 <code>@pattern</code>，两边保持一致。</p>
+<p><strong>守卫</strong>：<code>npm run check:pattern-coverage</code>（<code>check-pattern-coverage.js</code>，已接入 <code>check:structure</code> 与 PR 门禁）查三项——跟踪源文件没有条目、条目指向已删文件（幽灵）、模式名不在 GoF 23 内。三项都走 <code>scripts/ci/pattern-coverage-baseline.json</code> 棘轮，只降不升；后两项基线为 0，新增一处即 error。「本仓有哪些源文件」以 <code>git ls-files</code> 为准而非扫盘——文件系统里的 <code>.venv</code>、构建产物不是本仓的代码。</p>
 <h2 id="三-跨分类关联指引">三、跨分类关联指引<a class="anchor" href="#三-跨分类关联指引" aria-label="锚点">#</a></h2>
 <ul><li>文档总入口：<code>docs/00_INDEX_文档索引.md</code>。</li><li>模式图谱设计：<code>docs/03_DESIGN_设计/[DESIGN-ARCH-014]</code>。</li></ul>
       </article>

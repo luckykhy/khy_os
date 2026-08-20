@@ -29,9 +29,9 @@
 - 统一组件构建入口：
   - `scripts/build-khy-os.sh`
 - VMware 镜像规划/构建：
-  - `scripts/khytogo/make-khytogo.sh --mode vmware-plan|vmware-create`
+  - `extensions/scripts/khy-portable/khytogo/make-khytogo.sh --mode vmware-plan|vmware-create`
 - 便携包：
-  - `scripts/portable/build-usb-portable.sh`
+  - `extensions/scripts/khy-portable/build-usb-portable.sh`
 
 ## WASM ABI
 

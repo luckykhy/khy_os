@@ -39,7 +39,7 @@
 | `check:manifest-sync` | `release/check_manifest_sync.py` | pip 打包清单与实际文件一致 | 改 `MANIFEST.in` / 新增包内资源后 |
 | `check:flag-registry` | `check-flag-registry.js` | 每个 `KHY_*` 开关都登记在 flagRegistry SSOT | 新增环境开关后 |
 | `check:model-hardcoding` | `check-model-hardcoding.js` | 模型 id 不写死在业务代码里 | 接新模型 / 改网关后 |
-| `check:pattern-coverage` | `check-pattern-coverage.js` | 设计模式注册表覆盖实现 | 改 `docs/_设计模式/模式注册表.json` 后 |
+| `check:pattern-coverage` | `check-pattern-coverage.js` | 注册表与磁盘一致：未标注 / 幽灵条目 / 非 GoF 模式名（三项走 `pattern-coverage-baseline.json` 棘轮） | 新增源文件、删文件、改 `docs/_设计模式/模式注册表.json` 后 |
 | `check:tool-contract` | `check-tool-contract.js` | 工具调用契约（入参/出参 schema） | 新增/改工具后 |
 | `check:skill-evals` | `check-skill-evals.js` | 每个技能有 eval | 新增技能后 |
 | `check:skill-scenarios` | `check-skill-scenarios.js` | 技能场景覆盖 | 同上 |
@@ -54,7 +54,7 @@
 
 | 入口 | 展开 |
 | --- | --- |
-| `check:structure` | `check:layout` → `check:json-schemas` → `check:node-syntax` |
+| `check:structure` | `check:layout` → `check:pattern-coverage` → `check:json-schemas` → `check:node-syntax` → `check:build-artifacts` → `check:runtime-placement` |
 | `check:changed` | `check:change-safety` → `check:agent-rules` → `check:leaf-contract` |
 
 ---
@@ -132,11 +132,11 @@
 
 | 域 | 入口 | 用途 |
 | --- | --- | --- |
-| `portable:` | `build:dev` `build:runtime` `plan:dev` `plan:runtime` `package` `package:runtime` `package:dev` `verify` `repair` | 便携版构建、打包、体检、修复（`scripts/portable/*`） |
-| `hooks:` | `hooks:install` | 安装 git 钩子（`scripts/install/install-git-hooks.js`） |
+| `portable:` | `build:dev` `build:runtime` `plan:dev` `plan:runtime` `package` `package:runtime` `package:dev` `verify` `repair` | 便携版构建、打包、体检、修复（`extensions/scripts/khy-portable/*`） |
+| `hooks:` | `hooks:install` | 安装 git 钩子（`extensions/scripts/khy-installer/install-git-hooks.js`） |
 | `verify:` | `verify:install` | 安装完整性自检 |
-| `bench:` | `startup` `startup-probe` `ab-compare` `git-spawn` | 性能基准（`scripts/bench/*`） |
-| `doctor:` | `hydration` `model-types` | 诊断（`scripts/diagnostics/*`） |
+| `bench:` | `startup` `startup-probe` `ab-compare` `git-spawn` | 性能基准（`extensions/scripts/khy-diagnostics/bench/*`） |
+| `doctor:` | `hydration` `model-types` | 诊断（`extensions/scripts/khy-diagnostics/*`） |
 
 ---
 

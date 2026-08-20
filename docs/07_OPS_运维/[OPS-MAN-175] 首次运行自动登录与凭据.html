@@ -79,7 +79,7 @@
 <hr>
 <h2 id="四-跨机器复制项目后">四、跨机器复制项目后<a class="anchor" href="#四-跨机器复制项目后" aria-label="锚点">#</a></h2>
 <ol><li><strong>配置全局 <code>khy</code> 命令</strong>：<code>portable-setup.bat</code>（Windows）/ <code>portable-setup.sh</code></li><li><strong>直接跑 <code>khy</code></strong>：用户名按新机器的系统用户自动探测，凭据在本机现场生成——<strong>不需要</strong>先跑任何 setup 脚本</li><li>需要完整能力（Web 界面、注册新用户、数据库）时再启动后端：<code>npm run dev --workspace services/backend</code></li></ol>
-<p>如果想在启动 CLI 之前就把管理员账号播种进数据库（例如要立刻用 Web 界面登录），跑 <code>scripts/setup/first-time-setup.bat</code>，它等价于 <code>node services/backend/scripts/quick-setup.js</code>；失败时的兜底是 <code>npm run seed --workspace services/backend</code>。</p>
+<p>如果想在启动 CLI 之前就把管理员账号播种进数据库（例如要立刻用 Web 界面登录），跑 <code>extensions/scripts/khy-installer/setup/first-time-setup.bat</code>，它等价于 <code>node services/backend/scripts/quick-setup.js</code>；失败时的兜底是 <code>npm run seed --workspace services/backend</code>。</p>
 <hr>
 <h2 id="五-故障排查">五、故障排查<a class="anchor" href="#五-故障排查" aria-label="锚点">#</a></h2>
 <table><thead><tr><th>症状</th><th>原因</th><th>处理</th></tr></thead><tbody><tr><td>一直弹登录表单，不自动登录</td><td>凭据文件不存在且现场生成失败（多为数据家不可写）</td><td>看 CLI 打印的错误行；用 <code>KHY_DATA_HOME</code> 指到可写目录</td></tr><tr><td>「用户不存在，正在自动注册…」后失败</td><td>注册需要后端，后端未运行</td><td>先起后端；或用本地默认管理员（凭据文件那份）登录</td></tr><tr><td>凭据文件里的密码登不进去</td><td>数据库里的账号是另一套凭据（例如被 <code>reset-admin-password</code> 改过）</td><td><code>node services/ai-backend/scripts/reset-admin-password.js --password &lt;新密码&gt;</code></td></tr><tr><td>想重新生成凭据</td><td>生成是幂等的，文件在就不会重来</td><td>删掉 <code>&lt;数据家&gt;/credentials/default-admin.json</code> 再跑 <code>khy</code></td></tr><tr><td>非交互环境下报「自动登录失败且非交互模式」</td><td>管道/CI 里没有表单可填</td><td>预先设 <code>KHY_DEFAULT_PASSWORD</code>，或先在交互终端里跑一次让凭据落盘</td></tr></tbody></table>

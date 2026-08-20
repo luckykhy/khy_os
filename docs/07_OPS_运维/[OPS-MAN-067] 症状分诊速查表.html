@@ -141,7 +141,7 @@ npm run build --prefix apps/ai-frontend</code></pre>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
 <ul><li>you changed startup/network/task execution</li><li>you need a fast changed-file gate</li><li>you need to verify handoff guardrails</li></ul>
 <p><strong>先读这些文件：</strong></p>
-<ul><li><code>AGENTS.md</code></li><li><code>CONTRIBUTING.md</code></li><li><code>scripts/ci/check-agent-rules.js</code></li><li><code>scripts/ci/check-change-safety.js</code></li><li><code>scripts/install/install-git-hooks.js</code></li><li><code>scripts/ci/check-version-sync.js</code></li><li><code>scripts/ci/check-node-syntax.js</code></li><li><code>scripts/ci/check-python-syntax.py</code></li></ul>
+<ul><li><code>AGENTS.md</code></li><li><code>CONTRIBUTING.md</code></li><li><code>scripts/ci/check-agent-rules.js</code></li><li><code>scripts/ci/check-change-safety.js</code></li><li><code>extensions/scripts/khy-installer/install-git-hooks.js</code></li><li><code>scripts/ci/check-version-sync.js</code></li><li><code>scripts/ci/check-node-syntax.js</code></li><li><code>scripts/ci/check-python-syntax.py</code></li></ul>
 <p><strong>参考文档：</strong></p>
 <ul><li>AGENTS.md</li><li>CONTRIBUTING.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
@@ -183,7 +183,7 @@ npm run check:version-sync</code></pre>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
 <ul><li>you see an error or symptom but do not know which subsystem owns it</li><li>a user or weak AI needs to be routed from a symptom to files and verify commands</li><li>the triage matcher mis-routes a symptom</li><li>the OPS-MAN-067 cheat sheet is out of sync with its generator</li></ul>
 <p><strong>先读这些文件：</strong></p>
-<ul><li><code>scripts/lib/maintainerTriage.js</code></li><li><code>scripts/diagnostics/triage.js</code></li><li><code>scripts/tests/maintainerTriage.test.js</code></li><li><code>docs/_维护者/维护映射表.json</code></li></ul>
+<ul><li><code>scripts/lib/maintainerTriage.js</code></li><li><code>extensions/scripts/khy-diagnostics/triage.js</code></li><li><code>scripts/tests/maintainerTriage.test.js</code></li><li><code>docs/_维护者/维护映射表.json</code></li></ul>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-067] 症状分诊速查表.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>
@@ -332,7 +332,7 @@ npm run build --prefix apps/ai-frontend</code></pre>
 <p><strong>什么时候来这里（症状触发词）：</strong></p>
 <ul><li>right-click a .md file on Windows → '选择一个应用以打开此.md文件' → khy is missing from the 建议的应用/Recommended apps section</li><li>you need khy to register as a recommended handler for .md/.markdown via Applications\&lt;app&gt;\SupportedTypes (not just OpenWithProgids)</li><li>you add a new extension khy should be suggested to open, and must keep register/unregister PS1 symmetric (zero registry residue)</li><li>the md-editor first-run auto-registration (mdEditorRegister) spawns register-windows.ps1 and you need to know exactly which HKCU keys it writes</li></ul>
 <p><strong>先读这些文件：</strong></p>
-<ul><li><code>services/backend/src/services/mdSuggestedAppsPlan.js</code></li><li><code>services/backend/tests/services/mdSuggestedAppsPlan.test.js</code></li><li><code>tools/khyos-markdown/register-windows.ps1</code></li><li><code>tools/khyos-markdown/unregister-windows.ps1</code></li><li><code>services/backend/src/services/mdEditorRegister.js</code></li></ul>
+<ul><li><code>services/backend/src/services/mdSuggestedAppsPlan.js</code></li><li><code>services/backend/tests/services/mdSuggestedAppsPlan.test.js</code></li><li><code>extensions/tools/khy-markdown/register-windows.ps1</code></li><li><code>extensions/tools/khy-markdown/unregister-windows.ps1</code></li><li><code>services/backend/src/services/mdEditorRegister.js</code></li></ul>
 <p><strong>参考文档：</strong></p>
 <ul><li>docs/07_OPS_运维/[OPS-MAN-077] Windows md 文件建议的应用注册.md</li></ul>
 <p><strong>跑这些验证命令（绿灯＝这块没坏）：</strong></p>

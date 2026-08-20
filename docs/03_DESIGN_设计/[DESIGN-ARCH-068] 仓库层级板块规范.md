@@ -22,8 +22,8 @@
 | **L2** | `services/` | Node 运行时，**全部业务逻辑**：CLI、AI 网关、各类 service、Web API | `services/backend/bin/khy.js` | Node.js |
 | **L3** | `apps/` | 平台**自带**的管理前端（AI 平台 UI） | `apps/ai-frontend/` | Vue 3 + Vite |
 | **L4** | `software/` | 跑在平台**之上**的内置默认应用（khyquant 量化终端） | `software/khyquant/` | Python + Vue |
-| **L5** | `extensions/` | 外部 IDE / 编辑器桥接，不随主包分发 | `extensions/khy-trae-bridge/` | Node.js |
-| **L6** | `tools/` | 独立开发者工具，**不参与运行时** | `tools/khyos-markdown/`、`tools/deepseek-eyes/` | Node.js |
+| **L5** | `extensions/` | **内置拓展，随主包分发**。布局两层 `extensions/<分类>/<id>/`，六个分类名与契约见 `[DESIGN-ARCH-069]` §2.3 | `extensions/tools/khy-markdown/`、`extensions/bridges/khy-trae-bridge/` | Node.js |
+| **L6** | `tools/` | 独立开发者工具，**不参与运行时** | `tools/deepseek-eyes/` | Node.js |
 
 ### 1.1 L3 与 L4 的分界（最容易混的一条）
 
@@ -34,16 +34,28 @@
 
 **判据**：问「删掉它，Khy-OS 还是 Khy-OS 吗？」——是 → `software/`；不是 → `apps/`。
 
+### 1.1b L5 与 L6 的分界
+
+`extensions/` 与 `tools/` 都装「不是核的东西」，分界只有一条：**参与运行时吗**。
+
+- **参与运行时 → `extensions/`**（L5）。被核在运行时发现并按需激活，随主包分发。
+- **只在开发/构建期被开发者手动调用 → `tools/`**（L6）。不被任何运行时代码路径触达。
+
+`khyos-markdown` 曾在 `tools/`，而 `khy md` 命令在运行时把它拉起 —— 它从来就不该在 L6，
+2026-08-19 迁为 `extensions/tools/khy-markdown/`。判据：**有没有运行时代码路径指向它**。
+
+L5 内部的契约（目录形状、manifest、发现与激活、删除语义）由 `[DESIGN-ARCH-069]` 规定，
+本文不复制。
+
 ### 1.2 横切层（不编号）
 
 服务于所有层，不参与 L0–L6 的依赖判定：
 
 | 目录 | 职责 |
 | --- | --- |
-| `scripts/` | 工程任务：CI 守卫、文档站、发布、便携版、恢复、诊断、基准 |
+| `scripts/` | 工程任务：CI 守卫、公共库、测试、文档站、发布、维护。**便携版 / 安装 / 诊断 / 基准 / ISO 已按 [DESIGN-ARCH-069] §1.6 迁为拓展**，见 `extensions/scripts/` |
 | `packaging/` | 打包清单与**板块切分**（见第二节） |
 | `docs/` | 全部文档（两轴命名见第三节） |
-| `alpine/` | Alpine 镜像的 etc 覆盖层 |
 | `_source/` | 加密源码快照与恢复说明 |
 
 ### 1.3 根级生成目录
@@ -72,7 +84,7 @@
 - **`L3 → L4`、`L4 → L3`**：两个前端之间不得互相 import。
 - **`L2 → L3`**：后端不得反向 import 前端源码（打包脚本按路径复制产物不算）。
 - **`L2 → L4` 的非壳引用**：带逻辑的跨目录 import 一律禁止，只有上表那种一行别名壳被容忍。
-- **任何层 → `L5` / `L6`**：`extensions/`、`tools/` 是叶子，只被 `scripts/` 触达。
+- **任何层 → `L5` / `L6`**：`extensions/`、`tools/` 是叶子，只被 `scripts/` 触达。L5 改为随包分发的内置拓展后**这条不变**：核**不 import 拓展**，只按 `[DESIGN-ARCH-069]` 的契约发现并激活它们（路径 + `require` 拓展自己声明的入口，不是对 `extensions/` 的静态依赖）；反向的 `拓展 → L2` 也只走注入的 `ctx`，不走深层相对路径。
 - **跨 workspace 的深层相对路径**：形如 `require('../../../<别的包>/src/...')` 一律禁止，应走 workspace 包名。
 
 ### 2.1 实测存量（基线，本轮不修）
@@ -196,11 +208,11 @@ docs/
 | `test:` | 测试 | `scripts/tests/*`、各 workspace |
 | `gate:` | 发布门 | `scripts/release/*` |
 | `restore:` | 源码恢复流程 | `scripts/restore/*` |
-| `portable:` | 便携版构建打包 | `scripts/portable/*` |
+| `portable:` | 便携版构建打包 | `extensions/scripts/khy-portable/*` |
 | `maintainer:` | 维护映射表相关 | `scripts/ci/print-maintainer-map.js` |
 | `maintenance:` | 生成类维护动作 | `scripts/maintenance/*` |
-| `bench:` | 性能基准 | `scripts/bench/*` |
-| `hooks:` / `verify:` | 安装与自检 | `scripts/install/*` |
+| `bench:` | 性能基准 | `extensions/scripts/khy-diagnostics/bench/*` |
+| `hooks:` / `verify:` | 安装与自检 | `extensions/scripts/khy-installer/*` |
 
 ### 5.1 两条硬规则
 
@@ -248,7 +260,7 @@ npm run check:layout -- --update-baseline                # 修完一批后下调
 node --test scripts/tests/check-repo-layout.test.js
 ```
 
-`scripts/ci/check-repo-layout.js` 的七条规则：
+`scripts/ci/check-repo-layout.js` 的八条规则：
 
 | id | 规则 | 级别 |
 | --- | --- | --- |
@@ -259,12 +271,13 @@ node --test scripts/tests/check-repo-layout.test.js
 | `cross-layer-require` | 跨 workspace 的深层相对 `require`（纯 re-export 壳豁免） | warning + 基线 |
 | `unresolved-require` | 深层相对 `require` 指向磁盘上不存在的路径 | warning + 基线 |
 | `docs-index-complete` | 阶段目录里的文档须出现在主索引 `docs/00_INDEX_文档索引.md`（CP-3） | warning + 基线 |
+| `extension-contract` | `extensions/` 下每个目录须有合规 `khy.extension.json`（真源 `[DESIGN-ARCH-069]` §3） | warning + 基线 |
 
 `docs-index-first` 只管「每个目录有没有就近索引」，管不到「主入口漏没漏链」——后者是 `docs-index-complete`。
 该规则对 `02_CONCEPTS_概念入门/` 与 `09_STORY_修仙学AI/` **豁免**：这两个小白向目录的可达性由
 `scripts/docs/check_beginner_docs.js`（禁孤儿页/禁死链/禁死胡同）保证，比主索引点名更强；主索引只链其目录入口。
 
-四条 warning 规则用 `scripts/ci/repo-layout-baseline.json` 记录已知违规数，**只降不升**（与仓库既有的 `frontend-size-baseline.json`、duplication 基线同一套路）。超过基线即自动升为 error。
+五条 warning 规则用 `scripts/ci/repo-layout-baseline.json` 记录已知违规数，**只降不升**（与仓库既有的 `frontend-size-baseline.json`、duplication 基线同一套路）。超过基线即自动升为 error。
 
 本守卫**刻意全仓扫描**，不接受 `--changed`：层级是仓库的全局属性，只看改动集会漏掉「别人搬走了索引文件」这类破坏。
 
@@ -282,7 +295,7 @@ git grep -I -o -h --untracked -E 'npm run [a-zA-Z0-9:_-]+' | sort -u
 node scripts/ci/check-repo-layout.js --promote=root-whitelist,docs-index-first,layer-registry
 ```
 
-三条 error 级规则阻断合并；四条 warning 级规则由基线棘轮把关（超基线自动升 error）。因为守卫不接受 `--changed`，该步骤**不需要** `GIT_BASE_REF` 环境变量，与相邻的 `check-change-safety` / `check-agent-rules` 步骤不同。维护归属登记在 `docs/_维护者/维护映射表.json` 的 `repo-layout` area（`verify` 字段即上面两条命令）。
+三条 error 级规则阻断合并；五条 warning 级规则由基线棘轮把关（超基线自动升 error）。因为守卫不接受 `--changed`，该步骤**不需要** `GIT_BASE_REF` 环境变量，与相邻的 `check-change-safety` / `check-agent-rules` 步骤不同。维护归属登记在 `docs/_维护者/维护映射表.json` 的 `repo-layout` area（`verify` 字段即上面两条命令）。
 
 守卫的可移植性约定：`--promote=<id>` 精确挑选要阻断的规则，`--strict-warnings` 全部升级，`--list=<id>` 打全量清单，拼错 id 以**退出码 2** 失败（不静默放过）——与 `check-change-safety.js` 同一套参数语义。测试通过 `KHY_REPO_LAYOUT_ROOT` 指向临时 fixture 仓库，不依赖本仓库当时的真实违规数。
 
@@ -294,5 +307,6 @@ node scripts/ci/check-repo-layout.js --promote=root-whitelist,docs-index-first,l
 - 项目规则总纲（红线/命名/权限/MCP 索引层）：`[OPS-MAN-169] 项目规则总纲-命名·skill·权限·mcp`
 - 任务入口总表：`[OPS-MAN-174] 任务入口总表`
 - 文档排版与格式控制：`[DESIGN-ARCH-023] khyos文档排版与格式控制规范`
+- 拓展契约与核心边界（本文 L5 的下位法）：`[DESIGN-ARCH-069] 拓展契约与核心边界规范`
 - 设计模式标注规范：`[DESIGN-ARCH-015] 编码规范`
 - 维护区域映射（111 个 area → 文件 → 验证命令）：`docs/_维护者/维护映射表.json`
