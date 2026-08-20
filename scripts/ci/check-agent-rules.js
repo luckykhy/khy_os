@@ -29,6 +29,10 @@ const rawTargets = args.filter((a) => !a.startsWith('--'));
 const CODE_EXTS = new Set([
   '.js', '.cjs', '.mjs', '.ts', '.tsx', '.vue',
   '.py', '.json', '.yaml', '.yml',
+  // Setup scripts ship to users verbatim, so a hardcoded path in one of them
+  // (install-khy.ps1 shipped `node D:\Code\...\khy.js`) breaks every install
+  // that is not the author's machine. Scanned for Rule 1c.
+  '.ps1', '.sh', '.bat', '.cmd',
 ]);
 
 const IGNORE_DIRS = new Set([
@@ -69,6 +73,40 @@ const HARD_ENDPOINT_PATTERNS = [
 // above never matched these, so production-domain hardcodes used to pass the
 // gate entirely. Add new first-party hosts here as they appear.
 const PRODUCTION_HOST_PATTERN = /\bkhyquant\.(?:top|com|cn)\b/i;
+
+// Machine-local absolute filesystem paths. Two shapes leak a specific machine's
+// layout (or write outside the project) and must never be pinned in source:
+//
+//  a) A drive-qualified Windows path (`D:\Code\...`, `C:/Users/...`). Whoever
+//     committed it hardcoded THEIR checkout; every other user gets a broken
+//     path. install-khy.ps1 shipped `node D:\Code\...\khy.js` to all users this
+//     way — it must be derived from $PSScriptRoot / __dirname instead.
+//
+//  b) A computed bare drive root used as a write target — `path.parse(__dirname).root`
+//     joined with a directory. This looks dynamic (it follows the install drive)
+//     but still writes to `<drive>:\tmp\...`, i.e. OUTSIDE the project, polluting
+//     the user's machine. Generated files belong under the resolved output home;
+//     use utils/storageRoots.resolveGeneratedFileDir().
+const ABS_PATH_PATTERNS = [
+  { re: /['"`][A-Za-z]:[\\/]{1,2}(?![\\/])[^'"`\n]{2,}/, kind: 'drive-qualified' },
+  { re: /\bpath\.parse\(\s*__(?:dirname|filename)\s*\)\.root\b/, kind: 'drive-root' },
+];
+
+// POSIX absolute paths that pin a specific machine's home/user directory.
+// Bare `/usr/bin`, `/etc/...` are system-standard and NOT flagged; a personal
+// home path is.
+const POSIX_HOME_PATH_PATTERN = /['"`]\/(?:home|Users)\/(?!<|\$|\{|%|\w*(?:user|name|USER|NAME)\b)[A-Za-z0-9._-]+\//;
+
+// Well-known Windows system directories used as an env-var fallback
+// (`process.env.ProgramFiles || 'C:\\Program Files'`). Unlike a production
+// domain — where an env-overridable default silently forks any install that
+// lacks the var — these are fixed OS constants, identical on every Windows
+// machine, so they leak no per-machine layout and cannot drift. The idiom is
+// correct and stays exempt; a path under them that names a USER or a checkout
+// still trips the rule, because the pattern requires the segment to end there.
+const WINDOWS_SYSTEM_DIR_PATTERN =
+  /['"`][A-Za-z]:[\\/]{1,2}(?:Program Files(?: \(x86\))?|ProgramData|Windows|Users|Temp)['"`]/i;
+
 
 // Rule 3 termination effects. A fixed-duration timer only violates the idle-timeout
 // rule if it ENDS work when it fires; see Rule 3 below for why the effect, not the
@@ -374,6 +412,48 @@ function checkFile(relPath, findings) {
           'Hard-coded first-party production domain. Import the endpoint from constants/serviceDefaults.js (or make it env-overridable).',
           trimmed,
         );
+      }
+    }
+
+    // Rule 1c: machine-local absolute filesystem paths (see ABS_PATH_PATTERNS).
+    // Exemptions mirror Rule 1b: comments, examples/help text, and test files
+    // that deliberately pin a path as a fixture.
+    if (!isSelf && !isTestFile) {
+      const trimmed = line.trim();
+      const isComment = /^\s*(\/\/|\/?\*|\*|#)/.test(trimmed);
+      const isExample = /例如|e\.g\.|example|示例|@see|如\s|placeholder|占位/i.test(line);
+      if (!isComment && !isExample) {
+        for (const { re, kind } of ABS_PATH_PATTERNS) {
+          if (!re.test(line)) continue;
+          // A drive-qualified path inside a glob/ignore pattern or a regex that
+          // MATCHES paths (rather than declaring one) is a matcher, not a target.
+          if (kind === 'drive-qualified' && /\[A-Za-z\]|\\\\?[A-Za-z]:|test\(|match\(|replace\(/.test(line)) break;
+          // OS-standard system dir as an env fallback — see WINDOWS_SYSTEM_DIR_PATTERN.
+          if (kind === 'drive-qualified' && WINDOWS_SYSTEM_DIR_PATTERN.test(line)) break;
+          pushFinding(
+            findings,
+            'error',
+            'no-hardcoded-abs-path',
+            relPath,
+            lineNo,
+            kind === 'drive-root'
+              ? 'Bare drive root used as a write target — this writes outside the project. Use utils/storageRoots.resolveGeneratedFileDir().'
+              : 'Machine-local absolute path detected. Derive it from __dirname / $PSScriptRoot or an env var.',
+            trimmed,
+          );
+          break;
+        }
+        if (POSIX_HOME_PATH_PATTERN.test(line)) {
+          pushFinding(
+            findings,
+            'error',
+            'no-hardcoded-abs-path',
+            relPath,
+            lineNo,
+            'Machine-local home path detected. Use os.homedir() or the resolved data home.',
+            trimmed,
+          );
+        }
       }
     }
 

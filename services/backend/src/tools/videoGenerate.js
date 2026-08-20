@@ -202,21 +202,20 @@ module.exports = defineTool({
         fs.mkdirSync(path.dirname(target), { recursive: true });
       }
     } else {
-      const drive = path.parse(__dirname).root; // dynamic based on project location
-      const outDir = path.join(drive, 'tmp', 'khy-videos');
-      const fallback = path.join(os.tmpdir(), 'khy-videos');
-      const finalDir =
-        fs.existsSync(outDir) ||
-        (function (d) {
-          try {
-            fs.mkdirSync(d, { recursive: true });
-            return true;
-          } catch {
-            return false;
-          }
-        })(outDir)
-          ? outDir
-          : fallback;
+      // Generated media converges under the resolved output home
+      // (KHY_OUTPUT_HOME -> non-system drive .khy -> data home). Never a bare
+      // drive root: writing to <drive>:\tmp pollutes the machine outside the
+      // project. Policy lives in utils/storageRoots, not here.
+      let finalDir;
+      try {
+        const { resolveGeneratedFileDir } = require('../utils/storageRoots');
+        finalDir = resolveGeneratedFileDir({
+          subdir: path.join('tmp', 'khy-videos'),
+          preferCwd: false,
+        }).dir;
+      } catch {
+        finalDir = path.join(os.tmpdir(), 'khy-videos');
+      }
       fs.mkdirSync(finalDir, { recursive: true });
       target = path.join(finalDir, `khy_video_${Date.now()}.mp4`);
     }
