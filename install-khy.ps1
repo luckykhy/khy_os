@@ -31,13 +31,24 @@ if ($content -match 'khy-os|function khy') {
 
 # Add khy function
 Write-Host "[2/3] Adding khy global command..." -ForegroundColor Yellow
+
+# Resolve the entry point from this script's own location, so the generated
+# profile points at wherever the user actually cloned khy-os. Hardcoding an
+# absolute path here would leak one machine's layout to every user.
+$khyEntry = Join-Path $PSScriptRoot 'services\backend\bin\khy.js'
+if (!(Test-Path -Path $khyEntry)) {
+    Write-Host "      ERROR: khy entry not found at $khyEntry" -ForegroundColor Red
+    Write-Host "      Run this script from the khy-os repository root." -ForegroundColor Red
+    exit 1
+}
+
 $khyFunction = @"
 
 # ========================================
 # Khy-OS Global Command
 # ========================================
 function khy {
-    node C:\khy-os\services\backend\bin\khy.js `$args
+    node "$khyEntry" `$args
 }
 "@
 

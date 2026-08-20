@@ -139,18 +139,27 @@ function _tryMkdir(dir) {
 }
 
 /**
- * Get the khy output directory (<drive>:\tmp\khy-<subdir>\) based on the drive
- * where this project is installed (derived from __dirname). Falls back to
- * Desktop → tmpdir if the primary dir cannot be created.
+ * Get the khy output directory for generated media.
+ *
+ * Resolution is delegated to utils/storageRoots (KHY_OUTPUT_HOME -> non-system
+ * drive .khy -> data home) so generated files stay inside the resolved output
+ * home. Writing to a bare drive root (<drive>:\tmp\khy-<subdir>) pollutes the
+ * machine outside the project and is deliberately not done here.
  * @param {string} subdir - e.g. 'images' or 'videos'
  * @returns {{dir: string, primary: string, fallback: string}}
  */
 function _getKhyOutputDir(subdir) {
-  const drive = path.parse(__dirname).root; // e.g. "D:\"
-  const primary = path.join(drive, 'tmp', `khy-${subdir}`);
-  const fallback = fs.existsSync(path.join(os.homedir(), 'Desktop'))
-    ? path.join(os.homedir(), 'Desktop')
-    : path.join(os.tmpdir(), `khy-${subdir}`);
+  const fallback = path.join(os.tmpdir(), `khy-${subdir}`);
+  let primary;
+  try {
+    const { resolveGeneratedFileDir } = require('../utils/storageRoots');
+    primary = resolveGeneratedFileDir({
+      subdir: path.join('tmp', `khy-${subdir}`),
+      preferCwd: false,
+    }).dir;
+  } catch {
+    primary = fallback;
+  }
   return {
     primary,
     fallback,
