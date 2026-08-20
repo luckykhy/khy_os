@@ -243,7 +243,7 @@ npm run portable:plan:dev -- \
 构建完成后，先校验目录产物：
 
 ```sh
-node scripts/portable/portable-health-check.js --artifact dist/portable/ARTIFACT_DIR
+node extensions/scripts/khy-portable/portable-health-check.js --artifact dist/portable/ARTIFACT_DIR
 ```
 
 校验内容包括：
@@ -257,19 +257,19 @@ node scripts/portable/portable-health-check.js --artifact dist/portable/ARTIFACT
 只有通过校验的 artifact 才能压缩：
 
 ```sh
-node scripts/portable/pack-portable.js --artifact dist/portable/ARTIFACT_DIR
+node extensions/scripts/khy-portable/pack-portable.js --artifact dist/portable/ARTIFACT_DIR
 ```
 
 预览而不生成压缩包：
 
 ```sh
-node scripts/portable/pack-portable.js --artifact dist/portable/ARTIFACT_DIR --dry-run
+node extensions/scripts/khy-portable/pack-portable.js --artifact dist/portable/ARTIFACT_DIR --dry-run
 ```
 
 自定义压缩包输出目录：
 
 ```sh
-node scripts/portable/pack-portable.js --artifact dist/portable/ARTIFACT_DIR --out dist/releases
+node extensions/scripts/khy-portable/pack-portable.js --artifact dist/portable/ARTIFACT_DIR --out dist/releases
 ```
 
 打包器在压缩前重新验证 manifest，检测到文件缺失、篡改或额外摘要条目时立即终止。
@@ -305,9 +305,9 @@ node scripts/portable/pack-portable.js --artifact dist/portable/ARTIFACT_DIR --o
 
 ## 与源码启动的区别
 
-仓库根目录的 `khy.bat`、`khy.sh`、`scripts/portable/run.ps1` 和旧同步脚本仍服务于源码开发、自举或兼容流程。它们不是可发布 artifact 的替代品，也不构成“目标机无预装运行时、离线启动”的交付证明。
+仓库根目录的 `khy.bat`、`khy.sh`、`extensions/scripts/khy-portable/run.ps1` 和旧同步脚本仍服务于源码开发、自举或兼容流程。它们不是可发布 artifact 的替代品，也不构成“目标机无预装运行时、离线启动”的交付证明。
 
-发布和验收只以 `scripts/portable/build-portable-artifact.js` 生成、带完整 manifest 且通过 `portable-health-check.js --artifact` 的目录为准。
+发布和验收只以 `extensions/scripts/khy-portable/build-portable-artifact.js` 生成、带完整 manifest 且通过 `portable-health-check.js --artifact` 的目录为准。
 
 ### 源码目录下的三种启动档位
 
@@ -318,8 +318,8 @@ node scripts/portable/pack-portable.js --artifact dist/portable/ARTIFACT_DIR --o
 | 启动方式 | 起了什么 | 需要后端 | Web 界面 |
 | --- | --- | --- | --- |
 | `khy` / `.\khy.bat` / `./khy.sh` | 仅 CLI（轻量） | 否 | 无 |
-| `scripts\setup\start-backend.bat` | 后端 API + 认证 | 是 | 无（只有 API） |
-| `scripts\setup\start-all.bat` | 后端 + 前端，各开一个窗口 | 是 | http://localhost:3000 |
+| `extensions\scripts\khy-installer\setup\start-backend.bat` | 后端 API + 认证 | 是 | 无（只有 API） |
+| `extensions\scripts\khy-installer\setup\start-all.bat` | 后端 + 前端，各开一个窗口 | 是 | http://localhost:3000 |
 
 后端 API 在 http://localhost:5000。三档都不需要先跑任何 setup 脚本来建账号——
 **CLI 的自动登录不依赖后端**（凭据在本机现场生成），详见

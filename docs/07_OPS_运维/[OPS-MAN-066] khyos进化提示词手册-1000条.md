@@ -2093,9 +2093,9 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
   - 说明：子系统：Maintenance Safety and Rule Gates。读懂再动。
   - 验证：`node --check scripts/ci/check-change-safety.js`
 
-**511.** 阅读「Maintenance Safety and Rule Gates」的 scripts/install/install-git-hooks.js，用一句话说清它做什么，并给非显然逻辑补一句注释（勿改行为）。
+**511.** 阅读「Maintenance Safety and Rule Gates」的 extensions/scripts/khy-installer/install-git-hooks.js，用一句话说清它做什么，并给非显然逻辑补一句注释（勿改行为）。
   - 说明：子系统：Maintenance Safety and Rule Gates。读懂再动。
-  - 验证：`node --check scripts/install/install-git-hooks.js`
+  - 验证：`node --check extensions/scripts/khy-installer/install-git-hooks.js`
 
 **512.** 阅读「Maintenance Safety and Rule Gates」的 scripts/ci/check-version-sync.js，用一句话说清它做什么，并给非显然逻辑补一句注释（勿改行为）。
   - 说明：子系统：Maintenance Safety and Rule Gates。读懂再动。
@@ -2185,9 +2185,9 @@ npm run test:evolution-prompts         # 校验恰好 1000 条、每条带安全
   - 说明：子系统：Symptom Triage (route a symptom to its subsystem)。读懂再动。
   - 验证：`node --check scripts/lib/maintainerTriage.js`
 
-**534.** 阅读「Symptom Triage (route a symptom to its subsystem)」的 scripts/diagnostics/triage.js，用一句话说清它做什么，并给非显然逻辑补一句注释（勿改行为）。
+**534.** 阅读「Symptom Triage (route a symptom to its subsystem)」的 extensions/scripts/khy-diagnostics/triage.js，用一句话说清它做什么，并给非显然逻辑补一句注释（勿改行为）。
   - 说明：子系统：Symptom Triage (route a symptom to its subsystem)。读懂再动。
-  - 验证：`node --check scripts/diagnostics/triage.js`
+  - 验证：`node --check extensions/scripts/khy-diagnostics/triage.js`
 
 **535.** 阅读「Symptom Triage (route a symptom to its subsystem)」的 scripts/tests/maintainerTriage.test.js，用一句话说清它做什么，并给非显然逻辑补一句注释（勿改行为）。
   - 说明：子系统：Symptom Triage (route a symptom to its subsystem)。读懂再动。

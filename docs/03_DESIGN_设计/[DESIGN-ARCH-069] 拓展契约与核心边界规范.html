@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[DESIGN-ARCH-069] 拓展契约与核心边界规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>03_DESIGN_设计<span class="sep">›</span>[DESIGN-ARCH-069] 拓展契约与核心边界规范</div>
+      <header class="hero reveal"><h1>[DESIGN-ARCH-069] 拓展契约与核心边界规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#design-arch-069-拓展契约与核心边界规范">[DESIGN-ARCH-069] 拓展契约与核心边界规范</a></li><li class="lvl-2"><a href="#〇-为什么要有这一篇">〇、为什么要有这一篇</a></li><li class="lvl-2"><a href="#一-核心边界">一、核心边界</a></li><li class="lvl-3"><a href="#1-1-核是什么">1.1 核是什么</a></li><li class="lvl-3"><a href="#1-2-六类拓展-机制与实现的切割线">1.2 六类拓展：机制与实现的切割线</a></li><li class="lvl-3"><a href="#1-3-拓展-不能-做的事">1.3 拓展**不能**做的事</a></li><li class="lvl-3"><a href="#1-4-粒度-按能力域打包-不按文件拆">1.4 粒度：按能力域打包，不按文件拆</a></li><li class="lvl-3"><a href="#1-5-什么时候-不能-迁-入向耦合三档">1.5 什么时候**不能**迁：入向耦合三档</a></li><li class="lvl-3"><a href="#1-6-scripts-的裁定">1.6 `scripts/` 的裁定</a></li><li class="lvl-3"><a href="#1-7-现存功能的归类">1.7 现存功能的归类</a></li><li class="lvl-2"><a href="#二-拓展根与优先级">二、拓展根与优先级</a></li><li class="lvl-3"><a href="#2-1-五个根-按优先级降序">2.1 五个根，按优先级降序</a></li><li class="lvl-3"><a href="#2-2-extensions-层级定位的修订">2.2 `extensions/` 层级定位的修订</a></li><li class="lvl-3"><a href="#2-3-分类目录-extensions">2.3 分类目录：`extensions///`</a></li><li class="lvl-2"><a href="#三-manifest-khy-extension-json">三、manifest：`khy.extension.json`</a></li><li class="lvl-3"><a href="#3-1-三种格式与迁移期">3.1 三种格式与迁移期</a></li><li class="lvl-3"><a href="#3-2-字段优先级-manifest-与入口导出冲突时">3.2 字段优先级（manifest 与入口导出冲突时）</a></li><li class="lvl-3"><a href="#3-3-id-为什么必须是目录名">3.3 `id` 为什么必须是目录名</a></li><li class="lvl-3"><a href="#3-4-provides-核按-服务名-找拓展">3.4 `provides`：核按**服务名**找拓展</a></li><li class="lvl-3"><a href="#3-5-kind-toolchain-核不-require-只按名字叫的脚本">3.5 `kind: &quot;toolchain&quot;`：核不 require、只按名字叫的脚本</a></li><li class="lvl-2"><a href="#四-生命周期">四、生命周期</a></li><li class="lvl-3"><a href="#4-1-删除目录-拓展自动删除">4.1 「删除目录 → 拓展自动删除」</a></li><li class="lvl-2"><a href="#五-贡献面">五、贡献面</a></li><li class="lvl-3"><a href="#5-1-两条注册路径-两套命名规则">5.1 两条注册路径，两套命名规则</a></li><li class="lvl-3"><a href="#5-2-执行兜底-发现路径">5.2 执行兜底 ≠ 发现路径</a></li><li class="lvl-3"><a href="#5-3-拓展如何拿到-basetool-它不拿">5.3 拓展如何拿到 `BaseTool`：它不拿</a></li><li class="lvl-2"><a href="#六-决策流程-这东西该做成什么">六、决策流程：这东西该做成什么</a></li><li class="lvl-2"><a href="#七-守卫与验证">七、守卫与验证</a></li><li class="lvl-3"><a href="#7-1-extension-id-hardcode-1-3-第四条的机器强制">7.1 `extension-id-hardcode`：§1.3 第四条的机器强制</a></li><li class="lvl-3"><a href="#7-2-contribtoollifecycle-把-4-的三条承诺变成用例">7.2 `contribToolLifecycle`：把 §4 的三条承诺变成用例</a></li><li class="lvl-3"><a href="#7-3-extension-path-drift-搬目录搬坏了-机器来发现">7.3 `extension-path-drift`：搬目录搬坏了，机器来发现</a></li><li class="lvl-2"><a href="#关联">关联</a></li></ul></nav>
+      <article class="doc-body">
+<p>&lt;!-- 文档分类: DESIGN-ARCH-069 | 阶段: 设计 | 原路径: 新建 --&gt;</p>
+<h1 id="design-arch-069-拓展契约与核心边界规范">[DESIGN-ARCH-069] 拓展契约与核心边界规范<a class="anchor" href="#design-arch-069-拓展契约与核心边界规范" aria-label="锚点">#</a></h1>
+<blockquote><p><strong>强制规范 · 「什么是核、什么是拓展」的单一真源</strong> · 回答四个问题：①khy 的<strong>核</strong>到哪儿为止；②一个拓展<strong>长什么样</strong>（目录、manifest、入口）；③它<strong>装在哪、谁发现它、什么时候被加载</strong>；④<strong>删掉目录之后会怎样</strong>。</p>
+<p><strong>定位</strong>：本文管<strong>拓展契约</strong>。<code>[DESIGN-ARCH-068]</code> 管顶层目录的层级与依赖边，是本文的上位法；本文只把 L5 <code>extensions/</code> 这一层的内部规则写细，不复制也不覆盖它的层级表。运行时的常驻/按需边界真源是 <code>[DESIGN-ARCH-062]</code>，本文的惰性激活遵循它，不另立一套生命周期。</p>
+<p><strong>守卫</strong>：<code>scripts/ci/check-repo-layout.js</code> 的 <code>extension-contract</code> 与 <code>extension-id-hardcode</code> 两条规则（<code>npm run check:layout</code>）——前者管拓展目录是否合契约，后者管<strong>核</strong>里有没有点名具体拓展。本文第三节的 manifest 字段清单在 <code>services/backend/src/services/extensions/extensionRoots.js</code> 内以常量落地；改本文须同步改该模块与守卫。</p>
+<p><strong>谁该读</strong>：任何要新增一个功能板块、或要判断「这东西该进核还是该做成拓展」的人或 AI。</p></blockquote>
+<hr>
+<h2 id="〇-为什么要有这一篇">〇、为什么要有这一篇<a class="anchor" href="#〇-为什么要有这一篇" aria-label="锚点">#</a></h2>
+<p>khy 是复合项目，长期缺一条「核在哪儿结束」的线，后果是可以量化的：</p>
+<p><strong>① 三套互不认识的拓展机制并存。</strong> 同一个问题各有两三个答案：</p>
+<table><thead><tr><th>机制</th><th>manifest</th><th>安装根</th><th>惰性</th><th>谁在用</th></tr></thead><tbody><tr><td><code>services/backend/src/plugin-loader/</code></td><td><code>package.json#khy</code></td><td><code>&lt;dataHome&gt;/plugins</code>、npm 全局、workspace</td><td>否，启动即 <code>activate</code></td><td><code>replSession.js</code> 启动期</td></tr><tr><td><code>services/backend/src/services/extensions/extensionManager.js</code></td><td><code>openclaw.plugin.json</code></td><td><code>&lt;appHome&gt;/extensions</code></td><td>否</td><td><code>khy extension</code> 系列命令</td></tr><tr><td><code>services/backend/src/services/plugins/pluginContribResolver.js</code></td><td><code>openclaw.plugin.json</code></td><td><code>&lt;appHome&gt;/extensions</code></td><td><strong>是</strong></td><td>工具漏斗兜底</td></tr></tbody></table>
+<p>三者的路径常量是<strong>复制</strong>的，第三个的注释里明写「与 extensionManager 按构造保持同步」——即靠人记住，不靠机器。</p>
+<p><strong>② 仓库自己的 <code>extensions/</code> 目录没有任何加载器扫描它。</strong> 它在 <code>[DESIGN-ARCH-068]</code> 里被定义成「外部 IDE 桥接，不随主包分发」，而 <code>MANIFEST.in</code> 里却有 <code>recursive-include extensions *</code>——规范说不分发，打包说分发。</p>
+<p><strong>③ 删掉目录 ≠ 拓展消失。</strong> <code>extensions_state.json</code> 会留下条目，任何按 state 枚举的调用点继续报告一个幽灵拓展。</p>
+<p><strong>④ 于是新功能只能往核里堆。</strong> 加一条命令要改三处（<code>handlers/x.js</code> + <code>aliases.js</code> + <code>router.js</code> 的 switch），没有比这更便宜的路径，<code>services/backend</code> 因此不断变大而边界不断变模糊。</p>
+<p>本文用<strong>一套契约</strong>替掉上面的三套，并给 <code>extensions/</code> 一个明确的、随包分发的定位。</p>
+<hr>
+<h2 id="一-核心边界">一、核心边界<a class="anchor" href="#一-核心边界" aria-label="锚点">#</a></h2>
+<h3 id="1-1-核是什么">1.1 核是什么<a class="anchor" href="#1-1-核是什么" aria-label="锚点">#</a></h3>
+<p><strong>核 = 壳 + 漏斗 + 网关。</strong> 三件，缺一不可，且<strong>都不可作为拓展卸载</strong>：</p>
+<table><thead><tr><th>部件</th><th>落地位置</th><th>一句话职责</th><th>为什么必须在核里</th></tr></thead><tbody><tr><td><strong>壳</strong></td><td><code>platform/</code>（L1）+ <code>services/backend/src/cli/</code></td><td>启动、REPL、命令注册表、路由</td><td>没有它，没有进程可以承载任何拓展</td></tr><tr><td><strong>漏斗</strong></td><td><code>services/backend/src/services/tool*</code>（工具调用单一出口）</td><td>所有工具调用的唯一入口、权限与沙箱裁决</td><td>它是安全边界。拓展<strong>穿过</strong>漏斗，不得<strong>绕过</strong>漏斗</td></tr><tr><td><strong>网关</strong></td><td><code>services/backend/src/services/gateway/</code>、<code>services/ai-backend/</code></td><td>模型路由、密钥池、协议转换</td><td>拓展要用 AI，只能经由 <code>ctx.ai</code>，不得自持 provider 密钥</td></tr></tbody></table>
+<p><strong>判据（与 <code>[DESIGN-ARCH-068]</code> §1.1 的判据同构）</strong>：问「删掉它，还能启动并跑通一次工具调用吗？」——不能 → 核；能 → 拓展。</p>
+<h3 id="1-2-六类拓展-机制与实现的切割线">1.2 六类拓展：机制与实现的切割线<a class="anchor" href="#1-2-六类拓展-机制与实现的切割线" aria-label="锚点">#</a></h3>
+<p>用户的定位是「tool、plugin、scripts、mcp、software、协议都是拓展」。这六个词不是六种机制——<br><strong>机制只有一套</strong>（本文全篇），六个词说的是<strong>同一套机制的六类实现</strong>：</p>
+<table><thead><tr><th>类</th><th>现主要落点</th><th>做成拓展后的形态</th></tr></thead><tbody><tr><td>tool</td><td><code>services/backend/src/tools/*</code></td><td><code>capabilities: [&quot;tools&quot;]</code>，manifest 声明 + 入口导出 execute</td></tr><tr><td>plugin</td><td><code>plugin-loader</code> 的五个发现源</td><td>已是拓展，只需换 canonical manifest</td></tr><tr><td>scripts</td><td><code>scripts/*</code></td><td><code>kind: asset</code> 或 <code>runtime</code>，见 §1.6 裁定</td></tr><tr><td>mcp</td><td>mcp 预设 / 生态注册表</td><td>manifest <code>mcp</code> 字段，核代为拉起</td></tr><tr><td>software</td><td><code>software/*</code></td><td><code>kind: runtime</code>，通常一个域一个拓展</td></tr><tr><td>协议</td><td><code>gateway/protocolConverter/*</code></td><td><code>kind: runtime</code> + <code>provides</code> 服务名</td></tr></tbody></table>
+<p><strong>切割线</strong>：一样东西属于「机制」还是「实现」，看它删掉之后<strong>别的拓展还能不能被发现和激活</strong>。<br><code>extensionRoots</code> / <code>pluginContribResolver</code> / <code>contextFactory</code> 删掉，全部拓展一起消失 → 机制，留核。<br><code>NotebookEdit</code> 删掉，只有它自己消失 → 实现，可迁。这与 §1.1 「删掉它还能跑通一次工具调用吗」<br>是同一条判据在不同粒度上的应用。</p>
+<h3 id="1-3-拓展-不能-做的事">1.3 拓展<strong>不能</strong>做的事<a class="anchor" href="#1-3-拓展-不能-做的事" aria-label="锚点">#</a></h3>
+<p>拓展是加法，不是补丁。契约的价值全在这几条否定上：</p>
+<ul><li><strong>不得绕过漏斗</strong>：贡献的工具<strong>不论走哪条注册路径</strong>（§5.1 的两条都算），最终都落进同一个工具注册表，与内置工具走同一条 <code>executeTool</code> 路径、同一套权限裁决。注册路径有两条，<strong>执行入口只有一个</strong>——前者是实现细节，后者是安全边界。</li><li><strong>不得自持模型密钥</strong>：要 AI 走 <code>ctx.ai</code>，由网关统一路由计费。</li><li><strong>不得写核的配置</strong>：只能写自己的 <code>&lt;pluginsHome&gt;/&lt;ns&gt;/</code>。</li><li><strong>不得要求核认识它</strong>：核里<strong>不允许</strong>出现任何拓展 id 的硬编码分支。核要用一个拓展提供的能力时，按<strong>服务名</strong>去找（§3.4 的 <code>provides</code> + <code>extensionRoots.findProvider()</code>），不按 id 找目录。这一条已由 <code>extension-id-hardcode</code> 规则机器强制，基线 0——见第七节守卫。</li></ul>
+<hr>
+<h3 id="1-4-粒度-按能力域打包-不按文件拆">1.4 粒度：按能力域打包，不按文件拆<a class="anchor" href="#1-4-粒度-按能力域打包-不按文件拆" aria-label="锚点">#</a></h3>
+<p>一个拓展 = <strong>一个能力域</strong>，不是一个类、也不是一个目录下的全部东西。全仓约 190 个工具类若一对一<br>拆成 190 个拓展，每个都要一份 manifest、一次目录扫描、一条 state 记录，而「删掉桌面自动化」这种<br>真实意图仍然要删 3 个目录——粒度和意图对不上，管理成本反而比现在高。</p>
+<p><strong>规则</strong>：能力域 = 用户会<strong>整块启用或整块删掉</strong>的那个单位。目标约 15–25 个拓展，例如<br><code>khy-desktop-automation</code>（DesktopControl + RPA + ComputerUse 三者合一）、<code>khy-disk-ops</code>、<br><code>khy-protocol-anthropic</code>。一个域一个目录，删域即整块消失。</p>
+<p>反向的判据同样成立：如果两样东西<strong>从来不会被分开删</strong>，它们就该在同一个拓展里；如果一个拓展里<br>有一半是用户想留、另一半想删的，那它切大了。</p>
+<h3 id="1-5-什么时候-不能-迁-入向耦合三档">1.5 什么时候<strong>不能</strong>迁：入向耦合三档<a class="anchor" href="#1-5-什么时候-不能-迁-入向耦合三档" aria-label="锚点">#</a></h3>
+<p>判断一个东西能否迁出核，看的不是它自己有多独立，而是<strong>核对它的入向引用</strong>。三档，处置不同：</p>
+<table><thead><tr><th>档</th><th>定义</th><th>处置</th></tr></thead><tbody><tr><td><strong>硬入向</strong></td><td>核 import 这个模块，或直接读它的内部状态</td><td><strong>不能迁</strong>，先断边再谈迁移</td></tr><tr><td><strong>名字入向</strong></td><td>核的策略表按<strong>字符串</strong>点名这个工具</td><td><strong>可迁，但必须保留原名</strong>（见 §5.1）</td></tr><tr><td><strong>零入向</strong></td><td>核完全不认识它</td><td>自由迁移</td></tr></tbody></table>
+<p>硬入向的实例（本轮盘出，均<strong>未</strong>迁）：<code>_taskStore</code> 被 TUI、WS、压缩、worktree 四处直接读；<br><code>cronScheduler</code> 被管理面、生命周期、自治三处 import；<code>diskCleanup</code> 被 <code>aiChatCore</code> 与<br><code>directiveComposer</code> 调用。这三个看起来都像「独立功能」，但核已经长进去了。</p>
+<p>名字入向是<strong>可以带着迁</strong>的，原因在于策略表的匹配是 fail-soft 的：表里点名一个不存在的工具，<br>它只是永远匹配不上，不报错、不崩。这条性质是「名字入向可迁」成立的全部依据——一旦某张表改成<br>「找不到就抛」，这条判据就失效了。</p>
+<h3 id="1-6-scripts-的裁定">1.6 <code>scripts/</code> 的裁定<a class="anchor" href="#1-6-scripts-的裁定" aria-label="锚点">#</a></h3>
+<p><code>scripts/</code> 不整体归一边，按<strong>自指</strong>切：</p>
+<table><thead><tr><th>留核</th><th>拆走</th></tr></thead><tbody><tr><td><code>scripts/{ci,lib,tests}</code></td><td><code>khy-portable</code>（<code>portable/</code> + <code>khytogo/</code>）</td></tr><tr><td><code>scripts/{docs,release,maintenance}</code></td><td><code>khy-alpine-iso</code>（<code>alpine/</code>）</td></tr><tr><td></td><td><code>khy-installer</code>（<code>install/</code> + <code>setup/</code>）</td></tr><tr><td></td><td><code>khy-qoder-bridge</code>（<code>qoder-bridge/</code>）</td></tr><tr><td></td><td><code>khy-diagnostics</code>（<code>diagnostics/</code> + <code>bench/</code>）</td></tr></tbody></table>
+<p><strong><code>scripts/ci</code> 必须留核的理由是自指，不是重要性</strong>：本契约的机器强制（<code>check-repo-layout.js</code>、<br><code>check-pattern-coverage.js</code>）就住在那里。把契约的执法者做成受契约管辖的拓展，会得到一个<br>「删掉这个拓展就没人检查拓展合不合规」的循环——删目录即消失的语义在这里会反噬。同理<br><code>scripts/lib</code> 是执法者的依赖，<code>scripts/tests</code> 是对执法者的验证。</p>
+<p><code>scripts/release</code> 与 <code>scripts/docs</code> 留核的理由不同：它们是<strong>构建期</strong>的，不参与运行时，<br>按 §6 的最后一条分支本来就不该是拓展。</p>
+<h3 id="1-7-现存功能的归类">1.7 现存功能的归类<a class="anchor" href="#1-7-现存功能的归类" aria-label="锚点">#</a></h3>
+<p>以下是<strong>目标态</strong>。除已标注者外均为<strong>待迁移</strong>，不是既成事实——迁移按第七节的棘轮逐个进行。</p>
+<table><thead><tr><th>目标拓展 id</th><th>现位置</th><th>状态</th></tr></thead><tbody><tr><td><code>khy-markdown</code></td><td><code>extensions/tools/khy-markdown/</code>（原 <code>tools/khyos-markdown/</code>）</td><td><strong>✅ 已迁移</strong>（第一个试点）</td></tr><tr><td><code>khy-notebook</code></td><td><code>extensions/tools/khy-notebook/</code>（原 <code>…/src/tools/NotebookEditTool/</code>）</td><td><strong>✅ 已迁移</strong>（第一个迁出核的<strong>内置工具</strong>）</td></tr><tr><td><code>khy-trae-bridge</code></td><td><code>extensions/bridges/khy-trae-bridge/</code></td><td>已在位，<code>kind: ide-bridge</code></td></tr><tr><td><code>khy-quant</code></td><td><code>software/khyquant/</code></td><td>待迁移</td></tr><tr><td><code>khy-eyes</code></td><td><code>tools/deepseek-eyes/</code></td><td>待迁移</td></tr><tr><td>5 个 scripts 拓展</td><td><code>scripts/{portable,alpine,install,qoder-bridge,diagnostics,…}</code></td><td>待迁移，清单见 §1.6</td></tr><tr><td><code>khy-protocol-*</code></td><td><code>gateway/protocolConverter/*</code></td><td>待迁移</td></tr><tr><td><code>khy-mcp-presets</code></td><td>mcp 预设 + 生态注册表</td><td>待迁移</td></tr><tr><td>约 15–25 个能力域拓展</td><td><code>services/backend/src/tools/*</code></td><td>待迁移，粒度见 §1.4</td></tr><tr><td><code>khy-web-admin</code></td><td><code>services/backend/src/{routes,models,controllers}</code></td><td>待迁移（体量最大，最后做）</td></tr><tr><td><code>khy-ai-frontend</code></td><td><code>apps/ai-frontend/</code></td><td>待迁移</td></tr></tbody></table>
+<blockquote><p><code>khy-quant</code> 的迁移<strong>不改变</strong> <code>[DESIGN-ARCH-068]</code> 对 <code>software/</code> 的定义：khyquant 现在就是「内置默认应用而非项目本身」，做成拓展是把这句话落到机器上，不是新的定位。</p></blockquote>
+<p><strong><code>khy-notebook</code> 是本契约第一个可被引用的完整先例</strong>：它证明了一个已经在核里、已经暴露给模型、<br>已经被约 20 处策略表点名的内置工具，可以在<strong>行为逐字节不变</strong>的前提下迁出去。迁移中实测出的两个<br>缺口（§5.1 命名、§5.2 广告）都已补上并有守卫。后续 tool 类迁移照它抄。</p>
+<h2 id="二-拓展根与优先级">二、拓展根与优先级<a class="anchor" href="#二-拓展根与优先级" aria-label="锚点">#</a></h2>
+<p>一个拓展 = <strong>一个目录</strong>。目录是它的全部：id 是目录名，代码、manifest、资源都在里面，没有任何一个字节散落在别处。</p>
+<h3 id="2-1-五个根-按优先级降序">2.1 五个根，按优先级降序<a class="anchor" href="#2-1-五个根-按优先级降序" aria-label="锚点">#</a></h3>
+<p>真源：<code>extensionRoots.listRoots()</code>。</p>
+<table><thead><tr><th>#</th><th>根</th><th>用途</th><th>随包分发</th></tr></thead><tbody><tr><td>1</td><td><code>KHY_EXTENSION_PATH</code>（path-list）</td><td>开发/测试覆盖</td><td>—</td></tr><tr><td>2</td><td><code>&lt;appRoot&gt;/extensions/</code></td><td><strong>仓库内置拓展</strong></td><td><strong>是</strong></td></tr><tr><td>3</td><td><code>&lt;appHome&gt;/extensions/</code></td><td>用户安装的拓展</td><td>否</td></tr><tr><td>4</td><td><code>&lt;appHome&gt;/plugins/</code></td><td>遗留 plugin-loader 目录</td><td>否</td></tr><tr><td>5</td><td><code>&lt;dataHome&gt;/plugins/</code></td><td>遗留 plugin-loader 目录</td><td>否</td></tr></tbody></table>
+<p>同名（= 同目录名）拓展<strong>先出现者胜</strong>，后者被完全遮蔽。</p>
+<p><strong>为什么仓库根优先于用户目录</strong>（与多数插件系统相反）：内置拓展是平台承诺的一部分。若用户目录优先，一个同名目录就能静默顶替内置功能，且用户看不出发生了顶替。仓库优先意味着<strong>要顶替就得改名</strong>，于是冲突永远是可见的，而不是取决于扫描顺序。</p>
+<p><strong>同一根内的扫描顺序按目录名排序</strong>，不依赖文件系统返回序——冲突裁决因此确定可复现。</p>
+<h3 id="2-2-extensions-层级定位的修订">2.2 <code>extensions/</code> 层级定位的修订<a class="anchor" href="#2-2-extensions-层级定位的修订" aria-label="锚点">#</a></h3>
+<p><code>[DESIGN-ARCH-068]</code> §1 原将 L5 定义为「外部 IDE / 编辑器桥接，<strong>不随主包分发</strong>」。本文将其修订为：</p>
+<blockquote><p><strong>L5 <code>extensions/</code></strong> = 内置拓展，随主包分发。每个子目录是一个自足拓展，遵循本规范的契约。IDE 桥接（<code>kind: ide-bridge</code>）是其中一类，不是全部。</p></blockquote>
+<p>这与既有的 <code>MANIFEST.in</code> 的 <code>recursive-include extensions *</code> 一致——修的是规范，不是打包行为。<code>[DESIGN-ARCH-068]</code> 的层级表已同步改写。 分类目录（§2.3）同样不改打包行为：<code>recursive-include</code> 本来就是递归的。</p>
+<p><strong>禁止边不变</strong>：「任何层 → L5/L6」仍然禁止。核<strong>不 import 拓展</strong>，只通过契约发现并激活它们；反向的 <code>拓展 → L2</code> 也不走深层相对路径，只走注入的 <code>ctx</code>。这条禁止边是拓展契约成立的前提，不是它的例外。</p>
+<h3 id="2-3-分类目录-extensions">2.3 分类目录：<code>extensions/&lt;分类&gt;/&lt;id&gt;/</code><a class="anchor" href="#2-3-分类目录-extensions" aria-label="锚点">#</a></h3>
+<p>按 §1.4 的粒度，<code>extensions/</code> 最终会有二十几个目录。二十几个兄弟目录平铺在一层，正是本篇要消灭的那个问题（「说不清哪个是什么」）换了个地方重现。因此<strong>发现路径下探恰好一层</strong>：</p>
+<pre><code>extensions/
+├── tools/        工具能力域（tool）        khy-notebook / khy-markdown / khy-disk-ops …
+├── protocols/    协议转换（协议）           khy-protocol-anthropic / khy-protocol-openai …
+├── mcp/          MCP 预设与服务器（mcp）
+├── scripts/      交付 / 运维脚本域（scripts） khy-portable / khy-installer …
+├── software/     跑在平台之上的应用（software）khy-quant
+└── bridges/      宿主 / IDE 插件桥（plugin）  khy-trae-bridge</code></pre>
+<p>六个分类名一一对应用户提出的六类（tool / plugin / scripts / mcp / software / 协议），不是另起一套词。</p>
+<p><strong>分类目录的判据是「有没有 manifest」，不是一份分类名白名单。</strong> 一个根下的直接子目录若自己没有可解析的 manifest、却含有带 manifest 的子目录，它就是分类目录：只负责归类，本身不是拓展。之所以不把分类名写进加载器：白名单要么写在加载器里（于是「文件系统就是注册表」变成「加载器里那张表才是注册表」），要么写进一个新的 <code>extensions/</code> 根 manifest（于是 <code>extensions/</code> 自己成了需要维护的注册表，「拖入目录」不再够用）。用「有无 manifest」判据两者都不需要——分类目录天然是空壳。</p>
+<p><strong>收敛分类名是仓库卫生，由 CI 管，不由机制管。</strong> <code>check-repo-layout</code> 的 <code>extension-contract</code> 规则强制上表六个名字，并报出「既不是拓展也不是分类目录」的目录。用户目录与 <code>KHY_EXTENSION_PATH</code> 下不受这条约束——那是别人的磁盘，不是本仓的卫生。</p>
+<p><strong>三条必须成立的性质</strong>，缺一条分类就从「布局」变成「语义」：</p>
+<table><thead><tr><th>性质</th><th>为什么</th></tr></thead><tbody><tr><td><code>id</code> 仍是<strong>叶子</strong>目录名，分类名不进 id</td><td>id 同时是 state 键、冲突键与孤儿检测键。分类名一旦渗进 id，把拓展移进分类目录就等于给它改身份——state 条目、冲突裁决与孤儿检测同时错位，比不分类糟得多</td></tr><tr><td>顶层直放仍然有效</td><td>否则「拖入目录即被发现」被收窄成「拖进正确的分类才被发现」，drop-in 承诺就打了折</td></tr><tr><td>自带 manifest 的目录<strong>不再</strong>下探</td><td>显式自我声明胜过按结构推断。否则一个拓展在自己目录里放了子拓展（vendor 场景）会被整块散开成分类</td></tr></tbody></table>
+<p><strong>为什么只下探一层</strong>：<code>id</code> 必须唯一指代一个东西。允许任意深度后，「目录名」不再唯一，<code>a/khy-x</code> 与 <code>khy-x</code> 的关系就成了需要裁决的新问题。一层足够分类，两层开始需要规则。落地件是 <code>extensionRoots.MAX_DEPTH = 2</code>；孤儿检测（<code>findOrphanState</code>）与发现<strong>必须同深度</strong>——它只看一层的话，「把拓展移进分类目录」会让在位的拓展被列入残留名单，而残留名单是要被清理的。</p>
+<p>删一层分类目录 = 删掉它整块内容，与逐个删拓展语义一致，<code>§4.1</code> 的承诺不变。</p>
+<hr>
+<hr>
+<h2 id="三-manifest-khy-extension-json">三、manifest：<code>khy.extension.json</code><a class="anchor" href="#三-manifest-khy-extension-json" aria-label="锚点">#</a></h2>
+<p>放在拓展目录根。<strong>JSON，不是 JS</strong>——manifest 必须能在不执行任何拓展代码的前提下读完，这是惰性激活的前提。</p>
+<pre><code class="language-jsonc"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;khy-markdown&quot;</span><span class="hljs-punctuation">,</span>          <span class="hljs-comment">// 必须等于目录名（不等则以目录名为准，守卫报错）</span>
+  <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;Khy Markdown&quot;</span><span class="hljs-punctuation">,</span>        <span class="hljs-comment">// 展示名</span>
+  <span class="hljs-attr">&quot;version&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;1.0.0&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;description&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;零依赖跨平台 Markdown 编辑器&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;kind&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;runtime&quot;</span><span class="hljs-punctuation">,</span>             <span class="hljs-comment">// runtime（默认）| ide-bridge | asset | toolchain</span>
+  <span class="hljs-attr">&quot;namespace&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;md&quot;</span><span class="hljs-punctuation">,</span>             <span class="hljs-comment">// 命令/工具的前缀，缺省取 id</span>
+  <span class="hljs-attr">&quot;engines&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;khy&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;&gt;=1.1.0&quot;</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;main&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;khyos-md-bridge.js&quot;</span><span class="hljs-punctuation">,</span>  <span class="hljs-comment">// 入口；kind=runtime 时必需且须在磁盘上存在</span>
+  <span class="hljs-attr">&quot;capabilities&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;commands&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;tools&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-string">&quot;mcp&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;provides&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;markdown-workbench&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>  <span class="hljs-comment">// 对核声明的服务名，见 3.4</span>
+  <span class="hljs-attr">&quot;commands&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;open&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;description&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;打开编辑器&quot;</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;tools&quot;</span><span class="hljs-punctuation">:</span>    <span class="hljs-punctuation">[</span><span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;md_render&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;description&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;…&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;inputSchema&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span><span class="hljs-punctuation">}</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;skills&quot;</span><span class="hljs-punctuation">:</span>   <span class="hljs-punctuation">[</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;mcp&quot;</span><span class="hljs-punctuation">:</span>      <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;command&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;node&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;args&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;khyos-md-mcp.js&quot;</span><span class="hljs-punctuation">]</span> <span class="hljs-punctuation">}</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;permissions&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;network&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;spawn&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">true</span></span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;database&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-literal"><span class="hljs-keyword">false</span></span> <span class="hljs-punctuation">}</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<h3 id="3-1-三种格式与迁移期">3.1 三种格式与迁移期<a class="anchor" href="#3-1-三种格式与迁移期" aria-label="锚点">#</a></h3>
+<table><thead><tr><th>格式</th><th>地位</th></tr></thead><tbody><tr><td><code>khy.extension.json</code></td><td><strong>canonical</strong>，新拓展只许用这个</td></tr><tr><td><code>openclaw.plugin.json</code></td><td>遗留，只读兼容；<code>manifestFormat</code> 字段会如实标出</td></tr><tr><td><code>package.json#khy</code></td><td>遗留，只读兼容；无 <code>khy</code> 字段的普通 npm 包<strong>不</strong>被当作拓展</td></tr></tbody></table>
+<p>同一目录里多种共存 → canonical 胜。遗留格式<strong>不新增支持字段</strong>：要用新字段，先迁到 canonical。</p>
+<h3 id="3-2-字段优先级-manifest-与入口导出冲突时">3.2 字段优先级（manifest 与入口导出冲突时）<a class="anchor" href="#3-2-字段优先级-manifest-与入口导出冲突时" aria-label="锚点">#</a></h3>
+<ul><li><strong>JSON 可表达的</strong>（标量、布尔、数组）→ <strong>manifest 胜</strong>。它是安装现场的声明意图，且能在不执行代码时读到。</li><li><strong>运行时函数</strong>（<code>execute</code>、<code>requiresSandboxEscape</code>、<code>validateInput</code>…）→ <strong>入口导出胜</strong>。JSON 装不下函数，manifest 里的同名项只可能是占位。</li></ul>
+<p>这条规则已在 <code>pluginContribResolver.js</code> 落地，本文只是把它升格为契约。</p>
+<h3 id="3-3-id-为什么必须是目录名">3.3 <code>id</code> 为什么必须是目录名<a class="anchor" href="#3-3-id-为什么必须是目录名" aria-label="锚点">#</a></h3>
+<p>因为「删目录即消失」要成立，<strong>键不能藏在文件内容里</strong>。若 id 取自 manifest，删掉目录后 state 里的 id 就无从与磁盘核对，孤儿检测退化成猜测。以目录名为键，「这个 id 还在不在」永远是一次 <code>statSync</code>。</p>
+<p>引入分类目录（§2.3）后这条要说得更准：id 是<strong>叶子</strong>目录名，分类名不进 id。写成 <code>&quot;id&quot;: &quot;tools/khy-x&quot;</code> 看着更完整，实际把 state 键、冲突键与孤儿检测键一起改掉了——<code>extension-contract</code> 规则会报它。</p>
+<h3 id="3-4-provides-核按-服务名-找拓展">3.4 <code>provides</code>：核按<strong>服务名</strong>找拓展<a class="anchor" href="#3-4-provides-核按-服务名-找拓展" aria-label="锚点">#</a></h3>
+<p><code>capabilities</code> 说的是「我往注册表里贡献什么」（命令、工具、MCP），方向朝外；<code>provides</code> 说的是<strong>核可以按什么名字找到我</strong>，方向朝内。二者不可互相替代。</p>
+<pre><code class="language-jsonc"><span class="hljs-attr">&quot;provides&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;markdown-workbench&quot;</span><span class="hljs-punctuation">]</span></code></pre>
+<p><strong>为什么需要它。</strong> §1.3 第四条禁止核里出现拓展 id 的硬编码分支，但核确实有「我需要一个 Markdown 工作台」这类真实需求——<code>khy md</code>、<code>khy docs browse</code>、WS 编辑器通道都要拿到那个目录。没有 <code>provides</code> 时，唯一的写法就是在核里写死 <code>khy-markdown</code>，于是第四条只能靠人守。有了它，核问的是 <code>findProvider('markdown-workbench')</code>：拓展可以改名、可以被第三方实现替换、可以装在任何一个根下，核一行都不用改。这正是第六节决策流程里「绝不为单个拓展在核里开分支」的可执行形式。</p>
+<p><strong>裁决规则</strong>（<code>extensionRoots.findProvider()</code>）：</p>
+<table><thead><tr><th>规则</th><th>取值</th><th>理由</th></tr></thead><tbody><tr><td>多个提供者</td><td><strong>根优先级高者胜</strong>（§2.1 的根序）</td><td>与目录同名冲突同一套裁决；不比版本号——版本裁决会让「装了什么」影响「用哪个」</td></tr><tr><td>入口探针 <code>probe</code></td><td>声明了服务但探针文件不在磁盘上 → 跳过，继续找下一个</td><td>否则一个同名空目录就能骗过解析</td></tr><tr><td>无提供者</td><td>返回 <code>null</code></td><td>调用方走既有的「没装这个拓展」路径，不新增分支</td></tr></tbody></table>
+<p><strong>服务名不是 id 的别名。</strong> 它是一份能力契约：谁声明 <code>markdown-workbench</code>，就得提供 <code>main</code> 指向的那个入口所约定的形状。因此服务名要按<strong>能力</strong>取（<code>markdown-workbench</code>），不要按实现取（<code>muya-editor</code>）。</p>
+<p><strong>核这一侧的落地形态</strong>：每个服务在 <code>services/backend/src/services/extensions/</code> 下有且只有<strong>一个</strong>解析器模块，所有调用点都从它取目录，不各自实现一遍。形态有两种：带历史包袱的服务写<strong>专用</strong>解析器（如 <code>markdownWorkbench.js</code>，它还背着环境变量覆盖与迁移期 id 兜底两级）；没有包袱的直接用<strong>通用</strong>解析点 <code>providerModule.js</code>：</p>
+<pre><code class="language-js"><span class="hljs-keyword">const</span> { requireFromProvider } = <span class="hljs-built_in">require</span>(<span class="hljs-string">&#x27;./extensions/providerModule&#x27;</span>);
+<span class="hljs-keyword">const</span> verifier = <span class="hljs-title function_">requireFromProvider</span>(<span class="hljs-string">&#x27;install-verifier&#x27;</span>, <span class="hljs-string">&#x27;verify-install.js&#x27;</span>);  <span class="hljs-comment">// 拓展缺席 → null</span></code></pre>
+<p>它存在的理由是一次实测：scripts 迁移后守卫立刻在核里揪出三处<br><code>require('../../../../extensions/scripts/…')</code>。这种<strong>加载期</strong>相对 require 有两个问题，第二个是<br>致命的——写死了 id 与磁盘层数（下次移动就烂），以及删掉那个拓展目录会让整个核模块在加载期抛<br><code>MODULE_NOT_FOUND</code>。<strong>那不叫「删目录即消失」，那叫删目录即整机不可用</strong>，正是 §4.1 要禁的。</p>
+<p><strong>缺席时降级还是报错，由调用点按后果定，不由解析器统一定：</strong></p>
+<table><thead><tr><th>调用点</th><th>缺席时</th><th>理由</th></tr></thead><tbody><tr><td><code>restoreAgentService</code> 的三面镜子</td><td><strong>fail-soft</strong>，跳过该面</td><td>少一面探测就是少一面，其余两面照常出结论。但摘要必须写「拓展未安装」而<strong>不是</strong>「探测失败」——「这台机器上没装这个能力」和「装了但坏了」是两个诊断，报同一句话会把人引向一个根本不存在的故障</td></tr><tr><td><code>portableAdapter</code> 的产物校验</td><td><strong>fail-closed</strong>，抛错</td><td><code>verifyArtifactManifest</code> / <code>runHealthCheck</code> 是更新落地前的校验闸。跳过它们等于装一个没验过的更新，比「更新失败」严重得多</td></tr></tbody></table>
+<p>报错文案里点<strong>服务名</strong>（<code>portable-artifact</code>）而不是拓展 id——既不触 §1.3 第四条，也更准确：<br>缺的是一个能力的提供者，不是某个具体实现。这一条是有代价的教训——本轮开工时，Markdown 工作台在核里有<strong>三处互不认识的定位逻辑</strong>，其中一处在试点迁目录后已经失效（<code>khy docs browse</code> 静默坏掉而无人发现，因为它 fail-soft）。一个服务一个解析器，是让「迁移一次、全部跟上」成立的前提。</p>
+<p><strong>第三种形态：搬迁前先立 seam。</strong> 上面两种都假定拓展已经在 <code>extensions/</code> 下了。<code>khy-quant</code><br>（§1.7 的待迁移项）不是这个情形——它是全仓最重的一处 §1.5 <strong>硬入向</strong>：<code>services/backend/src</code><br>里有 57 个纯 re-export 壳各自写死 <code>require('../../../../software/khyquant/&lt;模块&gt;')</code>，其中 19 个<br>路由壳被 <code>server.js</code> 在<strong>启动期</strong>直接 require。直接 <code>git mv</code> 会同时撞三面墙：57 处 require 路径<br>里带上 <code>khy-quant</code>，把 <code>extension-id-hardcode</code> 的 0 基线一次性染红；核 → L5 的边违反 §2.2；而删<br>目录仍然让 <code>server.js</code> 起不来，§4.1 的承诺照旧不成立。</p>
+<p>结论是<strong>搬迁前先断边</strong>：先建解析器 <code>quantApp.js</code>，把 57 处「点名磁盘位置」收敛成一处「点名服务<br><code>quant-app</code>」，再把壳改成从它取模块。断完之后搬目录是纯 <code>git mv</code> + 加 manifest，核一行都不用改。<br>它比 <code>markdownWorkbench.js</code> 多一级<strong>迁移期兜底</strong>——契约发现落空时回落到 L4 现址 <code>software/khyquant</code>，<br>让断边这一步成为纯重构（行为与迁移前一致），Phase 1 搬完即删掉这一支。兜底写的是 L4 目录名<br><code>khyquant</code> 而不是拓展 id <code>khy-quant</code>，所以它自己不触 §1.3 第四条。</p>
+<p>它与通用解析点 <code>providerModule.js</code> 有一处<strong>刻意的不同</strong>，值得单独记：后者把「拓展未安装」与<br>「装了但模块加载抛错」都吞成 <code>null</code>。对诊断/交付路径够用，对这里不够——一个路由模块里的真 bug<br>会因此从启动期大声崩退化成<strong>静默 404</strong>。所以 <code>quantApp.loadModule()</code> 只对「目录/文件不在」返回<br><code>null</code>，文件在而 <code>require</code> 抛错时<strong>照抛</strong>。这正是上面那张表「『没装这个能力』和『装了但坏了』是<br>两个诊断」在加载层的对应写法。</p>
+<h3 id="3-5-kind-toolchain-核不-require-只按名字叫的脚本">3.5 <code>kind: &quot;toolchain&quot;</code>：核不 require、只按名字叫的脚本<a class="anchor" href="#3-5-kind-toolchain-核不-require-只按名字叫的脚本" aria-label="锚点">#</a></h3>
+<p>交付、构建、诊断这类脚本迁进 <code>extensions/</code> 后，四种 kind 里没有一个装得下它们，于是本轮加了第四种。</p>
+<p>它与 <code>runtime</code> 的区别是<strong>执行位置</strong>，不是重要性：核<strong>不 require</strong> 它的入口，而是照 manifest 的<br><code>commands[].script</code> 起一个子进程。因此它拿不到 <code>ctx</code>，也不受惰性激活那一套约束——它只是一堆能被<br>按名字叫到的脚本。不塞进 <code>asset</code> 是因为 asset 是惰性的资源，没人「运行」它；这些是要运行的。</p>
+<pre><code class="language-jsonc"><span class="hljs-punctuation">{</span>
+  <span class="hljs-attr">&quot;id&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;khy-portable&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;kind&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;toolchain&quot;</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;provides&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span><span class="hljs-string">&quot;portable-artifact&quot;</span><span class="hljs-punctuation">]</span><span class="hljs-punctuation">,</span>
+  <span class="hljs-attr">&quot;commands&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-punctuation">[</span>
+    <span class="hljs-punctuation">{</span> <span class="hljs-attr">&quot;name&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;build&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;description&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;构建便携版产物&quot;</span><span class="hljs-punctuation">,</span> <span class="hljs-attr">&quot;script&quot;</span><span class="hljs-punctuation">:</span> <span class="hljs-string">&quot;build-portable-artifact.js&quot;</span> <span class="hljs-punctuation">}</span>
+  <span class="hljs-punctuation">]</span>
+<span class="hljs-punctuation">}</span></code></pre>
+<p><strong>入口字段是 <code>commands[].script</code>，不是 <code>main</code>。</strong> 守卫（<code>check-repo-layout.js</code>）对 toolchain 走<br>单独一支：每条命令都必须有 <code>name</code>、必须声明 <code>script</code>、且该 <code>script</code> 必须在磁盘上存在。这一条要在<br><strong>提交时</strong>核对而不是留给运行时——派发器只有在用户真的敲了那条命令时才会发现脚本不存在，而那通常<br>是发布当天。</p>
+<p><strong>派发器 <code>scripts/lib/ext-run.js</code>。</strong> <code>npm run portable:build:dev</code> 这类目标改成<br><code>node scripts/lib/ext-run.js khy-portable build --kind portable-dev</code>。这层间接不是为了好看：没有它，删掉<br><code>extensions/scripts/khy-portable/</code> 会让 <code>npm run portable:build:dev</code> 直接死于 node 的<br><code>Cannot find module</code>；有了它，退化成一句<br><code>[ext-run] 拓展 khy-portable 未安装 —— 命令 &quot;build&quot; 不可用。</code> 加非零退出。<strong>这才是 §4.1 的<br>「删目录即消失」在交付脚本这条路径上的样子</strong>——能力没了，仓库还是可用的。</p>
+<p>派发器<strong>自带一份两层目录扫描</strong>，不复用 <code>extensionRoots</code>：<code>scripts/</code> 不许 import L2<br>（[DESIGN-ARCH-068] 第二节禁止边）。两份实现意味着两份会漂移的语义，所以<br><code>scripts/tests/ext-run.test.js</code> 专门钉了「同深度、同分类规则、同缺失行为」，其中一例就是<br>「不下探第三层 —— 与 <code>extensionRoots.MAX_DEPTH</code> 同深度」。</p>
+<hr>
+<hr>
+<h2 id="四-生命周期">四、生命周期<a class="anchor" href="#四-生命周期" aria-label="锚点">#</a></h2>
+<pre><code>启动  ──►  ① 发现（只读 manifest，不 require 任何入口）
+                │
+                ├─ 目录不在 / manifest 坏 / 显式 disabled  ──►  这个拓展不存在，成本为零
+                │
+                ▼
+           ② 索引贡献名（命令 → 命令注册表 plugin 优先级层；工具 → 漏斗兜底索引）
+                │
+           ②' 广告贡献名（工具 → 拼进给模型的工具清单，仅读 manifest）
+                │
+       首次真正调用某个贡献名
+                ▼
+           ③ 激活（require 入口 → activate(ctx) → 登记 disposables）
+                │
+           进程退出 / 显式禁用
+                ▼
+           ④ 停用（deactivate() → dispose 全部登记项）</code></pre>
+<p><strong>① 发现只读 manifest。</strong> 一个从未被调用的拓展，其入口模块的模块体<strong>永不执行</strong>——零加载时间、零副作用。这是 <code>[DESIGN-ARCH-062]</code> 「按需」档的直接应用。</p>
+<p><strong>②' 广告与索引必须同生共死。</strong> 索引让工具「叫得动」，广告让模型「看得见」——只做前者，一个迁出核的工具就成了没人知道它存在的死代码。详见 §5.2；这是 <code>khy-notebook</code> 试点<strong>实测</strong>出来的缺口，不是推演。广告同样只读 manifest，绝不为了拿一行描述去 require 入口，否则惰性当场作废。</p>
+<blockquote><p><strong>即时 vs 惰性的分界线</strong>：<code>plugin-loader</code> 的五个发现源里，配置项、workspace 依赖、全局 npm、<code>KHY_PLUGINS</code> 这四个都是<strong>被点名</strong>的——点名本身就是加载意图，故在 <code>init()</code> 期激活。唯独<strong>拓展根扫描</strong>是对一棵用户可能只是拖进来一个文件夹的目录树的枚举，把它们在启动期激活，等于把每个内置拓展的模块体记到开机时间上，正是本节要禁止的事。所以拓展根来的候选只在 <code>init()</code> 里<strong>占名</strong>（状态 <code>discovered:lazy</code>，命名空间已占、manifest 已知、入口<strong>未</strong> require），首次使用时经 <code>activateNamespace(ns)</code> 激活。关掉 <code>KHY_PLUGIN_LAZY_LOAD</code> → 它们也回到即时激活，与其余四源同构。</p></blockquote>
+<p><strong>③ 激活是双门 fail-closed。</strong> 中心门控（<code>KHY_PLUGIN_LAZY_LOAD</code>）与该拓展自身的 <code>enabled</code> 状态<strong>都</strong>要过；任一不过 → 当作未安装，走既有的「未知命令/未知工具」路径，不新增任何分支。激活有 5 秒超时，超时或抛错 → <code>disabled:timeout</code> / <code>disabled:error</code>，<strong>不影响其他拓展和主流程</strong>。</p>
+<p><strong>④ 停用靠 disposables。</strong> <code>ctx</code> 提供的每个注册动作都返回一个 dispose 句柄，停用时逐个调用。拓展不需要、也不允许自己去注册表里删东西。</p>
+<h3 id="4-1-删除目录-拓展自动删除">4.1 「删除目录 → 拓展自动删除」<a class="anchor" href="#4-1-删除目录-拓展自动删除" aria-label="锚点">#</a></h3>
+<p><strong>文件系统就是注册表。</strong> 三条推论，缺一不可：</p>
+<ol><li>目录在 + manifest 可解析 → 该拓展<strong>存在</strong>。不需要任何 state 条目为它背书——这是 drop-in 的前提：拖进目录不必先登记。</li><li>目录不在 → 该拓展<strong>不存在</strong>。state 里的残留条目<strong>不得</strong>让它复活。</li><li>只有 <code>state[id].enabled === false</code> 这一种显式禁用，能压住一个在位的目录。</li></ol>
+<p><code>extensions_state.json</code> 因此是<strong>纯覆盖层</strong>（只记「谁被显式禁用了」），不是注册表。指向已不存在目录的条目 = 残留，由 <code>extensionRoots.findOrphanState()</code> 识别、由 <code>extensionManager.pruneOrphanState()</code> 清除。清残留是<strong>幂等</strong>的（没残留则<strong>不写盘</strong>），且<strong>不影响功能</strong>——发现路径本来就看不见它们，清理只是让 state 文件不再积累谎言。</p>
+<p>孤儿判定看<strong>全部根</strong>，不只看用户安装目录：一个内置拓展被显式禁用后，state 里那条记录对应的是<strong>仓库根</strong>里的目录；若只查用户目录，它会被判成孤儿删掉，等于默默把一个被禁用的拓展重新启用了。读（<code>extensionRoots</code>）与写（<code>extensionManager</code>）的分工也在此固定：只读探测器永不写盘，安装器是 state 的唯一写者。</p>
+<hr>
+<h2 id="五-贡献面">五、贡献面<a class="anchor" href="#五-贡献面" aria-label="锚点">#</a></h2>
+<p>拓展能贡献什么，由 <code>ctx</code>（<code>plugin-loader/contextFactory.js</code>）划定。这是<strong>能力的全集</strong>——不在表里的一律做不到：</p>
+<table><thead><tr><th>贡献点</th><th>API</th><th>命名空间化</th><th>备注</th></tr></thead><tbody><tr><td>命令</td><td><code>ctx.commands.register</code></td><td><code>/&lt;ns&gt;.&lt;name&gt;</code></td><td>进命令注册表 <code>plugin: 60</code> 优先级层，永远盖不过内置命令</td></tr><tr><td>工具</td><td><code>ctx.tools.register</code></td><td><code>&lt;ns&gt;_&lt;name&gt;</code></td><td>经漏斗，与内置工具同一套权限裁决</td></tr><tr><td>MCP 服务器</td><td>manifest <code>mcp</code> 字段</td><td>—</td><td>由核代为拉起，拓展不自管进程</td></tr><tr><td>技能</td><td>manifest <code>skills</code></td><td>—</td><td>走既有 skill 发现路径</td></tr><tr><td>数据源</td><td><code>ctx.dataSources</code></td><td>—</td><td></td></tr><tr><td>AI</td><td><code>ctx.ai.generate</code> / <code>.stream</code></td><td>—</td><td><strong>唯一</strong>的模型访问通道</td></tr><tr><td>存储</td><td><code>ctx.storage</code>（KV）</td><td>自动隔离</td><td>落在 <code>&lt;pluginsHome&gt;/&lt;ns&gt;/storage/</code></td></tr><tr><td>配置</td><td><code>ctx.config</code></td><td>自动隔离</td><td>落在 <code>&lt;pluginsHome&gt;/&lt;ns&gt;/config.json</code></td></tr><tr><td>日志</td><td><code>ctx.logger</code></td><td><code>[plugin:&lt;ns&gt;]</code></td><td></td></tr><tr><td>网络 / 子进程 / 数据库</td><td><code>ctx.http</code> / <code>ctx.spawn</code> / <code>ctx.database</code></td><td>—</td><td>各需 manifest <code>permissions</code> 对应项</td></tr></tbody></table>
+<p><strong>命名空间化不是礼貌，是隔离</strong>：两个拓展贡献同名命令时，因为都带各自前缀，<strong>不会</strong>互相覆盖；而拓展<strong>永远</strong>盖不过内置——<code>plugin: 60</code> 低于 <code>builtin: 100</code>，注册表拒绝降级覆盖。</p>
+<h3 id="5-1-两条注册路径-两套命名规则">5.1 两条注册路径，两套命名规则<a class="anchor" href="#5-1-两条注册路径-两套命名规则" aria-label="锚点">#</a></h3>
+<p>上表只画了一条路径。实际有<strong>两条</strong>，它们写进的是同一个注册表，命名规则却不同——这一点此前没有<br>被写下来，<code>khy-notebook</code> 迁移时才撞出来：</p>
+<table><thead><tr><th>路径</th><th>入口</th><th>工具名</th><th>谁在用</th></tr></thead><tbody><tr><td><strong>ctx 路径</strong></td><td><code>contextFactory</code> 的 <code>ctx.tools.register(def)</code></td><td>强制改写为 <code>&lt;ns&gt;_&lt;name&gt;</code></td><td>拓展在 <code>activate(ctx)</code> 里主动注册</td></tr><tr><td><strong>manifest 路径</strong></td><td><code>pluginContribResolver.activateContributedTool()</code></td><td><strong>按 <code>def.name</code> 原样</strong></td><td>manifest 声明 + 漏斗惰性激活</td></tr></tbody></table>
+<p>两套都合法，因为它们服务于不同意图：</p>
+<ul><li>ctx 路径是<strong>拓展自己想加一个新工具</strong>。加前缀是对的：新工具没有历史包袱，前缀能防两个拓展撞名，</li></ul>
+<p>也让用户一眼看出这工具来自哪个拓展。</p>
+<ul><li>manifest 路径要能承载<strong>从核里迁出来的既有工具</strong>。这类工具的名字是已经对模型公开的 API，</li></ul>
+<p>也已经被核内策略表按字符串点名（§1.5 的「名字入向」）。给它加前缀等于换了一个工具：<br>  模型不认识 <code>nb_NotebookEdit</code>，而 11 个内置 agent 的 denylist、<code>permissionPolicy</code> 的 matcher、<br>  <code>permissionStore</code> 的分类、<code>roleToolScope</code>、TUI 的 ProcessGroup 分类——约 20 处——全部落空。</p>
+<p><strong>规则</strong>：</p>
+<ol><li><strong>新增</strong>的拓展工具走 ctx 路径，接受 <code>&lt;ns&gt;_&lt;name&gt;</code> 前缀。</li><li><strong>从核迁出</strong>的工具走 manifest 路径，<strong>必须保留原名</strong>，且在 manifest 的 <code>_note</code> 里写明</li></ol>
+<p>为什么不加前缀、原来在哪。</p>
+<ol><li>保留原名的代价是<strong>全局唯一</strong>：两个拓展不能都叫 <code>NotebookEdit</code>。冲突由「先扫到者胜」裁决</li></ol>
+<p>（§2.1），且后者被完全遮蔽——所以迁出的工具名必须当成全局标识符对待，不是局部名字。</p>
+<blockquote><p>与 §1.3 第一条不矛盾：两条路径都进同一个注册表、都经同一个 <code>executeTool</code>。分叉在<strong>注册</strong>，<br>不在<strong>执行</strong>。</p></blockquote>
+<h3 id="5-2-执行兜底-发现路径">5.2 执行兜底 ≠ 发现路径<a class="anchor" href="#5-2-执行兜底-发现路径" aria-label="锚点">#</a></h3>
+<p><code>pluginContribResolver</code> 原本只有两个消费者方向的能力：<code>ownsTool(name)</code> 与<br><code>activateContributedTool(name)</code>，且唯一的调用点在 <code>toolCalling.js</code> 的<strong>执行</strong>路径上——<br>也就是说，它只在模型<strong>已经发出</strong> <code>tool_use</code> 之后才会被问到。</p>
+<p>而模型能不能发出这个 <code>tool_use</code>，取决于它有没有在工具清单里见过这个名字。那份清单由<br><code>assembleToolPool()</code> 从<strong>已加载</strong>的工具生成，里面按定义永远没有惰性拓展。</p>
+<p>两件事合起来的后果：<strong>一个从核里迁出去的工具会「叫得动，但没人知道它存在」</strong>。执行兜底是完好的，<br>迁移看起来是成功的，测试也是绿的——只是模型再也不会调用它了。这等于把工具从模型手里拿走。</p>
+<p><strong>补法</strong>（已落地）：<code>listDeclaredTools()</code> 从 manifest <strong>纯 JSON 读</strong>出全部声明的工具描述符，<br>由 <code>claudeAdapter.buildDirectToolDefs()</code> 在拼清单时合并进去。三条约束：</p>
+<ol><li><strong>绝不 require 任何入口</strong>——manifest 之所以规定为 JSON 而不是 JS（§3），换来的正是</li></ol>
+<p>「不执行拓展代码就能读到 name / description / inputSchema」这件事。为了广告去 require 入口，<br>   等于把 §4 的惰性整个作废。</p>
+<ol><li><strong>内置优先去重</strong>：<code>pool</code> 里已有同名工具则跳过。与漏斗侧「内置永远赢」（<code>activateContributedTool</code></li></ol>
+<p>只在正常解析返回 <code>null</code> 之后才被触发）同向，不产生第二套优先级。</p>
+<ol><li><strong>整段 fail-soft</strong>：拓展目录坏掉，宁可少广告一个工具，也不能让模型清单构建不出来。</li></ol>
+<p><strong>由此得出一条通则</strong>：「删目录即消失」要成立，<strong>发现、激活、广告三个面必须同时翻转</strong>。任何一个<br>面留在旧状态，都会产生一种特定的假象——广告留着而目录没了 = 向模型撒谎；索引留着而广告没了 =<br>死代码。新增贡献面时，先问它属于这三面里的哪一面，再问它跟着目录一起消失了没有。</p>
+<h3 id="5-3-拓展如何拿到-basetool-它不拿">5.3 拓展如何拿到 <code>BaseTool</code>：它不拿<a class="anchor" href="#5-3-拓展如何拿到-basetool-它不拿" aria-label="锚点">#</a></h3>
+<p>一个反复会被问到的问题：拓展导出的工具要不要继承 <code>BaseTool</code>？</p>
+<p><strong>不要，也不能。</strong> §2.2 的禁止边写着「拓展 → L2 不走深层相对路径」，而<br><code>services/backend/src/tools/_baseTool</code> 正在 L2 深处。拓展<strong>导出纯对象</strong><br>（<code>{ tools: [{ name, execute, prompt }] }</code>），由漏斗侧的 <code>activateContributedTool()</code> 调<br><code>defineTool()</code> 把它包装成正式工具再注册。拓展一行核代码都不 import。</p>
+<p>这不是风格选择，而是「删目录即消失」的必要条件：拓展一旦 import 了核的内部路径，它就和某个<br>特定版本的核绑死了，删得掉目录，删不掉这份耦合。</p>
+<hr>
+<h2 id="六-决策流程-这东西该做成什么">六、决策流程：这东西该做成什么<a class="anchor" href="#六-决策流程-这东西该做成什么" aria-label="锚点">#</a></h2>
+<pre><code>新功能来了
+  │
+  ├─ 删掉它，还能启动并跑通一次工具调用吗？
+  │     └─ 不能 ──────────────────────────────► 核（services/backend，走既有三步注册）
+  │
+  ├─ 它要不要在核里留硬编码分支？
+  │     └─ 要，且无法用 ctx 表达 ─────────────► 先补 ctx 能力，再做成拓展
+  │                                              （绝不为单个拓展在核里开分支）
+  │
+  ├─ 它随主包分发吗？
+  │     ├─ 是 ────────────────────────────────► extensions/&lt;id&gt;/（仓库内置拓展）
+  │     └─ 否 ────────────────────────────────► 用户装到 &lt;appHome&gt;/extensions/&lt;id&gt;/
+  │
+  └─ 它根本不参与运行时（构建脚本、一次性工具）？
+        └─ 是 ────────────────────────────────► tools/（L6，不是拓展）</code></pre>
+<p><strong><code>tools/</code> 与 <code>extensions/</code> 的分界</strong>：参与运行时 → 拓展；只在开发/构建期被开发者手动调用 → <code>tools/</code>。试点 <code>khyos-markdown</code> 正是踩线的例子——它被 <code>khy md</code> 命令在运行时拉起，所以它从来就不该在 <code>tools/</code>。</p>
+<hr>
+<h2 id="七-守卫与验证">七、守卫与验证<a class="anchor" href="#七-守卫与验证" aria-label="锚点">#</a></h2>
+<pre><code class="language-powershell">npm run check:layout                                      <span class="hljs-comment"># extension-contract / extension-id-hardcode 都在内</span>
+npm run check:layout <span class="hljs-literal">--</span> <span class="hljs-literal">--list</span>=extension<span class="hljs-literal">-contract</span>          <span class="hljs-comment"># 打印全量清单</span>
+npm run check:layout <span class="hljs-literal">--</span> <span class="hljs-literal">--list</span>=extension<span class="hljs-literal">-id-hardcode</span>       <span class="hljs-comment"># 打印核里的 id 硬编码点</span>
+npm run check:layout <span class="hljs-literal">--</span> <span class="hljs-literal">--update-baseline</span>                  <span class="hljs-comment"># 修完一批后下调基线（绝不上调）</span>
+node <span class="hljs-literal">--test</span> scripts/tests/check<span class="hljs-literal">-repo-layout</span>.test.js
+node <span class="hljs-literal">--test</span> services/backend/tests/extensions/contribToolLifecycle.test.js   <span class="hljs-comment"># 契约第四节的机器化</span></code></pre>
+<p><code>extension-contract</code>（warning + 基线，与 <code>[DESIGN-ARCH-068]</code> 第七节的四条 warning 规则同一套棘轮）检查 <code>extensions/</code> 下每个直接子目录：</p>
+<table><thead><tr><th>检查</th><th>说明</th></tr></thead><tbody><tr><td>有 canonical manifest</td><td>缺 <code>khy.extension.json</code> → 计一处（遗留格式也计，从而形成迁移压力）</td></tr><tr><td><code>id</code> 与目录名一致</td><td>不一致 → 计一处</td></tr><tr><td><code>kind</code> 合法</td><td>不在 <code>runtime</code> / <code>ide-bridge</code> / <code>asset</code> 内 → 计一处</td></tr><tr><td><code>main</code> 可解析</td><td><code>kind: runtime</code> 时 <code>main</code> 缺失或磁盘上不存在 → 计一处</td></tr></tbody></table>
+<p><strong>棘轮的作用</strong>：基线是本轮完成后的实测值。此后每迁移一个功能进 <code>extensions/</code>，只要它带着合规 manifest，计数不涨；一旦有人塞进一个不合契约的目录，计数超基线<strong>自动升为 error</strong> 阻断合并。§1.7 表里那一长串「待迁移」因此不需要一次做完——契约先立，迁移在棘轮下逐个进行。</p>
+<h3 id="7-1-extension-id-hardcode-1-3-第四条的机器强制">7.1 <code>extension-id-hardcode</code>：§1.3 第四条的机器强制<a class="anchor" href="#7-1-extension-id-hardcode-1-3-第四条的机器强制" aria-label="锚点">#</a></h3>
+<p>上一轮把「核里不允许出现拓展 id 的硬编码分支」写进了契约，但如实登记了它<strong>没有机器强制</strong>。本轮补上：</p>
+<pre><code class="language-powershell">npm run check:layout <span class="hljs-literal">--</span> <span class="hljs-literal">--list</span>=extension<span class="hljs-literal">-id-hardcode</span></code></pre>
+<p>规则扫 <code>services/backend/src</code> 下的全部 <code>.js</code>，找<strong>分派用途</strong>的拓展 id 字面量。基线 <strong>0</strong>——新增一处即超基线、即 error。</p>
+<p>三条排除，每一条都是为了让规则只报真问题：</p>
+<table><thead><tr><th>排除</th><th>理由</th></tr></thead><tbody><tr><td>注释（行注释与跨行块注释）</td><td>注释里提 id 是<strong>说明</strong>，不是分派。实现上必须整文件带状态地剥（<code>stripToCode</code>），逐行判断看不见跨行块注释的续行——这正是本轮规则第一版 6 个误报的全部来源</td></tr><tr><td>含中文的字符串</td><td>那是面向用户的提示文案。禁它只会逼出更含糊的报错信息，与规则的目的相反</td></tr><tr><td><code>kind: ide-bridge</code> 的拓展 id</td><td>它们的路径由外部 IDE 决定，核改成服务名也影响不了那一侧</td></tr></tbody></table>
+<p><strong>唯一的白名单</strong>是 <code>markdownWorkbench.js</code> 里的 <code>LEGACY_ID</code>——迁移期的兜底，服务名铺开后即删。白名单写在守卫脚本里而非文档里：要加一条，就得改守卫、就会进 diff、就会被评审看见。</p>
+<p><strong>发现一个 id 硬编码时的正解</strong>：不是加白名单，而是走 §3.4——给拓展的 manifest 加 <code>provides</code>，在 <code>services/extensions/</code> 下建（或复用）一个服务解析器，把调用点改成问服务名。</p>
+<p><strong>本轮落地件</strong>：</p>
+<table><thead><tr><th>件</th><th>位置</th><th>作用</th></tr></thead><tbody><tr><td>根与 manifest 真源</td><td><code>services/backend/src/services/extensions/extensionRoots.js</code></td><td>五个根、三种格式、state 只读、孤儿识别；本轮新增 <code>provides</code> 归一与 <code>findProvider()</code></td></tr><tr><td>服务解析器（首例）</td><td><code>…/services/extensions/markdownWorkbench.js</code></td><td><code>markdown-workbench</code> 的<strong>唯一</strong>定位与加载入口；四级解析：环境变量 → 服务名 → id 兜底 → 相对路径兜底</td></tr><tr><td>安装器</td><td><code>…/extensions/extensionManager.js</code></td><td>三个常量改从真源取；新增 <code>pruneOrphanState()</code></td></tr><tr><td>漏斗兜底</td><td><code>…/plugins/pluginContribResolver.js</code></td><td>改走真源，首次得以看见仓库 <code>extensions/</code> 根</td></tr><tr><td>启动期加载器</td><td><code>services/backend/src/plugin-loader/index.js</code></td><td>新增第 4 发现源（拓展根，惰性）与 <code>activateNamespace()</code></td></tr><tr><td>四个调用点归一</td><td><code>cli/handlers/md.js</code>、<code>cli/handlers/docs.js</code>、<code>services/aiManagementKhyosWs.js</code>、<code>services/mdEditorRegister.js</code></td><td>三套各自为政的定位逻辑（其一已失效）全部改从服务解析器取</td></tr><tr><td>守卫用例</td><td><code>scripts/tests/check-repo-layout.test.js</code></td><td>契约五项检查各一例 + 超基线升 error；本轮加 6 例覆盖 id 硬编码规则的三条排除与计数</td></tr><tr><td>贡献工具广告</td><td><code>…/plugins/pluginContribResolver.js</code> <code>listDeclaredTools()</code> + <code>gateway/adapters/claudeAdapter.js</code></td><td>§5.2 的缺口补丁：让惰性拓展的工具进入模型清单，且不 require 入口</td></tr><tr><td>通用服务解析点</td><td><code>…/services/extensions/providerModule.js</code></td><td>按服务名惰性取拓展模块；本轮解掉核里 4 处指向 <code>extensions/</code> 的加载期硬 require</td></tr><tr><td>交付脚本派发器</td><td><code>scripts/lib/ext-run.js</code> + <code>scripts/tests/ext-run.test.js</code></td><td>20 个 npm 目标改走它；31 例钉住「删目录即消失而不是即崩溃」</td></tr><tr><td>路径漂移守卫</td><td><code>check-repo-layout.js</code> 的 <code>extension-path-drift</code></td><td>搬目录后断掉的相对 require 与算错的爬根算术，基线 0</td></tr><tr><td>服务解析器（硬入向）</td><td><code>…/services/extensions/quantApp.js</code> + <code>tests/extensions/quantAppSeam.test.js</code></td><td><code>quant-app</code> 的唯一定位与加载入口；两级解析：服务名 → 迁移期 L4 兜底。为 <code>khy-quant</code> 断边而立，13 例钉住「未安装」与「装了但坏了」不同档</td></tr><tr><td>生命周期用例</td><td><code>services/backend/tests/extensions/contribToolLifecycle.test.js</code></td><td>13 例：拖入即发现 / 需要时才加载 / 删目录即消失 / 门控 fail-closed / 模型看得见 / <code>khy-notebook</code> 真实核验</td></tr></tbody></table>
+<h3 id="7-2-contribtoollifecycle-把-4-的三条承诺变成用例">7.2 <code>contribToolLifecycle</code>：把 §4 的三条承诺变成用例<a class="anchor" href="#7-2-contribtoollifecycle-把-4-的三条承诺变成用例" aria-label="锚点">#</a></h3>
+<p>用户对拓展机制的原话是三条：「删除目录拓展自动删除，拖入目录，启动并在需要时自动加载」。这三条<br>各自对应一组断言，而不是被笼统地测成「拓展能跑」。两条实现约束值得写下来，都是被实测逼出来的：</p>
+<p><strong>每个用例起一个子进程。</strong> resolver 有目录扫描缓存与 <code>require</code> 缓存，同一进程里先测「目录在」<br>再测「目录不在」，读到的是缓存行为而不是契约行为——用例会绿，但它证明不了任何事。子进程同时<br>让 <code>KHY_EXTENSION_PATH</code> 这类只在模块加载时读一次的环境变量能被逐例设置。</p>
+<p><strong><code>KHY_EXTENSION_PATH</code> 是前插，不是替换。</strong> <code>listRoots()</code> 把它排在最高优先级，随后<strong>照样</strong><br>push 仓库根、用户根与两个遗留 plugins 根。所以 fixture 进程永远还看得见真实的 <code>extensions/</code>，<br>以及别人机器上可能存在的 <code>~/.khyquant/extensions</code>。<strong>断言必须收敛到 fixture 自己的工具名上</strong>，<br>不能钉死整份清单——否则用例的成败取决于跑它的那台机器上装了什么。（本轮第一版就是这么红的。）</p>
+<p>机制部分一律用临时目录当 fixture，只有最后一组「试点核验」打真实的 <code>khy-notebook</code>——那是实际<br>迁移的东西，它坏了就该红。</p>
+<p><strong>这套用例做过变异测试</strong>：把门控判断从 <code>listDeclaredTools()</code> 删掉、把 <code>claudeAdapter</code> 的广告<br>合并改成空数组、让 <code>listDeclaredTools()</code> 去 <code>require</code> 入口——三处各自被对应的那一条用例抓住。<br>绿的测试套件在被证明能为正确的原因变红之前，不算证据。</p>
+<p><strong>兜底不得越过契约</strong>：<code>markdownWorkbench.js</code> 的第 ④ 级相对路径兜底<strong>仅在契约模块本身不可用时</strong>才执行。无条件执行会绕过契约的全部判决——拓展被显式禁用、目录被删、仓库根被门控关闭，这三种情形下契约都已判「不可见」，而一条硬目录探测会把它捧回来，使 §4.1 第二条「目录不在 → 拓展不存在」失效。契约模块在位时，它的结论就是终局结论。任何后续服务解析器都须照此写。</p>
+<h3 id="7-3-extension-path-drift-搬目录搬坏了-机器来发现">7.3 <code>extension-path-drift</code>：搬目录搬坏了，机器来发现<a class="anchor" href="#7-3-extension-path-drift-搬目录搬坏了-机器来发现" aria-label="锚点">#</a></h3>
+<p>拓展是<strong>会被整体搬动</strong>的目录。本轮把 <code>scripts/&lt;子目录&gt;/</code> 下的脚本迁到<br><code>extensions/scripts/&lt;id&gt;/</code> 时，深度从 2 变成 3（<code>bench/</code> 那批变成 4），于是两类路径同时失准：</p>
+<table><thead><tr><th>类</th><th>症状</th><th>危险度</th></tr></thead><tbody><tr><td>相对 <code>require</code></td><td>加载期抛 <code>MODULE_NOT_FOUND</code></td><td>低——它会自己叫</td></tr><tr><td><code>path.resolve(__dirname, '..', '..')</code> 爬根算术</td><td><strong>不抛任何错</strong>，静默算出一个错的根</td><td>高——到运行时才表现为「什么都没探测到」，而那看起来和「一切正常」很像</td></tr></tbody></table>
+<p>实测：迁移后 7 个文件的相对 require 断了，<strong>21 个文件</strong>的爬根算术错了。前者当场暴露，后者<br>一个都没暴露——<code>requireFromProvider</code> 明明解析成功，只是探到的东西是空的。</p>
+<p>已有的 <code>unresolved-require</code> 够不着这两类：它只看 <code>../../</code> 起步的深层 require，于是单层<br><code>../lib/x</code> 是它的盲区，<code>__dirname</code> 算术更完全不在它视野里。所以单列一条，只扫 <code>extensions/</code>：</p>
+<pre><code class="language-powershell">npm run check:layout <span class="hljs-literal">--</span> <span class="hljs-literal">--list</span>=extension<span class="hljs-literal">-path-drift</span></code></pre>
+<p>基线 <strong>0</strong>。判据分两支，分开是因为它们的正确性问题根本不同：</p>
+<ul><li><strong>带具体路径段的</strong>（<code>__dirname/../../services/backend/src</code>）→ 判<strong>存不存在</strong>（并试</li></ul>
+<p><code>.js/.cjs/.mjs/.json</code> 后缀，因为有些 join 是当 require 说明符用的）。这里<strong>不能</strong>复用<br>  <code>resolvesOnDisk</code>：那个函数答的是「node 能不能 require 它」，会因为一个真实存在的目录里没有<br>  <code>index.js</code> 就判它不存在。</p>
+<ul><li><strong>纯 <code>..</code> 序列的</strong>（拿祖先目录当基准）→ 判<strong>落点</strong>：必须落在<strong>仓库根</strong>或<strong>本拓展内部</strong>。</li></ul>
+<p>中间的 <code>extensions/</code>、<code>extensions/&lt;分类&gt;/</code> 都真实存在，所以任何「路径存不存在」式的检查都<br>  看不见这类漂移——必须直接钉死落点。放行「本拓展内部」是被一个真实用例逼出来的：<br>  <code>khy-markdown/test/mcp-smoke.js</code> 用 <code>path.join(__dirname, '..')</code> 取自己的包目录，那是正当写法。</p>
+<p>不以 <code>..</code> 开头的（<code>path.join(__dirname, 'traces')</code>）与所在深度无关，天然不会因搬家而漂，不在<br>规则视野内——否则运行时自建的输出目录会逼着人给规则加豁免名单。</p>
+<p><strong>这条规则做过变异测试</strong>：把单层 require 改回搬迁前的写法、把爬根少算一级、把爬根多算一级——<br>三处各自被抓住，且报出的诊断能区分「落在 extensions」与「爬出仓库」。规则第一版曾因误用<br><code>resolvesOnDisk</code> 而「变异测试通过」，但那是<strong>为错误的理由</strong>通过的（它拿 require 语义去判一个普通<br>路径），一并记在这里：绿不等于对，得看它为什么绿。</p>
+<hr>
+<hr>
+<h2 id="关联">关联<a class="anchor" href="#关联" aria-label="锚点">#</a></h2>
+<ul><li>仓库层级与依赖边（上位法）：<code>[DESIGN-ARCH-068]</code> 仓库层级板块规范</li><li>常驻/一次性/按需 生命周期边界：<code>[DESIGN-ARCH-062]</code> khyos 后台常驻与按需加载生命周期边界</li><li>工具契约与漏斗：<code>[DESIGN-ARCH-015]</code> 编码规范、<code>npm run check:tool-contract</code></li><li>项目定位（拓展的上游意图）：<code>[INIT-PRD-002]</code> 项目-定位</li><li>落地件：<code>services/backend/src/services/extensions/extensionRoots.js</code>（根与 manifest 单一真源）；完整清单见第七节</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../docs/03_DESIGN_设计/[DESIGN-ARCH-068] 仓库层级板块规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DESIGN-ARCH-068] 仓库层级板块规范</div></a><a class="next" href="../../docs/03_DESIGN_设计/[DESIGN-LEGISLATION] 跨Agent技能MCP统一管理-阶段二立法清单.html"><div class="dir">下一篇 →</div><div class="ttl">[DESIGN-LEGISLATION] 跨 Agent 技能/MCP 统一管理 —— 阶段二立法规则清单</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../";window.__KHY_CUR__="docs/03_DESIGN_设计/[DESIGN-ARCH-069] 拓展契约与核心边界规范.html";</script>
+<script src="../../docs/_assets/nav-data.js"></script>
+<script src="../../docs/_assets/mermaid.min.js"></script>
+<script src="../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

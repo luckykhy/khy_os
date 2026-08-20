@@ -49,7 +49,7 @@
 │ toolUseLoop  死开关意图裁决         intentArbiter            (KHY_INTENT_ARBITER)
 │ repl/router  /diff 采集+着色        gitDiffCollect           (KHY_DIFF_INCLUDE_UNTRACKED)
 │ repl         出口去重               renderDedup              (KHY_RENDER_DEDUP)
-│ App.js       ↑/↓ 编辑中浏览历史     historyBrowseDecision    (KHY_HISTORY_BROWSE_EDITING)
+│ App.js       方向键归属(context 栈)  arrowRouting             (无门控·恒生效)
 ├─ 回合结束 ────────────────────────────────────────────────────────┤
 │ ai.js:6157  consolidate 蒸馏进 memory 槽(fire-and-forget,不 await,绝不翻红当轮)
 │             consolidateCurrent       (KHY_SESSION_SLOTS · 节拍 KHY_CONSOLIDATE_EVERY)

@@ -3,7 +3,7 @@
 | 项 | 值 |
 | --- | --- |
 | 文档类型 | 架构设计（ARCH） |
-| 适用范围 | `tools/khyos-markdown/` 内嵌 Markdown 工作台及双平台右键集成 |
+| 适用范围 | `extensions/tools/khy-markdown/` 内嵌 Markdown 工作台及双平台右键集成 |
 | 强制级别 | 设计基线（实现须符合本文「红线符合性」一节） |
 | 上位治理 | [MGMT-STD-002]（合并系统提示词）、[MGMT-STD-001]（文档结构铁律） |
 | 状态 | 定稿 |
@@ -38,7 +38,7 @@
 被右键的目标文件。桥接器以 `http://127.0.0.1` 同源服务页面与 `/api/read`，请求与页面**同源**，CORS 不再适用。
 
 ### 3.2 双模启动
-- **项目内嵌模式**：桥接器无路径参数启动，`projectRoot` 经 `tools/khyos-markdown/` 上溯两级自定位，
+- **项目内嵌模式**：桥接器无路径参数启动，`projectRoot` 经 `extensions/tools/khy-markdown/` 上溯两级自定位，
   `/api/list` 默认列本仓库 `docs/`，文档树相对浏览。
 - **全局工具模式**：右键传入绝对路径（`%1` / `%f`），页面 `?path=<encodeURIComponent>` 渲染任意位置文件。
 
@@ -66,7 +66,7 @@
 ## 5. 交付物
 
 ```
-tools/khyos-markdown/
+extensions/tools/khy-markdown/
   khyosMarkdown.html          单文件工作台（零依赖）
   khyos-md-bridge.js          纯 Node 桥接器（同源消除 CORS + token + 双模）
   khyos-md-launch.vbs         Windows 隐藏启动器（自定位）
@@ -94,4 +94,4 @@ tools/khyos-markdown/
 
 - 合并系统提示词与宪法红线全文：`docs/08_MGMT_项目管理/[MGMT-STD-002]`。
 - 文档结构与索引铁律：`docs/08_MGMT_项目管理/[MGMT-STD-001]`。
-- 实现代码：`tools/khyos-markdown/`。
+- 实现代码：`extensions/tools/khy-markdown/`。

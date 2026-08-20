@@ -28,7 +28,7 @@
 |------|----------|------------------|------------------|
 | **C1** | 硬编码数据库密码 `postgres` | ✅ **真** | `software/khyquant/ml/data_collector.py:29-30`（`_get_default_db_config` 返回 `"password":"postgres"`） |
 | **C2** | 硬编码生产 IP `47.85.29.215` + ssh/scp | ✅ **真（但为 `print()` 部署提示串，非可执行命令）** | `software/khyquant/ml/train_18_features.py:236,238` |
-| **C3** | 硬编码后端端点 `setup_khy_provider.py` | ❌ **本仓不存在**：`scripts/qoder-bridge/` 仅含 `.ps1` + `logs/`，全仓 `find` 无 `setup_khy_provider.py`。该文件只存在于 bundled 副本 | —（不可在本仓落地） |
+| **C3** | 硬编码后端端点 `setup_khy_provider.py` | ❌ **本仓不存在**：`extensions/scripts/khy-qoder-bridge/` 仅含 `.ps1` + `logs/`，全仓 `find` 无 `setup_khy_provider.py`。该文件只存在于 bundled 副本 | —（不可在本仓落地） |
 | **C4** | ML 未来信息泄漏（`shift(-5)` 标签混入特征） | ❌ **误报**：`shift(-5)/shift(-10)` 确实产出 `label_5d/label_10d/return_5d`，但 `feature_engineer.py:538-548` `select_features` 的 `exclude_cols` **显式排除** `label_5d,label_10d,return_5d,return_10d,return_20d` 及所有 soft-label 列。标签不进 X，无泄漏 | `feature_engineer.py:535-555`（已正确防护） |
 | **C5** | 特征列表不一致（18 vs 49） | ⚠️ **夸大**：`check_model_features.py` 是一个**诊断工具**（探针 `[18,49]` 看模型期望几列，提示旧 49 列模型需重训），其存在≠线上正在错位。无证据表明当前推理静默错位 | `software/khyquant/ml/check_model_features.py`（诊断脚本） |
 | **C6** | 全局模型缓存无线程安全 / 无 TTL / 吞异常 | ⚠️ **部分成立（降级为设计注记）**：`predict.py:67-68` 的 `_MODEL_CACHE/_FEATURE_COLUMNS_CACHE` 确无锁、无 TTL。但本子系统是**单进程 CLI 推理**，线程竞态可能性低；报告所指「L894 吞异常」在 980 行的文件里未定位到，疑似子代理误标行号 | `predict.py:67-68,118-140` |

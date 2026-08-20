@@ -122,4 +122,4 @@
 - 本规范所属分类：`docs/08_MGMT_项目管理/`（工程治理标准）。
 - 文档结构铁律全文：本目录 `[MGMT-STD-001]`。
 - 工作台架构与红线符合性：`docs/03_DESIGN_设计/[DESIGN-ARCH-032]`。
-- 实现代码与操作指南：`tools/khyos-markdown/`（含 `README.md`）。
+- 实现代码与操作指南：`extensions/tools/khy-markdown/`（含 `README.md`）。

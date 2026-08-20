@@ -303,7 +303,7 @@ npm run test:one -- services/backend/tests/publish.sourceReleaseMode.test.js ser
 - `CONTRIBUTING.md`
 - `scripts/ci/check-agent-rules.js`
 - `scripts/ci/check-change-safety.js`
-- `scripts/install/install-git-hooks.js`
+- `extensions/scripts/khy-installer/install-git-hooks.js`
 - `scripts/ci/check-version-sync.js`
 - `scripts/ci/check-node-syntax.js`
 - `scripts/ci/check-python-syntax.py`
@@ -412,7 +412,7 @@ npm run test:one -- scripts/tests/gen-evolution-prompts.test.js
 
 **先读这些文件：**
 - `scripts/lib/maintainerTriage.js`
-- `scripts/diagnostics/triage.js`
+- `extensions/scripts/khy-diagnostics/triage.js`
 - `scripts/tests/maintainerTriage.test.js`
 - `docs/_维护者/维护映射表.json`
 
@@ -803,8 +803,8 @@ npm run test:one -- services/backend/tests/bootstrap/startupFailureExplain.test.
 **先读这些文件：**
 - `services/backend/src/services/mdSuggestedAppsPlan.js`
 - `services/backend/tests/services/mdSuggestedAppsPlan.test.js`
-- `tools/khyos-markdown/register-windows.ps1`
-- `tools/khyos-markdown/unregister-windows.ps1`
+- `extensions/tools/khy-markdown/register-windows.ps1`
+- `extensions/tools/khy-markdown/unregister-windows.ps1`
 - `services/backend/src/services/mdEditorRegister.js`
 
 **参考文档：**

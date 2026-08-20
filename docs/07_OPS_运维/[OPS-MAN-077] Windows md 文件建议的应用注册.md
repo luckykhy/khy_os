@@ -6,7 +6,7 @@
 
 ## 真实原因
 
-`tools/khyos-markdown/register-windows.ps1` 原本写了两类项：
+`extensions/tools/khy-markdown/register-windows.ps1` 原本写了两类项：
 
 1. 右键动词 `SystemFileAssociations\.md\shell\khyosMarkdown`（「使用 khyosMarkdown 打开」）。
 2. `.md\OpenWithProgids\KhyOS.Markdown` —— 把 ProgID 挂进「打开方式」列表。

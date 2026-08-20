@@ -6,7 +6,7 @@
 > **一句话定位**：仓库里的 `.md` 是**唯一真源**；`.html` / `.pdf` 是从它**确定性生成的产物**。
 > 想读得舒服（浮动目录、表格、代码块、中文字体）就生成 HTML；想归档 / 打印 / 发给别人就生成 PDF。
 >
-> 相关：`tools/khyos-markdown/`（右键打开任意 `.md` 的交互工作台）、
+> 相关：`extensions/tools/khy-markdown/`（右键打开任意 `.md` 的交互工作台）、
 > [IMPL-RPT-023] 文档排版-内容与样式分离、[DESIGN-ARCH-032] 内嵌 MD 工作台、
 > [DESIGN-ARCH-023] 文档排版与格式控制规范。
 
@@ -16,7 +16,7 @@
 
 | 我想做的 | 用哪个 | 产物 |
 | --- | --- | --- |
-| **随手读某个 `.md`**（阅读 / 小改） | `tools/khyos-markdown`（右键或命令打开） | 浏览器里实时预览，不落文件 |
+| **随手读某个 `.md`**（阅读 / 小改） | `extensions/tools/khy-markdown`（右键或命令打开） | 浏览器里实时预览，不落文件 |
 | **把 `docs/` 文档生成漂亮 HTML / PDF** | `scripts/docs/md-to-pdf.js` | 自带样式的 `.html` + 打印版 `.pdf` |
 | **让 AI 排版一篇论文 / 报告（Word）** | `renderDocument` 工具（REPL 内） | `.docx`（**注意：不产 PDF/HTML**，见 §4） |
 
@@ -65,7 +65,7 @@
 ## 1. 生成 HTML + PDF（最常用）
 
 真源脚本：`scripts/docs/md-to-pdf.js`。**零新增依赖**——复用仓库已内置的 `markdown-it`
-（`extensions/khy-trae-bridge/node_modules/markdown-it`）解析 markdown，用系统的 **google-chrome
+（`extensions/bridges/khy-trae-bridge/node_modules/markdown-it`）解析 markdown，用系统的 **google-chrome
 `--print-to-pdf`** 把生成的 HTML 打成 PDF。中文靠 Noto Sans/Serif CJK 渲染。
 
 ```svg
@@ -194,24 +194,24 @@ REPL 里的 `renderDocument`（别名 `typeset_document` / `render_docx` 等）�
 
 ## 5. 交互阅读：khyosMarkdown 工作台
 
-只想**读**或**小改**某个 `.md`（不生成产物），用 `tools/khyos-markdown`：单文件、零外部依赖、断网可用，
-经本机回环桥接器绕过 `file://` 的 CORS 限制（细节见 `tools/khyos-markdown/README.md`）。
+只想**读**或**小改**某个 `.md`（不生成产物），用 `extensions/tools/khy-markdown`：单文件、零外部依赖、断网可用，
+经本机回环桥接器绕过 `file://` 的 CORS 限制（细节见 `extensions/tools/khy-markdown/README.md`）。
 
 ```bash
 # 打开任意 .md（自动起本机服务 + 开浏览器）
-node tools/khyos-markdown/khyos-md-bridge.js "/path/to/任意 文档.md"
+node extensions/tools/khy-markdown/khyos-md-bridge.js "/path/to/任意 文档.md"
 
 # 无参 → 浏览本仓库 docs/
-node tools/khyos-markdown/khyos-md-bridge.js
+node extensions/tools/khy-markdown/khyos-md-bridge.js
 ```
 
 注册系统右键「使用 khyosMarkdown 打开」（Windows 仅 HKCU、Linux 仅 `~/.local`，无 UAC / sudo）：
 
 ```bash
 # Linux
-bash tools/khyos-markdown/register-linux.sh
+bash extensions/tools/khy-markdown/register-linux.sh
 # Windows（PowerShell，无需管理员）
-powershell -ExecutionPolicy Bypass -File tools/khyos-markdown/register-windows.ps1
+powershell -ExecutionPolicy Bypass -File extensions/tools/khy-markdown/register-windows.ps1
 ```
 
 > 想从工作台得到 PDF：浏览器里 `Ctrl/Cmd + P` → 另存为 PDF 即可；要归档级、带目录的排版版，仍推荐走 §1 的脚本。

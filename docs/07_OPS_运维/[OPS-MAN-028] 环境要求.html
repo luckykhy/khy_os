@@ -73,8 +73,8 @@ khy gateway status</code></pre>
 <h3 id="2-2-vmware-镜像构建要求-可选">2.2 VMware 镜像构建要求（可选）<a class="anchor" href="#2-2-vmware-镜像构建要求-可选" aria-label="锚点">#</a></h3>
 <ul><li>root 权限（<code>sudo</code>）</li><li><code>parted</code>、<code>losetup</code>、<code>rsync</code>、<code>grub-install</code>、<code>mkfs.vfat</code>、<code>mkfs.ext4</code></li><li>可选的 VMDK 导出：<code>qemu-img</code></li></ul>
 <p>快速检查：</p>
-<pre><code class="language-bash">bash scripts/khytogo/make-khytogo.sh --mode vmware-plan</code></pre>
-<blockquote><p>注意：<code>scripts/khytogo/</code> 属<strong>源码树</strong>脚本。纯 <code>pip install</code> 的用户安装目录里没有它——<br>先 <code>khy restore</code>（还原可读源码树）或 <code>git clone</code> 仓库后，再在源码树根目录执行。</p></blockquote>
+<pre><code class="language-bash">bash extensions/scripts/khy-portable/khytogo/make-khytogo.sh --mode vmware-plan</code></pre>
+<blockquote><p>注意：<code>extensions/scripts/khy-portable/khytogo/</code> 属<strong>源码树</strong>脚本。纯 <code>pip install</code> 的用户安装目录里没有它——<br>先 <code>khy restore</code>（还原可读源码树）或 <code>git clone</code> 仓库后，再在源码树根目录执行。</p></blockquote>
       </article>
       <nav class="pager"><a class="prev" href="../../docs/07_OPS_运维/[OPS-MAN-027] 快速开始.html"><div class="dir">← 上一篇</div><div class="ttl">KHY-OS 快速开始 — 安装与使用</div></a><a class="next" href="../../docs/07_OPS_运维/[OPS-MAN-029] 磁盘守卫-防膨胀机制.html"><div class="dir">下一篇 →</div><div class="ttl">磁盘守卫 — 防膨胀机制</div></a></nav>
       <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>

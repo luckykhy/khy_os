@@ -29,10 +29,10 @@
 <h1 id="ops-man-059-文档-pdf-与-html-生成与查看">[OPS-MAN-059] 文档 · PDF 与 HTML 生成与查看<a class="anchor" href="#ops-man-059-文档-pdf-与-html-生成与查看" aria-label="锚点">#</a></h1>
 <blockquote><p><strong>参考手册</strong> · 把 <code>docs/</code> 里的 markdown 变成<strong>好看、可打印、可离线</strong>的 HTML / PDF，一条线讲清。</p>
 <p><strong>一句话定位</strong>：仓库里的 <code>.md</code> 是<strong>唯一真源</strong>；<code>.html</code> / <code>.pdf</code> 是从它<strong>确定性生成的产物</strong>。<br>想读得舒服（浮动目录、表格、代码块、中文字体）就生成 HTML；想归档 / 打印 / 发给别人就生成 PDF。</p>
-<p>相关：<code>tools/khyos-markdown/</code>（右键打开任意 <code>.md</code> 的交互工作台）、<br>[IMPL-RPT-023] 文档排版-内容与样式分离、[DESIGN-ARCH-032] 内嵌 MD 工作台、<br>[DESIGN-ARCH-023] 文档排版与格式控制规范。</p></blockquote>
+<p>相关：<code>extensions/tools/khy-markdown/</code>（右键打开任意 <code>.md</code> 的交互工作台）、<br>[IMPL-RPT-023] 文档排版-内容与样式分离、[DESIGN-ARCH-032] 内嵌 MD 工作台、<br>[DESIGN-ARCH-023] 文档排版与格式控制规范。</p></blockquote>
 <hr>
 <h2 id="0-先分清三条路-选对工具-别绕路">0. 先分清三条路（选对工具，别绕路）<a class="anchor" href="#0-先分清三条路-选对工具-别绕路" aria-label="锚点">#</a></h2>
-<table><thead><tr><th>我想做的</th><th>用哪个</th><th>产物</th></tr></thead><tbody><tr><td><strong>随手读某个 <code>.md</code></strong>（阅读 / 小改）</td><td><code>tools/khyos-markdown</code>（右键或命令打开）</td><td>浏览器里实时预览，不落文件</td></tr><tr><td><strong>把 <code>docs/</code> 文档生成漂亮 HTML / PDF</strong></td><td><code>scripts/docs/md-to-pdf.js</code></td><td>自带样式的 <code>.html</code> + 打印版 <code>.pdf</code></td></tr><tr><td><strong>让 AI 排版一篇论文 / 报告（Word）</strong></td><td><code>renderDocument</code> 工具（REPL 内）</td><td><code>.docx</code>（<strong>注意：不产 PDF/HTML</strong>，见 §4）</td></tr></tbody></table>
+<table><thead><tr><th>我想做的</th><th>用哪个</th><th>产物</th></tr></thead><tbody><tr><td><strong>随手读某个 <code>.md</code></strong>（阅读 / 小改）</td><td><code>extensions/tools/khy-markdown</code>（右键或命令打开）</td><td>浏览器里实时预览，不落文件</td></tr><tr><td><strong>把 <code>docs/</code> 文档生成漂亮 HTML / PDF</strong></td><td><code>scripts/docs/md-to-pdf.js</code></td><td>自带样式的 <code>.html</code> + 打印版 <code>.pdf</code></td></tr><tr><td><strong>让 AI 排版一篇论文 / 报告（Word）</strong></td><td><code>renderDocument</code> 工具（REPL 内）</td><td><code>.docx</code>（<strong>注意：不产 PDF/HTML</strong>，见 §4）</td></tr></tbody></table>
 <blockquote><p>记住这条分界：<strong>读文档 → khyosMarkdown；发布/归档文档 → md-to-pdf.js；写正式 Word → renderDocument。</strong><br>本文主讲前两条（PDF / HTML），第三条只做澄清避免混淆。</p></blockquote>
 <pre><code class="language-svg"><span class="hljs-tag">&lt;<span class="hljs-name">svg</span> <span class="hljs-attr">viewBox</span>=<span class="hljs-string">&quot;0 0 720 260&quot;</span> <span class="hljs-attr">xmlns</span>=<span class="hljs-string">&quot;http://www.w3.org/2000/svg&quot;</span> <span class="hljs-attr">font-family</span>=<span class="hljs-string">&quot;sans-serif&quot;</span> <span class="hljs-attr">font-size</span>=<span class="hljs-string">&quot;13&quot;</span>&gt;</span>
   <span class="hljs-tag">&lt;<span class="hljs-name">rect</span> <span class="hljs-attr">x</span>=<span class="hljs-string">&quot;290&quot;</span> <span class="hljs-attr">y</span>=<span class="hljs-string">&quot;18&quot;</span> <span class="hljs-attr">width</span>=<span class="hljs-string">&quot;140&quot;</span> <span class="hljs-attr">height</span>=<span class="hljs-string">&quot;46&quot;</span> <span class="hljs-attr">rx</span>=<span class="hljs-string">&quot;8&quot;</span> <span class="hljs-attr">fill</span>=<span class="hljs-string">&quot;#eff4ff&quot;</span> <span class="hljs-attr">stroke</span>=<span class="hljs-string">&quot;#2563eb&quot;</span>/&gt;</span>
@@ -69,7 +69,7 @@
 <blockquote><p>上图：同一份 <code>.md</code> 真源，按目的分流到三条路；三种产物各不重叠（<code>renderDocument</code> 只产 <code>.docx</code>，见 §4）。</p></blockquote>
 <hr>
 <h2 id="1-生成-html-pdf-最常用">1. 生成 HTML + PDF（最常用）<a class="anchor" href="#1-生成-html-pdf-最常用" aria-label="锚点">#</a></h2>
-<p>真源脚本：<code>scripts/docs/md-to-pdf.js</code>。<strong>零新增依赖</strong>——复用仓库已内置的 <code>markdown-it</code><br>（<code>extensions/khy-trae-bridge/node_modules/markdown-it</code>）解析 markdown，用系统的 <strong>google-chrome<br><code>--print-to-pdf</code></strong> 把生成的 HTML 打成 PDF。中文靠 Noto Sans/Serif CJK 渲染。</p>
+<p>真源脚本：<code>scripts/docs/md-to-pdf.js</code>。<strong>零新增依赖</strong>——复用仓库已内置的 <code>markdown-it</code><br>（<code>extensions/bridges/khy-trae-bridge/node_modules/markdown-it</code>）解析 markdown，用系统的 <strong>google-chrome<br><code>--print-to-pdf</code></strong> 把生成的 HTML 打成 PDF。中文靠 Noto Sans/Serif CJK 渲染。</p>
 <pre><code class="language-svg"><span class="hljs-tag">&lt;<span class="hljs-name">svg</span> <span class="hljs-attr">viewBox</span>=<span class="hljs-string">&quot;0 0 720 150&quot;</span> <span class="hljs-attr">xmlns</span>=<span class="hljs-string">&quot;http://www.w3.org/2000/svg&quot;</span> <span class="hljs-attr">font-family</span>=<span class="hljs-string">&quot;sans-serif&quot;</span> <span class="hljs-attr">font-size</span>=<span class="hljs-string">&quot;12.5&quot;</span>&gt;</span>
   <span class="hljs-tag">&lt;<span class="hljs-name">rect</span> <span class="hljs-attr">x</span>=<span class="hljs-string">&quot;20&quot;</span> <span class="hljs-attr">y</span>=<span class="hljs-string">&quot;52&quot;</span> <span class="hljs-attr">width</span>=<span class="hljs-string">&quot;120&quot;</span> <span class="hljs-attr">height</span>=<span class="hljs-string">&quot;46&quot;</span> <span class="hljs-attr">rx</span>=<span class="hljs-string">&quot;8&quot;</span> <span class="hljs-attr">fill</span>=<span class="hljs-string">&quot;#eff4ff&quot;</span> <span class="hljs-attr">stroke</span>=<span class="hljs-string">&quot;#2563eb&quot;</span>/&gt;</span>
   <span class="hljs-tag">&lt;<span class="hljs-name">text</span> <span class="hljs-attr">x</span>=<span class="hljs-string">&quot;80&quot;</span> <span class="hljs-attr">y</span>=<span class="hljs-string">&quot;74&quot;</span> <span class="hljs-attr">text-anchor</span>=<span class="hljs-string">&quot;middle&quot;</span> <span class="hljs-attr">fill</span>=<span class="hljs-string">&quot;#1f2328&quot;</span> <span class="hljs-attr">font-weight</span>=<span class="hljs-string">&quot;700&quot;</span>&gt;</span>.md 真源<span class="hljs-tag">&lt;/<span class="hljs-name">text</span>&gt;</span>
@@ -138,17 +138,17 @@ node scripts/docs/md-to-pdf.js --combined <span class="hljs-string">&quot;运维
 <p>所以：<strong>文档站点用的漂亮 HTML/PDF → §1 的 <code>md-to-pdf.js</code>；AI 写 Word 论文 → <code>renderDocument</code>。</strong> 两条路各司其职。</p>
 <hr>
 <h2 id="5-交互阅读-khyosmarkdown-工作台">5. 交互阅读：khyosMarkdown 工作台<a class="anchor" href="#5-交互阅读-khyosmarkdown-工作台" aria-label="锚点">#</a></h2>
-<p>只想<strong>读</strong>或<strong>小改</strong>某个 <code>.md</code>（不生成产物），用 <code>tools/khyos-markdown</code>：单文件、零外部依赖、断网可用，<br>经本机回环桥接器绕过 <code>file://</code> 的 CORS 限制（细节见 <code>tools/khyos-markdown/README.md</code>）。</p>
+<p>只想<strong>读</strong>或<strong>小改</strong>某个 <code>.md</code>（不生成产物），用 <code>extensions/tools/khy-markdown</code>：单文件、零外部依赖、断网可用，<br>经本机回环桥接器绕过 <code>file://</code> 的 CORS 限制（细节见 <code>extensions/tools/khy-markdown/README.md</code>）。</p>
 <pre><code class="language-bash"><span class="hljs-comment"># 打开任意 .md（自动起本机服务 + 开浏览器）</span>
-node tools/khyos-markdown/khyos-md-bridge.js <span class="hljs-string">&quot;/path/to/任意 文档.md&quot;</span>
+node extensions/tools/khy-markdown/khyos-md-bridge.js <span class="hljs-string">&quot;/path/to/任意 文档.md&quot;</span>
 
 <span class="hljs-comment"># 无参 → 浏览本仓库 docs/</span>
-node tools/khyos-markdown/khyos-md-bridge.js</code></pre>
+node extensions/tools/khy-markdown/khyos-md-bridge.js</code></pre>
 <p>注册系统右键「使用 khyosMarkdown 打开」（Windows 仅 HKCU、Linux 仅 <code>~/.local</code>，无 UAC / sudo）：</p>
 <pre><code class="language-bash"><span class="hljs-comment"># Linux</span>
-bash tools/khyos-markdown/register-linux.sh
+bash extensions/tools/khy-markdown/register-linux.sh
 <span class="hljs-comment"># Windows（PowerShell，无需管理员）</span>
-powershell -ExecutionPolicy Bypass -File tools/khyos-markdown/register-windows.ps1</code></pre>
+powershell -ExecutionPolicy Bypass -File extensions/tools/khy-markdown/register-windows.ps1</code></pre>
 <blockquote><p>想从工作台得到 PDF：浏览器里 <code>Ctrl/Cmd + P</code> → 另存为 PDF 即可；要归档级、带目录的排版版，仍推荐走 §1 的脚本。</p></blockquote>
 <hr>
 <h2 id="6-生成-html-的交互与图解特性">6. 生成 HTML 的交互与图解特性<a class="anchor" href="#6-生成-html-的交互与图解特性" aria-label="锚点">#</a></h2>

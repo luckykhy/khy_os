@@ -103,7 +103,7 @@ Linux/macOS 用 `export KHY_CLI_AUTO_LOGIN=0` 等价形式。
 2. **直接跑 `khy`**：用户名按新机器的系统用户自动探测，凭据在本机现场生成——**不需要**先跑任何 setup 脚本
 3. 需要完整能力（Web 界面、注册新用户、数据库）时再启动后端：`npm run dev --workspace services/backend`
 
-如果想在启动 CLI 之前就把管理员账号播种进数据库（例如要立刻用 Web 界面登录），跑 `scripts/setup/first-time-setup.bat`，它等价于 `node services/backend/scripts/quick-setup.js`；失败时的兜底是 `npm run seed --workspace services/backend`。
+如果想在启动 CLI 之前就把管理员账号播种进数据库（例如要立刻用 Web 界面登录），跑 `extensions/scripts/khy-installer/setup/first-time-setup.bat`，它等价于 `node services/backend/scripts/quick-setup.js`；失败时的兜底是 `npm run seed --workspace services/backend`。
 
 ---
 
