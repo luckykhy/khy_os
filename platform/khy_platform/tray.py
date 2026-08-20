@@ -321,18 +321,18 @@ def _kill_pid(pid: int) -> bool:
         return False
 
 
-# Substring that uniquely identifies the khyos-markdown bridge process among all
+# Substring that uniquely identifies the khy-markdown bridge process among all
 # node.exe on the box. The bridge has NO pidfile (it listens on an ephemeral port,
 # started detached via the .vbs or `khy md`), so command-line matching is the only
 # reliable way to find it. This is the file that WinError 32 locks during upgrade:
 # the bridge serves vendor/khyos-muya.js (6.4MB) + .css (4.6MB) out of
-# site-packages/.../bundled/tools/khyos-markdown/, holding those handles open.
+# site-packages/.../bundled/extensions/tools/khy-markdown/, holding those handles open.
 _MD_BRIDGE_MARKER = "khyos-md-bridge"
 
 
 def _extract_bridge_pids(process_list_text: str, self_pid: int = 0) -> list:
     """Pure parser: from a WMIC/CIM listing (``ProcessId``,``CommandLine`` pairs),
-    return the pids whose command line references the khyos-markdown bridge.
+    return the pids whose command line references the khy-markdown bridge.
 
     Deterministic, never raises, does no IO — split out from the enumerator so it
     can be unit-tested without spawning processes. Excludes ``self_pid`` so
@@ -389,7 +389,7 @@ def _extract_bridge_pids(process_list_text: str, self_pid: int = 0) -> list:
 
 
 def _list_md_bridge_pids() -> list:
-    """Enumerate khyos-markdown bridge pids (IO boundary). Windows-only meaningful;
+    """Enumerate khy-markdown bridge pids (IO boundary). Windows-only meaningful;
     other platforms return ``[]`` (upgrade file-lock is a Windows problem). Fail-soft:
     any error → empty list, never raises."""
     if os.name != "nt":
@@ -411,12 +411,12 @@ def _list_md_bridge_pids() -> list:
 
 
 def _stop_md_bridges() -> bool:
-    """Terminate every resident khyos-markdown bridge, fail-soft. Returns True when
+    """Terminate every resident khy-markdown bridge, fail-soft. Returns True when
     at least one bridge was found and a kill attempted; False when none were running.
 
     This is the step that makes ``khy stop`` actually deliver on "safe to upgrade":
     the bridge — not the daemon — is what typically holds
-    ``bundled/tools/khyos-markdown/`` open and triggers WinError 32."""
+    ``bundled/extensions/tools/khy-markdown/`` open and triggers WinError 32."""
     stopped = False
     try:
         for pid in _list_md_bridge_pids():
@@ -437,8 +437,8 @@ def stop_all_resident() -> dict:
         descriptor. It is spawned *detached* by the tray, so it will NOT die when the
         tray exits — it must be killed explicitly.
       * the system tray (prevents it from re-spawning the daemon mid-upgrade).
-      * the khyos-markdown bridge(s) — a SEPARATE detached node.exe with no pidfile,
-        serving vendor/khyos-muya.js/.css out of bundled/tools/khyos-markdown/. This
+      * the khy-markdown bridge(s) — a SEPARATE detached node.exe with no pidfile,
+        serving vendor/khyos-muya.js/.css out of bundled/extensions/tools/khy-markdown/. This
         is the file the reported WinError 32 was actually locking; found by
         command-line marker since there is no pid descriptor to read.
 

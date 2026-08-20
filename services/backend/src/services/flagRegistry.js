@@ -1936,6 +1936,17 @@ const FLAGS = {
   // 再继续干活,且只在**会跑工具/耗时的轮次**出。开 → 本轮首个工具即将派发且模型尚未自己出文本时,
   // 注入一句按 turnIndex 轮换的短确认句(「收到,我来处理。」…);关 → 逐字节回退到「无 ack」。
   KHY_TURN_ACK: { mode: 'default-on', off: 'CANON', default: true },
+  // 问候轮豁免子门(2026-08-20 用户反馈「已读乱回」):用户只说一句「你好」,模型自行决定先跑个
+  // git status 摸底,首工具派发触发 ack → 用户看到的第一句话是「明白,我先动手了。」——开工口吻,可这
+  // 一轮根本没有「工」,读起来就是答非所问。开 → 本轮用户原话是纯问候时判空,让模型自己去
+  // 回这句招呼(判据走 textHeuristics.isGreeting 单一真源,与 KHY_GREETING_NO_TOOLS 那条"首轮纯
+  // 问候 → 零工具"边界同源,覆盖它够不到的非首轮问候);关(或父门关)→ 问候轮照旧出 ack。
+  KHY_TURN_ACK_GREETING_SKIP: {
+    mode: 'default-on',
+    off: 'CANON',
+    default: true,
+    parent: 'KHY_TURN_ACK',
+  },
 
   // ── 首响应静默窗口守护(firstResponseAckVoice;2026-07-12 /goal「输入提示词时 khy 要及时回应」)──
   // 交互 raw-mode 终端里 spinner 被 render-suppress,提交那刻到首个模型 chunk 之间看不到任何动静,
@@ -2628,6 +2639,17 @@ const FLAGS = {
   // 只做「query → 命中(新→旧序)」搜索计算,IO/渲染留 App.js 薄壳与 HistorySearchOverlay。关 →
   // isEnabled false → App.js 顶层完全不激活该浮层,Ctrl+R 逐字节回退为落到 textInput 的历史 no-op。
   KHY_HISTORY_REVERSE_SEARCH: { mode: 'default-on', off: 'CANON', default: true },
+
+  // ── 键盘快捷键对齐 Claude Code:Ctrl+O 全量会话可滚动视图(transcriptView)──────────────
+  // Ctrl+O 打开 TranscriptView:整段会话按行投影进一个 bounded viewport,用 CC 的 `scroll:*`
+  // 键位(ctrl+u/d 半页、ctrl+b/f 整页、j/k & ↑↓ 单行、g/G 顶底、space/b 翻页)滚到**任意**
+  // 早前段落,Ctrl+E 就地展开该段的思考与工具输出。这解掉了「想点开某段就得接管鼠标(SGR
+  // 1002),一接管终端原生滚轮 scrollback 与拖选复制就同时失效」的死结 —— CC 的做法就是不碰
+  // 鼠标,展开与滚动全走键盘。两个纯叶子承担全部计算:scrollActions(偏移算术,已 clamp)与
+  // transcriptLines(messages → 文本行,渲染器注入)。关 → App.js 的 Transcript context 分支
+  // 整段不参与判定,Ctrl+O 逐字节回退为历史行为「就地展开最后一条 foldable 的详情」
+  // (query.expandLastFoldable + committedExpansion 活层副本)。
+  KHY_TRANSCRIPT_VIEW: { mode: 'default-on', off: 'CANON', default: true },
 
   // ── MarkText(muya)Markdown 工作台 + 右键「打开方式」注册(md 命令 / mdEditorRegister)──────
   // khy md <file> 用嵌入的 muya 引擎(WYSIWYG + 数学/图表/高亮/表格)打开 .md;首次运行幂等注册进
@@ -3392,6 +3414,16 @@ const FLAGS = {
   // 调用点逐字节回退到接线前行为。不设 parent:hook 生态是自己的顶层域。
   KHY_HOOK_TOOL_PERMISSION: { mode: 'default-on', off: 'CANON', default: true },
   KHY_HOOK_PROMPT_SECTION: { mode: 'default-on', off: 'CANON', default: true },
+
+  // ── 内置拓展根(extensionRoots:仓库/安装根下的 extensions/ 参与发现)──
+  // [DESIGN-ARCH-069] 拓展契约。此前三套拓展机制都只扫用户目录,仓库自己的 extensions/
+  // 没有任何加载器看它 —— 本门控打开的正是这一路新增发现(<appRoot>/extensions,随主包
+  // 分发的内置拓展)。默认开(内置拓展是平台承诺的一部分,不该要用户额外开一个开关);
+  // 关 → extensionRoots.listRoots() 不再产出 builtin 根,根集合逐字节回退到本契约引入前
+  // (用户目录 extensions/ + 遗留 plugins/ 两处),内置拓展一个都不被发现,等价于基线。
+  // 它只管**根集合**,不管激活时机 —— 惰性由 KHY_PLUGIN_LAZY_LOAD 管,两者正交。
+  // 不设 parent:拓展发现是自己的顶层域,不受插件惰性/模型适配等其它域牵连。
+  KHY_EXTENSION_REPO_ROOT: { mode: 'default-on', off: 'CANON', default: true },
 };
 
 /**

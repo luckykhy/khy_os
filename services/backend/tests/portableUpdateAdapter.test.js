@@ -6,7 +6,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const adapter = require('../src/services/updateAdapters/portableAdapter');
-const { writeArtifactManifest } = require('../../../scripts/portable/artifact-manifest');
+const { writeArtifactManifest } = require('../../../extensions/scripts/khy-portable/artifact-manifest');
 
 const OLD_COMMIT = '1111111111111111111111111111111111111111';
 const NEW_COMMIT = '2222222222222222222222222222222222222222';

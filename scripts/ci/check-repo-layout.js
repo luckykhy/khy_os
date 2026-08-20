@@ -66,6 +66,9 @@ const ALL_FINDING_IDS = new Set([
   'cross-layer-require',
   'unresolved-require',
   'docs-index-complete',
+  'extension-contract',
+  'extension-id-hardcode',
+  'extension-path-drift',
 ]);
 
 // 这几条是「已知违规存量 + 只降不升」型：超过基线才升为 error。
@@ -74,6 +77,9 @@ const BASELINE_IDS = new Set([
   'cross-layer-require',
   'unresolved-require',
   'docs-index-complete',
+  'extension-contract',
+  'extension-id-hardcode',
+  'extension-path-drift',
 ]);
 
 // ── 层级清单（真源 [DESIGN-ARCH-068] 第一节）────────────────────────────────
@@ -83,7 +89,7 @@ const LAYERS = {
   services: 'L2 Node 运行时（全部业务逻辑）',
   apps: 'L3 平台自带管理前端',
   software: 'L4 跑在平台之上的内置应用',
-  extensions: 'L5 外部 IDE 桥接',
+  extensions: 'L5 内置拓展（随主包分发，契约见 [DESIGN-ARCH-069]）',
   tools: 'L6 独立开发者工具',
 };
 // 横切层：服务于所有层，不参与依赖判定（真源同上 第 1.2 节）。
@@ -91,7 +97,6 @@ const CROSSCUTTING = {
   docs: '全部文档',
   scripts: '工程任务脚本',
   packaging: '打包清单与板块切分',
-  alpine: 'Alpine 镜像 etc 覆盖层',
   _source: '加密源码快照与恢复说明',
 };
 // 构建/打包工具在仓库根生成的目录，不是源码层。保持封闭集合，新增项须有对应忽略规则。
@@ -126,9 +131,9 @@ const WORKSPACE_ROOTS = [
   'platform/packages/shared',
   'platform/packages/moonbit-plugin-sdk',
   'platform/delivery',
-  'tools/khyos-markdown',
+  'extensions/tools/khy-markdown',
   'tools/deepseek-eyes',
-  'extensions/khy-trae-bridge',
+  'extensions/bridges/khy-trae-bridge',
 ];
 
 function git(cmdArgs) {
@@ -304,6 +309,339 @@ function checkLayerRegistry(findings) {
   });
 }
 
+// ── 规则 8：extensions/ 下每个目录都须遵守拓展契约 ────────────────────────
+// 真源 docs/03_DESIGN_设计/[DESIGN-ARCH-069] 拓展契约与核心边界规范.md 第三节。
+// 字段清单同时在 services/backend/src/services/extensions/extensionRoots.js 落地；
+// 这里刻意**不 require** 那个模块 —— 守卫属横切层，按 [DESIGN-ARCH-068] 第二节
+// 「任何层 → L5/L6」的禁止边，scripts/ 只许按路径操作，不许 import L2 的实现。
+// 代价是两处各有一份字段名，收益是守卫不会因为被守卫的代码坏掉而一起坏掉。
+const EXTENSION_MANIFEST = 'khy.extension.json';
+const EXTENSION_KINDS = new Set(['runtime', 'ide-bridge', 'asset', 'toolchain']);
+
+// 仓库自己的分类名白名单（真源 [DESIGN-ARCH-069] §2.3 的表；来自用户原话枚举的六类：
+// tool / plugin / scripts / mcp / software / 协议）。
+//
+// 加载器**不**认这份表 —— 它只认「有没有 manifest」，任何空壳目录都能当分类（见
+// extensionRoots 的 MAX_DEPTH 注释）。收敛分类名纯属**仓库卫生**：不收的话
+// extensions/ 会长出一棵谁也说不清的树，而那正是本契约要消灭的东西。用户目录与
+// KHY_EXTENSION_PATH 下的拓展不受这条约束 —— 那是别人的磁盘，不是本仓的卫生。
+const EXTENSION_CATEGORIES = new Set(['tools', 'protocols', 'mcp', 'scripts', 'software', 'bridges']);
+
+function listSubdirs(dir) {
+  try {
+    return fs
+      .readdirSync(dir, { withFileTypes: true })
+      .filter(entry => entry.isDirectory())
+      .map(entry => entry.name)
+      .filter(name => !name.startsWith('.') && name !== 'node_modules')
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * 枚举 extensions/ 下的拓展目录，深度与 extensionRoots.discover() 一致（两层，§2.3）。
+ *
+ * 刻意重复实现而不 require 那个模块：守卫属横切层，按 [DESIGN-ARCH-068] 第二节的禁止边
+ * scripts/ 不许 import L2 的实现 —— 代价是两份深度逻辑，收益是守卫不会因为被守卫的
+ * 代码坏掉而一起坏掉。两处的一致性由 contribToolLifecycle.test.js 的分类用例组兜住。
+ *
+ * 与加载器的一处**刻意差异**：这里用「manifest 文件存在」判定是不是拓展，加载器用
+ * 「manifest 可解析」。于是 JSON 写坏的目录在加载器眼里退化成分类目录（下面没东西 →
+ * 静默消失），在守卫眼里仍是一个坏拓展 —— 该报出来，而不是跟着一起消失。
+ *
+ * @returns {{extensions: Array<{rel:string,abs:string,id:string,category:string|null}>,
+ *           structural: string[]}} structural 是布局本身的违规（分类名越界、说不清的目录）
+ */
+function collectExtensionDirs(extRoot) {
+  const extensions = [];
+  const structural = [];
+  for (const name of listSubdirs(extRoot)) {
+    const abs = path.join(extRoot, name);
+    if (fs.existsSync(path.join(abs, EXTENSION_MANIFEST))) {
+      // 自带 manifest → 是拓展，不再下探（与加载器同一优先级：显式声明胜过结构推断）
+      extensions.push({ rel: `extensions/${name}`, abs, id: name, category: null });
+      continue;
+    }
+    const children = listSubdirs(abs);
+    const inner = children.filter(c => fs.existsSync(path.join(abs, c, EXTENSION_MANIFEST)));
+    if (inner.length === 0) {
+      structural.push(
+        `extensions/${name} —— 既不是拓展（缺 ${EXTENSION_MANIFEST}）也不是分类目录（下面没有任何拓展）`
+      );
+      continue;
+    }
+    if (!EXTENSION_CATEGORIES.has(name)) {
+      structural.push(
+        `extensions/${name} —— 分类名不在 ${[...EXTENSION_CATEGORIES].join(' / ')} 内`
+      );
+    }
+    for (const child of children) {
+      const childAbs = path.join(abs, child);
+      if (!inner.includes(child)) {
+        structural.push(
+          `extensions/${name}/${child} —— 缺 ${EXTENSION_MANIFEST}；` +
+            `分类目录下只能直接放拓展，不能再套一层分类（发现只下探两层）`
+        );
+        continue;
+      }
+      extensions.push({
+        rel: `extensions/${name}/${child}`,
+        abs: childAbs,
+        id: child,
+        category: name,
+      });
+    }
+  }
+  return { extensions, structural };
+}
+
+function checkExtensionContract(findings, counts) {
+  const extRoot = path.join(repoRoot, 'extensions');
+  if (!fs.existsSync(extRoot)) {
+    counts['extension-contract'] = 0;
+    return; // 没有 extensions/ 目录 → 无可违规（fixture 仓库的常态）
+  }
+  const { extensions, structural } = collectExtensionDirs(extRoot);
+
+  const violations = [...structural];
+  for (const { rel, abs, id: name } of extensions) {
+    const manifestPath = path.join(abs, EXTENSION_MANIFEST);
+    let manifest;
+    try {
+      manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    } catch (err) {
+      violations.push(
+        `${rel} —— ${err.code === 'ENOENT' ? `缺 ${EXTENSION_MANIFEST}` : `${EXTENSION_MANIFEST} 不是合法 JSON`}`
+      );
+      continue;
+    }
+    if (!manifest || typeof manifest !== 'object') {
+      violations.push(`${rel} —— ${EXTENSION_MANIFEST} 顶层不是对象`);
+      continue;
+    }
+    // id 必须等于**叶子**目录名：否则「删目录即消失」的键就藏在文件内容里，孤儿检测
+    // 无从核对。分类名刻意不进 id（§2.3）—— 移进分类目录不得改变拓展身份。
+    if (manifest.id !== name) {
+      violations.push(`${rel} —— id (${JSON.stringify(manifest.id)}) 与目录名不一致`);
+    }
+    const kind = manifest.kind === undefined ? 'runtime' : manifest.kind;
+    if (!EXTENSION_KINDS.has(kind)) {
+      violations.push(`${rel} —— kind (${JSON.stringify(manifest.kind)}) 不在 ${[...EXTENSION_KINDS].join(' / ')} 内`);
+    } else if (kind === 'runtime') {
+      // runtime 拓展的入口必须现在就能解析到：一个指向空气的 main 只会在首次调用
+      // 时才暴露，而那时报的是「未知命令」，没人会想到是 manifest 写错了。
+      if (typeof manifest.main !== 'string' || !manifest.main) {
+        violations.push(`${rel} —— kind=runtime 但没声明 main`);
+      } else if (!fs.existsSync(path.join(abs, manifest.main))) {
+        violations.push(`${rel} —— main (${manifest.main}) 在磁盘上不存在`);
+      }
+    } else if (kind === 'toolchain') {
+      // toolchain 的入口不是 main 而是 commands[].script（核经 ext-run 起子进程调它）。
+      // 这里必须现在就核对：ext-run 只有在**用户真的敲了那条命令**时才会发现脚本不存在，
+      // 而那通常是发布当天。manifest 说得出名字就得指得出脚本。
+      for (const cmd of Array.isArray(manifest.commands) ? manifest.commands : []) {
+        if (!cmd || typeof cmd.name !== 'string' || !cmd.name) {
+          violations.push(`${rel} —— commands 里有一条没有 name`);
+          continue;
+        }
+        if (typeof cmd.script !== 'string' || !cmd.script) {
+          violations.push(`${rel} —— kind=toolchain 的命令 "${cmd.name}" 没声明 script`);
+        } else if (!fs.existsSync(path.join(abs, cmd.script))) {
+          violations.push(`${rel} —— 命令 "${cmd.name}" 的 script (${cmd.script}) 在磁盘上不存在`);
+        }
+      }
+    }
+  }
+
+  counts['extension-contract'] = violations.length;
+  if (violations.length === 0) return;
+  findings.push({
+    id: 'extension-contract',
+    severity: 'warning',
+    message: `${violations.length} 处 extensions/ 目录不合拓展契约。`,
+    detail:
+      `${violations.slice(0, 3).join('；')}${violations.length > 3 ? ' …' : ''} —— 契约见 ` +
+      `docs/03_DESIGN_设计/[DESIGN-ARCH-069] 拓展契约与核心边界规范.md 第三节；` +
+      `全量清单用 --list=extension-contract。`,
+    full: violations,
+  });
+}
+
+// ── 规则：核里不得硬编码拓展 id ──────────────────────────
+// 真源 [DESIGN-ARCH-069] §1.3 第四条：「核里**不允许**出现任何拓展 id 的硬编码分支」。
+//
+// 为什么需要机器强制：这条此前靠人守，而人没守住 —— khy-markdown 一个拓展就在核里
+// 积了**三份**互不认识的定位逻辑，其中 docs.js 那份在拓展迁目录后指向空气，
+// 而 fail-soft 把失败掩成一句提示，`khy docs browse` 静默坏了一整轮无人发觉。
+// 硬编码一个 id 的代价不是「不够优雅」，是下一次移动时多一处会烂掉的路径。
+//
+// **只算分派用途的字面量**。注释与面向用户的提示文案不算：一句「未找到 khy-markdown
+// 拓展」不是分支，禁掉它只会逼人把有用的错误信息写模糊，对架构没有任何好处。
+// 判据是字面量是否出现在**代码**里（剥掉注释后仍在）且**不在字符串拼接的提示上下文**。
+const CORE_SCAN_DIRS = ['services/backend/src'];
+// 允许名单：**文件 → 该文件被豁免的 id 集合**（`'*'` = 整文件豁免）。
+//
+// 为什么是「文件 + id」而不是整文件：整文件豁免会连带放过这个文件**将来**新写的
+// 真·分派分支，等于把守卫在这个文件上永久关掉。按 id 登记则只放过已知的那一条，
+// 别的 id 一出现照报。
+//
+// 什么算正当理由：只有「该字面量不是为了在运行机器上定位一个拓展」。
+// 描述**仓库布局**（重建源码包时要复制哪个目录）与记述**历史**（bug 案例的文件清单）
+// 都属此类——它们换成服务名既无意义也无从解析，因为那时根本没有一个在位的拓展可解析。
+// 名单保持封闭：新增项须在此显式登记并写明理由。
+const EXTENSION_ID_ALLOWLIST = new Map([
+  // 契约自身的实现件：它必须能写出 id，否则契约模块过不了它自己的规则。
+  ['services/backend/src/services/extensions/markdownWorkbench.js', '*'], // LEGACY_ID 迁移期兜底
+  // pip 源码包重建：它按**仓库布局**逐目录复制（'docs'、'frontend'、'packages/shared' 同理），
+  // 描述的是要重建出的那棵树长什么样，不是在这台机器上找一个已安装的拓展。
+  ['services/backend/src/cli/handlers/publish.js', new Set(['khy-alpine-iso'])],
+  // 历史 bug 案例数据集：files[] 记的是**当年那次事故**改了哪些文件，是史料不是分派。
+  ['services/backend/src/data/bugCases.js', new Set(['khy-alpine-iso'])],
+]);
+
+/** 该文件的该 id 是否已登记豁免。 */
+function _idAllowed(file, id) {
+  const entry = EXTENSION_ID_ALLOWLIST.get(file);
+  if (!entry) return false;
+  return entry === '*' || entry.has(id);
+}
+
+/**
+ * 把一份源码剥成「只剩会被执行的代码」的逐行数组。
+ *
+ * 剥掉两类**不算分支**的文本：
+ *   ① 注释（行注释 + 跨行块注释）—— 注释记述历史、指路、写迁移说明，本来就该能提 id；
+ *   ② 含中文的字符串字面量 —— 面向用户的提示文案。禁掉它只会逼人把
+ *      「未找到 khy-markdown 拓展」写成「未找到拓展」，对架构毫无好处，只是让报错变模糊。
+ *
+ * 必须整文件扫而不是逐行扫：JSDoc 的续行长这样 `  * 底层复用 khy-markdown 拓展`，
+ * 单看这一行没有任何注释标记，逐行剥离会把整个文档块当成代码 —— 那正是本规则
+ * 第一版 6 个命中里 5 个是误报的原因。块注释状态必须跨行保持。
+ *
+ * @param {string} text 源码全文
+ * @returns {string[]} 与原文行号一一对应的「代码残余」（被剥掉的部分留空串）
+ */
+function stripToCode(text) {
+  const src = text.split(/\r?\n/);
+  const out = new Array(src.length).fill("");
+  let inBlock = false;
+  for (let li = 0; li < src.length; li++) {
+    const line = src[li];
+    let acc = "";
+    let i = 0;
+    while (i < line.length) {
+      if (inBlock) {
+        const close = line.indexOf("*/", i);
+        if (close === -1) { i = line.length; break; }
+        inBlock = false;
+        i = close + 2;
+        continue;
+      }
+      const c = line[i];
+      if (c === "/" && line[i + 1] === "/") break;          // 行注释 → 丢弃本行剩余
+      if (c === "/" && line[i + 1] === "*") { inBlock = true; i += 2; continue; }
+      if (c === "'" || c === "\"" || c === "`") {
+        const quote = c;
+        let j = i + 1;
+        let body = "";
+        while (j < line.length) {
+          if (line[j] === "\\") { body += line[j + 1] || ""; j += 2; continue; }
+          if (line[j] === quote) break;
+          body += line[j];
+          j += 1;
+        }
+        // 含中文 → 提示文案，抹掉；纯 ASCII → 可能是分派用的 id，保留。
+        acc += /[\u4e00-\u9fa5]/.test(body) ? "" : quote + body + quote;
+        i = j + 1;
+        continue;
+      }
+      acc += c;
+      i += 1;
+    }
+    out[li] = acc;
+  }
+  return out;
+}
+
+function checkExtensionIdHardcode(findings, counts) {
+  const extRoot = path.join(repoRoot, 'extensions');
+  if (!fs.existsSync(extRoot)) {
+    counts['extension-id-hardcode'] = 0;
+    return;
+  }
+  // 两层枚举（§2.3）：拓展可能在 extensions/<分类>/<id>。只看一层的话，一批拓展
+  // 移进分类目录后这条守卫会静默变成空转 —— 「核里不许点名拓展 id」从此不再被检查。
+  const ids = collectExtensionDirs(extRoot)
+    .extensions
+    // kind: ide-bridge 不纳入。它交付的是给外部 IDE 安装的 VSIX，宿主是 IDE 而不是
+    // khy 进程（契约 §2.2：核**不激活**它）。核里写它的名字时，拼的是
+    // `<IDE globalStorage>/<id>/` 这种由 **IDE 侧**规则决定的路径 —— 那不是
+    // 「核为了找拓展而点名它」，而是读一个外部系统按它自己规则存的文件，
+    // 改成服务名也无法影响它。强制这类 id 只会造出无法修复的违规。
+    .filter(({ abs }) => {
+      try {
+        const m = JSON.parse(fs.readFileSync(path.join(abs, EXTENSION_MANIFEST), 'utf8'));
+        return !m || m.kind !== 'ide-bridge';
+      } catch {
+        return true; // 读不到 manifest → 保守地纳入（extension-contract 那条会先报它）
+      }
+    })
+    .map(({ id }) => id);
+  if (ids.length === 0) {
+    counts['extension-id-hardcode'] = 0;
+    return;
+  }
+
+  // 用目录 pathspec + 后缀过滤，而不是 `${d}/**/*.js`：git 的 pathspec 里 `**`
+  // 不是递归通配，`src/**/*.js` 匹配不到直接放在 src/ 下的文件 —— 真实仓库
+  // 因为核代码都在子目录里才碰巧有结果，夹具里一放到 src/ 根下就静默漏掉。
+  const files = git(['ls-files', ...CORE_SCAN_DIRS])
+    .split('\n')
+    .map(x => x.trim())
+    .filter(Boolean)
+    .filter(f => f.endsWith('.js'))
+    .filter(f => !f.includes('node_modules/'))
+    .filter(f => EXTENSION_ID_ALLOWLIST.get(f) !== '*');
+
+  const violations = [];
+  for (const rel of files) {
+    let text;
+    try {
+      text = fs.readFileSync(path.join(repoRoot, rel), 'utf8');
+    } catch {
+      continue;
+    }
+    // 快通道：整文不含任何 id 就不必逐行剥离。
+    if (!ids.some(id => text.includes(id))) continue;
+    const lines = stripToCode(text);
+    for (let i = 0; i < lines.length; i++) {
+      const code = lines[i];
+      for (const id of ids) {
+        if (code.includes(id) && !_idAllowed(rel, id)) {
+          violations.push(`${rel}:${i + 1} —— 硬编码拓展 id ${JSON.stringify(id)}`);
+          break;
+        }
+      }
+    }
+  }
+
+  counts['extension-id-hardcode'] = violations.length;
+  if (violations.length === 0) return;
+  findings.push({
+    id: 'extension-id-hardcode',
+    severity: 'warning',
+    message: `${violations.length} 处核代码硬编码了拓展 id。`,
+    detail:
+      `${violations.slice(0, 3).join('；')}${violations.length > 3 ? ' …' : ''} —— ` +
+      `改用服务名定位（manifest 的 provides + extensionRoots.findProvider），契约见 ` +
+      `docs/03_DESIGN_设计/[DESIGN-ARCH-069] 拓展契约与核心边界规范.md §1.3；` +
+      `全量清单用 --list=extension-id-hardcode。`,
+    full: violations,
+  });
+}
+
 // ── 规则 4：npm run 目标须能解析到已定义脚本 ──────────────────────────────
 function collectDefinedScripts() {
   const defined = new Set();
@@ -426,6 +764,136 @@ function isTestFixture(relFile) {
     || /(?:^|\.)test\.[cm]?js$/.test(relFile);
 }
 
+// ── 拓展路径漂移（[DESIGN-ARCH-069] §4.1 的机器化）─────────────────────────
+// 为什么单列一条而不是靠 unresolved-require：那条只看 `../../` 起步的深层 require，
+// 于是漏掉两类「搬目录搬坏了」的典型：
+//   ① 单层 `../lib/x` —— 拓展从 scripts/<子目录>/ 挪到 extensions/scripts/<id>/ 后，
+//      同一个 `../lib` 指向的已经不是同一个地方了；
+//   ② `path.resolve(__dirname, '..', '..')` 这类爬根算术 —— 它**不会**在加载期抛错，
+//      只会静默算出一个错的根，然后在运行时表现为「什么都没探测到」。②比①危险得多。
+// 只查 extensions/：拓展是会被整体搬动的那类目录，深度敏感的代码在这里最脆。
+function collectExtensionSources() {
+  const out = [];
+  const root = path.join(repoRoot, 'extensions');
+  const walk = (dir) => {
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch { return; }
+    for (const entry of entries) {
+      const abs = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === 'node_modules' || entry.name === 'vendor' || entry.name === '.git') continue;
+        walk(abs);
+      } else if (/\.[cm]?js$/.test(entry.name)) {
+        out.push(abs);
+      }
+    }
+  };
+  walk(root);
+  return out;
+}
+
+// 从任意目录往上找到它所属拓展的根（带 khy.extension.json 的那一层）。
+// 找不到就返回 null —— extensions/ 下也存在还没上契约的目录，那由 extension-contract 管。
+function extensionRootOf(dir) {
+  const stop = path.join(repoRoot, 'extensions');
+  let cur = dir;
+  while (cur.startsWith(stop) && cur !== stop) {
+    if (fs.existsSync(path.join(cur, 'khy.extension.json'))) return cur;
+    const up = path.dirname(cur);
+    if (up === cur) break;
+    cur = up;
+  }
+  return null;
+}
+
+function checkExtensionPathDrift(findings, counts) {
+  const RELATIVE_REQUIRE = /require\(\s*['"](\.[^'"]*)['"]\s*\)/g;
+  // 只接全字面量参数：出现变量就判不了，交给人。
+  // 不认死 `path.` 这个接收者：`require('path').resolve(...)`、`nodePath.join(...)` 一样要认。
+  // 第一个实参就是 __dirname 已经是足够强的特征，再要求接收者叫 path 只会漏。
+  const DIRNAME_JOIN = /\.(?:join|resolve)\(\s*__dirname\s*,([^)]*)\)/g;
+  const LITERAL = /^\s*(['"])(.*?)\1\s*$/;
+  const broken = [];
+
+  for (const abs of collectExtensionSources()) {
+    const rel = toPosix(path.relative(repoRoot, abs));
+    let src;
+    try {
+      src = fs.readFileSync(abs, 'utf8');
+    } catch { continue; }
+    const dir = path.dirname(abs);
+    const lineOf = (index) => src.slice(0, index).split('\n').length;
+    const lineTextOf = (index) => src.slice(src.lastIndexOf('\n', index) + 1, src.indexOf('\n', index) + 1 || undefined);
+
+    RELATIVE_REQUIRE.lastIndex = 0;
+    for (let m = RELATIVE_REQUIRE.exec(src); m; m = RELATIVE_REQUIRE.exec(src)) {
+      const lineText = lineTextOf(m.index);
+      if (looksLikeComment(lineText, lineText.indexOf('require('))) continue;
+      const target = path.resolve(dir, m[1]);
+      if (!resolvesOnDisk(toPosix(path.relative(repoRoot, target)))) {
+        broken.push(`${rel}:${lineOf(m.index)} → require('${m[1]}')（不存在）`);
+      }
+    }
+
+    DIRNAME_JOIN.lastIndex = 0;
+    for (let m = DIRNAME_JOIN.exec(src); m; m = DIRNAME_JOIN.exec(src)) {
+      const pieces = m[1].split(',').map(x => x.trim()).filter(Boolean);
+      const parts = [];
+      let allLiteral = pieces.length > 0;
+      for (const piece of pieces) {
+        const lm = piece.match(LITERAL);
+        if (!lm) { allLiteral = false; break; }
+        parts.push(...lm[2].split('/').filter(Boolean));
+      }
+      // 只查「往上爬」的：不以 .. 开头的是脚本自己旁边的路径（如运行时自建的输出
+      // 目录），与所在深度无关，天然不会因为搬家而漂。
+      if (!allLiteral || parts[0] !== '..') continue;
+      const lineText = lineTextOf(m.index);
+      if (looksLikeComment(lineText, 0)) continue;
+      const target = path.resolve(dir, ...parts);
+
+      if (parts.every(part => part === '..')) {
+        // 纯 `..` 序列 = 拿某个祖先目录当基准。在拓展里只有两个落点说得通：
+        // **仓库根**（要读仓库里的东西）或**本拓展内部**（含自己的根，如 test/ 往上一层）。
+        // 落在两者之间的 extensions/ 或 extensions/<分类>/ 上没有任何意义 —— 那是布局
+        // 的中间层，不是谁的根 —— 而这恰恰是拓展被搬深一层后必然出现的症状。
+        // 这一条不能靠「路径存不存在」来判：那些中间目录**都存在**，正是它让这类漂移
+        // 完全无声（不抛错、不报缺失，只是从此什么都探测不到）。所以直接钉死落点。
+        const extRoot = extensionRootOf(dir);
+        const inExt = extRoot && (target === extRoot || target.startsWith(extRoot + path.sep));
+        if (path.resolve(target) !== path.resolve(repoRoot) && !inExt) {
+          broken.push(`${rel}:${lineOf(m.index)} → __dirname/${parts.join('/')} `
+            + `落在 ${toPosix(path.relative(repoRoot, target)) || '.'}，`
+            + '既不是仓库根也不在本拓展内（爬根层数算错）');
+        }
+        continue;
+      }
+
+      // 带具体段的：有的当 require 说明符用（无扩展名），所以要试模块后缀；
+      // 这里问的是「存不存在」，不是「node 能不能 require」——用 existsSync 而不是
+      // resolvesOnDisk，后者会因为目录里没有 index.js 就把一个真实存在的目录判为不存在。
+      const hit = ['', '.js', '.cjs', '.mjs', '.json'].some(ext => fs.existsSync(target + ext));
+      if (!hit) {
+        broken.push(`${rel}:${lineOf(m.index)} → __dirname/${parts.join('/')}（不存在）`);
+      }
+    }
+  }
+
+  counts['extension-path-drift'] = broken.length;
+  if (broken.length > 0) {
+    findings.push({
+      id: 'extension-path-drift',
+      severity: 'warning',
+      message: `${broken.length} 处拓展内的相对路径指向磁盘上不存在的位置（搬目录时级数算错）。`,
+      detail: '相对 require 会在加载期抛 MODULE_NOT_FOUND；__dirname 爬根算术不抛错，'
+        + `只会静默算错根、到运行时才表现为「什么都没找到」。首例：${broken.slice(0, 4).join(' | ')}`,
+      full: broken,
+    });
+  }
+}
+
 function checkCrossLayerRequires(findings, counts) {
   const out = git([
     'grep',
@@ -538,6 +1006,9 @@ function main() {
   checkLayerRegistry(findings);
   checkDanglingTasks(findings, counts);
   checkCrossLayerRequires(findings, counts);
+  checkExtensionContract(findings, counts);
+  checkExtensionIdHardcode(findings, counts);
+  checkExtensionPathDrift(findings, counts);
 
   if (updateBaseline) {
     // 保留 baseline json 里 `_` 前缀的说明字段（_note/_source/_meaning），

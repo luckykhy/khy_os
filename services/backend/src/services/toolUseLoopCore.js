@@ -2146,14 +2146,19 @@ async function runToolUseLoop(userMessage, options = {}) {
       _intentToolChoice: undefined,
       _isFollowUp: false,
     });
-    return {
-      finalResponse: String((greetingResult && greetingResult.reply) || ''),
-      toolCallLog: [],
-      iterations: 1,
-      provider: greetingResult && greetingResult.provider,
-      tokenUsage: greetingResult && greetingResult.tokenUsage,
-      pureGreeting: true,
-    };
+    const greetingText = String((greetingResult && greetingResult.reply) || '').trim();
+    // 只有拿到**可用**的回复才走捷径。空回复/网关报错时继续落到主循环:那里有既有的
+    // 有界重试和「认证失败/网络中断」等诚实错误文案,捷径自己再造一套只会把错误吞成空白。
+    if (greetingText && !(greetingResult && greetingResult.errorType)) {
+      return {
+        finalResponse: greetingText,
+        toolCallLog: [],
+        iterations: 1,
+        provider: greetingResult.provider,
+        tokenUsage: greetingResult.tokenUsage,
+        pureGreeting: true,
+      };
+    }
   }
 
   // Shadow FSM instance for this run (observation only; may be null, fail-soft).

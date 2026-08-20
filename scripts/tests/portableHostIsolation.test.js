@@ -18,7 +18,7 @@ const POSIX_LAUNCHER = path.join(ROOT, 'khy.sh');
 const POWERSHELL_LAUNCHER = path.join(ROOT, 'scripts', 'portable', 'run.ps1');
 const WINDOWS_SETUP = path.join(ROOT, 'portable-setup.bat');
 const POSIX_SETUP = path.join(ROOT, 'portable-setup.sh');
-// 2026-08-15 根目录收容（MGMT-STD-001 §1.3 白名单）把这个薄壳从仓库根搬到 scripts/setup/，
+// 2026-08-15 根目录收容（MGMT-STD-001 §1.3 白名单）把这个薄壳从仓库根搬到 extensions/scripts/khy-installer/setup/，
 // 壳里的相对调用同步变成 %~dp0..\..\portable-setup.bat。真入口仍是根上的 portable-setup.bat。
 const LEGACY_WINDOWS_SETUP = path.join(ROOT, 'scripts', 'setup', 'setup-khy.bat');
 const WINDOWS_WRAPPER_INSTALLER = path.join(ROOT, 'scripts', 'portable', 'install-path-wrappers.bat');

@@ -12,6 +12,9 @@ const React = require('react');
 
 const WelcomeBanner = require('./WelcomeBanner');
 const Transcript = require('./Transcript');
+// TranscriptView 的工具行摘要复用 ToolLines 的 summarizeArgs,视图里的
+// `✓ readFile(src/a.js)` 与 committed 区逐字一致(含相对路径/中间截断门控)。
+const ToolLines = require('./ToolLines');
 const StreamingBlock = require('./StreamingBlock');
 const PromptFrame = require('./PromptFrame');
 const KhyOsView = require('./KhyOsView');
@@ -21,6 +24,7 @@ const CompactionProgress = require('./CompactionProgress');
 const CompletionMenu = require('./CompletionMenu');
 const HelpMenu = require('./HelpMenu');
 const ShellView = require('./ShellView');
+const TranscriptView = require('./TranscriptView');
 const TaskListPanel = require('./TaskListPanel');
 const TopologyPanel = require('./TopologyPanel');
 const SidebarPanel = require('./SidebarPanel');
@@ -55,7 +59,6 @@ const _sessionColorState = require('../../sessionColorState');
 // setFooter return the SAME ref when nothing changed, so an adapterInfo churn can
 // no longer force an unconditional re-render (the render-storm "loaded gun").
 const { footersEqual } = require('../footerStability');
-const { shouldBrowseHistoryWhileEditing } = require('../historyBrowseDecision');
 const inkRuntime = require('../inkRuntime');
 
 // Live-region height coordinator (anti scroll-jump). Pure leaf; fail-soft require
@@ -114,6 +117,30 @@ try {
 } catch {
   _startupAnchor = null;
 }
+// Transcript 视图的两个纯叶子(对齐 CC 的 `Transcript` context):scrollActions 是
+// `scroll:*` 动作族的偏移算术,transcriptLines 把 messages 投影成可切片的文本行。
+// fail-soft require:任一缺失 → _transcriptReady 为假 → Ctrl+O 逐字节回退为旧的
+// 「就地展开上一步详情」,与 KHY_TRANSCRIPT_VIEW 关掉时同路径。
+let _scrollActions = null;
+try {
+  _scrollActions = require('../scrollActions');
+} catch {
+  _scrollActions = null;
+}
+let _transcriptLines = null;
+try {
+  _transcriptLines = require('../transcriptLines');
+} catch {
+  _transcriptLines = null;
+}
+// 方向键归属判定叶子(CC context → bindings)。require 失败 → 块 4.7 的 switch 落到
+// default,方向键一律转发给 textInput —— 退化但不瘫痪(子视图滚动会失效,输入不会丢)。
+let _arrowRouting = null;
+try {
+  _arrowRouting = require('../arrowRouting');
+} catch {
+  _arrowRouting = null;
+}
 // Thin read-only Ink overlay for the reverse-search prompt line. Fail-soft; if the
 // component is unavailable the search state simply renders nothing.
 let _HistorySearchOverlay = null;
@@ -152,6 +179,31 @@ function _notifyTtlMs(env) {
     return Math.max(NOTIFY_TTL_FLOOR_MS, raw);
   }
   return DEFAULT_NOTIFY_TTL_MS;
+}
+// Transcript 视图门控(KHY_TRANSCRIPT_VIEW,default-on)。关掉或两个叶子任一 require
+// 失败 → Ctrl+O 逐字节回退为旧的「就地展开上一步详情」,Transcript context 分支整段
+// 不参与判定。FALSY 词表 = flagRegistry 的 CANON off-words(仅作 registry 不可用时的兜底)。
+const _TRANSCRIPT_FALSY = new Set(['0', 'false', 'off', 'no']);
+function _transcriptViewEnabled(env) {
+  // flagRegistry 优先(集中真源),不可用再退本地 CANON 解析。绝不抛 —— 门控自身出错
+  // 绝不能把 Ctrl+O 打没,所以最终兜底是 true(默认开)。
+  try {
+    return require('../../../services/flagRegistry').isFlagEnabled(
+      'KHY_TRANSCRIPT_VIEW',
+      env || process.env
+    );
+  } catch {
+    /* fall through to local */
+  }
+  try {
+    const raw = (env || process.env).KHY_TRANSCRIPT_VIEW;
+    const v = String(raw === undefined || raw === null ? 'true' : raw)
+      .trim()
+      .toLowerCase();
+    return !_TRANSCRIPT_FALSY.has(v);
+  } catch {
+    return true;
+  }
 }
 // ── App.js 模块作用域助手（已抽取为叶子 ./appHostHelpers.js）────────────────────────
 // 权限模式应用 + 任务面板行 + 状态行/spinner/队列面板派生,皆 React 闭包无关。完整实现见该
@@ -555,6 +607,17 @@ function App({ options = {} }) {
   // scroll within it. `shellScroll` is the line offset into the tool output.
   const [shellViewOpen, setShellViewOpen] = React.useState(false);
   const [shellScroll, setShellScroll] = React.useState(0);
+  // Transcript 视图(对齐 CC 的 `app:toggleTranscript`):Ctrl+O 打开全量会话的可滚动
+  // 视图,在里面能回到**任意**早前段落并展开它 —— 这是旧的「就地展开最后一条」做不到
+  // 的事。`transcriptScroll` 是行偏移,`showAll` 对应 CC 的 `transcript:toggleShowAll`,
+  // 复用全局 `expanded` state(它已同时驱动 <Static> 的 MessageBlock 与 StreamingBlock,
+  // 所以视图里按 Ctrl+E 全展开,退出后 live/committed 两区也保持展开态)。
+  const [transcriptOpen, setTranscriptOpen] = React.useState(false);
+  const [transcriptScroll, setTranscriptScroll] = React.useState(0);
+  // 门控 + 两个叶子都在 ⇔ Transcript 视图这条路可用。任一不满足 → Ctrl+O 与箭头
+  // 路由整段回退到今天的行为(字节级回退,不留半开状态)。
+  const _transcriptOn =
+    _transcriptViewEnabled(process.env) && !!_transcriptLines && !!_scrollActions;
   // Spinner heartbeat: a 1s tick drives elapsed-time + stall detection while a
   // turn is in flight. lastActivityRef stamps the last time streamed output
   // changed, so a gap > 3s flags the turn as "等待响应…" (stalled).
@@ -3659,6 +3722,73 @@ function App({ options = {} }) {
         return;
       }
 
+      // 1b) Transcript 视图(CC 的 `Transcript` context)打开时拥有全部输入。
+      //     位置在 Ctrl+C / Ctrl+D 的全局处理**之前**:CC 在这个 context 里把
+      //     ctrl+c 绑成 transcript:exit、ctrl+d 绑成 scroll:halfPageDown,若排在
+      //     全局之后就永远被「双击退出」抢走。键位表逐条照抄 CC:
+      //       ctrl+u/d 半页 · ctrl+b/f 整页 · ctrl+p/n & j/k & ↑↓ 单行
+      //       g/home 顶 · G/end 底 · space 整页下 · b 整页上
+      //       ctrl+e 展开/折叠工具输出 · esc/q/ctrl+c/ctrl+o 关闭
+      //     偏移算术全部走 scrollActions 叶子(唯一真源,已 clamp),这里只做键→动作名。
+      if (transcriptOpen) {
+        if (key.escape || input === 'q' || (key.ctrl && (input === 'c' || input === 'o'))) {
+          setTranscriptOpen(false);
+          setTranscriptScroll(0);
+          return;
+        }
+        // CC transcript:toggleShowAll —— 复用全局 expanded,所以退出视图后 live 区与
+        // committed 区也保持同一展开态(这正是 CC 的语义)。
+        if (key.ctrl && input === 'e') {
+          setExpanded((v) => {
+            const next = !v;
+            showHint(next ? '会话记录：已展开工具输出' : '会话记录：已折叠工具输出');
+            return next;
+          });
+          return;
+        }
+        let _act = null;
+        if (key.ctrl && input === 'u') {
+          _act = 'halfPageUp';
+        } else if (key.ctrl && input === 'd') {
+          _act = 'halfPageDown';
+        } else if (key.ctrl && input === 'b') {
+          _act = 'fullPageUp';
+        } else if (key.ctrl && input === 'f') {
+          _act = 'fullPageDown';
+        } else if ((key.ctrl && input === 'p') || key.upArrow || (!key.ctrl && input === 'k')) {
+          _act = 'lineUp';
+        } else if ((key.ctrl && input === 'n') || key.downArrow || (!key.ctrl && input === 'j')) {
+          _act = 'lineDown';
+        } else if (key.pageUp) {
+          _act = 'fullPageUp';
+        } else if (key.pageDown) {
+          _act = 'fullPageDown';
+        } else if (key.home) {
+          _act = 'top';
+        } else if (key.end) {
+          _act = 'bottom';
+        } else if (input === 'g' || (input === 'G' && !key.ctrl)) {
+          // 小写 g 跳顶、大写 G(shift+g)跳底 —— less/vim 惯例,与 CC 一致。
+          _act = input === 'g' ? 'top' : 'bottom';
+        } else if (!key.ctrl && input === ' ') {
+          _act = 'fullPageDown';
+        } else if (!key.ctrl && input === 'b') {
+          _act = 'fullPageUp';
+        }
+        if (_act) {
+          const _dims = _transcriptView || { lines: [], viewport: 0 };
+          setTranscriptScroll((s) =>
+            _scrollActions.applyScroll(_act, {
+              offset: s,
+              viewport: _dims.viewport,
+              total: _dims.lines.length,
+            })
+          );
+          return;
+        }
+        return; // 视图拥有输入:其余按键一律吞掉,绝不漏进输入缓冲区
+      }
+
       //    a double-press exit — the first press also clears any pending input and
       //    arms the timer; a second press within the window exits.
       if (key.ctrl && input === 'c') {
@@ -3705,6 +3835,9 @@ function App({ options = {} }) {
       // Ctrl+L: clear committed transcript.
       if (key.ctrl && input === 'l') {
         setCommittedExpansion(null);
+        // 清空后 Transcript 视图会变成空壳,顺手关掉并归零偏移(与它的数据源同生命周期)。
+        setTranscriptOpen(false);
+        setTranscriptScroll(0);
         query.setMessages([]);
         return;
       }
@@ -3716,8 +3849,22 @@ function App({ options = {} }) {
         attachClipboardImage();
         return;
       }
-      // Ctrl+O: expand/collapse process groups + tool output.
+      // Ctrl+O (CC app:toggleTranscript): open the scrollable full-conversation
+      // view. 视图里能滚到**任意**早前段落并按 Ctrl+E 展开它 —— 这正是旧的「只能展开
+      // 最后一条」做不到的事,也是不接管鼠标就能提供「点开某段」能力的那条路。
       if (key.ctrl && input === 'o') {
+        if (_transcriptOn) {
+          setTranscriptOpen((v) => {
+            const next = !v;
+            if (next) {
+              setCommittedExpansion(null);
+              setTranscriptScroll(0);
+            }
+            return next;
+          });
+          return;
+        }
+        // 门控关(或叶子 require 失败)→ 逐字节回退为旧的就地展开。
         // While a turn is live-streaming, the process group / thinking lives in the
         // dynamic StreamingBlock, which re-renders on prop change — toggle the
         // global flag so it expands/collapses in place.
@@ -3955,31 +4102,37 @@ function App({ options = {} }) {
       // 4.7) Arrow navigation routed by interaction state (块4). Runs before the
       //      editing fallthrough. Vim owns its own motions, plan/help overlays
       //      keep their handling, so we only route plain arrows outside those.
+      //
+      //      判定全部下沉到 arrowRouting 叶子(照抄 CC 的 context → bindings 结构):这里
+      //      只做「动作名 → 副作用」。历史上这段是一串有序 if,把优先级、条件与副作用缠在
+      //      一起,读的人得从缩进反推谁压过谁;现在优先级只有叶子里那一个定义处,且可单测。
       const isArrow = key.upArrow || key.downArrow || key.leftArrow || key.rightArrow;
       if (isArrow && !vimEnabled && !planPhase && !showHelp) {
         const empty = value === '';
-
-        // SUBVIEW — shell peek panel is open: ← returns, ↑/↓ scroll it, → no-op.
-        if (shellViewOpen) {
-          if (key.leftArrow) {
+        const _arrowAct = _arrowRouting
+          ? _arrowRouting.resolveArrowAction({
+              key,
+              shellViewOpen,
+              busy,
+              empty,
+              queueLen: query.queueLen,
+            })
+          : null;
+        switch (_arrowAct) {
+          case 'subview:exit':
             setShellViewOpen(false);
             return;
-          }
-          if (key.upArrow) {
+          case 'scroll:lineUp':
             setShellScroll((s) => Math.max(0, s - 1));
             return;
-          }
-          if (key.downArrow) {
+          case 'scroll:lineDown':
             setShellScroll((s) => s + 1);
             return;
-          }
-          return; // rightArrow inside the panel: swallow
-        }
-
-        // EXECUTING (busy && empty): ↑ pulls the last queued (unsent) message back
-        // into the input for editing; ↓ opens the peek panel; ← no-op; → swallowed.
-        if (busy && empty) {
-          if (key.upArrow && query.queueLen > 0) {
+          case 'subview:openShell':
+            setShellScroll(0);
+            setShellViewOpen(true);
+            return;
+          case 'queue:editLast': {
             const item = query.dequeueLast();
             if (item) {
               textInput.setText(item.text);
@@ -3988,47 +4141,21 @@ function App({ options = {} }) {
             }
             return;
           }
-          if (key.downArrow) {
-            setShellScroll(0);
-            setShellViewOpen(true);
+          // history:previous / history:next / input:forward 都是「交给 useTextInput」:
+          // 历史回溯本就由它实现(第一次 ↑ 暂存草稿、↓ 走过最新一条时还原),动作名分开
+          // 是为了与 CC 注册表同构、让叶子的返回值自解释,副作用这里是同一个。
+          case 'history:previous':
+          case 'history:next':
+          case 'input:forward':
+            textInput.onInput(input, key);
             return;
-          }
-          return;
+          case 'noop':
+            return; // 该 context 下此方向无绑定:吞掉,绝不漏进输入缓冲区
+          default:
+            break; // 叶子 require 失败(_arrowRouting 为 null)→ 落到下面的兜底转发
         }
-
-        // IDLE_EMPTY (!busy && empty): ↑/↓ browse history (forward to textInput),
-        // ← returns/no-op, → forwards (cursor no-op on empty).
-        if (!busy && empty) {
-          if (key.leftArrow) {
-            return;
-          } // no subview to return from → no-op
-          textInput.onInput(input, key);
-          return;
-        }
-
-        // EDITING (!empty): ←/→ forward (cursor). Vertical arrows are also
-        // forwarded so useTextInput can browse whole submitted entries. A recalled
-        // multiline entry remains one history item: each ↑/↓ moves exactly one item,
-        // never one visual/text line.
-        // useTextInput stashes the live draft (draft.current) on the first ↑ and
-        // restores it when ↓ walks past the newest entry, so the draft is never
-        // lost — matching Claude Code / bash / readline. Without this the buffer
-        // becomes non-empty after the first recall and every further ↑ was
-        // swallowed, so you could only ever go back ONE entry and had to clear the
-        // line before ↑ would recall the entry before it. Gate
-        // KHY_HISTORY_BROWSE_EDITING∈{0,false,off,no} restores the legacy
-        // "swallow single-line vertical arrows" behaviour (byte-identical).
-        if (!empty) {
-          if (key.upArrow || key.downArrow) {
-            if (shouldBrowseHistoryWhileEditing({ hasNewline: value.includes('\n') })) {
-              textInput.onInput(input, key);
-              return;
-            }
-            return; // gate off + single-line with text → ignore vertical arrows
-          }
-          textInput.onInput(input, key);
-          return;
-        }
+        textInput.onInput(input, key);
+        return;
       }
 
       // 5) Everything else → text editing.
@@ -4317,6 +4444,24 @@ function App({ options = {} }) {
     return _real > 0 && _eff > 0 && _eff < _real ? _eff : 0;
   })();
   const _railOut = _railContentCols > 0 && railOn;
+  // ── Transcript 视图的行投影(只在视图打开时才算)────────────────────────────
+  // 排版宽度用与 committed 区同一口径的 effectiveCols(_railCols),渲染器注入
+  // Transcript 自己那个 renderMarkdown,保证视图里的排版与 <Static> 里一致。
+  // 视口高度由 TranscriptView.bodyHeight 算,App 与组件共用同一个函数 —— 所以
+  // Ctrl+D 翻的「半页」正是屏幕上看到的那半页。
+  const _transcriptView = React.useMemo(() => {
+    if (!transcriptOpen || !_transcriptLines) {
+      return null;
+    }
+    const cols = _railCols(0) || Number(_resCols) || 0;
+    const lines = _transcriptLines.buildTranscriptLines(query.messages, {
+      cols,
+      showAll: expanded,
+      renderMarkdown: Transcript.renderMarkdown,
+      summarizeTool: ToolLines.summarizeArgs,
+    });
+    return { lines, viewport: TranscriptView.bodyHeight(_resRows, lines.length) };
+  }, [transcriptOpen, expanded, query.messages, _resCols, _resRows]);
   // Task #23: at startup (no committed messages yet) the welcome banner
   // renders inside the live row's LEFT column, so its version line and the
   // sidebar's top edge share the SAME terminal row (left/right split — the
@@ -4652,6 +4797,18 @@ function App({ options = {} }) {
               // while executing, ← to return, ↑/↓ to scroll.
               shellViewOpen
                 ? h(ShellView, { streaming: query.streaming, scroll: shellScroll })
+                : null,
+
+              // Transcript 视图(CC app:toggleTranscript):全量会话的可滚动回看,
+              // Ctrl+O 开关。行数组与视口高度由 _transcriptView 一次算好,键位分支
+              // 与组件切片共用同一组数字。
+              transcriptOpen && _transcriptView
+                ? h(TranscriptView, {
+                    lines: _transcriptView.lines,
+                    scroll: transcriptScroll,
+                    showAll: expanded,
+                    rows: _resRows,
+                  })
                 : null,
 
               busy && !awaitingUserChoice

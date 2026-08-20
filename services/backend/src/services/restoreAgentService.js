@@ -44,10 +44,12 @@ const {
 const { logHealEvent } = require('./healAuditService');
 const { escalate } = require('./healEscalationService');
 
-// 复用三个 CLI 的探测器（零重复，各自 fail-soft）
+// 复用三个探测器（零重复，各自 fail-soft）。restore-check 仍在核的 scripts/ 里，直接 require；
+// 另两个已迁为拓展（khy-installer / khy-diagnostics），必须**按服务名惰性解析**：写死相对
+// 路径的话，删掉那个拓展目录会让本模块在加载期就抛 MODULE_NOT_FOUND，整个还原服务连启动
+// 都失败——那是「删目录即整机不可用」，不是 §4.1 要的「删目录即该能力消失」。
 const { probeRestoreFacts } = require('../../../../scripts/restore/restore-check');
-const { resolveBundleRoot, probeInstalledBundle } = require('../../../../scripts/install/verify-install');
-const { probeHydrationFacts } = require('../../../../scripts/diagnostics/hydration-doctor');
+const { requireFromProvider } = require('./extensions/providerModule');
 
 const MAX_STEPS = parseInt(process.env.KHY_RESTORE_MAX_STEPS || '10', 10);
 
@@ -71,17 +73,34 @@ function _probeSnapshot() {
     snapshot.restore = { ready: false, blockers: [], warnings: [], checked: 0, summary: '还原就绪探测失败' };
   }
   try {
-    const bundleRoot = resolveBundleRoot();
-    const probes = probeInstalledBundle(bundleRoot);
+    const verifier = requireFromProvider('install-verifier', 'verify-install.js');
+    if (!verifier) {
+      // 拓展缺席与探测失败是两回事：前者是「这台机器上没装这个能力」，后者是「装了但坏了」。
+      // 报同一句话会让人去查一个根本不存在的故障。
+      throw new Error('install-verifier 未提供');
+    }
+    const bundleRoot = verifier.resolveBundleRoot();
+    const probes = verifier.probeInstalledBundle(bundleRoot);
     snapshot.integrity = assessInstallIntegrity(probes, { bundleResolved: bundleRoot !== null });
-  } catch {
-    snapshot.integrity = { intact: false, missing: [], present: [], checked: 0, summary: '安装完整性探测失败' };
+  } catch (err) {
+    const missing = /未提供/.test(err && err.message);
+    snapshot.integrity = {
+      intact: false, missing: [], present: [], checked: 0,
+      summary: missing ? '跳过安装完整性探测：install-verifier 拓展未安装' : '安装完整性探测失败',
+    };
   }
   try {
-    const facts = probeHydrationFacts();
-    snapshot.hydration = assessHydrationHealth(facts);
-  } catch {
-    snapshot.hydration = { healthy: false, blockers: [], warnings: [], checked: 0, summary: '水合健康探测失败' };
+    const doctor = requireFromProvider('hydration-probe', 'hydration-doctor.js');
+    if (!doctor) {
+      throw new Error('hydration-probe 未提供');
+    }
+    snapshot.hydration = assessHydrationHealth(doctor.probeHydrationFacts());
+  } catch (err) {
+    const missing = /未提供/.test(err && err.message);
+    snapshot.hydration = {
+      healthy: false, blockers: [], warnings: [], checked: 0,
+      summary: missing ? '跳过水合健康探测：hydration-probe 拓展未安装' : '水合健康探测失败',
+    };
   }
   return snapshot;
 }

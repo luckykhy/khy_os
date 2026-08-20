@@ -1,0 +1,26 @@
+{
+  "id": "khy-installer",
+  "name": "Khy Installer",
+  "version": "1.0.0",
+  "description": "安装、部署、首次配置与安装后自检（Windows / Linux 双平台脚本）",
+  "kind": "toolchain",
+  "capabilities": [
+    "commands"
+  ],
+  "provides": [
+    "install-verifier"
+  ],
+  "commands": [
+    {
+      "name": "hooks",
+      "description": "安装 git hooks",
+      "script": "install-git-hooks.js"
+    },
+    {
+      "name": "verify",
+      "description": "安装后自检",
+      "script": "verify-install.js"
+    }
+  ],
+  "_note": "scripts/install/link-shared-dev.js **刻意未迁**：它挂在 package.json 的 preinstall 上，是 npm 自己的入向依赖（[DESIGN-ARCH-069] §1.5 的「硬入向」）。迁走它会让 `npm install` 在本拓展缺席时直接失败——那是核基础设施，不是可拆的能力。"
+}

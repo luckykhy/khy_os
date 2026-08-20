@@ -801,15 +801,23 @@ async function handleDocsFreshness(args, options = {}) {
  */
 async function handleDocsBrowse(args, options) {
   const repoRoot = getRepoRoot();
-  const bridgePath = path.join(repoRoot, 'tools', 'khyos-markdown', 'khyos-md-bridge.js');
 
-  let bridge;
+  // 不自己拼拓展路径：本函数曾硬编码 `tools/khyos-markdown`，拓展迁入
+  // extensions/ 后该路径指向空气，而 fail-soft 把它掩成了一句提示
+  // —— `khy docs browse` 因此静默失效而无人发觉。现在走服务定位（
+  // [DESIGN-ARCH-069] §1.3 第四条），与 `khy md` 共用同一条解析路径。
+  let workbench;
   try {
-    bridge = require(bridgePath);
+    workbench = require('../../services/extensions/markdownWorkbench').loadBridge();
   } catch (e) {
-    printInfo('khyosMarkdown 工具未找到: ' + bridgePath);
+    printInfo('加载 Markdown 工作台失败: ' + e.message);
     return;
   }
+  if (!workbench) {
+    printInfo('未找到 Markdown 工作台拓展（提供 markdown-workbench 服务的拓展未安装或已禁用）。');
+    return;
+  }
+  const bridge = workbench.bridge;
 
   const docsRoot = path.join(repoRoot, 'docs');
   const rawTarget = Array.isArray(args) ? args[0] : undefined;
@@ -831,7 +839,7 @@ async function handleDocsBrowse(args, options) {
   try {
     const result = await bridge.startBridge({
       targetPath,
-      scriptDir: path.join(repoRoot, 'tools', 'khyos-markdown'),
+      scriptDir: workbench.dir,
       autoShutdown: true,
     });
     console.log(`  ✅ khyosMarkdown 文档浏览器已就绪: ${result.url}`);

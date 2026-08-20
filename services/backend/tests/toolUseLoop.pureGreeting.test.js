@@ -164,6 +164,20 @@ describe('toolUseLoop — 首轮纯问候不进工具回路', () => {
     );
   });
 
+  test('招呼那一轮网关报错 → 仍走主循环的诚实错误文案,不被捷径吞成空白', async () => {
+    toolCalling.executeTool = async () => ({ success: false, error: 'boom' });
+
+    const chat = async () => ({ reply: '', errorType: 'auth', stopReason: 'error', provider: 'mock' });
+
+    const result = await toolUseLoop.runToolUseLoop('你好', { chat, maxIterations: 4 });
+
+    assert.match(
+      result.finalResponse,
+      /认证失败|API Key/,
+      '零工具的捷径只在拿到可用回复时短路;失败要落回主循环既有的错误处理',
+    );
+  });
+
   test('KHY_GREETING_NO_TOOLS=false → 逐字节回退到今日行为', async () => {
     process.env.KHY_GREETING_NO_TOOLS = 'false';
 

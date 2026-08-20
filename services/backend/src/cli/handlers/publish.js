@@ -700,7 +700,7 @@ Restore a source-like project tree from installed payload.
 - \`frontend/\`
 - \`docs/\`
 - \`alpine/\`
-- \`scripts/alpine/\`
+- \`extensions/scripts/khy-alpine-iso/\`
 - \`packages/shared/\`
 
 ## Notes
@@ -742,7 +742,7 @@ function _buildOriginCodeBundle(projectRoot, state, options = {}) {
           frontendDir: path.join(layout.projectLikeRoot, 'frontend'),
           docsDir: path.join(layout.projectLikeRoot, 'docs'),
           alpineDir: path.join(layout.projectLikeRoot, 'kernel', 'alpine'),
-          scriptsAlpineDir: path.join(layout.projectLikeRoot, 'scripts', 'alpine'),
+          scriptsAlpineDir: path.join(layout.projectLikeRoot, 'extensions', 'scripts', 'khy-alpine-iso'),
           packagesSharedDir: path.join(layout.projectLikeRoot, 'packages', 'shared'),
           backendSharedDir: path.join(layout.npmBackendDir, 'vendor', 'shared'),
         }
@@ -753,7 +753,7 @@ function _buildOriginCodeBundle(projectRoot, state, options = {}) {
           frontendDir: path.join(layout.khyOsDir, 'bundled', 'frontend'),
           docsDir: path.join(layout.khyOsDir, 'bundled', 'docs'),
           alpineDir: path.join(layout.khyOsDir, 'bundled', 'alpine'),
-          scriptsAlpineDir: path.join(layout.khyOsDir, 'bundled', 'scripts', 'alpine'),
+          scriptsAlpineDir: path.join(layout.khyOsDir, 'bundled', 'extensions', 'scripts', 'khy-alpine-iso'),
           packagesSharedDir: path.join(layout.khyOsDir, 'bundled', 'packages', 'shared'),
           backendSharedDir: path.join(layout.khyOsDir, 'bundled', 'backend', 'vendor', 'shared'),
         };
@@ -840,12 +840,12 @@ function _buildOriginCodeBundle(projectRoot, state, options = {}) {
   if (
     _copyIfExists(
       sourceLocations.scriptsAlpineDir,
-      path.join(bundleRoot, 'scripts', 'alpine'),
+      path.join(bundleRoot, 'extensions', 'scripts', 'khy-alpine-iso'),
       PIP_INSTALL_BUNDLE_SKIP_NAMES
     )
   ) {
     sourceMappings.push({
-      target: 'scripts/alpine/',
+      target: 'extensions/scripts/khy-alpine-iso/',
       source: sourceLocations.scriptsAlpineDir,
       note: 'ISO helper scripts',
     });

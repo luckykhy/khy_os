@@ -41,7 +41,7 @@ function makeFixture(mutate) {
   for (const layer of ['kernel', 'platform', 'services', 'apps', 'software', 'extensions', 'tools']) {
     writeFile(root, `${layer}/.keep`, '');
   }
-  for (const cross of ['scripts', 'packaging', 'alpine', '_source']) {
+  for (const cross of ['scripts', 'packaging', '_source']) {
     writeFile(root, `${cross}/.keep`, '');
   }
 
@@ -260,6 +260,95 @@ describe('check-repo-layout: 任务入口与跨层引用', () => {
   });
 });
 
+describe('check-repo-layout: 拓展契约（[DESIGN-ARCH-069]）', () => {
+  // 合规拓展的最小形状：canonical manifest + id 等于目录名 + main 在磁盘上。
+  function writeExtension(dir, id, manifest, { withEntry = true } = {}) {
+    writeFile(dir, `extensions/${id}/khy.extension.json`, `${JSON.stringify(manifest, null, 2)}\n`);
+    if (withEntry && manifest.main) {
+      writeFile(dir, `extensions/${id}/${manifest.main}`, 'module.exports = { activate() {} };\n');
+    }
+  }
+
+  test('合规拓展不计违规', () => {
+    const root = makeFixture((dir) => {
+      writeExtension(dir, 'khy-demo', { id: 'khy-demo', name: 'Demo', version: '1.0.0', kind: 'runtime', main: 'index.js' });
+      // kind: ide-bridge 不需要 main —— 核不激活它。
+      writeExtension(dir, 'khy-bridge', { id: 'khy-bridge', name: 'Bridge', version: '1.0.0', kind: 'ide-bridge' });
+      // kind 缺省即 runtime，合规拓展可以不写这一字段。
+      writeExtension(dir, 'khy-plain', { id: 'khy-plain', name: 'Plain', version: '1.0.0', main: 'main.js' });
+    });
+    const { status, stdout } = runGuard(root);
+    assert.equal(status, 0, stdout);
+    assert.match(stdout, /"extension-contract":0/);
+  });
+
+  test('缺 khy.extension.json 的目录被计入', () => {
+    const root = makeFixture((dir) => {
+      writeFile(dir, 'extensions/khy-nomanifest/index.js', 'module.exports = {};\n');
+    });
+    const { status, stdout } = runGuard(root, ['--list=extension-contract']);
+    assert.equal(status, 0, stdout);
+    assert.match(stdout, /"extension-contract":1/);
+    assert.match(stdout, /khy-nomanifest/);
+  });
+
+  test('id 与目录名不一致被计入', () => {
+    const root = makeFixture((dir) => {
+      writeExtension(dir, 'khy-dir', { id: 'khy-other', name: 'X', version: '1.0.0', kind: 'runtime', main: 'index.js' });
+    });
+    const { status, stdout } = runGuard(root, ['--list=extension-contract']);
+    assert.equal(status, 0, stdout);
+    assert.match(stdout, /"extension-contract":1/);
+    assert.match(stdout, /khy-other/);
+  });
+
+  test('kind 非法被计入', () => {
+    const root = makeFixture((dir) => {
+      writeExtension(dir, 'khy-weird', { id: 'khy-weird', name: 'X', version: '1.0.0', kind: 'plugin', main: 'index.js' });
+    });
+    const { status, stdout } = runGuard(root, ['--list=extension-contract']);
+    assert.equal(status, 0, stdout);
+    assert.match(stdout, /"extension-contract":1/);
+    assert.match(stdout, /khy-weird/);
+  });
+
+  test('runtime 拓展的 main 指向空气被计入', () => {
+    const root = makeFixture((dir) => {
+      writeExtension(dir, 'khy-ghostmain',
+        { id: 'khy-ghostmain', name: 'X', version: '1.0.0', kind: 'runtime', main: 'index.js' },
+        { withEntry: false });
+    });
+    const { status, stdout } = runGuard(root, ['--list=extension-contract']);
+    assert.equal(status, 0, stdout);
+    assert.match(stdout, /"extension-contract":1/);
+    assert.match(stdout, /khy-ghostmain/);
+  });
+
+  test('坏 JSON 与缺 manifest 区分得开（都计一处，但原因不同）', () => {
+    const root = makeFixture((dir) => {
+      writeFile(dir, 'extensions/khy-badjson/khy.extension.json', '{ "id": "khy-badjson", \n');
+    });
+    const { status, stdout } = runGuard(root, ['--list=extension-contract']);
+    assert.equal(status, 0, stdout);
+    assert.match(stdout, /"extension-contract":1/);
+    assert.match(stdout, /khy-badjson/);
+    // 「解析失败」必须与「缺失」措辞不同，否则修的人会去建一个已经存在的文件。
+    assert.doesNotMatch(stdout, /khy-badjson[^\n]*缺/);
+  });
+
+  test('超基线 → extension-contract 升为 error', () => {
+    const root = makeFixture((dir) => {
+      writeFile(dir, 'extensions/khy-nomanifest/index.js', 'module.exports = {};\n');
+      writeFile(dir, 'scripts/ci/repo-layout-baseline.json',
+        `${JSON.stringify({ updated: '2026-01-01', counts: { 'dangling-task': 0, 'cross-layer-require': 0, 'unresolved-require': 0, 'docs-index-complete': 0, 'extension-contract': 0 } }, null, 2)}\n`);
+    });
+    const { status, stdout } = runGuard(root);
+    assert.equal(status, 1, stdout);
+    assert.match(stdout, /extension-contract/);
+    assert.match(stdout, /promoted from warning/);
+  });
+});
+
 describe('check-repo-layout: 基线棘轮与参数校验', () => {
   test('实测数超过基线 → 该 warning 升为 error', () => {
     const root = makeFixture((dir) => {
@@ -320,5 +409,266 @@ describe('check-repo-layout: 基线棘轮与参数校验', () => {
     const root = makeFixture();
     const { status } = runGuard(root, ['--list=danglingtask']);
     assert.equal(status, 2);
+  });
+});
+
+describe('check-repo-layout: 拓展分类目录（[DESIGN-ARCH-069] §2.3）', () => {
+  // 分类是为「二十几个拓展平铺在 extensions/ 下没法管」加的一层布局。守卫在这里管两件
+  // 加载器**故意不管**的事：分类名不许随手新造，分类目录下不许再套一层。
+  // 加载器只认「有没有 manifest」，任何空壳目录都能当分类 —— 收敛分类名属仓库卫生。
+  function writeNested(dir, category, id, extra = {}) {
+    writeFile(dir, `extensions/${category}/${id}/khy.extension.json`,
+      `${JSON.stringify({ id, name: id, version: '1.0.0', kind: 'runtime', main: 'index.js', ...extra }, null, 2)}\n`);
+    writeFile(dir, `extensions/${category}/${id}/index.js`, 'module.exports = {};\n');
+  }
+
+  test('分类目录下的合规拓展不计违规', () => {
+    const root = makeFixture((dir) => {
+      writeNested(dir, 'tools', 'khy-demo');
+      writeNested(dir, 'protocols', 'khy-proto');
+      // 顶层与分类可以共存：分类是布局手段，不是强制层。
+      writeFile(dir, 'extensions/khy-top/khy.extension.json',
+        `${JSON.stringify({ id: 'khy-top', name: 'Top', version: '1.0.0', kind: 'ide-bridge' }, null, 2)}\n`);
+    });
+    const { status, stdout } = runGuard(root);
+    assert.equal(status, 0, stdout);
+    assert.match(stdout, /"extension-contract":0/);
+  });
+
+  test('分类名不在白名单里被计入 —— 否则 extensions/ 会长出一棵没人说得清的树', () => {
+    const root = makeFixture((dir) => {
+      writeNested(dir, 'misc', 'khy-demo');
+    });
+    const { status, stdout } = runGuard(root, ['--list=extension-contract']);
+    assert.equal(status, 0, stdout);
+    assert.match(stdout, /"extension-contract":1/);
+    assert.match(stdout, /extensions\/misc —— 分类名不在/);
+  });
+
+  test('分类目录下再套一层被计入 —— 发现只下探两层，第三层等于不存在', () => {
+    const root = makeFixture((dir) => {
+      writeNested(dir, 'tools', 'khy-demo');
+      writeFile(dir, 'extensions/tools/sub/khy-deep/khy.extension.json', '{}\n');
+    });
+    const { status, stdout } = runGuard(root, ['--list=extension-contract']);
+    assert.equal(status, 0, stdout);
+    assert.match(stdout, /"extension-contract":1/);
+    assert.match(stdout, /extensions\/tools\/sub —— 缺 khy\.extension\.json/);
+  });
+
+  test('既不是拓展也不是分类的目录被计入', () => {
+    const root = makeFixture((dir) => {
+      writeFile(dir, 'extensions/khy-mystery/README.md', '# 说不清是什么\n');
+    });
+    const { status, stdout } = runGuard(root, ['--list=extension-contract']);
+    assert.equal(status, 0, stdout);
+    assert.match(stdout, /"extension-contract":1/);
+    assert.match(stdout, /既不是拓展.*也不是分类目录/);
+  });
+
+  test('分类下的 id 必须等于叶子目录名，不含分类前缀', () => {
+    // 反过来写（id: 'tools/khy-demo'）是迁移时最容易犯的错：看着「更完整」，
+    // 实际把 state 键、冲突键与孤儿检测键一起改掉了。
+    const root = makeFixture((dir) => {
+      writeFile(dir, 'extensions/tools/khy-demo/khy.extension.json',
+        `${JSON.stringify({ id: 'tools/khy-demo', name: 'D', version: '1.0.0', kind: 'runtime', main: 'index.js' }, null, 2)}\n`);
+      writeFile(dir, 'extensions/tools/khy-demo/index.js', 'module.exports = {};\n');
+    });
+    const { status, stdout } = runGuard(root, ['--list=extension-contract']);
+    assert.equal(status, 0, stdout);
+    assert.match(stdout, /"extension-contract":1/);
+    assert.match(stdout, /id \("tools\/khy-demo"\) 与目录名不一致/);
+  });
+
+  test('核里硬编码分类目录下的拓展 id 同样被抓 —— 分类不是规则的盲区', () => {
+    // 这条是分类改造最隐蔽的回归：id 枚举若还只看一层，一批拓展移进分类目录后
+    // 「核里不许点名拓展 id」这条守卫就静默变成空转，而计数依然是 0。
+    const root = makeFixture((dir) => {
+      writeNested(dir, 'tools', 'khy-demo');
+      writeFile(dir, 'services/backend/src/x.js', `const DIR = 'khy-demo';\n`);
+    });
+    const { status, stdout } = runGuard(root, ['--list=extension-id-hardcode']);
+    assert.equal(status, 0, stdout);
+    assert.match(stdout, /"extension-id-hardcode":1/);
+    assert.match(stdout, /src\/x\.js:1/);
+  });
+});
+
+describe('check-repo-layout: 核不得硬编码拓展 id（[DESIGN-ARCH-069] §1.3 第四条）', () => {
+  // 每个用例都要有一个「已存在的拓展」，规则才有 id 可查。
+  function withDemoExtension(dir) {
+    writeFile(dir, 'extensions/khy-demo/khy.extension.json',
+      `${JSON.stringify({ id: 'khy-demo', name: 'Demo', version: '1.0.0', kind: 'runtime', main: 'index.js' }, null, 2)}\n`);
+    writeFile(dir, 'extensions/khy-demo/index.js', 'module.exports = {};\n');
+  }
+  function core(dir, body) {
+    writeFile(dir, 'services/backend/src/x.js', body);
+  }
+
+  test('核里没有 id 字面量 → 零违规', () => {
+    const root = makeFixture((dir) => {
+      withDemoExtension(dir);
+      core(dir, `const d = require('./svc').findProvider('demo-service');\n`);
+    });
+    const { status, stdout } = runGuard(root);
+    assert.equal(status, 0, stdout);
+    assert.match(stdout, /"extension-id-hardcode":0/);
+  });
+
+  test('代码里的 id 字面量被计入，且指出行号', () => {
+    const root = makeFixture((dir) => {
+      withDemoExtension(dir);
+      core(dir, `const DIR = 'khy-demo';\n`);
+    });
+    const { status, stdout } = runGuard(root, ['--list=extension-id-hardcode']);
+    assert.equal(status, 0, stdout);
+    assert.match(stdout, /"extension-id-hardcode":1/);
+    assert.match(stdout, /src\/x\.js:1/);
+  });
+
+  // 这是本规则最容易做错的地方：第一版逐行剥离注释，而 JSDoc 续行（`  * 复用 khy-demo`）
+  // 本身没有任何注释标记，于是真实仓库 6 个命中里 5 个是误报。块注释状态必须跨行保持。
+  test('注释里的 id 不计（含跨行 JSDoc 续行）', () => {
+    const root = makeFixture((dir) => {
+      withDemoExtension(dir);
+      core(dir, [
+        '/**',
+        ' * 底层复用 khy-demo 拓展（extensions/khy-demo/）。',
+        ' * Pattern mirrors extensions/khy-demo/index.js',
+        ' */',
+        '// 行注释里也提一次 khy-demo',
+        'const ok = 1; /* 块注释 khy-demo */',
+        '',
+      ].join(String.fromCharCode(10)));
+    });
+    const { status, stdout } = runGuard(root);
+    assert.equal(status, 0, stdout);
+    assert.match(stdout, /"extension-id-hardcode":0/);
+  });
+
+  test('含中文的提示文案不计（禁掉它只会让报错变模糊）', () => {
+    const root = makeFixture((dir) => {
+      withDemoExtension(dir);
+      core(dir, `printError('未找到 khy-demo 拓展，请先安装。');\n`);
+    });
+    const { status, stdout } = runGuard(root);
+    assert.equal(status, 0, stdout);
+    assert.match(stdout, /"extension-id-hardcode":0/);
+  });
+
+  test('kind: ide-bridge 的 id 不计（其路径由外部 IDE 决定，改服务名也影响不了）', () => {
+    const root = makeFixture((dir) => {
+      writeFile(dir, 'extensions/khy-ide/khy.extension.json',
+        `${JSON.stringify({ id: 'khy-ide', name: 'IDE', version: '1.0.0', kind: 'ide-bridge' }, null, 2)}\n`);
+      core(dir, `const p = path.join(globalStorage, 'khy-ide', 'auth.json');\n`);
+    });
+    const { status, stdout } = runGuard(root);
+    assert.equal(status, 0, stdout);
+    assert.match(stdout, /"extension-id-hardcode":0/);
+  });
+
+  test('超基线（基线 0）→ 升为 error', () => {
+    const root = makeFixture((dir) => {
+      withDemoExtension(dir);
+      core(dir, `const DIR = 'khy-demo';\n`);
+      writeFile(dir, 'scripts/ci/repo-layout-baseline.json',
+        `${JSON.stringify({ updated: '2026-01-01', counts: { 'extension-id-hardcode': 0 } }, null, 2)}\n`);
+    });
+    const { status, stdout } = runGuard(root);
+    assert.equal(status, 1, stdout);
+    assert.match(stdout, /超出基线/);
+  });
+});
+
+describe('check-repo-layout: 拓展路径漂移（搬目录搬坏了）', () => {
+  // 这一组盯的是「文件被挪深一层，路径算术没跟着改」这一类。它在本仓库真实发生过：
+  // scripts/<子目录>/x.js 迁到 extensions/scripts/<id>/x.js 之后，`../lib/y` 和
+  // `path.resolve(__dirname,'..','..')` 全部指错，而后者**不抛任何错**。
+  function ext(dir, id, files) {
+    writeFile(dir, `extensions/scripts/${id}/khy.extension.json`,
+      `${JSON.stringify({ id, name: id, version: '1.0.0', kind: 'toolchain', commands: [] }, null, 2)}\n`);
+    for (const [rel, body] of Object.entries(files)) writeFile(dir, `extensions/scripts/${id}/${rel}`, body);
+  }
+
+  test('路径都对得上时不计违规', () => {
+    const root = makeFixture((dir) => {
+      writeFile(dir, 'scripts/lib/thing.js', 'module.exports = {};\n');
+      ext(dir, 'khy-ok', {
+        'run.js': "const t = require('../../../scripts/lib/thing');\nconst ROOT = require('path').resolve(__dirname, '..', '..', '..');\n",
+      });
+    });
+    const { status, stdout } = runGuard(root);
+    assert.equal(status, 0, stdout);
+    assert.match(stdout, /"extension-path-drift":0/);
+  });
+
+  test('单层相对 require 指空 → 计入（unresolved-require 只看 ../../ 起步，够不着这里）', () => {
+    const root = makeFixture((dir) => {
+      writeFile(dir, 'scripts/lib/thing.js', 'module.exports = {};\n');
+      ext(dir, 'khy-req', { 'run.js': "const t = require('../lib/thing');\n" });
+    });
+    const { status, stdout } = runGuard(root, ['--list=extension-path-drift']);
+    assert.match(stdout, /"extension-path-drift":1/);
+    assert.match(stdout, /khy-req\/run\.js/);
+    assert.match(stdout, /"unresolved-require":0/, '正是 unresolved-require 的盲区，所以才要单列一条');
+  });
+
+  test('爬根少算一级（落在 extensions/）→ 计入，哪怕那个目录真实存在', () => {
+    // 这条是整组的理由：extensions/ 是存在的，所以任何「路径存不存在」式的检查
+    // 都看不见这处漂移 —— 它不报错，只是从此把仓库根认成了 extensions/。
+    const root = makeFixture((dir) => {
+      ext(dir, 'khy-short', { 'run.js': "const ROOT = require('path').resolve(__dirname, '..', '..');\n" });
+    });
+    const { status, stdout } = runGuard(root, ['--list=extension-path-drift']);
+    assert.match(stdout, /"extension-path-drift":1/);
+    assert.match(stdout, /既不是仓库根也不在本拓展内/);
+  });
+
+  test('爬根多算一级（爬出仓库）→ 计入', () => {
+    const root = makeFixture((dir) => {
+      ext(dir, 'khy-long', { 'run.js': "const ROOT = require('path').resolve(__dirname, '..', '..', '..', '..');\n" });
+    });
+    const { status, stdout } = runGuard(root, ['--list=extension-path-drift']);
+    assert.match(stdout, /"extension-path-drift":1/);
+  });
+
+  test('爬到本拓展自己的根 → 不计违规', () => {
+    // 拓展内部的 test/ 往上一层拿包目录当 root 是正当写法，不能误报。
+    const root = makeFixture((dir) => {
+      ext(dir, 'khy-self', { 'test/smoke.js': "const ROOT = require('path').join(__dirname, '..');\n" });
+    });
+    const { status, stdout } = runGuard(root);
+    assert.equal(status, 0, stdout);
+    assert.match(stdout, /"extension-path-drift":0/);
+  });
+
+  test('脚本旁边的相对路径（不含 ..）与深度无关 → 不计违规', () => {
+    // 运行时自建的输出目录属于这一类，误报它会逼着人给规则加豁免名单。
+    const root = makeFixture((dir) => {
+      ext(dir, 'khy-side', { 'run.js': "const OUT = require('path').join(__dirname, 'traces');\n" });
+    });
+    const { status, stdout } = runGuard(root);
+    assert.equal(status, 0, stdout);
+    assert.match(stdout, /"extension-path-drift":0/);
+  });
+
+  test('注释里举例的路径不计违规', () => {
+    const root = makeFixture((dir) => {
+      ext(dir, 'khy-cmt', { 'run.js': "// 迁移前写的是 require('../lib/thing')\nmodule.exports = {};\n" });
+    });
+    const { status, stdout } = runGuard(root);
+    assert.equal(status, 0, stdout);
+    assert.match(stdout, /"extension-path-drift":0/);
+  });
+
+  test('超基线（基线 0）→ 升为 error', () => {
+    const root = makeFixture((dir) => {
+      ext(dir, 'khy-reg', { 'run.js': "const ROOT = require('path').resolve(__dirname, '..', '..');\n" });
+      writeFile(dir, 'scripts/ci/repo-layout-baseline.json',
+        `${JSON.stringify({ updated: '2026-01-01', counts: { 'extension-path-drift': 0 } }, null, 2)}\n`);
+    });
+    const { status, stdout } = runGuard(root);
+    assert.equal(status, 1, stdout);
+    assert.match(stdout, /超出基线/);
   });
 });

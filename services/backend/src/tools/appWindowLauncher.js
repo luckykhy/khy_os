@@ -5,7 +5,7 @@
  * (no address bar / tab strip), falling back to a regular browser tab via
  * platformUtils.openDefault when no --app capable browser is available.
  *
- * Pattern mirrors tools/khyos-markdown/khyos-md-bridge.js (findAppModeBrowsers
+ * Pattern mirrors extensions/tools/khy-markdown/khyos-md-bridge.js (findAppModeBrowsers
  * + openBrowser) but lives in the backend tree so the CLI handlers can use it
  * without a reverse dependency on the markdown tool.
  *

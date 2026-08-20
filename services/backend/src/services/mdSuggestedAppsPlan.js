@@ -14,7 +14,7 @@
  *
  * 分层（同 bundleLaunchContract / installIntegrity）：本文件是**纯核心 SSOT**——零 IO、
  * 无时钟、无随机、同输入恒同输出、绝不抛（异常退化为安全空计划）。真正写注册表的 IO 在
- * tools/khyos-markdown/register-windows.ps1（仅 HKCU、免 UAC），本文件只枚举「该写哪些键」，
+ * extensions/tools/khy-markdown/register-windows.ps1（仅 HKCU、免 UAC），本文件只枚举「该写哪些键」，
  * 并被契约测用来钉死 PS1 不漂移、卸载对称零残留。
  *
  * 红线：只规划 HKEY_CURRENT_USER（用户级），绝不 HKLM——免管理员、免 UAC 弹窗。

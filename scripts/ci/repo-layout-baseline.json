@@ -5,13 +5,19 @@
     "dangling-task": "被文档/CI 引用但任何 package.json 里都没定义的 npm run 目标数",
     "cross-layer-require": "跨 workspace 的深层相对 require 处数（纯 re-export 壳文件已豁免）",
     "unresolved-require": "深层相对 require 指向磁盘上不存在的路径的处数 —— 每一处都是潜伏崩溃",
-    "docs-index-complete": "阶段目录里没有出现在主索引 docs/00_INDEX_文档索引.md 的文档份数（CP-3 漏链）"
+    "docs-index-complete": "阶段目录里没有出现在主索引 docs/00_INDEX_文档索引.md 的文档份数（CP-3 漏链）",
+    "extension-contract": "extensions/ 下不合 [DESIGN-ARCH-069] 拓展契约的目录处数（缺 khy.extension.json / id≠目录名 / kind 非法 / runtime 的 main 指向空气）",
+    "extension-id-hardcode": "核代码（services/backend/src）里硬编码拓展 id 的处数 —— [DESIGN-ARCH-069] §1.3 第四条。只算分派用途：注释与含中文的提示文案不计，kind: ide-bridge 的拓展不计（其路径由外部 IDE 决定，改成服务名也影响不了）。基线为 0：新增一处即升 error。",
+    "extension-path-drift": "extensions/ 内指向不存在位置的相对路径处数 —— 相对 require（任意层数，补上 unresolved-require 只看 ../../ 起步的盲区）与 __dirname 爬根算术两类。后者不抛错，只会静默算错根。基线为 0：拓展就是会被整体搬动的目录，新增一处即升 error。"
   },
-  "updated": "2026-08-17",
+  "updated": "2026-08-19",
   "counts": {
     "dangling-task": 115,
     "cross-layer-require": 43,
     "unresolved-require": 24,
-    "docs-index-complete": 0
+    "docs-index-complete": 0,
+    "extension-contract": 0,
+    "extension-id-hardcode": 0,
+    "extension-path-drift": 0
   }
 }

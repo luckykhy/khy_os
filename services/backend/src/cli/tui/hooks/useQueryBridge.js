@@ -1977,6 +1977,7 @@ function useQueryBridge(hostHandlers = {}) {
             line = _turnAckVoice.computeTurnAck({
               turnIndex: turnSeqRef.current,
               sawText: sawTextRef.current,
+              userText: runningTurnTextRef.current,
               env: process.env,
             });
           }

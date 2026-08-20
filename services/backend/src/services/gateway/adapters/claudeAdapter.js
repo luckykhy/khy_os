@@ -1932,6 +1932,33 @@ function buildDirectToolDefs() {
       }
     }
 
+    // 拓展经 manifest 声明、但尚未加载的工具 —— 补进清单，否则模型看不见它们。
+    //
+    // `pool` 只含**已加载**的工具，而惰性拓展按定义还没加载（[DESIGN-ARCH-069] §4：
+    // 发现阶段只读 manifest，入口等首次调用）。不补这一段，一个从核里迁出去的工具就
+    // 「executeTool 叫得动、模型却从没在清单里见过」—— khy-notebook 试点实测出的缺口。
+    //
+    // 三条约束：
+    //   ① 纯 manifest 读，不 require 任何拓展入口 —— 惰性不破；
+    //   ② `pool.has(name)` 去重且**内置优先**：同名内置工具已在池里就跳过，与漏斗侧
+    //      「内置永远赢」（activateContributedTool 只在正常解析返回 null 后才触发）同向；
+    //   ③ 整段 try/catch —— 拓展目录坏掉不该让模型清单构建失败。
+    try {
+      const declared = require('../../plugins/pluginContribResolver').listDeclaredTools();
+      for (const d of declared) {
+        if (pool.has(d.name) || defs.some((x) => x.name === d.name)) {
+          continue;
+        }
+        defs.push({
+          name: d.name,
+          description: d.description || '',
+          input_schema: d.inputSchema || { type: 'object', properties: {} },
+        });
+      }
+    } catch {
+      // fail-soft：宁可少广告一个拓展工具，不可让整份清单构建不出来
+    }
+
     // Append Anthropic server-side tool search so the model can discover deferred tools
     if (deferEnabled) {
       defs.push({
@@ -3285,6 +3312,9 @@ module.exports = {
   is1MContextActive,
   effectiveContextWindow,
   __test__: {
+    // 暴露给 tests/gateway/contribToolDefs.test.js：拓展声明的工具是否真的进了
+    // 模型可见清单。不导出就只能靠肉眼读代码断言「这段在执行路径上」。
+    buildDirectToolDefs: () => buildDirectToolDefs(),
     getRuntimeDiagnosticsFile: () => _runtimeDiagnosticsStore.getFile(),
     readPersistedRuntimeDiagnostics: (options = {}) =>
       _runtimeDiagnosticsStore.readDiagnostic(options),

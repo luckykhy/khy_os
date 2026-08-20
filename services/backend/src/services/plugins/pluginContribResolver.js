@@ -17,9 +17,11 @@
  *     (default-on) AND the extension's `extensions_state.json` `enabled` state must
  *     pass; any failure → null → "unknown tool" → existing fuzzy-fix path. There is
  *     NO funnel bypass and NO new entrance into executeTool.
- *   - **Zero hard-coding**: paths mirror extensionManager (`getAppHome()` with the
- *     ~/.khyquant fallback), manifest file name, state file name — single source
- *     of truth kept in step with extensionManager by construction.
+ *   - **Zero hard-coding**: roots, manifest names and state file all come from
+ *     `services/extensions/extensionRoots` — the single source of truth legislated by
+ *     [DESIGN-ARCH-069]. This module used to COPY those three constants from
+ *     extensionManager and keep them in step "by construction" (i.e. by a human
+ *     remembering); it no longer owns any path of its own.
  *   - **Pure leaf / no cycles**: this module requires only `_baseTool`, the tools
  *     registry, and `flagRegistry` — nothing that requires toolCalling, so it can
  *     be required from toolCalling without creating an edge back into it.
@@ -32,28 +34,25 @@
 'use strict';
 
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 
 const flagRegistry = require('../flagRegistry');
+const extensionRoots = require('../extensions/extensionRoots');
 
 // ── Gate ───────────────────────────────────────────────────────────────
 // Single-gate on flagRegistry (central registry). Default-on. The extension's
 // own `enabled` state is a SECOND gate consulted per extension (see _enabled).
 const GATE = 'KHY_PLUGIN_LAZY_LOAD';
 
-// ── Paths (mirror extensionManager; single source of truth) ──────────
-function _appHome() {
-  try {
-    const { getAppHome } = require('../../utils/dataHome');
-    return getAppHome();
-  } catch {
-    return path.join(os.homedir(), '.khyquant');
-  }
-}
-const EXTENSIONS_DIR = path.join(_appHome(), 'extensions');
-const MANIFEST_FILE = 'openclaw.plugin.json';
-const STATE_FILE = path.join(_appHome(), 'extensions_state.json');
+// ── Paths — delegated wholesale to extensionRoots (真源) ──────────────
+// These three are kept as exports ONLY because existing tests and call sites read
+// them; they are now derived, not declared. EXTENSIONS_DIR in particular is no
+// longer "the" directory — there are up to five roots (repo `extensions/` included,
+// which this resolver could not see at all before) — so it reports the user root
+// for backwards compatibility while the actual scan walks every root.
+const EXTENSIONS_DIR = extensionRoots.userExtensionsDir();
+const MANIFEST_FILE = extensionRoots.MANIFEST_LEGACY_JSON;
+const STATE_FILE = extensionRoots.stateFilePath();
 const _TOOLS_FIELD = 'tools';
 
 // ── Registry (lazy require to avoid any edge back into toolCalling) ──
@@ -71,18 +70,11 @@ let _catalog = null;
 let _stateCache = null;
 
 function _readStateFile() {
-  try {
-    if (fs.existsSync(STATE_FILE)) {
-      return JSON.parse(fs.readFileSync(STATE_FILE, 'utf-8'));
-    }
-  } catch {
-    /* corrupt/unreadable → treat as no state (absent state = enabled) */
-  }
-  return {};
+  return extensionRoots.readState();
 }
 
 function _enabled(dirName, state) {
-  return state[dirName]?.enabled !== false;
+  return extensionRoots.isEnabled(dirName, state);
 }
 
 function _loadStateCached() {
@@ -92,39 +84,31 @@ function _loadStateCached() {
   return _stateCache;
 }
 
-// Scan EXTENSIONS_DIR, collecting { dir, manifest, enabled } for every folder that
-// carries a manifest declaring at least one tool. Pure read of manifest `tools`;
-// the `entry` module is NOT required here.
+// Scan EVERY extension root (repo `extensions/` + user dirs + legacy plugins dirs),
+// collecting { dir, manifest, absDir } for each enabled extension declaring at least
+// one tool. Pure manifest read — no `entry` module is required here.
+//
+// Delegating to extensionRoots.discover() is what widened this resolver's reach from
+// one hardcoded directory to the full root set; the disabled-filter, first-wins
+// collision policy and fail-soft behaviour are unchanged because discover() applies
+// exactly the same rules (sorted dir names, skip-on-bad-manifest, absent state =
+// enabled). `dir` stays the BARE DIRECTORY NAME: it is the state key and the
+// collision key, and [DESIGN-ARCH-069] §3.3 pins both to the directory basename.
 function _scanEnabledExtensions() {
-  const state = _loadStateCached();
   const found = [];
   try {
-    const dirs = fs.readdirSync(EXTENSIONS_DIR, { withFileTypes: true });
-    for (const dir of dirs) {
-      if (!dir.isDirectory()) {
-        continue;
+    for (const ext of extensionRoots.discover()) {
+      if (ext.kind !== 'runtime') {
+        continue; // ide-bridge / asset never contribute runtime tools
       }
-      if (!_enabled(dir.name, state)) {
-        continue;
-      }
-      const manifestPath = path.join(EXTENSIONS_DIR, dir.name, MANIFEST_FILE);
-      let manifest;
-      try {
-        if (!fs.existsSync(manifestPath)) {
-          continue;
-        }
-        manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-      } catch {
-        continue; // corrupt manifest → skip
-      }
-      const declared = Array.isArray(manifest[_TOOLS_FIELD]) ? manifest[_TOOLS_FIELD] : [];
+      const declared = Array.isArray(ext[_TOOLS_FIELD]) ? ext[_TOOLS_FIELD] : [];
       if (!declared.length) {
         continue; // no contributed tools in this extension
       }
-      found.push({ dir: dir.name, manifest });
+      found.push({ dir: ext.id, absDir: ext.dir, manifest: ext });
     }
   } catch {
-    /* EXTENSIONS_DIR missing/unreadable */
+    /* every root missing/unreadable → no contributed tools, funnel unchanged */
   }
   return found;
 }
@@ -156,9 +140,10 @@ function _rebuild() {
       if (!def || typeof def !== 'object' || typeof def.name !== 'string' || !def.name) {
         continue;
       }
-      const entryPath = ext.manifest.entry
-        ? path.join(EXTENSIONS_DIR, ext.dir, ext.manifest.entry)
-        : null;
+      // Absolute dir comes from the root that actually provided this extension —
+      // joining EXTENSIONS_DIR would silently mis-resolve anything found in the repo
+      // root or a legacy plugins dir.
+      const entryPath = ext.manifest.entry ? path.join(ext.absDir, ext.manifest.entry) : null;
       if (!entryPath || !fs.existsSync(entryPath)) {
         continue;
       }
@@ -319,9 +304,47 @@ function activateContributedTool(name) {
   return tool;
 }
 
+/**
+ * 拓展经 manifest **声明**的全部工具描述符 —— 纯 JSON 读，**永不 require 任何入口**。
+ *
+ * 为什么需要这个：`ownsTool()` / `activateContributedTool()` 是**执行**兜底，只在
+ * 模型已经发出 tool_use 之后才被问到。而模型能不能发出这个 tool_use，取决于它有没有
+ * 在工具清单里见过这个名字 —— 那份清单由 `assembleToolPool()` 从**已加载**的工具生成，
+ * 里面永远没有惰性拓展。结果是一个迁出核的工具「叫得动但看不见」，等于从模型手里
+ * 拿走了它。这是 khy-notebook 试点实测出来的缺口，不是假想。
+ *
+ * 补法必须保持惰性：manifest 是 JSON，name/description/inputSchema 三样**不执行任何
+ * 拓展代码**就能读到 —— 这正是 [DESIGN-ARCH-069] §3 坚持「manifest 是 JSON 不是 JS」
+ * 换来的东西。声明用来广告，入口仍然等到首次真正调用才 require。
+ *
+ * @returns {Array<{name:string,description:string,inputSchema:object,dir:string}>}
+ *          失败一律返回空数组（fail-soft：宁可少广告一个工具，不可让清单构建抛异常）。
+ */
+function listDeclaredTools() {
+  if (!flagRegistry.isFlagEnabled(GATE, process.env)) {
+    return [];
+  }
+  try {
+    _ensureCatalog();
+  } catch {
+    return [];
+  }
+  const out = [];
+  for (const [name, rec] of toolIndex) {
+    out.push({
+      name,
+      description: (rec.def && rec.def.description) || '',
+      inputSchema: (rec.def && rec.def.inputSchema) || { type: 'object', properties: {} },
+      dir: rec.dir,
+    });
+  }
+  return out;
+}
+
 module.exports = {
   ownsTool,
   activateContributedTool,
+  listDeclaredTools,
   EXTENSIONS_DIR,
   STATE_FILE,
   MANIFEST_FILE,

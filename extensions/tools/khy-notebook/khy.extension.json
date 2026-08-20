@@ -1,0 +1,78 @@
+{
+  "id": "khy-notebook",
+  "name": "Khy Notebook",
+  "version": "1.0.0",
+  "description": "Jupyter Notebook (.ipynb) 单元格编辑：replace / insert / delete",
+  "kind": "runtime",
+  "namespace": "nb",
+  "engines": {
+    "khy": ">=1.1.0"
+  },
+  "main": "index.js",
+  "capabilities": [
+    "tools"
+  ],
+  "tools": [
+    {
+      "name": "NotebookEdit",
+      "description": "Replace, insert, or delete a cell in a Jupyter notebook (.ipynb).",
+      "category": "filesystem",
+      "risk": "high",
+      "aliases": [
+        "notebook_edit",
+        "edit_notebook"
+      ],
+      "searchHint": "jupyter notebook ipynb cell edit replace insert delete",
+      "isReadOnly": false,
+      "isConcurrencySafe": false,
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "notebook_path",
+          "new_source"
+        ],
+        "properties": {
+          "notebook_path": {
+            "type": "string",
+            "description": "Absolute path to the .ipynb file."
+          },
+          "cell_number": {
+            "type": "number",
+            "description": "0-indexed cell number to edit."
+          },
+          "cell_id": {
+            "type": "string",
+            "description": "Cell ID to edit (alternative to cell_number)."
+          },
+          "cell_type": {
+            "type": "string",
+            "enum": [
+              "code",
+              "markdown"
+            ],
+            "description": "Cell type. Required for insert."
+          },
+          "edit_mode": {
+            "type": "string",
+            "enum": [
+              "replace",
+              "insert",
+              "delete"
+            ],
+            "description": "Edit mode. Defaults to replace."
+          },
+          "new_source": {
+            "type": "string",
+            "description": "New source content for the cell."
+          }
+        }
+      }
+    }
+  ],
+  "permissions": {
+    "network": false,
+    "spawn": false,
+    "database": false
+  },
+  "_note": "本拓展 2026-08-19 由 services/backend/src/tools/NotebookEditTool/ 迁入，是 [DESIGN-ARCH-069] 第二个试点，也是**第一个把内置工具迁出核**的例子。工具名保持 `NotebookEdit` 原名而不加 `nb_` 前缀：核里有约 20 处策略表按这个名字点名（11 个内置 agent 的 denylist、permissionPolicy/matchers、permissionStore 分类、roleToolScope、TUI ProcessGroup 分类），且它是对模型暴露的 API 契约名，改名等于换了一个工具。原名之所以可行，是因为本拓展走的是 manifest + 漏斗兜底路径（pluginContribResolver 按 def.name 原样注册），而不是会强制加前缀的 ctx.tools.register —— 两条路径的命名规则差异见 [DESIGN-ARCH-069] §5.1。"
+}

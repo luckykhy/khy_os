@@ -104,17 +104,17 @@ _bs3_prebuild.tar.gz
 #   git checkout 下 platform/khy_platform/cli.py 优先走源码树，从不读这两个文件。
 platform/khy_platform/bundled/
 packaging/npm/bundled/
-#   apps/ai-frontend/public/vendor/ —— tools/khyos-markdown/vendor/ 的字节级镜像，
+#   apps/ai-frontend/public/vendor/ —— extensions/tools/khy-markdown/vendor/ 的字节级镜像，
 #   由 apps/ai-frontend 的 predev/prebuild 钩子调 sync-md-vendor.mjs 自动同步。
 apps/ai-frontend/public/vendor/
-#   tools/khyos-markdown/vendor/ —— muya WYSIWYG 引擎的 esbuild 自打包产物（11 MB），
+#   extensions/tools/khy-markdown/vendor/ —— muya WYSIWYG 引擎的 esbuild 自打包产物（11 MB），
 #   源码是同级 muya-embed/（@muyajs/core@0.2.0 + build.mjs），重建逐字节可复现。
-#   守卫 muya-embed/ensure-vendor.mjs 挂在三处：khyos-markdown 的 prepack、
+#   守卫 muya-embed/ensure-vendor.mjs 挂在三处：khy-markdown 拓展的 prepack、
 #   scripts/release/build-payload-assets.js（Release 的 markdown-vendor payload）、
 #   apps/ai-frontend 的 sync-md-vendor.mjs（fail-soft，缺则回退内联渲染器）。
 #   打包层早已 prune 它：MANIFEST.in + pip_packaging_rules.py:SDIST_PRUNE_DIRS。
 #   附带收益：跟踪时 Windows 的 autocrlf 会在检出时把它撑大 4112 字节。
-tools/khyos-markdown/vendor/
+extensions/tools/khy-markdown/vendor/
 #   docs/_assets/mermaid.min.js —— mermaid@11.15.0 的 esbuild 自打包产物（3.3 MB），
 #   源码是 scripts/docs/mermaid-embed/；由 npm run docs:build 的 ensure 步骤重建。
 #   同目录的 docs-site.css / docs-site.js / hljs-*.css 是手写源码，继续跟踪。

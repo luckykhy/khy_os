@@ -101,6 +101,7 @@
         "cleanupService",
         "ciStatusService",
         "extensionMarketplace",
+        "extensionRoots",
         "instructionEcosystemRegistry",
         "instructionFileService",
         "mcp",

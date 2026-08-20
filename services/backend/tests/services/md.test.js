@@ -18,7 +18,7 @@ const HANDLER = require('../../src/cli/handlers/md');
 const REG = require('../../src/services/mdEditorRegister');
 
 // ── md handler:tools 目录解析 ─────────────────────────────────────────────
-test('resolveToolsDir:命中真实仓库 tools/khyos-markdown（含 khyos-md-bridge.js）', () => {
+test('resolveToolsDir:经拓展契约命中真实仓库 extensions/tools/khy-markdown（含 khyos-md-bridge.js）', () => {
   const dir = HANDLER.resolveToolsDir();
   assert.ok(dir, '应解析出目录');
   assert.ok(fs.existsSync(path.join(dir, 'khyos-md-bridge.js')), '目录内应有桥接器');
