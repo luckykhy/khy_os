@@ -7,11 +7,25 @@
  *   1. User config:     ~/.khyquant/config.json (legacy ~/.khy/config.json also supported)
  *   2. Local workspace: ./node_modules/khy-<name> or ./@scope/khy-<name>
  *   3. Global npm:      npm -g prefix/lib/node_modules/khy-*
- *   4. Plugin dir:      ~/.khyquant/plugins/<name>/ (legacy ~/.khy/plugins also supported)
- *   5. Environment:     KHY_PLUGINS=khyquant,khy-notes
+ *   4. Extension roots: every root of `services/extensions/extensionRoots` —
+ *                       <appRoot>/extensions/ (built-in, ships with the package),
+ *                       <appHome>/extensions/, KHY_EXTENSION_PATH. **Deferred**:
+ *                       see below.
+ *   5. Plugin dir:      ~/.khyquant/plugins/<name>/ (legacy ~/.khy/plugins also supported)
+ *   6. Environment:     KHY_PLUGINS=khyquant,khy-notes
  *
  * Each plugin must export a KhyPlugin-compatible object and have a valid
- * package.json#khy manifest field.
+ * manifest (`khy.extension.json` or `package.json#khy` — see [DESIGN-ARCH-069] §3).
+ *
+ * **Eager vs deferred.** Sources 1/2/3/5/6 name a plugin explicitly (a config
+ * entry, a dependency, an env var), so being named IS the intent to load it and
+ * they are activated during init(). Source 4 is a *directory scan* of a tree the
+ * user may simply have dropped a folder into — activating those at startup would
+ * charge every built-in extension's module body into boot time, which is exactly
+ * what [DESIGN-ARCH-069] §4 forbids. They are therefore only *indexed* at init
+ * (namespace reserved, manifest known, entry NOT required) and activated on first
+ * use via activateNamespace(). Turning the KHY_PLUGIN_LAZY_LOAD gate off restores
+ * eager activation for them too.
  */
 
 const fs = require('fs');
@@ -19,6 +33,9 @@ const os = require('os');
 const path = require('path');
 
 const { getDataHome } = require('../utils/dataHome');
+// 拓展根的单一真源（[DESIGN-ARCH-069]）。此前本加载器有自己的 5 个发现源，其中**没有
+// 一个**是仓库的 extensions/ —— 随包分发的内置拓展对它完全不可见。
+const extensionRoots = require('../services/extensions/extensionRoots');
 
 // Optional SDK load: fall back to a built-in manifest validator when the
 // @khy/plugin-sdk package is missing (fail-soft, warn only once).
@@ -122,6 +139,18 @@ const LEGACY_KHY_CONFIG = path.join(LEGACY_KHY_HOME, 'config.json');
 const LEGACY_KHY_PLUGINS_DIR = path.join(LEGACY_KHY_HOME, 'plugins');
 const ACTIVATE_TIMEOUT_MS = 5000;
 
+// 已发现但尚未激活。与 'disabled:*' 有本质区别：那些是**试过并失败**，这个是**还没试**。
+const STATE_DISCOVERED = 'discovered:lazy';
+
+// 惰性总闸沿用既有声明式门（default-on），不新立一个。注册表不可用 → 保持默认开。
+function _lazyGateOn() {
+  try {
+    return require('../services/flagRegistry').isFlagEnabled('KHY_PLUGIN_LAZY_LOAD', process.env);
+  } catch {
+    return true;
+  }
+}
+
 // ── State ─────────────────────────────────────────────────────────────────────
 
 /** @type {Map<string, LoadedPlugin>} namespace → loaded plugin */
@@ -129,6 +158,12 @@ const _loadedPlugins = new Map();
 
 /** @type {string} Host version (set by init) */
 let _hostVersion = '1.0.0';
+
+/** @type {Function|null} contextFactory kept from init(), for deferred activation */
+let _contextFactory = null;
+
+/** @type {object|null} logger kept from init(), for deferred activation */
+let _logger = null;
 
 /**
  * @typedef {object} LoadedPlugin
@@ -155,6 +190,10 @@ let _hostVersion = '1.0.0';
 async function init({ hostVersion, contextFactory, logger }) {
   _hostVersion = hostVersion;
   const log = logger || console;
+  // 留存供 activateNamespace() 用：惰性候选在 init 之后才被激活，那时调用方手里
+  // 通常已经没有 contextFactory 了（它是 replSession 启动期的局部量）。
+  _contextFactory = contextFactory;
+  _logger = log;
 
   // Discover all candidate plugin paths
   const candidates = discoverPlugins(log);
@@ -200,16 +239,24 @@ async function init({ hostVersion, contextFactory, logger }) {
       continue;
     }
 
+    // 惰性候选（目录扫描来的）：只占名、不 require 入口。首次调用其贡献名时由
+    // activateNamespace() 激活。门控关掉 → 退回即时激活（与其他源同构）。
+    const deferred = candidate.lazy && _lazyGateOn();
+
     // Reserve namespace
     _loadedPlugins.set(manifestData.namespace, {
       namespace: manifestData.namespace,
       manifest: manifestData,
       instance: null,
-      state: 'loading',
+      state: deferred ? STATE_DISCOVERED : 'loading',
       source,
       path: pluginPath,
       disposables: [],
     });
+
+    if (deferred) {
+      continue;
+    }
 
     // Load and activate
     activationPromises.push(activatePlugin(manifestData, pluginPath, source, contextFactory, log));
@@ -267,6 +314,42 @@ function getAllPlugins() {
 }
 
 /**
+ * 按需激活一个**已发现但未激活**的拓展（[DESIGN-ARCH-069] §4 的第 ③ 步）。
+ *
+ * 幂等且无副作用地可重复调用：
+ *   - 已 active → 直接返回它，不重复 require。
+ *   - 从未被发现 → null（走调用方既有的「未知命令 / 未知工具」路径，不新增分支）。
+ *   - `disabled:*` → null。那是**试过并失败**的终态，不在这里重试；重试会把一个
+ *     启动期就 5 秒超时的拓展变成每次调用都卡 5 秒。
+ *
+ * @param {string} namespace - 拓展命名空间
+ * @param {object} [opts] - { contextFactory, logger } 覆盖 init() 留存的那一份
+ * @returns {Promise<object|null>} 激活后的 LoadedPlugin，失败/不适用则 null
+ */
+async function activateNamespace(namespace, opts = {}) {
+  const entry = _loadedPlugins.get(namespace);
+  if (!entry) {
+    return null;
+  }
+  if (entry.state === 'active') {
+    return entry;
+  }
+  if (entry.state !== STATE_DISCOVERED) {
+    return null; // loading / disabled:* 都不在这里插手
+  }
+
+  const contextFactory = opts.contextFactory || _contextFactory;
+  if (typeof contextFactory !== 'function') {
+    return null; // 没有 ctx 工厂就无法给拓展注入能力 —— 宁可不激活
+  }
+  const log = opts.logger || _logger || console;
+
+  entry.state = 'loading';
+  await activatePlugin(entry.manifest, entry.path, entry.source, contextFactory, log);
+  return entry.state === 'active' ? entry : null;
+}
+
+/**
  * Get plugin status summary.
  */
 function getStatus() {
@@ -321,7 +404,16 @@ function discoverPlugins(log) {
     }
   }
 
-  // 4. plugin data-home directories scan (includes legacy ~/.khy/plugins)
+  // 4. 拓展根扫描（仓库内置 + 用户安装 + KHY_EXTENSION_PATH）——**惰性**，见文件头注释
+  const extPlugins = discoverFromExtensionRoots(log);
+  for (const c of extPlugins) {
+    if (!seenNames.has(c.manifestData.name)) {
+      seenNames.add(c.manifestData.name);
+      candidates.push({ ...c, source: c.source, lazy: true });
+    }
+  }
+
+  // 5. plugin data-home directories scan (includes legacy ~/.khy/plugins)
   const dirPlugins = discoverFromPluginsDir(log);
   for (const c of dirPlugins) {
     if (!seenNames.has(c.manifestData.name)) {
@@ -330,7 +422,7 @@ function discoverPlugins(log) {
     }
   }
 
-  // 5. KHY_PLUGINS environment variable
+  // 6. KHY_PLUGINS environment variable
   const envPlugins = discoverFromEnv(log);
   for (const c of envPlugins) {
     if (!seenNames.has(c.manifestData.name)) {
@@ -468,6 +560,58 @@ function discoverFromGlobal(log) {
       }
     }
   } catch {}
+  return results;
+}
+
+/**
+ * 从 extensionRoots 的全部根发现拓展。
+ *
+ * 与其他发现源的两点不同：
+ *   - manifest 由 `extensionRoots.readManifest` 读，因此 `khy.extension.json`（canonical）
+ *     与 `package.json#khy`（遗留）都认得 —— 本加载器自己的 readManifest 只认后者。
+ *   - 只收 `kind: 'runtime'` 且声明了 `main` 的：`ide-bridge`（VSIX 之类交付给外部 IDE
+ *     的产物）和 `asset` 根本没有可激活的入口，把它们当插件加载只会产生噪音告警。
+ *
+ * 被显式禁用（`extensions_state.json` 里 `enabled: false`）的拓展不会出现在这里 ——
+ * discover() 已经过滤掉了，与 pluginContribResolver 的双门语义一致。
+ *
+ * @returns {Array<{manifestData: object, pluginPath: string, source: string}>}
+ */
+function discoverFromExtensionRoots(log) {
+  const results = [];
+  let found;
+  try {
+    found = extensionRoots.discover();
+  } catch (err) {
+    if (log && log.warn) {
+      log.warn(`  ⚠ 拓展根扫描失败，已跳过该发现源: ${err && err.message ? err.message : err}`);
+    }
+    return results; // fail-soft：一个源坏掉不影响其余四个
+  }
+
+  for (const ext of found) {
+    if (ext.kind !== 'runtime' || !ext.main) {
+      continue;
+    }
+    results.push({
+      // manifestData 用本加载器消费的形状；namespace / engines 已由 extensionRoots 归一。
+      manifestData: {
+        name: ext.name,
+        displayName: ext.displayName,
+        version: ext.version,
+        description: ext.description,
+        namespace: ext.namespace,
+        engines: ext.engines,
+        main: ext.main,
+        capabilities: ext.capabilities,
+        permissions: ext.permissions,
+      },
+      pluginPath: ext.dir,
+      // source 如实带上根的来源（builtin / user / override），便于 `khy plugin status`
+      // 一眼看出这个拓展是随包来的还是用户装的。
+      source: `ext:${ext.source}`,
+    });
+  }
   return results;
 }
 
@@ -619,8 +763,11 @@ module.exports = {
   getPlugin,
   getAllPlugins,
   getStatus,
+  activateNamespace,
   discoverPlugins,
+  discoverFromExtensionRoots,
   readManifest,
+  STATE_DISCOVERED,
   // Manifest validator: @khy/plugin-sdk when installed, else the built-in
   // fallback — exported so callers/tests validate against the same function
   // the loader actually uses.

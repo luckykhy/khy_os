@@ -7,7 +7,7 @@
  *
  * 背景：治理 `.khy/logs`（约 463M）、`.khy/checkpoints`（约 275M）和多份重复
  * node_modules 之前，必须先有一份**可复现的**体积快照，否则「省了多少」只能靠感觉。
- * 探测（walk 文件树、读 manifest）全部留在 scripts/diagnostics/storage-baseline.js；
+ * 探测（walk 文件树、读 manifest）全部留在 extensions/scripts/khy-diagnostics/storage-baseline.js；
  * 本文件只接收已经采集好的事实，做归类、求和、去重收益计算与呈现。
  *
  * 这样拆分的收益：判定逻辑可在无文件系统的单测里全覆盖，而 CLI 只需守住

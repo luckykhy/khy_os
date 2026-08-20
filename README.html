@@ -70,12 +70,12 @@ khy doctor                 <span class="hljs-comment"># 系统健康检查</span
 .\khy.bat
 
 <span class="hljs-comment"># 或使用 PowerShell 便携化启动脚本（npm workspaces monorepo）</span>
-.\scripts\portable\run.ps1                  <span class="hljs-comment"># 等价于 npm run dev</span>
-.\scripts\portable\run.ps1 build            <span class="hljs-comment"># npm run build</span>
-.\scripts\portable\run.ps1 shell            <span class="hljs-comment"># 进入带 node/npm 环境的 PowerShell</span></code></pre>
+.\extensions\scripts\khy-portable\run.ps1                  <span class="hljs-comment"># 等价于 npm run dev</span>
+.\extensions\scripts\khy-portable\run.ps1 build            <span class="hljs-comment"># npm run build</span>
+.\extensions\scripts\khy-portable\run.ps1 shell            <span class="hljs-comment"># 进入带 node/npm 环境的 PowerShell</span></code></pre>
 <p>Linux / macOS 使用 <code>./khy.sh</code>。便携模式详见 <a href="docs/06_DEPLOY_部署/PORTABLE.html">PORTABLE.md</a>。</p>
-<p>仓库<strong>不跟踪可再生的构建产物</strong>：Markdown 工作台的 muya WYSIWYG 引擎（<code>tools/khyos-markdown/vendor/</code>）<br>与离线文档站的图表引擎（<code>docs/_assets/mermaid.min.js</code>）都由同级源码按需重建。开发路径 fail-soft<br>（缺失时自动回退），发布路径硬失败。想立刻补齐：</p>
-<pre><code class="language-bash">node tools/khyos-markdown/muya-embed/ensure-vendor.mjs   <span class="hljs-comment"># muya 所见即所得引擎（约 11 MB）</span>
+<p>仓库<strong>不跟踪可再生的构建产物</strong>：Markdown 工作台的 muya WYSIWYG 引擎（<code>extensions/tools/khy-markdown/vendor/</code>）<br>与离线文档站的图表引擎（<code>docs/_assets/mermaid.min.js</code>）都由同级源码按需重建。开发路径 fail-soft<br>（缺失时自动回退），发布路径硬失败。想立刻补齐：</p>
+<pre><code class="language-bash">node extensions/tools/khy-markdown/muya-embed/ensure-vendor.mjs   <span class="hljs-comment"># muya 所见即所得引擎（约 11 MB）</span>
 npm run docs:mermaid                                     <span class="hljs-comment"># 文档站 Mermaid 图表引擎（约 3.3 MB）</span></code></pre>
 <h2 id="快速开始-开发者">快速开始（开发者）<a class="anchor" href="#快速开始-开发者" aria-label="锚点">#</a></h2>
 <h3 id="启动后端">启动后端<a class="anchor" href="#启动后端" aria-label="锚点">#</a></h3>
@@ -158,12 +158,14 @@ node scripts\seed.js               <span class="hljs-comment"># 或：完整种�
 │   ├── qoder-bridge/  release/  restore/  tests/
 │   └── README.md             #   scripts 目录索引与分类说明
 │
-├── tools/                    # 独立工具
-│   ├── deepseek-eyes/        #   图像理解 MCP 服务
-│   └── khyos-markdown/       #   Markdown 渲染桥接
+├── tools/                    # 独立开发者工具（不参与运行时）
+│   └── deepseek-eyes/        #   图像理解 MCP 服务
+│
+├── extensions/               # 内置拓展：一个目录一个拓展，删目录即卸载
+│   ├── khy-markdown/         #   Markdown 工作台（muya 所见即所得 + MCP）
+│   └── khy-trae-bridge/      #   Trae/VS Code 登录态桥接（VSIX）
 │
 ├── alpine/                   # Alpine Linux ISO 构建相关
-├── extensions/               # 扩展（khy-trae-bridge）
 ├── docs/                     # 全套中文文档（01_INIT ~ 09_STORY + 维护手册）
 └── _source/                  # 源码快照 / 恢复参考</code></pre>
 <h3 id="分层概览">分层概览<a class="anchor" href="#分层概览" aria-label="锚点">#</a></h3>

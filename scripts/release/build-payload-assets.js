@@ -38,7 +38,7 @@ function copyAsset(source, outDir, asset) {
   return { asset, sha256: sha256File(destination), size: stat.size };
 }
 
-// markdown 拓展正在从 tools/khyos-markdown 改名到 extensions/khy-markdown，而改名尚未落到
+// markdown 拓展正在从 tools/khyos-markdown 改名到 extensions/tools/khy-markdown，而改名尚未落到
 // 提交树 —— 写死任一侧都会在另一侧 ENOENT（发布流水线是在 tag 的干净检出上跑的，
 // 拿不到工作树里那份暂存的改名）。所以按存在性解析，改名前后都能工作。
 function resolveMarkdownExtensionDir(root) {

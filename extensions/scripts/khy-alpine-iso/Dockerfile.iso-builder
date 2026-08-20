@@ -1,0 +1,26 @@
+# Dockerfile.iso-builder — Build KHY OS ISO inside a container
+# Works on Windows (Docker Desktop), macOS, and Linux.
+#
+# Usage:
+#   docker build -t khy-iso-builder -f extensions/scripts/khy-alpine-iso/Dockerfile.iso-builder .
+#   docker run --rm -v "$(pwd)/dist:/out" khy-iso-builder
+#
+# The ISO will appear at dist/khy-os.iso on the host.
+
+FROM alpine:3.23 AS builder
+
+# Keep builder image minimal: only tools required by build-khy-os-iso.sh preflight
+# and host-side ISO assembly. Runtime packages for KHY OS are installed inside the
+# chroot rootfs by build-khy-os-iso.sh, not here.
+RUN apk add --no-cache \
+    bash coreutils findutils grep sed \
+    wget rsync tar \
+    grub grub-bios grub-efi xorriso mtools \
+    squashfs-tools \
+    ca-certificates
+
+COPY . /src
+
+# The build script needs chroot + mount, which require --privileged
+# or at minimum CAP_SYS_ADMIN + CAP_SYS_CHROOT.
+ENTRYPOINT ["bash", "/src/extensions/scripts/khy-alpine-iso/build-khy-os-iso.sh", "--output", "/out/khy-os.iso"]

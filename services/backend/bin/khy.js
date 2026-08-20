@@ -863,7 +863,7 @@ async function ensureAuthenticated() {
                 }
               } catch (regErr) {
                 printInfo(`自动注册失败: ${regErr.message || 'unknown'}`);
-                printInfo(`提示: 如需使用完整功能，请先运行 'scripts/setup/start-all.bat' 启动后端服务`);
+                printInfo(`提示: 如需使用完整功能，请先运行 'extensions/scripts/khy-installer/setup/start-all.bat' 启动后端服务`);
               }
             }
           } catch (err) {

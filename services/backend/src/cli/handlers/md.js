@@ -10,7 +10,7 @@
  *   khy md register          把 khyosMarkdown 注册进系统「打开方式」(.md 关联)
  *   khy md unregister        移除该关联
  *
- * 底层复用 tools/khyos-markdown/：
+ * 底层复用 khy-markdown 拓展（extensions/tools/khy-markdown/，[DESIGN-ARCH-069] 拓展契约）：
  *   - khyos-md-bridge.js：127.0.0.1 同源桥接器（消 CORS + token 鉴权 + /vendor 静态服务）。
  *   - khyosMarkdown.html：门控加载同源本地 muya 引擎产物 vendor/，失败逐字节回退零依赖内联引擎。
  *   - register-linux.sh / register-windows.ps1：用户级关联（~/.local / HKCU，无 sudo/UAC）。
@@ -35,29 +35,21 @@ function flagOn(name) {
 }
 
 /**
- * 定位 tools/khyos-markdown 目录。dev 与 pip/npm bundled 布局中，tools/ 与 services/ 同级，
- * 故 handler 目录上溯 5 层即命中；另留环境变量覆盖与若干候选兜底。
+ * 定位 Markdown 工作台拓展目录。
+ *
+ * 实现已下沉到 services/extensions/markdownWorkbench —— 本 handler 不再自己知道
+ * 「那个拓展叫什么、在磁盘的哪一层」，只知道它要一个 `markdown-workbench` 服务。
+ * 此处保留同名导出，是因为它已是既有测试与 deps 注入的契约面（改名只会制造无谓的
+ * 改动面），转发一层的代价换来四个调用点共用同一条解析路径。
+ *
+ * @returns {string|null} 绝对路径；未安装 / 已删目录 → null（调用方给提示，不抛）
  */
 function resolveToolsDir() {
-  const candidates = [];
-  const envDir = process.env.KHY_MD_TOOLS_DIR;
-  if (envDir) {
-    candidates.push(envDir);
+  try {
+    return require('../../services/extensions/markdownWorkbench').resolveDir();
+  } catch (_) {
+    return null; // 模块被裁剪 → 与「没装这个拓展」同一路径，不新增分支
   }
-  // handlers → cli → src → backend → services → <root> → tools/khyos-markdown
-  candidates.push(path.resolve(__dirname, '..', '..', '..', '..', '..', 'tools', 'khyos-markdown'));
-  // 兜底：再上溯一层（防个别打包层级差异）。
-  candidates.push(
-    path.resolve(__dirname, '..', '..', '..', '..', '..', '..', 'tools', 'khyos-markdown')
-  );
-  for (const c of candidates) {
-    try {
-      if (fs.existsSync(path.join(c, 'khyos-md-bridge.js'))) {
-        return c;
-      }
-    } catch (_) {}
-  }
-  return null;
 }
 
 function resolveLocalVendorDir(toolsDir) {
@@ -107,7 +99,7 @@ async function openEditor(targetPath) {
   const { printInfo, printError, printWarn, printSuccess } = fmt();
   const toolsDir = resolveToolsDir();
   if (!toolsDir) {
-    printError('未找到 khyosMarkdown 工具目录（tools/khyos-markdown）。');
+    printError('未找到 khy-markdown 拓展（extensions/tools/khy-markdown）。');
     printInfo('可设置 KHY_MD_TOOLS_DIR 指向该目录后重试。');
     return true;
   }
@@ -182,7 +174,7 @@ function runRegisterScript(action) {
   const { printInfo, printError, printWarn, printSuccess } = fmt();
   const toolsDir = resolveToolsDir();
   if (!toolsDir) {
-    printError('未找到 tools/khyos-markdown。');
+    printError('未找到 khy-markdown 拓展（extensions/tools/khy-markdown）。');
     return true;
   }
 

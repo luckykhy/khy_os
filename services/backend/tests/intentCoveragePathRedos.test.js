@@ -31,7 +31,7 @@ const REALISTIC = [
   '请修改 src/cli/ai.js 和 services/backend/tests/foo.test.js',
   '看下 config.json 还有 a_b/c-d/e.py 这个路径',
   '重构 utils/helper.ts、components/Button.vue，保留 README.md',
-  '路径 ./scripts/diagnostics/fuzz-input.js 有问题',
+  '路径 ./extensions/scripts/khy-diagnostics/fuzz-input.js 有问题',
   'no paths here just prose about maotai and 茅台',
   'windows path C:\\Users\\dev\\project\\main.go handling',
   'deep/nested/a/b/c/d/e/f/g/file_name-2.tsx 请看这个',

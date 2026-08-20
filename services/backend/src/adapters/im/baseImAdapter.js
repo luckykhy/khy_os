@@ -6,7 +6,7 @@
  * baseImAdapter.js — IM 渠道适配器抽象基类:所有 IM 渠道(飞书 / Telegram / 钉钉)
  * 共用的「通道骨架」单一真源。
  *
- * 为什么需要它:`src/bridge/`(HTTP + WS 远程控制)与 `extensions/khy-trae-bridge/`
+ * 为什么需要它:`src/bridge/`(HTTP + WS 远程控制)与 `extensions/bridges/khy-trae-bridge/`
  * (编辑器侧)各自把「连上去 → 收消息 → 回消息 → 断线重连 → 附件落盘」从零搭了一遍。
  * 再加一个 IM 渠道就是第三遍,而每一遍都会重新踩同样的坑:固定时长超时把活着的长连接
  * 掐死、退避没有上界把网关打爆、附件散落在各自硬编码的 `~/.khyquant/…` 下。基类把这些

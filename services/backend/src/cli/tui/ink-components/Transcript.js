@@ -641,4 +641,8 @@ Transcript.adaptPersistedTimeline = adaptPersistedTimeline;
 Transcript.userMsgWhiteBgEnabled = userMsgWhiteBgEnabled;
 Transcript.userMsgBgColor = userMsgBgColor;
 Transcript.userMsgFgColor = userMsgFgColor;
+// TranscriptView(Ctrl+O 全量视图)用同一个渲染器投影文本行,这样视图里的排版与
+// <Static> committed 区逐字一致 —— 两处各自 require markdownRenderer 会在门控/
+// fail-soft 状态不同时排出两种版式。
+Transcript.renderMarkdown = renderMarkdown;
 module.exports = Transcript;

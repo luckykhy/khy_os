@@ -1,0 +1,36 @@
+{
+  "id": "khy-portable",
+  "name": "Khy Portable",
+  "version": "1.0.0",
+  "description": "便携版构建、打包、体检与修复；含 khytogo U 盘分发脚本",
+  "kind": "toolchain",
+  "capabilities": [
+    "commands"
+  ],
+  "provides": [
+    "portable-artifact"
+  ],
+  "commands": [
+    {
+      "name": "build",
+      "description": "构建便携版产物（--kind portable-dev|portable-runtime，加 --plan 只出计划）",
+      "script": "build-portable-artifact.js"
+    },
+    {
+      "name": "package",
+      "description": "打包便携版（--kind dev|runtime）",
+      "script": "package-portable.js"
+    },
+    {
+      "name": "verify",
+      "description": "便携版体检",
+      "script": "portable-health-check.js"
+    },
+    {
+      "name": "repair",
+      "description": "修复便携版目录",
+      "script": "repair-portable.js"
+    }
+  ],
+  "_note": "2026-08-19 由 scripts/portable/ + scripts/khytogo/ 迁入（[DESIGN-ARCH-069] §1.6 裁定：scripts/ 只留 ci/lib/tests/docs/release/maintenance，其余拆为拓展）。npm 目标经 scripts/lib/ext-run.js 派发——删掉本目录后 `npm run portable:*` 退化为一条「拓展未安装」的消息而不是 Cannot find module。"
+}

@@ -512,7 +512,9 @@ async function handleKhyosMdOpen(session, msg) {
   const fs = require('fs');
   let toolsDir;
   try {
-    toolsDir = require('../cli/handlers/md').resolveToolsDir();
+    // 服务定位，不再 require 上去找 cli 层的 handler（那是层级倒置），
+    // 也不点名具体拓展 —— [DESIGN-ARCH-069] §1.3 第四条。
+    toolsDir = require('./extensions/markdownWorkbench').resolveDir();
   } catch (err) {
     return wsSend(session, {
       type: 'khyos_md_status',
@@ -524,7 +526,7 @@ async function handleKhyosMdOpen(session, msg) {
     return wsSend(session, {
       type: 'khyos_md_status',
       status: 'error',
-      message: '未找到 khyosMarkdown 工具目录(tools/khyos-markdown)',
+      message: '未找到 Markdown 工作台拓展(无拓展提供 markdown-workbench 服务)',
     });
   }
   let bridge;

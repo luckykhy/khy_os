@@ -22,7 +22,7 @@ const BUG_CASES = [
     rootCause:
       'cleanup() 未用 mountpoint -q 检查挂载状态就执行 rm -rf，且 bind-mount 未设 --make-rslave 导致删除操作穿透到宿主',
     fix: '1) 添加 --make-rslave 防止挂载事件传播\n2) devpts 加 newinstance 参数隔离\n3) rm -rf 前用 mountpoint -q 前置检查',
-    files: ['scripts/alpine/build-khy-os-iso.sh'],
+    files: ['extensions/scripts/khy-alpine-iso/build-khy-os-iso.sh'],
     detailDoc: 'docs/08_MGMT_项目管理/[MGMT-OTHER-002] 事后分析-终端崩溃-2026-05-09.md',
     lesson: '永远不要在可能包含 bind-mount 的目录树上执行 rm -rf，必须先验证挂载状态',
     example: {

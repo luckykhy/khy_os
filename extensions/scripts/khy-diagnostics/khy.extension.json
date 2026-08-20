@@ -1,0 +1,56 @@
+{
+  "id": "khy-diagnostics",
+  "name": "Khy Diagnostics",
+  "version": "1.0.0",
+  "description": "故障分诊、各类 doctor、模糊测试语料与性能基准",
+  "kind": "toolchain",
+  "capabilities": [
+    "commands"
+  ],
+  "provides": [
+    "hydration-probe"
+  ],
+  "commands": [
+    {
+      "name": "triage",
+      "description": "故障分诊（--gen-doc 生成文档）",
+      "script": "triage.js"
+    },
+    {
+      "name": "doctor-hydration",
+      "description": "会话 hydration 诊断",
+      "script": "hydration-doctor.js"
+    },
+    {
+      "name": "doctor-model-types",
+      "description": "模型类型与 provider 对账",
+      "script": "model-type-providers.js"
+    },
+    {
+      "name": "doctor-storage",
+      "description": "存储基线诊断",
+      "script": "storage-baseline.js"
+    },
+    {
+      "name": "bench-startup",
+      "description": "启动耗时 A/B 基准",
+      "script": "bench/startup_ab_bench.js"
+    },
+    {
+      "name": "bench-startup-probe",
+      "description": "启动探针开销基准",
+      "script": "bench/startup_probe_cost_bench.js"
+    },
+    {
+      "name": "bench-ab-compare",
+      "description": "A/B 结果比对",
+      "script": "bench/ab-compare.js"
+    },
+    {
+      "name": "bench-git-spawn",
+      "description": "git 子进程开销基准",
+      "script": "bench/git_spawn_bench.js"
+    }
+  ],
+  "_note": "2026-08-19 由 scripts/diagnostics/ + scripts/bench/ 迁入。诊断与基准是同一能力域的两面（先量后诊），按 §1.4「按能力域打包」合为一个拓展而不是两个。"
+}

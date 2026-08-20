@@ -1,0 +1,15 @@
+{
+  "_note": "check-pattern-coverage.js 的已知存量。只允许下降：实测数 > 基线数即在 CI 亮红。补完一批标注后跑 `npm run check:pattern-coverage -- --update-baseline` 下调，绝不上调来让 CI 变绿。",
+  "_source": "scripts/ci/check-pattern-coverage.js；注册表真源 docs/_设计模式/模式注册表.json",
+  "_meaning": {
+    "pattern-uncovered": "本仓 git 跟踪的源文件里没有模式注册表条目的份数。范围 = git ls-files ∩ 11 种源码扩展名，减去 vendor/ 构建产物、压缩产物、_source/ 快照、以及测试文件（注册表既有约定：1139 条里仅 5 条是测试）。",
+    "pattern-ghost": "注册表里指向磁盘上已不存在文件的条目数 —— 注册表在说谎的处数。基线为 0：新增一条即升 error。",
+    "pattern-invalid": "模式名不在 GoF 23 之内、或模式列表为空的处数。基线为 0：新增一处即升 error。"
+  },
+  "updated": "2026-08-19",
+  "counts": {
+    "pattern-uncovered": 2705,
+    "pattern-ghost": 0,
+    "pattern-invalid": 0
+  }
+}

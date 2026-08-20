@@ -1,0 +1,10 @@
+{
+  "id": "khy-trae-bridge",
+  "name": "KHY Trae Bridge",
+  "version": "0.2.1",
+  "description": "将 Trae 登录态桥接到 KHY OS CLI — 自动提取 icube.marscode token",
+  "kind": "ide-bridge",
+  "namespace": "trae",
+  "capabilities": [],
+  "_note": "kind=ide-bridge：本目录交付的是给 Trae/VS Code 侧安装的 VSIX，宿主是 IDE 而不是 khy 进程，因此核不激活它（无 main）。它仍须声明自己，否则 extensions/ 下会重新出现「说不清是什么」的目录。契约见 docs/03_DESIGN_设计/[DESIGN-ARCH-069] 拓展契约与核心边界规范.md"
+}

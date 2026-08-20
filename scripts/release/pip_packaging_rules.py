@@ -45,7 +45,6 @@ SDIST_RECURSIVE_INCLUDES = _ordered_unique([
     "kernel/vendor",
     "kernel/alpine",
     "scripts",
-    "tools/khyos-markdown",
 ])
 
 SDIST_FILE_INCLUDES = _ordered_unique([
@@ -68,7 +67,7 @@ SDIST_FILE_INCLUDES = _ordered_unique([
 # distribution. Keep the list path-specific where broad basenames would delete
 # required application source such as ``src/models`` or ``src/data``.
 SDIST_PRUNE_DIRS = _ordered_unique([
-    "extensions/khy-trae-bridge/node_modules",
+    "extensions/bridges/khy-trae-bridge/node_modules",
     "services/backend/node_modules",
     "services/backend/vendor",
     # Historical prepack output. Source snapshots are immutable Release payloads
@@ -80,8 +79,8 @@ SDIST_PRUNE_DIRS = _ordered_unique([
     "services/ai-backend/node_modules",
     # khyosMarkdown's bridge, HTML shell, and OS integration ship in the sdist;
     # the 10.5 MB WYSIWYG vendor bundle is an immutable first-use payload.
-    "tools/khyos-markdown/muya-embed/node_modules",
-    "tools/khyos-markdown/vendor",
+    "extensions/tools/khy-markdown/muya-embed/node_modules",
+    "extensions/tools/khy-markdown/vendor",
     "apps/ai-frontend/node_modules",
     "services/backend/models",
     "services/backend/logs",
@@ -110,7 +109,7 @@ SDIST_PRUNE_DIRS = _ordered_unique([
     # via each frontend's build script, so they are pure derivatives.
     "apps/ai-frontend/dist",
     "software/khyquant/frontend/dist",
-    # Build-time mirror of tools/khyos-markdown/vendor/ produced by
+    # Build-time mirror of extensions/tools/khy-markdown/vendor/ produced by
     # apps/ai-frontend/scripts/sync-md-vendor.mjs (srcDir -> public/vendor).
     # Verified byte-identical to the SSOT, so shipping it doubles 10.52 MB for
     # nothing; the sync script recreates it during the frontend build.
@@ -132,7 +131,7 @@ SDIST_PRUNE_DIRS = _ordered_unique([
     "services/ai-backend/test",
     "software/khyquant/tests",
     "platform/packages/shared/tests",
-    "tools/khyos-markdown/test",
+    "extensions/tools/khy-markdown/test",
     "apps/ai-frontend/test",
     "kernel/build",
     "kernel/iso/output",
@@ -246,9 +245,12 @@ BASE_COPY_PAYLOADS = [
     # __pycache__/*.pyc/node_modules are stripped by COPY_EXCLUDE_PATTERNS; the
     # tree carries no data/models/node_modules so no source is at risk.
     ("scripts", "scripts"),
-    # khyosMarkdown shell + bridge + OS registration. The vendor/ subtree is
+    # Built-in extensions ([DESIGN-ARCH-069] 拓展契约). khy-markdown carries the
+    # khyosMarkdown shell + bridge + OS registration; its vendor/ subtree is
     # excluded by SDIST_PRUNE_DIRS and provisioned from the immutable Release.
-    ("tools/khyos-markdown", "tools/khyos-markdown"),
+    # Shipping the whole tree (not just one extension) is what makes the repo
+    # extension root <appRoot>/extensions/ exist in an installed layout at all.
+    ("extensions", "extensions"),
 ]
 
 ROOT_DOCS = ["README.md", "AGENTS.md"]

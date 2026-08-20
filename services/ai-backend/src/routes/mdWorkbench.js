@@ -5,7 +5,7 @@
  * 可选增强——读写**服务器主机**上一个受限根目录内的 Markdown 文本文件（自托管单机场景下即
  * 用户自己的机器）。匿名用户前端不渲染该区、绝不触发这些 API。
  *
- * 安全红线（照抄 tools/khyos-markdown/khyos-md-bridge.js 的两道闸 + 本仓 fail-soft 约定）：
+ * 安全红线（照抄 extensions/tools/khy-markdown/khyos-md-bridge.js 的两道闸 + 本仓 fail-soft 约定）：
  *   1. 必经 `authenticateToken`（router.use 顶部）——与 marketplace.js 同范式。
  *   2. 路径 confinement：decode 后 path.resolve，用 path.relative(root, abs) 判定，
  *      拒 `..` 逃逸 / 绝对路径穿越——所有读/写/列都必须落在配置根目录内。

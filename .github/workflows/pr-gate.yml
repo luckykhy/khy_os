@@ -87,6 +87,14 @@ jobs:
       - name: Check repo layout
         run: node scripts/ci/check-repo-layout.js --promote=root-whitelist,docs-index-first,layer-registry
 
+      # 设计模式注册表守卫（真源 docs/_设计模式/模式注册表.json）。与上一步同档：
+      # 同样不传 --changed —— 注册表是仓库的全局属性，只看改动集看不见
+      # 「别人删了文件而条目还在」这类幽灵条目。三条规则全走
+      # scripts/ci/pattern-coverage-baseline.json 棘轮（只降不升，超基线自动升 error），
+      # 所以不需要 --promote：ghost 与 invalid 的基线本就是 0，新增一处即红。
+      - name: Check pattern coverage
+        run: node scripts/ci/check-pattern-coverage.js
+
       - name: Check Node syntax
         run: node scripts/ci/check-node-syntax.js
 

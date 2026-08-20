@@ -129,7 +129,7 @@
 /**
  * Markdown.vue — AI 前端内嵌的 Markdown 工作台版块（无需登录）。
  *
- * 定位：把原先独立 bridge 服务 + 独立浏览器窗口的 `tools/khyos-markdown` 能力，
+ * 定位：把原先独立 bridge 服务 + 独立浏览器窗口的 `extensions/tools/khy-markdown` 能力，
  * 融进本应用外壳的一个侧边栏版块，登录/未登录都能用，消除「分割」。
  *
  * 核心（本文件，Phase A）= 纯浏览器内编辑，零后端、零 401：

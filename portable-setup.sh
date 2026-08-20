@@ -2,7 +2,7 @@
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
-INSTALLER="$PROJECT_ROOT/scripts/portable/install-path-wrappers.sh"
+INSTALLER="$PROJECT_ROOT/extensions/scripts/khy-portable/install-path-wrappers.sh"
 
 printf 'Khy-OS portable command setup\n\n'
 bash "$INSTALLER" --force --add-to-path "$@"

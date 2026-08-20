@@ -15,7 +15,7 @@ if [[ "${1:-}" == "repair" ]]; then
     fi
     export KHYQUANT_PORTABLE_ROOT="$SCRIPT_DIR"
     shift
-    node "$SCRIPT_DIR/scripts/portable/repair-portable.js" "$@"
+    node "$SCRIPT_DIR/extensions/scripts/khy-portable/repair-portable.js" "$@"
     exit $?
 fi
 

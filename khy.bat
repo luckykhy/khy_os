@@ -23,7 +23,7 @@ if /i "%~1"=="repair" (
         exit /b 1
     )
     set "KHYQUANT_PORTABLE_ROOT=%~dp0"
-    node "%~dp0scripts\portable\repair-portable.js" %2 %3 %4 %5 %6 %7 %8 %9
+    node "%~dp0extensions\scripts\khy-portable\repair-portable.js" %2 %3 %4 %5 %6 %7 %8 %9
     exit /b !ERRORLEVEL!
 )
 

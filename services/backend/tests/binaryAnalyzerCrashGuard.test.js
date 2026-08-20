@@ -20,7 +20,7 @@ const assert = require('node:assert');
 
 const { parseELF, parsePE, binaryParseGuardEnabled } = require('../src/services/binaryAnalyzer');
 
-// ── crafted corpus (mirrors scripts/diagnostics/fuzzFileCorpus.js) ──
+// ── crafted corpus (mirrors extensions/scripts/khy-diagnostics/fuzzFileCorpus.js) ──
 
 // 64-bit ELF header, little-endian. e_shoff points near EOF, e_shentsize = 0.
 function craftedElfShentsizeZero() {

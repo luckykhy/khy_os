@@ -1,9 +1,9 @@
 /**
  * sync-md-vendor.mjs — 把 Markdown 工作台的 muya 自打包产物从单一真源
- * (`tools/khyos-markdown/vendor/`) 幂等同步到本前端的 `public/vendor/`,
+ * (`extensions/tools/khy-markdown/vendor/`) 幂等同步到本前端的 `public/vendor/`,
  * 由 vite 原样拷进 `dist/vendor/`、经 nginx 免鉴权静态托管。
  *
- * 单一真源仍是 tools/khyos-markdown/vendor/;此脚本仅在构建/开发前把产物带过来,
+ * 单一真源仍是 extensions/tools/khy-markdown/vendor/;此脚本仅在构建/开发前把产物带过来,
  * 防止两处漂移。幂等:大小+mtime 一致则跳过拷贝;缺源文件不致命(fail-soft,
  * 只 warn 并退出 0——运行时 Markdown.vue 会因 /vendor 404 回退内联渲染器)。
  *
@@ -16,8 +16,8 @@ import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(here, '..'); // apps/ai-frontend
-const srcDir = resolve(appRoot, '../../tools/khyos-markdown/vendor');
-const ensureScript = resolve(appRoot, '../../tools/khyos-markdown/muya-embed/ensure-vendor.mjs');
+const srcDir = resolve(appRoot, '../../extensions/tools/khy-markdown/vendor');
+const ensureScript = resolve(appRoot, '../../extensions/tools/khy-markdown/muya-embed/ensure-vendor.mjs');
 const destDir = resolve(appRoot, 'public/vendor');
 const ASSETS = ['khyos-muya.js', 'khyos-muya.css', 'MANIFEST.json'];
 
@@ -36,7 +36,7 @@ function upToDate(src, dest) {
  *  fail-soft:离线或 npm 不可用时只 warn,由调用方决定是否降级。 */
 function ensureSource() {
   if (existsSync(srcDir)) return true;
-  console.warn('[sync-md-vendor] source missing — rebuilding from tools/khyos-markdown/muya-embed/');
+  console.warn('[sync-md-vendor] source missing — rebuilding from extensions/tools/khy-markdown/muya-embed/');
   try {
     execFileSync(process.execPath, [ensureScript], { stdio: 'inherit' });
   } catch (err) {
@@ -48,7 +48,7 @@ function ensureSource() {
 function main() {
   if (!ensureSource()) {
     console.warn(`[sync-md-vendor] source missing: ${srcDir} — skip (runtime falls back to inline renderer)`);
-    console.warn('[sync-md-vendor] fix: node tools/khyos-markdown/muya-embed/ensure-vendor.mjs');
+    console.warn('[sync-md-vendor] fix: node extensions/tools/khy-markdown/muya-embed/ensure-vendor.mjs');
     return;
   }
   try {

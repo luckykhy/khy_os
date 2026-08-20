@@ -278,8 +278,8 @@ services/backend/bin/khy.js @startup-failure-explain
 # Windows .md Suggested-app Registration
 services/backend/src/services/mdSuggestedAppsPlan.js @md-suggested-apps
 services/backend/tests/services/mdSuggestedAppsPlan.test.js @md-suggested-apps
-tools/khyos-markdown/register-windows.ps1 @md-suggested-apps
-tools/khyos-markdown/unregister-windows.ps1 @md-suggested-apps
+extensions/tools/khy-markdown/register-windows.ps1 @md-suggested-apps
+extensions/tools/khy-markdown/unregister-windows.ps1 @md-suggested-apps
 services/backend/src/services/mdEditorRegister.js @md-suggested-apps
 
 # Fresh-machine Off-machine-restore Self-check in khy doctor

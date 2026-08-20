@@ -1,0 +1,53 @@
+{
+  "id": "khy-markdown",
+  "name": "Khy Markdown",
+  "version": "1.0.0",
+  "description": "零依赖跨平台 Markdown 编辑器：muya 所见即所得、Mermaid 流程图、图片粘贴上传、系统「打开方式」注册",
+  "kind": "runtime",
+  "namespace": "md",
+  "engines": {
+    "khy": ">=1.1.0"
+  },
+  "main": "khyos-md-bridge.js",
+  "capabilities": [
+    "commands",
+    "mcp"
+  ],
+  "provides": [
+    "markdown-workbench"
+  ],
+  "commands": [
+    {
+      "name": "open",
+      "description": "用 muya 打开一个 .md 文件"
+    },
+    {
+      "name": "register",
+      "description": "把 khyosMarkdown 注册进系统「打开方式」(.md 关联)"
+    },
+    {
+      "name": "unregister",
+      "description": "移除该 .md 关联"
+    }
+  ],
+  "mcp": {
+    "command": "node",
+    "args": [
+      "khyos-md-mcp.js"
+    ],
+    "tools": [
+      "read_markdown",
+      "write_markdown",
+      "list_markdown",
+      "search_markdown",
+      "open_editor",
+      "get_outline"
+    ]
+  },
+  "permissions": {
+    "network": false,
+    "spawn": true,
+    "database": false
+  },
+  "_note": "本拓展 2026-08-19 由 tools/khyos-markdown 迁入，是 [DESIGN-ARCH-069] 拓展契约的试点。它此前在 L6 tools/ 却被 `khy md` 在运行时拉起——迁移的判据是「有没有运行时代码路径指向它」，见 [DESIGN-ARCH-068] 第 1.1b 节。commands 目前仍由 services/backend/src/cli/handlers/md.js 承载（只是不再硬编码本目录路径，改走 extensionRoots 发现）；把它们改为经 ctx.commands.register 贡献，属后续一轮。"
+}

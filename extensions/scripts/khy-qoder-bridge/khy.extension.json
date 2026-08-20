@@ -1,0 +1,12 @@
+{
+  "id": "khy-qoder-bridge",
+  "name": "Khy Qoder Bridge",
+  "version": "1.0.0",
+  "description": "Qoder 桥接器的 Windows 启动与开机自启注册",
+  "kind": "toolchain",
+  "capabilities": [
+    "commands"
+  ],
+  "commands": [],
+  "_note": "两个 PowerShell 脚本，没有 node 入口，因此 commands 为空——它是靠 `pwsh <脚本>` 直接调用的。保留 manifest 是为了让这个目录「说得清自己是什么」（§2.3 的「既不是拓展也不是分类目录」会报没有 manifest 的目录）。"
+}

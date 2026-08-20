@@ -15,7 +15,7 @@ if not exist "%PROJECT_ROOT%\khy.bat" (
     exit /b 1
 )
 
-call "%PROJECT_ROOT%\scripts\portable\install-path-wrappers.bat" --force --add-to-path
+call "%PROJECT_ROOT%\extensions\scripts\khy-portable\install-path-wrappers.bat" --force --add-to-path
 if errorlevel 1 (
     echo.
     echo [FAIL] Command setup failed.

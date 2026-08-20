@@ -9253,6 +9253,7 @@ async function startRepl(options = {}) {
                   _ackLine = _turnAckVoice.computeTurnAck({
                     turnIndex: _turnAckIndex,
                     sawText: !!_turnAckSawText,
+                    userText: aiInput,
                     env: process.env,
                   });
                 }
@@ -9664,6 +9665,7 @@ async function startRepl(options = {}) {
                         _ackLine = _turnAckVoice.computeTurnAck({
                           turnIndex: _turnAckIndex,
                           sawText: !!_turnAckSawText,
+                          userText: aiInput,
                           env: process.env,
                         });
                       }

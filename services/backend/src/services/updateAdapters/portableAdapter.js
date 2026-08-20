@@ -6,11 +6,36 @@ const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
 const StreamZip = require('node-stream-zip');
-const { verifyArtifactManifest, normalizeTarget } = require('../../../../../scripts/portable/artifact-manifest');
-const { runHealthCheck } = require('../../../../../scripts/portable/portable-health-check');
+const { requireFromProvider } = require('../extensions/providerModule');
 const { validateUpdateIndex } = require('../updateIndexProtocol');
 
 const { UPDATE } = require('../../constants/serviceDefaults');
+
+// 便携版产物的校验件已迁为拓展（khy-portable，服务名 portable-artifact）。这里**惰性**解析，
+// 且缺席时 **fail-closed**：这两个函数是更新落地前的校验闸，跳过它们就等于装一个没验过的
+// 更新——那比「更新失败」严重得多。所以拓展缺席报错，不降级、不静默放行。
+function _portableArtifact(file) {
+  const mod = requireFromProvider('portable-artifact', file);
+  if (!mod) {
+    throw new Error(
+      `portable update requires a provider of the "portable-artifact" service (${file}); ` +
+        'none is installed, so the artifact cannot be verified'
+    );
+  }
+  return mod;
+}
+
+function verifyArtifactManifest(target) {
+  return _portableArtifact('artifact-manifest.js').verifyArtifactManifest(target);
+}
+
+function normalizeTarget(platform, arch) {
+  return _portableArtifact('artifact-manifest.js').normalizeTarget(platform, arch);
+}
+
+function runHealthCheck(options) {
+  return _portableArtifact('portable-health-check.js').runHealthCheck(options);
+}
 
 function rootFor(state, opts = {}) {
   const base = opts.cacheDir || path.join(require('../../utils/dataHome').getDataHome(), 'updates', 'cache');

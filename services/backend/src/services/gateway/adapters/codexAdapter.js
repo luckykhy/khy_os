@@ -1729,7 +1729,7 @@ function buildDirectToolDefs() {
     const defs = getToolDefinitions();
     // PascalCase names only — claudeCompat handles aliases at execution time
     const seen = new Set();
-    return defs
+    const out = defs
       .filter((d) => {
         if (!_CODEX_DIRECT_ALLOWED_TOOLS.has(d.name) || seen.has(d.name)) {
           return false;
@@ -1743,6 +1743,35 @@ function buildDirectToolDefs() {
         description: d.description || '',
         parameters: d.parameters || { type: 'object', properties: {} },
       }));
+
+    // 拓展经 manifest 声明、但尚未加载的工具 —— 与 claudeAdapter 同一条补充。
+    //
+    // 这条路径的清单来自 getToolDefinitions()，它只看**静态注册表**；惰性拓展按定义
+    // 还没加载，于是一个从核里迁出去的工具会从这份清单里凭空消失。允许名单里已经
+    // 躺着 image_generate / video_generate 两个名字 —— 把媒体域迁成拓展的那一刻，
+    // codex 直连路径就会静默少掉这两个工具，且不报任何错。
+    //
+    // 允许名单仍然说了算：补充只是让「已被允许的名字」在拓展形态下依旧广告得出去，
+    // 不是给拓展开一条绕过名单的后门。
+    try {
+      const declared = require('../../plugins/pluginContribResolver').listDeclaredTools();
+      for (const d of declared) {
+        if (!_CODEX_DIRECT_ALLOWED_TOOLS.has(d.name) || seen.has(d.name)) {
+          continue;
+        }
+        seen.add(d.name);
+        out.push({
+          type: 'function',
+          name: d.name,
+          description: d.description || '',
+          parameters: d.inputSchema || { type: 'object', properties: {} },
+        });
+      }
+    } catch {
+      // fail-soft：宁可少广告一个拓展工具，不可让整份清单构建不出来
+    }
+
+    return out;
   } catch {
     // Fallback: minimal tool set
     return [

@@ -4,9 +4,9 @@
  */
 const winston = require('winston');
 const DailyRotateFile = require('winston-daily-rotate-file');
-const { resolveLogDir } = require('./storagePaths');
+const { resolveLogWriteDir } = require('./storagePaths');
 
-const LOG_DIR = resolveLogDir();
+const LOG_DIR = resolveLogWriteDir();
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',

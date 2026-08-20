@@ -86,19 +86,19 @@ khy doctor                 # 系统健康检查
 .\khy.bat
 
 # 或使用 PowerShell 便携化启动脚本（npm workspaces monorepo）
-.\scripts\portable\run.ps1                  # 等价于 npm run dev
-.\scripts\portable\run.ps1 build            # npm run build
-.\scripts\portable\run.ps1 shell            # 进入带 node/npm 环境的 PowerShell
+.\extensions\scripts\khy-portable\run.ps1                  # 等价于 npm run dev
+.\extensions\scripts\khy-portable\run.ps1 build            # npm run build
+.\extensions\scripts\khy-portable\run.ps1 shell            # 进入带 node/npm 环境的 PowerShell
 ```
 
 Linux / macOS 使用 `./khy.sh`。便携模式详见 [PORTABLE.md](docs/06_DEPLOY_部署/PORTABLE.md)。
 
-仓库**不跟踪可再生的构建产物**：Markdown 工作台的 muya WYSIWYG 引擎（`tools/khyos-markdown/vendor/`）
+仓库**不跟踪可再生的构建产物**：Markdown 工作台的 muya WYSIWYG 引擎（`extensions/tools/khy-markdown/vendor/`）
 与离线文档站的图表引擎（`docs/_assets/mermaid.min.js`）都由同级源码按需重建。开发路径 fail-soft
 （缺失时自动回退），发布路径硬失败。想立刻补齐：
 
 ```bash
-node tools/khyos-markdown/muya-embed/ensure-vendor.mjs   # muya 所见即所得引擎（约 11 MB）
+node extensions/tools/khy-markdown/muya-embed/ensure-vendor.mjs   # muya 所见即所得引擎（约 11 MB）
 npm run docs:mermaid                                     # 文档站 Mermaid 图表引擎（约 3.3 MB）
 ```
 
@@ -228,12 +228,14 @@ khy-os/
 │   ├── qoder-bridge/  release/  restore/  tests/
 │   └── README.md             #   scripts 目录索引与分类说明
 │
-├── tools/                    # 独立工具
-│   ├── deepseek-eyes/        #   图像理解 MCP 服务
-│   └── khyos-markdown/       #   Markdown 渲染桥接
+├── tools/                    # 独立开发者工具（不参与运行时）
+│   └── deepseek-eyes/        #   图像理解 MCP 服务
+│
+├── extensions/               # 内置拓展：一个目录一个拓展，删目录即卸载
+│   ├── khy-markdown/         #   Markdown 工作台（muya 所见即所得 + MCP）
+│   └── khy-trae-bridge/      #   Trae/VS Code 登录态桥接（VSIX）
 │
 ├── alpine/                   # Alpine Linux ISO 构建相关
-├── extensions/               # 扩展（khy-trae-bridge）
 ├── docs/                     # 全套中文文档（01_INIT ~ 09_STORY + 维护手册）
 └── _source/                  # 源码快照 / 恢复参考
 ```

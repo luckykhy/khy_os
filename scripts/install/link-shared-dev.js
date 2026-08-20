@@ -6,10 +6,9 @@
  *
  * `services/backend` declares `"@khy/shared": "file:./vendor/shared"` so the
  * PUBLISHED tarball is self-contained (prepack.js copies the workspace package
- * into vendor/shared at pack time). In a monorepo CHECKOUT, however, vendor/ is
- * git-ignored and only materialised at pack time, so a plain `npm install` would
- * resolve that `file:` dependency against a missing target and create a dangling
- * `node_modules/@khy/shared` link — the `Cannot find module .../@khy/shared/...`
+ * into vendor/shared at pack time). In a monorepo CHECKOUT that `file:` target
+ * must also exist, or npm resolves it against a missing directory and leaves a
+ * dangling `node_modules/@khy/shared` — the `Cannot find module .../@khy/shared/...`
  * failure.
  *
  * This hook bridges the two worlds without touching the published contract: it
@@ -47,6 +46,18 @@ function alreadyLinked() {
   }
 }
 
+/**
+ * 这个 hook 是否有权删除 vendor/shared：只有它自己建的符号链接才算。
+ * 真目录一律不碰——那是被 git 跟踪的源码，可能还带着未提交的修改。
+ */
+function isSelfMadeLink() {
+  try {
+    return fs.lstatSync(VENDOR_SHARED).isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+
 function main() {
   // Only act inside a monorepo checkout; on an end-user install the workspace
   // source is absent and vendor/shared is the real copy shipped in the tarball.
@@ -54,10 +65,25 @@ function main() {
 
   if (alreadyLinked()) return; // idempotent
 
-  // Replace whatever is there (missing, dangling link, or a stale snapshot copy)
-  // with a relative symlink to the canonical workspace source.
+  // NEVER destroy a tracked working tree. vendor/shared is NOT git-ignored in this
+  // repo — `git ls-files` reports 87 tracked files under it, and some of them can
+  // carry uncommitted edits. The original `rmSync` here assumed vendor/ existed
+  // only at pack time; that assumption is false, and acting on it would delete
+  // real source (including unstaged work) on any plain `npm install`.
+  //
+  // So: replace only what this hook is entitled to replace — a missing target, or
+  // a symlink it previously created. A real directory is left exactly as it is.
+  // A checked-in vendor/shared already satisfies the `file:` dependency, which is
+  // the only thing this hook exists to guarantee, so bailing out is not a
+  // degradation — the install resolves fine either way.
+  if (fs.existsSync(VENDOR_SHARED)) {
+    if (!isSelfMadeLink()) {
+      log('vendor/shared is a real directory (tracked in git); leaving it untouched');
+      return;
+    }
+    fs.rmSync(VENDOR_SHARED, { recursive: true, force: true });
+  }
   fs.mkdirSync(VENDOR_DIR, { recursive: true });
-  fs.rmSync(VENDOR_SHARED, { recursive: true, force: true });
   const relTarget = path.relative(VENDOR_DIR, SHARED_SRC);
   fs.symlinkSync(relTarget, VENDOR_SHARED, 'dir');
   log(`linked vendor/shared → ${relTarget}`);
