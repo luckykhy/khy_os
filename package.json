@@ -1,6 +1,8 @@
 {
   "name": "Khy-OS",
   "private": true,
+  "//packageManager": "pnpm 迁移期：corepack 据此固定版本，任何机器上 `corepack pnpm` 都解析到同一个 pnpm。npm workspaces 字段与 pnpm-workspace.yaml 双布局并存，npm lockfile 保留到验收通过后才退役。",
+  "packageManager": "pnpm@10.18.0",
   "workspaces": [
     "platform/packages/shared",
     "platform/packages/ui-shared",

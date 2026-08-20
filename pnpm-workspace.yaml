@@ -1,0 +1,48 @@
+# pnpm workspace 成员清单。
+#
+# 与根 package.json 的 `workspaces` 字段**并存**：迁移期两套布局都要能装，
+# npm lockfile 和现有 node_modules 一律保留，直到 clean checkout、后端/前端/
+# mobile/markdown 测试和发布 dry-run 全部验过，才另开一个提交逐个退役。
+# 顺序与 package.json 保持一致，方便两边对读。
+#
+# 刻意**不使用** `tools/*`、`extensions/*` 这类宽 glob：宽 glob 会在有人新建
+# 目录时静默把它拉进 workspace，依赖解析范围因此在无人 review 的情况下变化。
+# 每一个成员都显式列出，增删都留在 diff 里。
+packages:
+  - platform/packages/shared
+  - platform/packages/ui-shared
+  - services/backend
+  - services/ai-backend
+  - apps/ai-frontend
+  - apps/khy-mobile
+  - software/khyquant/frontend
+  - extensions/tools/khy-markdown
+
+# 独立构建子项目，**不**纳入 workspace：
+#   extensions/tools/khy-markdown/muya-embed —— muya WYSIWYG 的 esbuild 自打包源，
+#     产物 vendor/ 要求逐字节可复现；提升依赖会改变解析结果。
+#   scripts/docs/mermaid-embed      —— 同理，mermaid.min.js 的自打包源。
+# 两者继续各自持有 package-lock.json 并用 npm 构建。
+
+# 允许跑安装脚本的包。与根 package.json 的 `allowScripts` 同一份名单：
+# better-sqlite3 有原生编译步骤，禁掉它 require 时会直接报 ERR_DLOPEN_FAILED。
+onlyBuiltDependencies:
+  - better-sqlite3
+
+# `@khy/shared` / `@khy/ui-shared` 从未发布到 registry。npm 靠「名字+版本对得上
+# 就用本地包」把它们解析到 workspace，pnpm 不然：services/backend 通过
+# `"khy-ai-backend": "file:../ai-backend"` 拉进 ai-backend，而 file: 依赖被当作
+# 仓外的不透明包，它自己的 `"@khy/shared": "^1.6.5"` 于是被拿去 registry 查，404。
+#
+# 这里刻意用 `parent>dep` 的**限定**写法，而不是裸名字覆盖全树。裸写
+# `"@khy/shared": workspace:*` 会连 services/backend 自己那条
+# `"@khy/shared": "file:./vendor/shared"` 一起改掉——而 vendor/shared 与
+# platform/packages/shared **并非同一份内容**（database.js 里回落到后端
+# sqliteCompat 的相对深度按各自位置写死，一个上溯 5 层、一个上溯 4 层）。
+# 那条 vendor 依赖是发布契约的一部分：prepack 打包时把 workspace 包复制进
+# vendor/shared，使 tarball 自带一份而不依赖 registry 上不存在的包。
+# 限定覆盖只修 ai-backend 的传递解析，backend 的 file: 依赖原样保留。
+#
+# 只有 pnpm 读这段，npm 侧的解析与 lockfile 完全不受影响——迁移期两套布局都要能装。
+overrides:
+  "khy-ai-backend>@khy/shared": workspace:*
