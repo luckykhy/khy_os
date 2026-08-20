@@ -153,3 +153,6 @@ docs/_ref/
 # Windows device-name redirection artifacts (PowerShell `> NUL` creates literal files)
 NUL
 nul
+
+# khy portable sync 在目标根生成的运行时记录（含机器本地 sourceRoot），不应入库
+.sync-manifest.json
