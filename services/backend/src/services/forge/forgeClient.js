@@ -12,6 +12,7 @@
  */
 
 const { execFile } = require('child_process');
+const path = require('path');
 
 const forgeCore = require('./forgeCore');
 const { request: nativeRequest } = require('../../utils/nativeHttp');
@@ -226,7 +227,7 @@ function _httpErr(platform, resp, what) {
     err.recovery = {
       cause: '未配置 GITHUB_TOKEN,匿名请求速率限制为 60 次/小时',
       fix: '配置 token 后提升至 5000 次/小时',
-      envFile: 'D:\\Portable\\khy-os\\services\\backend\\.env',
+      envFile: path.join(process.cwd(), '.env'),
       envKey: 'GITHUB_TOKEN',
       envValue: 'ghp_你的token粘贴在这里',
       steps: [

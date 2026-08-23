@@ -136,6 +136,28 @@ describe('check-agent-rules Rules 1-3 — regression guard', () => {
   });
 });
 
+describe('check-agent-rules Rule 1c — absolute-path exemptions', () => {
+  test('allows a documented known-installation candidate', () => {
+    const file = fixture(
+      'known-installation.js',
+      "const candidate = 'C:" + "\\\\Program Files\\\\Tool'; // khy-allow-abs-path: known installation candidate\n",
+    );
+    const { status, stdout } = runGate(file);
+    assert.equal(status, 0);
+    assert.doesNotMatch(stdout, /no-hardcoded-abs-path/);
+  });
+
+  test('rejects an exemption without a reason', () => {
+    const file = fixture(
+      'empty-exemption.js',
+      "const candidate = 'C:" + "\\\\Program Files\\\\Tool'; // khy-allow-abs-path:    \n",
+    );
+    const { status, stdout } = runGate(file);
+    assert.equal(status, 1);
+    assert.match(stdout, /Absolute-path exemption requires a non-empty reason/);
+  });
+});
+
 describe('check-agent-rules Rule 1b — hardcoded first-party production domain', () => {
   // Assemble the first-party domain at runtime so THIS test source contains no
   // contiguous flaggable literal — CI runs the gate over scripts/ including
