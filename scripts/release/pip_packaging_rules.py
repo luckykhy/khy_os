@@ -60,7 +60,6 @@ SDIST_FILE_INCLUDES = _ordered_unique([
     "software/khyquant/frontend/package-lock.json",
     "README.md",
     "AGENTS.md",
-    "scripts/obfuscate.js",
 ])
 
 # Historical / generated / sensitive trees that must never enter the source

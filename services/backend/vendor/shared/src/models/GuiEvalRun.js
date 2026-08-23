@@ -30,7 +30,7 @@ const GuiEvalRun = sequelize.define('GuiEvalRun', {
   agent_model: {
     type: DataTypes.STRING(100),
     allowNull: true,
-    comment: '使用的 Agent 模型标识（如 "gpt-4o", "claude-sonnet-4"）',
+    comment: '使用的 Agent 模型标识（由模型单一真源中的角色或数组定义）',
   },
   agent_config: {
     type: jsonType,
