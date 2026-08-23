@@ -88,8 +88,12 @@ _describe('storageRoots.listNonSystemDrives', () => {
   _test('linux: keeps /mnt mounts with a different device, excludes same-device', () => {
     const fakeLinux = {
       existsSync: () => true,
+      // The production code builds candidates with path.join, so on Windows the
+      // probe arrives as `\mnt\d`. Compare through path.join too, or this
+      // linux-layout case silently degrades into "every mount shares the root
+      // device" and asserts nothing.
       statSync: (p) => {
-        const dev = p === '/' ? 1 : p === '/mnt/d' ? 2 : 1; // /mnt/e shares root dev → excluded
+        const dev = p === '/' ? 1 : p === path.join('/mnt', 'd') ? 2 : 1; // /mnt/e shares root dev → excluded
         return { dev, isDirectory: () => true };
       },
       statfsSync: () => ({ bsize: 1, bavail: 5 * GB, blocks: 10 * GB }),
@@ -98,7 +102,7 @@ _describe('storageRoots.listNonSystemDrives', () => {
     };
     const list = sr.listNonSystemDrives({ platform: 'linux', fsImpl: fakeLinux });
     _expect(list.length).toBe(1);
-    _expect(list[0].root).toBe('/mnt/d');
+    _expect(list[0].root).toBe(path.join('/mnt', 'd'));
   });
 });
 
@@ -144,6 +148,74 @@ _describe('storageRoots.resolveGeneratedFileDir', () => {
     });
     _expect(r.source).toBe('non-system-drive');
     _expect(r.dir).toBe(path.join('/mnt/d', '.khy', 'out'));
+  });
+
+  // accessSync(W_OK) is not a writability test on Windows: it answers from the
+  // read-only attribute, so a disconnected network share and a virtual mount
+  // whose driver refuses creation both pass it and then throw on mkdir. Before
+  // the probe became "actually create it", that directory was handed back and
+  // the crash landed in whatever wrote the first file.
+  _test('a drive that passes accessSync but fails mkdir is skipped for the next one', () => {
+    const attempted = [];
+    const fake = {
+      mkdirSync: (dir) => {
+        attempted.push(dir);
+        if (String(dir).startsWith(path.join('/mnt', 'big'))) {
+          const err = new Error('ENOENT: no such file or directory');
+          err.code = 'ENOENT';
+          throw err;
+        }
+      },
+      accessSync: () => {},
+      existsSync: () => true,
+      statSync: (p) => ({ dev: p === '/' ? 1 : 2, isDirectory: () => true }),
+      // `big` sorts first on free space, so the fallback is only exercised if
+      // the mkdir failure really demotes it.
+      statfsSync: (p) => ({
+        bsize: 1,
+        bavail: String(p).includes('big') ? 9 * GB : 5 * GB,
+        blocks: 10 * GB,
+      }),
+      readdirSync: (p) => (p === '/mnt' ? ['big', 'ok'] : []),
+    };
+    const r = sr.resolveGeneratedFileDir({
+      subdir: 'out',
+      preferCwd: false,
+      deps: { env: {}, fsImpl: fake, platform: 'linux', homedir: '/home/u' },
+    });
+    _expect(r.source).toBe('non-system-drive');
+    _expect(r.dir).toBe(path.join('/mnt', 'ok', '.khy', 'out'));
+    _expect(attempted.length).toBe(2);
+  });
+
+  _test('every non-system drive failing mkdir falls back to the system default', () => {
+    const fake = {
+      mkdirSync: (dir) => {
+        if (String(dir).startsWith(path.join('/mnt'))) {
+          throw new Error('EACCES: permission denied');
+        }
+      },
+      accessSync: () => {},
+      existsSync: () => true,
+      statSync: (p) => ({ dev: p === '/' ? 1 : 2, isDirectory: () => true }),
+      statfsSync: () => ({ bsize: 1, bavail: 5 * GB, blocks: 10 * GB }),
+      readdirSync: (p) => (p === '/mnt' ? ['d', 'e'] : []),
+    };
+    const r = sr.resolveGeneratedFileDir({
+      subdir: 'out',
+      preferCwd: false,
+      // Pin the data home on the injected env: the system branch also reads the
+      // live process env, and a developer machine that exports KHY_DATA_HOME
+      // would otherwise decide this assertion.
+      deps: {
+        env: { KHY_DATA_HOME: path.join('/data') },
+        fsImpl: fake,
+        platform: 'linux',
+        homedir: '/home/u',
+      },
+    });
+    _expect(r.source).toBe('system');
+    _expect(r.dir).toBe(path.join('/data', 'out'));
   });
 
   _test('preferCwd:false skips the cwd even with room', () => {
