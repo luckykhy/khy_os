@@ -35,6 +35,27 @@
 
 ---
 
+## 双机流水线自举（新机器 / 替换机器必读）
+
+> 本仓库只是双机协作流水线的一半；另一半是「指挥部」仓库 **khy-os-hq**
+> （提示词库 + 任务/Bug 状态真源，私有仓库 `github.com/luckykhy/khy-os-hq`）。
+> **在本机开始任何开发前**，若找不到指挥部部署，先按以下步骤接入
+> （可把本节原样交给本机任意编码 AI 代为执行）：
+
+1. 部署指挥部：`git clone https://github.com/luckykhy/khy-os-hq.git`
+   到 `<本仓库父目录>\Projects\khy-os-hq`；该目录已存在则改为 `git pull --ff-only`
+2. 机械验收：在指挥部目录内运行 `python scripts\hq_check.py`，必须 exit 0
+3. 同步体检：`python scripts\sync.py --status` 应同时显示本仓库与指挥部的分支状态
+4. 周期拉取：注册 Windows 计划任务 `khy-hq-autopull`（每 10 分钟运行指挥部根目录的
+   `autopull.bat`，只拉不推，当前用户即可、无需管理员）
+5. 此后会话协议以指挥部根目录 `AGENTS.md` 为准：开工先拉、收工检查全绿后推送；
+   完整的自包含接入提示词存于指挥部 `prompts/meta/02-新机器接入.md`
+
+> 若本仓库与指挥部不在同一父目录下，设置环境变量 `KHY_OS_DIR` 指向本仓库根，
+> 指挥部的脚本即可自动发现本仓库位置。
+
+---
+
 ## 架构速查
 
 > **新增文件 / 新增顶层目录 / 新增 `npm run` 入口前，先读
