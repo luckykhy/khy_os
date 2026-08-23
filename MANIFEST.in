@@ -17,7 +17,6 @@ recursive-include kernel/moonbit *
 recursive-include kernel/userland *
 recursive-include kernel/iso *
 recursive-include kernel/vendor *
-recursive-include kernel/alpine *
 recursive-include scripts *
 
 # Include standalone files required by build/runtime packaging.
@@ -36,6 +35,7 @@ include AGENTS.md
 
 # Exclude internal credentials docs and local env files.
 exclude docs/INTERNAL_CREDENTIALS.md
+exclude docs/_assets/mermaid.min.js
 exclude services/backend/.env
 exclude services/.env
 exclude backend/.env
@@ -90,12 +90,18 @@ prune services/backend/wasm-indicators/_build
 prune kernel/moonbit/_build
 prune services/backend/bin/llama-cpp
 prune services/backend/bin/ollama-runner
+prune services/backend/.khy
+prune services/backend/src/.khy
+prune services/backend/test-data-criterion-1
+prune services/backend/test-data-criterion-2
+prune apps/ai-frontend/.vscode
 
 # Extension-specific recursive excludes.
-recursive-exclude services/backend *.db *.sqlite *.sqlite3 *.joblib *.log *.pyc
+recursive-exclude services/backend *.db *.db-shm *.db-wal *.sqlite *.sqlite-shm *.sqlite-wal *.sqlite3 *.joblib *.log *.pyc *.ast *.typedtree
+recursive-exclude docs/07_OPS_运维 *进化提示词手册*
 recursive-exclude kernel *.o *.bin *.elf *.efi *.iso *.img
 recursive-exclude platform/packages/moonbit-plugin-sdk *.wasm
-recursive-exclude docs *.html *.pdf
+recursive-exclude docs *.pdf
 
 # Never ship prebuilt binaries / model payloads in pip distributions.
 global-exclude *.iso
@@ -128,3 +134,16 @@ global-exclude *.pem
 global-exclude *.rar
 global-exclude .env
 global-exclude .env.*
+global-exclude *.html
+global-exclude .khy_*
+global-exclude *.tgz
+global-exclude *.db-shm
+global-exclude *.db-wal
+
+# Re-add real runtime files killed by the broad rules above.
+# MUST stay last: MANIFEST.in applies its directives in order.
+include apps/ai-frontend/index.html
+include software/khyquant/frontend/index.html
+include software/khyquant/frontend/ml-test.html
+include software/khyquant/frontend/public/offline.html
+include extensions/tools/khy-markdown/khyosMarkdown.html
