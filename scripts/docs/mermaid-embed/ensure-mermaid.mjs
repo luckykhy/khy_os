@@ -7,10 +7,19 @@
  * （build_docs_site.js:554），校验器把它列为必备资源（verify_docs_site.js 第 8-9
  * 行），所以 docs:build 之前必须先过这道门。
  *
+ * 构建成功后自动清掉自己的 node_modules（实测 127.7 MB，产出物只有 3.3 MB）：
+ * 安装树本身没有留存价值。反复改 build.mjs 时用 KHY_KEEP_BUILD_DEPS=1 保留。
+ * 只有真跑过构建才清 —— 产物已就绪而直接短路的那条路上一次构建都没跑，
+ * 那棵树是开发者自己装的，只提示不删。
+ *
  * 用法：
  *   node ensure-mermaid.mjs             # 开发态：构建失败只 warn，exit 0
  *                                       #（docs-site.js:401 会优雅降级，图表区留白）
  *   node ensure-mermaid.mjs --required  # 发布态：构建失败即 exit 1
+ *   KHY_KEEP_BUILD_DEPS=1 node ensure-mermaid.mjs  # 保留 node_modules 便于反复构建
+ *
+ * 重建命令（被清掉之后照此恢复）：
+ *   npm run docs:mermaid
  *
  * @pattern Builder
  */
@@ -23,6 +32,16 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..', '..', '..');
 const outfile = resolve(root, 'docs', '_assets', 'mermaid.min.js');
 const required = process.argv.includes('--required');
+const REBUILD_CMD = 'npm run docs:mermaid';
+
+/** 取清理器。取不到就退化成空操作：清理是优化，不是产出。 */
+async function loadCleaner() {
+  try {
+    return (await import('../../lib/buildDepsCleanup.mjs')).cleanBuildDeps;
+  } catch (_) {
+    return null;
+  }
+}
 
 /** 产物是否已就绪。存在且非空即可——build.mjs 要么整份写出要么抛错。 */
 function isReady() {
@@ -42,9 +61,16 @@ function runNode(args) {
   execFileSync(process.execPath, args, { cwd: here, stdio: 'inherit' });
 }
 
-function main() {
+async function main() {
+  const clean = await loadCleaner();
+  const sweep = (built) => {
+    if (!clean) return;
+    clean({ dir: here, label: 'ensure-mermaid', rebuildCommand: REBUILD_CMD, built });
+  };
+
   if (isReady()) {
     console.log('[ensure-mermaid] docs/_assets/mermaid.min.js 已就绪 — 跳过构建');
+    sweep(false);
     return;
   }
   console.log('[ensure-mermaid] mermaid.min.js 缺失 — 从 scripts/docs/mermaid-embed/ 重建');
@@ -64,10 +90,15 @@ function main() {
     console.warn('[ensure-mermaid] 开发态放行；生成的文档站图表区域会留白（不报错）。');
     return;
   }
-  if (!isReady() && required) {
-    console.error('[ensure-mermaid] 构建结束但产物仍不存在。');
-    process.exit(1);
+  if (!isReady()) {
+    // 产物没出来就保留安装树：下一次要靠它排查，这时候清是帮倒忙。
+    if (required) {
+      console.error('[ensure-mermaid] 构建结束但产物仍不存在。');
+      process.exit(1);
+    }
+    return;
   }
+  sweep(true);
 }
 
 main();

@@ -9,10 +9,19 @@
  * 判定「已就绪」：vendor/MANIFEST.json 可解析，且它列出的每个文件都存在、字节数
  * 与清单一致。任何一条不满足就整树重建（build.mjs 自己会先 rmSync 再写）。
  *
+ * 构建成功后自动清掉自己的 node_modules（实测 182.3 MB，产出物只有 11 MB）：
+ * 安装树本身没有留存价值，删了随时能用下面的命令原样装回来。反复改 build.mjs 时
+ * 用 KHY_KEEP_BUILD_DEPS=1 保留。只有真跑过构建才清 —— 产物已就绪而直接短路的
+ * 那条路上一次构建都没跑，那棵树是开发者自己装的，只提示不删。
+ *
  * 用法：
  *   node ensure-vendor.mjs              # 开发态：构建失败只 warn，exit 0
  *                                       #（运行时会优雅降级到内联渲染器）
  *   node ensure-vendor.mjs --required   # 发布态：构建失败即 exit 1
+ *   KHY_KEEP_BUILD_DEPS=1 node ensure-vendor.mjs   # 保留 node_modules 便于反复构建
+ *
+ * 重建命令（被清掉之后照此恢复）：
+ *   node extensions/tools/khy-markdown/muya-embed/ensure-vendor.mjs
  *
  * @pattern Builder
  */
@@ -24,6 +33,16 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const vendorDir = resolve(here, '..', 'vendor');
 const required = process.argv.includes('--required');
+const REBUILD_CMD = 'node extensions/tools/khy-markdown/muya-embed/ensure-vendor.mjs';
+
+/** 取清理器。取不到（被单独打包等）就退化成空操作：清理是优化，不是产出。 */
+async function loadCleaner() {
+  try {
+    return (await import('../../../../scripts/lib/buildDepsCleanup.mjs')).cleanBuildDeps;
+  } catch (_) {
+    return null;
+  }
+}
 
 /** vendor/ 是否已就绪（清单存在，且它列出的每个文件都存在且非空）。纯判定，不抛。
  *
@@ -45,9 +64,7 @@ function isReady() {
 }
 
 /** npm 在 Windows 上是 npm.cmd，必须过 shell；node 自身走 execPath，绝不过 shell
- *  （`C:\Program Files
-odejs
-ode.exe` 带空格，shell 拼接后会被截成 `C:\Program`）。 */
+ *  （`C:\Program Files\nodejs\node.exe` 带空格，shell 拼接后会被截成 `C:\Program`）。 */
 function runNpm(args) {
   execFileSync('npm', args, { cwd: here, stdio: 'inherit', shell: process.platform === 'win32' });
 }
@@ -55,9 +72,16 @@ function runNode(args) {
   execFileSync(process.execPath, args, { cwd: here, stdio: 'inherit' });
 }
 
-function main() {
+async function main() {
+  const clean = await loadCleaner();
+  const sweep = (built) => {
+    if (!clean) return;
+    clean({ dir: here, label: 'ensure-vendor', rebuildCommand: REBUILD_CMD, built });
+  };
+
   if (isReady()) {
     console.log('[ensure-vendor] vendor/ 已就绪 — 跳过构建');
+    sweep(false);
     return;
   }
   console.log('[ensure-vendor] vendor/ 缺失或不完整 — 从 muya-embed/ 重建');
@@ -79,9 +103,12 @@ function main() {
   }
   if (!isReady()) {
     const msg = '[ensure-vendor] 构建结束但 vendor/ 仍不完整（MANIFEST 与实际文件不符）。';
+    // 产物不完整时保留安装树：下一次要靠它排查，这时候清反而是帮倒忙。
     if (required) { console.error(msg); process.exit(1); }
     console.warn(msg);
+    return;
   }
+  sweep(true);
 }
 
 main();
