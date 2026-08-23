@@ -74,6 +74,8 @@ platform/packages/*
 !platform/packages/shared/**
 !platform/packages/ui-shared/
 !platform/packages/ui-shared/**
+# 上面的 ! 反选把本地包的 node_modules 一起解禁了，这里重新排除
+platform/packages/*/node_modules/
 
 # Frontend build artifacts
 apps/ai-frontend/dist/

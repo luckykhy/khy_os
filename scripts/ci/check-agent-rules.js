@@ -430,6 +430,13 @@ function checkFile(relPath, findings) {
           if (kind === 'drive-qualified' && /\[A-Za-z\]|\\\\?[A-Za-z]:|test\(|match\(|replace\(/.test(line)) break;
           // OS-standard system dir as an env fallback — see WINDOWS_SYSTEM_DIR_PATTERN.
           if (kind === 'drive-qualified' && WINDOWS_SYSTEM_DIR_PATTERN.test(line)) break;
+          const exemption = line.match(/khy-allow-abs-path:\s*(.*)$/i);
+          if (exemption) {
+            if (exemption[1].trim()) break;
+            pushFinding(findings, 'error', 'no-hardcoded-abs-path', relPath, lineNo,
+              'Absolute-path exemption requires a non-empty reason.', trimmed);
+            break;
+          }
           pushFinding(
             findings,
             'error',
