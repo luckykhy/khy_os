@@ -174,29 +174,69 @@ function probeCheckpoints(checkpointRoot) {
   return projects;
 }
 
-/** 顶层 node_modules 树（不递归进嵌套的 node_modules，那已计入父树）。 */
+/** 不该走进去找 node_modules 的目录：生成物与外部环境，进去只会拖慢体检。 */
+const DEP_SCAN_SKIP = new Set(['.git', 'node_modules', 'dist', 'build', '.gradle', '.venv', 'coverage', '__pycache__']);
+
+/**
+ * 发现工作树里的全部 node_modules 目录。
+ *
+ * 从前这里是一张手写的候选路径表，代价是「表没跟上目录改名就静默漏报」：
+ * extensions/tools/khy-markdown/muya-embed 那 182 MB 一直没进表，实测 781.7 MB
+ * 只报出 599.4 MB。体积基线漏报比不报更糟（会拿着假数字宣布省了多少），所以改成
+ * 真实遍历，代价是多走一遍目录树。
+ *
+ * @returns {{top:Array<{path:string,bytes:number,files:number}>, nested:number}}
+ *   top 是顶层树（嵌套的 node_modules 已计入其父树字节，不重复计）；
+ *   nested 是「一共有多少处 node_modules 目录」，含嵌套，用来跟 du 口径对齐。
+ */
 function probeDependencies() {
-  const candidates = [
-    '.',
-    'services/backend',
-    'services/ai-backend',
-    'apps/ai-frontend',
-    'apps/khy-mobile',
-    'platform/packages/shared',
-    'platform/packages/ui-shared',
-    'software/khyquant/frontend',
-    'tools/khyos-markdown',
-    'tools/khyos-markdown/muya-embed',
-    'scripts/docs/mermaid-embed',
-    'extensions/tools/khy-markdown',
-  ];
-  const trees = [];
-  for (const rel of candidates) {
-    const dir = path.join(ROOT, rel, 'node_modules');
-    if (!fs.existsSync(dir)) continue;
-    trees.push({ path: path.posix.join(rel === '.' ? '<root>' : rel, 'node_modules'), bytes: treeStats(dir).bytes });
+  const top = [];
+  let nested = 0;
+  const stack = [ROOT];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    let entries;
+    try {
+      entries = fs.readdirSync(current, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.isSymbolicLink()) continue;
+      const full = path.join(current, entry.name);
+      if (entry.name === 'node_modules') {
+        const stats = treeStats(full);
+        const rel = path.relative(ROOT, full).split(path.sep).join('/');
+        top.push({ path: rel || 'node_modules', bytes: stats.bytes, files: stats.files });
+        nested += 1 + countNested(full);
+        continue; // 顶层树已整棵计入，不再下钻
+      }
+      if (DEP_SCAN_SKIP.has(entry.name)) continue;
+      stack.push(full);
+    }
   }
-  return trees;
+  return { top, nested };
+}
+
+/** 一棵 node_modules 里还嵌套了多少处 node_modules（只数个数，字节已算在父树）。 */
+function countNested(dir) {
+  let count = 0;
+  const stack = [dir];
+  while (stack.length > 0) {
+    let entries;
+    try {
+      entries = fs.readdirSync(stack.pop(), { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.isSymbolicLink()) continue;
+      const full = path.join(entry.parentPath || entry.path || dir, entry.name);
+      if (entry.name === 'node_modules') count += 1;
+      stack.push(full);
+    }
+  }
+  return count;
 }
 
 function probeBuildOutputs() {

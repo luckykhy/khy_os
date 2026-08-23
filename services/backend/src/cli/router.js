@@ -2508,6 +2508,14 @@ async function route(parsed, context = {}) {
         return true;
       }
 
+      case 'clean': {
+        // 分级清理:构建产物 / 可重装依赖 / 运行时状态。默认只清点不删,
+        // 真删要 --yes;会话历史(.khy/checkpoints)不在任何默认档内。
+        const { handleCleanCommand } = require('./handlers/clean');
+        await handleCleanCommand(subCommand, args, options);
+        return true;
+      }
+
       case 'storage': {
         // Storage placement: show where data lives + migrate the data home onto
         // a non-system drive (explicit, verified, reversible — never automatic).
@@ -3100,7 +3108,7 @@ async function route(parsed, context = {}) {
         const looksLikeCommand =
           rawForFuzzy.length <= 30 &&
           !/[\u4e00-\u9fff]{3,}/.test(rawForFuzzy) && // 排除中文长句
-          /^[a-zA-Z\/]/.test(rawForFuzzy); // 以英文或 / 开头
+          /^[a-zA-Z/]/.test(rawForFuzzy); // 以英文或 / 开头
         if (looksLikeCommand && !isTui) {
           const suggestions = _findClosestCommands(rawForFuzzy);
           if (suggestions.length > 0) {

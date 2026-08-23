@@ -110,6 +110,7 @@ const ROUTER_COMMANDS = [
   'repo',
   'deploy',
   'storage',
+  'clean',
   'backup',
   'uninstall',
   'features',
@@ -563,6 +564,7 @@ const ROUTER_SUB_COMMANDS = {
   ],
   deploy: ['list', 'status', 'stop', 'logs', 'help'],
   storage: ['status', 'migrate', 'help'],
+  clean: ['help'],
   // 数据备份与恢复。注意 restore 是 backup 的**子命令** —— 顶层 `restore` 另有其主
   // (加密源码包恢复,handlers/publish),两者不可混用。
   backup: ['create', 'list', 'status', 'verify', 'restore', 'prune', 'help'],
@@ -1640,6 +1642,13 @@ const BUILTIN_SLASH_COMMANDS = [
     label: '便携版同步',
     desc: '把开发版最新代码增量同步到便携版 (sync/status)',
     route: 'portable help',
+    category: 'system',
+  },
+  {
+    cmd: '/clean',
+    label: '分级清理',
+    desc: '清点并回收构建产物/可重装依赖/运行时状态 (--build/--deps/--runtime)',
+    route: 'clean',
     category: 'system',
   },
   {

@@ -1,5 +1,13 @@
 'use strict';
 
+// 单测预算说明：本文件每条用例都先 jest.resetModules() 再整树 require src/cli/ai，
+// 所以每条的墙上时间里绝大部分是模块图重解析，不是被测行为本身。pnpm 的
+// node_modules 是符号链接指向 .pnpm/<pkg>@<ver>/，Windows 下每次解析都要多走一层
+// 链接，实测同样的用例从 npm 平铺树的 5 秒级涨到 25 秒级 —— 原来按平铺树标定的
+// 5000/15000/30000 预算因此会超时，而断言内容一条都没改（断的是状态文本，不是耗时）。
+// 统一把预算抬到 120 秒：够宽到不受依赖布局影响，又不至于让真卡死的用例挂到没边。
+jest.setTimeout(120000);
+
 // 轻量对话工具裁剪回归:一句「你好」不该背着 160 个工具定义(≈5.7 万 token)去问模型。
 // 见 aiMessageBuilder._isLightweightConversationTool / aiChatCore 的 _lightweightConversation。
 
@@ -76,7 +84,7 @@ describe('lightweight conversation tool curation', () => {
 
     expect(calls.length).toBeGreaterThan(0);
     expect(toolNamesOf(calls[0]).length).toBeGreaterThan(0);
-  }, 30000);
+  });
 
   test('non-greeting lightweight chat still gets the curated core set', async () => {
     delete process.env.KHY_GREETING_FASTPATH;

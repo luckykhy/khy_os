@@ -14,7 +14,7 @@
     "start": "node khyos-md-bridge.js",
     "dev": "node khyos-md-bridge.js --no-open",
     "mcp": "node khyos-md-mcp.js",
-    "test": "node --test test/",
+    "test": "node --test \"test/*.test.js\"",
     "register:win": "powershell -ExecutionPolicy Bypass -File register-windows.ps1",
     "register:linux": "bash register-linux.sh",
     "unregister:win": "powershell -ExecutionPolicy Bypass -File unregister-windows.ps1",
