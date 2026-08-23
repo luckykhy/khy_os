@@ -207,6 +207,23 @@ const LIFECYCLE = Object.freeze([
     startSymbol: null,
     note: '主 CLI 后台检查并预取校验更新，空闲后发送结构化确认事件',
   }),
+  Object.freeze({
+    id: 'runtimeFootprintNotice',
+    tier: 'startup-oneshot',
+    process: 'cli-startup',
+    mode: 'khy',
+    // gate 留空是刻意的:KHY_FOOTPRINT_NOTICE 只掐掉「提示」那半边(判定在
+    // assessRuntimeFootprint 内),滚动那半边照跑,所以它不是本条目的开关。整条
+    // 关掉走 per-id 约定名 KHY_LIFECYCLE_RUNTIMEFOOTPRINTNOTICE=off。
+    gate: null,
+    gateInverted: false,
+    delayMs: 3500,
+    immediate: false,
+    unref: false,
+    shutdownHook: true,
+    startSymbol: null,
+    note: '轻量模式 +3.5s 滚动 .khy/logs 与 .khy/audit 一次并做体积自检(只报不删,不起周期 timer)。完整模式由 cleanupService 条目一并覆盖,这里只补 khy 模式那条缺口',
+  }),
 
   // ── daemon 常驻(daemonEntry.js 独立进程)──────────────────────────────────
   Object.freeze({
