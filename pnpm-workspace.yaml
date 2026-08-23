@@ -44,5 +44,21 @@ onlyBuiltDependencies:
 # 限定覆盖只修 ai-backend 的传递解析，backend 的 file: 依赖原样保留。
 #
 # 只有 pnpm 读这段，npm 侧的解析与 lockfile 完全不受影响——迁移期两套布局都要能装。
+# `file:` 在 pnpm 里**不是**符号链接。npm 对 `file:<dir>` 建符号链接，包的真实路径
+# 仍在源目录；pnpm 把它当不透明 tarball，硬链接进 .pnpm/<name>@file+<hash>/ 之后
+# 真实路径就落在虚拟存储里。上面两条本地依赖的代码都靠**真实路径的相对深度**回落
+# 到后端（ai-backend 里 `../../../backend/src/utils/*` 上溯 3 层到 services/，
+# vendor/shared 的 database.js 上溯 4 层到 services/backend/），路径一挪就全断
+# —— 实测发布装配 `npm run assemble` 因此 20 处 Could not resolve 而失败。
+#
+# 所以把这两条改成会建符号链接的形式：workspace 成员用 workspace:*，仓内非成员
+# 目录用 link:（相对 workspace 根解析）。解析结果与 npm 布局逐条等价：
+# backend 的 `@khy/shared` 仍是自己的 vendor/shared（上溯 4 层那一份），
+# ai-backend 的仍是 platform/packages/shared（上溯 5 层那一份），两份不混。
+#
+# 同样只有 pnpm 读这段：services/backend/package.json 里的 `file:` 声明一字不动，
+# 发布 tarball 自带 vendor/shared 的契约因此原样保留。
 overrides:
   "khy-ai-backend>@khy/shared": workspace:*
+  "khy-os-backend>khy-ai-backend": workspace:*
+  "khy-os-backend>@khy/shared": link:services/backend/vendor/shared
