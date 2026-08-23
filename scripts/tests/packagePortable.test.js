@@ -6,6 +6,16 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
+// 被测对象住在拓展 khy-portable 里（[DESIGN-ARCH-069]：删目录即卸载）。经 lib/ext-run
+// 解析而不写死 extensions/ 下的路径——拓展被删掉时这里退化成一条说得清的 skip，
+// 而不是一条 node 的 Cannot find module。
+const { requireExtensionModule } = require('../lib/ext-run');
+const _ext = requireExtensionModule('khy-portable', { file: 'package-portable.js' });
+if (!_ext) {
+  test('拓展 khy-portable 未安装，本文件的被测对象随它一起消失', (ctx) =>
+    ctx.skip('extensions/scripts/khy-portable/ 不在磁盘上；放回该目录即恢复，无需注册步骤'));
+  return;
+}
 const {
   ROOT,
   VERSION,
@@ -17,7 +27,7 @@ const {
   artifactPaths,
   createStages,
   packagePortable,
-} = require('../portable/package-portable');
+} = _ext;
 
 function baseOptions(overrides = {}) {
   const target = hostTarget();

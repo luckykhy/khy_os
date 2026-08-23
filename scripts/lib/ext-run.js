@@ -139,4 +139,55 @@ if (require.main === module) {
   main(process.argv.slice(2));
 }
 
-module.exports = { findExtension, MAX_DEPTH };
+/**
+ * 解析一个拓展里的脚本路径。`ref` 二选一：
+ *   `{ command: 'verify' }` —— 走 manifest 的 commands 表（**首选**）。核侧只知道
+ *      「拓展 id + 命令名」这一对，脚本叫什么、放在哪由拓展自己说，和 npm 目标的
+ *      派发用同一条真源。
+ *   `{ file: 'artifact-manifest.js' }` —— 直接给相对路径。留给「拓展的内部库模块」
+ *      这一类：它们不是命令，manifest 里没有它们，只有测试会伸手进去。
+ *
+ * 拓展没装、命令没声明、脚本不在磁盘上，一律返回 null 而不是抛——调用方据此退化。
+ *
+ * @param {string} id - 拓展 id
+ * @param {{command?: string, file?: string}} ref
+ * @returns {string|null} 绝对路径
+ */
+function resolveExtensionScript(id, ref = {}) {
+  const found = findExtension(id);
+  if (!found) return null;
+
+  let rel = ref.file;
+  if (ref.command) {
+    const commands = Array.isArray(found.manifest.commands) ? found.manifest.commands : [];
+    const entry = commands.find((c) => c && c.name === ref.command);
+    if (!entry || typeof entry.script !== 'string' || !entry.script) return null;
+    rel = entry.script;
+  }
+  if (!rel) return null;
+
+  const scriptPath = path.join(found.dir, rel);
+  return fs.existsSync(scriptPath) ? scriptPath : null;
+}
+
+/**
+ * `require()` 一个拓展里的模块，拓展缺失时返回 null。
+ *
+ * 为什么不直接写 `require('../../extensions/scripts/khy-installer/verify-install')`：
+ * 那样一来删掉拓展目录，调用方就是一条 node 的 Cannot find module 崩溃，而按
+ * [DESIGN-ARCH-069] §4.1「删目录即卸载」，缺失应当是一种**说得清的退化**。
+ * 这正是 2026-08-20 那次迁移留下的坑——npm 目标经 ext-run 派发保住了，进程内
+ * require 的调用方没跟上，于是 `npm run test:scripts` 一直是红的。
+ *
+ * @param {string} id - 拓展 id
+ * @param {{command?: string, file?: string}} ref - 同 resolveExtensionScript
+ * @returns {object|null}
+ */
+function requireExtensionModule(id, ref) {
+  const scriptPath = resolveExtensionScript(id, ref);
+  if (!scriptPath) return null;
+  // eslint-disable-next-line global-require, import/no-dynamic-require
+  return require(scriptPath);
+}
+
+module.exports = { findExtension, resolveExtensionScript, requireExtensionModule, MAX_DEPTH };

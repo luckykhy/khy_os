@@ -789,8 +789,8 @@
       "paths": [
         "services/backend/src/services/mdSuggestedAppsPlan.js",
         "services/backend/tests/services/mdSuggestedAppsPlan.test.js",
-        "tools/khyos-markdown/register-windows.ps1",
-        "tools/khyos-markdown/unregister-windows.ps1",
+        "extensions/tools/khy-markdown/register-windows.ps1",
+        "extensions/tools/khy-markdown/unregister-windows.ps1",
         "services/backend/src/services/mdEditorRegister.js"
       ],
       "docs": [
