@@ -43,7 +43,6 @@ SDIST_RECURSIVE_INCLUDES = _ordered_unique([
     "kernel/userland",
     "kernel/iso",
     "kernel/vendor",
-    "kernel/alpine",
     "scripts",
 ])
 
@@ -143,10 +142,34 @@ SDIST_PRUNE_DIRS = _ordered_unique([
     "kernel/moonbit/_build",
     "services/backend/bin/llama-cpp",
     "services/backend/bin/ollama-runner",
+    # ── Local RUNTIME STATE. Not a size problem, a correctness one. ──────────
+    # Both .khy trees are this machine's own generated state (storageRoots.js
+    # writes them), untracked, and reachable by ``recursive-include
+    # services/backend *``. The 1.1.11 sdist therefore shipped one developer's
+    # heal-audit.jsonl (523.7 KB of local self-heal history) to every user, and
+    # services/backend/src/.khy carries a khyquant SQLite database that only
+    # escaped because ``*.db`` happens to be excluded below.
+    "services/backend/.khy",
+    "services/backend/src/.khy",
+    # Output directories of the criterion verification scripts
+    # (verify-criterion-*.js). Written on the developer's machine when those
+    # scripts run; the scripts recreate them on demand.
+    "services/backend/test-data-criterion-1",
+    "services/backend/test-data-criterion-2",
+    # Editor recommendations for whoever opens the frontend locally. Gitignored,
+    # zero runtime consumers, and pure noise in a source release.
+    "apps/ai-frontend/.vscode",
 ])
 
 SDIST_EXCLUDES = _ordered_unique([
     "docs/INTERNAL_CREDENTIALS.md",
+    # Regenerable build product, 3.12 MB — the single largest non-bundle member
+    # of every sdist so far. .gitignore's "可再生构建产物" section already keeps it
+    # out of git, but MANIFEST.in walks the WORKING TREE, so a release built on a
+    # machine that had run `npm run docs:mermaid` shipped it anyway. The generator
+    # (scripts/docs/mermaid-embed/) stays in the sdist, so an sdist consumer
+    # regenerates it with: npm run docs:mermaid
+    "docs/_assets/mermaid.min.js",
     # Defense-in-depth: exact ``.env`` paths pruned from the sdist even though
     # .gitignore already blocks them and GLOBAL_EXCLUDES ``.env.*`` covers suffixed
     # variants. Forest layout keeps real dev credentials under both the service root
@@ -160,18 +183,32 @@ SDIST_EXCLUDES = _ordered_unique([
 ])
 
 SDIST_RECURSIVE_EXCLUDES = [
-    ("services/backend", ["*.db", "*.sqlite", "*.sqlite3", "*.joblib", "*.log", "*.pyc"]),
+    # *.db-shm / *.db-wal are SQLite's sidecars for an open write-ahead log. The
+    # ``*.db`` entry has always dropped the databases themselves, so the sidecars
+    # shipped alone: 64 KB of a half-written transaction log from whoever last ran
+    # the WAL verification scripts, describing a database that is not there.
+    # *.ast / *.typedtree are moon's per-module build intermediates under
+    # wasm-*/; the .mbt sources they derive from ship, so `moon build` recreates
+    # them.
+    ("services/backend", [
+        "*.db", "*.db-shm", "*.db-wal",
+        "*.sqlite", "*.sqlite-shm", "*.sqlite-wal", "*.sqlite3",
+        "*.joblib", "*.log", "*.pyc",
+        "*.ast", "*.typedtree",
+    ]),
+    # Internal-only operations material must not travel in a PUBLIC release.
+    # The pattern (rather than the exact path) is deliberate: MANIFEST.in splits
+    # every directive on whitespace, and this file's real basename
+    # ("[OPS-MAN-066] khyos进化提示词手册-1000条.md", 594 KB) contains a space,
+    # so no ``exclude``/``global-exclude`` line can name it literally.
+    ("docs/07_OPS_运维", ["*进化提示词手册*"]),
     ("kernel", ["*.o", "*.bin", "*.elf", "*.efi", "*.iso", "*.img"]),
     ("platform/packages/moonbit-plugin-sdk", ["*.wasm"]),
-    # Drop pre-rendered doc-site OUTPUTS from the source distribution. Every
-    # docs/**/*.html is a build_docs_site.js derivative of an adjacent .md, and
-    # the three docs/**/*.pdf are rendered exports of their OPS-MAN .md sources.
-    # ~11.8 MB/version of pure derivatives with zero runtime consumers (docs.js
-    # reads only .md / 维护映射表.json). The .md sources, the generator, and
-    # docs/_assets/ (mermaid + css + js) all stay, so `khy docs:build` can
-    # regenerate the offline site on demand. Scoped to docs/ so runtime HTML
-    # shipped elsewhere (apps/ai-frontend dist, muya editor) is untouched.
-    ("docs", ["*.html", "*.pdf"]),
+    # The three docs/**/*.pdf are rendered exports of their OPS-MAN .md sources.
+    # Their .html siblings used to be handled here too; that rule is now the
+    # ``*.html`` global-exclude plus SDIST_FINAL_INCLUDES, because the same
+    # generator writes derivatives outside docs/ as well.
+    ("docs", ["*.pdf"]),
 ]
 
 GLOBAL_EXCLUDES = _ordered_unique([
@@ -221,6 +258,45 @@ GLOBAL_EXCLUDES = _ordered_unique([
     # basename and every suffixed variant globally.
     ".env",
     ".env.*",
+    # Pre-rendered doc-site OUTPUT. 152 files / 2.03 MB in the 1.1.11 sdist, of
+    # which 147 are build_docs_site.js derivatives of an adjacent .md — verified
+    # by comparing the member list against its own .md siblings. Nothing reads
+    # them (docs-site.js reads .md), and `khy docs:build` regenerates the whole
+    # offline site from the .md sources that stay. The rule is global rather than
+    # ``recursive-exclude docs`` because 132 of the derivatives sit under
+    # services/backend/src/{skills,data}/ next to the prompt.md / SKILL.md that
+    # the skill loader actually reads. The 5 files that are NOT derivatives are
+    # real HTML entry points and come back via SDIST_FINAL_INCLUDES.
+    "*.html",
+    # Per-machine hydration markers written by the bootstrap/self-heal paths
+    # (.khy_quant_bootstrapped, .khy_version_stamp, …). All 7 are untracked local
+    # state, and shipping a PRE-SET marker is worse than shipping bulk: a fresh
+    # install reads it, concludes bootstrap already ran, and lands in the
+    # splitbrain state that hydrationHealth.js exists to diagnose.
+    ".khy_*",
+    # npm pack leftovers. services/backend/pack/khy-os-khy-os-1.2.3.tgz is a
+    # 3-byte placeholder with zero references in the tree; a real one would be a
+    # packaged copy of the package being packaged.
+    "*.tgz",
+    # SQLite write-ahead sidecars, anywhere. The services/backend recursive
+    # exclude covers today's occurrences; this keeps a future one out of any tree.
+    "*.db-shm",
+    "*.db-wal",
+])
+
+# Re-added AFTER every exclusion above. MANIFEST.in applies its directives in
+# order, so a trailing ``include`` is the only way to keep a file that an earlier
+# broad rule kills. These are the five *.html files in the tree that are NOT
+# doc-site derivatives — real HTML entry points with no .md sibling:
+# three Vite/PWA shells, one ML test page, and the Markdown workbench shell.
+# HOW-TO-EXTEND: add a path here only if it is a genuine runtime document; if it
+# has an adjacent .md it is a generated derivative and must stay excluded.
+SDIST_FINAL_INCLUDES = _ordered_unique([
+    "apps/ai-frontend/index.html",
+    "software/khyquant/frontend/index.html",
+    "software/khyquant/frontend/ml-test.html",
+    "software/khyquant/frontend/public/offline.html",
+    "extensions/tools/khy-markdown/khyosMarkdown.html",
 ])
 
 # Wheel build copy/prune rules used by ``setup.py``.
@@ -436,6 +512,140 @@ AUDIT_FORBIDDEN_CLASSIFIER_SUBSTRINGS = _ordered_unique([
     "investment",
 ])
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Post-build sdist ALLOWLIST.
+#
+# Everything above is a *denylist*: broad recursive-includes followed by prune /
+# exclude / global-exclude. That shape leaks by construction — a file class
+# nobody thought of is included by default, and the leak is only discovered by
+# reading a shipped tarball. Every leak fixed above (a developer's heal-audit
+# log, seven hydration markers, SQLite sidecars, a 3.12 MB regenerable mermaid
+# bundle, an internal 594 KB prompt handbook) had shipped in every release since
+# it appeared.
+#
+# So the release build asserts the inverse afterwards: list the members of the
+# finished sdist and fail the build on anything this allowlist does not name.
+# A new file class now needs a deliberate entry here, which is a code review
+# instead of a silent inclusion.
+#
+# A member passes if ANY of these holds:
+#   1. its basename matches SDIST_ALLOWED_BASENAMES (dotfiles, Dockerfile, …)
+#   2. its lowercased suffix is in SDIST_ALLOWED_SUFFIXES
+#   3. its path matches SDIST_ALLOWED_PATHS or is in SDIST_FINAL_INCLUDES
+# and, independently, it is under SDIST_MAX_FILE_BYTES unless named in
+# SDIST_LARGE_FILE_PATHS.
+#
+# KNOWN LIMITATION, stated so nobody trusts this further than it goes: a
+# suffix-based allowlist cannot tell a public design doc from an internal one —
+# both are ``.md``. The 1000-条 handbook is kept out by an explicit exclude, not
+# by this check. The size ceiling is the partial backstop: it catches the class
+# by its symptom (an unusually fat text file) rather than by its meaning.
+SDIST_ALLOWED_SUFFIXES = frozenset([
+    # Source
+    ".js", ".mjs", ".cjs", ".ts", ".vue", ".py", ".c", ".h", ".asm", ".go",
+    ".cs", ".mbt", ".mbti", ".sql",
+    # Config / manifests / lock files
+    ".json", ".toml", ".yaml", ".yml", ".cfg", ".conf", ".in", ".ld", ".pkg",
+    ".npmrc",
+    # Scripts (every shell the launchers support: POSIX, PowerShell, cmd,
+    # double-clickable macOS .command, legacy Windows .vbs)
+    ".sh", ".ps1", ".bat", ".cmd", ".command", ".vbs",
+    # Docs and plain text
+    ".md", ".txt",
+    # Styles and UI assets that ship with the frontends
+    ".css", ".scss", ".svg", ".png", ".jpg", ".ico",
+])
+
+# fnmatch patterns for files with no suffix to judge.
+SDIST_ALLOWED_BASENAMES = _ordered_unique([
+    ".gitignore",
+    ".npmignore",
+    ".npmrc",
+    ".prettierrc",
+    ".prettierignore",
+    "Dockerfile*",
+    "Makefile",
+    "LICENSE",
+    # setuptools sdist metadata.
+    "PKG-INFO",
+    # bin/ shims installed on PATH; extensionless by POSIX convention.
+    "khy-os",
+    "khy-os-backend",
+    "khy-os-console",
+    "khyosmarkdown",
+])
+
+# fnmatch patterns for individual files that break the suffix rules on purpose.
+# Each needs a reason, because each is a hole in the policy above.
+SDIST_ALLOWED_PATHS = _ordered_unique([
+    # 4.6 KB PE launcher for the Markdown workbench on Windows, tracked in git
+    # alongside the KhyosMarkdown.cs it was built from. Small enough that the
+    # "never ship prebuilt binaries" rule is about provenance, not weight —
+    # keeping it means the workbench has a double-clickable entry on a fresh
+    # install; the .cs source ships next to it either way.
+    "extensions/tools/khy-markdown/KhyosMarkdown.exe",
+    # 8 KB packaged VS Code / Trae extension. The bridge installs itself from
+    # this file; without it the IDE bridge has nothing to hand the editor.
+    # Pattern rather than exact path so a version bump does not fail the build.
+    "extensions/bridges/khy-trae-bridge/*.vsix",
+    # 41-byte hand-written wasm module exporting `add`, served by the frontend's
+    # wasm demo page. Not a compiled payload — it IS the demo.
+    "software/khyquant/frontend/public/wasm/*.wasm",
+])
+
+# Single-file size ceiling. Nothing in a source release should be a megabyte of
+# one file except the deliberate offline runtime bundle: at the 1.1.11 baseline
+# the next largest member was package-lock.json at 795 KB, so this leaves real
+# headroom while still tripping on the next generated blob that wanders in.
+SDIST_MAX_FILE_BYTES = 1 * 1024 * 1024
+
+SDIST_LARGE_FILE_PATHS = _ordered_unique([
+    # The entire offline pip runtime, ~17 MB. See scripts/release/
+    # assemble-pip-runtime.js: this bundle is the reason `pip install khy-os`
+    # works with no network and no npm, so it is load-bearing, not overhead.
+    "platform/khy_platform/bundled/runtime/khy/bundle.mjs",
+])
+
+
+def sdist_allowlist_violations(members):
+    """Return ``[(relpath, reason), …]`` for sdist members the allowlist rejects.
+
+    ``members`` is an iterable of ``(relpath, size_bytes)`` where ``relpath`` is
+    POSIX-style and relative to the sdist root (the ``khy_os-<version>/`` prefix
+    already stripped). Pure function: no IO, no globals mutated, so both the
+    release audit and the unit test can call it.
+    """
+    import fnmatch
+    import posixpath
+
+    allowed_paths = list(SDIST_ALLOWED_PATHS) + list(SDIST_FINAL_INCLUDES)
+    violations = []
+    for relpath, size in members:
+        basename = posixpath.basename(relpath)
+        suffix = posixpath.splitext(basename)[1].lower()
+        named = any(fnmatch.fnmatch(relpath, pattern) for pattern in allowed_paths)
+        if not named:
+            if any(fnmatch.fnmatch(basename, pattern) for pattern in SDIST_ALLOWED_BASENAMES):
+                pass
+            elif suffix in SDIST_ALLOWED_SUFFIXES:
+                pass
+            elif suffix:
+                violations.append((relpath, f"suffix '{suffix}' is not on the sdist allowlist"))
+                continue
+            else:
+                violations.append((relpath, "extensionless basename is not on the sdist allowlist"))
+                continue
+        if size > SDIST_MAX_FILE_BYTES and not any(
+            fnmatch.fnmatch(relpath, pattern) for pattern in SDIST_LARGE_FILE_PATHS
+        ):
+            violations.append((
+                relpath,
+                f"{size / 1048576:.2f} MB exceeds the "
+                f"{SDIST_MAX_FILE_BYTES / 1048576:.1f} MB single-file ceiling",
+            ))
+    return violations
+
+
 REQUIRED_SDIST_PATHS = _ordered_unique([
     "kernel/Makefile",
     "kernel/src",
@@ -526,6 +736,14 @@ def render_manifest() -> str:
     ])
     for pattern in GLOBAL_EXCLUDES:
         lines.append(f"global-exclude {pattern}")
+
+    lines.extend([
+        "",
+        "# Re-add real runtime files killed by the broad rules above.",
+        "# MUST stay last: MANIFEST.in applies its directives in order.",
+    ])
+    for path in SDIST_FINAL_INCLUDES:
+        lines.append(f"include {path}")
 
     lines.append("")
     return "\n".join(lines)

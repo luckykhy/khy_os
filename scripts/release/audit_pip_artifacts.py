@@ -19,6 +19,7 @@ from pip_packaging_rules import (
     AUDIT_FORBIDDEN_FILE_GLOBS,
     REQUIRED_SDIST_PATHS,
     REQUIRED_WHEEL_PATHS,
+    sdist_allowlist_violations,
 )
 
 
@@ -166,7 +167,60 @@ def _audit_tree(label: str, root: Path, required_paths) -> int:
     return 0
 
 
+def _read_sdist_members(artifact: Path):
+    """Return ``[(relpath, size), …]`` for the files inside an sdist tarball.
+
+    Paths are relative to the ``<name>-<version>/`` root the tarball wraps
+    everything in, so they line up with the repository-relative paths the
+    packaging rules are written in.
+    """
+    members = []
+    with tarfile.open(artifact, "r:gz") as tf:
+        for member in tf.getmembers():
+            if not member.isfile():
+                continue
+            name = member.name
+            rel = name.split("/", 1)[1] if "/" in name else name
+            members.append((rel, member.size))
+    return members
+
+
+def _audit_sdist_allowlist(label: str, artifact: Path) -> int:
+    """Fail the release when the finished sdist holds anything unaccounted for.
+
+    The include/prune/exclude rules that BUILD the sdist are a denylist, so a
+    file class nobody anticipated ships by default. This asserts the inverse
+    against the artifact that was actually produced: every member must be named
+    by the allowlist in pip_packaging_rules, or the build stops here.
+    """
+    members = _read_sdist_members(artifact)
+    violations = sdist_allowlist_violations(members)
+    if violations:
+        for rel, reason in violations[:40]:
+            print(f"  {rel}: {reason}")
+        if len(violations) > 40:
+            print(f"  ... and {len(violations) - 40} more")
+        print(
+            "  Fix: drop the file via scripts/release/pip_packaging_rules.py, or,"
+            " if it genuinely belongs in a source release, add it to"
+            " SDIST_ALLOWED_* there with the reason."
+        )
+        return _fail(f"{label} contains {len(violations)} file(s) outside the sdist allowlist")
+
+    biggest = sorted(members, key=lambda item: -item[1])[:8]
+    _info(f"{label} largest members:")
+    for rel, size in biggest:
+        print(f"  {size / 1048576:8.3f} MB  {rel}")
+    _ok(f"{label} matches the sdist allowlist ({len(members)} files)")
+    return 0
+
+
 def _audit_sdist(artifact: Path, workspace: Path) -> int:
+    label = f"sdist {artifact.name}"
+    rc = _audit_sdist_allowlist(label, artifact)
+    if rc:
+        return rc
+
     target = workspace / f"{artifact.name}.x"
     target.mkdir(parents=True, exist_ok=True)
     with tarfile.open(artifact, "r:gz") as tf:
@@ -174,7 +228,7 @@ def _audit_sdist(artifact: Path, workspace: Path) -> int:
             tf.extractall(target, filter="data")
         except TypeError:
             tf.extractall(target)
-    return _audit_tree(f"sdist {artifact.name}", target, REQUIRED_SDIST_PATHS)
+    return _audit_tree(label, target, REQUIRED_SDIST_PATHS)
 
 
 def _audit_wheel(artifact: Path, workspace: Path) -> int:
