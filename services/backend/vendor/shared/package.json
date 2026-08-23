@@ -54,5 +54,14 @@
   },
   "optionalDependencies": {
     "better-sqlite3": "^12.8.0"
+  },
+  "//peerDependencies": "sqlite3 走 optional peer 而不是 optionalDependencies：后者会让每次安装都真去编译一次原生模块（失败还刷屏），而 database.js 的方言加载本来就是 sqlite3 -> sqliteCompat -> 后端兼容层 三级回退、装不上是正常路径。声明在这里只为让「代码能 require 的东西都有名字」，npm 不会因此装它。",
+  "peerDependencies": {
+    "sqlite3": "^5.1.7"
+  },
+  "peerDependenciesMeta": {
+    "sqlite3": {
+      "optional": true
+    }
   }
 }
