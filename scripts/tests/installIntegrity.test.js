@@ -153,8 +153,11 @@ test('反漂移：每条 CRITICAL_BUNDLE_PATHS 都被 pip 或 npm 权威清单�
   }
 });
 
-test('doc 一致性：OPS-MAN-069 落盘 == 生成器输出(防手改漂移)', () => {
-  const { buildDoc, DOC_PATH } = require('../install/verify-install');
+test('doc 一致性：OPS-MAN-069 落盘 == 生成器输出(防手改漂移)', (t) => {
+  const { requireExtensionModule } = require('../lib/ext-run');
+  const cli = requireExtensionModule('khy-installer', { command: 'verify' });
+  if (!cli) return t.skip('拓展 khy-installer 未安装 —— 这份文档由它生成，没有生成器就没有可比对的基准（删目录即卸载）');
+  const { buildDoc, DOC_PATH } = cli;
   const onDisk = fs.readFileSync(DOC_PATH, 'utf8');
   assert.strictEqual(
     onDisk,

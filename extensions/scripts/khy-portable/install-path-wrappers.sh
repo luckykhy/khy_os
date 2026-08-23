@@ -33,7 +33,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 RUNNER="$PROJECT_ROOT/khy.sh"
 [[ -f "$RUNNER" ]] || { printf '[FAIL] khy.sh not found under: %s\n' "$PROJECT_ROOT" >&2; exit 1; }
 mkdir -p "$BIN_DIR"
