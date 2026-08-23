@@ -148,6 +148,20 @@ function deferredPrefetch(options = {}) {
   // serviceLifecyclePolicy 的 cli-startup 条目一一对应,scripts/check-lifecycle-policy.js 守卫防漂移。
   const policy = require('../services/serviceLifecyclePolicy');
 
+  // 体积自检的提示发射:完整模式与轻量模式共用一份,免得两处文案漂移。
+  // 只报不删 —— .khy 下躺着会话存档与工作区快照,自动清理判错是不可逆的。
+  const emitFootprintNotice = (cleanup) => {
+    try {
+      const footprint = cleanup.assessRuntimeFootprint();
+      if (footprint.notice) {
+        const chalk = require('chalk').default || require('chalk');
+        emit(chalk.dim(`  ℹ ${footprint.notice}`));
+      }
+    } catch {
+      /* 自检失败不该拦住启动 */
+    }
+  };
+
   const RUNNERS = {
     // ── Lightweight mode (khy):+300ms 预热 gateway(门判定保留在 body 内)──────
     gatewayWarmup: () => {
@@ -159,6 +173,32 @@ function deferredPrefetch(options = {}) {
         }
         const gw = require('../services/gateway/aiGateway');
         gw.init().catch(() => {});
+      } catch {
+        /* non-critical */
+      }
+    },
+
+    // 轻量模式 +3.5s:滚动 + 体积自检。
+    //
+    // 为什么轻量模式要单独有这一条:cleanupService 那条策略条目是 mode 'khyquant',
+    // 而 bin/khy.js 以 `khy` 名调用时把 KHY_RUNTIME_MODE 设成 'khy',走的是本段。
+    // 于是日志/审计的滚动在最主要的分发入口上从来没跑过,.khy 只增不减。这里补的是
+    // 那条缺口,但刻意只做两件有界的事(滚动 logs 与 audit、报一次体积),不起周期
+    // timer、不做完整 runCleanup,轻量模式该轻的地方仍然轻。
+    runtimeFootprintNotice: () => {
+      try {
+        const cleanup = require('../services/cleanupService');
+        try {
+          cleanup.cleanRuntimeLogs();
+        } catch {
+          /* 滚动失败不影响自检 */
+        }
+        try {
+          cleanup.cleanTraceAudit();
+        } catch {
+          /* 同上 */
+        }
+        emitFootprintNotice(cleanup);
       } catch {
         /* non-critical */
       }
@@ -193,6 +233,8 @@ function deferredPrefetch(options = {}) {
         const cleanup = require('../services/cleanupService');
         const result = cleanup.runCleanup({ trigger: 'startup' });
         cleanup.startPeriodicCleanup({ skipInitial: true });
+        // 体积自检:只报不删。清理跑完之后才测,报的才是清理之后的真实占用。
+        emitFootprintNotice(cleanup);
         if (result.summary && result.summary.actions && result.summary.actions.length > 0) {
           try {
             const chalk = require('chalk').default || require('chalk');

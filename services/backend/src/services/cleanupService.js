@@ -7,6 +7,12 @@
  *  - Training interaction records trimming (10 000 lines / 50 MB)
  *  - Telemetry export pruning (max 5 files)
  *  - Trace audit logs rotation (trace-events.jsonl, sessions/, summaries/, exports/)
+ *    过期分片先折成 audit/archive/sessions-<日期>.jsonl.gz 再删原件，总量超
+ *    KHY_AUDIT_MAX_TOTAL_MB 时才从最旧的归档开始删。取回归档里的记录：
+ *      node -e "process.stdout.write(require('zlib').gunzipSync(require('fs').readFileSync(process.argv[1])))" <归档.gz> > out.jsonl
+ *    每行带 _source 字段指回原分片文件名。被总量封顶删掉的归档无法重建 —— 这是
+ *    唯一不可逆的一档，所以它的阈值默认给到 200 MB（实测 audit 只有 14.8 MB）。
+ *    .khy/audit-trajectory 不在本服务治理范围内：那条通道契约规定不压缩不裁剪。
  *  - Antivirus scan log rotation (scan.log)
  *  - Skill ledger audit rotation (skill-ledger/audit.jsonl)
  *  - Telemetry audit log rotation (~/.khy/audit.jsonl)
@@ -31,7 +37,7 @@ const path = require('path');
 const zlib = require('zlib');
 
 const _formatBytesAtom = require('../utils/formatBytes');
-const { LOGS, CHECKPOINT } = require('../constants/serviceDefaults');
+const { LOGS, AUDIT, CHECKPOINT, RUNTIME_FOOTPRINT } = require('../constants/serviceDefaults');
 
 // Lazily resolve the legacy-compatible app home (portable-aware).
 // No local caching: preserves getAppHome() live-resolve semantics.
@@ -66,10 +72,12 @@ const OS_TEMP_MAX_AGE_HOURS = (() => {
 })();
 
 // ── Extended coverage limits ───────────────────────────────────────────
-const TRACE_EVENTS_MAX_BYTES = 10 * 1024 * 1024; // 10 MB
-const TRACE_SESSION_MAX_AGE_D = 7; // 7 days
-const TRACE_SUMMARY_MAX_FILES = 50;
-const TRACE_EXPORT_MAX_FILES = 10;
+// 审计流水的四个阈值搬到 constants/serviceDefaults 的 AUDIT 策略里,可用 KHY_AUDIT_*
+// 覆盖。默认值逐字节等于此前的硬编码常量,所以不改环境的部署行为不变。
+const TRACE_EVENTS_MAX_BYTES = AUDIT.EVENTS_MAX_SIZE_BYTES;
+const TRACE_SESSION_MAX_AGE_D = AUDIT.KEEP_DAYS;
+const TRACE_SUMMARY_MAX_FILES = AUDIT.MAX_SUMMARY_FILES;
+const TRACE_EXPORT_MAX_FILES = AUDIT.MAX_EXPORT_FILES;
 const SCAN_LOG_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 const SKILL_AUDIT_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 const TELEM_AUDIT_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -430,6 +438,75 @@ function cleanTelemetry(maxFiles = TELEMETRY_MAX_FILES) {
 
 // ── Storage report ──────────────────────────────────────────────────────
 
+/**
+ * 运行时体积自检:算出数据家目录的现状,超阈值就给出一句可执行的提示。
+ *
+ * **只报不删**。这里刻意不接任何删除动作:.khy 下躺着 checkpoints(工作区快照)、
+ * sessions(会话存档)、credentials/、api_keys.json —— 自动清理一旦判错就是不可逆
+ * 的损失,而多占几百 MB 是可逆的。所以本函数的产出是一段文字,执行权留给用户。
+ *
+ * 纯函数式:不写盘、不发通知,调用方决定怎么展示。KHY_FOOTPRINT_NOTICE=0 关掉,
+ * KHY_FOOTPRINT_NOTICE_MB 调阈值。
+ *
+ * @param {string} [root] 数据家目录,缺省 _khyHome()
+ * @returns {{root:string,totalBytes:number,totalHuman:string,thresholdBytes:number,
+ *            overThreshold:boolean,reclaimableBytes:number,reclaimableHuman:string,
+ *            notice:string|null,breakdown:Array<{rel:string,bytes:number,human:string}>}}
+ */
+function assessRuntimeFootprint(root = _khyHome()) {
+  const thresholdBytes = Math.max(0, RUNTIME_FOOTPRINT.NOTICE_MB) * 1024 * 1024;
+  // `khy clean --runtime` 的白名单(见 cli/handlers/clean.js RUNTIME_TARGETS)。
+  // 提示里报的「可回收」必须与那条命令实际会删的一致,否则用户跑完发现回收数字
+  // 对不上,下一次就不信这个提示了。
+  const RECLAIMABLE = ['logs', 'audit', 'tmp', 'cache', 'break-cache', 'change-watch'];
+  const breakdown = [];
+  let totalBytes = 0;
+  let reclaimableBytes = 0;
+  for (const name of safeLs(root)) {
+    const fp = path.join(root, name);
+    let bytes = 0;
+    try {
+      const st = fs.statSync(fp);
+      bytes = st.isDirectory() ? safeTreeSize(fp) : st.size;
+    } catch {
+      continue;
+    }
+    totalBytes += bytes;
+    if (RECLAIMABLE.includes(name)) {
+      reclaimableBytes += bytes;
+    }
+    breakdown.push({ rel: name, bytes, human: humanSize(bytes) });
+  }
+  breakdown.sort((a, b) => b.bytes - a.bytes);
+  const overThreshold =
+    RUNTIME_FOOTPRINT.ENABLED && thresholdBytes > 0 && totalBytes > thresholdBytes;
+  let notice = null;
+  if (overThreshold) {
+    const top = breakdown
+      .slice(0, 3)
+      .map((b) => `${b.rel} ${b.human}`)
+      .join('、');
+    // 状态文本按红线 2 写成「动作 + 目标 + 进度」:说清测了什么、测出多少、下一步
+    // 敲什么命令。绝不写成「空间不足…」这种没有下一步的话。
+    notice =
+      `已统计 ${root}:占用 ${humanSize(totalBytes)}，超过提示阈值 ` +
+      `${humanSize(thresholdBytes)}（最大三项:${top}）。` +
+      `可运行 khy clean --runtime --dry-run 查看可回收的 ${humanSize(reclaimableBytes)}；` +
+      `会话存档与工作区快照不在其中,不会被清掉。`;
+  }
+  return {
+    root,
+    totalBytes,
+    totalHuman: humanSize(totalBytes),
+    thresholdBytes,
+    overThreshold,
+    reclaimableBytes,
+    reclaimableHuman: humanSize(reclaimableBytes),
+    notice,
+    breakdown,
+  };
+}
+
 function getStorageReport() {
   const report = {};
 
@@ -555,8 +632,133 @@ function _rotateAppendLog(filePath, maxBytes, label) {
   }
 }
 
-function cleanTraceAudit() {
-  const auditRoot = path.join(_khyHome(), 'audit');
+/**
+ * 把一批过期审计分片折成 audit/archive/sessions-<最新分片日期>.jsonl.gz。
+ *
+ * 每行形如 {"_source": "<原文件名>", ...原始行}:归档后仍要能按来源回溯到具体
+ * 分片,否则压缩就等于丢失溯源信息。非 JSON 行原样包一层 {_source, _raw},
+ * 不做丢弃——审计流水里出现坏行本身就是需要留证的事实。
+ *
+ * @param {string} auditRoot 审计根目录
+ * 返回值刻意是三态而不是 boolean:「没内容可留」(全是空分片)与「归档失败」
+ * (磁盘满 / 目录只读)对调用方的含义完全相反 —— 前者可以放心删原件,后者必须
+ * 留着。压成一个 false 会让空分片永远清不掉。
+ *
+ * @param {Array<{name:string,path:string,mtimeMs:number}>} expired 过期分片
+ * @returns {{ok:boolean,wrote:boolean}} ok=可以删原件了;wrote=真写出了归档
+ */
+function _archiveExpiredAuditSessions(auditRoot, expired) {
+  try {
+    const archiveDir = path.join(auditRoot, 'archive');
+    const newest = expired.reduce((acc, x) => (x.mtimeMs > acc ? x.mtimeMs : acc), 0);
+    const stamp = new Date(newest || Date.now()).toISOString().slice(0, 10);
+    const lines = [];
+    for (const item of expired) {
+      let raw;
+      try {
+        raw = fs.readFileSync(item.path, 'utf-8');
+      } catch {
+        continue;
+      }
+      for (const line of raw.split('\n')) {
+        if (!line.trim()) {
+          continue;
+        }
+        let parsed = null;
+        try {
+          parsed = JSON.parse(line);
+        } catch {
+          parsed = null;
+        }
+        lines.push(
+          JSON.stringify(
+            parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+              ? Object.assign({ _source: item.name }, parsed)
+              : { _source: item.name, _raw: line }
+          )
+        );
+      }
+    }
+    if (lines.length === 0) {
+      // 过期分片全是空文件:没有证据需要保全,原件可以直接删。
+      return { ok: true, wrote: false };
+    }
+    // 建目录推迟到确定有内容要写之后:全是空分片时不留一个空 archive/ 目录。
+    // 同时这也是「归档写不出去」的第一道判定点——目录建不出来就直接落进 catch。
+    fs.mkdirSync(archiveDir, { recursive: true });
+    // 同一天可能归档多次(重启/周期清理各来一趟),所以带序号避免互相覆盖。
+    let target = path.join(archiveDir, `sessions-${stamp}.jsonl.gz`);
+    let n = 2;
+    while (fs.existsSync(target)) {
+      target = path.join(archiveDir, `sessions-${stamp}.${n}.jsonl.gz`);
+      n++;
+    }
+    fs.writeFileSync(target, zlib.gzipSync(Buffer.from(lines.join('\n') + '\n', 'utf-8')));
+    return { ok: true, wrote: true };
+  } catch {
+    return { ok: false, wrote: false };
+  }
+}
+
+/**
+ * 审计根目录总量封顶:超过 AUDIT.MAX_TOTAL_MB 时,从**最旧的归档**开始删。
+ * 只删 archive/ 下的 .gz,不碰保留期内的活跃分片——活跃分片是当前会话正在写的
+ * 东西,按体积去删它等于随机截断本轮审计。
+ *
+ * @param {string} auditRoot 审计根目录
+ * @returns {{removed:number,bytes:number,overCap:boolean}}
+ */
+function _capAuditArchives(auditRoot) {
+  const maxBytes = Math.max(0, AUDIT.MAX_TOTAL_MB) * 1024 * 1024;
+  let removed = 0;
+  let bytes = 0;
+  if (maxBytes === 0) {
+    return { removed, bytes, overCap: false };
+  }
+  let total = safeTreeSize(auditRoot);
+  if (total <= maxBytes) {
+    return { removed, bytes, overCap: false };
+  }
+  const archiveDir = path.join(auditRoot, 'archive');
+  const entries = [];
+  for (const name of safeLs(archiveDir)) {
+    const fp = path.join(archiveDir, name);
+    try {
+      const st = fs.statSync(fp);
+      if (st.isFile() && name.endsWith('.gz')) {
+        entries.push({ path: fp, size: st.size, mtimeMs: st.mtimeMs });
+      }
+    } catch {
+      /* skip */
+    }
+  }
+  entries.sort((a, b) => a.mtimeMs - b.mtimeMs);
+  for (const e of entries) {
+    if (total <= maxBytes) {
+      break;
+    }
+    try {
+      fs.unlinkSync(e.path);
+      total -= e.size;
+      bytes += e.size;
+      removed++;
+    } catch {
+      /* skip */
+    }
+  }
+  return { removed, bytes, overCap: total > maxBytes };
+}
+
+/**
+ * 审计流水治理:滚动 trace-events.jsonl、把过期分片归档、给 summaries/exports 封顶、
+ * 最后按总量删最旧的归档。
+ *
+ * 参数化 auditRoot 与 cleanRuntimeLogs 同理:让单测在临时目录里跑真实分支,而不是
+ * 去 mock fs。缺省仍是数据家下的 audit,调用方行为不变。
+ *
+ * @param {string} [auditRoot] 审计根目录,缺省 <dataHome>/audit
+ */
+function cleanTraceAudit(auditRoot = path.join(_khyHome(), 'audit')) {
   let removed = 0,
     bytes = 0;
 
@@ -567,20 +769,45 @@ function cleanTraceAudit() {
     bytes += rot.originalSize || 0;
   }
 
-  // 2. Clean old session files (> 7 days)
+  // 2. 过期会话分片:先打包压缩进 archive/,再删原件(AUDIT.ARCHIVE=0 → 退回直接删)
   const sessionDir = path.join(auditRoot, 'sessions');
   const cutoff = Date.now() - TRACE_SESSION_MAX_AGE_D * 86400000;
+  const expired = [];
   for (const f of safeLs(sessionDir)) {
     const fp = path.join(sessionDir, f);
     try {
       const st = fs.statSync(fp);
       if (st.isFile() && st.mtimeMs < cutoff) {
-        bytes += st.size;
-        fs.unlinkSync(fp);
-        removed++;
+        expired.push({ name: f, path: fp, size: st.size, mtimeMs: st.mtimeMs });
       }
     } catch {
       /* skip */
+    }
+  }
+  let archived = 0;
+  // 归档关掉时(KHY_AUDIT_ARCHIVE=0)按旧行为直接删,所以 safeToDelete 起点是 !ARCHIVE。
+  let safeToDelete = !AUDIT.ARCHIVE;
+  if (expired.length > 0 && AUDIT.ARCHIVE) {
+    // 一批过期分片折成**一个** gz。按批而不是逐文件归档是刻意的:这个目录的成本
+    // 主要在文件数(实测 2483 个分片才 14.8 MB),逐文件 gz 只换字节不换文件数。
+    const res = _archiveExpiredAuditSessions(auditRoot, expired);
+    safeToDelete = res.ok;
+    if (res.wrote) {
+      archived = expired.length;
+    }
+  }
+  // 归档失败(磁盘满 / 目录只读)时不删原件:宁可留着占地方,也不能让证据在没有副本
+  // 的情况下消失。这是 fail-soft 的正确方向。反过来,全是空分片时 ok 为真而 wrote
+  // 为假 —— 没有证据需要保全,那就该照删,否则空文件永远清不掉。
+  if (expired.length > 0 && safeToDelete) {
+    for (const item of expired) {
+      try {
+        fs.unlinkSync(item.path);
+        bytes += item.size;
+        removed++;
+      } catch {
+        /* skip */
+      }
     }
   }
 
@@ -616,7 +843,12 @@ function cleanTraceAudit() {
     }
   }
 
-  return { removed, bytes, rotated: rot.rotated };
+  // 5. 总量封顶(删最旧的归档)。放在最后:先把过期件折成归档,再看总量还超不超。
+  const capped = _capAuditArchives(auditRoot);
+  removed += capped.removed;
+  bytes += capped.bytes;
+
+  return { removed, bytes, rotated: rot.rotated, archived, overCap: capped.overCap };
 }
 
 // ── Scan log rotation ──────────────────────────────────────────────────
@@ -1693,5 +1925,6 @@ module.exports = {
   cleanOsTempFiles,
   getLastCleanupReport,
   getStorageReport,
+  assessRuntimeFootprint,
   humanSize,
 };
