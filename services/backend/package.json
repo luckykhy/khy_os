@@ -8,6 +8,7 @@
     "khy-os": "./bin/khy.js",
     "khy": "./bin/khy.js"
   },
+  "//files": "从上面的目录白名单里再减掉非运行时内容。npm 的 files 支持取反模式，写在这里而不是另开 .npmignore：两份清单会各自漂移，而漂移方向总是「多带了东西」。① !**/.khy —— 运行时状态。src/.khy/khyquant/data/khy-quant.db 是本机跑出来的库，未被 git 跟踪，却是 tarball 里最大的单文件（0.59 MB）；谁在自己机器上 publish 就把自己的库发出去。② 测试文件与 __tests__ —— 装到用户机器上不会跑，jest 也不在生产依赖里。③ !**/*.html —— src/ 下 132 个 .html 全部有同名 .md，是文档站渲染出来的副本；技能加载器只读 prompt.md / SKILL.md（见 src/cli/repl/userSkillCommands.js:147），运行时一个 .html 都不读。④ wasm-* 的 .ast/.typedtree/trace.json 与 *_test.mbt —— moon build 的中间产物和测试，不是可发布源码（三个 wasm 目录里本来就没有编译好的 .wasm，运行时只加载用户 --wasm 指定的路径）。",
   "files": [
     "bin/khy.js",
     "bin/khy-os-init.js",
@@ -33,7 +34,17 @@
     "babel.config.json",
     "esbuild.config.js",
     "jsconfig.json",
-    "README*"
+    "README*",
+    "!**/.khy",
+    "!**/*.test.js",
+    "!**/*.spec.js",
+    "!**/__tests__",
+    "!**/*.html",
+    "!wasm-*/**/*.ast",
+    "!wasm-*/**/*.typedtree",
+    "!wasm-*/trace.json",
+    "!wasm-*/**/*_test.mbt",
+    "!wasm-*/**/*_wbtest.mbt"
   ],
   "scripts": {
     "start": "node server.js",
