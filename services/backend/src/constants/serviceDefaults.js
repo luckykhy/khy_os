@@ -282,6 +282,36 @@ const LOGS = Object.freeze({
   MAX_FILES: parseInt(process.env.KHY_LOG_MAX_FILES || '40', 10),
   MAX_SIZE_BYTES: parseInt(process.env.KHY_LOG_MAX_SIZE_BYTES || String(120 * 1024 * 1024), 10),
 });
+// 审计流水（.khy/audit）的保留策略。与 LOGS 同形：先归档，再按总量删归档。
+//
+// 为什么归档而不是直接删：审计分片是「谁在什么时候做了什么」的流水，过了保留期
+// 仍可能被回溯（事故复盘、合规问询）。旧实现对 sessions/ 里过期文件直接 unlink，
+// 保留期一到证据就没了。改成打包成一份 .jsonl.gz 落进 audit/archive/，既压掉了
+// 体积（实测 5.8 MB / 2129 个小文件 → 一份几百 KB 的 gz），又把「2483 个小文件」
+// 这个真正贵的成本（每个文件一次 stat/一次 inode）收成一个。
+//
+// 注意：这里**不含** .khy/audit-trajectory。那条通道是外部质检要逐行解析的审计
+// 记录，契约规定任何情况下都不压缩、不裁剪、不摘要，所以它既不在本策略内，也不
+// 在 `khy clean --runtime` 的白名单内。别"顺手"把它加进来。
+const AUDIT = Object.freeze({
+  KEEP_DAYS: parseInt(process.env.KHY_AUDIT_KEEP_DAYS || '7', 10),
+  MAX_TOTAL_MB: parseInt(process.env.KHY_AUDIT_MAX_TOTAL_MB || '200', 10),
+  MAX_SUMMARY_FILES: parseInt(process.env.KHY_AUDIT_MAX_SUMMARY_FILES || '50', 10),
+  MAX_EXPORT_FILES: parseInt(process.env.KHY_AUDIT_MAX_EXPORT_FILES || '10', 10),
+  EVENTS_MAX_SIZE_BYTES: parseInt(
+    process.env.KHY_AUDIT_EVENTS_MAX_SIZE_BYTES || String(10 * 1024 * 1024),
+    10
+  ),
+  // 关掉 → 退回旧行为（过期直接删，不留归档）。留这个开关是为了让磁盘极紧的部署
+  // 有退路，默认开：多数场合下 gz 归档比原始分片小一个量级，留着更划算。
+  ARCHIVE: process.env.KHY_AUDIT_ARCHIVE !== '0',
+});
+// 运行时体积自检的提示阈值。超过就在启动时说一句「跑 khy clean --runtime 看看」，
+// 绝不自动删——.khy 里躺着会话历史与凭据，自动清理的错误代价是不可逆的。
+const RUNTIME_FOOTPRINT = Object.freeze({
+  NOTICE_MB: parseInt(process.env.KHY_FOOTPRINT_NOTICE_MB || '500', 10),
+  ENABLED: process.env.KHY_FOOTPRINT_NOTICE !== '0',
+});
 const CHECKPOINT = Object.freeze({
   STORAGE_MODE: process.env.KHY_CHECKPOINT_STORAGE_MODE || 'legacy',
   MAX_TOTAL_MB: parseInt(process.env.KHY_CHECKPOINT_MAX_TOTAL_MB || '500', 10),
@@ -487,6 +517,8 @@ const exported = {
   BACKUP,
   // Runtime storage retention and rollback policy.
   LOGS,
+  AUDIT,
+  RUNTIME_FOOTPRINT,
   CHECKPOINT,
   COLD_EXPORT,
   // API key 池冷却/退避单一真源(services/apiKeyPool.js)

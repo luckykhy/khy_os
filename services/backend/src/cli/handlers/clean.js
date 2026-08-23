@@ -10,9 +10,10 @@
  *   1. 默认只预览。不给 --yes 就只打印「删什么、回收多少」，一个字节都不动。
  *   2. 每一项都必须带重建命令。清单里没有重建命令的目标不许进注册表 ——
  *      「删了装不回来」不叫清理，叫丢数据。
- *   3. 会话历史不进任何默认档。--all 只覆盖 build + deps；运行时那一档要显式
- *      --runtime；而 .khy/checkpoints（实测 49.7 MB 的会话历史）连 --runtime
- *      都碰不到，需要 --checkpoints 单独点名，并且每次都把这条豁免打印出来。
+ *   3. 不可重建的历史不进任何默认档。--all 只覆盖 build + deps；运行时那一档要
+ *      显式 --runtime；而 .khy/checkpoints（实测 49.7 MB 的工作区快照，即未提交
+ *      的代码改动）连 --runtime 都碰不到，需要 --checkpoints 单独点名，并且每次
+ *      都把这条豁免打印出来。
  *
  * 与 scripts/ci/check-build-artifacts.js 的分工：那个守卫拦「产物被提交进 git」，
  * 这条命令清「产物躺在工作树里占地方」，两者互不重叠。
@@ -143,7 +144,11 @@ const BUILD_GLOBS = [
  */
 const RUNTIME_TARGETS = [
   { rel: 'logs', why: '运行日志', rebuild: '下一次运行自动重建' },
-  { rel: 'audit', why: '审计日志分片', rebuild: '下一次运行自动重建（历史审计记录不可恢复）' },
+  {
+    rel: 'audit',
+    why: '审计日志分片与归档',
+    rebuild: '下一次运行自动重建；过期分片的 gz 归档一并删除，历史审计记录不可恢复',
+  },
   { rel: 'tmp', why: '临时文件', rebuild: '下一次运行自动重建' },
   { rel: 'cache', why: '运行时缓存', rebuild: '下一次运行自动重建' },
   { rel: 'break-cache', why: '中断恢复缓存', rebuild: '下一次运行自动重建' },
@@ -151,14 +156,21 @@ const RUNTIME_TARGETS = [
 ];
 
 /**
- * 会话历史：连 --runtime 都不碰，需要 --checkpoints 显式点名。
- * 实测 checkpoints 单目录 49.7 MB，里面是能被 khy resume 读回来的对话存档 ——
- * 「顺手清出来的几十 MB」换「用户找不回上周那次会话」，这笔账不划算。
+ * 工作区快照：连 --runtime 都不碰，需要 --checkpoints 显式点名。
+ *
+ * 实测 checkpoints 单目录 49.7 MB，里面是 workspace/checkpointService.js 存的
+ * 工作区快照 —— git diff 补丁（.patch）与非 git 目录的 tar.gz。也就是**未提交的
+ * 代码改动**，删掉就再也拿不回来了。对话存档在隔壁 .khy/sessions（实测 1.5 MB），
+ * 同样不在任何默认档内。「顺手清出来的几十 MB」换「用户找不回上周那些改动」，
+ * 这笔账不划算。
+ *
+ * 另外 .khy/audit-trajectory 也故意不在本文件的任何白名单里：那条通道是外部质检
+ * 要逐行解析的审计记录，契约规定不压缩不裁剪，删除它必须是用户自己的显式动作。
  */
 const CHECKPOINT_TARGET = {
   rel: 'checkpoints',
-  why: '会话存档（khy resume 的数据源）',
-  rebuild: '无法重建：删掉即永久丢失历史会话',
+  why: '工作区快照（未提交改动的 git diff / tar.gz）',
+  rebuild: '无法重建：删掉即永久丢失这些未提交的改动',
 };
 
 // ── 纯发现与规划（不写任何东西，--dry-run 与单测都走这条路） ──
@@ -356,7 +368,7 @@ function _discoverDeps(root, fsImpl = fs) {
  *
  * @param {object} opts
  * @param {string[]} opts.tiers          要清的档位，取值 build|deps|runtime
- * @param {boolean} [opts.checkpoints]   是否连会话存档一起清（必须显式点名）
+ * @param {boolean} [opts.checkpoints]   是否连工作区快照一起清（必须显式点名）
  * @param {string}  [opts.root]          仓库根（测试注入）
  * @param {string}  [opts.dataHome]      数据家（测试注入）
  * @param {object}  [opts.fsImpl]        fs 注入
@@ -434,7 +446,7 @@ function buildCleanPlan(opts = {}) {
           rel: '.khy/' + CHECKPOINT_TARGET.rel,
           bytes: stats.bytes,
           files: stats.files,
-          reason: '会话历史，--runtime 不清；确实要清用 khy clean --runtime --checkpoints',
+          reason: '工作区快照（未提交的改动），--runtime 不清；确实要清用 khy clean --runtime --checkpoints',
         });
       }
     }
@@ -561,7 +573,7 @@ function _printHelp() {
   console.log('  clean --all                         等于 --build --deps（刻意不含 runtime）');
   console.log('    --dry-run                         只预览，即使带了 --yes 也不删');
   console.log('    --yes                             跳过交互确认，直接删除');
-  console.log('    --checkpoints                     连 .khy/checkpoints 会话历史一起清（危险）');
+  console.log('    --checkpoints                     连 .khy/checkpoints 工作区快照一起清（危险）');
   console.log(
     chalk.dim('  每一项都打印重建命令；会话历史不在任何默认档内，必须显式点名才会被删。')
   );

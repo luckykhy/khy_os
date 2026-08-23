@@ -114,9 +114,25 @@ test('listStartupSchedule:完整模式条目/顺序/延迟与 prefetch 现值逐
   ]);
 });
 
-test('listStartupSchedule:轻量模式包含 gateway 预热和后台更新检查', () => {
+test('listStartupSchedule:轻量模式含 gateway 预热、体积自检、后台更新检查', () => {
   const light = policy.listStartupSchedule({}, 'khy').map((e) => `${e.id}@${e.delayMs}`);
-  assert.deepStrictEqual(light, ['gatewayWarmup@300', 'versionUpdateNotice@5000']);
+  // runtimeFootprintNotice 只在轻量模式出现:完整模式那边由 cleanupService 一并做掉。
+  // bin/khy.js 以 `khy` 名调用时走的正是轻量模式,少了这条 .khy 就只增不减。
+  assert.deepStrictEqual(light, [
+    'gatewayWarmup@300',
+    'runtimeFootprintNotice@3500',
+    'versionUpdateNotice@5000',
+  ]);
+  const full = policy.listStartupSchedule({}).map((e) => e.id);
+  assert.ok(!full.includes('runtimeFootprintNotice'));
+});
+
+test('listStartupSchedule:体积自检可用 KHY_LIFECYCLE_RUNTIMEFOOTPRINTNOTICE 关掉', () => {
+  const light = policy
+    .listStartupSchedule({ KHY_LIFECYCLE_RUNTIMEFOOTPRINTNOTICE: 'off' }, 'khy')
+    .map((e) => e.id);
+  assert.ok(!light.includes('runtimeFootprintNotice'));
+  assert.ok(light.includes('gatewayWarmup'));
 });
 
 test('listStartupSchedule:主门开时 per-id 覆盖剔除条目', () => {
