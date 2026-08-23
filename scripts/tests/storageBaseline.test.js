@@ -117,6 +117,31 @@ test('dependency listings are sorted biggest-first and capped at 10', () => {
   assert.ok(summary.largest.every((t, i, all) => i === 0 || all[i - 1].bytes >= t.bytes));
 });
 
+test('nested node_modules count is reported apart from the tree byte total', () => {
+  // 144 dirs and 6 trees are both true of the same tree: bytes may only be
+  // counted once per top-level tree, while "how many node_modules are there"
+  // counts nested ones too. Folding them into one number is how a slimming
+  // report ends up claiming savings it never made.
+  const summary = baseline.summarizeDependencies({
+    top: [
+      { path: 'node_modules', bytes: 300, files: 40 },
+      { path: 'apps/x/node_modules', bytes: 100, files: 10 },
+    ],
+    nested: 144,
+  });
+  assert.equal(summary.trees, 2);
+  assert.equal(summary.dirs, 144);
+  assert.equal(summary.totalBytes, 400);
+  assert.equal(summary.totalFiles, 50);
+});
+
+test('a bare array of trees still summarizes, dirs falling back to tree count', () => {
+  const summary = baseline.summarizeDependencies([{ path: 'node_modules', bytes: 7 }]);
+  assert.equal(summary.trees, 1);
+  assert.equal(summary.dirs, 1);
+  assert.equal(summary.totalFiles, 0);
+});
+
 test('empty .gz archives are surfaced as their own count', () => {
   // A zero-byte .gz is the fingerprint of a compression run that died halfway.
   // The count is itself the alarm, so it must not be folded into archiveBytes.

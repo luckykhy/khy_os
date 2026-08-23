@@ -239,16 +239,48 @@ test('startBridge 绑定 127.0.0.1 随机端口且不自动开浏览器', async 
   } finally { s.close(); }
 });
 
-test('openBrowser 跨平台命令选择正确（注入 spawn 桩）', () => {
+test('openBrowser 优先 --app 独立窗口（注入 spawn 桩）', () => {
+  // 桩永不抛，所以每个平台都应停在自己的第一个 Chromium 候选上。
+  // win32 的候选表过 existsSync，本机没装 Chromium 系时才降级 —— 两条都接受。
   const calls = [];
   const spy = (cmd, args) => { calls.push({ cmd, args }); return { unref() {} }; };
   bridge.openBrowser('http://127.0.0.1:1/', 'win32', spy);
   bridge.openBrowser('http://127.0.0.1:1/', 'darwin', spy);
   bridge.openBrowser('http://127.0.0.1:1/', 'linux', spy);
-  assert.equal(calls[0].cmd, 'cmd');
-  assert.deepEqual(calls[0].args.slice(0, 3), ['/c', 'start', '']);
+
+  if (calls[0].cmd === 'cmd') {
+    assert.deepEqual(calls[0].args.slice(0, 3), ['/c', 'start', '""']);
+  } else {
+    assert.match(calls[0].cmd, /\.exe$/i);
+    assert.deepEqual(calls[0].args, ['--app=http://127.0.0.1:1/']);
+  }
+  // darwin 的候选表也过 existsSync，非 mac 机器上必然降级到 open
   assert.equal(calls[1].cmd, 'open');
-  assert.equal(calls[2].cmd, 'xdg-open');
+  assert.deepEqual(calls[1].args, ['http://127.0.0.1:1/']);
+  // linux 的候选表不过 existsSync，桩不抛就必然停在第一个候选
+  assert.equal(calls[2].cmd, 'google-chrome');
+  assert.deepEqual(calls[2].args, ['--app=http://127.0.0.1:1/']);
+});
+
+test('openBrowser 候选全部失败时降级到系统默认浏览器（注入抛错的 spawn 桩）', () => {
+  // --app 候选一个都起不来时的兜底路径：win32 走 cmd /c start，
+  // darwin 走 open，linux 走 xdg-open。桩对 --app 调用抛错，对兜底放行。
+  const calls = [];
+  const spy = (cmd, args) => {
+    calls.push({ cmd, args });
+    if (args.some((a) => String(a).startsWith('--app='))) throw new Error('spawn refused');
+    return { unref() {} };
+  };
+  const tail = (plat) => {
+    calls.length = 0;
+    bridge.openBrowser('http://127.0.0.1:1/', plat, spy);
+    return calls[calls.length - 1];
+  };
+  const win = tail('win32');
+  assert.equal(win.cmd, 'cmd');
+  assert.deepEqual(win.args.slice(0, 3), ['/c', 'start', '""']);
+  assert.equal(tail('darwin').cmd, 'open');
+  assert.equal(tail('linux').cmd, 'xdg-open');
 });
 
 // ── /vendor/* 同源静态服务（muya 产物）+ 路径 confinement ─────────────────────
