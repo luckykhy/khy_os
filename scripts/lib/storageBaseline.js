@@ -113,16 +113,24 @@ function summarizeLogs(logs) {
 /**
  * 依赖树统计。同一个包在 N 个 node_modules 里各装一份是本仓最大的可回收项，
  * 故按 tree 数量和总字节分别列出，而不是只报一个总和。
+ *
+ * 入参兼容两种形态：旧的裸数组，和探针发现式遍历后的
+ * `{top:[{path,bytes,files}], nested:number}`。nested 是「一共多少处 node_modules
+ * 目录」（含嵌套），单独报出来是因为它才是 du 口径下的那个数，而字节只能按顶层树
+ * 算一次 —— 两个数混用会得出「省了 780 MB」这种自己骗自己的结论。
  */
 function summarizeDependencies(trees) {
-  const list = Array.isArray(trees) ? trees : [];
+  const src = trees && !Array.isArray(trees) && typeof trees === 'object' ? trees : { top: trees };
+  const list = Array.isArray(src.top) ? src.top : [];
   const sorted = list
     .filter((tree) => tree && typeof tree === 'object')
-    .map((tree) => ({ path: String(tree.path || ''), bytes: num(tree.bytes) }))
+    .map((tree) => ({ path: String(tree.path || ''), bytes: num(tree.bytes), files: num(tree.files) }))
     .sort((a, b) => b.bytes - a.bytes);
   return {
     trees: sorted.length,
+    dirs: num(src.nested) || sorted.length,
     totalBytes: sorted.reduce((sum, tree) => sum + tree.bytes, 0),
+    totalFiles: sorted.reduce((sum, tree) => sum + tree.files, 0),
     largest: sorted.slice(0, 10),
   };
 }
@@ -207,8 +215,10 @@ function render(summary) {
       + (summary.checkpoints.dedupRatio ? ' (' + summary.checkpoints.dedupRatio + 'x)' : ''));
 
   lines.push('Dependencies');
-  row('node_modules trees', String(summary.dependencies.trees));
-  row('total', formatBytes(summary.dependencies.totalBytes));
+  row('node_modules trees', String(summary.dependencies.trees)
+    + ' (' + summary.dependencies.dirs + ' dirs incl. nested)');
+  row('total', formatBytes(summary.dependencies.totalBytes)
+    + ' / ' + summary.dependencies.totalFiles + ' files');
   for (const tree of summary.dependencies.largest) {
     row('  ' + tree.path, formatBytes(tree.bytes));
   }
