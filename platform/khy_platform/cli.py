@@ -445,6 +445,26 @@ def _source_checkout_backend() -> Path | None:
     return None
 
 
+def _is_standalone_bundle_install() -> bool:
+    """True when this install runs the standalone bundle and has no backend tree.
+
+    That is what a pip wheel looks like: khy_platform/bundled/runtime/khy/
+    bundle.mjs exists and there is no source checkout beside it. Callers use it
+    to skip repairs that only make sense against a directory tree (npm install,
+    .env writing, port rewriting) - in bundle mode the runtime carries its own
+    dependencies and writes its own .env.
+
+    An editable checkout returns False even when a stale bundled artifact is
+    lying around: the source tree stays authoritative there.
+    """
+    if _source_checkout_backend() is not None:
+        return False
+    bundled_root = _find_bundled_root()
+    if not bundled_root:
+        return False
+    return (bundled_root / "runtime" / "khy" / "bundle.mjs").is_file()
+
+
 def get_bundle_dir() -> Path:
     """返回 backend 目录路径（这是 Node 端核心代码所在位置）。
 
@@ -2048,14 +2068,21 @@ def _run_preflight_cli(args) -> int:
 
     退出码：0 = 全部通过（warning 不算失败）；1 = 存在 fail 项。
     """
+    # A standalone-bundle install (the pip wheel) genuinely has no backend
+    # directory: the runtime is one bundle.mjs with its dependencies already
+    # linked in. Asking get_bundle_dir() there makes it print "the package may
+    # be corrupted / force-reinstall" to stderr before raising SystemExit, so
+    # don't ask -- there is nothing to resolve and nothing to repair.
+    standalone = _is_standalone_bundle_install()
     backend_dir = None
-    try:
-        backend_dir = get_bundle_dir()
-    except SystemExit:
-        # get_bundle_dir 在彻底找不到时会 sys.exit；这里降级为可报告的失败项。
-        backend_dir = None
-    except Exception:
-        backend_dir = None
+    if not standalone:
+        try:
+            backend_dir = get_bundle_dir()
+        except SystemExit:
+            # get_bundle_dir 在彻底找不到时会 sys.exit；这里降级为可报告的失败项。
+            backend_dir = None
+        except Exception:
+            backend_dir = None
 
     checks = [
         _pf_check_path_entrypoint(),
@@ -2065,6 +2092,12 @@ def _run_preflight_cli(args) -> int:
     ]
     if backend_dir is not None:
         checks.append(_pf_check_backend_deps(backend_dir))
+    elif standalone:
+        checks.append({
+            "name": "Backend dependencies",
+            "status": _PF_OK,
+            "detail": "linked into the standalone bundle (nothing to install)",
+        })
     else:
         checks.append({
             "name": "Backend dependencies",
@@ -2293,15 +2326,22 @@ def _run_where_cli(args) -> int:
     launcher = Path(__file__).resolve()
 
     # 解析 backend 目录，但不在缺失时退出（get_bundle_dir 找不到会 sys.exit）。
+    # standalone bundle（pip wheel）本来就没有 backend 目录树，问它等于让它先往
+    # stderr 打一段「安装包可能损坏，请 force-reinstall」——健康的安装被说成坏的。
+    standalone = _is_standalone_bundle_install()
     backend_dir = None
-    try:
-        backend_dir = get_bundle_dir()
-    except SystemExit:
-        backend_dir = None
-    except Exception:
-        backend_dir = None
+    if not standalone:
+        try:
+            backend_dir = get_bundle_dir()
+        except SystemExit:
+            backend_dir = None
+        except Exception:
+            backend_dir = None
 
-    mode = _detect_install_mode(backend_dir) if backend_dir else "unknown"
+    if backend_dir:
+        mode = _detect_install_mode(backend_dir)
+    else:
+        mode = "standalone-bundle" if standalone else "unknown"
     bundled_root = _find_bundled_root()
     on_path = (
         shutil.which("khy")
@@ -2326,6 +2366,9 @@ def _run_where_cli(args) -> int:
         node_modules = backend_dir / "node_modules"
         ready = node_modules.is_dir() and any(node_modules.iterdir())
         print(f"  dependencies   : {'installed' if ready else 'MISSING (run `khy preflight`)'}")
+    elif standalone:
+        print("  backend dir    : (none — this install runs the standalone bundle)")
+        print("  dependencies   : linked into the bundle")
     else:
         print("  backend dir    : (not found — reinstall: pip install --force-reinstall khy-os)")
     print("=" * 60)
@@ -2443,8 +2486,21 @@ def main():
 
     # khy doctor / heal — 体检并主动自愈启动依赖（缺什么修什么，不触发 Node 后端）。
     # 与内核 `khy os doctor` 区分：此处是顶层 `doctor`（raw_args[0]），后者走 os 子命令。
+    #
+    # Exception: a standalone-bundle install (the pip wheel) has no backend
+    # DIRECTORY at all - the runtime is one bundle.mjs with its dependencies
+    # already linked in. Every repair step in _run_doctor_cli (npm install,
+    # .env, port rewrite) addresses a directory tree, so it bailed out at step
+    # 2 with "Backend directory not found - cannot self-heal" plus a "the
+    # package may be corrupted / force-reinstall" hint. Nothing was corrupt: a
+    # wheel install simply never contains that tree. Fall through to the normal
+    # dispatch instead and let the bundle run its own doctor, which is the
+    # richer check anyway (Node/Python/Git, tool registry, gateway channels).
+    # check_node() on that path still auto-provisions a portable Node, so no
+    # self-heal capability is lost.
     if raw_args and raw_args[0].lower() in {"doctor", "heal", "selfheal", "self-heal"}:
-        sys.exit(_run_doctor_cli(raw_args[1:]))
+        if not _is_standalone_bundle_install():
+            sys.exit(_run_doctor_cli(raw_args[1:]))
 
     # khy where / which / location — 打印真实安装位置（不触发 Node 后端）。
     # 解决 Windows `where khy` 只显示 Scripts 垫片、看不到 bundled 后端的问题。
@@ -2509,9 +2565,9 @@ def main():
     )
     # In an editable Git checkout the source tree is authoritative. The bundled
     # artifact is reserved for installed wheels, where the source tree is absent.
-    is_standalone_bundle = source_backend is None and bool(
-        bundled_cli and bundled_cli.is_file()
-    )
+    # Same predicate as _is_standalone_bundle_install(); kept as one call so the
+    # doctor dispatch above and this launch path can never disagree.
+    is_standalone_bundle = _is_standalone_bundle_install()
     backend_dir = source_backend if source_backend is not None else (
         None if is_standalone_bundle else get_bundle_dir()
     )
