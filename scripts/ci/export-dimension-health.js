@@ -12,7 +12,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const BACKEND_SRC = path.resolve(process.cwd(), 'services/backend/src');
+const REPO_ROOT = path.resolve(__dirname, '../..');
+const BACKEND_SRC = path.join(REPO_ROOT, 'services/backend/src');
 
 const EVIDENCE = {
   D1: {
@@ -62,8 +63,8 @@ const EVIDENCE = {
   D5: {
     name: 'Governance & Quality',
     files: [
-      '../../../AGENTS.md',
-      '../../../scripts/ci/export-quality-dashboard.js',
+      'AGENTS.md',
+      'scripts/ci/export-quality-dashboard.js',
     ],
     checks: [],
   },
@@ -74,13 +75,12 @@ function main() {
     generatedAt: new Date().toISOString(),
     dimensions: {},
   };
-  let degraded = false;
 
   for (const [dim, spec] of Object.entries(EVIDENCE)) {
     const entry = { name: spec.name, filesPresent: 0, filesMissing: [], exportChecks: [] };
 
     for (const rel of spec.files) {
-      const abs = path.resolve(BACKEND_SRC, rel);
+      const abs = path.resolve(rel === 'AGENTS.md' || rel.startsWith('scripts/') ? REPO_ROOT : BACKEND_SRC, rel);
       if (fs.existsSync(abs)) {
         entry.filesPresent++;
       } else {
@@ -109,7 +109,7 @@ function main() {
     health.dimensions[dim] = entry;
   }
 
-  const outDir = path.resolve(process.cwd(), 'docs/_报告');
+  const outDir = path.join(REPO_ROOT, 'docs/_报告');
   fs.mkdirSync(outDir, { recursive: true });
   const outPath = path.join(outDir, '维度健康.json');
   fs.writeFileSync(outPath, JSON.stringify(health, null, 2) + '\n');
@@ -119,11 +119,11 @@ function main() {
   for (const [dim, entry] of Object.entries(health.dimensions)) {
     const status = entry.healthy ? 'HEALTHY' : 'DEGRADED';
     console.log(`  ${dim} ${entry.name}: ${status} (${entry.filesPresent}/${entry.filesPresent + entry.filesMissing.length} files)`);
-    if (!entry.healthy) degraded = true;
   }
-
-  // Exit non-zero when governance evidence is degraded so CI fails closed.
-  process.exitCode = degraded ? 1 : 0;
+  const degraded = Object.values(health.dimensions).some((entry) => !entry.healthy);
+  if (degraded) {
+    process.exitCode = 1;
+  }
 }
 
 try {
