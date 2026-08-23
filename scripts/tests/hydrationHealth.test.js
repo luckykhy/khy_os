@@ -171,8 +171,11 @@ test('全部修法文本不含 commit/push/rm 危险文件/curl/publish', () => 
 });
 
 // ── doc 一致性：OPS-MAN-070 落盘 == 生成器输出（防手改漂移）───────────────────
-test('doc 一致性：OPS-MAN-070 落盘 == 生成器输出', () => {
-  const { buildDoc, DOC_PATH } = require('../diagnostics/hydration-doctor');
+test('doc 一致性：OPS-MAN-070 落盘 == 生成器输出', (t) => {
+  const { requireExtensionModule } = require('../lib/ext-run');
+  const cli = requireExtensionModule('khy-diagnostics', { command: 'doctor-hydration' });
+  if (!cli) return t.skip('拓展 khy-diagnostics 未安装 —— 这份文档由它生成，没有生成器就没有可比对的基准（删目录即卸载）');
+  const { buildDoc, DOC_PATH } = cli;
   const onDisk = fs.readFileSync(DOC_PATH, 'utf8');
   assert.strictEqual(
     onDisk,

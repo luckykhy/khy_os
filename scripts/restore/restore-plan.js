@@ -11,8 +11,9 @@
  *
  * 设计：合成逻辑全在纯叶子 scripts/lib/agentRestorePlan.js（零 IO、可离线全测）；
  * 本文件只做两件事——
- *   (1) **复用**三个已有 CLI 的探测器（restore-check / verify-install /
- *       hydration-doctor），跑出三面镜子的评估对象，全程 fail-soft；
+ *   (1) **复用**三个已有 CLI 的探测器（restore-check 在核内；verify-install 与
+ *       hydration-doctor 已迁入拓展，经 lib/ext-run 解析，拓展缺失就少一面镜子），
+ *       跑出三面镜子的评估对象，全程 fail-soft；
  *   (2) 呈现 / 落盘。任何探针失败都退化为保守结果，绝不让方案本身崩。
  *
  * 为谁而写：这台构建机即将过期，pip(`khy-os`)/npm(`@khy-os/khy-os`) 是仅有的两条
@@ -31,8 +32,7 @@ const { assessHydrationHealth } = require('../lib/hydrationHealth');
 
 // 复用三个 CLI 的探测器（零重复；探测层各自 fail-soft）。
 const { probeRestoreFacts } = require('./restore-check');
-const { resolveBundleRoot, probeInstalledBundle } = require('../install/verify-install');
-const { probeHydrationFacts } = require('../diagnostics/hydration-doctor');
+const { requireExtensionModule } = require('../lib/ext-run');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const DOC_PATH = path.join(
@@ -58,12 +58,21 @@ function gatherAssessments() {
     out.restore = assessRestoreReadiness(probeRestoreFacts());
   } catch { /* fail-soft */ }
   try {
-    const bundleRoot = resolveBundleRoot();
-    const probes = probeInstalledBundle(bundleRoot);
-    out.integrity = assessInstallIntegrity(probes, { bundleResolved: bundleRoot !== null });
+    // 两个探测器住在拓展里（khy-installer / khy-diagnostics），所以在 try 内部才
+    // require：拓展被删掉时这里返回 null，对应的那面镜子退化为 undefined，方案照出，
+    // 而不是整个 CLI 起不来。放在文件顶部 require 就没有这个退路。
+    const verify = requireExtensionModule('khy-installer', { command: 'verify' });
+    if (verify) {
+      const bundleRoot = verify.resolveBundleRoot();
+      const probes = verify.probeInstalledBundle(bundleRoot);
+      out.integrity = assessInstallIntegrity(probes, { bundleResolved: bundleRoot !== null });
+    }
   } catch { /* fail-soft */ }
   try {
-    out.hydration = assessHydrationHealth(probeHydrationFacts());
+    const hydration = requireExtensionModule('khy-diagnostics', { command: 'doctor-hydration' });
+    if (hydration) {
+      out.hydration = assessHydrationHealth(hydration.probeHydrationFacts());
+    }
   } catch { /* fail-soft */ }
   return out;
 }
