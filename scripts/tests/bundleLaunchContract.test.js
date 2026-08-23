@@ -10,6 +10,9 @@
  *   B. 真实清单一致性——解析磁盘上三份权威清单原文（pip REQUIRED_WHEEL_PATHS /
  *      REQUIRED_SDIST_PATHS、npm REQUIRED_PATHS），断言三渠道都钉死了自己 exec 的
  *      启动脚本。这条一旦漂移（某渠道漏钉启动地板）立即变红并点名。
+ *   C. 离机渠道启动交接——文件在不在只是第一层，装完之后子命令能不能真的跑起来
+ *      是第二层。两条实测出来的断链都在这里钉住：npm 壳不告知入口别名、pip 侧
+ *      把「wheel 里本就没有 backend 目录」误判成「安装包损坏」。
  */
 
 const { test } = require('node:test');
@@ -189,4 +192,153 @@ test('真实清单：pip(wheel/sdist) 与 npm 三渠道都钉死了启动地板'
       `修法：把缺失路径加进 scripts/release/pip_packaging_rules.py 的 REQUIRED_WHEEL_PATHS/` +
       `REQUIRED_SDIST_PATHS，或 packaging/npm/scripts/audit-purity.js 的 REQUIRED_PATHS。`
   );
+});
+
+// 钉死启动脚本只解决「文件在不在」，还有一层「进程怎么被告知它是谁」。
+// bundle.mjs 是被 spawn 的目标，argv[1] 的 basename 恒为 bundle.mjs，
+// services/backend/bin/khy.js 的 getInvokedBinary() 两个正则都不命中，
+// 回落到 khyquant 模式，于是全部系统子命令被「khyquant 仅用于启动量化应用」挡下。
+// 实测症状：npm install -g 之后只有 --version 能用，khy gateway status 只回两行提示。
+// pip 侧靠 cli.py 设 KHYQUANT_INVOKED_AS 绕开了，npm 侧必须自己也说一声。
+test('npm 启动壳把「用户敲的是哪个入口」如实传给 bundle', () => {
+  const shim = path.resolve(__dirname, '..', '..', 'packaging', 'npm', 'bin', 'khy.js');
+  const src = fs.readFileSync(shim, 'utf8');
+  assert.match(
+    src,
+    /KHYQUANT_INVOKED_AS/,
+    'packaging/npm/bin/khy.js 没有传 KHYQUANT_INVOKED_AS：' +
+      'bundle 会把自己当成 khyquant，npm 渠道的系统子命令全部失效。'
+  );
+  assert.doesNotMatch(
+    src,
+    /env:\s*process\.env/,
+    '直接把 process.env 原样传下去等于没设 KHYQUANT_INVOKED_AS：应传拷贝后的 env。'
+  );
+  assert.match(
+    src,
+    /KHYQUANT_INVOKED_AS\s*=\s*'khy'/,
+    '本包只发 khy / khy-os 两个系统入口，默认值应当是 khy。'
+  );
+});
+
+// ── C. 离机渠道启动交接（真实驱动 Python 启动器）──────────────────────────────
+// wheel 装完之后没有 backend 目录树，运行时就是一个自带依赖的 bundle.mjs。
+// _run_doctor_cli 的每一步修复（npm install / 写 .env / 改端口）都对着目录树，
+// 所以它在第 2 步就报「Backend directory not found」并劝用户 force-reinstall ——
+// 其实什么都没坏。判定归口到 _is_standalone_bundle_install()，这里驱动真 Python
+// 断言它的三种情形，顺带保证 doctor 分流与启动分流用的是同一个判据。
+const { spawnSync } = require('node:child_process');
+const os = require('node:os');
+const { searchExecutable } = require('../../services/backend/src/tools/platformUtils');
+
+const PY_CANDIDATES = process.platform === 'win32'
+  ? ['python', 'py', 'python3']
+  : ['python3', 'python'];
+
+function pythonCommand() {
+  for (const candidate of PY_CANDIDATES) {
+    if (searchExecutable(candidate)) return candidate;
+  }
+  return null;
+}
+
+const STANDALONE_PROBE = [
+  'import json, pathlib, sys',
+  'sys.path.insert(0, sys.argv[1])',
+  'import khy_platform.cli as cli',
+  'root = pathlib.Path(sys.argv[2])',
+  '# 源码检出优先：即便旁边躺着一份 bundle 产物也不算 standalone',
+  'cli._source_checkout_backend = lambda: root / "services" / "backend"',
+  'cli._find_bundled_root = lambda: root / "bundled"',
+  'checkout_wins = cli._is_standalone_bundle_install()',
+  '# 无源码树 + bundle.mjs 在位 = wheel 安装',
+  'cli._source_checkout_backend = lambda: None',
+  'wheel = cli._is_standalone_bundle_install()',
+  '# 无源码树 + 无 bundle 根 = 既非源码也非 wheel，保守判 False',
+  'cli._find_bundled_root = lambda: None',
+  'neither = cli._is_standalone_bundle_install()',
+  'print(json.dumps([checkout_wins, wheel, neither]))',
+].join('\n');
+
+test('_is_standalone_bundle_install：源码检出压过 bundle，wheel 判 True，两者皆无判 False', () => {
+  const python = pythonCommand();
+  if (!python) return; // 无 Python 的环境跳过：这条断言不该阻断 Node 侧全绿
+
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-standalone-'));
+  try {
+    const bundleDir = path.join(root, 'bundled', 'runtime', 'khy');
+    fs.mkdirSync(bundleDir, { recursive: true });
+    fs.writeFileSync(path.join(bundleDir, 'bundle.mjs'), '// stub\n');
+
+    const platformDir = path.resolve(__dirname, '..', '..', 'platform');
+    const r = spawnSync(python, ['-c', STANDALONE_PROBE, platformDir, root], { encoding: 'utf8' });
+    assert.equal(r.status, 0, `probe failed: ${r.stderr || r.stdout}`);
+    assert.deepStrictEqual(
+      JSON.parse(r.stdout.trim()),
+      [false, true, false],
+      'wheel 安装必须判为 standalone，否则 khy doctor 会把「本就没有 backend 目录」误报成安装损坏'
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('doctor 分流与启动分流共用同一个 standalone 判据（不许各算一遍）', () => {
+  const cliFile = path.resolve(__dirname, '..', '..', 'platform', 'khy_platform', 'cli.py');
+  const src = fs.readFileSync(cliFile, 'utf8');
+  assert.match(
+    src,
+    /if not _is_standalone_bundle_install\(\):\n\s+sys\.exit\(_run_doctor_cli/,
+    'khy doctor 必须在 standalone 模式下放行到 Node 侧 doctor，而不是报「安装包损坏」。'
+  );
+  assert.match(
+    src,
+    /is_standalone_bundle = _is_standalone_bundle_install\(\)/,
+    '启动分流应复用同一判据；就地重算会和 doctor 分流悄悄分叉。'
+  );
+});
+// preflight / where 也栽在同一个坑里：健康的 wheel 安装被它们说成
+// 「bundled backend directory not found / 安装包可能损坏，请 force-reinstall」，
+// preflight 还因此返回退出码 1。这条驱动真 Python 跑两个子命令，断言它们在
+// standalone 模式下如实报告「依赖已链进 bundle」，且绝不劝人重装。
+const DIAGNOSTIC_PROBE = [
+  'import contextlib, io, json, sys',
+  'sys.path.insert(0, sys.argv[1])',
+  'import khy_platform.cli as cli',
+  'cli._is_standalone_bundle_install = lambda: True',
+  'out = {}',
+  'for name in ("_run_preflight_cli", "_run_where_cli"):',
+  '    buf = io.StringIO()',
+  '    with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):',
+  '        getattr(cli, name)([])',
+  '    out[name] = buf.getvalue()',
+  'print(json.dumps(out))',
+].join('\n');
+
+test('standalone 模式下 preflight / where 不再把健康安装说成损坏', () => {
+  const python = pythonCommand();
+  if (!python) return;
+
+  const platformDir = path.resolve(__dirname, '..', '..', 'platform');
+  const r = spawnSync(python, ['-c', DIAGNOSTIC_PROBE, platformDir], { encoding: 'utf8' });
+  assert.equal(r.status, 0, `probe failed: ${r.stderr || r.stdout}`);
+  const out = JSON.parse(r.stdout.trim());
+
+  assert.match(
+    out._run_preflight_cli,
+    /Backend dependencies: linked into the standalone bundle/,
+    'khy preflight 应当承认 wheel 安装的依赖已在 bundle 里，而不是判 FAIL 并返回 1。'
+  );
+  assert.match(
+    out._run_where_cli,
+    /mode\s+: standalone-bundle/,
+    'khy where 应当报出 standalone-bundle 模式，而不是 unknown。'
+  );
+  for (const [name, text] of Object.entries(out)) {
+    assert.doesNotMatch(
+      text,
+      /force-reinstall|may be corrupted/,
+      `${name} 在健康的 standalone 安装上劝用户重装 —— 这是误报。`
+    );
+  }
 });
