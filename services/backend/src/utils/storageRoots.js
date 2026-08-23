@@ -47,6 +47,33 @@ function _ensureDir(dir, fsImpl) {
 }
 
 /**
+ * Create `dir` and report whether it actually came into being.
+ *
+ * The only trustworthy writability test is a write. `accessSync(W_OK)` on
+ * Windows answers from the read-only *attribute*, so it says yes for mapped
+ * network shares that are disconnected and for virtual mounts whose driver
+ * refuses creation (a Dokan volume returns ENOENT on mkdir at its own root).
+ * A candidate that passes accessSync and then fails mkdir used to be handed
+ * back to the caller anyway, moving the crash from here to whatever tried to
+ * write the first file.
+ *
+ * The verdict is mkdir's own: not throwing counts as success. Deliberately no
+ * follow-up stat — injected fs doubles model creation without modelling the
+ * resulting tree, and re-reading through them would fail every candidate and
+ * collapse the whole policy onto the system default.
+ *
+ * @returns {boolean} true when the directory was created or already existed.
+ */
+function _tryEnsureDir(dir, fsImpl) {
+  try {
+    (fsImpl || fs).mkdirSync(dir, { recursive: true });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Absolute root of the system drive.
  * @returns {string} win32 -> "C:\\" (from %SystemDrive%); posix -> "/"
  */
@@ -306,19 +333,24 @@ function resolveGeneratedFileDir(opts = {}) {
     try {
       if (isWritable(cwd, d) && freeBytesFor(cwd, d) >= minFree) {
         const dir = path.join(cwd, subdir);
-        _ensureDir(dir, fsImpl);
-        return { dir, source: 'cwd' };
+        if (_tryEnsureDir(dir, fsImpl)) {
+          return { dir, source: 'cwd' };
+        }
       }
     } catch {
       /* fall through */
     }
   }
 
-  // 3. Largest-free non-system drive
-  const best = pickBestNonSystemDrive({ ...opts.deps, minFreeBytes: minFree });
-  if (best) {
-    const dir = path.join(best.root, '.khy', subdir);
-    _ensureDir(dir, fsImpl);
+  // 3. Non-system drives, largest free space first. Walk the whole list rather
+  // than betting on the best one: the top candidate can be the drive whose
+  // driver refuses creation, and dropping straight to the system default would
+  // give up the remaining real disks for no reason.
+  for (const cand of listNonSystemDrives({ ...opts.deps, minFreeBytes: minFree })) {
+    const dir = path.join(cand.root, '.khy', subdir);
+    if (!_tryEnsureDir(dir, fsImpl)) {
+      continue;
+    }
     const result = { dir, source: 'non-system-drive' };
     try {
       noteIfOutsideSystemDrive(result, opts.deps);
