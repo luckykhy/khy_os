@@ -155,12 +155,22 @@ test('真实映射表可加载且分诊命中(集成)', () => {
   assert.strictEqual(r[0].id, 'gateway-adapters');
 });
 
-test('速查表 OPS-MAN-067 已落盘且与生成器输出一致(防手改漂移)', () => {
+test('速查表 OPS-MAN-067 已落盘且与生成器输出一致(防手改漂移)', (ctx) => {
   const fs = require('node:fs');
-  const cli = require('../diagnostics/triage');
+  const { requireExtensionModule } = require('../lib/ext-run');
+  const cli = requireExtensionModule('khy-diagnostics', { command: 'triage' });
+  if (!cli) return ctx.skip('拓展 khy-diagnostics 未安装 —— 这份文档由它生成，没有生成器就没有可比对的基准（删目录即卸载）');
   assert.ok(fs.existsSync(cli.DOC_PATH), '速查表未生成，先跑 npm run maintenance:triage-doc');
+  // 行尾先归一再比：这份文档是**被跟踪**的（git 里存 LF），而本仓 core.autocrlf=true
+  // 会把它检出成 CRLF，生成器则始终吐 LF。逐字节比对在任何 Windows 检出上都必然失败，
+  // 而这条断言要防的是「有人手改了内容」，不是行尾风格。
+  const eol = (text) => text.replace(/\r\n/g, '\n');
   const disk = fs.readFileSync(cli.DOC_PATH, 'utf8');
-  assert.strictEqual(disk, cli.buildDoc(), '落盘速查表与生成器输出不一致，请重跑 npm run maintenance:triage-doc');
+  assert.strictEqual(
+    eol(disk),
+    eol(cli.buildDoc()),
+    '落盘速查表与生成器输出不一致，请重跑 npm run maintenance:triage-doc'
+  );
   // 每个子系统一节、含 triage 用法与红线
   const map = t.loadMap();
   const sections = (disk.match(/^### /gm) || []).length;

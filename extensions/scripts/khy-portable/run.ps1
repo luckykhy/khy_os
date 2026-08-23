@@ -22,7 +22,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$ProjectRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$ProjectRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 $DataHome = Join-Path $ProjectRoot ".khy"
 $NodeHome = Join-Path $DataHome "node"
 $VersionRoot = Join-Path $NodeHome "v$($NodeVersion.TrimStart('v'))"

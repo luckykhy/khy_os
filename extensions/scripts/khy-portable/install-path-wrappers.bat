@@ -2,7 +2,7 @@
 setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul
 
-pushd "%~dp0..\.." >nul
+pushd "%~dp0..\..\.." >nul
 if errorlevel 1 (
     echo [FAIL] Cannot resolve the project root from: %~dp0
     exit /b 1
