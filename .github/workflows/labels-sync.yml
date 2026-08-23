@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # 先做结构校验，避免把一份坏 JSON 半途写进仓库标签。
       - name: Validate labels.json

@@ -48,9 +48,9 @@ jobs:
         # 一个什么都没检查的步骤会显示为通过。这是实测过的静默失败，不要改回 --prefix。
         working-directory: apps/ai-frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           # 不写死大版本：跟随当前稳定 LTS。
           node-version: 'lts/*'
@@ -92,7 +92,7 @@ jobs:
         run: node scripts/ci/check-frontend-size.js --app apps/ai-frontend
 
       - name: Upload build output
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: ai-frontend-dist
@@ -112,9 +112,9 @@ jobs:
       run:
         working-directory: software/khyquant/frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 'lts/*'
           cache: npm
@@ -147,7 +147,7 @@ jobs:
         run: node scripts/ci/check-frontend-size.js --app software/khyquant/frontend
 
       - name: Upload build output
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: khyquant-frontend-dist
