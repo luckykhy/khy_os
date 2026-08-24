@@ -6,7 +6,7 @@
  * update is a separate operation entered only after an explicit user choice.
  */
 
-const { execFileSync, execSync } = require('child_process');
+const { execFile, execFileSync, execSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -124,6 +124,33 @@ function runGit(args, cwd, opts = {}) {
   }) || '').trim();
 }
 
+/**
+ * runGit 的异步版本：不阻塞事件循环。供启动横幅在 Ink 渲染体之外（mount 后
+ * 一次性 effect）取 provenance，避免同步 spawn 把 TUI 卡死。
+ * 契约与 runGit 对齐：注入的 opts.git 返回 { stdout } 或字符串均可。
+ */
+function runGitAsync(args, cwd, opts = {}) {
+  const git = opts.git;
+  if (typeof git === 'function') {
+    const out = git(args, cwd);
+    return Promise.resolve(out).then((s) => String((s && s.stdout) || s || '').trim());
+  }
+  return new Promise((resolve) => {
+    execFile('git', args, {
+      cwd,
+      encoding: 'utf8',
+      timeout: opts.gitTimeoutMs || 15000,
+      maxBuffer: 4 * 1024 * 1024,
+      windowsHide: true,
+    }, (err, stdout, stderr) => {
+      // 与 execFileSync 行为对齐：非零退出时 execFileSync 抛错、这里 resolve ''
+      // 让调用方走各自的空值语义（fail-soft），而不是把异常传播回渲染路径。
+      if (err) return resolve('');
+      resolve(String(stdout || '').trim());
+    });
+  });
+}
+
 function findPortableRoot(start, fsImpl = fs) {
   let current = path.resolve(start || process.cwd());
   for (;;) {
@@ -142,6 +169,21 @@ function findPortableRoot(start, fsImpl = fs) {
 function findSourceRoot(start, opts = {}) {
   try {
     const root = runGit(['rev-parse', '--show-toplevel'], start || process.cwd(), opts);
+    if (!root) return null;
+    const fsImpl = opts.fs || fs;
+    return fsImpl.existsSync(path.join(root, 'services', 'backend', 'package.json')) ? root : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * findSourceRoot 的异步版本：git 走 execFile（不阻塞事件循环），供启动横幅使用。
+ * 只 await git 探测；收尾的 existsSync 是毫秒级本地 fs，保持同步。
+ */
+async function findSourceRootAsync(start, opts = {}) {
+  try {
+    const root = await runGitAsync(['rev-parse', '--show-toplevel'], start || process.cwd(), opts);
     if (!root) return null;
     const fsImpl = opts.fs || fs;
     return fsImpl.existsSync(path.join(root, 'services', 'backend', 'package.json')) ? root : null;
@@ -852,6 +894,86 @@ function getSourceProvenance(opts = {}) {
 }
 
 /**
+ * getSourceProvenance 的异步版本：git 探测走 execFile（回调式、绝不阻塞事件循环），
+ * 供启动横幅在 Ink 渲染体之外（App mount 后的一次性 effect）取 provenance。
+ * 与同步版逐字段同构，只把两处 git spawn 换成 runGitAsync；本地 fs 读仍是毫秒级，
+ * 保持同步。git 慢/失效时不抛，返回 blank 字面量——banner 整行省略而非卡死 UI。
+ *
+ * @param {object} [opts] 与同步版同字段（cwd/fs/git/stateFile/memoryOnly/includeDirty）
+ * @returns {Promise<object>} getSourceProvenance 同形状
+ */
+async function getSourceProvenanceAsync(opts = {}) {
+  const blank = {
+    kind: null,
+    version: null,
+    commit: '',
+    shortCommit: '',
+    updatedAt: null,
+    source: null,
+    dirty: false,
+    checkedAt: null,
+    stateStale: false,
+  };
+  const result = { ...blank };
+  try {
+    const fsImpl = opts.fs || fs;
+    const cwd = opts.cwd || process.env.KHY_OS_ROOT || process.cwd();
+    const portableRoot = findPortableRoot(opts.portableRoot || cwd, fsImpl);
+    if (portableRoot) {
+      result.kind = 'portable';
+      try {
+        const info = JSON.parse(
+          fsImpl.readFileSync(path.join(portableRoot, 'BUILD-INFO.json'), 'utf8')
+        );
+        result.version = String(info.version || '') || null;
+        result.commit = String(info.sourceCommit || '');
+        result.shortCommit = result.commit.slice(0, 7);
+        result.source = String(info.kind || 'portable-runtime');
+      } catch {
+        result.source = 'portable-runtime';
+      }
+    } else {
+      const sourceRoot = await findSourceRootAsync(cwd, opts);
+      if (sourceRoot) {
+        result.kind = 'git';
+        result.version = readSourceVersion(sourceRoot, fsImpl);
+        const head = (await runGitAsync(
+          ['log', '-1', '--format=%H%n%cI%n%D'], sourceRoot, opts
+        )).split('\n');
+        result.commit = (head[0] || '').trim();
+        result.shortCommit = result.commit.slice(0, 7);
+        result.updatedAt = (head[1] || '').trim() || null;
+        result.source = pickSourceRef((head[2] || '').trim());
+        if (opts.includeDirty) {
+          try {
+            result.dirty = (await runGitAsync(
+              ['status', '--porcelain', '-uno'], sourceRoot, opts
+            )).length > 0;
+          } catch { /* fail soft */ }
+        }
+      }
+    }
+
+    try {
+      const state = readState(opts);
+      const recorded = String(
+        (state.current && state.current.commit) || (state.source && state.source.commit) || ''
+      );
+      if (state.checkedAt) {
+        if (!result.commit || !recorded || recorded === result.commit) {
+          result.checkedAt = state.checkedAt;
+        } else {
+          result.stateStale = true;
+        }
+      }
+    } catch { /* 状态文件不可读不影响其余字段 */ }
+    return result;
+  } catch {
+    return blank;
+  }
+}
+
+/**
  * 纯函数：把 getSourceProvenance() 的结果渲成一行启动横幅文本。零 IO、绝不抛。
  *
  * 时间按 ISO 字面截取（不转本机时区）：%cI 带的是提交者当时的时区偏移，保留它
@@ -898,6 +1020,7 @@ module.exports = {
   detectInstallation,
   getGitStatus,
   getSourceProvenance,
+  getSourceProvenanceAsync,
   formatProvenance,
   checkUpdate,
   stageUpdate,

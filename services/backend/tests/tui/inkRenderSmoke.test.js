@@ -1786,12 +1786,13 @@ describeOrSkip('Ink TUI render smoke (src/cli/tui/ink-components)', () => {
       expect(fn({ model: 'gpt-4o' }, { updateLine: 'x' }).model).toBe('gpt-4o');
     });
 
-    test('协调器抛错时降级为空串而非崩溃（fail-soft）', () => {
+    test('渲染路径绝不触碰 git 协调器（反卡死回归栅栏）；无 updateLine 时整行省略', () => {
       const App = require('../../src/cli/tui/ink-components/App');
       const fn = App._resolveBannerProps;
-      // App 只在其内部 require 协调器，这里直接对真实模块做运行时覆盖：
-      // _resolveBannerProps 是在函数体内、每次调用时重新读取 coordinator.getSourceProvenance，
-      // 所以替换导出的函数引用即可拦截，无需进入真实 git 路径。
+      // 曾用「updateLine 为空时回落 getSourceProvenance」取更新行，但那是同步
+      // execFileSync，在 Ink 渲染体里跑会把事件循环堵死（首屏卡住/快捷键失效）。
+      // 此处钉死契约：_resolveBannerProps 是纯函数，绝不读协调器 ——
+      // 即便把 getSourceProvenance 换成抛错版本，也不得影响渲染结果。
       const mod = require('../../src/services/updateCoordinator');
       const orig = mod.getSourceProvenance;
       try {
@@ -1799,6 +1800,7 @@ describeOrSkip('Ink TUI render smoke (src/cli/tui/ink-components)', () => {
         const props = fn({ model: 'claude-opus-5' }, { updateLine: '' });
         expect(props.updateLine).toBe('');
         expect(props.version).toBeDefined();
+        expect(props.gatewayAdapters).toBe(9);
       } finally {
         mod.getSourceProvenance = orig;
       }
