@@ -64,6 +64,10 @@ User → khy command → Python cli.py → Node.js services/backend/bin/khy.js
 | 训练 | `services/backend/src/services/modelTrainingService.js` | LoRA/蒸馏/导出 |
 | 回测 | `services/backend/src/services/backtestEngine.js` | 策略模拟 |
 
+### 治理总纲
+
+[`[DESIGN-ARCH-070] 治理总纲与可执行规则`](docs/03_DESIGN_设计/[DESIGN-ARCH-070]%20治理总纲与可执行规则.md) 将既有规则收拢为 MOD、MEM、TOOL、ACP、API 五个可检索板块，不替代各自单一真源。新增目录、任务入口、工具/扩展或通信/API 契约前，先定位对应条款和它引用的既有规范。`node scripts/ci/check-gov-rules.js` 校验总纲入口、检查脚本目标及 PR gate 接线；层级和工程红线仍分别由既有守卫执行。
+
 ---
 
 ## 如何新增一个 CLI 命令（3 步）

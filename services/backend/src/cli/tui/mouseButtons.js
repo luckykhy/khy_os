@@ -33,19 +33,26 @@
  * 与 caretGeometry.js 的 parentNode 链累加同源;命中测试只需跳过 internal_static
  * 子树(静态区早已滚入 scrollback,不可点)。
  *
- * ── 门控:为什么默认全关 ──────────────────────────────────────────────────
+ * ── 门控:为什么默认全关 ──────────────────────────
  * 终端的鼠标追踪是**独占**的:一旦开启,滚轮与按住拖动都被送进本进程的 stdin,
  * 终端自己再也收不到 —— 用户同时失去「滚轮翻 scrollback」和「拖选复制」这两个最
- * 基础的终端能力。下面的 dispatcher 有一套「识别到滚动/选择意图就临时关追踪」的
- * 透传补偿,但它补不回触发的那一下:那个事件已经进了 stdin、终端没收到,无法回灌。
- * 于是慢速一格一格地滚(阅读时最常见的滚法)每一格都被吞掉;拖选的**起点**也在按
- * 下那一刻就丢了,原生选择只能从中途接管,选出来的范围是错的。
+ * 基础的终端能力。补偿是补不回来的:触发的那一下已经进了 stdin、终端没收到,
+ * 无法回灌。慢速一格一格地滚(阅读时最常见的滚法)每一格都被吞掉。
+ *
+ * 参照实现(Claude Code,2026-08 实测):全量检索其 307MB 单文件 bundle,鼠标追踪
+ * 序列只有 `?1000h`/`?1006h` 各一处,且上下文是一个 vendored 的多选提示组件;**没有
+ * 1002,也没有 1003**。即 CC 的主 REPL 根本不接管鼠标,原生滚轮与拖选全程可用;
+ * 展开与滚动全走键盘 —— Ctrl+O 开 Transcript 视图,视图内用 `scroll:*` 动作族
+ * (j/k、Ctrl+U/D、g/G、Ctrl+E 全展开)。本模块因此也降到 1000(见 enableBytes):
+ * 1000 不报位移,拖选从来不会变成本进程的事件,原生选择完整保留;历史上那套
+ * 针对拖选的透传补偿(`pendingSelect`)随之删除 —— 它只在 1002 下才能触发,而当初
+ * 选 1002 的理由恰恰就是「为了喂它」。现在仅剩滚轮需要透传(见 dispatcher)。
  *
  * 收益侧只有两个可点元素(麦克风按钮、待发图片的 ×),且麦克风有等价键位 Alt+M、
  * 图片有 Esc 清除。拿「少按一个键」换掉「滚动 + 复制」不成比例,所以:
  *
- *   KHY_MOUSE_BUTTONS  **默认全平台关**;显式 1/true/on/yes 才开点击层(开了就
- *                     接受上述滚动/选择退化,dispatcher 只能尽力补偿)。
+ *   KHY_MOUSE_BUTTONS  **默认全平台关**;显式 1/true/on/yes 才开点击层(开了就接受
+ *                     上述滚轮退化,拖选则不受影响)。
  *   KHY_MOUSE_HOVER   默认关:悬停高亮要 1003「任意移动」追踪,那是 60~120Hz 的
  *                     事件洪流、持续占用终端输入;显式 1/true/on/yes 才启用。
  * 两者都沿用 0/false/off/no 关闭口径(sidebarLayout/railLayout 同款)。
@@ -79,7 +86,7 @@ function isMouseSequence(input) {
  * @returns {{button:number, col:number, row:number, isPress:boolean, isRelease:boolean, isMotion:boolean, isWheel:boolean}|null}
  *   col/row 为 0-based 屏幕坐标;button 为 SGR 按钮码(0=左键,2=右键,
  *   64=滚轮上,65=滚轮下;shift/meta/ctrl 以 4/8/16 叠加在低位);
- *   isMotion 表示携带位移位(32)的移动/拖拽事件(1002 只在按住键时报,1003 连空移动也报);
+ *   isMotion 表示携带位移位(32)的移动/拖拽事件(默认的 1000 一个都不报,仅 hover 的 1003 会报);
  *   isWheel 表示滚轮事件(SGR 按钮 64/65,可带修饰位)。
  */
 function parseSgrMouse(input) {
@@ -131,17 +138,23 @@ function mouseHoverEnabled(env = process.env) {
 /**
  * 启用鼠标追踪的 ANSI 字节。写进 stdout(交给 ink 的 stdout)即可,终端立即生效。
  *
- * 用 **1002(button-event)而不是 1000(X11 basic)**:1000 只报「按下 / 松开」,
- * 一个位移事件都不报,于是 dispatcher 的选择透传(pendingSelect + 按住拖动 → 关
- * 追踪把这次拖拽交还终端)在真实终端里**永远不会触发** —— 单测里那条用例之所以
- * 绿,是因为它自己伪造了一个位移事件。1002 只在「有键按住时」报位移,恰好够判定
- * 拖拽,又不像 1003 连空移动都报(那是 60~120Hz 洪流)。1006 是 SGR 坐标编码,
- * 与追踪模式正交,两者都要。
+ * 用 **1000(X11 basic)**,与 Claude Code 唯一那处追踪调用同档(见头部)。1000 只报
+ * 「按下 / 松开」,一个位移事件都不报 —— 这正是我们要的:点击只需要按下与松开两个
+ * 端点,位移是纯负担。
+ *
+ * 曾经用的是 1002(button-event,按住键时连位移一起报),理由是「有位移事件才能判定
+ * 拖拽,从而把拖选透传给终端」。那条推理是反的:1002 报出的位移意味着**按下那一下
+ * 已经被本进程吃掉了** —— 终端没收到,原生选择只能从拖到一半的地方接管,选出来的范
+ * 围必然是错的,补偿补不回起点。降到 1000 后位移根本不上报,按下/松开落在空白处时
+ * dispatcher 什么都不做,终端自己看到完整的一次拖拽,拖选行为完全正常。
+ *
+ * 1006 是 SGR 坐标编码,与追踪模式正交,两者都要。hover 额外开 1003(任意移动),
+ * 那是 60~120Hz 洪流且必然吞掉拖选,故单独门控、默认关。
  * @param {{hover?: boolean}} [opts]
  * @returns {string}
  */
 function enableBytes({ hover = false } = {}) {
-  let out = '\x1b[?1002h\x1b[?1006h';
+  let out = '\x1b[?1000h\x1b[?1006h';
   if (hover) {
     out += '\x1b[?1003h';
   }
@@ -277,14 +290,16 @@ function hitTest(layout, col, row, offset) {
  * 语义对齐 opencode:在**松开**(onMouseUp)触发点击(命中松开点);
  * 悬停开时在位移事件上做 onMouseOver/onMouseOut 高亮状态机。
  *
- * ── 对抗式「点击 + 原生选择/滚轮」透传 ──────────────────────────────────────
- * xterm 追踪(1000/1002/1003)会同时吞掉原生选择与滚轮。为尽量两全,dispatcher
- * 区分「点击按钮」与「选择/滚动意图」:
+ * ── 滚轮透传 ────────────────────────────────────────────────────────────────
+ * xterm 追踪会吞掉原生滚轮。dispatcher 只做两件事:
  *   - 按下命中按钮(pendingClick)→ 等待松开触发 onClick(拖出按钮则取消);
- *   - 按下落空(pendingSelect)→ 按住拖动(位移且按钮在 0/1/2)→ 判定为选择意图,
- *     调 onNative() 临时关追踪让终端原生选择接管本次拖拽;
- *   - 滚轮事件(64/65)→ 调 onNative() 让终端原生滚动。
+ *   - 滚轮事件(64/65)→ 调 onNative() 临时关追踪,让终端原生滚动接管。
  * onNative 由调用方(App.js)实现:写 disableBytes + 空闲后恢复 enableBytes。
+ *
+ * **拖选不需要补偿**:1000 不报位移,按下/松开落在空白处时下面什么都不做,终端自己
+ * 看到完整的一次拖拽。历史上这里有一条 `pendingSelect` 分支试图把拖选透传给终端,
+ * 它在真实终端里一次都没触发过 —— 1002 才报位移,而当初选 1002 的理由恰恰是「为了
+ * 喂它」,是个循环论证。已随降档一并删除。
  * @param {{hover?: boolean, motionThrottleMs?: number, onNative?: function}} [opts]
  *        motionThrottleMs=0 关闭位移节流(测试用;运行时默认 30ms 防高频命中测试)。
  * @returns {{onInput:function, reset:function}}
@@ -293,7 +308,6 @@ function createMouseDispatcher({ hover = true, motionThrottleMs = 30, onNative }
   let hoverNode = null;
   let lastMoveAt = 0;
   let pendingClick = false; // 按下落在按钮上 → 等待松开触发点击
-  let pendingSelect = false; // 按下落在空白 → 拖动则透传给原生选择
   const throttle = Number(motionThrottleMs) > 0 ? Number(motionThrottleMs) : 0;
   // 布局缓存:collectLayout(整树 DFS)只在该算时算一次。1003 移动追踪会让终端在
   // 每次鼠标移动都发事件(可到 60~120Hz);若每个事件都重算布局,大树上 2~20ms/
@@ -339,16 +353,10 @@ function createMouseDispatcher({ hover = true, motionThrottleMs = 30, onNative }
         return true;
       }
 
+      // Motion only ever arrives under 1003 (hover, opt-in): 1000 reports press
+      // and release, nothing in between. Kept because the parser still classifies
+      // motion, and a stray motion event must not fall through to press/release.
       if (ev.isMotion) {
-        // Drag while the press landed on empty space → selection intent: switch
-        // to native so the terminal's own click-drag selection takes over.
-        // `button & 31 <= 2` means a real button is held during the motion
-        // (motion bit 32 set; plain moves report button 3 = none).
-        if (pendingSelect && (ev.button & 31) <= 2) {
-          pendingSelect = false;
-          fireNative();
-          return true;
-        }
         if (!hover) {
           return true;
         }
@@ -381,13 +389,11 @@ function createMouseDispatcher({ hover = true, motionThrottleMs = 30, onNative }
       }
 
       if (ev.isPress) {
-        // Press decides intent: on a button → click candidate; on empty space →
-        // selection candidate (a subsequent drag passes through to native).
-        const item = hitTest(layout, ev.col, ev.row, offset);
-        if (item) {
+        // Press on a button arms a click. Press on empty space is deliberately a
+        // no-op: under 1000 the terminal never sees this press, but it never sees
+        // a drag either, so there is nothing to hand back and nothing to fake.
+        if (hitTest(layout, ev.col, ev.row, offset)) {
           pendingClick = true;
-        } else {
-          pendingSelect = true;
         }
         return true;
       }
@@ -396,7 +402,6 @@ function createMouseDispatcher({ hover = true, motionThrottleMs = 30, onNative }
       // release point (drag-off-button cancels, opencode same semantics).
       const wasClick = pendingClick;
       pendingClick = false;
-      pendingSelect = false;
       if (wasClick) {
         const item = hitTest(layout, ev.col, ev.row, offset);
         const node = item ? item.node : null;
@@ -415,7 +420,6 @@ function createMouseDispatcher({ hover = true, motionThrottleMs = 30, onNative }
     reset() {
       hoverNode = null;
       pendingClick = false;
-      pendingSelect = false;
     },
   };
 }

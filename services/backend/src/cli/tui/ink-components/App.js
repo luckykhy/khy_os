@@ -26,6 +26,8 @@ const HelpMenu = require('./HelpMenu');
 const ShellView = require('./ShellView');
 const TranscriptView = require('./TranscriptView');
 const TaskListPanel = require('./TaskListPanel');
+// 独占输入的全屏覆盖层(/model·/khyos)期间隐藏输入框/页脚的判定单一真源。
+const overlayLiveBudget = require('./overlayLiveBudget');
 const TopologyPanel = require('./TopologyPanel');
 const SidebarPanel = require('./SidebarPanel');
 const { useQueryBridge, buildResumedTranscript } = require('../hooks/useQueryBridge');
@@ -235,6 +237,18 @@ const ModelPicker = require('./ModelPicker');
 const PermissionsPrompt = require('./PermissionsPrompt');
 const QuestionPrompt = require('./QuestionPrompt');
 const RewindPicker = require('./RewindPicker');
+
+/**
+ * 「挂起 live UI → app.clear()」的沉降等待(ms)。必须 > ink 的 34ms 节流窗口,否则 clear()
+ * 与迟到的 trailing 渲染竞态,导致输入框 chrome 残影。fail-soft:叶子不可用 → 历史 16ms。
+ */
+function _suspendSettleMs() {
+  try {
+    return require('../perfTunables').suspendSettleMs(process.env);
+  } catch {
+    return 16;
+  }
+}
 
 // Pre-resolved modules for handleSubmit (eliminates per-submit require() calls).
 // Module scope: loaded once at process init, cached for the session.
@@ -796,11 +810,17 @@ function App({ options = {} }) {
   const mouseNativeRef = React.useRef(false);
   const mouseNativeRestoreTimer = React.useRef(null);
 
-  // Native passthrough. Tracking is exclusive: the wheel notch / drag that got us
-  // here was already delivered to stdin, so the terminal never saw it and there is
-  // no way to hand it back — that first notch is simply lost. What we CAN do is get
-  // out of the way for everything after it, by resetting tracking and staying out
-  // until the user shows they want the buttons again.
+  // Native passthrough. Tracking is exclusive: the wheel notch that got us here was
+  // already delivered to stdin, so the terminal never saw it and there is no way to
+  // hand it back — that first notch is simply lost. What we CAN do is get out of the
+  // way for everything after it, by resetting tracking and staying out until the user
+  // shows they want the buttons again.
+  //
+  // Only the wheel reaches here. Tracking is 1000 (X11 basic — see mouseButtons.js),
+  // which reports press and release and nothing in between, so a drag never becomes
+  // an event in this process at all and native selection works untouched. There used
+  // to be a drag branch here compensating for 1002's motion reports; it could not
+  // recover the swallowed press either way, and it went away with the downgrade.
   //
   // The window used to be 250ms, which made slow reading-speed scrolling (one notch
   // every few hundred ms) lose EVERY notch: each one re-armed tracking before the
@@ -2039,7 +2059,9 @@ function App({ options = {} }) {
           } catch {
             /* best effort */
           }
-          await new Promise((r) => setTimeout(r, 16));
+          // 沉降等待必须 > ink 的 34ms 节流窗口,否则 clear() 与迟到的 trailing 渲染
+          // 竞态 → 输入框 chrome 残影(与下方 route() 分支同一原因,同一真源)。
+          await new Promise((r) => setTimeout(r, _suspendSettleMs()));
           try {
             if (reviewApp && typeof reviewApp.clear === 'function') {
               reviewApp.clear();
@@ -2131,8 +2153,12 @@ function App({ options = {} }) {
         /* best effort */
       }
       // Let React flush the suspended (empty live UI) frame before clearing, so
-      // the handler starts from a clean transient region.
-      await new Promise((r) => setTimeout(r, 16));
+      // the handler starts from a clean transient region. 等待时长必须**超过 ink 自身的
+      // 节流窗口**(maxFps 30 → 34ms,leading+trailing):历史硬编码的 16ms 短于该窗口,
+      // 「空 live 区」那帧常仍挂在 trailing 队列 → clear() 擦除并 log.sync 了**旧**帧行数后,
+      // 迟到的 trailing onRender 又把刚擦掉的输入框 chrome 画回来 =「输入框残影」。
+      // 取值走 perfTunables 单一真源(KHY_TUI_SUSPEND_SETTLE_MS 可调);fail-soft 回退 16ms。
+      await new Promise((r) => setTimeout(r, _suspendSettleMs()));
       try {
         if (app && typeof app.clear === 'function') {
           app.clear();
@@ -4722,6 +4748,17 @@ function App({ options = {} }) {
       /* 辅助 UI */
     }
   }
+  // 独占输入的全屏覆盖层是否正挂载(→ 隐藏 PromptFrame / FooterBar,见下方注释)。
+  // fail-soft:叶子不可用 → 回退历史「只认 modelPicker」判定。
+  let _overlayOwnsLive;
+  try {
+    _overlayOwnsLive = overlayLiveBudget.ownsLiveRegion(
+      { modelPicker: !!modelPicker, khyosOpen: !!khyosOpen },
+      process.env
+    );
+  } catch {
+    _overlayOwnsLive = !!modelPicker;
+  }
   return h(
     Box,
     { flexDirection: 'column', width: _railContentCols || undefined },
@@ -4973,13 +5010,16 @@ function App({ options = {} }) {
             ...(tasksHidden ? { lines: [], hidden: 0, hiddenLines: [] } : {}),
           }),
 
-          // Prompt input. Hidden while the model picker overlay is mounted:
-          // rendering PromptFrame + FooterBar + ModelPicker together grows the live
-          // region past the terminal height, which desyncs ink's erase-line
+          // Prompt input. Hidden while an input-owning full-screen overlay is
+          // mounted: rendering PromptFrame + FooterBar + overlay together grows the
+          // live region past the terminal height, which desyncs ink's erase-line
           // accounting after static output (see pendingGatewayNoticeRef comment)
-          // and visually duplicates the prompt chrome. The picker owns input while
-          // open (top-level useInput yields), so hiding the frame is safe.
-          modelPicker
+          // and visually duplicates the prompt chrome. Such an overlay owns input
+          // while open (top-level useInput yields), so hiding the frame is safe.
+          // 判定收敛到 overlayLiveBudget:除 ModelPicker 外,/khyos 的 KhyOsView 同样独占
+          // 输入且自身已占 rows-3,再叠输入框/页脚必然触发 ink 全屏重绘(win32 每帧往
+          // scrollback 堆一份永久副本 =「输出重复两次 + 输入框残影」)。
+          _overlayOwnsLive
             ? null
             : h(PromptFrame, {
                 value,
@@ -5007,8 +5047,8 @@ function App({ options = {} }) {
 
           // Footer. When the pinned topic bar is unavailable, the current topic is
           // shown here as a fallback (块3 degraded path).
-          // (FooterBar likewise hidden while the model picker is open — see above.)
-          modelPicker
+          // (FooterBar likewise hidden while an input-owning overlay is open — see above.)
+          _overlayOwnsLive
             ? null
             : h(FooterBar, {
                 ...footer,

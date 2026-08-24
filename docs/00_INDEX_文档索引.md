@@ -12,7 +12,7 @@
 |---|---|---:|---:|
 | 01 | `01_INIT_立项/` | 2 | 2 |
 | 02 | `02_CONCEPTS_概念入门/` | 33 | 目录入口（见下） |
-| 03 | `03_DESIGN_设计/` | 69 | 69 |
+| 03 | `03_DESIGN_设计/` | 70 | 70 |
 | 04 | `04_IMPL_实现/` | 37 | 37 |
 | 05 | `05_TEST_测试/` | 9 | 9 |
 | 06 | `06_DEPLOY_部署/` | 22 | 22 |
@@ -137,6 +137,7 @@
 - [`DESIGN-ARCH-067` 动态模型差异化适配引擎](03_DESIGN_设计/%5BDESIGN-ARCH-067%5D%20动态模型差异化适配引擎.md) ⚠️ 编号与上一条冲突，待重编
 - [`DESIGN-ARCH-068` 仓库层级板块规范](03_DESIGN_设计/%5BDESIGN-ARCH-068%5D%20仓库层级板块规范.md) — **顶层目录 L0–L6 分层、允许依赖边、`docs/` 两轴命名、任务入口命名的单一真源**；新增文件或新增顶层目录前先读它，由 `npm run check:layout` 强制
 - [`DESIGN-ARCH-069` 拓展契约与核心边界规范](03_DESIGN_设计/%5BDESIGN-ARCH-069%5D%20拓展契约与核心边界规范.md) — **「什么是核、什么是拓展」的单一真源**：核 = 壳+漏斗+网关；一个拓展 = 一个目录 + 一份 `khy.extension.json`；五个拓展根与优先级；发现→惰性激活→停用；删目录即消失。`[DESIGN-ARCH-068]` 是其上位法，由 `npm run check:layout` 的 `extension-contract` 规则强制
+- [`DESIGN-ARCH-070` 治理总纲与可执行规则](03_DESIGN_设计/%5BDESIGN-ARCH-070%5D%20治理总纲与可执行规则.md) — **既有治理规则的索引与缺口登记**：MOD、MEM、TOOL、ACP、API 五板块；不推翻既有单一真源；由 `node scripts/ci/check-gov-rules.js` 守住总纲与 CI 接线。
 - [`DESIGN-OTHER-001` Khyos-数学重塑-实施提示词链](03_DESIGN_设计/%5BDESIGN-OTHER-001%5D%20Khyos-数学重塑-实施提示词链.md)
 - [`DESIGN-OTHER-002` _cbssp_分阶段防闪退提示词](03_DESIGN_设计/%5BDESIGN-OTHER-002%5D%20_cbssp_分阶段防闪退提示词.md)
 - [`DESIGN-OTHER-003` khy-系统提示词结构图](03_DESIGN_设计/%5BDESIGN-OTHER-003%5D%20khy-系统提示词结构图.md)

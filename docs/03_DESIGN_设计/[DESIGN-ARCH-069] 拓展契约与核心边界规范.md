@@ -139,7 +139,7 @@ khy 是复合项目，长期缺一条「核在哪儿结束」的线，后果是�
 | `khy-markdown` | `extensions/tools/khy-markdown/`（原 `tools/khyos-markdown/`） | **✅ 已迁移**（第一个试点） |
 | `khy-notebook` | `extensions/tools/khy-notebook/`（原 `…/src/tools/NotebookEditTool/`） | **✅ 已迁移**（第一个迁出核的**内置工具**） |
 | `khy-trae-bridge` | `extensions/bridges/khy-trae-bridge/` | 已在位，`kind: ide-bridge` |
-| `khy-quant` | `software/khyquant/` | 待迁移 |
+| `khy-quant` | `software/khyquant/` | **Phase 0 已断边**（见 §3.4 第三种形态）；Phase 1 搬目录待做 |
 | `khy-eyes` | `tools/deepseek-eyes/` | 待迁移 |
 | 5 个 scripts 拓展 | `scripts/{portable,alpine,install,qoder-bridge,diagnostics,…}` | 待迁移，清单见 §1.6 |
 | `khy-protocol-*` | `gateway/protocolConverter/*` | 待迁移 |
@@ -149,6 +149,10 @@ khy 是复合项目，长期缺一条「核在哪儿结束」的线，后果是�
 | `khy-ai-frontend` | `apps/ai-frontend/` | 待迁移 |
 
 > `khy-quant` 的迁移**不改变** `[DESIGN-ARCH-068]` 对 `software/` 的定义：khyquant 现在就是「内置默认应用而非项目本身」，做成拓展是把这句话落到机器上，不是新的定位。
+
+> **`khy-quant` 分两步做，原因见 §3.4 第三种形态。** Phase 0（断边）已完成：57 个壳改走服务名、`server.js` 改 fail-soft 挂载，实测移开 `software/khyquant` 后服务器仍能启动并汇报「已跳过 21/21 条量化应用路由」——改前是加载期 `MODULE_NOT_FOUND`，整机不可用。Phase 1（搬目录）剩下的是纯 `git mv` + 加一份声明 `provides: ["quant-app"]` 的 manifest + 删掉解析器里的迁移期兜底，**核一行都不用改**；另有约 40 处非文档引用（CI workflow / `MANIFEST.in` / 便携构建脚本 / workspace 声明 / 版本轨道 3）要跟着改，那是 Phase 1 的主要工作量。
+>
+> Phase 0 顺带暴露两个**死壳**：`src/routes/marketData.js` 与 `src/routes/news.js` 有壳、被 `server.js` require（前者）或压根没引用（后者），但都没有对应的 `app.use`。`/api/news` 实际走的是 `createAiProxy()`，与量化应用无关。清理它们会改变模块副作用的执行时机，故不并入「纯重构」的 Phase 0，留给 Phase 1。
 
 **`khy-notebook` 是本契约第一个可被引用的完整先例**：它证明了一个已经在核里、已经暴露给模型、
 已经被约 20 处策略表点名的内置工具，可以在**行为逐字节不变**的前提下迁出去。迁移中实测出的两个
@@ -587,6 +591,9 @@ npm run check:layout -- --list=extension-id-hardcode
 | 通用服务解析点 | `…/services/extensions/providerModule.js` | 按服务名惰性取拓展模块；本轮解掉核里 4 处指向 `extensions/` 的加载期硬 require |
 | 交付脚本派发器 | `scripts/lib/ext-run.js` + `scripts/tests/ext-run.test.js` | 20 个 npm 目标改走它；31 例钉住「删目录即消失而不是即崩溃」|
 | 路径漂移守卫 | `check-repo-layout.js` 的 `extension-path-drift` | 搬目录后断掉的相对 require 与算错的爬根算术，基线 0 |
+| 壳改写（57 个） | `services/backend/src/{routes,models,services,controllers,cli/handlers}/**` | 每个壳从 `require('../../../../software/khyquant/X')` 改成 `loadModule('X')`；核 → L4 的 57 处跨层引用归零，`cross-layer-require` 的 57 处豁免随之消失 |
+| fail-soft 挂载 | `services/backend/server.js` 的 `mountOptional()` / `reportSkippedMounts()` | 21 处量化路由挂载（含别名）改走它；应用缺席时跳过并汇报一行「已跳过 21/21 … quant-app 服务未安装」，而不是让 `app.use(path, null)` 抛 |
+| 断边回归用例 | `services/backend/tests/extensions/quantAppServerMount.test.js` | 6 例：应用在位全挂上 / 缺席仍启动 / 汇总文案守红线② / 静态防复发（量化路由不许绕过 `mountOptional`）|
 | 服务解析器（硬入向） | `…/services/extensions/quantApp.js` + `tests/extensions/quantAppSeam.test.js` | `quant-app` 的唯一定位与加载入口；两级解析：服务名 → 迁移期 L4 兜底。为 `khy-quant` 断边而立，13 例钉住「未安装」与「装了但坏了」不同档 |
 | 生命周期用例 | `services/backend/tests/extensions/contribToolLifecycle.test.js` | 13 例：拖入即发现 / 需要时才加载 / 删目录即消失 / 门控 fail-closed / 模型看得见 / `khy-notebook` 真实核验 |
 
