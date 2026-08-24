@@ -322,26 +322,17 @@ function _resolveBannerProps(footer = {}, overrides = {}) {
       }
     }
     bannerWindow = bannerWindow || (footer.contextLimit ? `${Math.round(footer.contextLimit / 1000)}k 令牌` : '');
-    // 更新时间与来源：只读本地 git/BUILD-INFO，不联网、不 spawn 包管理器，
-    // 因此可以同步取；失败时留空字符串，横幅整行省略而不是显示占位值。
-    let bannerUpdateLine = '';
-    try {
-      if (overrides.updateLine) {
-        bannerUpdateLine = overrides.updateLine;
-      } else {
-        const coordinator = require('../../../services/updateCoordinator');
-        bannerUpdateLine = coordinator.formatProvenance(coordinator.getSourceProvenance());
-      }
-    } catch {
-      /* 探测不可用时不展示更新行 */
-    }
+    // 更新时间与来源：只读本地 git/BUILD-INFO，不联网、不 spawn 包管理器。
+    // 注意这是纯函数——渲染路径绝不再同步 spawn git（那会把 Ink 事件循环堵死，
+    // 表现为启动首屏/敲键时画面在、快捷键失效）。updateLine 由 App 侧异步取好传入；
+    // 这里拿不到就留空，横幅整行省略，也绝不代跑 git。
     props.version = pkg.version;
     props.model = bannerModel;
     props.adapter = footer.adapter || process.env.GATEWAY_PREFERRED_ADAPTER || 'auto';
     props.authMethod = 'API 密钥';
     props.contextWindow = bannerWindow;
     props.gatewayAdapters = 9;
-    props.updateLine = bannerUpdateLine;
+    props.updateLine = overrides.updateLine || '';
   } catch {
     /* bannerProps 组装失败不影响 App 主体 */
   }
@@ -366,6 +357,24 @@ function App({ options = {} }) {
     },
   });
   const [footer, setFooter] = React.useState({});
+  // 启动横幅的「更新时间 + 来源」行。由 mount 后的一次性 effect 异步取回，
+  // 渲染路径绝不碰 git：同步 spawn 会把 Ink 事件循环堵死（卡死根因）。
+  const [bannerUpdateLine, setBannerUpdateLine] = React.useState('');
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const coordinator = require('../../../services/updateCoordinator');
+        const line = coordinator.formatProvenance(await coordinator.getSourceProvenanceAsync());
+        if (!cancelled) setBannerUpdateLine(line);
+      } catch {
+        /* 探测不可用时不展示更新行，横幅整行省略而非卡死 */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const _queryStatusRef = React.useRef(query.status);
   _queryStatusRef.current = query.status;
 
@@ -4258,7 +4267,7 @@ function App({ options = {} }) {
   );
 
   // Welcome banner props.
-  const bannerProps = _resolveBannerProps(footer);
+  const bannerProps = _resolveBannerProps(footer, { updateLine: bannerUpdateLine });
 
   // 输入框占位符:优先级阶梯收敛到纯叶子 promptPlaceholder(CC usePromptInputPlaceholder)。
   // 新增「有可编辑排队消息且提示未用尽 → 按 ↑ 编辑」一档;门控关/叶子缺失 → 逐字节回退历史两分支。

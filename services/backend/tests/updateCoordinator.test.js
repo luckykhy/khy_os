@@ -497,3 +497,70 @@ describe('updateCoordinator provenance', () => {
     assert.equal(coordinator.formatProvenance(undefined), '');
   });
 });
+
+describe('updateCoordinator provenance async', () => {
+  // 与同步版同构的桩：git.run 返回同步字符串（runGitAsync 注入分支会
+  // Promise.resolve 包一层并兼容 {stdout}|string）。
+  function provenanceGit(overrides = {}) {
+    const values = {
+      'rev-parse --show-toplevel': 'C:/repo',
+      'log -1 --format=%H%n%cI%n%D':
+        'aaa\n2026-08-24T15:07:17+08:00\nHEAD -> main, origin/main, origin/HEAD',
+      'status --porcelain -uno': '',
+      ...overrides,
+    };
+    const calls = [];
+    return {
+      calls,
+      run(args) {
+        const key = args.join(' ');
+        calls.push(key);
+        if (!(key in values)) throw new Error(`unexpected git: ${key}`);
+        const value = values[key];
+        if (value instanceof Error) throw value;
+        return value;
+      },
+    };
+  }
+
+  function repoFs() {
+    return {
+      existsSync(file) {
+        return /services[\\/]backend[\\/]package\.json$/.test(file);
+      },
+      readFileSync(file) {
+        if (/package\.json$/.test(file)) return '{"version":"1.1.11"}';
+        throw new Error('not readable');
+      },
+    };
+  }
+
+  test('async 版与同步版输出同形；git 命令序列一致', async () => {
+    const git = provenanceGit();
+    const p = await coordinator.getSourceProvenanceAsync({
+      cwd: 'C:/repo', fs: repoFs(), git: git.run, memoryOnly: true,
+    });
+    assert.equal(p.kind, 'git');
+    assert.equal(p.version, '1.1.11');
+    assert.equal(p.commit, 'aaa');
+    assert.equal(p.updatedAt, '2026-08-24T15:07:17+08:00');
+    assert.equal(p.source, 'origin/main');
+    assert.equal(p.dirty, false);
+    assert.deepEqual(git.calls, [
+      'rev-parse --show-toplevel',
+      'log -1 --format=%H%n%cI%n%D',
+    ]);
+  });
+
+  test('异步路径绝不抛（git 失败 → blank/空字段），供横幅 fail-soft', async () => {
+    const git = provenanceGit({
+      'rev-parse --show-toplevel': new Error('no git'),
+    });
+    const p = await coordinator.getSourceProvenanceAsync({
+      cwd: 'C:/repo', fs: repoFs(), git: git.run, memoryOnly: true,
+    });
+    assert.equal(p.kind, null);
+    assert.equal(p.commit, '');
+    assert.ok(!p.updatedAt);
+  });
+});
