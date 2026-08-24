@@ -5542,6 +5542,21 @@ const AIGatewayGenerateMethod = {
                   `Gateway telemetry warning: ${usageTrackErr.message || 'usage tracking failed'}`
                 );
               }
+              // 状态透明:实际响应的模型 ≠ 用户所选模型时,明确告知(所选通道不可用自动回退)。
+              // 仅发一个 status 帧;buildSubstitutionNotice 纯叶子、fail-soft,绝不抛。
+              try {
+                const substituteNotice = require('./modelSubstitutionNotice').buildSubstitutionNotice({
+                  requestedModel: options.model,
+                  servingModel: successResult.model || result.model,
+                  servingProvider: result.provider || entry.key,
+                  env: process.env,
+                });
+                if (substituteNotice) {
+                  emitStatus(substituteNotice);
+                }
+              } catch {
+                /* fail-soft:替代模型披露是尽力而为,绝不阻断请求 */
+              }
               return finalized;
             }
 
