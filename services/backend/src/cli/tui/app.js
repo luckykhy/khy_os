@@ -55,16 +55,18 @@ async function startInkApp(options = {}) {
   } catch { /* shutdown module optional — waitUntilExit path still prints */ }
 
   // Scrollback preservation (门控 KHY_PRESERVE_SCROLLBACK 默认开): wrap the stdout
-  // we hand to ink in a Proxy that normalizes ink's clearTerminal frame per-platform:
-  // on non-win32 it strips the `\x1b[3J` (clear-scrollback) escape while passing
-  // `\x1b[2J`/`\x1b[H` through; on win32 it INJECTS `\x1b[3J` into ink's `\x1b[2J\x1b[0f`
-  // (→ `\x1b[2J\x1b[3J\x1b[0f`) because Windows conhost/Windows Terminal scrolls the old
-  // frame INTO scrollback on `\x1b[2J` instead of erasing in place — without the `3J`,
-  // every fullscreen repaint stacks another full copy of the transcript (the「同一对话
-  // 窗口重复显示 2–3 份」bug). ink emits `clearTerminal + fullStaticOutput + output` as a
+  // we hand to ink in a Proxy that normalizes ink's clearTerminal frame. **平台对称**:
+  // 两类终端都只**剥离** `[3J`(清回滚缓冲),`[2J`/`[H` 原样透传。
+  // 历史上 win32 分支曾反向**注入** `[3J` 去压制重复帧,现已刻意移除 —— 注入会
+  // 直接清空用户正在查看的原生 scrollback,代价高于它修的重复症状
+  // (判断见 scrollbackPreserve.js 头注)。因此 win32 的重复帧改为**从源头不触发**:
+  // 让 live 区高度恒 < rows(liveRegionBudget / liveHeightClamp / overlayLiveBudget 三层),
+  // 而不是事后拿 3J 擦。ink emits `clearTerminal + fullStaticOutput + output` as a
   // single write() when the live region height >= rows (ink.js:327 / instance.js:132);
-  // non-win32 clearTerminal is `\x1b[2J\x1b[3J\x1b[H` and the `3J` wipes native scrollback
-  // — which is exactly why long output「滚不到中间」on those terminals. We only override
+  // non-win32 clearTerminal is `[2J[3J[H` and the `3J` wipes native scrollback
+  // — which is exactly why long output「滚不到中间」on those terminals; win32 的 clearTerminal
+  // 是 `[2J[0f`(本就无 3J 可剥),conhost 的 `2J` 把旧帧**滚进** scrollback 而非
+  // 就地擦除 → 一旦触发全屏分支就留一份永久副本。We only override
   // write(); every other property (columns/rows/isTTY/on('resize')/syncOutput backing)
   // is delegated to the real process.stdout so ink's sizing/resize/sync semantics are
   // unchanged. Not touching process.stdout itself means no teardown is required and

@@ -247,7 +247,15 @@ function KhyOsView({ onExit, isoPath, diskPath }) {
 
   // Bounded viewport: show the tail of the screen buffer.
   const rows = process.stdout.rows && process.stdout.rows > 0 ? process.stdout.rows : 24;
-  const maxBody = Math.max(6, rows - 6);
+  // 正文预算走 overlayLiveBudget 单一真源:留足 chrome + 兄弟余量,使本覆盖层总高严格
+  // < 终端 rows,不触发 ink 全屏重绘(win32 下每次重绘都会往 scrollback 堆一份永久副本 →
+  // 用户看到的「输出重复 / 输入框残影」)。fail-soft:叶子取不到 → 回退历史 rows-6。
+  let maxBody;
+  try {
+    maxBody = require('./overlayLiveBudget').overlayBodyRows(rows, process.env);
+  } catch {
+    maxBody = Math.max(6, rows - 6);
+  }
   const all = screenRef.current.lines;
   const body = all.slice(Math.max(0, all.length - maxBody));
 

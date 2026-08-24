@@ -87,6 +87,10 @@ jobs:
       - name: Check repo layout
         run: node scripts/ci/check-repo-layout.js --promote=root-whitelist,docs-index-first,layer-registry
 
+      # 治理总纲入口、根检查链与 PR gate 必须同时可达，避免文档或守卫静默脱钩。
+      - name: Check governance rules
+        run: node scripts/ci/check-gov-rules.js
+
       # 设计模式注册表守卫（真源 docs/_设计模式/模式注册表.json）。与上一步同档：
       # 同样不传 --changed —— 注册表是仓库的全局属性，只看改动集看不见
       # 「别人删了文件而条目还在」这类幽灵条目。三条规则全走

@@ -35,6 +35,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { ensureAiBackendResolvable } = require('../../bootstrap/aiBackendModuleResolve');
 
 /** 服务名：核唯一该知道的字符串。按能力取名，不按实现取名（§3.4）。 */
 const SERVICE = 'quant-app';
@@ -104,6 +105,9 @@ function loadModule(rel) {
   } catch (_) {
     return null;
   }
+  // quant-app 位于 backend 的同级树，模块自身的 bare require 不会沿着 backend/node_modules
+  // 向上解析。复用打包安装已有的 fallback，使开发树和便携安装都能看到后端依赖。
+  ensureAiBackendResolvable();
   return require(abs); // 存在即加载；抛错照抛
 }
 

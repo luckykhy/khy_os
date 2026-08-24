@@ -7,6 +7,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { WINDOWS_IDE_INSTALL_PATHS } = require('../../../constants/installationCandidates');
 
 const HOME = os.homedir();
 const PLATFORM = process.platform;
@@ -39,8 +40,7 @@ const DEFAULT_PATHS = {
             path.join(process.env.LOCALAPPDATA, 'Kiro'),
           ]
         : []),
-      'C:\\Program Files\\Kiro',
-      'C:\\Program Files (x86)\\Kiro',
+      ...WINDOWS_IDE_INSTALL_PATHS.kiro,
     ],
     darwin: ['/Applications/Kiro.app', path.join(HOME, 'Applications', 'Kiro.app')],
     linux: [
@@ -55,7 +55,7 @@ const DEFAULT_PATHS = {
     win32: [
       path.join(HOME, 'AppData', 'Local', 'Programs', 'Cursor'),
       path.join(HOME, 'AppData', 'Local', 'Cursor'),
-      'C:\\Program Files\\Cursor',
+      ...WINDOWS_IDE_INSTALL_PATHS.cursor,
     ],
     darwin: ['/Applications/Cursor.app', path.join(HOME, 'Applications', 'Cursor.app')],
     linux: [
@@ -73,8 +73,7 @@ const DEFAULT_PATHS = {
       path.join(HOME, 'AppData', 'Local', 'Programs', 'Trae'),
       path.join(HOME, 'AppData', 'Local', 'Trae CN'),
       path.join(HOME, 'AppData', 'Local', 'Trae'),
-      'C:\\Program Files\\Trae CN',
-      'C:\\Program Files\\Trae',
+      ...WINDOWS_IDE_INSTALL_PATHS.trae,
     ],
     darwin: [
       '/Applications/Trae.app',
@@ -88,7 +87,7 @@ const DEFAULT_PATHS = {
     win32: [
       path.join(HOME, 'AppData', 'Local', 'Programs', 'Warp'),
       path.join(HOME, 'AppData', 'Local', 'Warp'),
-      'C:\\Program Files\\Warp',
+      ...WINDOWS_IDE_INSTALL_PATHS.warp,
     ],
     darwin: ['/Applications/Warp.app', path.join(HOME, 'Applications', 'Warp.app')],
     linux: [
@@ -102,7 +101,7 @@ const DEFAULT_PATHS = {
     win32: [
       path.join(HOME, 'AppData', 'Local', 'Programs', 'Windsurf'),
       path.join(HOME, 'AppData', 'Local', 'Windsurf'),
-      'C:\\Program Files\\Windsurf',
+      ...WINDOWS_IDE_INSTALL_PATHS.windsurf,
       path.join(HOME, 'AppData', 'Local', 'Programs', 'Codeium'),
     ],
     darwin: [
@@ -120,8 +119,7 @@ const DEFAULT_PATHS = {
   vscode: {
     win32: [
       path.join(HOME, 'AppData', 'Local', 'Programs', 'Microsoft VS Code'),
-      'C:\\Program Files\\Microsoft VS Code',
-      'C:\\Program Files (x86)\\Microsoft VS Code',
+      ...WINDOWS_IDE_INSTALL_PATHS.vscode,
     ],
     darwin: [
       '/Applications/Visual Studio Code.app',

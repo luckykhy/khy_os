@@ -183,6 +183,43 @@ describe('quantApp seam：「未安装」与「装了但坏了」是两档', () 
   // 契约，那时再补用例。这里刻意不造一个假绿灯来占位。
 });
 
+describe('quantApp seam：壳里的模块路径必须真的存在', () => {
+  // 改写前，这些壳写的是相对 require，check-repo-layout 的 unresolved-require 规则
+  // 能静态验出写错的路径。改成 loadModule('routes/market') 之后实参是个字符串，
+  // 那条门禁验不了了 —— 静态可验性是真丢了一块。这一组用例把它挣回来：扫出核里
+  // 全部 loadModule 实参，逐个断言目标在量化应用里存在。少了它，一个拼错的模块名
+  // 会安静地退化成 null，然后在某个请求路径上炸成 TypeError。
+  const CALL = /loadModule\(\s*'([^']+)'\s*\)/g;
+
+  /** 递归收集核里所有 loadModule 实参。 */
+  function collect(dir, out = []) {
+    for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (ent.name === 'node_modules') continue;
+      const p = path.join(dir, ent.name);
+      if (ent.isDirectory()) { collect(p, out); continue; }
+      if (!ent.name.endsWith('.js')) continue;
+      const txt = fs.readFileSync(p, 'utf8');
+      if (!txt.includes('quantApp')) continue;
+      for (const m of txt.matchAll(CALL)) out.push({ file: p, mod: m[1] });
+    }
+    return out;
+  }
+
+  test('核里每一处 loadModule 实参都能在量化应用里找到对应文件', () => {
+    const calls = collect(path.join(BACKEND, 'src'));
+    assert.ok(calls.length >= 57, '至少该扫到 57 个兼容壳，扫到 ' + calls.length + ' 个——扫描逻辑可能坏了');
+
+    const missing = [];
+    for (const { file, mod } of calls) {
+      const abs = path.join(L4_DIR, mod.endsWith('.js') ? mod : mod + '.js');
+      if (!fs.existsSync(abs)) {
+        missing.push(path.relative(BACKEND, file) + " → '" + mod + "'");
+      }
+    }
+    assert.deepEqual(missing, [], '这些壳指向的模块不存在，会静默解析成 null');
+  });
+});
+
 describe('quantApp seam：对真实 khyquant 的核验', () => {
   test('真实应用的路由模块能通过 seam 取到，且是个 express router', () => {
     const out = ask(

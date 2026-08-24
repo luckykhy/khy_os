@@ -56,6 +56,9 @@ class ComputerUseTool extends BaseTool {
 Actions:
 - "computer_use": Give a goal. Auto-runs observe→think→act→verify for desktop tasks (open apps, fill forms, navigate UI). Works with or without a target app (fuzzy: observes screen and decides).
   Optional: app (preferred, soft constraint), planFirst (plan before acting).
+  Cross-app goals (e.g. "搜攻略→写备忘录→查地图→建日历日程"): name every app in the goal; the tool
+  auto-detects the app list, enables plan-first and scales the iteration budget. The agent carries
+  facts between apps with an internal scratchpad (remember), returned as "notes" for verification.
 - "capabilities": Check desktop capabilities (screenshot, OCR, input, vision).
 
 SAFETY: real mouse/keyboard. Requires KHY_DESKTOP_CONTROL=on/ask/strict or per-call approval. Default off.
@@ -180,11 +183,26 @@ Graded confirmation by action risk (low/medium/high/critical): 'on' auto-runs lo
               }
             }
 
+            // 跨应用任务的两个默认值（显式传参始终优先）：
+            //   1. plan-first —— 应用数 >1 时默认开启：计划会注入之后每一轮决策提示词，
+            //      模型据此维持阶段感，不会在第 3 个应用里忘了还有第 4 个应用要写。
+            //   2. 轮数预算 —— 默认 30 轮按「一个应用一段观察→操作→验证」摊不开，
+            //      四应用任务光切换与验证就耗尽预算；按应用数线性放大到上限 100。
+            const multiApp = targetApps.length > 1;
+            const planFirst =
+              typeof params.planFirst === 'boolean' ? params.planFirst : multiApp;
+            const maxIterations =
+              Number(params.maxIterations) > 0
+                ? Number(params.maxIterations)
+                : multiApp
+                  ? Math.min(100, 15 * targetApps.length)
+                  : undefined;
+
             const agent =
               deps.agent ||
               new ComputerUseAgent({
                 model: params.model,
-                maxIterations: params.maxIterations,
+                maxIterations,
                 sessionId: deps.sessionId || params.sessionId,
                 signal: deps.signal || null,
               });
@@ -216,10 +234,10 @@ Graded confirmation by action risk (low/medium/high/critical): 'on' auto-runs lo
             };
             const result = await agent.run(resolvedGoal || goal, {
               sessionId: deps.sessionId || params.sessionId,
-              maxIterations: params.maxIterations,
+              maxIterations,
               app: targetApp,
               apps: targetApps.length > 0 ? targetApps : undefined,
-              planFirst: params.planFirst,
+              planFirst,
               hostApproved,
               signal: deps.signal || null,
               onIteration,
@@ -235,6 +253,10 @@ Graded confirmation by action risk (low/medium/high/critical): 'on' auto-runs lo
               // 跨应用协作：完整应用清单
               ...(Array.isArray(result.targetApps) && result.targetApps.length > 0
                 ? { targetApps: result.targetApps }
+                : {}),
+              // 跨应用暗记：agent 在各应用间搬运的结构化信息（信息提取的可核查证据）
+              ...(Array.isArray(result.notes) && result.notes.length > 0
+                ? { notes: result.notes }
                 : {}),
               iterations: result.iterations,
               finished: result.finished,

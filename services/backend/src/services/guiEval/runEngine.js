@@ -130,18 +130,43 @@ class RunEngine {
     return collector;
   }
 
+  /**
+   * 迭代预算：一个应用一段「观察→操作→验证」流程，轮数需求随应用数线性增长。
+   * 固定 30 轮对「浏览器→备忘录→地图→日历」这类四应用任务远远不够——光是应用
+   * 切换与逐步验证就吃掉大半预算，任务会在走到最后一个应用之前耗尽轮数而判失败。
+   * 可用 environment.maxIterations 显式覆盖。
+   * @param {object} task
+   * @returns {number} 30–100 之间的迭代上限
+   */
+  _resolveIterationBudget(task) {
+    const env = (task && task.environment) || {};
+    const explicit = Number(env.maxIterations || env.max_iterations || 0);
+    if (Number.isFinite(explicit) && explicit > 0) {
+      return Math.min(100, Math.max(1, Math.round(explicit)));
+    }
+    const appCount = Array.isArray(env.apps) ? env.apps.length : 0;
+    const checkpointCount = Array.isArray(task && task.checkpoints) ? task.checkpoints.length : 0;
+    const budget = 15 * Math.max(1, appCount) + 4 * checkpointCount;
+    return Math.min(100, Math.max(30, budget));
+  }
+
   async _runAgent(task, run, collector, opts = {}) {
     const { ComputerUseAgent } = require('../computerUse/computerUseAgent');
+    const appCount = Array.isArray(task.environment && task.environment.apps)
+      ? task.environment.apps.length
+      : 0;
     const agent = new ComputerUseAgent({
       model: opts.agentModel,
-      maxIterations: 30,
+      maxIterations: this._resolveIterationBudget(task),
     });
 
     const goal = task.description || task.name;
-    const trajectory = [];
 
     const result = await agent.run(goal, {
       hostApproved: true,
+      // 多应用任务先规划再执行：计划会注入之后每一轮决策提示词，模型据此维持阶段感，
+      // 不至于在第 3 个应用里忘了自己还要回到第 4 个应用。
+      planFirst: appCount > 1,
       maxDuration: task.max_duration || 300,
       onIteration: (state, { iteration, action, result: stepResult }) => {
         // Record each iteration

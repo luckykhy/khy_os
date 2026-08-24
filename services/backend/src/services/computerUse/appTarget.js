@@ -58,6 +58,26 @@ const APP_ALIASES = [
   { name: '网易云音乐', keys: ['网易云音乐', 'netease cloud music', '云音乐'] },
   { name: 'QQ音乐', keys: ['qq音乐', 'qq music'] },
   { name: 'PotPlayer', keys: ['potplayer', 'pot player'] },
+  // ── 系统自带小应用 ────────────────────────────────────────────────────
+  // 跨应用生活类任务（行程规划、日程安排、清单整理）几乎全落在这一组上；
+  // 缺了它们，resolveTargetApps 只能识别出「浏览器」一个应用，
+  // 决策提示词里的「跨应用协作」段就不会触发。
+  {
+    name: '备忘录',
+    keys: ['备忘录', '便签', '便笺', '便利贴', 'notes', 'sticky notes', 'stickynotes', '记事'],
+  },
+  { name: '日历', keys: ['日历', '日程表', '日程', 'calendar'] },
+  {
+    name: '地图',
+    keys: ['地图', 'maps', '高德地图', '百度地图', '腾讯地图', 'amap', 'gaode', 'google maps'],
+  },
+  { name: '待办', keys: ['待办', '待办事项', 'to do', 'todo', 'microsoft to do', 'reminders'] },
+  { name: '时钟', keys: ['时钟', '闹钟', '秒表', '计时器', 'clock', 'alarm'] },
+  { name: '天气', keys: ['天气', 'weather'] },
+  { name: '照片', keys: ['照片', '相册', '图片查看器', 'photos', 'photo viewer'] },
+  { name: '相机', keys: ['相机', '摄像头', 'camera'] },
+  // '设置' 单字太泛（「设置提醒时间」会误命中），只认长写法与英文名。
+  { name: '设置', keys: ['系统设置', '设置应用', 'settings', '控制面板', 'control panel'] },
 ];
 
 // 归一化：小写、去空白、统一全半角
