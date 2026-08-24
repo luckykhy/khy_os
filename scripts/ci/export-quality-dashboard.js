@@ -20,16 +20,30 @@ function loadReport(relPath) {
   }
 }
 
+function dimensionScore(healthDim) {
+  if (!healthDim) return 1;
+  if (healthDim.healthy) return 3;
+  return healthDim.filesPresent > 0 ? 2 : 1;
+}
+
 function main() {
+  const healthReport = loadReport('docs/_报告/维度健康.json');
+
+  const dimensions = {
+    D1: { name: 'Agent Harness', evidence: ['adaptive Ralph Loop', 'loop analytics', 'boulder state', 'delivery gate'] },
+    D2: { name: 'Skills System', evidence: ['19/19 scenario evals', 'drift detection', 'regression thresholds', 'history snapshots'] },
+    D3: { name: 'MCP & Tooling', evidence: ['6 ToolGuards', 'hook telemetry', 'content-fingerprint', 'fault isolation'] },
+    D4: { name: 'Team/Parallel Mode', evidence: ['mailbox protocol', 'worker routing', 'zombie detection', 'dep timeout'] },
+    D5: { name: 'Governance & Quality', evidence: ['quality dashboard', 'dimension health', 'AGENTS.md rules'] },
+  };
+
+  for (const [dim, info] of Object.entries(dimensions)) {
+    info.score = dimensionScore(healthReport?.dimensions?.[dim]);
+  }
+
   const dashboard = {
     generatedAt: new Date().toISOString(),
-    dimensions: {
-      D1: { score: 3, name: 'Agent Harness', evidence: ['adaptive Ralph Loop', 'loop analytics', 'boulder state', 'delivery gate'] },
-      D2: { score: 3, name: 'Skills System', evidence: ['19/19 scenario evals', 'drift detection', 'regression thresholds', 'history snapshots'] },
-      D3: { score: 3, name: 'MCP & Tooling', evidence: ['6 ToolGuards', 'hook telemetry', 'content-fingerprint', 'fault isolation'] },
-      D4: { score: 3, name: 'Team/Parallel Mode', evidence: ['mailbox protocol', 'worker routing', 'zombie detection', 'dep timeout'] },
-      D5: { score: 3, name: 'Governance & Quality', evidence: ['quality dashboard', 'dimension health', 'AGENTS.md rules'] },
-    },
+    dimensions,
     checks: {},
     exitCriteria: { allAtLeast2: true, twoAt3: true, met: true },
   };
