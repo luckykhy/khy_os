@@ -1,54 +1,54 @@
 {
-  "generatedAt": "2026-08-19T15:51:06.538Z",
+  "generatedAt": "2026-08-24T00:43:44.124Z",
   "dimensions": {
     "D1": {
-      "score": 3,
       "name": "Agent Harness",
       "evidence": [
         "adaptive Ralph Loop",
         "loop analytics",
         "boulder state",
         "delivery gate"
-      ]
+      ],
+      "score": 3
     },
     "D2": {
-      "score": 3,
       "name": "Skills System",
       "evidence": [
         "19/19 scenario evals",
         "drift detection",
         "regression thresholds",
         "history snapshots"
-      ]
+      ],
+      "score": 3
     },
     "D3": {
-      "score": 3,
       "name": "MCP & Tooling",
       "evidence": [
         "6 ToolGuards",
         "hook telemetry",
         "content-fingerprint",
         "fault isolation"
-      ]
+      ],
+      "score": 3
     },
     "D4": {
-      "score": 3,
       "name": "Team/Parallel Mode",
       "evidence": [
         "mailbox protocol",
         "worker routing",
         "zombie detection",
         "dep timeout"
-      ]
+      ],
+      "score": 3
     },
     "D5": {
-      "score": 3,
       "name": "Governance & Quality",
       "evidence": [
         "quality dashboard",
         "dimension health",
         "AGENTS.md rules"
-      ]
+      ],
+      "score": 3
     }
   },
   "checks": {
