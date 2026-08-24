@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# KHY_MANAGED_HOOK
+# Push every completed local phase commit to configured mirrors.
+set -u
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+"$ROOT/scripts/sync/push-mirrors.sh" || true

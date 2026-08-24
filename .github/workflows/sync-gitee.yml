@@ -1,0 +1,48 @@
+name: Sync Gitee mirror
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to mirror'
+        required: false
+        default: 'main'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gitee-mirror-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mirror branch to Gitee
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          GITEE_USER: ${{ vars.GITEE_USER }}
+          GITEE_REPOSITORY: ${{ vars.GITEE_REPOSITORY }}
+          SOURCE_BRANCH: ${{ github.event_name == 'workflow_dispatch' && inputs.branch || github.ref_name }}
+        run: |
+          set -euo pipefail
+          : "${GITEE_TOKEN:?Repository secret GITEE_TOKEN is required}"
+          : "${GITEE_USER:?Repository variable GITEE_USER is required}"
+          : "${GITEE_REPOSITORY:?Repository variable GITEE_REPOSITORY is required (owner/repo)}"
+          case "$GITEE_REPOSITORY" in
+            */*) ;;
+            *) echo "GITEE_REPOSITORY must be owner/repo" >&2; exit 1 ;;
+          esac
+          auth="$(printf '%s' "$GITEE_USER:$GITEE_TOKEN" | base64 -w0)"
+          git init mirror
+          cd mirror
+          git remote add github "https://github.com/${GITHUB_REPOSITORY}.git"
+          git remote add gitee "https://gitee.com/${GITEE_REPOSITORY}.git"
+          git fetch --depth=1 github "${SOURCE_BRANCH}"
+          git -c "http.https://gitee.com/.extraheader=Authorization: Basic ${auth}" \
+            push gitee "FETCH_HEAD:refs/heads/${SOURCE_BRANCH}"
