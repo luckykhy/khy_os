@@ -1,5 +1,7 @@
 'use strict';
 
+const { GIT_BASH_CANDIDATES } = require('../constants/installationCandidates');
+
 /**
  * gitExecutableResolver — 纯叶子模块：解析 git 可执行文件路径（Windows 优先 Git Bash）。
  *
@@ -16,11 +18,7 @@
 /**
  * Git Bash 在 Windows 上的典型安装路径（按优先级排序）。
  */
-const GIT_BASH_CANDIDATE_PATHS_WINDOWS = [
-  'C:\\Program Files\\Git\\bin\\git.exe', // 默认安装路径（64位）
-  'C:\\Program Files (x86)\\Git\\bin\\git.exe', // 32位系统或32位安装
-  'C:\\Git\\bin\\git.exe', // 便携式/自定义安装
-];
+const GIT_BASH_CANDIDATE_PATHS_WINDOWS = GIT_BASH_CANDIDATES;
 
 /**
  * 解析 git 可执行文件候选路径列表（按优先级排序）。

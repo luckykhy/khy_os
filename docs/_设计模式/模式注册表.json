@@ -2629,5 +2629,88 @@
   ],
   "platform/packages/shared/src/utils/logger.js": [
     "Decorator"
+  ],
+  "scripts/ci/check-gov-rules.js": [
+    "Template Method",
+    "Visitor"
+  ],
+  "services/backend/src/cli/tui/ink-components/overlayLiveBudget.js": [
+    "Strategy"
+  ],
+  "services/backend/src/cli/handlers/clean.js": [
+    "Command"
+  ],
+  "services/backend/src/constants/installationCandidates.js": [
+    "Flyweight"
+  ],
+  "services/backend/src/services/auditTrajectory/acceptance.js": [
+    "Strategy"
+  ],
+  "services/backend/src/services/auditTrajectory/channel.js": [
+    "Chain of Responsibility",
+    "Proxy"
+  ],
+  "services/backend/src/services/auditTrajectory/diffCapture.js": [
+    "Memento"
+  ],
+  "services/backend/src/services/auditTrajectory/drafter.js": [
+    "Builder"
+  ],
+  "services/backend/src/services/auditTrajectory/index.js": [
+    "Facade"
+  ],
+  "services/backend/src/services/auditTrajectory/parser.js": [
+    "Interpreter"
+  ],
+  "services/backend/src/services/auditTrajectory/recorder.js": [
+    "Memento"
+  ],
+  "services/backend/src/services/auditTrajectory/wire.js": [
+    "Decorator"
+  ],
+  "services/backend/src/services/auditTrajectory/workerProcess.js": [
+    "Template Method"
+  ],
+  "services/backend/src/services/auditTrajectory/workspaceGuard.js": [
+    "Proxy"
+  ],
+  "services/backend/src/cli/tui/app.js": [
+    "Command"
+  ],
+  "services/backend/src/cli/tui/ink-components/App.js": [
+    "Composite"
+  ],
+  "services/backend/src/cli/tui/ink-components/KhyOsView.js": [
+    "Composite"
+  ],
+  "services/backend/src/cli/tui/ink-components/TranscriptView.js": [
+    "Composite"
+  ],
+  "services/backend/src/cli/tui/mouseButtons.js": [
+    "Command"
+  ],
+  "services/backend/src/cli/tui/perfTunables.js": [
+    "Strategy"
+  ],
+  "services/backend/src/services/computerUse/appTarget.js": [
+    "Strategy"
+  ],
+  "services/backend/src/services/computerUse/computerUseAgent.js": [
+    "Command"
+  ],
+  "services/backend/src/services/extensions/quantApp.js": [
+    "Facade"
+  ],
+  "services/backend/src/services/flagRegistry.js": [
+    "Singleton"
+  ],
+  "services/backend/src/services/gitExecutableResolver.js": [
+    "Strategy"
+  ],
+  "services/backend/src/services/guiEval/runEngine.js": [
+    "Template Method"
+  ],
+  "services/backend/src/tools/ComputerUseTool/index.js": [
+    "Command"
   ]
 }

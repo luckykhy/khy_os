@@ -58,6 +58,10 @@ const EXPERIENCE_ENV = 'KHY_COMPUTER_USE_EXPERIENCE';
 const MAX_SOM_MARKS = 30;
 // 卡住检测：连续多少轮「画面无变化且上一步是操作」就注入回退提示
 const STUCK_STREAK_LIMIT = 2;
+// 跨应用暗记（scratchpad）：remember 动作写入。条数与单条长度都设上限，防止提示词膨胀。
+const NOTES_CAP = 24;
+const NOTE_KEY_MAX = 60;
+const NOTE_VALUE_MAX = 600;
 
 // ── LLM 调用 ────────────────────────────────────────────────────────────
 
@@ -310,6 +314,13 @@ const SYSTEM_PROMPT = `你是 khy-os Computer Use 代理，负责通过屏幕观
 - { "action": "listWindows" }   — 列出当前可见窗口
 - { "action": "closeWindow", "app": "Firefox" }   — 关闭窗口（慎用）
 
+### 记忆类（跨应用传递信息的唯一可靠手段）
+- { "action": "remember", "key": "景点顺序", "value": "1. 断桥残雪
+2. 白堤
+3. 苏堤" }   — 把「刚从当前应用读到的关键信息」记入跨应用暗记。
+  暗记会原文注入之后每一轮的「已记录的信息」段，跨应用切换、跨几十轮都不丢失。
+  **无副作用、不消耗操作预算、随时可调用**；同一个 key 再次 remember 覆盖旧值（用于修正）。
+
 ### 控制
 - { "action": "wait", "ms": 1000 }   — 等待（给 UI 反应时间，最多 5000ms）
 - { "action": "finish", "summary": "任务已完成：..." }   — 目标达成，结束任务
@@ -337,7 +348,14 @@ const SYSTEM_PROMPT = `你是 khy-os Computer Use 代理，负责通过屏幕观
 7. 目标达成或确认无法继续时，用 finish 或 escalate 结束
 8. 只输出一个动作的 JSON，不要输出多个
 9. 若收到「卡住检测」提示（连续多轮画面无变化）：先按 esc 关弹窗 → 重新激活目标窗口 → 回退到最近成功的步骤换路径，不要原地反复点击
-10. 可用「经验记忆」中的成功操作模式作为参考，但需按当前实际屏幕判断，不要盲目照搬`;
+10. 可用「经验记忆」中的成功操作模式作为参考，但需按当前实际屏幕判断，不要盲目照搬
+11. **跨应用任务铁律：任何要带去下一个应用用的信息，读到的那一轮立刻 remember**。
+    屏幕会被切走、剪贴板会被下一次 typePaste 覆盖、动作历史会被截断——只有暗记跨轮保留。
+    例：在浏览器里读到 3 个景点名与顺序 → 先 remember，再 activate 到备忘录写入。
+12. 需要「原样重现之前写过的内容」时（如把备忘录里的顺序粘到日历备注），
+    直接取「已记录的信息」里的暗记原文 typePaste 写入，比回源应用重新复制可靠得多。
+13. 目标里指定了输出格式（编号、缩进、换行）时严格遵循；建议把格式要求本身也 remember 下来，
+    避免多轮之后格式走样。`;
 
 // ── 动作解析 ─────────────────────────────────────────────────────────────
 
@@ -428,6 +446,51 @@ function _resolvePoint(actionObj, ctx, prefix = '') {
   };
 }
 
+/**
+ * 把 remember 动作写入跨应用暗记（scratchpad）。
+ *
+ * 这是跨应用任务的数据总线：进度摘要只记「做过什么动作」且被 cap 截断，剪贴板会被
+ * 下一次 typePaste 覆盖，源应用窗口会被 activate 切走——只有暗记能把「在应用 A 里
+ * 读到的事实」原文送到几十轮之后的应用 D（如浏览器→备忘录→地图→日历）。
+ *
+ * 同 key 覆盖（允许修正），超出 NOTES_CAP 丢弃最旧一条。
+ * 原地改数组、零 IO、绝不抛，便于单测。
+ * @param {Array<{key:string,value:string}>} notes  暗记数组（原地修改）
+ * @param {object} actionObj  { key, value }
+ */
+function _recordNote(notes, actionObj) {
+  const key = String((actionObj && actionObj.key) || '')
+    .trim()
+    .slice(0, NOTE_KEY_MAX);
+  const raw = actionObj ? actionObj.value : undefined;
+  let text;
+  if (typeof raw === 'string') {
+    text = raw;
+  } else if (raw === undefined || raw === null) {
+    text = '';
+  } else {
+    try {
+      text = JSON.stringify(raw);
+    } catch {
+      text = String(raw);
+    }
+  }
+  const value = text.trim().slice(0, NOTE_VALUE_MAX);
+  if (!key || !value) {
+    return { success: false, error: 'remember 需要非空的 key 与 value' };
+  }
+  const idx = notes.findIndex((n) => n && n.key === key);
+  if (idx >= 0) {
+    notes[idx] = { key, value };
+  } else {
+    notes.push({ key, value });
+    if (notes.length > NOTES_CAP) {
+      notes.shift();
+    }
+  }
+  return { success: true, note: { key, value }, _iterationSummary: `remembered「${key}」` };
+}
+
 async function _executeAction(controller, actionObj, ctx = {}) {
   const a = actionObj.action;
 
@@ -486,6 +549,13 @@ async function _executeAction(controller, actionObj, ctx = {}) {
       analysis: recognized ? recognized.slice(0, 1500) : '(未识别到文字)',
       _iterationSummary: 'aiAnalyzed (ocr)',
     };
+  }
+  if (a === 'remember') {
+    // 记忆类动作：只写内存 scratchpad，不触碰桌面 → 不过 safetyGate、不计操作预算。
+    if (!Array.isArray(ctx.notes)) {
+      return { success: false, error: 'remember 不可用（缺少 notes 上下文）' };
+    }
+    return _recordNote(ctx.notes, actionObj);
   }
   if (a === 'clickElement') {
     // 混合动作（「GUI Agents 综述」3.3）：元素引用定位 + 可选坐标偏移，兼顾精度与泛化。
@@ -798,7 +868,15 @@ function _summarizeOcr(recognized, maxChars = 600) {
 function _summarizeProgress(history, opts = {}) {
   const cap = opts.cap || PROGRESS_SUMMARY_CAP;
   const failCap = opts.failCap || 3;
-  const nonOps = new Set(['observe', 'inspect', 'aiAnalyze', 'plan', 'think', 'app-soft']);
+  const nonOps = new Set([
+    'observe',
+    'inspect',
+    'aiAnalyze',
+    'plan',
+    'think',
+    'app-soft',
+    'remember',
+  ]);
   const done = [];
   const failed = [];
   for (const h of Array.isArray(history) ? history : []) {
@@ -895,6 +973,7 @@ function _writeJournal(state, result) {
       stoppedReason: result.stoppedReason || '',
       summary: result.summary || '',
       plan: state.plan || '',
+      notes: Array.isArray(state.notes) ? state.notes : [],
       iterations: Array.isArray(state.history) ? state.history.length : 0,
       actuationCount: state.actuationCount || 0,
       steps: (state.history || []).map((h) => ({
@@ -1039,7 +1118,7 @@ function _loadExperience(goal, app, opts = {}) {
           (s) =>
             s &&
             s.action &&
-            !['observe', 'inspect', 'aiAnalyze', 'plan', 'think'].includes(s.action)
+            !['observe', 'inspect', 'aiAnalyze', 'plan', 'think', 'remember'].includes(s.action)
         )
         .slice(0, 8)
         .map((s) =>
@@ -1095,6 +1174,14 @@ function _buildDecisionPrompt(state) {
         '请规划好应用切换：用 { "action": "activate", "app": "<应用名>" } 在它们之间切换，切换后先 observe 再操作。'
       );
     }
+    lines.push('');
+  }
+  // 执行计划必须每轮注入：长任务（尤其跨 4 个应用的连贯任务）里模型靠它维持阶段感，
+  // 否则会丢失「现在做到第几步」而反复重做已完成的阶段。
+  if (state.plan) {
+    lines.push('## 执行计划（首轮生成，按阶段推进）');
+    lines.push(state.plan);
+    lines.push('对照下方「任务进度」判断当前处于计划的哪一步，只推进下一步；已完成的步骤不要重做。');
     lines.push('');
   }
   lines.push(`## 当前屏幕（你可以在下方截图中看到）`);
@@ -1170,6 +1257,14 @@ function _buildDecisionPrompt(state) {
   if (progress) {
     lines.push('## 任务进度（持久摘要，跨轮保留）');
     lines.push(progress);
+    lines.push('');
+  }
+  // 跨应用暗记：原文注入且不参与 cap 截断——应用 A 的信息能活到应用 D 的唯一通道。
+  if (Array.isArray(state.notes) && state.notes.length > 0) {
+    lines.push('## 已记录的信息（你之前 remember 的内容，跨应用传递用）');
+    for (const n of state.notes) {
+      lines.push(`- ${n.key}: ${n.value}`);
+    }
     lines.push('');
   }
   const experience = _loadExperience(state.goal, state.app, { limit: 2 });
@@ -1381,6 +1476,7 @@ class ComputerUseAgent {
       lastOcrText: '',
       lastVisionText: '',
       lastActionResult: null,
+      notes: [], // 跨应用暗记（remember 写入，每轮注入决策提示词）
       actuationCount: 0,
       finished: false,
       escalated: false,
@@ -1425,6 +1521,10 @@ class ComputerUseAgent {
       } catch {
         plan = '';
       } // 计划失败不阻塞，直接进入循环
+      // 计划必须落到 state 上：_buildDecisionPrompt 只读 state.plan。原先只在
+      // iter===0 且提示词已构建【之后】才赋值，计划从未进入任何一轮决策提示词
+      // （只写进了轨迹日志），plan-first 形同虚设。
+      state.plan = plan || '';
     }
 
     // ── 主循环 ─────────────────────────────────────────────────────
@@ -1601,10 +1701,6 @@ class ComputerUseAgent {
 
       // Step 2: think（调用 LLM 决策）
       const decisionPrompt = _buildDecisionPrompt(state);
-      if (planFirst && plan && iter === 0) {
-        // 首轮带上计划
-        state.plan = plan;
-      }
       let decisionContent;
       try {
         decisionContent = await _callLLM(
@@ -1729,21 +1825,30 @@ class ComputerUseAgent {
           visionDescriber: this._visionDescriber,
           platform: caps.platform,
           screenSize: state._screenSize || null,
+          notes: state.notes,
         });
       } catch (err) {
         actResult = { success: false, error: (err && err.message) || String(err) };
       }
 
-      const isActuate = !['observe', 'inspect', 'aiAnalyze', 'wait', 'finish', 'escalate'].includes(
-        action.action
-      );
+      const isActuate = ![
+        'observe',
+        'inspect',
+        'aiAnalyze',
+        'remember',
+        'wait',
+        'finish',
+        'escalate',
+      ].includes(action.action);
       if (isActuate && actResult.success !== false) {
         state.actuationCount++;
       }
 
       // Step 5: 短暂等待让 UI 反应
       if (
-        !['wait', 'finish', 'escalate', 'observe', 'inspect', 'aiAnalyze'].includes(action.action)
+        !['wait', 'finish', 'escalate', 'observe', 'inspect', 'aiAnalyze', 'remember'].includes(
+          action.action
+        )
       ) {
         await new Promise((r) => setTimeout(r, action.waitMs || 600));
       }
@@ -1829,6 +1934,7 @@ function _withAppContext(state, result) {
     app: state ? state.app || '' : '',
     appRequested: state ? state.appRequested || '' : '',
     targetApps: state && Array.isArray(state.targetApps) ? state.targetApps.slice() : [],
+    notes: state && Array.isArray(state.notes) ? state.notes.slice() : [],
     ...(state && state.appWarn ? { appWarn: state.appWarn } : {}),
   };
   const journalPath = _writeJournal(state, out);
@@ -1862,6 +1968,7 @@ function _compactAction(action) {
     'prompt',
     'region',
     'offset',
+    'value',
   ];
   for (const k of keep) {
     if (k in rest) {
@@ -1896,6 +2003,7 @@ module.exports = {
     _summarizeOcr,
     _summarizeElements,
     _summarizeProgress,
+    _recordNote,
     _detectChange,
     _buildDecisionPrompt,
     _writeJournal,

@@ -2026,6 +2026,17 @@ const FLAGS = {
   // 每 render 重建(逐字节回退今日)。
   KHY_STATIC_ITEMS_MEMO: { mode: 'default-on', off: 'CANON', default: true },
 
+  // ── 独占输入的全屏覆盖层 live 预算(overlayLiveBudget;修「/khyos 后输入框残影 + 输出重复两次」)──
+  // live(非 Static)区是一列兄弟,高度累加;ink 在 outputHeight >= rows 时走全屏分支写
+  // clearTerminal + 整段 static + output。win32 的 clearTerminal 是 `[2J[0f`(无 3J 可剥,
+  // 且 scrollbackPreserve 刻意在所有平台剥 3J 以保住原生 scrollback),conhost 的 2J 把旧帧**滚进**
+  // scrollback 而非就地擦 → 每帧一份永久副本。KhyOsView 自身已占 rows-1、每 40ms 重绘,再叠输入框
+  // + 页脚 → 必然每帧触发:副本堆叠 =「输出重复两次」,副本里冻结的 chrome =「输入框残影」。
+  // 开 → 覆盖层挂载期间隐藏 PromptFrame/FooterBar(既有 modelPicker 的同款处理,补齐 KhyOsView)
+  // 且覆盖层正文预算收紧到 rows-8(总高 rows-3 < rows);关 → 判定只认 modelPicker、正文预算回
+  // max(6, rows-6),逐字节回退今日。
+  KHY_OVERLAY_LIVE_BUDGET: { mode: 'default-on', off: 'CANON', default: true },
+
   // ── 已完成工具 diff 行按对象身份记忆(toolDiffRowsMemo)──────────────────────────────
   // 流式每帧父 App 重渲 → ToolLines(未 memo)对每个**已完成**工具重跑 diff 行构造:写入/编辑走
   // computeStructuredDiffHunks(全文结构化 diff)、shell 走 splitDiffLines 全量切行+逐行分类。但已完成
