@@ -62,6 +62,7 @@ function WelcomeBanner({
   authMethod,
   contextWindow,
   gatewayAdapters,
+  updateLine,
   showArt = true,
 }) {
   const { Box, Text } = inkRuntime.get();
@@ -91,7 +92,10 @@ function WelcomeBanner({
       ),
       h(Text, null, ''),
       h(Text, null, h(Text, { color: 'yellow' }, '状态')),
-      h(Text, { dimColor: true }, `网关：${gatewayAdapters || 0} 个适配器就绪`)
+      h(Text, { dimColor: true }, `网关：${gatewayAdapters || 0} 个适配器就绪`),
+      // 更新时间与来源：无法确定来源时整行省略，绝不显示占位或猜测值。
+      // 追加在「状态」区末尾（版本行之后），故 ROWS_BEFORE_VERSION 保持 0。
+      updateLine ? h(Text, { dimColor: true }, `更新：${updateLine}`) : null
     ),
     h(Text, null, ''),
     h(

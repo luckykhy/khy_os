@@ -319,3 +319,181 @@ describe('updateCoordinator', () => {
     assert.equal(skipped.skippedTarget, '2.0.0');
   });
 });
+
+describe('updateCoordinator provenance', () => {
+  function provenanceGit(overrides = {}) {
+    const values = {
+      'rev-parse --show-toplevel': 'C:/repo',
+      'log -1 --format=%H%n%cI%n%D':
+        'aaa\n2026-08-24T15:07:17+08:00\nHEAD -> main, origin/main, origin/HEAD',
+      'status --porcelain -uno': '',
+      ...overrides,
+    };
+    const calls = [];
+    return {
+      calls,
+      run(args) {
+        const key = args.join(' ');
+        calls.push(key);
+        if (!(key in values)) throw new Error(`unexpected git: ${key}`);
+        const value = values[key];
+        if (value instanceof Error) throw value;
+        return value;
+      },
+    };
+  }
+
+  function repoFs() {
+    return {
+      existsSync(file) {
+        // 只认源码仓；.portable/BUILD-INFO.json 一律不存在，避免走便携分支
+        return /services[\\/]backend[\\/]package\.json$/.test(file);
+      },
+      readFileSync(file) {
+        if (/package\.json$/.test(file)) return '{"version":"1.1.11"}';
+        throw new Error('not readable');
+      },
+    };
+  }
+
+  test('reads commit time and upstream from the live worktree, never over the network', () => {
+    const git = provenanceGit();
+    const p = coordinator.getSourceProvenance({
+      cwd: 'C:/repo', fs: repoFs(), git: git.run, memoryOnly: true,
+    });
+    assert.equal(p.kind, 'git');
+    assert.equal(p.version, '1.1.11');
+    assert.equal(p.commit, 'aaa');
+    assert.equal(p.updatedAt, '2026-08-24T15:07:17+08:00');
+    assert.equal(p.source, 'origin/main');
+    assert.equal(p.dirty, false);
+    // 启动路径绝不能 fetch：一次网络往返会把首屏卡在离线超时上
+    assert.ok(!git.calls.some(call => call.startsWith('fetch')));
+  });
+
+  test('spends exactly one git spawn beyond locating the repo', () => {
+    // 每次 spawn 在 Windows 上都是一次 CreateProcess，直接计入启动首屏。
+    // 这条断言把「一次 git log 拿齐 SHA/时间/来源」钉成契约。
+    const git = provenanceGit();
+    coordinator.getSourceProvenance({
+      cwd: 'C:/repo', fs: repoFs(), git: git.run, memoryOnly: true,
+    });
+    assert.deepEqual(git.calls, [
+      'rev-parse --show-toplevel',
+      'log -1 --format=%H%n%cI%n%D',
+    ]);
+  });
+
+  test('prefers a remote ref and strips HEAD aliases from the decoration', () => {
+    const git = provenanceGit({
+      'log -1 --format=%H%n%cI%n%D':
+        'aaa\n2026-08-24T15:07:17+08:00\nHEAD -> feature/x, origin/feature/x, gitee/feature/x',
+    });
+    assert.equal(coordinator.getSourceProvenance({
+      cwd: 'C:/repo', fs: repoFs(), git: git.run, memoryOnly: true,
+    }).source, 'origin/feature/x');
+  });
+
+  test('falls back to the local branch when no remote ref points at the commit', () => {
+    // 本地领先于 origin 时装饰里没有远程引用；标 origin/main 会是谎报
+    const git = provenanceGit({
+      'log -1 --format=%H%n%cI%n%D': 'aaa\n2026-08-24T15:07:17+08:00\nHEAD -> main',
+    });
+    assert.equal(coordinator.getSourceProvenance({
+      cwd: 'C:/repo', fs: repoFs(), git: git.run, memoryOnly: true,
+    }).source, 'main');
+  });
+
+  test('reports no source at all on a detached HEAD', () => {
+    const git = provenanceGit({
+      'log -1 --format=%H%n%cI%n%D': 'aaa\n2026-08-24T15:07:17+08:00\nHEAD',
+    });
+    assert.equal(coordinator.getSourceProvenance({
+      cwd: 'C:/repo', fs: repoFs(), git: git.run, memoryOnly: true,
+    }).source, null);
+  });
+
+  test('skips the worktree scan unless dirtiness is explicitly requested', () => {
+    // git status 要遍历工作树（本仓实测约为 git log 的两倍多），
+    // 默认关闭才能让启动首屏只付一次 spawn 的代价
+    const off = provenanceGit({ 'status --porcelain -uno': ' M a.js' });
+    const quiet = coordinator.getSourceProvenance({
+      cwd: 'C:/repo', fs: repoFs(), git: off.run, memoryOnly: true,
+    });
+    assert.equal(quiet.dirty, false);
+    assert.ok(!off.calls.some(call => call.startsWith('status')));
+
+    const on = provenanceGit({ 'status --porcelain -uno': ' M a.js' });
+    const probed = coordinator.getSourceProvenance({
+      cwd: 'C:/repo', fs: repoFs(), git: on.run, memoryOnly: true, includeDirty: true,
+    });
+    assert.equal(probed.dirty, true);
+    // -uno：未跟踪的嵌套仓库/草稿不该让横幅永久报「有未提交改动」
+    assert.ok(on.calls.includes('status --porcelain -uno'));
+  });
+
+  test('shows checkedAt only when the snapshot matches the running commit', () => {
+    coordinator.writeState(coordinator.blankState({
+      current: { version: '1.1.11', commit: 'aaa' },
+      checkedAt: 4242,
+    }), { memoryOnly: true });
+    const fresh = coordinator.getSourceProvenance({
+      cwd: 'C:/repo', fs: repoFs(), git: provenanceGit().run, memoryOnly: true,
+    });
+    assert.equal(fresh.checkedAt, 4242);
+    assert.equal(fresh.stateStale, false);
+  });
+
+  test('degrades a snapshot left behind by another branch instead of trusting it', () => {
+    coordinator.writeState(coordinator.blankState({
+      current: { version: '1.1.0', commit: 'oldsha' },
+      checkedAt: 4242,
+    }), { memoryOnly: true });
+    const p = coordinator.getSourceProvenance({
+      cwd: 'C:/repo', fs: repoFs(), git: provenanceGit().run, memoryOnly: true,
+    });
+    assert.equal(p.checkedAt, null);
+    assert.equal(p.stateStale, true);
+    // 实时 Git 信息仍然可用——降级只丢弃不可信的检查时间
+    assert.equal(p.updatedAt, '2026-08-24T15:07:17+08:00');
+  });
+
+  test('returns a blank record instead of throwing when git is unavailable', () => {
+    const p = coordinator.getSourceProvenance({
+      cwd: 'C:/repo',
+      fs: repoFs(),
+      git: () => { throw new Error('git not found'); },
+      memoryOnly: true,
+    });
+    assert.equal(p.kind, null);
+    assert.equal(p.commit, '');
+    assert.equal(coordinator.formatProvenance(p), '');
+  });
+
+  test('formats time literally from the ISO string without shifting timezone', () => {
+    // %cI 自带提交时区偏移；按字面截取才能与 git log 逐字对上，
+    // 也让输出不随运行机器的时区漂移
+    const text = coordinator.formatProvenance({
+      updatedAt: '2026-08-24T15:07:17+08:00',
+      source: 'origin/main',
+      shortCommit: '41b074f',
+    });
+    assert.equal(text, '2026-08-24 15:07 · origin/main@41b074f');
+  });
+
+  test('marks uncommitted changes and tolerates missing fields', () => {
+    assert.equal(
+      coordinator.formatProvenance({
+        updatedAt: '2026-08-24T15:07:17+08:00',
+        source: 'main',
+        shortCommit: 'abc1234',
+        dirty: true,
+      }),
+      '2026-08-24 15:07 · main@abc1234（有未提交改动）'
+    );
+    assert.equal(coordinator.formatProvenance({ source: 'origin/main' }), 'origin/main');
+    assert.equal(coordinator.formatProvenance({ updatedAt: 'not-a-date' }), '');
+    assert.equal(coordinator.formatProvenance(null), '');
+    assert.equal(coordinator.formatProvenance(undefined), '');
+  });
+});

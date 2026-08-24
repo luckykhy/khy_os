@@ -281,6 +281,73 @@ const _submitModules = (() => {
   return m;
 })();
 
+/**
+ * 纯函数：计算 WelcomeBanner 的 props（含「更新」行），供启动横幅渲染。
+ *
+ * 从 App 体内抽出来是因为它只依赖 footer + package.json，不接触组件状态/终端，
+ * 于是能在 node:test 里直接断言——App 的 banner 包在 <Static> 的 staticItems 里，
+ * 需要一个完整的挂载环境才会渲染，测试没法走到那一步。
+ *
+ * 一切按 fail-soft 处理：模型名/窗口/更新行各自 try，后端不可用时字段为空字符串，
+ * 横幅整行省略而不是显示占位值。绝不抛、绝不联网、绝不 spawn 包管理器。
+ *
+ * @param {object} [footer] 底部状态对象（{ model?, contextLimit?, adapter? }）
+ * @param {object} [overrides] 测试注入用（{ pkg?, updateLine? }）
+ * @returns {object} bannerProps
+ */
+function _resolveBannerProps(footer = {}, overrides = {}) {
+  const props = {};
+  try {
+    // CC 后端口径对齐(与页脚统一):横幅同样走友好模型名 + ccFormatTokens 的窗口大小。
+    // model 经 FooterBar.formatModelLabel(裸 slug → "Opus 4.8",未知 → 原样);
+    // contextWindow 经 ccFormatTokens(1M 窗口 → "1m 令牌" 而非旧的 "1000k 令牌";
+    // 200k → "200k 令牌" 逐字节不变)——消除 [[project_cc_token_count_semantics]] 记的最后一处
+    // 散落本地 token 格式器(Math.round(limit/1000)+"k")。两者各自包 try,异常静默回退旧形。
+    const pkg = overrides.pkg || require('../../../../package.json');
+    let bannerModel = footer.model;
+    try {
+      if (FooterBar && FooterBar.formatModelLabel) {
+        bannerModel = FooterBar.formatModelLabel(footer.model);
+      }
+    } catch {
+      bannerModel = footer.model;
+    }
+    let bannerWindow = '';
+    if (footer.contextLimit) {
+      try {
+        const fmt = require('../../ccFormat').ccFormatTokens;
+        bannerWindow = typeof fmt === 'function' ? `${fmt(footer.contextLimit)} 令牌` : '';
+      } catch {
+        /* keep the legacy window string */
+      }
+    }
+    bannerWindow = bannerWindow || (footer.contextLimit ? `${Math.round(footer.contextLimit / 1000)}k 令牌` : '');
+    // 更新时间与来源：只读本地 git/BUILD-INFO，不联网、不 spawn 包管理器，
+    // 因此可以同步取；失败时留空字符串，横幅整行省略而不是显示占位值。
+    let bannerUpdateLine = '';
+    try {
+      if (overrides.updateLine) {
+        bannerUpdateLine = overrides.updateLine;
+      } else {
+        const coordinator = require('../../../services/updateCoordinator');
+        bannerUpdateLine = coordinator.formatProvenance(coordinator.getSourceProvenance());
+      }
+    } catch {
+      /* 探测不可用时不展示更新行 */
+    }
+    props.version = pkg.version;
+    props.model = bannerModel;
+    props.adapter = footer.adapter || process.env.GATEWAY_PREFERRED_ADAPTER || 'auto';
+    props.authMethod = 'API 密钥';
+    props.contextWindow = bannerWindow;
+    props.gatewayAdapters = 9;
+    props.updateLine = bannerUpdateLine;
+  } catch {
+    /* bannerProps 组装失败不影响 App 主体 */
+  }
+  return props;
+}
+
 function App({ options = {} }) {
   const h = React.createElement;
   const { Box, Text, Static, useInput, useApp } = inkRuntime.get();
@@ -4191,44 +4258,7 @@ function App({ options = {} }) {
   );
 
   // Welcome banner props.
-  let bannerProps = {};
-  try {
-    const pkg = require('../../../../package.json');
-    // CC 后端口径对齐(与页脚统一):横幅同样走友好模型名 + ccFormatTokens 的窗口大小。
-    // model 经 FooterBar.formatModelLabel(裸 slug → "Opus 4.8",未知 → 原样);
-    // contextWindow 经 ccFormatTokens(1M 窗口 → "1m 令牌" 而非旧的 "1000k 令牌";
-    // 200k → "200k 令牌" 逐字节不变)——消除 [[project_cc_token_count_semantics]] 记的最后一处
-    // 散落本地 token 格式器(Math.round(limit/1000)+"k")。两者各自包 try,异常静默回退旧形。
-    let bannerModel = footer.model;
-    try {
-      if (FooterBar && FooterBar.formatModelLabel) {
-        bannerModel = FooterBar.formatModelLabel(footer.model);
-      }
-    } catch {
-      bannerModel = footer.model;
-    }
-    let bannerWindow = footer.contextLimit ? `${Math.round(footer.contextLimit / 1000)}k 令牌` : '';
-    try {
-      if (footer.contextLimit) {
-        const fmt = require('../../ccFormat').ccFormatTokens;
-        if (typeof fmt === 'function') {
-          bannerWindow = `${fmt(footer.contextLimit)} 令牌`;
-        }
-      }
-    } catch {
-      /* keep the legacy window string */
-    }
-    bannerProps = {
-      version: pkg.version,
-      model: bannerModel,
-      adapter: footer.adapter || process.env.GATEWAY_PREFERRED_ADAPTER || 'auto',
-      authMethod: 'API 密钥',
-      contextWindow: bannerWindow,
-      gatewayAdapters: 9,
-    };
-  } catch {
-    /* */
-  }
+  const bannerProps = _resolveBannerProps(footer);
 
   // 输入框占位符:优先级阶梯收敛到纯叶子 promptPlaceholder(CC usePromptInputPlaceholder)。
   // 新增「有可编辑排队消息且提示未用尽 → 按 ↑ 编辑」一档;门控关/叶子缺失 → 逐字节回退历史两分支。
@@ -5138,6 +5168,7 @@ function App({ options = {} }) {
 module.exports = App;
 // Exported for unit tests: status-line label composition + live activity read.
 module.exports._getStatusLabel = _getStatusLabel;
+module.exports._resolveBannerProps = _resolveBannerProps;
 module.exports._taskActivity = _taskActivity;
 module.exports._liveActivity = _liveActivity;
 module.exports._spinnerProgress = _spinnerProgress;

@@ -1701,4 +1701,107 @@ describeOrSkip('Ink TUI render smoke (src/cli/tui/ink-components)', () => {
       expect(over).toEqual([]);
     });
   }, 20000);
+
+  // ── 启动横幅的「更新时间 + 来源」行 ──────────────────────────────────────
+  describe('WelcomeBanner 更新行', () => {
+    const bannerFrame = async (extra) => stripAnsi(
+      await renderCompFrame('WelcomeBanner', {
+        ...CASES.WelcomeBanner, showArt: false, ...extra,
+      })
+    );
+
+    test('有 updateLine 时展示更新时间与来源', async () => {
+      const frame = await bannerFrame({
+        updateLine: '2026-08-24 15:07 · origin/main@41b074f',
+      });
+      expect(frame).toContain('更新：2026-08-24 15:07 · origin/main@41b074f');
+    });
+
+    test('无 updateLine 时整行省略，不留空行也不显示占位值', async () => {
+      const frame = await bannerFrame({ updateLine: '' });
+      expect(frame).not.toContain('更新：');
+      // 未知就是未知——宁可不显示，也不能编一个「未知/待定」冒充事实
+      expect(frame).not.toMatch(/未知|待定|N\/A/);
+      expect(frame).toContain('网关：');
+    });
+
+    test('降级：来源不可核验时只显示已确定的部分', async () => {
+      // 陈旧快照被丢弃后，formatProvenance 只剩来源可用
+      const frame = await bannerFrame({ updateLine: 'origin/main@41b074f' });
+      expect(frame).toContain('更新：origin/main@41b074f');
+      expect(frame).not.toMatch(/更新：\d{4}-/);
+    });
+
+    test('更新行不改变版本行之前的行数（ROWS_BEFORE_VERSION 契约）', async () => {
+      const WelcomeBanner = require('../../src/cli/tui/ink-components/WelcomeBanner');
+      const withLine = await bannerFrame({ updateLine: '2026-08-24 15:07 · main@abc1234' });
+      const rows = withLine.split(NL);
+      const versionRow = rows.findIndex((ln) => ln.includes('khy OS v'));
+      expect(versionRow).toBe(WelcomeBanner.bannerRowsBeforeVersion());
+    });
+
+    test('窄终端下更新行不溢出边界', async () => {
+      const Comp = require('../../src/cli/tui/ink-components/WelcomeBanner');
+      const { displayWidth } = require('../../src/cli/formatters');
+      const stdout = fakeStdout();
+      stdout.columns = 60;
+      stdout.rows = 24;
+      const instance = ink.render(
+        React.createElement(Comp, {
+          ...CASES.WelcomeBanner,
+          showArt: false,
+          updateLine: '2026-08-24 15:07 · origin/feature/very-long-branch-name@41b074f（有未提交改动）',
+        }),
+        { stdout, stdin: fakeStdin(), exitOnCtrlC: false, patchConsole: false }
+      );
+      await new Promise((resolve) => setTimeout(resolve, 40));
+      const frame = stripAnsi(stdout.getBuffer());
+      instance.unmount();
+      const over = frame.split(NL).filter((ln) => displayWidth(ln) > 60);
+      expect(over).toEqual([]);
+    });
+  });
+
+  // ── bannerProps 组装纯函数（从 App 体的 try 抽出，独立可断言）─────────────
+  describe('_resolveBannerProps', () => {
+    test('传入 updateLine 时原样进入 props；字段齐全且走 ccFormatTokens 窗口', () => {
+      const App = require('../../src/cli/tui/ink-components/App');
+      const fn = App._resolveBannerProps;
+      expect(typeof fn).toBe('function');
+      const props = fn({ model: 'claude-opus-5', contextLimit: 1_000_000, adapter: 'cli' }, {
+        pkg: { version: '1.1.11' },
+        updateLine: '2026-08-24 15:07 · origin/main@41b074f',
+      });
+      expect(props.version).toBe('1.1.11');
+      expect(props.gatewayAdapters).toBe(9);
+      expect(props.updateLine).toBe('2026-08-24 15:07 · origin/main@41b074f');
+      expect(props.contextWindow).toBe('1m 令牌');
+    });
+
+    test('模型名经 FooterBar 友好化；未知模型恒等透传', () => {
+      const App = require('../../src/cli/tui/ink-components/App');
+      const fn = App._resolveBannerProps;
+      // updateLine 给 truthy 占位，避开真实协调器 git 路径，只测模型名派生
+      expect(fn({ model: 'claude-opus-5' }, { updateLine: 'x' }).model).toBe('Opus 5');
+      expect(fn({ model: 'gpt-4o' }, { updateLine: 'x' }).model).toBe('gpt-4o');
+    });
+
+    test('协调器抛错时降级为空串而非崩溃（fail-soft）', () => {
+      const App = require('../../src/cli/tui/ink-components/App');
+      const fn = App._resolveBannerProps;
+      // App 只在其内部 require 协调器，这里直接对真实模块做运行时覆盖：
+      // _resolveBannerProps 是在函数体内、每次调用时重新读取 coordinator.getSourceProvenance，
+      // 所以替换导出的函数引用即可拦截，无需进入真实 git 路径。
+      const mod = require('../../src/services/updateCoordinator');
+      const orig = mod.getSourceProvenance;
+      try {
+        mod.getSourceProvenance = () => { throw new Error('boom'); };
+        const props = fn({ model: 'claude-opus-5' }, { updateLine: '' });
+        expect(props.updateLine).toBe('');
+        expect(props.version).toBeDefined();
+      } finally {
+        mod.getSourceProvenance = orig;
+      }
+    });
+  });
 });

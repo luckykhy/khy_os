@@ -718,6 +718,170 @@ function skipUpdate(opts = {}) {
   return writeState({ ...current, state: 'idle', skippedTarget: target || null }, opts);
 }
 
+/**
+ * 纯函数：从 `git log --format=%D` 的引用装饰里挑出最能代表「来源」的一个。
+ *
+ * 装饰形如 `HEAD -> main, origin/main, origin/HEAD, gitee/main, tag: v1.1.11`。
+ * 优先远程跟踪引用（它说明这份代码已同步到哪里），其次本地分支名。
+ *
+ * 本地分支靠 `HEAD ->` 标记识别，而不是「含斜杠即远程」——`feature/x` 这类
+ * 带斜杠的本地分支会被那种猜法误判成远程引用，报出一个并不存在的同步来源。
+ * 裸 HEAD（detached）、`origin/HEAD` 这类别名和 tag 都不是同步来源，剔除。
+ *
+ * @param {string} decoration %D 的原始输出
+ * @returns {?string} 形如 'origin/main' 或 'main'；无可用引用时 null
+ */
+function pickSourceRef(decoration) {
+  let local = null;
+  const remotes = [];
+  for (const raw of String(decoration || '').split(',')) {
+    const ref = raw.trim();
+    if (!ref || ref === 'HEAD' || /\/HEAD$/.test(ref) || ref.startsWith('tag:')) continue;
+    const headed = /^HEAD\s*->\s*(.+)$/.exec(ref);
+    if (headed) local = headed[1].trim() || null;
+    else remotes.push(ref);
+  }
+  return remotes[0] || local;
+}
+
+/**
+ * 只读本地元数据的「上次更新时间 + 来源」探测——绝不联网、绝不抛。
+ *
+ * 三种时间必须分开，混为一谈就会把「查过更新」冒充成「更新过代码」：
+ *   - updatedAt：当前工作树 HEAD 的提交时间（git log -1 --format=%cI）。
+ *     它是「这份代码有多新」唯一可核验的答案。
+ *   - source：该提交跟踪的上游引用（如 origin/main）；无上游时退回本地分支名。
+ *     @{upstream} 只读本地 config 与远程跟踪引用，不发网络请求。
+ *   - checkedAt：更新检查发生的时间，来自 updates/state.json，且**仅当快照
+ *     记录的 commit 与当前 HEAD 一致时**才可信；否则它是旧分支留下的陈旧
+ *     快照（本仓库就出现过 state.json 停在已切走的分支上），此时标 stateStale。
+ *
+ * 不走 detectInstallation：它的 package 分支会 spawn pip/npm 探测版本，把一个
+ * 展示字段变成启动期的进程开销。这里只走便携根（纯 fs）与源码仓（一次
+ * git rev-parse）两条廉价路径，都不命中则直接认不出来。
+ *
+ * @param {object} [opts] { cwd?, fs?, git?, stateFile?, memoryOnly? } — git/fs 可注入供测试桩
+ * @returns {{kind: ?string, version: ?string, commit: string, shortCommit: string,
+ *   updatedAt: ?string, source: ?string, dirty: boolean, checkedAt: ?number,
+ *   stateStale: boolean}}
+ */
+function getSourceProvenance(opts = {}) {
+  const blank = {
+    kind: null,
+    version: null,
+    commit: '',
+    shortCommit: '',
+    updatedAt: null,
+    source: null,
+    dirty: false,
+    checkedAt: null,
+    stateStale: false,
+  };
+  const result = { ...blank };
+  try {
+    const fsImpl = opts.fs || fs;
+    const cwd = opts.cwd || process.env.KHY_OS_ROOT || process.cwd();
+    // 与 detectInstallation 同序：便携运行时优先于源码仓。
+    const portableRoot = findPortableRoot(opts.portableRoot || cwd, fsImpl);
+    if (portableRoot) {
+      result.kind = 'portable';
+      try {
+        const info = JSON.parse(
+          fsImpl.readFileSync(path.join(portableRoot, 'BUILD-INFO.json'), 'utf8')
+        );
+        result.version = String(info.version || '') || null;
+        result.commit = String(info.sourceCommit || '');
+        result.shortCommit = result.commit.slice(0, 7);
+        // BUILD-INFO.json 没有构建时间字段，宁可不显示时间也不编一个出来。
+        result.source = String(info.kind || 'portable-runtime');
+      } catch {
+        result.source = 'portable-runtime';
+      }
+    } else {
+      const sourceRoot = findSourceRoot(cwd, opts);
+      if (sourceRoot) {
+        result.kind = 'git';
+        result.version = readSourceVersion(sourceRoot, fsImpl);
+        // 每个 git 子进程在 Windows 上都是一次 CreateProcess（见
+        // extensions/scripts/khy-diagnostics/bench/git_spawn_bench.js），而这段
+        // 代码在启动首屏同步执行，所以三条信息压进一次调用：
+        //   %H 提交 SHA / %cI 提交时间 / %D 指向该提交的引用装饰
+        // 用 %D 而非 @{upstream}：它回答的是「这份代码正是哪个引用上的内容」。
+        // 本地领先于 origin 时 origin/main 不会出现在装饰里，此时退回分支名，
+        // 而不是标一个并不包含当前代码的远程引用。
+        try {
+          const head = runGit(
+            ['log', '-1', '--format=%H%n%cI%n%D'], sourceRoot, opts
+          ).split('\n');
+          result.commit = (head[0] || '').trim();
+          result.shortCommit = result.commit.slice(0, 7);
+          result.updatedAt = (head[1] || '').trim() || null;
+          result.source = pickSourceRef((head[2] || '').trim());
+        } catch { /* 空仓/无提交 → 字段保持空 */ }
+        // 脏检测默认关闭：git status 要遍历工作树（本仓实测 ~147ms，是 git log
+        // 的两倍多），启动首屏不值当。需要时由调用方显式 includeDirty 打开。
+        // -uno：只看已跟踪文件，未跟踪的嵌套仓/草稿不该让横幅永久报脏。
+        if (opts.includeDirty) {
+          try {
+            result.dirty = runGit(
+              ['status', '--porcelain', '-uno'], sourceRoot, opts
+            ).length > 0;
+          } catch { /* fail soft */ }
+        }
+      }
+    }
+
+    // 检查时间：与当前 HEAD 同源才展示，否则只标陈旧。
+    try {
+      const state = readState(opts);
+      const recorded = String(
+        (state.current && state.current.commit) || (state.source && state.source.commit) || ''
+      );
+      if (state.checkedAt) {
+        if (!result.commit || !recorded || recorded === result.commit) {
+          result.checkedAt = state.checkedAt;
+        } else {
+          result.stateStale = true;
+        }
+      }
+    } catch { /* 状态文件不可读不影响其余字段 */ }
+    return result;
+  } catch {
+    return blank;
+  }
+}
+
+/**
+ * 纯函数：把 getSourceProvenance() 的结果渲成一行启动横幅文本。零 IO、绝不抛。
+ *
+ * 时间按 ISO 字面截取（不转本机时区）：%cI 带的是提交者当时的时区偏移，保留它
+ * 才能与 git log 看到的值逐字对上，也让输出不随运行机器的时区漂移。
+ *
+ * @param {object} [provenance] getSourceProvenance() 的返回值
+ * @returns {string} 形如 "2026-08-23 18:04 · origin/main@6b3babe"；无可展示信息时为 ''
+ */
+function formatProvenance(provenance) {
+  try {
+    if (!provenance || typeof provenance !== 'object') return '';
+    const parts = [];
+    const iso = String(provenance.updatedAt || '');
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(iso)) {
+      parts.push(`${iso.slice(0, 10)} ${iso.slice(11, 16)}`);
+    }
+    const source = String(provenance.source || '');
+    const short = String(provenance.shortCommit || '');
+    if (source && short) parts.push(`${source}@${short}`);
+    else if (source) parts.push(source);
+    else if (short) parts.push(short);
+    if (!parts.length) return '';
+    let text = parts.join(' · ');
+    if (provenance.dirty) text += '（有未提交改动）';
+    return text;
+  } catch {
+    return '';
+  }
+}
+
 function resetForTests() {
   memoryState = null;
   inFlight = null;
@@ -733,6 +897,8 @@ module.exports = {
   writeState,
   detectInstallation,
   getGitStatus,
+  getSourceProvenance,
+  formatProvenance,
   checkUpdate,
   stageUpdate,
   applyUpdate,
