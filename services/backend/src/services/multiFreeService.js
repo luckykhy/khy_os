@@ -134,6 +134,20 @@ let _proxyFailedOnce = false;
 // 的请求单独经其代理发出；其余 provider 不受影响（沿用共享 keep-alive agent 直连）。
 // agent 按代理 URL 缓存复用，保持 keep-alive 连接池语义。代理地址只来自配置，源码零硬编码。
 const _providerProxyAgents = new Map();
+// 已告警过「代理未监听」的代理 URL，避免每个请求刷屏。不做永久熔断：
+// 用户随时可能把本地代理客户端拉起来，下次请求应能自动恢复走代理。
+const _warnedDeadProxies = new Set();
+
+// 格式化代理端点为 host:port，仅用于日志/错误文案。
+// 只取 hostname 与 port，绝不带上 URL 里可能存在的账号密码。
+function _proxyEndpointLabel(proxyUrl) {
+  try {
+    const u = new URL(String(proxyUrl || '').trim());
+    return u.port ? `${u.hostname}:${u.port}` : u.hostname;
+  } catch {
+    return '(地址不可解析)';
+  }
+}
 
 function _agentForProviderProxy(proxyUrl, label) {
   const raw = String(proxyUrl || '').trim();
@@ -154,14 +168,12 @@ function _agentForProviderProxy(proxyUrl, label) {
       return sharedHttpsAgent;
     }
     _providerProxyAgents.set(raw, agent);
-    try {
-      const u = new URL(raw);
-      console.log(
-        `[proxy] 连接 ${label || 'provider'} 经代理 ${u.hostname}:${u.port}（per-provider，通道已建立）`
-      );
-    } catch {
-      /* proxyUrl 无法解析主机端口时仅跳过日志，agent 已可用 */
-    }
+    // 此处只是构造 agent，没有任何 I/O：真实的 TCP 连接与 CONNECT 隧道协商
+    // 要到首个请求发出时才发生。所以绝不能在这里声称「通道已建立」——
+    // 代理未监听时那句话会把排障方向带偏到上游/apikey 上。
+    console.log(
+      `[proxy] 绑定 ${label || 'provider'} 的 per-provider 代理 ${_proxyEndpointLabel(raw)}（尚未建连，首个请求时才连接）`
+    );
   }
   return agent;
 }
@@ -213,6 +225,33 @@ async function postWithDeadConnRetry(url, data, config, label) {
     try {
       return await axios.post(url, data, withKeepAliveAgents(proxied));
     } catch (err) {
+      // 代理进程未监听/不可达 → 先明确这是本地代理的问题（不是上游、不是 apikey），
+      // 再回退直连重试一次。此前该分支缺这一步，错误原样冒泡成一条裸的
+      // connect ECONNREFUSED，与上面「已绑定代理」的日志连起来极具误导性。
+      if (isProxyUnreachableError(err)) {
+        const endpoint = _proxyEndpointLabel(providerProxyUrl);
+        if (!_warnedDeadProxies.has(providerProxyUrl)) {
+          _warnedDeadProxies.add(providerProxyUrl);
+          console.warn(
+            `[proxy] ${label || 'provider'} 的 per-provider 代理 ${endpoint} 未监听(${err.code || 'ECONNREFUSED'})，回退直连重试 (第1/1次)...`
+          );
+        }
+        try {
+          return await axios.post(url, data, {
+            ...restConfig,
+            httpsAgent: _directHttpsAgent,
+            httpAgent: sharedHttpAgent,
+          });
+        } catch (directErr) {
+          // 直连也失败且同样没拿到响应 → 把「代理未监听」这个真实起因写进 message，
+          // 否则用户在「真实失败原因」里只看到 connect ECONNREFUSED，无从判断是本地
+          // 代理没起。已拿到响应（如 401/429）时不追加，避免把上游错误混淆成代理问题。
+          if (directErr && !directErr.response) {
+            directErr.message = `${directErr.message}（已回退直连仍失败；per-provider 代理 ${endpoint} 未监听，请启动本地代理，或清除该 provider 的 proxy 配置改为直连）`;
+          }
+          throw directErr;
+        }
+      }
       if (!isDeadConnectionError(err)) {
         throw err;
       }
@@ -257,6 +296,26 @@ async function postWithDeadConnRetry(url, data, config, label) {
     );
     return axios.post(url, data, { ...restConfig });
   }
+}
+
+// 「代理进程根本不在」的错误族，比 isProxyConnectError 窄一档：刻意排除
+// ECONNRESET —— 那是已建连后被对端断开，属于 keep-alive 死连接语义，仍应交给
+// isDeadConnectionError 的经代理重试，不能被误判成「代理没起」而回退直连。
+function isProxyUnreachableError(err) {
+  if (!err || err.response) {
+    return false;
+  }
+  const code = String(err.code || '').toUpperCase();
+  const msg = String(err.message || '').toLowerCase();
+  return (
+    code === 'ECONNREFUSED' ||
+    code === 'EHOSTUNREACH' ||
+    code === 'ENETUNREACH' ||
+    code === 'EADDRNOTAVAIL' ||
+    msg.includes('econnrefused') ||
+    msg.includes('ehostunreach') ||
+    msg.includes('enetunreach')
+  );
 }
 
 function isProxyConnectError(err) {
