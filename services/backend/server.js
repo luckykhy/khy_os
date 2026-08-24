@@ -445,23 +445,55 @@ app.use('/api/users', userRoutes); // 用户信息增删改查
 // 第2组：策略管理（策略适配层）
 // 设计模式：适配器模式（Adapter），将不同策略语言统一为内部可执行格式
 // ============================================================
-app.use('/api/strategies', strategyRoutes); // 策略 CRUD 和执行
+// ── 由拓展提供的路由：缺席时跳过，而不是让整机起不来 ────────────────────
+// [DESIGN-ARCH-069] §4.1 承诺「删目录即卸载」。量化应用（服务名 quant-app）的路由
+// 经兼容壳解析，应用缺席时壳得到 null —— 而 app.use(path, null) 会抛，于是「卸载一个
+// 应用」又变成了「服务器起不来」。这个挂载器把 null 变成一次跳过 + 一行汇总日志。
+//
+// 汇总而非逐条打印：应用整个缺席时会跳过 19 条，19 行日志是噪音不是信息。
+const _skippedMounts = [];
 
-app.use('/api/strategy', strategyRoutes); // 单数别名，向后兼容
+/**
+ * 挂载一个可选路由。
+ * @param {string} mountPath - 挂载路径
+ * @param {*} router - 路由器，或应用缺席时的 null
+ * @returns {boolean} 是否挂上
+ */
+function mountOptional(mountPath, router) {
+  if (typeof router === 'function' || (router && typeof router.handle === 'function')) {
+    app.use(mountPath, router);
+    return true;
+  }
+  _skippedMounts.push(mountPath);
+  return false;
+}
 
-app.use('/api/backtest', backtestRoutes); // 回测引擎接口
+/** 汇报跳过情况。文案点**服务名**而非拓展 id，且说「未安装」不说「探测失败」（§3.4）。 */
+function reportSkippedMounts(total) {
+  if (_skippedMounts.length === 0) return;
+  logger.warn(
+    '已跳过 ' + _skippedMounts.length + '/' + total + ' 条量化应用路由：' +
+      'quant-app 服务未安装（' + _skippedMounts.join('、') + '）'
+  );
+}
 
-app.use('/api/backtests', backtestRoutes); // 复数别名，论文中引用形式
+mountOptional('/api/strategies', strategyRoutes); // 策略 CRUD 和执行
 
-app.use('/api/watchlist', watchlistRoutes); // 自选股管理
+mountOptional('/api/strategy', strategyRoutes); // 单数别名，向后兼容
+
+mountOptional('/api/backtest', backtestRoutes); // 回测引擎接口
+
+mountOptional('/api/backtests', backtestRoutes); // 复数别名，论文中引用形式
+
+mountOptional('/api/watchlist', watchlistRoutes); // 自选股管理
 
 app.use('/api/admin', adminRoutes); // 管理员后台接口
 
-app.use('/api/stock', stockProxyRoutes); // 股票数据代理（解决跨域）
+mountOptional('/api/stock', stockProxyRoutes); // 股票数据代理（解决跨域）
 
 app.use('/api/settings', settingsRoutes); // 系统设置
 
-app.use('/api/dashboard', dashboardRoutes); // 仪表盘汇总数据
+mountOptional('/api/dashboard', dashboardRoutes); // 仪表盘汇总数据
 
 app.use('/api/password-reset', passwordResetRoutes); // 密码重置流程
 
@@ -469,11 +501,11 @@ app.use('/api/password-reset', passwordResetRoutes); // 密码重置流程
 // 第3组：交易与多智能体协同（对应论文第5章 §5.2 多智能体协同层）
 // 设计模式：观察者模式（Observer），智能体之间通过事件通信
 // ============================================================
-app.use('/api/trading', tradeRoutes); // 交易下单与持仓管理
+mountOptional('/api/trading', tradeRoutes); // 交易下单与持仓管理
 
-app.use('/api/trades', tradesRoutes); // 交易历史记录查询
+mountOptional('/api/trades', tradesRoutes); // 交易历史记录查询
 
-app.use('/api/trading-agents', tradingAgentsRoutes); // 多智能体交易系统
+mountOptional('/api/trading-agents', tradingAgentsRoutes); // 多智能体交易系统
 
 // ─── AI 请求代理 ──────────────────────────────────────────────────────
 // AI 路由由独立的 AI 管理后端 (ai-backend/) 提供服务。
@@ -557,32 +589,34 @@ app.use('/api/feedback', feedbackRoutes); // 用户反馈收集
 // 第4组：数据治理层（对应论文第4章 §4.4 四级降级数据获取策略）
 // 数据获取优先级：缓存 → AKShare → 备用源 → 本地存储
 // ============================================================
-app.use('/api/comprehensive', comprehensiveDataRoutes); // 综合数据聚合接口（多源融合）
+mountOptional('/api/comprehensive', comprehensiveDataRoutes); // 综合数据聚合接口（多源融合）
 
-app.use('/api/comprehensive-data', comprehensiveDataRoutes); // 别名路由
+mountOptional('/api/comprehensive-data', comprehensiveDataRoutes); // 别名路由
 
-app.use('/api/market', marketRoutes); // 市场行情数据
+mountOptional('/api/market', marketRoutes); // 市场行情数据
 
-app.use('/api/replay', replayRoutes); // 历史数据回放（用于策略复盘）
+mountOptional('/api/replay', replayRoutes); // 历史数据回放（用于策略复盘）
 
-app.use('/api/tick-backtest', require('./src/routes/tickBacktest')); // Tick 级回测引擎
+mountOptional('/api/tick-backtest', require('./src/routes/tickBacktest')); // Tick 级回测引擎
 
-app.use('/api/futures-tick', require('./src/routes/futuresTickData')); // 期货逐笔数据（ZIP 归档）
+mountOptional('/api/futures-tick', require('./src/routes/futuresTickData')); // 期货逐笔数据（ZIP 归档）
 
-app.use('/api/bank-transfer', require('./src/routes/bankTransfer')); // 银行转账模拟
+mountOptional('/api/bank-transfer', require('./src/routes/bankTransfer')); // 银行转账模拟
 
 // ============================================================
 // 第5组：标的管理与缓存（对应论文第4章 §4.5 缓存策略）
 // ============================================================
-app.use('/api/instruments', require('./src/routes/instruments')); // 金融标的列表（股票/期货/指数）
+mountOptional('/api/instruments', require('./src/routes/instruments')); // 金融标的列表（股票/期货/指数）
 
-app.use('/api/favorites', require('./src/routes/favorites')); // 用户收藏（自选股）
+mountOptional('/api/favorites', require('./src/routes/favorites')); // 用户收藏（自选股）
 
-app.use('/api/kline-data', require('./src/routes/klineData')); // K线 OHLCV 数据接口
+mountOptional('/api/kline-data', require('./src/routes/klineData')); // K线 OHLCV 数据接口
 
 app.use('/api/cache', require('./src/routes/cache')); // 缓存管理（清理、查看统计）
 
-app.use('/api/instrument-sync', require('./src/routes/instrumentSync')); // 标的自动同步接口
+mountOptional('/api/instrument-sync', require('./src/routes/instrumentSync')); // 标的自动同步接口
+
+reportSkippedMounts(21); // 量化应用路由挂载结果汇总
 
 // ============================================================
 // 第6组：系统管理与外部服务接口

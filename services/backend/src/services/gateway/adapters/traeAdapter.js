@@ -18,6 +18,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { NIRVANA_CACHE_CANDIDATES, NIRVANA_STORAGE_CANDIDATES } = require('../../../constants/installationCandidates');
 
 const { parseList, dedupe } = require('./_adapterUtils');
 const { getCWModule, parseCWStreamEvents } = require('./_cwStreamParser');
@@ -92,10 +93,7 @@ const TRAE_STORAGE_PATHS = [
   path.join(os.homedir(), 'AppData', 'Roaming', 'Nirvana', 'User', 'globalStorage', 'storage.json'),
   path.join(os.homedir(), 'AppData', 'Roaming', 'nirvana', 'User', 'globalStorage', 'storage.json'),
   // Windows: Program Files 安装目录
-  'C:\\Program Files\\nirvana\\User\\globalStorage\\storage.json',
-  'C:\\Program Files\\Nirvana\\User\\globalStorage\\storage.json',
-  'C:\\Program Files\\nirvana\\storage.json',
-  'C:\\Program Files\\Nirvana\\storage.json',
+  ...NIRVANA_STORAGE_CANDIDATES,
   // Trae CN (国内版)
   path.join(os.homedir(), '.config', 'Trae CN', 'User', 'globalStorage', 'storage.json'),
   path.join(
@@ -132,9 +130,7 @@ const NIRVANA_TRAE_CACHE_PATHS = (() => {
     path.join(home, 'AppData', 'Roaming', 'nirvana', 'trae_local_cache.json'),
     path.join(home, 'AppData', 'Roaming', 'Nirvana', 'trae_local_cache.json'),
     // Windows: Program Files 安装目录
-    'C:\\Program Files\\nirvana\\trae_local_cache.json',
-    'C:\\Program Files\\Nirvana\\trae_local_cache.json',
-    'C:\\Program Files (x86)\\nirvana\\trae_local_cache.json',
+    ...NIRVANA_CACHE_CANDIDATES,
     // Windows: %LOCALAPPDATA%
     path.join(home, 'AppData', 'Local', 'nirvana', 'trae_local_cache.json'),
     path.join(home, 'AppData', 'Local', 'Nirvana', 'trae_local_cache.json'),

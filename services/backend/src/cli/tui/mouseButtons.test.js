@@ -5,7 +5,7 @@
  *
  * Covers:
  *   - isMouseSequence / parseSgrMouse (press/release/motion, 0-based coords)
- *   - gates (buttons win32-default-on, hover default off)
+ *   - gates (buttons default off on every platform, hover default off)
  *   - enable/disable bytes (1000/1006/1003)
  *   - collectLayout (static/display:none skip, offset accumulation, handlers)
  *   - screenOffset (anchor-bottom vs top modes)
@@ -157,17 +157,19 @@ test('mouseHoverEnabled: default off, explicit truthy on', () => {
 });
 
 // ── enable/disable bytes ────────────────────────────────────────────────────
-test('enableBytes: 1002 (not 1000) so drag is reported at all', () => {
-  // 1000 只报按下/松开,一个位移事件都不报 → dispatcher 的选择透传在真终端里
-  // 永远不会触发(它靠 isMotion 判定拖拽)。1002 只在按住键时报位移,恰好够用。
-  assert.equal(enableBytes({ hover: false }), '\x1b[?1002h\x1b[?1006h');
-  assert.equal(enableBytes({ hover: true }), '\x1b[?1002h\x1b[?1006h\x1b[?1003h');
-  assert.equal(enableBytes(), '\x1b[?1002h\x1b[?1006h');
+test('enableBytes: 1000 (not 1002) — no motion reporting, drag-select stays native', () => {
+  // 对齐 Claude Code:其 bundle 里唯一那处追踪调用就是 1000/1006,全量检索没有 1002
+  // 也没有 1003。1000 只报按下/松开,点击只需要这两个端点;位移一旦上报,按下那一下
+  // 就已经被本进程吃掉,拖选起点必然丢失 —— 所以不报才是对的。
+  assert.equal(enableBytes({ hover: false }), '\x1b[?1000h\x1b[?1006h');
+  assert.equal(enableBytes({ hover: true }), '\x1b[?1000h\x1b[?1006h\x1b[?1003h');
+  assert.equal(enableBytes(), '\x1b[?1000h\x1b[?1006h');
 });
 
 test('disableBytes: resets every mode enableBytes can set, regardless of hover', () => {
   // 「只关自己开过的」写法埋雷:开 1002 而关 1000 会把终端留在追踪态,用户之后
-  // 每条命令都没有滚轮和复制。DECRST 打在没开过的模式上是 no-op,多关零成本。
+  // 每条命令都没有滚轮和复制。DECRST 打在没开过的模式上是 no-op,多关零成本 ——
+  // 降档到 1000 之后 1002 这一关就是纯遗留清理(旧版本/旧会话可能把终端留在 1002)。
   const expected = '\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l';
   assert.equal(disableBytes({ hover: false }), expected);
   assert.equal(disableBytes({ hover: true }), expected);
@@ -442,8 +444,12 @@ test('dispatcher: onNative absent still consumes wheel (no crash)', () => {
   assert.equal(d.onInput('[<65;2;20M', ctx), true);
 });
 
-// ── 对抗式透传:pendingSelect(按下落空)→ 拖动 → onNative ─────────────────────
-test('dispatcher: press on empty + drag → onNative (selection intent)', () => {
+// ── 1000 降档后的拖选契约:dispatcher 完全不介入 ─────────────────────────────
+test('dispatcher: drag on empty space never calls onNative (1000 reports no motion)', () => {
+  // 历史上这里有一条「按下落空 + 拖动 → onNative 把拖选交还终端」的补偿分支,它靠
+  // 伪造的位移事件才在单测里变绿:真实终端里 1002 报出位移时,按下那一下已经被本
+  // 进程吃掉,原生选择只能从半路接管,选出来的范围是错的。降到 1000 后位移根本不
+  // 上报,按下/松开落在空白处时 dispatcher 什么都不做,终端自己看到完整一次拖拽。
   let natives = 0;
   let clicks = 0;
   const button = makeNode({
@@ -467,11 +473,11 @@ test('dispatcher: press on empty + drag → onNative (selection intent)', () => 
   });
   const ctx = { rootNode: root, rows: 24, anchorBottom: true };
 
+  // 即便终端(或旧会话残留的 1002)真的送来一个按住位移事件,也不再触发透传。
   d.onInput('[<0;50;20M', ctx); // press on empty space
+  d.onInput('[<32;55;20M', ctx); // motion with left button held
+  d.onInput('[<0;55;20m', ctx); // release
   assert.equal(natives, 0);
-  d.onInput('[<32;55;20M', ctx); // drag (motion bit | left button) → selection intent
-  assert.equal(natives, 1);
-  d.onInput('[<0;55;20m', ctx); // release (native now, not reported) — no click
   assert.equal(clicks, 0);
 });
 
@@ -535,8 +541,8 @@ test('dispatcher: press on empty then release ON a button does not click (press 
   const root = makeNode({ width: 80, height: 5, children: [button] });
   const d = createMouseDispatcher({ hover: false });
   const ctx = { rootNode: root, rows: 24, anchorBottom: true };
-  d.onInput('[<0;50;20M', ctx); // press on empty → pendingSelect
-  d.onInput('[<0;2;20m', ctx); // release on button → pendingSelect cleared, no click
+  d.onInput('[<0;50;20M', ctx); // press on empty → nothing armed
+  d.onInput('[<0;2;20m', ctx); // release on button → no armed click, so no fire
   assert.equal(clicks, 0);
 });
 

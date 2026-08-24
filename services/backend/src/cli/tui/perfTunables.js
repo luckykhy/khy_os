@@ -22,6 +22,11 @@
  * (NaN / 0 / negative / empty string) falls back to the default — the same
  * reject-garbage paradigm used across the repo's env parsing.
  *
+ * A fourth knob, suspendSettleMs, is not a cadence but a **barrier**: how long
+ * the shell waits after suspending the live UI before calling app.clear(). It
+ * must EXCEED ink's own render throttle window, or the clear races a pending
+ * trailing render (see the function docstring).
+ *
  * Umbrella switch: KHY_TUI_LOW_POWER === '1' relaxes all three defaults
  * further (320 / 3000 / 640 — i.e. another 2x back-off) for battery /
  * remote-shell scenarios. A per-knob env var, when explicitly set to a valid
@@ -84,4 +89,32 @@ function topicBarAnimMs(env = process.env) {
   return _pos(env && env.KHY_TOPIC_BAR_ANIM_MS, def);
 }
 
-module.exports = { spinnerFrameMs, heartbeatMs, topicBarAnimMs };
+/**
+ * ink 自身的渲染节流窗口(ms)。ink render 默认 `maxFps: 30` →
+ * `Math.ceil(1000/30)` = 34ms 的 throttle(leading + trailing)。这是**上游常量的镜像**,
+ * 不是可调参数:改它不会改变 ink 的行为,只会让下面的 settle 算错。
+ */
+const INK_THROTTLE_MS = 34;
+
+/**
+ * 「挂起 live UI → app.clear()」之间的沉降等待(ms)。默认 50ms。
+ *
+ * 背景(goal「/命令后出现输入框残影」):壳在跑交互子命令前会 setInputActive(false) 让 live 区
+ * 变空,等一帧提交后再 app.clear(),使处理器从干净的瞬态区开始。此处历史上硬编码等 **16ms**,
+ * 但 ink 的节流窗口是 **34ms**(maxFps 30,leading+trailing)—— 16 < 34,那帧「空 live 区」提交
+ * 通常还挂在 trailing 队列里没落地。于是次序变成:
+ *   clear() 擦掉并 log.sync(**clear 前**那帧的行数)→ 随后 trailing onRender 把刚被擦掉的
+ *   输入框 chrome 又画了回来 → 残影。
+ * 取 50ms(> 34ms 一个安全余量)让 trailing 帧先落地,clear() 才擦到真正的最新帧。
+ *
+ * 门控 KHY_TUI_SUSPEND_SETTLE_MS 接受任意有限正数;垃圾值回落默认。LOW_POWER 不放宽本值——
+ * 它是正确性屏障而非动画节奏,放宽只会让命令启动更迟钝。
+ *
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {number}
+ */
+function suspendSettleMs(env = process.env) {
+  return _pos(env && env.KHY_TUI_SUSPEND_SETTLE_MS, INK_THROTTLE_MS + 16);
+}
+
+module.exports = { spinnerFrameMs, heartbeatMs, topicBarAnimMs, suspendSettleMs, INK_THROTTLE_MS };
