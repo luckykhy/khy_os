@@ -888,7 +888,7 @@
                 <span class="config-label">
                   默认优先适配器
                   <el-tooltip :content="helpText('preferredAdapter')" placement="top" effect="dark">
-                    <KhyIcon kind="help" size="sm" class="help-icon" />
+                    <KhyIcon kind="connection" size="sm" class="help-icon" />
                   </el-tooltip>
                 </span>
               </template>
@@ -916,7 +916,7 @@
                 <span class="config-label">
                   默认优先模型
                   <el-tooltip :content="helpText('preferredModel')" placement="top" effect="dark">
-                    <KhyIcon kind="help" size="sm" class="help-icon" />
+                    <KhyIcon kind="cpu" size="sm" class="help-icon" />
                   </el-tooltip>
                 </span>
               </template>
@@ -951,7 +951,7 @@
                     placement="top"
                     effect="dark"
                   >
-                    <KhyIcon kind="help" size="sm" class="help-icon" />
+                    <KhyIcon kind="key" size="sm" class="help-icon" />
                   </el-tooltip>
                 </span>
               </template>
@@ -969,7 +969,7 @@
                 <span class="config-label">
                   API 池默认供应商
                   <el-tooltip :content="helpText('apiPoolProvider')" placement="top" effect="dark">
-                    <KhyIcon kind="help" size="sm" class="help-icon" />
+                    <KhyIcon kind="shopping" size="sm" class="help-icon" />
                   </el-tooltip>
                 </span>
               </template>
@@ -995,7 +995,7 @@
                 <span class="config-label">
                   模型路由严格模式
                   <el-tooltip :content="helpText('modelRouteStrict')" placement="top" effect="dark">
-                    <KhyIcon kind="help" size="sm" class="help-icon" />
+                    <KhyIcon kind="lock" size="sm" class="help-icon" />
                   </el-tooltip>
                 </span>
               </template>
@@ -1008,7 +1008,7 @@
                 <span class="config-label">
                   启用 CLI 适配器
                   <el-tooltip :content="helpText('cliEnabled')" placement="top" effect="dark">
-                    <KhyIcon kind="help" size="sm" class="help-icon" />
+                    <KhyIcon kind="monitor" size="sm" class="help-icon" />
                   </el-tooltip>
                 </span>
               </template>
@@ -1021,7 +1021,7 @@
                 <span class="config-label">
                   Relay 端口
                   <el-tooltip :content="helpText('relayPort')" placement="top" effect="dark">
-                    <KhyIcon kind="help" size="sm" class="help-icon" />
+                    <KhyIcon kind="link" size="sm" class="help-icon" />
                   </el-tooltip>
                 </span>
               </template>
@@ -1037,7 +1037,7 @@
                 <span class="config-label">
                   Ollama 地址
                   <el-tooltip :content="helpText('ollamaHost')" placement="top" effect="dark">
-                    <KhyIcon kind="help" size="sm" class="help-icon" />
+                    <KhyIcon kind="home" size="sm" class="help-icon" />
                   </el-tooltip>
                 </span>
               </template>
@@ -1053,7 +1053,7 @@
                 <span class="config-label">
                   Ollama 默认模型
                   <el-tooltip :content="helpText('ollamaModel')" placement="top" effect="dark">
-                    <KhyIcon kind="help" size="sm" class="help-icon" />
+                    <KhyIcon kind="cpu" size="sm" class="help-icon" />
                   </el-tooltip>
                 </span>
               </template>
@@ -1067,7 +1067,7 @@
             <span class="config-label">
               模型路由映射
               <el-tooltip :content="helpText('modelRouteMap')" placement="top" effect="dark">
-                <KhyIcon kind="help" size="sm" class="help-icon" />
+                <KhyIcon kind="compass" size="sm" class="help-icon" />
               </el-tooltip>
             </span>
           </template>
@@ -1126,7 +1126,7 @@
                 placement="top"
                 effect="dark"
               >
-                <KhyIcon kind="help" size="sm" class="help-icon" />
+                <KhyIcon kind="key" size="sm" class="help-icon" />
               </el-tooltip>
             </span>
           </template>
@@ -1182,7 +1182,7 @@
                 placement="top"
                 effect="dark"
               >
-                <KhyIcon kind="help" size="sm" class="help-icon" />
+                <KhyIcon kind="tools" size="sm" class="help-icon" />
               </el-tooltip>
             </span>
           </template>
@@ -1229,7 +1229,7 @@
             <span class="config-label">
               供应商服务映射
               <el-tooltip :content="helpText('apiPoolServiceMap')" placement="top" effect="dark">
-                <KhyIcon kind="help" size="sm" class="help-icon" />
+                <KhyIcon kind="grid" size="sm" class="help-icon" />
               </el-tooltip>
             </span>
           </template>
@@ -1290,7 +1290,7 @@
                 placement="top"
                 effect="dark"
               >
-                <KhyIcon kind="help" size="sm" class="help-icon" />
+                <KhyIcon kind="data" size="sm" class="help-icon" />
               </el-tooltip>
             </span>
           </template>
