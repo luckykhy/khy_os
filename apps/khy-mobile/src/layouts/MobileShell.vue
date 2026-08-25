@@ -13,13 +13,20 @@ const route = useRoute();
 const runtime = useRuntimeStore();
 const session = useSessionStore();
 const notifications = useNotificationsStore();
+// 底部只留 5 个主入口。任务与审批从首页卡片进入，交易域从 /trading 二级展开。
 const links = [
   { to: '/home', label: '首页', icon: '⌂' },
   { to: '/chat', label: '对话', icon: '◇' },
-  { to: '/tasks', label: '任务', icon: '▤' },
+  { to: '/trading', label: '交易', icon: '⇄' },
   { to: '/market', label: '行情', icon: '↗' },
 ];
 const title = computed(() => route.meta.title || 'Khy-OS Companion');
+// 交易域子页面不在导航里，但仍应让「交易」标签保持高亮，否则二级页面看着像脱离了导航。
+const TRADING_GROUP = ['/trading', '/portfolio', '/order', '/trades', '/strategies', '/backtests'];
+function isActive(to) {
+  if (to === '/trading') return TRADING_GROUP.includes(route.path);
+  return route.path === to;
+}
 const taskStream = useSseStream('任务事件流', ({ data }) => notifications.add(data));
 const approvalStream = useSseStream('审批事件流', ({ data }) => notifications.add(data));
 
@@ -54,7 +61,7 @@ onMounted(async () => {
     </header>
     <main class="shell-content"><RouterView /></main>
     <nav class="bottom-nav" aria-label="主导航">
-      <RouterLink v-for="link in links" :key="link.to" :to="link.to" :class="{ active: route.path === link.to }">
+      <RouterLink v-for="link in links" :key="link.to" :to="link.to" :class="{ active: isActive(link.to) }">
         <span class="nav-icon">{{ link.icon }}</span><span>{{ link.label }}</span>
       </RouterLink>
       <RouterLink to="/settings" :class="{ active: route.path === '/settings' }"><span class="nav-icon">⚙</span><span>设置</span></RouterLink>
