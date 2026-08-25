@@ -1,6 +1,6 @@
 {
   "name": "khy-os-backend",
-  "version": "1.1.11",
+  "version": "1.1.12",
   "description": "Khy OS AI platform backend with default app runtime",
   "main": "server.js",
   "bin": {
@@ -92,11 +92,11 @@
   "engines": {
     "node": ">=20.18.1"
   },
+  "//dependencies": "本包是 khyquant（L4，software/khyquant/，自身没有 package.json）的**宿主进程**，因此这里有几项是替它代持的运行时依赖，backend 自己一次都不 require：moment —— 只被 khyquant 的 klineDataService.js / enhancedMockDataService.js 使用；node-cron —— 只被 khyquant 的 instrumentSyncService.js 在 start() 里 lazy require（无 try/catch，缺失即抛）。它 2026-08-25 前一直误挂在仓库根的 devDependencies 下，后果是 `npm ci --omit=dev` 装出来的树跑到定时行情同步时会 MODULE_NOT_FOUND。反过来 winston / winston-daily-rotate-file 虽在此声明，实际经 @khy/shared 间接使用，@khy/shared 自己也声明了它们——去掉这两行省不下任何字节，只是少一处冗余声明，暂留以免 khyquant 侧将来直接 require 时再回填。另：pg-hstore 没有任何一行代码显式 require，它是 sequelize 的 postgres 方言在 lib/dialects/postgres/hstore.js:2 动态 require 的，属于 sequelize 的 peer 缺口，删掉会在启用 hstore 字段时崩——不要按「无引用」清理掉它。",
   "dependencies": {
     "@aws/codewhisperer-streaming-client": "^1.0.45",
     "@babel/parser": "^7.29.8",
     "@khy/shared": "file:./vendor/shared",
-    "khy-ai-backend": "file:../ai-backend",
     "@simplewebauthn/server": "^13.3.0",
     "axios": "^1.19.0",
     "bcryptjs": "^2.4.3",
@@ -113,11 +113,13 @@
     "ink": "^6.8.0",
     "inquirer": "^8.2.7",
     "ipaddr.js": "^1.9.1",
-    "json5": "^2.2.3",
     "js-yaml": "^3.15.1",
+    "json5": "^2.2.3",
     "jsonwebtoken": "^9.0.2",
+    "khy-ai-backend": "file:../ai-backend",
     "moment": "^2.30.1",
     "multer": "^1.4.5-lts.1",
+    "node-cron": "^4.2.1",
     "node-stream-zip": "^1.15.0",
     "ora": "^5.4.1",
     "pg": "^8.11.3",
@@ -131,7 +133,8 @@
     "undici": "^7.19.0",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0",
-    "ws": "^8.16.0"
+    "ws": "^8.16.0",
+    "yjs": "^13.6.32"
   },
   "devDependencies": {
     "@babel/cli": "^7.24.0",
@@ -151,13 +154,11 @@
     "supertest": "^7.2.2",
     "yoga-layout": "^3.2.1"
   },
-  "//peerDependencies": "全部 optional。它们都是代码里 try/catch 包着 require 的可选运行时——声明在这里是为了「能被 require 的东西必须有名字」，而 optional:true 保证 npm 一个字节都不装。@aws-sdk/client-s3 由 KHY_AUDIT_S3_BUCKET 门控，@khy-os/khy-chain 装不上就退回本地链。",
+  "//peerDependencies": "全部 optional。它们都是代码里 try/catch 包着 require 的可选运行时——声明在这里是为了「能被 require 的东西必须有名字」，而 optional:true 保证 npm 一个字节都不装。@aws-sdk/client-s3 由 KHY_AUDIT_S3_BUCKET 门控，@khy-os/khy-chain 装不上就退回本地链。playwright / playwright-core 是 src/services/browser/engine.js 的 loadPlaywright() 按序尝试的两个候选（浏览器渲染搜索与 WebBrowser 工具共用），2026-08-25 前两个名字在任何 manifest 里都没有声明，只能靠前端 @playwright/test 提升上来的传递副本碰巧解析到——pnpm 严格布局下从 services/backend 根本解析不到，实测 MODULE_NOT_FOUND。缺失是设计内的降级路径（返回 null，调用方退回纯 HTTP 请求），engine.js 会打印一次中文启用提示。",
   "peerDependencies": {
     "@aws-sdk/client-s3": "^3.0.0",
     "@khy-os/khy-chain": "*",
     "@khy/plugin-sdk": "*",
-    "better-sqlite3": "^12.8.0",
-    "mysql2": "^3.0.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.207.0",
     "@opentelemetry/instrumentation-express": "^0.56.0",
     "@opentelemetry/instrumentation-http": "^0.207.0",
@@ -165,8 +166,12 @@
     "@opentelemetry/sdk-node": "^0.207.0",
     "@opentelemetry/sdk-trace-base": "^2.2.0",
     "@opentelemetry/semantic-conventions": "^1.29.0",
+    "better-sqlite3": "^12.8.0",
+    "mysql2": "^3.0.0",
     "node-llama-cpp": "^3.18.1",
-    "node-pty": "^1.0.0"
+    "node-pty": "^1.0.0",
+    "playwright": "^1.62.1",
+    "playwright-core": "^1.62.1"
   },
   "peerDependenciesMeta": {
     "@aws-sdk/client-s3": {
@@ -210,6 +215,12 @@
     },
     "node-pty": {
       "optional": true
+    },
+    "playwright": {
+      "optional": true
+    },
+    "playwright-core": {
+      "optional": true
     }
   },
   "lint-staged": {
@@ -219,9 +230,9 @@
     ]
   },
   "optionalDependencies": {
+    "@smithy/node-http-handler": "^4.6.1",
     "glob": "^10.3.10",
     "https-proxy-agent": "^7.0.4",
-    "@smithy/node-http-handler": "^4.6.1",
     "string-width": "^5.1.2"
   }
 }

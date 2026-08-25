@@ -73,6 +73,24 @@ describe('crossTurnRepeatDecision (pure)', () => {
     assert.doesNotThrow(() => toolUseLoop.crossTurnRepeatDecision(null, null, null, {}));
     assert.equal(toolUseLoop.crossTurnRepeatDecision(null, recent, {}, {}).steer, false);
   });
+
+  test('explicit reobserve bypasses cross-turn steering for read-only calls', () => {
+    const state = { counts: new Map(), cap: 1 };
+    const call = {
+      name: 'bash',
+      params: { command: 'git status --short', _toolControl: { reobserve: true } },
+    };
+    const harvested = toolUseLoop._signatureForCall('bash', { command: 'git status --short' }, null);
+    const recent = toolUseLoop._normalizeRecentSignatures({
+      exact: [harvested.sig],
+      intents: [harvested.intentKey],
+    });
+    assert.equal(
+      toolUseLoop.crossTurnRepeatDecision(call, recent, state, { KHY_CROSS_TURN_TOOL_DEDUP: '1' }).steer,
+      false
+    );
+  });
+
 });
 
 describe('runToolUseLoop — cross-turn repeat is steered, not re-executed', () => {

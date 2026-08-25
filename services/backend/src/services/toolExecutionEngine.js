@@ -102,6 +102,30 @@ const READ_ONLY_TOOLS = new Set([
 
 const SHELL_TOOL_NAMES = new Set(['shell_command', 'shellCommand', 'bash', 'execute_command']);
 
+function isObservationCall(call) {
+  if (!call) return false;
+  if (READ_ONLY_TOOLS.has(call.name)) return true;
+  try {
+    const detector = require('./toolLoopDetector');
+    if (detector._isSearchTool?.(call.name)) return true;
+    if (detector._isShellTool?.(call.name)) {
+      const command = call.params?._originalCommand || call.params?.command || call.params?.cmd;
+      if (!command) return false;
+      return require('./commandRiskClassifier').classifyCommandRisk(command).isReadOnly === true;
+    }
+  } catch {
+    /* fail-soft: unknown tools remain side-effecting */
+  }
+  return false;
+}
+
+function executionParams(params) {
+  if (!params || typeof params !== 'object' || !params._toolControl) return params;
+  const { _toolControl, ...rest } = params;
+  return rest;
+}
+
+
 // ── Concurrency-safety resolution (s02) ─────────────────────────────
 // Generate name variants (snake_case / camelCase / lowercase) so a call
 // named 'shell_command' resolves to the registered tool 'shellCommand'.
@@ -369,7 +393,7 @@ class ToolExecutionEngine {
     let result;
     try {
       const toolCalling = require('./toolCalling');
-      result = await toolCalling.executeTool(call.name, call.params, {
+      result = await toolCalling.executeTool(call.name, executionParams(call.params), {
         sessionId: this._traceSessionId,
         traceId: this._diagTraceId,
         requestId: this._requestId,
@@ -506,18 +530,37 @@ class ToolExecutionEngine {
   }
 
   async _executeParallel(calls, context) {
+    // A structured provider may emit the same concurrency-safe call more than
+    // once in one response. executeOne registers a dedup key only after the
+    // tool settles, so dispatching every copy here would race that registration
+    // and run the external operation repeatedly. Keep one representative per
+    // exact existing dedup key, then fan its result back out to every tool use.
+    const groups = new Map();
+    for (const [index, call] of calls.entries()) {
+      const key = JSON.stringify({ t: call.name, p: call.params });
+      const group = groups.get(key);
+      if (group) {
+        group.duplicates.push({ call, index });
+      } else {
+        groups.set(key, { call, index, duplicates: [] });
+      }
+    }
+
+    const representatives = [...groups.values()];
     try {
       const { runWithConcurrency } = require('./concurrencyLimiter');
       const result = await runWithConcurrency({
-        tasks: calls.map((call) => () => this.executeOne(call, context)),
+        tasks: representatives.map((group) => () => this.executeOne(group.call, context)),
         limit: MAX_PARALLEL_TOOLS,
         errorMode: 'continue',
       });
-      return result.results;
+      return this._expandParallelDedupResults(calls, representatives, result.results);
     } catch {
       // Fallback: Promise.allSettled
-      const settled = await Promise.allSettled(calls.map((call) => this.executeOne(call, context)));
-      return settled.map((s) =>
+      const settled = await Promise.allSettled(
+        representatives.map((group) => this.executeOne(group.call, context))
+      );
+      const results = settled.map((s) =>
         s.status === 'fulfilled'
           ? s.value
           : {
@@ -527,7 +570,48 @@ class ToolExecutionEngine {
               elapsed: 0,
             }
       );
+      return this._expandParallelDedupResults(calls, representatives, results);
     }
+  }
+
+  _expandParallelDedupResults(calls, representatives, representativeResults) {
+    const results = new Array(calls.length);
+
+    for (const [representativeIndex, group] of representatives.entries()) {
+      const representative = representativeResults[representativeIndex];
+      results[group.index] = representative;
+
+      for (const { call, index } of group.duplicates) {
+        const originalResult = representative?.result;
+        const result =
+          originalResult && typeof originalResult === 'object'
+            ? {
+                ...originalResult,
+                _deduped: true,
+                _dedupNote:
+                  'This exact call was duplicated in the same parallel batch. Reused the representative result.',
+              }
+            : {
+                success: false,
+                error: 'The representative tool call returned no structured result.',
+                _deduped: true,
+              };
+
+        if (this._onToolResult) {
+          this._onToolResult(call.name, call.params, result, this._iteration, 0);
+        }
+
+        results[index] = {
+          tool: call.name,
+          params: call.params,
+          result,
+          elapsed: 0,
+          _toolUseId: call._toolUseId || null,
+        };
+      }
+    }
+
+    return results;
   }
 
   // ── Pipeline stages ────────────────────────────────────────────────
@@ -623,8 +707,15 @@ class ToolExecutionEngine {
 
   _checkDedup(call) {
     const isReadOnly = READ_ONLY_TOOLS.has(call.name);
+    const isObservation = isObservationCall(call);
     const dedupKey = JSON.stringify({ t: call.name, p: call.params });
     let prevExec = this._executedCallKeys.get(dedupKey);
+
+    if (prevExec && isObservation && prevExec.result?.success !== false) {
+      // 历史观察结果只作证据，不应阻止新的状态读取。
+      this._executedCallKeys.delete(dedupKey);
+      prevExec = null;
+    }
 
     if (prevExec && isReadOnly) {
       const filePath = call.params?.file_path || call.params?.path || call.params?.filePath;
@@ -704,6 +795,8 @@ class ToolExecutionEngine {
         _isShellTool,
         extractPathIntent,
         _isFsTool,
+        extractSearchIntent,
+        _isSearchTool,
       } = require('./toolLoopDetector');
       let intentKey = null;
       if (_isShellTool(call.name)) {
@@ -716,10 +809,18 @@ class ToolExecutionEngine {
         if (pathIntent) {
           intentKey = `__intent__:fspath:${pathIntent}`;
         }
+      } else if (_isSearchTool(call.name)) {
+        const searchIntent = extractSearchIntent(call.params);
+        if (searchIntent) {
+          intentKey = `__intent__:search:${searchIntent}`;
+        }
       }
+      const isObservation = isObservationCall(call);
       if (intentKey) {
         const prev = this._executedCallKeys.get(intentKey);
-        if (prev && prev.count >= 2) {
+        if (prev && isObservation && prev.result?.success !== false) {
+          this._executedCallKeys.delete(intentKey);
+        } else if (prev && prev.count >= 2) {
           const result = {
             ...prev.result,
             _deduped: true,
