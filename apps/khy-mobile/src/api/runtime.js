@@ -24,6 +24,18 @@ export function normalizeBaseUrl(value) {
   return url.origin + (url.pathname === '/' ? '' : url.pathname.replace(/\/+$/, ''));
 }
 
+// `khy mobile` 生成的是浏览器管理页地址，`khy mobile app` 才是配对载荷。
+// 扫错码时地址会带上管理页路径，之后每个请求都拼成 /admin/xxx/api/...，
+// 表现为「连得上但全是 404」。这里提前识别，直接告诉用户该扫哪个码。
+const MANAGEMENT_PAGE_PATTERN = /\/admin(\/|$)/;
+
+function assertNotManagementPage(baseUrl) {
+  if (MANAGEMENT_PAGE_PATTERN.test(new URL(baseUrl).pathname)) {
+    throw new Error('这是浏览器管理页的二维码，请在电脑上执行 khy mobile app 获取配对二维码');
+  }
+  return baseUrl;
+}
+
 export function parsePairingPayload(value) {
   const raw = String(value || '').trim();
   if (!raw) throw new Error('二维码内容为空');
@@ -36,7 +48,9 @@ export function parsePairingPayload(value) {
       source: 'qr',
     };
   } catch (error) {
-    if (error instanceof SyntaxError) return { apiBaseUrl: normalizeBaseUrl(raw), source: 'qr' };
+    if (error instanceof SyntaxError) {
+      return { apiBaseUrl: assertNotManagementPage(normalizeBaseUrl(raw)), source: 'qr' };
+    }
     throw error;
   }
 }
