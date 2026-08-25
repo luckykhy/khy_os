@@ -32,7 +32,7 @@ onMounted(refresh);
       <RouterLink class="metric" to="/approvals"><strong>{{ snapshot?.summary?.pending_remote_approval_count ?? snapshot?.pending_approvals?.length ?? 0 }}</strong><span>待审批</span></RouterLink>
       <RouterLink class="metric" to="/tasks"><strong>{{ snapshot?.summary?.active_large_task_count ?? snapshot?.background_tasks?.length ?? 0 }}</strong><span>运行任务</span></RouterLink>
       <RouterLink class="metric" to="/chat"><strong>AI</strong><span>开始对话</span></RouterLink>
-      <RouterLink class="metric" to="/market"><strong>↗</strong><span>查看行情</span></RouterLink>
+      <RouterLink class="metric" to="/trading"><strong>⇄</strong><span>交易与持仓</span></RouterLink>
     </section>
     <p class="status-line" :class="status.tone">{{ statusText(status) }}</p><p v-if="error" class="alert">{{ error }}</p>
     <section><div class="row"><h2>最近事件</h2><button v-if="notifications.unread" class="button" @click="notifications.markAllRead">标为已读</button></div><EventTimeline v-if="notifications.events.length" :events="notifications.events.slice(0, 8)" /><p v-else class="panel muted">暂无移动事件摘要</p></section>

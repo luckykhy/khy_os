@@ -16,6 +16,13 @@ const routes = [
       { path: 'tasks', component: () => import('@/views/TasksView.vue'), meta: { title: '任务' } },
       { path: 'approvals', component: () => import('@/views/ApprovalsView.vue'), meta: { title: '待审批' } },
       { path: 'market', component: () => import('@/views/MarketView.vue'), meta: { title: '行情' } },
+      // 交易域：入口页 + 五个子页面。子页面不占底部导航位，从 /trading 二级进入。
+      { path: 'trading', component: () => import('@/views/TradingHubView.vue'), meta: { title: '交易' } },
+      { path: 'portfolio', component: () => import('@/views/PortfolioView.vue'), meta: { title: '持仓' } },
+      { path: 'order', component: () => import('@/views/OrderView.vue'), meta: { title: '下单' } },
+      { path: 'trades', component: () => import('@/views/TradesView.vue'), meta: { title: '流水' } },
+      { path: 'strategies', component: () => import('@/views/StrategiesView.vue'), meta: { title: '策略' } },
+      { path: 'backtests', component: () => import('@/views/BacktestsView.vue'), meta: { title: '回测' } },
       { path: 'settings', component: () => import('@/views/SettingsView.vue'), meta: { title: '设置' } },
     ],
   },
