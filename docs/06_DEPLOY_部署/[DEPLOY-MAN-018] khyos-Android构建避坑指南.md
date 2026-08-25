@@ -8,8 +8,8 @@
 ## 0. 一分钟上手
 
 ```bash
-pip install khy-os            # 已包含 requests（下载器）与 Node 后端
-# 自行安装 JDK 17（唯一需手动的前置，见 §3）
+pip install khy-os            # 自带 Node 后端；编排器只用 Python 标准库，无额外依赖
+# 自行安装 JDK 17 或更高（唯一需手动的前置，见 §3）
 khy build android             # 调试包：自动下 SDK → vite build → cap sync → gradlew
 khy build android --release   # 签名发布包
 khy build android -o dist/apk # 指定输出目录
@@ -32,9 +32,13 @@ khy build android -o dist/apk # 指定输出目录
 
 结论：khyos 的核心**不是纯 Python**，Briefcase 无从下手。正确的桥接是
 **Capacitor**——用原生 WebView 装载已构建的 Vue 前端，前端通过网络（本地/局域网/云端）
-连接后端网关。项目里 `software/khyquant/frontend/android` **本就是一个完整的
-Capacitor Android 工程**（含 `gradlew`、release keystore、`variables.gradle`）。
+连接后端网关。随身 App 的 Capacitor 工程在 **`apps/khy-mobile/`**（L3 层，
+`android/` 子目录已 `cap add` 完成，含 `gradlew`、`variables.gradle`、`local.properties`）。
 `khy build android` 做的就是把它的构建流程**自动化、跨平台化、零配置化**。
+
+> 早期版本曾把 `software/khyquant/frontend/android` 当作构建目标——那是 khyquant
+> 应用自己的前端，不是随身 App。编排器现在只认 `apps/khy-mobile`，也可用
+> `KHY_ANDROID_PROJECT` 显式覆盖。
 
 ### 1.1 推论：没有「Python C 扩展交叉编译」这回事
 因为 APK 里**不运行 Python**（运行的是 WebView + JS），所以**不存在**需要为
@@ -70,13 +74,18 @@ ARM64/ARMv7 交叉编译的 Python C 扩展，**NDK 默认不安装**（`pyproje
 
 ---
 
-## 3. 唯一需手动：安装 JDK 17
+## 3. 唯一需手动：安装 JDK 17+
 
-Android/Gradle 构建硬性依赖 JDK，khyos **不会**替你装系统级 JDK。缺失时命令会打印：
+Android/Gradle 构建硬性依赖 JDK。**下限是 17**（AGP 8.x 的要求），更高版本同样可用
+——本机实测 JDK 21.0.12 + AGP 8.13.0 正常出包。编排器会解析 `java -version`，
+低于 17 时提前拦下，而不是让 gradle 报一堆看不懂的字节码错误。
+
+khyos **不会**替你装系统级 JDK。缺失时命令会打印：
 
 ```
 [Action Required] 未检测到 Java JDK —— Android 构建的硬性前置依赖
-  - Windows：winget install Microsoft.OpenJDK.17  （或 https://adoptium.net 下载 Temurin 17）
+  - Windows：winget install Microsoft.OpenJDK.17（或到 https://adoptium.net 下载 Temurin 17+）
+  - macOS  ：brew install --cask temurin
   - Linux  ：sudo apt install openjdk-17-jdk
   - 装好后重开终端，确认 `java -version` 可用，再重跑 `khy build android`。
 ```
@@ -89,13 +98,14 @@ Android/Gradle 构建硬性依赖 JDK，khyos **不会**替你装系统级 JDK�
 
 | 症状 | 原因 | 处理 |
 |---|---|---|
-| `[Action Required] 未检测到 Java JDK` | PATH 无 `java` | 按 §3 装 JDK 17，重开终端 |
+| `[Action Required] 未检测到 Java JDK` | PATH 无 `java` | 按 §3 装 JDK 17+，重开终端 |
+| `[Action Required] Java 版本过低` | JDK < 17，AGP 8.x 不支持 | 升级到 17 或更高后重开终端 |
 | SDK 下载卡死 / 超时（国内） | 直连 dl.google.com 不稳 | 已内置镜像轮换+重试+断点续传；仍失败则设 `HTTPS_PROXY` 后重跑 |
 | 下载中断后重跑很慢 | — | 无需担心：已下载部分会**断点续传**，不会从头来 |
 | Windows 报路径超长 / 解压失败 | 260 字符限制 | 已用短缓存根 `~/.khyos/android_sdk` 规避；管理员身份跑一次可永久开启系统长路径 |
 | Linux `gradlew: Permission denied` | 缺可执行位 | 编排器已自动 `chmod +x`；若手动跑请 `chmod +x gradlew` |
 | `local.properties` 指向别的机器 | 仓库残留旧绝对路径 | 编排器每次构建都会**重写**它，无需手改 |
-| Gradle 退码失败、看不懂 | 默认隐藏底层堆栈 | 加 `--verbose` 重跑看完整日志；常见是 JDK 版本不符（需 17）或磁盘不足 |
+| Gradle 退码失败、看不懂 | 默认隐藏底层堆栈 | 加 `--verbose` 重跑看完整日志；常见是 JDK 版本不符（需 17+）或磁盘不足 |
 | 没装 Node/npm | 前端构建缺工具 | khyos 自带 Node；若确实缺，装 Node 18+，或先手动 `npm run build` 后用 `--skip-web` |
 
 ---
@@ -129,5 +139,6 @@ Android/Gradle 构建硬性依赖 JDK，khyos **不会**替你装系统级 JDK�
 - 编排器：`platform/khy_platform/android_build.py`
 - CLI 接入：`platform/khy_platform/cli.py`（`_normalize_android_build_command` + `main()` 分支）
 - 版本锁：`pyproject.toml` → `[tool.khyos.android]`
-- Capacitor 工程：`software/khyquant/frontend/android/`
-- 离线单测：`tests/unit/test_android_build.py`
+- Capacitor 工程：`apps/khy-mobile/`（原生工程在其 `android/` 子目录）
+- 离线单测：`platform/tests/test_android_build.py`
+  （跑法：`python -m unittest discover -s platform/tests -t platform/tests`）
