@@ -31,3 +31,15 @@ packages = ["khy_platform"]
 # The Python launcher ships the standalone Node bundle as its only Node runtime
 # payload. Source checkout mode still resolves the repository backend directly.
 khy_platform = ["_resources/dev-constraints.txt", "_resources/tray-icon.png", "bundled/runtime/khy/bundle.mjs"]
+
+[tool.khyos.android]
+# Android 构建版本锁（单一真源，[DEPLOY-MAN-018] 第 2.1 节）。
+# 消费方：platform/khy_platform/android_build.py。每个键都可用环境变量
+# KHY_ANDROID_<KEY> 临时覆盖，例如 KHY_ANDROID_BUILD_TOOLS=34.0.0。
+#
+# 值必须与 android_build.py 的 _DEFAULT_LOCK 保持一致——pip 安装后本文件不随
+# wheel 分发，那份字典是读不到本表时的兜底（platform/tests 里有守卫测试）。
+compile_sdk = "36"        # 与 apps/khy-mobile/android/variables.gradle 的 compileSdkVersion 对齐
+build_tools = "35.0.0"
+cmdline_tools = "13114758"
+ndk = ""                  # 随身 App 是 WebView + JS，不含原生代码，默认不装 NDK（省 1GB+）
