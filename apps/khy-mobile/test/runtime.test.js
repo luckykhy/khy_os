@@ -24,4 +24,16 @@ describe('mobile runtime configuration', () => {
       source: 'qr',
     });
   });
+
+  it('parses a bare backend URL from the pairing QR', () => {
+    expect(parsePairingPayload('http://10.0.0.5:3000')).toEqual({
+      apiBaseUrl: 'http://10.0.0.5:3000',
+      source: 'qr',
+    });
+  });
+
+  it('rejects the browser management-page QR and names the right command', () => {
+    expect(() => parsePairingPayload('http://10.0.0.5:9090/admin/ai-gateway'))
+      .toThrow(/khy mobile app/);
+  });
 });
