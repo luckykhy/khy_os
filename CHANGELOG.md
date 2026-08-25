@@ -5,6 +5,27 @@ All notable changes to khy OS will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.1.12
+
+khy OS 1.1.12 — 补齐 Android APK 构建编排与发布版本同步。
+
+### Added
+
+- **Android APK 构建编排**（`platform/khy_platform/android_build.py`）
+  - `khy build android` 现在可以定位 `apps/khy-mobile`、检查 JDK 与 Windows 长路径支持、按需准备 Android SDK、写入 `local.properties`、构建 Web 资源、执行 Gradle 并收集 APK。
+  - Android SDK 默认放在用户目录下的 Khy-OS 数据路径，不进入 pip 包，NDK 默认保持为空以避免下载无原生依赖的工具链。
+
+### Changed
+
+- 主发布版本轨道统一升级到 `1.1.12`，覆盖 PyPI、npm、后端运行时、模块清单和后端锁文件。
+- 发布门禁补齐 `check:khyos-pins` 入口，确保工具链固定检查在发布前实际执行。
+
+### Compatibility
+
+- 安装 / 升级：`pip install -U khy-os` 或 `npm install -g @khy-os/khy-os`；`khy --version` 应报告 `1.1.12`。
+- 构建 APK：`khy build android`。
+
+---
 ## 1.1.9
 
 khy OS 1.1.9 — 精简体积、跨平台脚本补齐与若干修复。

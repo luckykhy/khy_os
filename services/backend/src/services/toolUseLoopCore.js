@@ -1442,6 +1442,46 @@ function _signatureForCall(name, params, detector) {
 // successful one. state = { counts:Map, cap:number } bounds steers per turn so
 // the steer itself cannot loop; once the cap is hit the call falls through and
 // executes normally (never a hard block).
+function _executionParams(params) {
+  if (!params || typeof params !== 'object' || !params._toolControl) {
+    return params;
+  }
+  const { _toolControl, ...rest } = params;
+  return rest;
+}
+
+function _isReobserveRequested(call) {
+  return call?.params?._toolControl?.reobserve === true;
+}
+
+// Observation calls describe current state, so an older successful result must
+// not steer a later iteration away from taking a fresh measurement.
+function _isObservationCall(call) {
+  if (!call) {
+    return false;
+  }
+  const name = String(call.name || call.tool || '');
+  try {
+    const detector = require('./toolLoopDetector');
+    if (detector._isSearchTool && detector._isSearchTool(name)) {
+      return _isReobserveRequested(call);
+    }
+    if (detector._isShellTool && detector._isShellTool(name)) {
+      const command = call.params?._originalCommand || call.params?.command || call.params?.cmd;
+      if (command) {
+        const { classifyCommandRisk } = require('./commandRiskClassifier');
+        return classifyCommandRisk(command).isReadOnly === true;
+      }
+    }
+    if (DEDUP_READ_ONLY_TOOLS.has(name)) {
+      return true;
+    }
+  } catch {
+    /* fail-soft: unknown calls remain side-effecting */
+  }
+  return false;
+}
+
 function crossTurnRepeatDecision(call, recentSigs, state, env) {
   const e = env || process.env;
   if (!_envFlagEnabled(e.KHY_CROSS_TURN_TOOL_DEDUP, true)) {
@@ -1460,11 +1500,12 @@ function crossTurnRepeatDecision(call, recentSigs, state, env) {
 
   const name = String(call.name || call.tool || '');
   const params = call.params || {};
+  const isObservation = _isObservationCall(call);
   const { sig, intentKey } = _signatureForCall(name, params, null);
   const matched =
     (sig && hasExact && exact.has(sig)) || (intentKey && hasIntents && intents.has(intentKey));
-  if (!matched) {
-    return { steer: false };
+  if (!matched || (isObservation && _isReobserveRequested(call))) {
+    return { steer: false, reobserve: isObservation && matched };
   }
 
   const key = sig || intentKey;
@@ -8260,6 +8301,7 @@ async function runToolUseLoop(userMessage, options = {}) {
               //   - 阈值: 只读工具允许 3 次相同调用 (vs mutating 工具 1 次)
               // DEDUP_READ_ONLY_TOOLS 为模块常量(见文件顶部 Constants 区),避免每调用重建。
               const isReadOnlyTool = DEDUP_READ_ONLY_TOOLS.has(call.name);
+              const isObservationCall = _isObservationCall(call);
               // Web/search tools are read-only but, unlike a read-after-write file read,
               // an identical repeated query returns identical results and only burns the
               // budget. Flag them so the repeat tolerance below can be tightened without
@@ -8270,8 +8312,12 @@ async function runToolUseLoop(userMessage, options = {}) {
               } catch {
                 /* best effort */
               }
-              const dedupKey = JSON.stringify({ t: call.name, p: call.params });
+              const dedupKey = JSON.stringify({ t: call.name, p: _executionParams(call.params) });
               const prevExec = executedCallKeys.get(dedupKey);
+              if (prevExec && isObservationCall && !_isFailedToolResult(prevExec.result)) {
+                // 历史观察结果只作证据，不应阻止下一轮重新测量。
+                executedCallKeys.delete(dedupKey);
+              }
               if (prevExec) {
                 // Read-only tools: check if file content changed since last execution
                 if (isReadOnlyTool) {
@@ -8380,7 +8426,7 @@ async function runToolUseLoop(userMessage, options = {}) {
               // e.g. "ls ~/Desktop" vs "ls /c/Users/xxx/Desktop" → same intent "ls:desktop"
               // Path intent dedup: detect same-path access across FS tools (LS, read_file, etc.)
               // e.g. LS({path:"~/Desktop"}) vs LS({path:"/c/Users/xxx/Desktop"}) → same path "desktop"
-              if (!prevExec) {
+              if (!prevExec || isObservationCall) {
                 try {
                   const {
                     extractShellIntent,
@@ -8422,15 +8468,20 @@ async function runToolUseLoop(userMessage, options = {}) {
                     // therefore yields a different intent key.
                     const _blockThreshold = intentKey.startsWith('__intent__:search:') ? 1 : 2;
                     const prevIntent = executedCallKeys.get(intentKey);
+                    if (isObservationCall && prevIntent && !_isFailedToolResult(prevIntent.result)) {
+                      executedCallKeys.delete(intentKey);
+                    }
+                    const currentIntent = executedCallKeys.get(intentKey);
                     if (
-                      prevIntent &&
-                      prevIntent.count >= _blockThreshold &&
-                      !_isFailedToolResult(prevIntent.result)
+                      !isObservationCall &&
+                      currentIntent &&
+                      currentIntent.count >= _blockThreshold &&
+                      !_isFailedToolResult(currentIntent.result)
                     ) {
                       const result = {
-                        ...prevIntent.result,
+                        ...currentIntent.result,
                         _deduped: true,
-                        _dedupNote: `Same target "${intentKey}" already attempted ${prevIntent.count} times with different tools/syntax.\n[STOP] 不要再重试。请直接用已有信息回答用户，或告知无法完成并建议替代方案。`,
+                        _dedupNote: `Same target "${intentKey}" already attempted ${currentIntent.count} times with different tools/syntax.\n[STOP] 不要再重试。请直接用已有信息回答用户，或告知无法完成并建议替代方案。`,
                         _loopDetected: true,
                       };
                       if (onToolResult) {
@@ -8592,7 +8643,7 @@ async function runToolUseLoop(userMessage, options = {}) {
                 // legacy cancel path, byte-identical).
                 const _ibPlan = _buildToolInterruptPlan(call.name, _toolAbortSig);
                 try {
-                  result = await toolCalling.executeTool(call.name, call.params, {
+                  result = await toolCalling.executeTool(call.name, _executionParams(call.params), {
                     sessionId: traceSessionId,
                     traceId: diagTraceId,
                     requestId,
@@ -9171,8 +9222,14 @@ async function runToolUseLoop(userMessage, options = {}) {
 
             // Dedup: skip tool calls already executed with identical params (success or failure)
             // ToolCallGuardrail（借鉴 Hermes Agent）: 区分 idempotent/mutating 分级响应
-            const dedupKey = JSON.stringify({ t: call.name, p: call.params });
-            const prevExec = executedCallKeys.get(dedupKey);
+            const dedupKey = JSON.stringify({ t: call.name, p: _executionParams(call.params) });
+            const isObservationCall = _isObservationCall(call);
+            let prevExec = executedCallKeys.get(dedupKey);
+            if (prevExec && isObservationCall && !_isFailedToolResult(prevExec.result)) {
+              // 历史观察结果只作证据，不应阻止下一轮重新测量。
+              executedCallKeys.delete(dedupKey);
+              prevExec = null;
+            }
             if (prevExec && _isFailedToolResult(prevExec.result)) {
               // Failed results are retryable: drop the stale failure record and let the
               // call re-execute. LoopDetector (above) still bounds a stuck retry loop.
@@ -9260,7 +9317,7 @@ async function runToolUseLoop(userMessage, options = {}) {
             }
 
             // Path/shell intent dedup (sequential path) — same logic as parallel path
-            if (!prevExec) {
+            if (!prevExec || isObservationCall) {
               try {
                 const {
                   extractShellIntent,
@@ -9292,15 +9349,20 @@ async function runToolUseLoop(userMessage, options = {}) {
                   // same-intent attempt; shell/FS-path intents keep the 3rd-attempt grace.
                   const _seqBlockThreshold = _seqIntentKey.startsWith('__intent__:search:') ? 1 : 2;
                   const _prevI = executedCallKeys.get(_seqIntentKey);
+                  if (isObservationCall && _prevI && !_isFailedToolResult(_prevI.result)) {
+                    executedCallKeys.delete(_seqIntentKey);
+                  }
+                  const _currentI = executedCallKeys.get(_seqIntentKey);
                   if (
-                    _prevI &&
-                    _prevI.count >= _seqBlockThreshold &&
-                    !_isFailedToolResult(_prevI.result)
+                    !isObservationCall &&
+                    _currentI &&
+                    _currentI.count >= _seqBlockThreshold &&
+                    !_isFailedToolResult(_currentI.result)
                   ) {
                     const result = {
-                      ..._prevI.result,
+                      ..._currentI.result,
                       _deduped: true,
-                      _dedupNote: `Same target "${_seqIntentKey}" already attempted ${_prevI.count} times.\n[STOP] 不要再重试。请直接用已有信息回答用户，或告知无法完成并建议替代方案。`,
+                      _dedupNote: `Same target "${_seqIntentKey}" already attempted ${_currentI.count} times.\n[STOP] 不要再重试。请直接用已有信息回答用户，或告知无法完成并建议替代方案。`,
                       _loopDetected: true,
                     };
                     const elapsed = 0;
@@ -9489,7 +9551,7 @@ async function runToolUseLoop(userMessage, options = {}) {
               try {
                 // Use toolCalling.executeTool which includes permission system
                 toolCalling = require('./toolCalling');
-                result = await toolCalling.executeTool(call.name, call.params, {
+                result = await toolCalling.executeTool(call.name, _executionParams(call.params), {
                   sessionId: traceSessionId,
                   traceId: diagTraceId,
                   requestId,
