@@ -141,20 +141,16 @@ _repl_*
 _smoke_*
 
 # Vendored tooling & reference material
-# deepseek-eyes source is distributed with khy; its local runtime stays untracked.
-#
-# NOTE: tools/deepseek-eyes is a git SUBMODULE, so the rules below are inert —
-# a parent .gitignore cannot filter paths inside another repository's index.
-# Its 92 MB .venv is excluded by the submodule's OWN .gitignore, which is why
-# `git status` still finishes in ~0.2s. Keep these lines as a safety net for the
-# day the submodule is flattened into a plain directory; do not add more here
-# expecting them to take effect today.
-tools/deepseek-eyes/.venv/
-tools/deepseek-eyes/**/__pycache__/
-tools/deepseek-eyes/**/*.py[cod]
-tools/deepseek-eyes/*.egg-info/
-tools/deepseek-eyes/.env
-tools/deepseek-eyes/.env.local
+# tools/deepseek-eyes: originally an accidental phantom git link (mode 160000,
+# with no .gitmodules mapping). A nested repo can't be checked out on clone,
+# and its local HEAD drifting made `git status` permanently dirty — which in
+# turn kept the dual-machine autopull `--clean-only` gate from ever firing
+# (the direct cause of the task loop never closing).
+# The phantom link is removed from the index (`git rm --cached
+# tools/deepseek-eyes` on 2026-08-27) and the whole directory is now a
+# machine-local vendored checkout that stays entirely out of git, so the
+# worktree can converge to clean and the sync loop can close.
+tools/deepseek-eyes/
 docs/_ref/
 
 # Root-level scratch / ad-hoc probe scripts (keep project root clean)
