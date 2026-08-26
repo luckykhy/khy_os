@@ -436,7 +436,14 @@ async function startRepl(options = {}) {
   if (process.stdout.isTTY && !options.oneShot) {
     try {
       const trustGate = require('./trustGate');
-      const decision = await trustGate.ensureWorkspaceTrust({ c: chalk() });
+      // 提问期间闸住 console.*:启动版本检查(三个发布源的网络往返,落点完全不可预测)
+      // 与 setImmediate 通知若插进 inquirer 的渲染区,它「回退固定行数重绘」的行计数会
+      // 当场错位 —— 提问框被从中间劈开、答完后又擦掉不该擦的行(实测可复现)。
+      // 暂存的通知在提问返回后、TUI 挂载前按序补发,位置不变,只是不再插进提问框。
+      const promptOutputGuard = require('./promptOutputGuard');
+      const decision = await promptOutputGuard.runExclusive(
+        () => trustGate.ensureWorkspaceTrust({ c: chalk() }),
+      );
       if (decision && decision.action === 'exit') {
         process.exit(typeof decision.code === 'number' ? decision.code : 0);
       }
@@ -577,7 +584,10 @@ async function startRepl(options = {}) {
     try {
       const onboarding = require('./onboarding');
       if (onboarding.isWizardEnabled() && onboarding.needsOnboarding()) {
-        await onboarding.runOnboarding({ inquirer: inquirer(), c: chalk() });
+        // 同信任门:向导也是 inquirer 提问,期间的异步通知必须暂存(见 promptOutputGuard)。
+        await require('./promptOutputGuard').runExclusive(
+          () => onboarding.runOnboarding({ inquirer: inquirer(), c: chalk() }),
+        );
       }
     } catch {
       /* onboarding is optional; never blocks the session */
@@ -12257,9 +12267,12 @@ async function startRepl(options = {}) {
                 .toLowerCase();
               return !['0', 'false', 'off', 'no', 'n'].includes(raw);
             })();
-            const harnessRetryAttempts = Math.max(
-              1,
-              parseInt(String(process.env.KHY_HARNESS_RETRY_ATTEMPTS || '2'), 10) || 2
+            // 轮次封顶:KHY_HARNESS_RETRY_ATTEMPTS 原来只有下界,填 999 就真跑 999 轮
+            // 整条工具循环(每轮都是一次完整 tool loop,不是一次 HTTP 请求)。上界统一取
+            // constants/retryBudget 的 MAX_RETRY_ROUNDS,「自动恢复 N/M」的 M 才是真值。
+            const harnessRetryAttempts = require('../constants/retryBudget').clampRetryRounds(
+              parseInt(String(process.env.KHY_HARNESS_RETRY_ATTEMPTS || '2'), 10),
+              2
             );
             const harnessRetryMinDelayMs = Math.max(
               100,

@@ -42,7 +42,7 @@ const { _dirStats, _fmtBytes } = require('./storage');
 /** 仓库根。handlers → cli → src → backend → services → root，共五层。 */
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..', '..');
 
-const TIERS = ['build', 'deps', 'runtime'];
+const TIERS = ['build', 'deps', 'tools', 'runtime'];
 
 /** markdown 工作台的**服务名**。核说要哪个服务，不说要哪个拓展。 */
 const MARKDOWN_WORKBENCH_SERVICE = 'markdown-workbench';
@@ -142,6 +142,8 @@ const BUILD_GLOBS = [
  * goals/ 等八十多份配置与用户状态。黑名单模式下漏写一条就等于删掉用户的凭据，
  * 而白名单漏写一条只是少回收几 MB。两种漏法的代价差着量级。
  */
+const TOOLS_TARGETS = [{ rel: 'tools/deepseek-eyes/.venv', why: 'DeepSeek Eyes 独立 Python 工具环境（可选）', rebuild: 'python -m venv tools/deepseek-eyes/.venv 后 pip install -e tools/deepseek-eyes' }];
+
 const RUNTIME_TARGETS = [
   { rel: 'logs', why: '运行日志', rebuild: '下一次运行自动重建' },
   {
@@ -350,7 +352,7 @@ function _discoverDeps(root, fsImpl = fs) {
         continue;
       }
       const abs = path.join(cur, e.name);
-      if (e.name === 'node_modules' || e.name === '.venv') {
+      if (e.name === 'node_modules' || (e.name === '.venv' && _rel(root, abs) !== 'tools/deepseek-eyes/.venv')) {
         found.push({ rel: _rel(root, abs), abs, kind: e.name });
         continue; // 整棵计入，不再下钻（嵌套的字节已算在父树里）
       }
@@ -431,6 +433,12 @@ function buildCleanPlan(opts = {}) {
     }
   }
 
+  if (tiers.includes('tools')) {
+    for (const t of TOOLS_TARGETS) {
+      push('tools', path.join(root, t.rel), t.rel, t.why, t.rebuild);
+    }
+  }
+
   if (tiers.includes('runtime')) {
     for (const t of RUNTIME_TARGETS) {
       push('runtime', path.join(dataHome, t.rel), '.khy/' + t.rel, t.why, t.rebuild);
@@ -438,17 +446,22 @@ function buildCleanPlan(opts = {}) {
     // 会话存档单独处理：不点名就只报「保留了多少」，让用户知道这块没被碰。
     const cpAbs = path.join(dataHome, CHECKPOINT_TARGET.rel);
     if (opts.checkpoints) {
-      push('runtime', cpAbs, '.khy/' + CHECKPOINT_TARGET.rel, CHECKPOINT_TARGET.why, CHECKPOINT_TARGET.rebuild);
+      let checkpointPlan;
+      try {
+        checkpointPlan = require('../../services/cleanupService').planCheckpointStorage(opts.checkpointMaxMb, { root: dataHome });
+      } catch (error) {
+        warnings.push('检查点保留规划失败：' + error.message);
+      }
+      if (checkpointPlan && checkpointPlan.selected && checkpointPlan.selected.length > 0) {
+        const bytes = checkpointPlan.selected.reduce((sum, item) => sum + item.bytes, 0);
+        items.push({ tier: 'runtime', rel: '.khy/checkpoints', abs: cpAbs, bytes, files: checkpointPlan.selected.length, why: '检查点配额保留：全局按时间从旧到新回收', rebuild: CHECKPOINT_TARGET.rebuild, checkpointPlan });
+      }
+      if (checkpointPlan && checkpointPlan.held) {
+        held.push(...checkpointPlan.held.map((item) => ({ rel: '.khy/checkpoints/' + item.rel, bytes: item.bytes, files: 0, reason: item.reason })));
+      }
     } else {
       const stats = _measure(cpAbs, fsImpl);
-      if (stats) {
-        held.push({
-          rel: '.khy/' + CHECKPOINT_TARGET.rel,
-          bytes: stats.bytes,
-          files: stats.files,
-          reason: '工作区快照（未提交的改动），--runtime 不清；确实要清用 khy clean --runtime --checkpoints',
-        });
-      }
+      if (stats) held.push({ rel: '.khy/checkpoints', bytes: stats.bytes, files: stats.files, reason: '工作区快照（未提交的改动），--runtime 不清；确实要清用 khy clean --runtime --checkpoints' });
     }
   }
 
@@ -487,8 +500,13 @@ function executeClean(plan, deps = {}) {
   const failed = [];
   for (const it of plan.items) {
     try {
-      fsImpl.rmSync(it.abs, { recursive: true, force: true, maxRetries: 3, retryDelay: 200 });
-      removed.push(it);
+      if (it.checkpointPlan) {
+        const result = require('../../services/cleanupService').executeCheckpointPlan(it.checkpointPlan);
+        removed.push({ ...it, bytes: result.reclaimedBytes, files: result.removed });
+      } else {
+        fsImpl.rmSync(it.abs, { recursive: true, force: true, maxRetries: 3, retryDelay: 200 });
+        removed.push(it);
+      }
     } catch (e) {
       failed.push({ ...it, error: e.message });
     }
@@ -530,6 +548,7 @@ function _printPlan(plan, opts = {}) {
   );
   _printTier('build', plan.items, '构建产物');
   _printTier('deps', plan.items, '可重装依赖');
+  _printTier('tools', plan.items, '可选工具环境');
   _printTier('runtime', plan.items, '运行时状态');
 
   if (plan.held.length > 0) {
@@ -560,7 +579,7 @@ function _printInventory() {
   }
   console.log('');
   printInfo('合计可回收 ' + _fmtBytes(plan.totalBytes) + ' / ' + plan.totalFiles + ' 文件');
-  console.log(chalk.dim('  选档位开始清理：khy clean --build / --deps / --runtime / --all'));
+  console.log(chalk.dim('  选档位开始清理：khy clean --build / --deps / --tools / --runtime / --all'));
   console.log(chalk.dim('  --all 只含 build + deps；运行时状态永远要显式 --runtime'));
 }
 
@@ -569,6 +588,7 @@ function _printHelp() {
   console.log('  clean                               只清点不删除，列出三档各能回收多少');
   console.log('  clean --build                       清构建产物（dist、build、各处 bundle 与前端产物）');
   console.log('  clean --deps                        清可重装依赖（全部 node_modules 与 .venv）');
+  console.log('  clean --tools                       清可选工具环境（仅登记的独立环境）');
   console.log('  clean --runtime                     清运行时状态（日志、审计、缓存、临时目录）');
   console.log('  clean --all                         等于 --build --deps（刻意不含 runtime）');
   console.log('    --dry-run                         只预览，即使带了 --yes 也不删');
@@ -591,6 +611,9 @@ function resolveTiers(options = {}) {
   if (on('all') || on('deps')) {
     tiers.push('deps');
   }
+  if (on('tools')) {
+    tiers.push('tools');
+  }
   if (on('runtime')) {
     tiers.push('runtime');
   }
@@ -609,7 +632,10 @@ async function handleCleanCommand(subCommand, _args = [], options = {}) {
 
   const dryRun = Boolean(options['dry-run'] || options.dryRun);
   const checkpoints = options.checkpoints === true || options.checkpoints === 'true';
-  const plan = buildCleanPlan({ tiers, checkpoints });
+  const capRaw = options['checkpoint-max-mb'];
+  const checkpointMaxMb = capRaw === undefined ? undefined : Number(capRaw);
+  if (capRaw !== undefined && (!Number.isFinite(checkpointMaxMb) || checkpointMaxMb <= 0)) { printError('--checkpoint-max-mb 必须是大于 0 的数字'); return; }
+  const plan = buildCleanPlan({ tiers, checkpoints, checkpointMaxMb });
 
   if (!_printPlan(plan, { preview: dryRun })) {
     printInfo(plan.message);

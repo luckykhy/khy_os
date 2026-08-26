@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # KHY_MANAGED_HOOK
 # Push every completed local phase commit to configured mirrors.
+# Offline or with an expired token the push is recorded in .khy/sync/mirror-queue.json
+# and replayed automatically by the next commit (or by `npm run sync:mirrors:retry`).
+# --non-interactive: never block a commit on a credential prompt.
 set -u
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
-"$ROOT/scripts/sync/push-mirrors.sh" || true
+"$ROOT/scripts/sync/push-mirrors.sh" --non-interactive || true

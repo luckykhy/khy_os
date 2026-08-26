@@ -1365,6 +1365,57 @@ function cleanRuntimeLogs(root = _runtimeLogRoot(), policy = LOGS) {
   return { removed, archived, bytes, root, archiveDir };
 }
 
+function planCheckpointStorage(maxTotalMb = CKPT_MAX_TOTAL_MB, options = {}) {
+  const fsImpl = options.fsImpl || fs;
+  const ckptRoot = options.root || path.join(_baseDir(), 'checkpoints');
+  let currentSize = 0;
+  try { currentSize = safeTreeSize(ckptRoot); } catch { return { ok: false, currentSize: 0, selected: [], held: [], reason: 'checkpoint root unavailable' }; }
+  const maxBytes = maxTotalMb * 1024 * 1024;
+  const projects = [];
+  let names = [];
+  try { names = fsImpl.readdirSync(ckptRoot); } catch { return { ok: false, currentSize, selected: [], held: [] }; }
+  const held = [];
+  for (const name of names) {
+    const projectDir = path.join(ckptRoot, name);
+    try {
+      if (!fsImpl.statSync(projectDir).isDirectory()) continue;
+      const manifest = JSON.parse(fsImpl.readFileSync(path.join(projectDir, 'manifest.json'), 'utf8'));
+      if (!Array.isArray(manifest.checkpoints)) throw new Error('invalid checkpoints');
+      projects.push({ name, projectDir, manifest });
+    } catch {
+      let bytes = 0; try { bytes = safeTreeSize(projectDir); } catch {}
+      held.push({ rel: name, bytes, reason: 'manifest 无法解析或数据不完整，保留不动' });
+    }
+  }
+  const candidates = [];
+  const refs = new Map();
+  for (const project of projects) for (const entry of project.manifest.checkpoints) {
+    const timestamp = Date.parse(entry.timestamp || '') || 0;
+    let bytes = 0;
+    for (const ext of ['.patch', '.tar.gz', '.stash.json']) { try { bytes += fsImpl.statSync(path.join(project.projectDir, entry.id + ext)).size; } catch {} }
+    for (const object of entry.objects || []) {
+      if (!object || typeof object.digest !== 'string') continue;
+      refs.set(object.digest, (refs.get(object.digest) || 0) + 1);
+    }
+    candidates.push({ project, entry, timestamp, bytes });
+  }
+  candidates.sort((a,b) => a.timestamp - b.timestamp || String(a.entry.id).localeCompare(String(b.entry.id)));
+  const selected = []; let projected = currentSize;
+  for (const candidate of candidates) {
+    if (projected <= maxBytes) break;
+    let reclaim = candidate.bytes;
+    for (const object of candidate.entry.objects || []) {
+      const digest = object && object.digest;
+      if (!digest || refs.get(digest) !== 1) continue;
+      try { reclaim += fsImpl.statSync(path.join(candidate.project.projectDir, 'objects', 'sha256', digest.slice(0, 2), digest + '.gz')).size; } catch {}
+    }
+    selected.push({ project: candidate.project.name, id: candidate.entry.id, timestamp: candidate.entry.timestamp, bytes: reclaim });
+    projected -= reclaim;
+    for (const object of candidate.entry.objects || []) { if (object && refs.has(object.digest)) refs.set(object.digest, refs.get(object.digest) - 1); }
+  }
+  return { ok: selected.length > 0, root: ckptRoot, maxTotalMb, maxBytes, currentSize, projectedSize: Math.max(0, projected), selected, held, projects: projects.length };
+}
+
 // ── Checkpoint storage cap ─────────────────────────────────────────────
 
 function cleanCheckpointStorage(maxTotalMb = CKPT_MAX_TOTAL_MB) {
@@ -1477,6 +1528,42 @@ function cleanCheckpointStorage(maxTotalMb = CKPT_MAX_TOTAL_MB) {
     currentSize: Math.max(0, totalSize),
     checkpoints: removedEntries.filter((item) => /\.(?:patch|tar\.gz|stash\.json)$/.test(item.filePath)).length,
   };
+}
+
+function executeCheckpointPlan(plan, options = {}) {
+  const fsImpl = options.fsImpl || fs;
+  const projects = new Map();
+  for (const item of plan.selected || []) {
+    const dir = path.join(plan.root, item.project);
+    try {
+      const manifestPath = path.join(dir, 'manifest.json');
+      const manifest = JSON.parse(fsImpl.readFileSync(manifestPath, 'utf8'));
+      const entry = manifest.checkpoints.find((candidate) => candidate.id === item.id);
+      if (!entry) continue;
+      manifest.checkpoints = manifest.checkpoints.filter((candidate) => candidate.id !== item.id);
+      for (const ext of ['.patch', '.tar.gz', '.stash.json']) { try { fsImpl.unlinkSync(path.join(dir, item.id + ext)); } catch {} }
+      projects.set(dir, { manifestPath, manifest, dir, entry });
+    } catch {}
+  }
+  for (const project of projects.values()) {
+    const temp = project.manifestPath + '.tmp-' + process.pid;
+    fsImpl.writeFileSync(temp, JSON.stringify(project.manifest, null, 2), 'utf8');
+    fsImpl.renameSync(temp, project.manifestPath);
+  }
+  const refs = new Set();
+  for (const name of fsImpl.readdirSync(plan.root)) {
+    try {
+      const dir = path.join(plan.root, name); const m = JSON.parse(fsImpl.readFileSync(path.join(dir, 'manifest.json'), 'utf8'));
+      for (const e of m.checkpoints || []) for (const o of e.objects || []) if (o && o.digest) refs.add(o.digest);
+    } catch {}
+  }
+  let reclaimedBytes = 0;
+  for (const project of projects.values()) for (const object of project.entry.objects || []) {
+    if (!object || refs.has(object.digest)) continue;
+    const target = path.join(project.dir, 'objects', 'sha256', object.digest.slice(0, 2), object.digest + '.gz');
+    try { reclaimedBytes += fsImpl.statSync(target).size; fsImpl.unlinkSync(target); } catch {}
+  }
+  return { removed: projects.size, reclaimedBytes };
 }
 
 // ── Run all cleanup ─────────────────────────────────────────────────────
@@ -1920,6 +2007,8 @@ module.exports = {
   cleanTrajectories,
   cleanTaskOutputs,
   cleanCheckpointStorage,
+  planCheckpointStorage,
+  executeCheckpointPlan,
   cleanRuntimeLogs,
   cleanBackendDir,
   cleanOsTempFiles,

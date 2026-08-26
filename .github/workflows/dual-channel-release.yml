@@ -43,8 +43,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: services/backend/package-lock.json
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -54,7 +54,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: services/backend
-        run: npm ci
+        run: npm run install:core
 
       - name: Run test suite (Jest)
         working-directory: services/backend

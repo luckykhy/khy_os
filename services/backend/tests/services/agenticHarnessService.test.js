@@ -162,6 +162,65 @@ describe('agenticHarnessService', () => {
     expect(report.deliveryVerdict.verdict).toBe('pass');
   });
 
+  test('Ralph continuation retains prior conversation and dedup state', async () => {
+    contextRouter.routeContextStrategy.mockReturnValue({
+      route: 'fits',
+      overflow: 0,
+      toolResultTokens: 0,
+    });
+
+    const priorMessages = [
+      { role: 'user', content: 'original task' },
+      { role: 'assistant', content: 'tool requested' },
+      { role: 'user', content: 'tool result: changed file' },
+    ];
+    const executedCallKeys = new Map([
+      ['{"t":"write_file","p":{"path":"src/demo.js"}}', { result: { success: true } }],
+    ]);
+
+    toolUseLoop.runToolUseLoop
+      .mockResolvedValueOnce({
+        finalResponse: 'iteration limit reached',
+        toolCallLog: [],
+        iterations: 2,
+        maxIterationsReached: true,
+        conversationMessages: priorMessages,
+        executedCallKeys,
+      })
+      .mockResolvedValueOnce({
+        finalResponse: 'completed after continuation',
+        toolCallLog: [],
+        iterations: 1,
+        provider: 'mock',
+      });
+
+    const previousRalphFlag = process.env.KHY_RALPH_LOOP;
+    const previousDeliveryGate = process.env.KHY_DELIVERY_GATE;
+    process.env.KHY_RALPH_LOOP = '1';
+    process.env.KHY_DELIVERY_GATE = '0';
+    try {
+      const harness = createAgenticHarness({
+        continuationCooldownMs: 0,
+        maxContinuationRounds: 1,
+      });
+      const result = await harness.run({
+        userMessage: 'create a new project',
+        chat: async () => ({ reply: 'unused' }),
+      });
+
+      expect(result.finalResponse).toContain('completed after continuation');
+      expect(toolUseLoop.runToolUseLoop).toHaveBeenCalledTimes(2);
+      const continuationOptions = toolUseLoop.runToolUseLoop.mock.calls[1][1];
+      expect(continuationOptions.initialMessages).toBe(priorMessages);
+      expect(continuationOptions.inheritedDedupKeys).toBe(executedCallKeys);
+    } finally {
+      if (previousRalphFlag === undefined) delete process.env.KHY_RALPH_LOOP;
+      else process.env.KHY_RALPH_LOOP = previousRalphFlag;
+      if (previousDeliveryGate === undefined) delete process.env.KHY_DELIVERY_GATE;
+      else process.env.KHY_DELIVERY_GATE = previousDeliveryGate;
+    }
+  });
+
   test('run blocks delivery when bugfix regression gate reports new failures', async () => {
     contextRouter.routeContextStrategy.mockReturnValue({
       route: 'fits',

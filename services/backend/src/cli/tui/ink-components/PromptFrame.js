@@ -325,11 +325,11 @@ function PromptFrame({
   // via layoutPromptRows (marker + caret + slack reserved).
   const border = '─'.repeat(Math.max(1, cols - 1));
 
-  // Mic voice button embedded at the box's top-border LEFT end (输入框左端)。
-  // Rendered as a clickable 4-col Box (` 🎤 `) replacing the first 4 border
+  // Voice input button embedded at the box's top-border LEFT end (输入框左端)。
+  // Rendered as a clickable 5-col Box (` MIC `) replacing the first 5 border
   // columns, so the total top-row width stays `cols - 1` — the anti-spill slack
   // is untouched and the input rows / caret math below never shift. State:
-  //   idle  → cyan mic;  hover (mouse onMouseOver) → white bg;  active (听写中)
+  //   idle  → cyan label;  hover (mouse onMouseOver) → white bg;  active (听写中)
   //   → magenta bg + white text (opencode 同款 backgroundColor 激活标记)。
   // 高亮放在 **Text** 的 backgroundColor 上,而不是 Box 的:ink 的 Box 背景填充
   // 会被文本单元格整体覆盖(render-background.js 先画、文本后覆盖),只有文本自身的
@@ -350,7 +350,7 @@ function PromptFrame({
             color: mic.active ? 'white' : micHover ? 'black' : accent || 'cyan',
             backgroundColor: mic.active ? 'magenta' : micHover ? 'white' : undefined,
           },
-          ' 🎤 '
+          ' MIC '
         )
       )
     : null;
@@ -359,7 +359,7 @@ function PromptFrame({
         Box,
         { flexDirection: 'row' },
         micButton,
-        h(Text, { color: borderColor, dimColor: busy }, '─'.repeat(Math.max(1, cols - 1 - 4)))
+        h(Text, { color: borderColor, dimColor: busy }, '─'.repeat(Math.max(1, cols - 1 - 5)))
       )
     : h(Text, { color: borderColor, dimColor: busy }, border);
   // In vim NORMAL the caret is a solid green block (vs. the default inverse

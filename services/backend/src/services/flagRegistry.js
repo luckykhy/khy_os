@@ -1930,6 +1930,16 @@ const FLAGS = {
   // 「先把…再…」仪式;续接句沿用 occurrence 轮换);关 → 逐字节回退历史「我先…」措辞。
   KHY_TOOL_PREFACE_NATURAL_VOICE: { mode: 'default-on', off: 'CANON', default: true },
 
+  // ── 过程旁白「执行中/结果/阶段」三处去模板化(toolPrefaceVoice;2026-08-26 用户反馈)──────
+  // 上一轮 KHY_TOOL_PREFACE_NATURAL_VOICE 只治了意图拍(toolProgressReason)的措辞,剩下两拍仍是
+  // 纯查表:toolRunningNarration / toolOutcomeNarration 里只有 websearch/webfetch 走 occurrence
+  // 轮换,其余分支是死字符串 → 一个多步任务连读三个文件就出三次逐字相同的「正在读取 x…」+
+  // 「x 读完了，结构我摸清了——接着…」,像机器复述;running 兜底「正在执行…」还只有动作没有目标,
+  // 贴红线②禁区;任务级 composePlanAnnouncement/composePlanProgress 同样零轮换。
+  // 开(默认)→ 三处都按 occurrence 轮换续接句(**首发句 occ 0 逐字节保持历史原文**,故旧断言不动),
+  // 兜底句补上目标;关 → 逐字节回退到「只有 websearch 会换」的历史行为。
+  KHY_TOOL_NARRATION_LIVE_VOICE: { mode: 'default-on', off: 'CANON', default: true },
+
   // ── turn 级即时确认「先回应用户,再干活」(turnAckVoice;2026-07-05 用户反馈)────────────
   // 用户反馈:khy 收到提示词后直接静默进 runToolUseLoop 调模型,全程没有任何「先回应用户」的文本
   // (现有 preface 全是逐工具、且在模型跑起来之后才出)。用户要 khy 代码级先甩一句确定性短句回应、
@@ -2425,6 +2435,15 @@ const FLAGS = {
   // AGENT_LAUNCHERS 驱动(含 opencode 直连型 + warp/vscode/windsurf 选模型型),ROUTER_COMMANDS/
   // 路由 case/ide handler 三面从注册表派生。关 → getAgentLaunchers 只返旧 5 个,三面逐字节回退。
   KHY_AGENT_LAUNCHERS: { mode: 'default-on', off: 'CANON', default: true },
+
+  // ── 外部 agent 资产管理层(agentAssets;「A 工具沉淀的记忆换到 B 工具等于清零」)──
+  // khy 此前与外部 agent 工具的交集只覆盖「模型与连接配置」(externalApps/*Adapter)与
+  // 「khy 自己的技能/记忆」(DiscoverSkillsTool / LocalMemoryRecall):外部工具把记忆/工具/
+  // 技能存在各自的私有目录与私有格式里,khy 既读不到也无法在它们之间迁移。开该门 →
+  // registry/adapters/sync 三层上线,统一发现与双向同步 opencode / Claude Code / harness /
+  // khy-os 四家的三类资产(写操作 dryRun 默认为真,冲突一律 keep-both 不覆盖)。
+  // 关 → listSourceIds 返空、resolveAdapter/discover/plan 明确拒绝并说明原因,零副作用。
+  KHY_AGENT_ASSETS: { mode: 'default-on', off: 'CANON', default: true },
 
   // ── 交互式 TUI 应用新终端启动(terminalLaunchCommand;「让 khy 启动 opencode 却不新开终端」)──
   // opencode/claude/codex 等交互式终端 agent 经 _spawnDetached 以 stdio:'ignore'+windowsHide 分离启动
@@ -3435,6 +3454,61 @@ const FLAGS = {
   // 它只管**根集合**,不管激活时机 —— 惰性由 KHY_PLUGIN_LAZY_LOAD 管,两者正交。
   // 不设 parent:拓展发现是自己的顶层域,不受插件惰性/模型适配等其它域牵连。
   KHY_EXTENSION_REPO_ROOT: { mode: 'default-on', off: 'CANON', default: true },
+
+  // ── 文件级实时同步(T-008:crdt_engine / file_sync_bus / session_registry)──
+  // 文档级操作合并总线的总门控。开(默认)→ 客户端可用 subscribe_files / file_op / file_catch_up
+  // 事件族提交带 baseVersion 的最小操作,服务端确定性合并后广播 file_changed 增量。
+  // 关 → 三个入口(submitOp / catchUp / subscribe)一律返 MERGE_FALLBACK + fallback:'file_lock',
+  // 逐字节回退到本任务前的 _fileLock.js 悲观文件锁 + 冲突副本路径,不丢数据。
+  // 不设 parent:文件同步是自己的顶层域,不受网关/插件等其它域牵连。
+  KHY_FILE_SYNC: { mode: 'default-on', off: 'CANON', default: true },
+  // 每文件保留的操作历史条数(环形缓冲)。断线重连时客户端拿 lastSeenVersion 回来补齐增量,
+  // 历史还在 → 只补缺失操作;已被挤掉 → 发 file_resync_required 全量重同步。
+  // 越大越能容忍长断线,代价是每文件常驻内存。clamp[8, 20000],默认 200。
+  KHY_FILE_SYNC_HISTORY: { mode: 'numeric', default: 200, min: 8, max: 20000, parent: 'KHY_FILE_SYNC' },
+  // 单批操作条数上限;clamp[1, 5000],默认 200。超限 → OP_TOO_LARGE(结构化拒绝,不写盘)。
+  KHY_FILE_SYNC_MAX_OPS: { mode: 'numeric', default: 200, min: 1, max: 5000, parent: 'KHY_FILE_SYNC' },
+  // 单条 insert 字符数上限;clamp[64, 4194304],默认 65536。防单操作膨胀成整文件广播。
+  KHY_FILE_SYNC_MAX_INSERT: {
+    mode: 'numeric',
+    default: 65536,
+    min: 64,
+    max: 4194304,
+    parent: 'KHY_FILE_SYNC',
+  },
+  // 单批操作合计字符数上限;clamp[256, 8388608],默认 262144。
+  KHY_FILE_SYNC_MAX_BATCH: {
+    mode: 'numeric',
+    default: 262144,
+    min: 256,
+    max: 8388608,
+    parent: 'KHY_FILE_SYNC',
+  },
+  // 单文档字符数上限;clamp[1024, 67108864],默认 4194304(4Mi)。超限文档不进文本 CRDT。
+  KHY_FILE_SYNC_MAX_DOC: {
+    mode: 'numeric',
+    default: 4194304,
+    min: 1024,
+    max: 67108864,
+    parent: 'KHY_FILE_SYNC',
+  },
+  // 编辑租约 TTL 毫秒;clamp[1000, 3600000],默认 45000。租约靠心跳/成功提交续期(基于活动的
+  // 超时),不是固定时长硬 kill;断线立即释放,不等 TTL 走完。
+  KHY_FILE_SYNC_LEASE_MS: {
+    mode: 'numeric',
+    default: 45000,
+    min: 1000,
+    max: 3600000,
+    parent: 'KHY_FILE_SYNC',
+  },
+  // 会话空闲回收毫秒;clamp[10000, 86400000],默认 300000。sweep 先收过期租约再收空闲会话。
+  KHY_FILE_SYNC_IDLE_MS: {
+    mode: 'numeric',
+    default: 300000,
+    min: 10000,
+    max: 86400000,
+    parent: 'KHY_FILE_SYNC',
+  },
 };
 
 /**

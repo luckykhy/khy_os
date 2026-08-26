@@ -2009,6 +2009,7 @@ function useQueryBridge(hostHandlers = {}) {
         const text = computePlanAnnouncement({
           plan,
           segmentModelNarrated: segmentModelNarratedRef.current,
+          turnIndex: turnSeqRef.current,
         });
         if (!text) {
           return;
@@ -3334,9 +3335,10 @@ function useQueryBridge(hostHandlers = {}) {
     return buildExpansionMessage(target, Date.now());
   }, [messages]);
 
-  // Items rendered in the committed <Static> region: banner first, then messages.
+  // Items rendered in the committed <Static> region: messages only. The startup banner
+  // belongs to App's live region so it cannot be replayed when the first message commits.
   // Memoized by messages array identity (stable across streaming frames / keystrokes
-  // / nowTick) so we don't re-alloc N+1 wrappers every render. Byte-identical content;
+  // / nowTick) so we don't re-alloc N wrappers every render. Byte-identical content;
   // gate off (KHY_STATIC_ITEMS_MEMO) → rebuild every render (today's behavior).
   const _staticCacheRef = useRef(null);
   const _staticReconciled = _staticItemsMemo.reconcileStaticItems(

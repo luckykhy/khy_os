@@ -103,6 +103,30 @@ function _isFalsy(value) {
   return ['0', 'false', 'no', 'off'].includes(String(value || '').trim().toLowerCase());
 }
 
+/**
+ * 把 winston 的控制台 transport 降到 warn —— CLI 的终端属于横幅、命令输出和 TUI。
+ *
+ * 共享 logger 只看 `NODE_ENV !== 'production'` 就挂 Console transport。对 `npm start` /
+ * `npm run dev` 的服务器进程这是对的(它们不经过本文件),对 khy 却不是:一启动,DB Health
+ * 之类的内部审计日志就以 `2026-… [info] [DB Health] …` 打进用户终端,并跟 `\r` 覆写的引导
+ * 进度行抢同一行。日志一行都没丢 —— 两个 DailyRotateFile transport 照旧全量落盘,这里只
+ * 关终端可见性,而且 warn/error 仍然直达用户,真出问题不会被闷掉。
+ *
+ * 三种情况不降音量:用户显式设过 LOG_LEVEL、显式开了 KHY_DEBUG、或本次带了
+ * --verbose/--debug(与 router 的 _applyVerbosityFlag 同一意图,只是提前到日志器初始化前
+ * 判定)。另有门控 KHY_CLI_QUIET_LOGS=0 可整体关掉,逐字节回退到今日行为。
+ *
+ * @param {string[]} args - 已标准化的命令行参数
+ */
+function _quietConsoleLogsForCli(args) {
+  if (_isFalsy(process.env.KHY_CLI_QUIET_LOGS)) return;
+  if (process.env.LOG_LEVEL || _isTruthy(process.env.KHY_DEBUG)) return;
+  if (args.includes('--verbose') || args.includes('--debug')) return;
+  try {
+    require('../src/utils/logger').setConsoleLevel('warn');
+  } catch { /* logger 不可用时不影响启动 */ }
+}
+
 let _startupUpdateCheckScheduled = false;
 
 /**
@@ -127,7 +151,7 @@ function _scheduleStartupUpdateCheck(printInfo, printError) {
       // 三个仓库都没答上来:诚实沉默(不谎报「已是最新」),仅调试门控下说明原因。
       if (!result.latest) {
         if (_isTruthy(process.env.KHY_STARTUP_UPDATE_DEBUG)) {
-          printInfo(`版本检查未完成：${sourcesText || '所有发布源均不可用'}`);
+          printInfo(`检查未完成：${sourcesText || '所有发布源均不可用'}`, '版本');
         }
         return;
       }
@@ -135,18 +159,22 @@ function _scheduleStartupUpdateCheck(printInfo, printError) {
       if (result.updateAvailable) {
         printInfo(
           `发现新版本：当前 v${result.current}，最新 v${result.latest}`
-            + (result.sourceLabel ? `（来源 ${result.sourceLabel}）` : '')
+            + (result.sourceLabel ? `（来源 ${result.sourceLabel}）` : ''),
+          '更新'
         );
-        if (sourcesText) printInfo(`发布源：${sourcesText}`);
+        if (sourcesText) printInfo(sourcesText, '来源');
         if (_isFalsy(process.env.KHY_AUTO_UPDATE)) {
-          printInfo('自动更新已关闭（KHY_AUTO_UPDATE=0）。');
+          printInfo('自动安装已关闭（KHY_AUTO_UPDATE=0），需手动运行 khy update。', '更新');
           return;
         }
 
         const { detectInstallation } = require('../src/services/updateCoordinator');
         const installation = detectInstallation();
         if (installation.type !== 'package') {
-          printInfo(`当前安装类型为 ${installation.type || 'unknown'}，请运行 khy update apply 完成更新。`);
+          printInfo(
+            `当前安装类型为 ${installation.type || 'unknown'}，请运行 khy update apply 完成更新。`,
+            '更新'
+          );
           return;
         }
         // 自动安装只走 pip(pip 成功后会顺带同步 npm 渠道)。取胜源不是 PyPI 时 pip 拉不到那个版本,
@@ -154,7 +182,8 @@ function _scheduleStartupUpdateCheck(printInfo, printError) {
         if (result.source !== 'pypi' || !(installation.packages && installation.packages.pip)) {
           printInfo(
             `最新版本发布在 ${result.sourceLabel || result.source} 渠道，`
-              + '请运行 khy update 从该渠道完成更新。'
+              + '请运行 khy update 从该渠道完成更新。',
+            '更新'
           );
           return;
         }
@@ -162,7 +191,7 @@ function _scheduleStartupUpdateCheck(printInfo, printError) {
         const { applyUpdate } = require('../src/services/khySelfUpdateService');
         const update = applyUpdate();
         if (update && update.success && update.changed) {
-          printInfo('更新完成，请重启 CLI 以使用新版本。');
+          printInfo('已完成，请重启 CLI 以使用新版本。', '更新');
         } else if (update && !update.success && update.error) {
           printError(`自动更新失败：${String(update.error).slice(0, 240)}`);
         }
@@ -171,9 +200,9 @@ function _scheduleStartupUpdateCheck(printInfo, printError) {
 
       const suffix = sourcesText ? `（发布源：${sourcesText}）` : '';
       if (compareVersions(result.current, result.latest) > 0) {
-        printInfo(`当前版本 v${result.current} 领先于已发布版本 v${result.latest}${suffix}。`);
+        printInfo(`v${result.current} 领先于已发布版本 v${result.latest}${suffix}`, '版本');
       } else {
-        printInfo(`当前版本 v${result.current} 已是最新版本${suffix}。`);
+        printInfo(`v${result.current} 已是最新版本${suffix}`, '版本');
       }
     } catch (error) {
       // Startup update checks are advisory and must never block the CLI.
@@ -610,7 +639,7 @@ async function ensureAuthenticated() {
   const auth = cliAuth();
   const session = auth.checkSession();
   if (session.loggedIn) {
-    console.log(`  ℹ 已登录: ${session.username}`);
+    console.log(`  登录  ${session.username}`);
     return true;
   }
 
@@ -646,7 +675,7 @@ async function ensureAuthenticated() {
       if (_defaultCreds) {
         const autoResult = await auth.login(_defaultCreds.username, _defaultCreds.password, undefined, 2000);
         if (autoResult && autoResult.success) {
-          console.log(chalk.dim(`  ℹ 已自动登录: ${_defaultCreds.username} (管理员)`));
+          console.log(chalk.dim(`  登录  ${_defaultCreds.username} (管理员，已自动登录)`));
           return true;
         }
       }
@@ -741,7 +770,7 @@ async function ensureAuthenticated() {
       if (_defaultCreds) {
         const autoResult = await auth.login(_defaultCreds.username, _defaultCreds.password, undefined, 2000);
         if (autoResult && autoResult.success) {
-          console.log(chalk.dim(`  ℹ 已自动登录: ${_defaultCreds.username} (管理员)`));
+          console.log(chalk.dim(`  登录  ${_defaultCreds.username} (管理员，已自动登录)`));
           return true;
         }
       }
@@ -1104,7 +1133,7 @@ async function startWithServer() {
       }
     } catch { /* server start is optional */ }
   } else {
-    console.log(chalk.dim(`  ℹ 后端服务已在运行 (端口 ${PORT})`));
+    console.log(chalk.dim(`  服务  后端已在运行 (端口 ${PORT})`));
   }
 
   // Check/show frontend URL and auto-open in browser
@@ -1116,7 +1145,7 @@ async function startWithServer() {
   } else {
     // Frontend is served by backend in production mode
     frontendUrl = `http://localhost:${PORT}`;
-    console.log(chalk.dim(`  ℹ 前端: ${frontendUrl} (后端一体化服务)`));
+    console.log(chalk.dim(`  前端  ${frontendUrl} (后端一体化服务)`));
   }
 
   // Auto-open frontend in default browser (use execFile to avoid shell injection)
@@ -1131,7 +1160,7 @@ async function startWithServer() {
       } else {
         execFile('xdg-open', [openUrl], { timeout: 5000 });
       }
-      console.log(chalk.dim(`  ℹ 已自动打开浏览器: ${openUrl}`));
+      console.log(chalk.dim(`  浏览  已自动打开 ${openUrl}`));
     } catch { /* non-critical: user can open manually */ }
   }
 
@@ -1242,12 +1271,16 @@ async function main() {
   // 使用 \r 覆盖同一行，让用户感知系统正在逐步就绪。
   const _isBootTty = process.stderr.isTTY && !args.includes('--help') && args[0] !== 'help';
   let _bootPhaseWrite = null; // 函数引用,在 _isBootTty 判定后才创建
+  let _bootPhaseLine = null;  // 句柄:负责在别人输出前让出瞬时行,并在交棒时收尾
   if (_isBootTty) {
-    _bootPhaseWrite = (phaseText) => {
-      try {
-        process.stderr.write(`\r  ${phaseText}...\x1b[K`);
-      } catch { /* stderr 不可写时静默 */ }
-    };
+    // 进度行是瞬时的(\r 覆写、行尾无换行),所以它必须在任何其他输出落地前先擦掉自己,
+    // 否则「ℹ 已登录」「版本通知」会从行中间续写,糊成一条永久残留的半截行。
+    _bootPhaseLine = require('../src/cli/bootPhaseLine').create();
+    _bootPhaseWrite = (phaseText) => _bootPhaseLine.write(phaseText);
+    // 命令在进度行亮着时直接退出(自身无任何 console 输出)的兜底:退出前擦干净。
+    try {
+      process.once('exit', () => _bootPhaseLine.end());
+    } catch { /* 注册不上不影响启动 */ }
     _bootPhaseWrite('⌛ khy 正在启动');
   }
 
@@ -1283,6 +1316,7 @@ async function main() {
   // here, past the quick paths, so --version/--help never load it. For real
   // commands this runs before any other init, exactly as the eager require did.
   if (_bootPhaseWrite) _bootPhaseWrite('⏳ 加载环境配置');
+  _quietConsoleLogsForCli(args);
   if (!_initPromise) {
     const { init: _bootstrapInit } = require('../src/bootstrap/init');
     _initPromise = _bootstrapInit({ machineReadable: _isMachineReadableInvocation(args) });
@@ -1825,6 +1859,8 @@ async function main() {
       } catch { /* non-critical */ }
       checkpoint('khy:setup-done');
       if (_bootPhaseWrite) _bootPhaseWrite('✓ 就绪');
+      // 交棒给 TUI 前收掉瞬时进度行:横幅从干净的一行起笔,后到的版本通知也不再撞行。
+      if (_bootPhaseLine) _bootPhaseLine.end();
       _scheduleStartupUpdateCheck(printInfo, printError);
       const { startRepl } = require('../src/cli/repl');
       if (_startupFsm) _startupFsm.fire('advance', { step: 'khy_repl_enter' }); // -> running

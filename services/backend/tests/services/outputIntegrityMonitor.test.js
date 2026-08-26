@@ -11,7 +11,7 @@
  *   5. 健康文本零误报 + snapshot 契约。用注入 sink 断言落盘、避免真写 winston。
  */
 
-const { describe, test, beforeEach } = require('node:test');
+const { describe, test, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
 
 const mon = require('../../src/services/outputIntegrityMonitor');
@@ -186,5 +186,101 @@ describe('snapshot / hasSignal 契约', () => {
     assert.equal(s.unrepaired >= 1, true);
     assert.equal(s.byType.mojibake >= 1, true);
     assert.equal(mon.hasSignal(), true);
+  });
+});
+
+// ── 自愈:重复不刷屏、窗口外自动转绿 ────────────────────────────────────────
+// 用户诉求「出现错误就永远报相同的错误,不会清理错误锁定」在这一层有两个具体成因:
+//   1. 同一条软 bug 每次出现都原样再落一遍错误日志(同一行重复几十遍)。
+//   2. snapshot 是进程生命周期单调累计,health 那条 yellow 一旦亮起就再也不灭。
+describe('重复落盘抑制 + 窗口化快照', () => {
+  let sink;
+  beforeEach(() => {
+    mon.reset();
+    sink = [];
+    mon.__setSink((e) => sink.push(e));
+  });
+  afterEach(() => {
+    mon.__setClock(null);
+    mon.reset();
+  });
+
+  const GARBLED = '�'.repeat(30);
+
+  test('同一条软 bug 连续出现:只在 1/2/4… 次落盘,并带累计与抑制条数', () => {
+    let t = 1_000_000;
+    mon.__setClock(() => t);
+    for (let i = 0; i < 5; i += 1) {
+      t += 100; // 保持在 DEDUP_WINDOW_MS 内,属于同一轮事件
+      mon.guardText(GARBLED, { source: 'dup' }, OBSERVE);
+    }
+    // 第 1、2、4 次落盘,第 3、5 次被抑制
+    assert.equal(sink.length, 3);
+    assert.equal(sink[0].repeat, undefined, '首次不带 repeat');
+    assert.equal(sink[1].repeat, 2);
+    assert.equal(sink[2].repeat, 4);
+    assert.equal(sink[2].suppressed, 1, '第 3 次被抑制,计入下一条');
+    // 抑制只影响日志,进程内计数不能丢
+    assert.equal(mon.snapshot().lifetime.unrepaired, 5);
+  });
+
+  test('静默超过归并窗后再复现:当作新一轮事件,重新照常落盘', () => {
+    let t = 2_000_000;
+    mon.__setClock(() => t);
+    mon.guardText(GARBLED, { source: 'dup' }, OBSERVE);
+    assert.equal(sink.length, 1);
+
+    t += 6 * 60_000; // > DEDUP_WINDOW_MS(5 分钟)
+    mon.guardText(GARBLED, { source: 'dup' }, OBSERVE);
+    assert.equal(sink.length, 2);
+    assert.equal(sink[1].repeat, undefined, '新一轮从「首次」开始,不带累计标记');
+  });
+
+  test('不同 detail 各自归并,互不影响', () => {
+    let t = 3_000_000;
+    mon.__setClock(() => t);
+    mon.guardText(GARBLED, { source: 'a' }, OBSERVE);
+    t += 100;
+    mon.guardText('�'.repeat(50), { source: 'a' }, OBSERVE); // len 不同 → detail 不同
+    assert.equal(sink.length, 2);
+  });
+
+  test('快照只统计窗口内的记录,窗口外自动转绿', () => {
+    let t = 4_000_000;
+    mon.__setClock(() => t);
+    mon.guardText(GARBLED, { source: 'w' }, OBSERVE);
+    assert.equal(mon.snapshot().unrepaired, 1);
+
+    t += 16 * 60_000; // > RECENT_WINDOW_MS(15 分钟)
+    const s2 = mon.snapshot();
+    assert.equal(s2.unrepaired, 0, '问题停止发生后 health 应能自行转绿');
+    assert.equal(Object.keys(s2.byType).length, 0);
+    assert.equal(s2.lifetime.unrepaired, 1, '生命周期累计仍可查');
+    assert.equal(s2.windowMs > 0, true, '窗口宽度必须暴露给调用方以便说清「近 N 分钟」');
+  });
+
+  test('自定义窗口宽度生效', () => {
+    let t = 5_000_000;
+    mon.__setClock(() => t);
+    mon.guardText(GARBLED, { source: 'w2' }, OBSERVE);
+    t += 2 * 60_000;
+    assert.equal(mon.snapshot({ windowMs: 60_000 }).unrepaired, 0);
+    assert.equal(mon.snapshot({ windowMs: 10 * 60_000 }).unrepaired, 1);
+  });
+
+  test('reset 同时清掉归并表,不会让首次出现被误抑制', () => {
+    let t = 6_000_000;
+    mon.__setClock(() => t);
+    mon.guardText(GARBLED, { source: 'r' }, OBSERVE);
+    t += 100;
+    mon.guardText(GARBLED, { source: 'r' }, OBSERVE);
+    assert.equal(sink.length, 2);
+
+    mon.reset();
+    sink.length = 0;
+    t += 100;
+    mon.guardText(GARBLED, { source: 'r' }, OBSERVE);
+    assert.equal(sink.length, 1);
+    assert.equal(sink[0].repeat, undefined);
   });
 });

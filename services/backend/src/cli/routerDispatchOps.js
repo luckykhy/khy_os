@@ -1429,7 +1429,7 @@ async function dispatchOpsCommand(command, _ctx) {
 
     case 'voice': {
       // Voice control placeholder — future integration with Windows Win+H
-      console.log(chalk.bold('\n  🎤 语音控制 (预览)\n'));
+      console.log(chalk.bold('\n  语音控制 (预览)\n'));
       printInfo('语音控制功能正在开发中...');
       console.log('');
       console.log(chalk.dim('  计划支持:'));

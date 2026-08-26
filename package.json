@@ -1,7 +1,7 @@
 {
   "name": "Khy-OS",
   "private": true,
-  "//packageManager": "pnpm 迁移期：corepack 据此固定版本，任何机器上 `corepack pnpm` 都解析到同一个 pnpm。npm workspaces 字段与 pnpm-workspace.yaml 双布局并存，npm lockfile 保留到验收通过后才退役。",
+  "//packageManager": "pnpm 是仓库 workspace 的唯一安装入口；独立构建子项目仍按 pnpm-workspace.yaml 说明使用 npm。packageManager 固定 corepack 版本。",
   "packageManager": "pnpm@10.18.0",
   "workspaces": [
     "platform/packages/shared",
@@ -29,14 +29,14 @@
     "check:duplication": "node scripts/ci/check-duplication.js",
     "check:duplication:gate": "node scripts/ci/check-duplication.js --gate",
     "check:duplication:strict": "node scripts/ci/check-duplication.js --gate --strict-warnings",
+    "check:duplication:baseline": "node scripts/ci/check-duplication.js --write-baseline",
+    "check:manifest-sync": "node scripts/ci/run-python.js scripts/release/check_manifest_sync.py",
     "check:khyos-pins": "node scripts/release/pin-khyos-toolchain.js --lint",
-    "check:maintainer:safety": "node --test scripts/tests/maintainerMapDocCoverage.test.js",
     "check:small-model:safety": "npm run check:change-safety -- --promote=sensitive-paths && npm run check:agent-rules && npm run check:leaf-contract && npm run check:model-hardcoding && npm run check:flag-registry",
+    "check:maintainer:safety": "node --test scripts/tests/maintainerMapDocCoverage.test.js",
     "check:ai-chat-ui-control-request": "npm exec --workspace services/backend -- jest tests/aiChat.controlRequest.ui.test.js --runInBand",
     "restore-check": "node scripts/restore/restore-check.js",
     "verify-install": "node scripts/lib/ext-run.js khy-installer verify",
-    "check:duplication:baseline": "node scripts/ci/check-duplication.js --write-baseline",
-    "check:manifest-sync": "node scripts/ci/run-python.js scripts/release/check_manifest_sync.py",
     "check:flag-registry": "node scripts/ci/check-flag-registry.js",
     "check:model-hardcoding": "node scripts/ci/check-model-hardcoding.js",
     "check:pattern-coverage": "node scripts/ci/check-pattern-coverage.js",
@@ -46,6 +46,7 @@
     "check:lifecycle-policy": "node scripts/ci/check-lifecycle-policy.js",
     "check:moonbit-layout": "node scripts/ci/check-moonbit-layout.js",
     "check:frontend-size": "node scripts/ci/check-frontend-size.js",
+    "check:dep-size": "node scripts/ci/check-dependency-size.js",
     "check:build-artifacts": "node scripts/ci/check-build-artifacts.js",
     "check:runtime-placement": "node scripts/ci/check-runtime-placement.js",
     "check:json-schemas": "node scripts/ci/validate-json-schemas.js",
@@ -53,6 +54,15 @@
     "check:reliability": "node scripts/ci/validate-reliability.js",
     "check:structure": "npm run check:layout && npm run check:gov-rules && npm run check:pattern-coverage && npm run check:json-schemas && npm run check:node-syntax && npm run check:build-artifacts && npm run check:runtime-placement",
     "check:changed": "npm run check:change-safety && npm run check:agent-rules && npm run check:leaf-contract",
+    "//clean": "默认干跑，只打印将删除的目录与体积；加 --apply 才真删。白名单见 scripts/maintenance/clean.js 顶部 TARGETS，只含构建与测试产物，绝不触及源码、锁文件、用户配置、.khy/checkpoints 与凭据。",
+    "clean": "node scripts/maintenance/clean.js",
+    "clean:apply": "node scripts/maintenance/clean.js --apply",
+    "//install:prod": "自建服务端的最小安装：只装 services/backend 的运行时闭包，不装任何 dev/lint/test/build 依赖。pip 与 npm 渠道发的是 bundle.mjs，不走这条路径。",
+    "install:prod": "corepack pnpm install --prod --filter khy-os-backend... --frozen-lockfile",
+    "install:core": "corepack pnpm install --frozen-lockfile --filter khy-os-backend... --filter khy-ai-backend... --filter @khy/shared...",
+    "install:frontend": "corepack pnpm install --frozen-lockfile --filter khy-ai-frontend... --filter quant-trading-frontend...",
+    "install:mobile": "corepack pnpm install --frozen-lockfile --filter @khy-os/mobile-companion...",
+    "install:all": "corepack pnpm install --frozen-lockfile",
     "//docs": "── 文档站构建与体检（scripts/docs/*）──",
     "docs:build": "node scripts/docs/mermaid-embed/ensure-mermaid.mjs && node scripts/docs/build_docs_site.js",
     "docs:mermaid": "node scripts/docs/mermaid-embed/ensure-mermaid.mjs",
@@ -117,6 +127,10 @@
     "//install": "── 安装与自检（extensions/scripts/khy-installer/*，经 ext-run 派发）──",
     "hooks:install": "node scripts/lib/ext-run.js khy-installer hooks",
     "verify:install": "node scripts/lib/ext-run.js khy-installer verify",
+    "//sync": "── 双仓镜像同步（scripts/sync/*）。断网或令牌失效时推送失败会记入 .khy/sync/mirror-queue.json，恢复后由下一次提交或 sync:mirrors:retry 补推 ──",
+    "sync:mirrors": "node scripts/sync/mirror-sync.js push",
+    "sync:mirrors:retry": "node scripts/sync/mirror-sync.js retry",
+    "sync:mirrors:status": "node scripts/sync/mirror-sync.js status",
     "//bench": "── 性能基准（extensions/scripts/khy-diagnostics/bench/*，经 ext-run 派发）──",
     "bench:startup": "node scripts/lib/ext-run.js khy-diagnostics bench-startup",
     "bench:startup-probe": "node scripts/lib/ext-run.js khy-diagnostics bench-startup-probe",
@@ -125,18 +139,14 @@
     "//diagnostics": "── 诊断（extensions/scripts/khy-diagnostics/*，经 ext-run 派发）──",
     "doctor:hydration": "node scripts/lib/ext-run.js khy-diagnostics doctor-hydration",
     "doctor:model-types": "node scripts/lib/ext-run.js khy-diagnostics doctor-model-types",
-    "doctor:storage": "node scripts/lib/ext-run.js khy-diagnostics doctor-storage"
+    "doctor:storage": "node scripts/lib/ext-run.js khy-diagnostics doctor-storage",
+    "install:core:ignore-scripts": "corepack pnpm install --frozen-lockfile --ignore-scripts --filter khy-os-backend... --filter khy-ai-backend... --filter @khy/shared..."
   },
+  "//devDependencies": "根级 devDependencies 只放**仓库级工具链**——被 scripts/ 下的治理脚本直接调用的东西。业务运行时依赖一律声明在拥有它的 workspace 里，否则 `npm ci --omit=dev` 会把运行时代码需要的包一起省掉。2026-08-25 依据这条规则移出两类：① 5 个 @opentelemetry/* —— 链路追踪由 KHY_OTEL_ENABLED 门控、在 observability/otel.js 里 lazy require，已声明为 services/backend 的 optional peerDependencies，根级再声明一遍等于让每台开发机无条件装 36 MB 默认不启用的包；② node-cron —— 它是 software/khyquant/services/instrumentSyncService.js 的运行时依赖（非 dev），已移到 services/backend/dependencies。",
   "devDependencies": {
-    "@opentelemetry/exporter-trace-otlp-http": "^0.207.0",
-    "@opentelemetry/instrumentation-express": "^0.56.0",
-    "@opentelemetry/instrumentation-http": "^0.207.0",
-    "@opentelemetry/sdk-node": "^0.207.0",
-    "@opentelemetry/sdk-trace-base": "^2.2.0",
     "ajv": "^6.15.0",
     "c8": "^10.1.3",
-    "esbuild": "^0.25.12",
-    "node-cron": "^4.2.1"
+    "esbuild": "^0.25.12"
   },
   "//overrides": "iconv-lite 收敛成单份：发布 bundle 由 esbuild 按解析路径内联，同一个包装在几个 node_modules 下就被打进去几遍。0.6.3 是 whatwg-encoding/encoding-sniffer 点名要的版本；body-parser/raw-body（~0.4.24）与 @inquirer/external-editor（^0.7.0）只用 decode/encodingExists，三个版本签名一致。",
   "overrides": {
@@ -147,5 +157,6 @@
   },
   "allowScripts": {
     "better-sqlite3@12.9.0": true
-  }
+  },
+  "//install:profiles": "install:core 是后端/共享包的日常最小开发闭包；install:frontend、install:mobile 按需补齐对应开发工具；install:all 用于全仓构建或兼容旧流程。所有入口都由 pnpm-workspace.yaml 驱动。"
 }

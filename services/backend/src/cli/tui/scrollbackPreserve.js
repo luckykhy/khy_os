@@ -20,13 +20,20 @@
 // 与 `liveRegionBudget`(尽量不触发 fullscreen)正交叠加:那是第一层「少触发」,本叶子是第二层
 // 「即便触发也不擦回滚」。
 //
-// 平台对称：两类终端都只剥离 clearTerminal 中的 `3J`。Windows 的 `2J` 行为
-// 依终端实现而异，但主动注入 `3J` 会直接清空用户正在查看的原生 scrollback，
-// 因此不能用它修复重复帧；保留终端原生滚动缓冲比去重更重要。
-// 分发函数 `normalizeClearTerminal` 在两平台统一执行剥离，且不会主动生成任何新字节。
+// 平台差异(本叶子的第二处职责):两类终端都先剥离 clearTerminal 中的 `3J`,此外 win32 再
+// 多做一步「清屏形式改写」。原因:conhost / Windows Terminal 的 **ED2(`[2J`)不是就地擦除**,
+// 而是把当前视口整屏**向上滚进** scrollback 再填白 —— 于是 ink 每触发一次 fullscreen 分支,
+// 回滚缓冲里就永久多出一份完整的 banner+输入框副本(用户报「UI 显示混乱 / 同一输入框重复两遍」)。
+//
+// 历史上试过反向**注入** `3J` 来压制,已刻意废弃:那会直接清空用户正在查看的原生 scrollback,
+// 代价高于它修的症状。正解是第三条路 —— 把 `[2J[0f` 改写成等价的 `[H[J`:
+//   `[H` 光标归位 + `[J`(ED0,从光标擦到屏幕末尾)。视觉终态与 ED2 完全一致(可视区清空、
+//   光标在左上角),但 ED0 是**就地擦除**,既不滚屏 → 不留重复副本,也不碰 scrollback → 历史仍可上翻。
+// 两个目标(去重复 / 保回滚)由此同时满足,不再二选一。
+// 非 win32 的 `[2J` 本就是就地擦除,保持原样,逐字节不变。
 //
 // 门控 KHY_PRESERVE_SCROLLBACK 默认开;关 → `normalizeClearTerminal`/`stripScrollbackClear`
-// 原样返回 → ink 写出原字节 → 两平台行为与今日逐字节一致(Windows 重复症状保留 = 诚实回退)。
+// 原样返回 → ink 写出原字节 → 两平台都回退到 ink 的原始行为(win32 重复帧症状随之回归)。
 
 const OFF_VALUES = ['0', 'false', 'off', 'no'];
 
@@ -39,9 +46,18 @@ const SCROLLBACK_CLEAR = '[3J';
  * 字节(编辑/四树镜像时易被吞)。下面是 win32 的 ink clearTerminal 与其「注入 3J」修正形式。
  */
 const ESC = SCROLLBACK_CLEAR.charAt(0); // '\x1b'
-const WIN_CLEAR = `${ESC}[2J${ESC}[0f`; // win32 ink clearTerminal(无 3J)
-// 兼容旧调用方的导出名；修复后它等于原始 Windows 清屏序列，不再注入 3J。
-const WIN_CLEAR_FIXED = WIN_CLEAR;
+// ink 6.x 依赖 ansi-escapes@7,其 clearTerminal 按 **isOldWindows()** 分支,而不是 platform:
+//   老 conhost → `2J + 0f`;其余(含 Windows 10/11 + Windows Terminal)→ `2J + 3J + H`。
+// 实测 Win11 走的是后者 —— 所以「win32 本就无 3J 可剥」是只对老 conhost 成立的旧结论,
+// 两种形式都要能识别,否则改写会静默漏掉现代 Windows 这条主路径。
+const WIN_CLEAR = `${ESC}[2J${ESC}[0f`; // 老 conhost 形式
+const NIX_CLEAR = `${ESC}[2J${ESC}[3J${ESC}[H`; // 现代形式(Win11 亦然)
+const CLEAR_VIEWPORT = `${ESC}[2J${ESC}[H`; // 现代形式剥掉 3J 之后的样子
+// win32 的等价「就地清屏」形式,是上面三者在 win32 上的统一改写目标(理由见头注)。
+// 注意顺序:必须先 `[H` 归位再 `[J` 擦到末尾 —— ED0 只擦光标之后,不归位就擦不干净整屏。
+const WIN_CLEAR_INPLACE = `${ESC}[H${ESC}[J`;
+// 兼容旧调用方的导出名:它即 win32 归一化后的目标序列。
+const WIN_CLEAR_FIXED = WIN_CLEAR_INPLACE;
 
 /**
  * scrollback 保全默认开;仅显式 falsy 关闭。
@@ -102,7 +118,21 @@ function normalizeClearTerminal(chunk, env = process.env, platform = process.pla
     if (typeof chunk !== 'string') {
       return chunk;
     }
-    return stripScrollbackClear(chunk, env);
+    // 第一步(两平台一致):剥 `3J`,保全原生 scrollback。
+    const stripped = stripScrollbackClear(chunk, env);
+    if (platform !== 'win32' || typeof stripped !== 'string') {
+      return stripped;
+    }
+    // 第二步(仅 win32):把两种 ED2 清屏形式都换成就地擦除,避免旧视口被滚进 scrollback。
+    // 此时 3J 已被剥掉,现代形式已塌缩为 CLEAR_VIEWPORT(`2J + H`)。
+    let out = stripped;
+    if (out.indexOf(WIN_CLEAR) !== -1) {
+      out = out.split(WIN_CLEAR).join(WIN_CLEAR_INPLACE);
+    }
+    if (out.indexOf(CLEAR_VIEWPORT) !== -1) {
+      out = out.split(CLEAR_VIEWPORT).join(WIN_CLEAR_INPLACE);
+    }
+    return out;
   } catch {
     return chunk;
   }
@@ -130,14 +160,19 @@ function createClearTerminalNormalizer(env = process.env, platform = process.pla
       if (typeof chunk !== 'string' && !isBuffer) {
         return chunk;
       }
-      const token = SCROLLBACK_CLEAR;
+      // win32 还要识别被拆开的 `[2J[0f`(8 字节),否则半截序列会漏过改写。
+      const tokens = platform === 'win32'
+        ? [SCROLLBACK_CLEAR, WIN_CLEAR, CLEAR_VIEWPORT, NIX_CLEAR]
+        : [SCROLLBACK_CLEAR];
+      const longest = tokens.reduce((a, t) => (t.length > a ? t.length : a), 0);
       const text = pending + (isBuffer ? chunk.toString('utf8') : chunk);
       pending = '';
 
+      // 只暂存「可能是某个 token 的真前缀」的最长尾缀;已完整的 token 不留,立即归一化。
       let keep = 0;
-      const max = Math.min(token.length - 1, text.length);
+      const max = Math.min(longest - 1, text.length);
       for (let n = max; n > 0; n -= 1) {
-        if (text.endsWith(token.slice(0, n))) {
+        if (tokens.some((t) => t.length > n && text.endsWith(t.slice(0, n)))) {
           keep = n;
           break;
         }
@@ -170,5 +205,8 @@ module.exports = {
   OFF_VALUES,
   SCROLLBACK_CLEAR,
   WIN_CLEAR,
+  NIX_CLEAR,
+  CLEAR_VIEWPORT,
+  WIN_CLEAR_INPLACE,
   WIN_CLEAR_FIXED,
 };

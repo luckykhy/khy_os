@@ -125,6 +125,7 @@ const ROUTER_COMMANDS = [
   'extension',
   'ext',
   'capability',
+  'agent-assets',
   'doc',
   'convert',
   'role',
@@ -571,6 +572,19 @@ const ROUTER_SUB_COMMANDS = {
   metadata: ['gen', 'refresh', 'check', 'show', 'link', 'hook'],
   meta: ['gen', 'refresh', 'check', 'show', 'link', 'hook'],
   capability: ['list', 'show', 'toggles', 'on', 'off', 'set'],
+  // 外部 agent 资产(记忆/工具/技能)的发现与迁移。import/export/sync 默认干跑,
+  // 必须显式 --apply 才落盘(见 cli/handlers/agentAssets.js)。
+  'agent-assets': [
+    'discover',
+    'caps',
+    'capabilities',
+    'list',
+    'plan',
+    'import',
+    'export',
+    'sync',
+    'help',
+  ],
   rtk: ['gain', 'status', 'install', 'on', 'off'],
   '20x': ['status', 'on', 'off'],
   lazy: ['ladder', 'show', 'debt', 'ledger', 'level', 'on', 'off', 'help'],
@@ -879,6 +893,7 @@ const CATEGORY_BY_COMMAND = {
   shell: 'system',
 
   agent: 'workflow',
+  'agent-assets': 'workflow',
   skill: 'workflow',
   extension: 'workflow',
   ext: 'workflow',
@@ -1148,6 +1163,12 @@ const BUILTIN_SLASH_COMMANDS = [
     label: '提炼技能',
     desc: '把一个目录或网页提炼成可复用技能:/learn-skill dir <目录> · /learn-skill url <网页>(对齐 Hermes /learn → khy skill learn dir|url;顶层别名不撞 /learn 课程,尾参 dir/url 经 router 展开为 skill learn dir/url)',
     route: 'skill learn',
+  },
+  {
+    cmd: '/agent-assets',
+    label: '外部 agent 资产',
+    desc: '盘点/迁移外部 agent 工具的记忆·工具·技能(opencode、Claude Code 等);import/export/sync 默认干跑,加 --apply 才落盘',
+    route: 'agent-assets',
   },
   {
     cmd: '/local-vault',

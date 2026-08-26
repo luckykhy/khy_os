@@ -76,6 +76,11 @@ platform/packages/*
 !platform/packages/ui-shared/**
 # 上面的 ! 反选把本地包的 node_modules 一起解禁了，这里重新排除
 platform/packages/*/node_modules/
+# runtime 日志仍随 khy 运行源源不断生成，上一行 !platform/packages/shared/**
+# 把本应被通用 logs/ 规则忽略的 platform/packages/shared/logs/ 一起解禁了，
+# 导致工作树永远带未跟踪文件、双机自动同步的 --clean-only 门禁永远跳过。
+# 这里在反选之后重新排除，让工作树可真正收敛到 clean。
+platform/packages/shared/logs/
 
 # Frontend build artifacts
 apps/ai-frontend/dist/
@@ -117,6 +122,7 @@ apps/ai-frontend/public/vendor/
 #   打包层早已 prune 它：MANIFEST.in + pip_packaging_rules.py:SDIST_PRUNE_DIRS。
 #   附带收益：跟踪时 Windows 的 autocrlf 会在检出时把它撑大 4112 字节。
 extensions/tools/khy-markdown/vendor/
+extensions/tools/khy-dsh-compat/vendor/
 #   docs/_assets/mermaid.min.js —— mermaid@11.15.0 的 esbuild 自打包产物（3.3 MB），
 #   源码是 scripts/docs/mermaid-embed/；由 npm run docs:build 的 ensure 步骤重建。
 #   同目录的 docs-site.css / docs-site.js / hljs-*.css 是手写源码，继续跟踪。

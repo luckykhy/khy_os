@@ -761,6 +761,14 @@ let _bootActivePort = null;
     console.log(`   ws://localhost:${_bootActivePort}`);
     console.log(`   健康检查: http://localhost:${_bootActivePort}/health\n`);
 
+    // 把「实际监听到的端口」落盘，供独立进程的 CLI（如 khy mobile 生成配对二维码）
+    // 读取。端口可能因占用而顺延，配置值不可信，只有这里知道真实结果。
+    try {
+      require('./src/utils/backendRuntime').writeBackendRuntime(_bootActivePort);
+    } catch {
+      // 落盘失败不影响服务，CLI 会回退到配置端口
+    }
+
     // ─── 延迟加载的服务层模块（原同步路径，已推迟到 listen() 之后）──────────
     // 这些服务仅用于 WebSocket 连接处理和后台任务，不在请求路由路径上。
     // 推迟加载可将 ~800ms 的服务实例化从冷启动关键路径移除。
@@ -1774,6 +1782,11 @@ try {
     registerShutdownHandlers,
     requestShutdown,
   } = require('./src/bootstrap/shutdown');
+  addShutdownHook('backendRuntimeFile', async () => {
+    try {
+      require('./src/utils/backendRuntime').clearBackendRuntime();
+    } catch {}
+  });
   addShutdownHook('realtimeData', async () => {
     try {
       if (realtimeDataService) realtimeDataService.cleanup();
@@ -1849,6 +1862,9 @@ try {
     logger.warn('Shutdown signal received', { signal });
     if (_serverStartupFsm)
       _serverStartupFsm.fire('shutdown', { step: 'graceful_shutdown', signal });
+    try {
+      require('./src/utils/backendRuntime').clearBackendRuntime();
+    } catch {}
     try {
       if (realtimeDataService) realtimeDataService.cleanup();
     } catch {}

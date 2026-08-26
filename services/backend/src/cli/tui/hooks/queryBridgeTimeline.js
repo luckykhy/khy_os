@@ -621,7 +621,7 @@ function shouldFlushTerminalOutcome({ sawText, salvaged, env } = {}) {
 // KHY_PLAN_ANNOUNCE=0; the MODEL already narrated this segment in prose
 // (模型推理优先 — don't double the developer's own plan); the voice is missing; or
 // the plan is absent/single-step (composePlanAnnouncement returns '').
-function computePlanAnnouncement({ plan, segmentModelNarrated, env } = {}) {
+function computePlanAnnouncement({ plan, segmentModelNarrated, env, turnIndex } = {}) {
   const e = env || process.env;
   if (String(e.KHY_TOOL_PREFACE || '').trim() === '0') {
     return '';
@@ -636,7 +636,7 @@ function computePlanAnnouncement({ plan, segmentModelNarrated, env } = {}) {
     return '';
   }
   try {
-    return _toolPrefaceVoice.composePlanAnnouncement(plan) || '';
+    return _toolPrefaceVoice.composePlanAnnouncement(plan, { env: e, turnIndex }) || '';
   } catch {
     return '';
   }
@@ -665,7 +665,7 @@ function computePlanProgress({ plan, stepIndex, status, segmentModelNarrated, en
     return '';
   }
   try {
-    return _toolPrefaceVoice.composePlanProgress(plan, stepIndex, status) || '';
+    return _toolPrefaceVoice.composePlanProgress(plan, stepIndex, status, { env: e }) || '';
   } catch {
     return '';
   }

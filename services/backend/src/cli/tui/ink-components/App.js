@@ -811,7 +811,7 @@ function App({ options = {} }) {
       if (_voiceInput && typeof _voiceInput.triggerWinH === 'function') {
         _voiceInput.triggerWinH().then((res) => {
           if (res && res.success) {
-            showHint(byUser ? '🎤 已停止语音听写' : '🎤 检测到静音，已自动停止听写');
+            showHint(byUser ? '已停止语音听写' : '检测到静音，已自动停止听写');
           } else if (byUser) {
             showHint('语音停止失败：' + ((res && res.error) || '未知错误'));
           }
@@ -849,7 +849,7 @@ function App({ options = {} }) {
     armSilenceTimer();
     _voiceInput.triggerWinH().then((res) => {
       if (res && res.success) {
-        showHint('🎤 语音听写中：说话内容将进入输入框（再次点击麦克风或静音自动停止）');
+        showHint('语音听写中：内容将进入输入框（再次点击 MIC 或静音自动停止）');
         armSilenceTimer();
       } else {
         dictatingRef.current = false;
@@ -4282,7 +4282,7 @@ function App({ options = {} }) {
         queueHintExhausted: queueHintUsesRef.current >= _pp.QUEUE_HINT_MAX_SHOWS,
         reviewText: 'Enter 确认执行 · skip/edit/add 修改 · n 取消',
         busyText: '',
-        defaultText: '输入消息，/ 命令，@ 文件，! shell，# 记忆，? 快捷键，🎤 Alt+M 语音',
+        defaultText: '输入消息，/ 命令，@ 文件，! shell，# 记忆，? 快捷键，Alt+M 语音',
         queueHintText: '按 ↑ 编辑排队消息，或继续输入',
       },
       process.env
@@ -4293,7 +4293,7 @@ function App({ options = {} }) {
         ? 'Enter 确认执行 · skip/edit/add 修改 · n 取消'
         : busy
           ? ''
-          : '输入消息，/ 命令，@ 文件，! shell，# 记忆，? 快捷键，🎤 Alt+M 语音';
+          : '输入消息，/ 命令，@ 文件，! shell，# 记忆，? 快捷键，Alt+M 语音';
   }
 
   // ── Live-region height coordination (anti scroll-jump) ──────────────────────
@@ -4534,8 +4534,8 @@ function App({ options = {} }) {
   // is made ONCE on the first render and stays sticky until the first
   // message arrives: <Static> consumes items exactly once, so flipping later
   // would either duplicate the banner in scrollback or lose it entirely.
-  // First message → staticItems.length > 1 → the banner (item 0) is handed
-  // back to <Static> and committed to scrollback in its normal position.
+  // The banner is intentionally never handed to <Static>: Ink only appends static
+  // items, so transferring an already-painted live banner would print it again.
   const _bannerInLiveRef = React.useRef(null);
   if (_bannerInLiveRef.current === null) {
     _bannerInLiveRef.current = _sidebarOn;
@@ -4545,7 +4545,8 @@ function App({ options = {} }) {
   if (_railOut) {
     _bannerInLiveRef.current = false;
   }
-  const _bannerInLive = _bannerInLiveRef.current === true && query.staticItems.length === 1;
+  const _bannerInLive = _bannerInLiveRef.current === true && query.messages.length === 0;
+  const _showStartupBanner = query.messages.length === 0;
   // Lucky-clover art gate: the banner's right-column art renders only when the
   // banner's OWN column is wide enough. Width inputs reuse THIS frame's
   // sticky-resolved values (_resCols / _mainColsV / _railContentCols) — the
@@ -4801,12 +4802,9 @@ function App({ options = {} }) {
   return h(
     Box,
     { flexDirection: 'column', width: _railContentCols || undefined },
-    // Committed output (banner + transcript) via <Static>. Always mounted so
+    // Committed transcript output via <Static>. Always mounted so
     // that suspending the live UI does not reprint scrollback.
-    h(Static, { items: _bannerInLive ? query.staticItems.slice(1) : query.staticItems }, (item) => {
-      if (item.kind === 'banner') {
-        return h(WelcomeBanner, { key: 'banner', ...bannerProps, showArt: _bannerShowArt });
-      }
+    h(Static, { items: query.staticItems }, (item) => {
       return h(Transcript.MessageBlock, { key: item.key, msg: item.msg, expanded });
     }),
 
@@ -4833,7 +4831,7 @@ function App({ options = {} }) {
               { flexDirection: 'column', flexGrow: 1 },
               // Startup-only banner (task #23): lives here so the version line tops
               // the left column exactly where the sidebar tops the right column.
-              _bannerInLive
+              _showStartupBanner
                 ? h(WelcomeBanner, { key: 'live-banner', ...bannerProps, showArt: _bannerShowArt })
                 : null,
               // Removable Ctrl+O detail for the latest committed <Static> turn.

@@ -69,7 +69,7 @@ describe('toolRunningNarration (执行中 staged transparency)', () => {
 
   test('falls back to a generic running line for thin/unknown input', () => {
     expect(toolRunningNarration('Read', {})).toBe('正在读取…');
-    expect(toolRunningNarration('unknown_xyz', {})).toBe('正在执行…');
+    expect(toolRunningNarration('unknown_xyz', {})).toBe('正在执行 unknown_xyz…');
     expect(toolRunningNarration()).toBe('正在执行…');
   });
 });
@@ -256,7 +256,7 @@ describe('composePlanProgress (task-level step transition)', () => {
 
   test('narrates a step BECOMING in_progress (step 2+)', () => {
     expect(composePlanProgress(plan, 1, 'in_progress')).toBe('第 2 步：改 useQueryBridge。');
-    expect(composePlanProgress(plan, 2, 'in_progress')).toBe('第 3 步：跑测试。');
+    expect(composePlanProgress(plan, 2, 'in_progress')).toBe('接着第 3 步，跑测试。');
   });
 
   test('stays silent on step 1 (covered by the upfront announcement)', () => {

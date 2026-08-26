@@ -14,7 +14,20 @@ const path = require('path');
 
 const { isWin, searchExecutable } = require('../tools/platformUtils');
 
+// 兜底裸命令(`python` / `python3`)的重探冷却。
+//
+// 原来解析结果一律永久缓存,**降级结果也一样**:第一次调用恰好赶上 venv 还没建好、
+// PATH 还没刷新、或某个 canRunPython 探测瞬时超时,就把整个进程钉在裸命令上。裸命令
+// 在 PATH 里没有 python 的环境下每次子进程都 ENOENT —— 同一条错误重复到进程结束,
+// 哪怕真正的解释器早就就位了。
+//
+// 现在只有「解析到确切路径」才永久缓存;降级结果带时间戳,过期后下一次调用重新解析。
+// 保留冷却窗是因为完整解析要 fork 若干次 canRunPython,不能每次调用都重扫一遍。
+const DEGRADED_RETRY_MS = 60_000;
+
 let _cached = null;
+let _degradedAt = 0; // >0:当前 _cached 是兜底裸命令,受冷却约束
+let _degradedWarned = false;
 
 function isWindows() {
   return isWin;
@@ -144,8 +157,16 @@ function _pythonPathQuiet() {
   }
 }
 
-function findPython() {
-  if (_cached) {
+/**
+ * 解析可用的 Python 解释器。
+ *
+ * @param {object} [opts]
+ * @param {() => number} [opts.now] - 时钟注入(测试用),默认 Date.now。
+ * @returns {string} 绝对路径,或解析不到时的兜底命令(该兜底最多保留 DEGRADED_RETRY_MS)。
+ */
+function findPython(opts = {}) {
+  const now = typeof opts.now === 'function' ? opts.now : Date.now;
+  if (_cached && (_degradedAt === 0 || now() - _degradedAt < DEGRADED_RETRY_MS)) {
     return _cached;
   }
 
@@ -165,6 +186,8 @@ function findPython() {
       }
       if (canRunPython(candidate)) {
         _cached = candidate;
+        _degradedAt = 0;
+        _degradedWarned = false;
         if (!_quiet) {
           console.log(`Using Python executable: ${_cached}`);
         }
@@ -179,6 +202,8 @@ function findPython() {
     }
     if (canRunPython(resolved)) {
       _cached = resolved;
+      _degradedAt = 0;
+      _degradedWarned = false;
       if (!_quiet) {
         console.log(`Using Python executable: ${_cached}`);
       }
@@ -187,10 +212,22 @@ function findPython() {
   }
 
   _cached = isWindows() ? 'python' : 'python3';
-  if (!_quiet) {
+  _degradedAt = now();
+  if (!_quiet && !_degradedWarned) {
+    // 只在首次降级时告警:冷却过期后会周期性重探,每次都喊一遍就成了新的噪音源。
+    _degradedWarned = true;
     console.warn(`Could not resolve an exact Python path. Falling back to command: ${_cached}`);
   }
   return _cached;
 }
 
-module.exports = { findPython };
+/**
+ * 清空解析缓存(测试用,也可在已知环境变更后主动调用,如刚建好 venv)。
+ */
+function resetPythonCache() {
+  _cached = null;
+  _degradedAt = 0;
+  _degradedWarned = false;
+}
+
+module.exports = { findPython, resetPythonCache };

@@ -2439,6 +2439,9 @@ async function runToolUseLoop(userMessage, options = {}) {
   let noToolNudgeUsed = false; // 精简后仅允许 1 次 nudge（对标 CC/DS 无 nudge 策略）
   let _codingVerifyNudgeUsed = false; // coding mode 验证提示只触发一次
   let _verificationNudgeUsed = false; // Phase R2-3B: 3+ writes without verify → one-shot nudge
+  // 执行中复杂度升级(executionComplexitySignals):开场按措辞判定为简单、但执行证据
+  // (改动文件数/跨目录数/已用轮次/连续失败)显示规模更大时,一次性要求补计划 + 登记任务板。
+  let _execComplexityEscalated = false;
   let _deliveryConclusionNudgeUsed = false; // 交付结论 nudge 只触发一次
   let _resultGuardNoticeUsed = false; // 结果守卫诚实收尾只追加一次/轮
   let _intentCoverageNudgeUsed = false; // [答得没接住意图] 意图接住回核 nudge 只触发一次
@@ -3705,6 +3708,7 @@ async function runToolUseLoop(userMessage, options = {}) {
           absoluteLimit: true, // 区分「绝对时间上限」与「空闲无进展」两类超时
           maxElapsedMs: loopElapsed,
           tokenUsage: _cumulativeUsage(_usageTotals, lastResult?.tokenUsage),
+          conversationMessages,
           executedCallKeys, // cross-turn dedup: let the next continuation round inherit executed keys
         };
       }
@@ -10486,6 +10490,39 @@ async function runToolUseLoop(userMessage, options = {}) {
           });
         }
 
+        // ── 执行中复杂度升级：措辞判简单、事实判复杂 → 一次性补计划 ────────
+        // 复杂度此前只在开工前按用户措辞打一次分(taskComplexity/taskScale),简短表述的
+        // 真实重构会被判成 simple/small,拿不到规划注入,跑几十轮后失焦。这里改按**执行
+        // 证据**复核规模(已改文件/跨目录/已用轮次/连续失败),越线则要求模型摆
+        // <execution_plan> 并把剩余步骤登记到任务板(任务记忆按轮回灌,登记后不再丢)。
+        // 模型已自行给出计划(executionPlan)→ 无需重复;一次性(_execComplexityEscalated);
+        // fail-soft——复核本身绝不阻断循环。
+        if (!_execComplexityEscalated && !executionPlan) {
+          try {
+            const _ecs = require('./executionComplexitySignals');
+            const _escDirective = _ecs.buildEscalationDirective(
+              _ecs.assessExecutionComplexity(
+                _ecs.collectExecutionSignals(toolCallLog, { iterationsUsed: iteration }),
+                process.env
+              ),
+              process.env
+            );
+            if (_escDirective) {
+              _execComplexityEscalated = true;
+              currentMessage += '\n\n' + _escDirective;
+              if (Array.isArray(effectiveChatOpts._structuredToolResultBlocks)) {
+                effectiveChatOpts._structuredToolResultBlocks.push({
+                  type: 'text',
+                  text: _escDirective,
+                });
+              }
+              _loopBreadcrumb('exec-complexity-escalation', { iteration });
+            }
+          } catch (e) {
+            _tripwire(e, 'loop.execComplexityEscalation');
+          }
+        }
+
         // 非侵入式结果反思：把单源旁白作为“上下文参考”交给模型自行取用（采用/改写/
         // 忽略），而非强制渲染固定文本。仅原生协议路径注入——弱本地模型走文本协议时
         // 不依赖模型主动取用，由 ink-TUI 的 flushPendingOutcome 合成兜底，更可靠。
@@ -10958,6 +10995,8 @@ async function runToolUseLoop(userMessage, options = {}) {
               iterations: iteration,
               provider: aiResult?.provider,
               tokenUsage: _cumulativeUsage(_usageTotals, aiResult?.tokenUsage),
+              conversationMessages,
+              executedCallKeys,
             };
           }
         } else {
@@ -11214,6 +11253,8 @@ async function runToolUseLoop(userMessage, options = {}) {
             provider: summaryResult?.provider || lastResult?.provider,
             tokenUsage: _cumulativeUsage(_usageTotals, summaryResult?.tokenUsage),
             consecutiveFailureBailout: true,
+            conversationMessages,
+            executedCallKeys,
           };
         }
       } else {

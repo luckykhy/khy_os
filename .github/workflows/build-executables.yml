@@ -53,8 +53,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: services/backend/package-lock.json
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -62,13 +62,12 @@ jobs:
           python-version: '3.13'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm run install:core
 
       - name: Install frontend dependencies
         shell: bash
         run: |
-          npm ci --prefix apps/ai-frontend
-          npm ci --prefix software/khyquant/frontend
+          npm run install:frontend
 
       # 发布链路上的 lint 暂为报告态。
       # 原因：npm run lint 是 `eslint src/ --max-warnings 0`，而 src/ 现存

@@ -155,6 +155,34 @@ function _naturalVoiceEnabled(env) {
   return !(v !== undefined && _NATURAL_FALSY.has(String(v).trim().toLowerCase()));
 }
 
+// ── 执行中/结果两拍的复述感修正(2026-08-26 用户反馈「中途的工具调用说明太机械」)──────
+// 前一轮 KHY_TOOL_PREFACE_NATURAL_VOICE 只治了 `toolProgressReason`(意图拍)的措辞。剩下两拍
+// 仍是**纯模板查表**:`toolRunningNarration` 11 条分支里只有 websearch/webfetch 走 _voice 轮换,
+// 其余 9 条是死字符串;`toolOutcomeNarration` 的成功分支同样只有 websearch/webfetch 会换。于是
+// 一个多步任务里连读三个文件 → 三次「正在读取 x…」+ 三次「x 读完了，结构我摸清了——接着…」,
+// 逐字重复,像机器复述。另外 running 的兜底 `'正在执行…'` 只有动作没有目标,贴着红线②的禁区。
+// 开 → 这两拍的每类工具都给 occurrence 续接句(首发句保持不变,故 occ 0 与历史逐字一致),兜底
+// 改成带目标的句子;关 → 逐字节回退到「只有 websearch 会换」的历史行为。flagRegistry 优先。
+const _LIVE_FALSY = new Set(['0', 'false', 'off', 'no']);
+function _liveVoiceEnabled(env) {
+  const e = env || (typeof process !== 'undefined' ? process.env : undefined) || {};
+  try {
+    const reg = require('../services/flagRegistry');
+    if (
+      reg &&
+      typeof reg.isRegistryEnabled === 'function' &&
+      reg.isRegistryEnabled(e) &&
+      typeof reg.isFlagEnabled === 'function'
+    ) {
+      return reg.isFlagEnabled('KHY_TOOL_NARRATION_LIVE_VOICE', e);
+    }
+  } catch {
+    /* 注册表不可用 → 本地回退 */
+  }
+  const v = e.KHY_TOOL_NARRATION_LIVE_VOICE;
+  return !(v !== undefined && _LIVE_FALSY.has(String(v).trim().toLowerCase()));
+}
+
 // Separator-agnostic basename: a Windows path ("D:\\...\\Desktop") must yield
 // "Desktop" even when this runs on a POSIX host (path.basename only splits the
 // host separator). Strips a trailing separator first, then takes the last
@@ -373,34 +401,57 @@ function toolRunningNarration(toolName, params = {}, options = {}) {
   const patternHint = String(params.pattern || params.query || params.q || '').trim();
   const commandHint = String(params.command || '').trim();
   const baseName = pathHint ? baseNameAnyOs(pathHint) : '';
+  // 门控包装:关时只返首发句(= 历史死字符串),开时按 occurrence 轮换续接句。
+  const live = _liveVoiceEnabled(options.env);
+  const _live = (first, continuations) => (live ? _voice(occ, first, continuations) : first);
 
   if (name === 'ls' || name === 'glob' || name === 'find') {
-    return baseName ? `正在列出 ${baseName} 的条目…` : '正在列出条目…';
+    return baseName
+      ? _live(`正在列出 ${baseName} 的条目…`, [
+          `继续看 ${baseName} 下还有什么…`,
+          `再列一遍 ${baseName}…`,
+        ])
+      : _live('正在列出条目…', ['继续列出条目…', '再看一层目录…']);
   }
   if (name === 'grep' || name === 'search') {
     if (patternHint && baseName) {
-      return `正在 ${baseName} 里搜索 "${patternHint}"…`;
+      return _live(`正在 ${baseName} 里搜索 "${patternHint}"…`, [
+        `继续在 ${baseName} 里找 "${patternHint}"…`,
+        `换个位置搜 "${patternHint}"…`,
+      ]);
     }
     if (patternHint) {
-      return `正在搜索 "${patternHint}"…`;
+      return _live(`正在搜索 "${patternHint}"…`, [
+        `继续找 "${patternHint}"…`,
+        `再搜一轮 "${patternHint}"…`,
+      ]);
     }
-    return '正在搜索…';
+    return _live('正在搜索…', ['继续搜索…', '再找一轮…']);
   }
   if (name === 'read' || name === 'readfile' || name === 'notebookread') {
-    return baseName ? `正在读取 ${baseName}…` : '正在读取…';
+    return baseName
+      ? _live(`正在读取 ${baseName}…`, [`接着读 ${baseName}…`, `再翻一段 ${baseName}…`])
+      : _live('正在读取…', ['接着往下读…', '再读一段…']);
   }
   if (name === 'write' || name === 'writefile' || name === 'createfile') {
-    return baseName ? `正在写入 ${baseName}…` : '正在写入…';
+    return baseName
+      ? _live(`正在写入 ${baseName}…`, [`继续写 ${baseName}…`, `补齐 ${baseName} 剩下的内容…`])
+      : _live('正在写入…', ['继续写入…', '补齐剩下的内容…']);
   }
   if (name === 'edit' || name === 'editfile' || name === 'multiedit' || name === 'notebookedit') {
-    return baseName ? `正在修改 ${baseName}…` : '正在修改…';
+    return baseName
+      ? _live(`正在修改 ${baseName}…`, [`接着改 ${baseName}…`, `再动一处 ${baseName}…`])
+      : _live('正在修改…', ['接着改下一处…', '再动一处…']);
   }
   if (name === 'bash' || name === 'shell' || name === 'shellcommand' || name === 'command') {
     if (commandHint) {
       const short = commandHint.length > 50 ? commandHint.slice(0, 47) + '...' : commandHint;
-      return `正在执行 \`${short}\`…`;
+      return _live(`正在执行 \`${short}\`…`, [
+        `接着跑 \`${short}\`…`,
+        `再执行一条 \`${short}\`…`,
+      ]);
     }
-    return '正在执行命令…';
+    return _live('正在执行命令…', ['接着跑下一条命令…', '再执行一条命令…']);
   }
   if (name === 'websearch' || name === 'webfetch') {
     if (patternHint) {
@@ -413,13 +464,23 @@ function toolRunningNarration(toolName, params = {}, options = {}) {
   }
   if (name === 'scaffoldfiles') {
     const root = String(params.root || '.').trim();
-    return root && root !== '.' ? `正在生成 ${root} 的骨架…` : '正在生成骨架…';
+    return root && root !== '.'
+      ? _live(`正在生成 ${root} 的骨架…`, [`继续补 ${root} 的骨架…`, `再生成一部分 ${root}…`])
+      : _live('正在生成骨架…', ['继续补骨架…', '再生成一部分…']);
   }
   if (name === 'agent' || name === 'task') {
     const role = String(params.role || params.subagent_type || '子任务').trim();
-    return `${role} 正在并行执行…`;
+    return _live(`${role} 正在并行执行…`, [
+      `${role} 还在跑，我先往下走…`,
+      `${role} 这一路继续推进…`,
+    ]);
   }
-  return '正在执行…';
+  // 兜底:红线②要求「动作 + 目标」,拿工具名当目标念出来;工具名都取不到时才回到
+  // 无目标的历史句(此时确实没有可说的目标)。
+  const label = live ? String(toolName || '').trim() : '';
+  return label
+    ? _voice(occ, `正在执行 ${label}…`, [`${label} 继续执行…`, `再调一次 ${label}…`])
+    : '正在执行…';
 }
 
 // "结果 + 行动" completion narration — the third beat of the before→during→after
@@ -451,6 +512,10 @@ function toolOutcomeNarration(toolName, result = {}, params = {}, options = {}) 
   const p = params || {};
   const pathHint = String(p.file_path || p.filePath || p.path || '').trim();
   const baseName = pathHint ? baseNameAnyOs(pathHint) : '';
+  // 门控包装(同 toolRunningNarration):关时只返首发句(= 历史死字符串),开时按本回合
+  // 该类工具的出现次数轮换续接句,避免连读三个文件出三句逐字相同的结果旁白。
+  const live = _liveVoiceEnabled(options.env);
+  const _live = (first, continuations) => (live ? _voice(occ, first, continuations) : first);
 
   const failed =
     result.success === false ||
@@ -494,53 +559,100 @@ function toolOutcomeNarration(toolName, result = {}, params = {}, options = {}) 
     const n = countOf(result.count, result.entries, result.files);
     if (n === 0) {
       return baseName
-        ? `${baseName} 这个位置现在是空的，我换个地方再找找。`
-        : '这个位置现在是空的，我换个地方再找找。';
+        ? _live(`${baseName} 这个位置现在是空的，我换个地方再找找。`, [
+            `${baseName} 里也没东西，我再换个位置。`,
+            `${baseName} 同样是空的，换条路找。`,
+          ])
+        : _live('这个位置现在是空的，我换个地方再找找。', [
+            '这里也没东西，我再换个位置。',
+            '同样是空的，换条路找。',
+          ]);
     }
     if (n != null) {
       const where = baseName ? `${baseName} 下` : '这里';
-      return `好，${where}一共 ${n} 个条目，我心里大致有数了——接着挑关键的看一眼。`;
+      return _live(`好，${where}一共 ${n} 个条目，我心里大致有数了——接着挑关键的看一眼。`, [
+        `${where}有 ${n} 个条目，先挑要紧的看。`,
+        `这一层 ${n} 个，范围收窄了，继续往里走。`,
+      ]);
     }
-    return baseName ? `${baseName} 列完了，接着挑关键的看一眼。` : '列完了，接着挑关键的看一眼。';
+    return baseName
+      ? _live(`${baseName} 列完了，接着挑关键的看一眼。`, [
+          `${baseName} 也列完了，先挑要紧的看。`,
+          `${baseName} 过了一遍，继续往里走。`,
+        ])
+      : _live('列完了，接着挑关键的看一眼。', [
+          '这层也列完了，先挑要紧的看。',
+          '过了一遍，继续往里走。',
+        ]);
   }
   if (name === 'read' || name === 'readfile' || name === 'notebookread') {
     const lines =
       typeof result.lines === 'number' ? result.lines : outStr ? outStr.split('\n').length : null;
     if (baseName && lines != null) {
-      return `${baseName} 读完了，${lines} 行，结构我摸清了——接着按需要往下改。`;
+      return _live(`${baseName} 读完了，${lines} 行，结构我摸清了——接着按需要往下改。`, [
+        `${baseName} 也看完了，${lines} 行，要点记下了。`,
+        `${baseName} 这 ${lines} 行过了一遍，接着往下。`,
+      ]);
     }
     if (baseName) {
-      return `${baseName} 读完了，结构我摸清了——接着按需要往下改。`;
+      return _live(`${baseName} 读完了，结构我摸清了——接着按需要往下改。`, [
+        `${baseName} 也看完了，要点记下了。`,
+        `${baseName} 过了一遍，接着往下。`,
+      ]);
     }
-    return '读完了，结构清楚了，接着往下改。';
+    return _live('读完了，结构清楚了，接着往下改。', [
+      '这份也看完了，要点记下了。',
+      '又过了一遍，接着往下。',
+    ]);
   }
   if (name === 'grep' || name === 'search' || name === 'searchcontent') {
     const n = countOf(result.count, result.matches);
     if (n === 0) {
-      return '这一轮没找到匹配，我换个关键词再找找。';
+      return _live('这一轮没找到匹配，我换个关键词再找找。', [
+        '这个词也没命中，我再换一个。',
+        '仍然没有匹配，换个思路找。',
+      ]);
     }
     if (n != null) {
-      return `找到 ${n} 处匹配，我逐个核对，先从第一处入手。`;
+      return _live(`找到 ${n} 处匹配，我逐个核对，先从第一处入手。`, [
+        `这轮 ${n} 处，接着往下核对。`,
+        `又是 ${n} 处，一并对一遍。`,
+      ]);
     }
-    return '匹配拿到了，我逐个核对。';
+    return _live('匹配拿到了，我逐个核对。', [
+      '这轮结果也拿到了，接着核对。',
+      '又拿到一批，继续对。',
+    ]);
   }
   if (name === 'write' || name === 'writefile' || name === 'createfile') {
     return baseName
-      ? `${baseName} 写好了，我回头跑一下确认它确实生效。`
-      : '写好了，我回头验证一下。';
+      ? _live(`${baseName} 写好了，我回头跑一下确认它确实生效。`, [
+          `${baseName} 也落盘了，稍后一起验。`,
+          `${baseName} 写完，接着下一处。`,
+        ])
+      : _live('写好了，我回头验证一下。', ['这份也落盘了，稍后一起验。', '写完，接着下一处。']);
   }
   if (name === 'edit' || name === 'editfile' || name === 'multiedit' || name === 'notebookedit') {
     return baseName
-      ? `${baseName} 改好了，我回头验一下改动没有副作用。`
-      : '改好了，我回头验证一下。';
+      ? _live(`${baseName} 改好了，我回头验一下改动没有副作用。`, [
+          `${baseName} 这处也改完了，接着下一处。`,
+          `${baseName} 改动落下了，稍后一起验。`,
+        ])
+      : _live('改好了，我回头验证一下。', ['这处也改完了，接着下一处。', '改动落下了，稍后一起验。']);
   }
   if (name === 'bash' || name === 'shell' || name === 'shellcommand' || name === 'command') {
     if (result._background) {
-      return '命令已经在后台跑起来了，我先继续别的，回头看它的输出。';
+      return _live('命令已经在后台跑起来了，我先继续别的，回头看它的输出。', [
+        '这条也挂到后台了，我先做别的。',
+        '后台又多了一条，回头一起收。',
+      ]);
     }
     const exit = typeof result.exitCode === 'number' ? result.exitCode : 0;
     if (exit === 0) {
-      return '命令跑通了，我接着往下走。';
+      return _live('命令跑通了，我接着往下走。', [
+        '这条也过了，继续下一条。',
+        '又通了一条，接着往下。',
+      ]);
     }
     if (!_failOutcomeEnabled()) {
       return '';
@@ -567,10 +679,16 @@ function toolOutcomeNarration(toolName, result = {}, params = {}, options = {}) 
     ]);
   }
   if (name === 'todowrite') {
-    return '待办清单更新好了，我照着它继续往下推进。';
+    return _live('待办清单更新好了，我照着它继续往下推进。', [
+      '清单又对齐了一次，接着往下推。',
+      '进度记上了，继续下一项。',
+    ]);
   }
   if (name === 'agent' || name === 'task') {
-    return '子任务那边有结果回来了，我把它收拢进主线。';
+    return _live('子任务那边有结果回来了，我把它收拢进主线。', [
+      '又有一路子任务回来了，一并收拢。',
+      '这一路的结果也到了，接着合。',
+    ]);
   }
   return '';
 }
@@ -598,7 +716,17 @@ function composePlanAnnouncement(plan, options = {}) {
     const desc = String((s && s.description) || '').trim();
     return `${i + 1}. ${desc || '（待定）'}`;
   });
-  const parts = ['我先讲下这件事打算怎么做：', ...lines];
+  // 同一会话里每回合都念同一句开场 + 同一句收尾 → 模板感。turnIndex(回合序号)当
+  // occurrence 轮换措辞;turn 0/缺省或门控关 → 逐字节保持历史两句。
+  const turn = _liveVoiceEnabled(options.env) ? Number(options.turnIndex) : 0;
+  const parts = [
+    _voice(turn, '我先讲下这件事打算怎么做：', [
+      '这件事我打算这么拆：',
+      '先把这轮的做法说在前面：',
+      '这次的路径是这样：',
+    ]),
+    ...lines,
+  ];
   const omitted = steps.length - shown.length;
   if (omitted > 0) {
     parts.push(`…（还有 ${omitted} 步，共 ${steps.length} 步）`);
@@ -606,7 +734,13 @@ function composePlanAnnouncement(plan, options = {}) {
   if (steps.some((s) => s && s.parallelGroup)) {
     parts.push('其中标了同组的步骤可以并行推进。');
   }
-  parts.push('我先从第 1 步开始。');
+  parts.push(
+    _voice(turn, '我先从第 1 步开始。', [
+      '这就从第 1 步动手。',
+      '按上面的顺序，从第 1 步开始。',
+      '先落第 1 步。',
+    ])
+  );
   return parts.join('\n');
 }
 
@@ -617,7 +751,7 @@ function composePlanAnnouncement(plan, options = {}) {
 // returns '' for every other transition, an out-of-range index, a missing
 // description, or step 1 (already covered by the upfront announcement) — so it
 // never doubles up with the per-tool outcome line.
-function composePlanProgress(plan, stepIndex, status) {
+function composePlanProgress(plan, stepIndex, status, options = {}) {
   const steps = plan && Array.isArray(plan.steps) ? plan.steps : null;
   if (!steps || steps.length === 0) {
     return '';
@@ -633,7 +767,14 @@ function composePlanProgress(plan, stepIndex, status) {
   if (!desc) {
     return '';
   }
-  return `第 ${idx + 1} 步：${desc}。`;
+  // 一个任务里每步都念「第 N 步：…」→ 步数越多越像报菜名。用**步序**当 occurrence
+  // (第一条可见步进 idx=1 → occ 0 → 逐字节保持历史句),之后逐步换连接词;门控关 → 全程历史句。
+  const occ = _liveVoiceEnabled(options.env) ? idx - 1 : 0;
+  return _voice(occ, `第 ${idx + 1} 步：${desc}。`, [
+    `接着第 ${idx + 1} 步，${desc}。`,
+    `往下是第 ${idx + 1} 步：${desc}。`,
+    `第 ${idx + 1} 步，${desc}。`,
+  ]);
 }
 
 // ── 段内点名检测(放宽过程叙述 gating)──────────────────────────────────────
