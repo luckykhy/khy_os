@@ -86,13 +86,17 @@ function renderPanel() {
   if (!_tasks || _tasks.length === 0) {
     return;
   }
-  if (!process.stdout.isTTY) {
-    return;
-  }
-  if (process.stdout.isTTY) {
-    return;
-  }
+  // 本面板当前**整体停用**,行为等价于「永远 no-op」——原先写成 `!isTTY return` 紧跟
+  // `isTTY return` 两条互相矛盾的守卫,读起来像笔误,实际是刻意禁用,这里把意图写明。
+  //
+  // 为什么禁用:下面用裸 process.stdout.write 直接吐面板,绕过了 ink 的 log-update 行计数
+  // (ink 靠「上一帧渲染了几行 → 擦掉同样行数」维持实时区;第三方裸写不计入,擦除量当场
+  // 少算 → 实时区被撕开、旧帧残留)。ink TUI 已自带任务面板,这套经典实现无处可用。
+  // 保留函数与 4 处调用点是为了不动调用方;要恢复经典 REPL 面板,须先把输出改走
+  // console.*(ink 的 patchConsole 会正确 clear/restore),不能直接放开这条 return。
+  return;
 
+  // eslint-disable-next-line no-unreachable
   const width = Math.min(process.stdout.columns || 80, 120);
   const done = _tasks.filter((t) => t.status === 'completed').length;
   const errored = _tasks.filter((t) => t.status === 'error').length;

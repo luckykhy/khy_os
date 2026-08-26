@@ -34,15 +34,41 @@ const CP_MAP = {
   65001: 'utf-8',
 };
 
-let _cached = undefined; // undefined = not checked, null = checked but failed
+// 成功探测的结果永久缓存(码页在进程生命周期内不会变);**失败不永久缓存**。
+//
+// 原实现把失败也写进 `_cached = null` 并当作终态。于是一次瞬时故障(chcp 3s 超时、
+// 子进程创建被杀软拦一下、容器里临时没有 comspec)就把整个进程钉死在「探测失败」上,
+// 后续所有解码回落 utf-8 —— GBK 控制台字节按 UTF-8 解出来就是 U+FFFD 乱码,而这类
+// 乱码被判为不可修复,于是同一条乱码告警会一直重复到进程结束。这正是「出现错误就
+// 永远报相同的错误」的一条根因。
+//
+// 现在失败只压制 FAILURE_RETRY_MS,过期后下一次调用重新探测。压制窗口是必要的:
+// getEncodingForBuffer 在每个非 UTF-8 数据块上都会调,不能每次都 fork 一个 chcp。
+const FAILURE_RETRY_MS = 60_000;
+
+let _cached = undefined; // undefined = 未探测, null = 探测失败(受 _failedAt 冷却约束)
+let _failedAt = 0;
 
 /**
  * Detect the system's default text encoding.
- * @returns {string|null}
+ *
+ * @param {object} [opts]
+ * @param {() => number} [opts.now] - 时钟注入(测试用),默认 Date.now。
+ * @returns {string|null} 编码名;探测失败返回 null(失败态最多保留 FAILURE_RETRY_MS)。
  */
-function getSystemEncoding() {
-  if (_cached !== undefined) {
+function getSystemEncoding(opts = {}) {
+  const now = typeof opts.now === 'function' ? opts.now : Date.now;
+  if (_cached !== undefined && _cached !== null) {
     return _cached;
+  }
+  if (_cached === null && now() - _failedAt < FAILURE_RETRY_MS) {
+    return null; // 仍在失败冷却窗口内,不重复 fork 探测进程
+  }
+
+  function fail() {
+    _cached = null;
+    _failedAt = now();
+    return null;
   }
 
   if (os.platform() === 'win32') {
@@ -67,8 +93,7 @@ function getSystemEncoding() {
     } catch {
       /* ignore */
     }
-    _cached = null;
-    return _cached;
+    return fail();
   }
 
   // Unix
@@ -83,8 +108,7 @@ function getSystemEncoding() {
         stdio: ['pipe', 'pipe', 'pipe'],
       }).trim();
     } catch {
-      _cached = null;
-      return _cached;
+      return fail();
     }
   }
 
@@ -101,8 +125,7 @@ function getSystemEncoding() {
     return _cached;
   }
 
-  _cached = null;
-  return _cached;
+  return fail();
 }
 
 /**
@@ -140,6 +163,7 @@ function getEncodingForBuffer(buf) {
  */
 function resetEncodingCache() {
   _cached = undefined;
+  _failedAt = 0;
 }
 
 module.exports = {

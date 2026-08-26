@@ -336,16 +336,23 @@ function _checkOutputMonitor() {
   const s = mon.snapshot();
   if (s.unrepaired > 0) {
     const top = Object.keys(s.byType).slice(0, 3).join('、');
+    // 计数改成窗口内的量（snapshot 默认 15 分钟），必须把窗口说出来：否则「3 处」
+    // 到底是刚发生的还是开机时那一次，用户无从判断，这条 yellow 就成了永久噪音。
+    const mins = Math.max(1, Math.round((s.windowMs || 0) / 60000));
     return {
       status: 'yellow',
-      detail: `${s.unrepaired} 处不可修复的输出软 bug（${top}），已写错误日志`,
-      hint: '查 logs/error-*.log 定位（乱码源/截断点）；KHY_OUTPUT_MONITOR=strict 可让其在 CI 抛出',
+      detail: `近 ${mins} 分钟 ${s.unrepaired} 处不可修复的输出软 bug（${top}），已写错误日志`,
+      // 旧提示指向 'logs/error-*.log' —— 一个相对路径，照字面意思找永远找不到。
+      // 改指向 `khy log`：它现在读的就是 transport 的真实写入目录，而且 `log clear`
+      // 能同时把本检查依赖的进程内累积清零（否则这条 yellow 清不掉）。
+      hint: '运行 log 看错误详情（乱码源/截断点）；处理完用 log clear 清除累积；KHY_OUTPUT_MONITOR=strict 可让其在 CI 抛出',
     };
   }
   if (s.repaired > 0) {
+    const mins = Math.max(1, Math.round((s.windowMs || 0) / 60000));
     return {
       status: 'info',
-      detail: `已自动修复 ${s.repaired} 处输出软 bug（乱码 strip / 围栏闭合 / 缩放重绘）`,
+      detail: `近 ${mins} 分钟已自动修复 ${s.repaired} 处输出软 bug（乱码 strip / 围栏闭合 / 缩放重绘）`,
     };
   }
   return { status: 'green', detail: '无输出不全 / 乱码 / 缩放丢行' };

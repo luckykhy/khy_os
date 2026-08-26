@@ -298,23 +298,22 @@ describeOrSkip('Ink TUI render smoke (src/cli/tui/ink-components)', () => {
     }
   });
 
-  // 麦克风按钮(鼠标层第一个消费者,学习 opencode 的按钮渲染):mic prop 提供时,
-  // 顶边框左端出现 🎤,闲置/激活(听写中)态都正常渲染(激活高亮是纯色码,jest
-  // 的 chalk 在 import 时已缓存颜色级别、FORCE_COLOR 事后无效,故只断言渲染不
-  // 抛错 + 字形在位;颜色由真终端渲染验证);mic 缺失时逐字节回退旧边框。
+  // 语音按钮在提供 mic prop 时渲染 MIC 文本标记，闲置/激活(听写中)态都正常渲染。
+  // chalk 在 import 时已缓存颜色级别、FORCE_COLOR 事后无效，故只断言渲染不抛错；
+  // 颜色由真实终端渲染验证；mic 缺失时逐字节回退旧边框。
   test('PromptFrame renders the mic voice button at the top-border left when mic is provided', async () => {
     const idle = stripAnsi(await renderCompFrame('PromptFrame', {
       value: 'hello', offset: 0, busy: false, placeholder: '', mic: { active: false, onClick: noop },
     }));
-    expect(idle).toContain('🎤');
+    expect(idle).toContain('MIC');
     const active = stripAnsi(await renderCompFrame('PromptFrame', {
       value: 'hello', offset: 0, busy: false, placeholder: '', mic: { active: true, onClick: noop },
     }));
-    expect(active).toContain('🎤');
+    expect(active).toContain('MIC');
     const none = stripAnsi(await renderCompFrame('PromptFrame', {
       value: 'hello', offset: 0, busy: false, placeholder: '',
     }));
-    expect(none).not.toContain('🎤');
+    expect(none).not.toContain('MIC');
   });
 
   // 端到端鼠标层验证(真实 ink 树):onClick Box 必须被 collectLayout 找到、命中、

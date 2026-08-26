@@ -155,7 +155,7 @@ function deferredPrefetch(options = {}) {
       const footprint = cleanup.assessRuntimeFootprint();
       if (footprint.notice) {
         const chalk = require('chalk').default || require('chalk');
-        emit(chalk.dim(`  ℹ ${footprint.notice}`));
+        emit(chalk.dim(`  存储  ${footprint.notice}`));
       }
     } catch {
       /* 自检失败不该拦住启动 */
@@ -215,7 +215,7 @@ function deferredPrefetch(options = {}) {
             const chalk = require('chalk').default || require('chalk');
             emit(
               chalk.dim(
-                `  ℹ 轻量模式: ${profile.profile} (${profile.memory.totalGB}GB RAM, ${profile.cpu.cores} cores)`
+                `  模式  轻量 ${profile.profile} (${profile.memory.totalGB}GB RAM, ${profile.cpu.cores} cores)`
               )
             );
           } catch {
@@ -240,7 +240,7 @@ function deferredPrefetch(options = {}) {
             const chalk = require('chalk').default || require('chalk');
             emit(
               chalk.dim(
-                `  ℹ 自动清理: ${result.summary.actions.join(', ')} (释放 ${result.summary.freedHuman})`
+                `  清理  ${result.summary.actions.join(', ')} (释放 ${result.summary.freedHuman})`
               )
             );
           } catch {
@@ -280,8 +280,8 @@ function deferredPrefetch(options = {}) {
         if (!ok) {
           try {
             const chalk = require('chalk').default || require('chalk');
-            emit(chalk.red('  ⚠ 文件完整性校验异常 — 部分核心文件已被修改'));
-            emit(chalk.dim('    运行 security 命令查看详情'));
+            emit(chalk.red('  校验  文件完整性异常：部分核心文件已被修改'));
+            emit(chalk.dim('  操作  运行 security 命令查看详情'));
           } catch {
             /* chalk not available */
           }
@@ -321,7 +321,7 @@ function deferredPrefetch(options = {}) {
         if (msg && !busy()) {
           try {
             const chalk = require('chalk').default || require('chalk');
-            emit(chalk.dim(`  ℹ IDE 适配器: ${msg}`));
+            emit(chalk.dim(`  适配  ${msg}`));
           } catch {
             /* chalk not available */
           }
@@ -341,9 +341,9 @@ function deferredPrefetch(options = {}) {
           try {
             const chalk = require('chalk').default || require('chalk');
             emit('');
-            emit(chalk.yellow(`  💡 学习建议: `) + chalk.white(s.name));
-            emit(chalk.dim(`     ${s.reason}`));
-            emit(chalk.dim(`     → ${s.action}`));
+            emit(chalk.yellow('  建议  ') + chalk.white(s.name));
+            emit(chalk.dim(`  原因  ${s.reason}`));
+            emit(chalk.dim(`  操作  ${s.action}`));
             emit('');
           } catch {
             /* chalk not available */

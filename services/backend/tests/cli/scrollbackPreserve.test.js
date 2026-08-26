@@ -74,46 +74,121 @@ test('gate on: win32 clearTerminal (no 3J) passes through stripScrollbackClear u
 });
 
 // ── normalizeClearTerminal: platform-aware dispatch ───────────────────────────
+//
+// win32 契约(本轮修复):clearTerminal 的 ED2 形式 `2J + 0f` 被改写为等价的
+// 「归位 + ED0」`H + J`。视觉终态一致(可视区清空、光标归位),但 ED0 是就地擦除,
+// 不会像 conhost / Windows Terminal 的 ED2 那样把旧视口滚进 scrollback 留下重复副本,
+// 也不像注入 3J 那样清空用户的原生回滚历史。非 win32 维持「只剥 3J」,逐字节不变。
 
-test('exported win32 constants preserve the original byte sequence', () => {
+const WIN32_INPLACE = `${ESC}[H${ESC}[J`;
+
+test('WIN_CLEAR_INPLACE 恰为 ESC[H ESC[J(归位在前、ED0 在后)', () => {
+  assert.strictEqual(leaf.WIN_CLEAR_INPLACE, WIN32_INPLACE);
+  // 顺序是语义性的:ED0 只擦光标之后,不先归位就擦不干净整屏。
+  assert.deepStrictEqual(
+    [...leaf.WIN_CLEAR_INPLACE].map((c) => c.charCodeAt(0)),
+    [27, 91, 72, 27, 91, 74],
+  );
+});
+
+test('win32 常量:WIN_CLEAR 是 ink 原序列,WIN_CLEAR_FIXED 是改写目标', () => {
   assert.strictEqual(WIN_CLEAR, WIN32_CLEAR);
-  assert.strictEqual(WIN_CLEAR_FIXED, WIN_CLEAR);
+  assert.strictEqual(WIN_CLEAR_FIXED, leaf.WIN_CLEAR_INPLACE);
 });
 
-test('win32: clearTerminal remains byte-identical and never gains 3J', () => {
-  assert.strictEqual(normalizeClearTerminal(WIN_CLEAR, {}, 'win32'), WIN_CLEAR);
-  assert.strictEqual(normalizeClearTerminal(WIN_CLEAR, {}, 'win32').includes(SCROLLBACK_CLEAR), false);
+test('win32: ED2 清屏被改写为就地擦除,且绝不注入 3J', () => {
+  const out = normalizeClearTerminal(WIN_CLEAR, {}, 'win32');
+  assert.strictEqual(out, WIN32_INPLACE);
+  assert.strictEqual(
+    out.includes(SCROLLBACK_CLEAR),
+    false,
+    '注入 3J 会清空用户原生 scrollback,是被刻意废弃的做法',
+  );
+  assert.strictEqual(
+    out.includes(`${ESC}[2J`),
+    false,
+    'ED2 必须消失,否则 conhost 仍会把旧视口滚进 scrollback 留下重复副本',
+  );
 });
 
-test('win32: a legacy 3J-bearing frame has 3J removed', () => {
+test('win32: 历史遗留的含 3J 帧先剥 3J 再改写', () => {
   const legacy = `${ESC}[2J${ESC}[3J${ESC}[0f`;
-  assert.strictEqual(normalizeClearTerminal(legacy, {}, 'win32'), WIN_CLEAR);
+  assert.strictEqual(normalizeClearTerminal(legacy, {}, 'win32'), WIN32_INPLACE);
 });
 
-test('win32: real fullscreen frame keeps body untouched', () => {
-  const body = 'line1\nline2\n[32mgreen[39m\n';
-  assert.strictEqual(normalizeClearTerminal(WIN_CLEAR + body, {}, 'win32'), WIN_CLEAR + body);
+test('win32: 现代形式 clearTerminal(2J+3J+H)被改写为就地擦除', () => {
+  // ink 6.x 用 ansi-escapes@7,其分支条件是 isOldWindows() 而非 platform ——
+  // Win10/11 + Windows Terminal 实测走的是这条带 3J 的路径,是现代 Windows 的主路径。
+  const modern = `${ESC}[2J${ESC}[3J${ESC}[H`;
+  const out = normalizeClearTerminal(modern, {}, 'win32');
+  assert.strictEqual(out, WIN32_INPLACE);
+  assert.strictEqual(out.includes(SCROLLBACK_CLEAR), false, '不得保留 3J:那会清空原生 scrollback');
+  assert.strictEqual(out.includes(`${ESC}[2J`), false, '不得保留 ED2:那会把旧视口滚进 scrollback');
 });
 
-test('win32: string without clearTerminal returned unchanged', () => {
+test('win32: 已剥掉 3J 的形式(2J+H)同样被改写', () => {
+  assert.strictEqual(normalizeClearTerminal(`${ESC}[2J${ESC}[H`, {}, 'win32'), WIN32_INPLACE);
+});
+
+test('win32: 现代形式的全屏帧正文逐字节不动', () => {
+  const body = `banner\nline2\n${ESC}[36mcyan${ESC}[39m\n`;
+  const frame = `${ESC}[2J${ESC}[3J${ESC}[H${body}`;
+  assert.strictEqual(normalizeClearTerminal(frame, {}, 'win32'), WIN32_INPLACE + body);
+});
+
+test('stateful win32 normalizer: 跨 write 拆开的现代形式仍被完整改写', () => {
+  const n = createClearTerminalNormalizer({}, 'win32');
+  assert.strictEqual(n.write(`${ESC}[2J${ESC}[3`), '');
+  assert.strictEqual(n.write(`J${ESC}[Hbody`), `${WIN32_INPLACE}body`);
+  assert.strictEqual(n.flush(), '');
+});
+
+
+test('win32: 全屏帧只换清屏头,正文逐字节不动', () => {
+  const body = `line1\nline2\n${ESC}[32mgreen${ESC}[39m\n`;
+  assert.strictEqual(
+    normalizeClearTerminal(WIN_CLEAR + body, {}, 'win32'),
+    WIN32_INPLACE + body,
+  );
+});
+
+test('win32: 一次 write 内的多次清屏全部改写', () => {
+  const s = `${WIN32_CLEAR}a${WIN32_CLEAR}b`;
+  assert.strictEqual(
+    normalizeClearTerminal(s, {}, 'win32'),
+    `${WIN32_INPLACE}a${WIN32_INPLACE}b`,
+  );
+});
+
+test('win32: 不含 clearTerminal 的普通输出原样返回', () => {
   const s = 'plain windows output\r\nno clear here';
   assert.strictEqual(normalizeClearTerminal(s, {}, 'win32'), s);
 });
 
-test('non-win32: delegates to stripScrollbackClear (strips 3J)', () => {
+test('win32: 裸 ED2(不是 clearTerminal 的一部分)不被改写', () => {
+  // 只认完整的 `2J + 0f`;其他来源的裸 2J 不属于本叶子的职责范围。
+  const s = `${ESC}[2Jsomething-else`;
+  assert.strictEqual(normalizeClearTerminal(s, {}, 'win32'), s);
+});
+
+test('non-win32: 委托 stripScrollbackClear(只剥 3J),不做 ED0 改写', () => {
   assert.strictEqual(
     normalizeClearTerminal(CLEAR_TERMINAL, {}, 'linux'),
     stripScrollbackClear(CLEAR_TERMINAL, {}),
   );
-  // and never injects on non-win32
+  // win32 形式的序列出现在 linux 上时保持原样 —— 改写严格限定 win32。
   assert.strictEqual(normalizeClearTerminal(WIN32_CLEAR, {}, 'linux'), WIN32_CLEAR);
 });
 
-test('normalizeClearTerminal: gate off is byte-identical on both platforms', () => {
+test('normalizeClearTerminal: gate off 两平台逐字节回退到 ink 原字节', () => {
   for (const v of OFF_VALUES) {
     const env = { KHY_PRESERVE_SCROLLBACK: v };
     assert.strictEqual(normalizeClearTerminal(WIN_CLEAR, env, 'win32'), WIN_CLEAR, `win32 ${v}`);
-    assert.strictEqual(normalizeClearTerminal(CLEAR_TERMINAL, env, 'linux'), CLEAR_TERMINAL, `linux ${v}`);
+    assert.strictEqual(
+      normalizeClearTerminal(CLEAR_TERMINAL, env, 'linux'),
+      CLEAR_TERMINAL,
+      `linux ${v}`,
+    );
   }
 });
 
@@ -128,22 +203,35 @@ test('normalizeClearTerminal: non-string chunks pass through on win32', () => {
 test('normalizeClearTerminal: does not throw on hostile env (win32 arm)', () => {
   const hostile = Object.create(null);
   assert.doesNotThrow(() => normalizeClearTerminal(WIN_CLEAR, hostile, 'win32'));
-  assert.strictEqual(normalizeClearTerminal(WIN_CLEAR, hostile, 'win32'), WIN_CLEAR);
+  assert.strictEqual(normalizeClearTerminal(WIN_CLEAR, hostile, 'win32'), WIN32_INPLACE);
 });
 
-test('stateful win32 normalizer passes split clear sequence through unchanged', () => {
+test('stateful win32 normalizer: 跨 write 拆开的清屏序列仍被完整改写', () => {
   const n = createClearTerminalNormalizer({}, 'win32');
-  assert.strictEqual(n.write(`${ESC}[2`), `${ESC}[2`);
-  assert.strictEqual(n.write(`J${ESC}[0fbody`), `J${ESC}[0fbody`);
+  // 前 5 字节是 `2J + 0f` 的真前缀 → 必须暂存;先吐出去就再也无法整体改写。
+  assert.strictEqual(n.write(`${ESC}[2`), '');
+  assert.strictEqual(n.write(`J${ESC}[0fbody`), `${WIN32_INPLACE}body`);
   assert.strictEqual(n.flush(), '');
 });
 
-test('stateful normalizer handles Buffer frames and preserves ordinary bytes', () => {
+test('stateful win32 normalizer: flush 归还未闭合尾缀,不吞字节', () => {
+  const n = createClearTerminalNormalizer({}, 'win32');
+  assert.strictEqual(n.write(`tail${ESC}[2J`), 'tail');
+  assert.strictEqual(n.flush(), `${ESC}[2J`);
+});
+
+test('stateful normalizer handles Buffer frames and rewrites the clear', () => {
   const n = createClearTerminalNormalizer({}, 'win32');
   const out = n.write(Buffer.from(`${WIN32_CLEAR}prompt`, 'utf8'));
   assert.ok(Buffer.isBuffer(out));
-  assert.strictEqual(out.toString('utf8'), `${WIN_CLEAR}prompt`);
+  assert.strictEqual(out.toString('utf8'), `${WIN32_INPLACE}prompt`);
   assert.strictEqual(n.write(Buffer.from('tail', 'utf8')).toString('utf8'), 'tail');
+});
+
+test('stateful non-win32 normalizer 不暂存 ED2(只认 3J 前缀)', () => {
+  const n = createClearTerminalNormalizer({}, 'linux');
+  assert.strictEqual(n.write(`hello${ESC}[2J`), `hello${ESC}[2J`);
+  assert.strictEqual(n.flush(), '');
 });
 
 test('stateful normalizer gate off is byte-identical', () => {
@@ -153,6 +241,7 @@ test('stateful normalizer gate off is byte-identical', () => {
   assert.strictEqual(out, frame);
   assert.strictEqual(n.flush(), '');
 });
+
 
 
 test('gate off: 3J-bearing frame returned byte-identical', () => {

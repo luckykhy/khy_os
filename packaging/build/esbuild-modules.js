@@ -79,6 +79,18 @@ const OPTIONAL_RUNTIME_MODULES = [
   'sqlite3',
   'node-llama-cpp',
   'node-pty',
+  // @opentelemetry/*：可观测性是 opt-in 能力，默认一个字节都不装
+  // （services/backend/package.json 里声明为 peerDependenciesMeta.optional）。
+  // 真源是 services/backend/src/observability/otel.js 的 OTEL_OPTIONAL_PACKAGES；
+  // 那边加减包时同步改这里，否则发布构建会在解析 require 时失败。
+  // 未启用时 otel.js 根本不会走到这些 require，bundle 里留个未解析路径是正确行为。
+  '@opentelemetry/sdk-node',
+  '@opentelemetry/sdk-trace-base',
+  '@opentelemetry/resources',
+  '@opentelemetry/semantic-conventions',
+  '@opentelemetry/instrumentation-http',
+  '@opentelemetry/instrumentation-express',
+  '@opentelemetry/exporter-trace-otlp-http',
 ];
 
 /**

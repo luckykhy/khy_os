@@ -230,3 +230,155 @@ try {
 3. **真共享读锁未实装**：当前以"写独占 + 读无锁"满足诉求且零开销；`meta.mode` 已为将来读计数预留。
 4. **pip / npm 生效**：本改动是 backend JS；随 `khyos.js` 类改动需重建 wheel/镜像才在 pip 环境落地
    （见 [[project_pip_multilang_distribution]] 打包纪律）。
+
+---
+
+## 8. 文档级操作合并层（T-008，2026-08-25 增补）
+
+§0–§7 的悲观文件锁解决的是**跨进程 lost-update**，但它的语义是「一次只让一个人写」——
+两个实例想同时编辑同一文件的**不同位置**时，后到者只能等锁或走冲突副本。本节增补的
+**文档级操作合并层**把这一类「本可自动合并」的并发编辑从「排队 / 冲突副本」升级为
+「按基线版本确定性合并」，同时**保留**文件锁作为降级路径——不是替换，是分层。
+
+```
+实例A 读到 v1 ──► diff_A(baseVersion=1) ──┐
+                                          ├─► 服务端按 baseVersion rebase 合并 ─► v2 / v3
+实例B 读到 v1 ──► diff_B(baseVersion=1) ──┘        重叠 → 结构化 MERGE_CONFLICT
+                                                   不可用 → MERGE_FALLBACK → §2 文件锁
+```
+
+### 8.1 实现与分层
+
+| 文件 | 职责 |
+|------|------|
+| `src/services/crdt_engine.js` | **纯叶子**：路径规范化/白名单、操作校验、OT rebase（`transformAgainst`）、重叠冲突判定、Y.Doc 收敛与快照。零 IO。 |
+| `src/services/session_registry.js` | **纯叶子**：多实例会话注册、订阅集、编辑租约（申请/续期/到期释放）、快照/恢复。时钟注入，零 IO。 |
+| `src/services/file_sync_bus.js` | 薄 IO 层 + 事件总线：每文件的当前内容/版本/操作历史/已处理 opId/订阅者集，全部副作用走注入端口（`readFile` / `writeFile` / `persist` / `send` / `now`）。 |
+| `src/services/aiManagementServer.js` | WS 边界接线：`default:` 分支之前认领 `file_*` / `subscribe_files`，认证成功注册会话，断线立即释放租约。 |
+
+**为什么不是纯 Yjs**：CRDT 按定义永不报冲突（它总能收敛出**某个**结果）。本任务要求
+「重叠编辑返回结构化冲突、可复核、可转冲突副本」，纯 CRDT 无法满足。故采用
+**自有操作协议 + OT rebase 提供冲突语义，Yjs（`Y.Doc`/`Y.Text`）作为收敛与快照基座**。
+`clientID` 由 `sessionId` 经 FNV-1a 定值，保证不同实例同输入同输出。
+
+### 8.2 操作与版本模型
+
+客户端提交的最小操作（必须自报 `baseVersion`，服务端强校验）：
+
+```json
+{
+  "type": "file_op",
+  "path": "docs/a.md",
+  "opId": "op-7f3c",
+  "sessionId": "s-1",
+  "editor": "alice",
+  "baseVersion": 12,
+  "operations": [{ "insert": "hello", "position": 40 }, { "delete": 3, "position": 10 }]
+}
+```
+
+- **版本单调递增**且可比较；`opId` 幂等去重（重复提交返回同一版本，`duplicate: true`，不再扇出）。
+- `baseVersion` 落后但仍在历史窗口内 → **自动 rebase** 后落地；已被挤出历史 → `HISTORY_EVICTED`
+  并附 `file_resync_required`；`baseVersion` 超前当前版本 → `BASE_VERSION_AHEAD`，**不静默接受**。
+- **绝不 last-writer-wins**。真重叠（删∩删、插在删区内、删区含插）一律返回：
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "MERGE_CONFLICT", "message": "文件存在重叠编辑冲突",
+    "path": "docs/a.md", "baseVersion": 12, "currentVersion": 13,
+    "opId": "op-7f3c", "conflictingOpIds": ["op-4a1b"],
+    "conflictCopyHint": "docs/a.md_conflict_khy_alice_…"
+  }
+}
+```
+冲突时**磁盘与版本都不动**，两侧操作信息都保留，可复核或按 hint 落冲突副本（§2 路径）。
+
+### 8.3 WebSocket 事件族（纯增量，老客户端零影响）
+
+挂在既有 `switch (msg.type)` 的 `default:` 分支**之前**：只有总线认领的类型被拦下，
+其余（`terminal_input` / `terminal_stream` / `khyos_desktop_frame` / `task_poll` / `chat` …）
+照旧走原处理器并在未知时回 `Unknown message type`。
+
+| 客户端 → 服务端 | 服务端 → 客户端 |
+|---|---|
+| `subscribe_files` `{paths, lastSeenVersions:{path:12}}` | `file_subscribed` `{ok, results:[{path, version, editor, increments, resync}]}` |
+| `unsubscribe_files` `{paths}` | `file_unsubscribed` |
+| `file_op`（§8.2） | `file_op_result` `{ok, path, opId, version, baseVersion, duplicate, warnings, status}` |
+| `file_catch_up` `{path, lastSeenVersion}` | `file_catch_up_result` `{ok, increments}` 或 `file_resync_required` |
+| `file_lease` `{path, action: acquire\|renew\|release}` | `file_lease_state` `{ok, lease:{sessionId, editorId, expiresAt, renewals}}` |
+| `file_lock` `{path, action: enable\|disable}` | `file_lock_state` `{ok, exclusive}` |
+| （扇出，无需请求） | `file_changed` `{path, version, baseVersion, opId, editor, sessionId, operations, timestamp}` |
+
+- 扇出**逐订阅者 fail-soft**：一个 socket 送不出去只算它自己失败（`delivered: 2/3` 写进 warnings），
+  不阻断其余订阅者。
+- **未经校验的客户端路径绝不落盘**：路径先规范化再过白名单前缀，越界/非法直接结构化拒绝。
+- 二进制文件不进文本合并器，直接 `BINARY_FILE` + `fallback: 'file_lock'`。
+
+### 8.4 断线重连补齐
+
+客户端重连时带 `lastSeenVersion` 回来：
+
+1. 历史窗口内仍有缺失操作 → **只补缺失的增量**（`increments`），不重传全文；
+2. 已被挤出历史 → `file_resync_required`，携带**当前版本** + 当前内容 + Y.Doc `snapshot`/`stateVector`；
+3. 补齐后客户端可直接续提交；重复补齐**返回同样的增量且不改变任何状态**（不会重放操作）。
+
+### 8.5 编辑租约（与 §2 文件锁的关系）
+
+租约是**基于活动的超时**，不是固定时长硬 kill：心跳与成功提交都会把 `expiresAt` 往后推；
+断线（`cleanupSession`）**立即**释放全部租约与订阅，不等 TTL 走完；空闲清扫（`gcSweep`）
+兜底回收过期租约与空闲会话。注册表通过 `snapshot()`/`restore()` 端口落到
+`<project>/.khy/file-sync/session-registry.json`，跨进程/重启后捞回，**不只活在单进程内存里**。
+
+`file_lock` 事件族提供**显式独占**开关：开启后该文件只接受租约持有者的操作，其余实例
+收到 `MERGE_FALLBACK`，语义等价于 §2 的写独占锁，供「我要整体重写这个文件」的场景使用。
+
+### 8.6 降级路径（必须不丢数据）
+
+下列任一情形，合并层一律返回结构化降级结果而非抛异常，调用方转 §2 文件锁 + 冲突副本：
+
+```json
+{ "ok": false, "error": {
+  "code": "MERGE_FALLBACK", "message": "实时合并不可用，已进入文件锁降级路径",
+  "fallback": "file_lock" } }
+```
+
+触发条件：`KHY_FILE_SYNC` 关闭、CRDT 依赖不可用、历史损坏、文档状态损坏、二进制文件、
+操作不可合并、版本无法确认、权限校验失败、WS 广播失败、读写端口报错。
+
+### 8.7 可调参数（全 env 覆盖，已登记 `flagRegistry.js`）
+
+| env | 默认 | clamp | 含义 |
+|-----|------|-------|------|
+| `KHY_FILE_SYNC` | 开 | — | 总门控。`0/false/off/no` 关 → 三个入口全部 `MERGE_FALLBACK`，逐字节回退 §2 |
+| `KHY_FILE_SYNC_HISTORY` | `200` | `[8, 20000]` | 每文件操作历史条数（环形），决定能容忍多长的断线 |
+| `KHY_FILE_SYNC_MAX_OPS` | `200` | `[1, 5000]` | 单批操作条数上限 |
+| `KHY_FILE_SYNC_MAX_INSERT` | `65536` | `[64, 4194304]` | 单条 insert 字符上限 |
+| `KHY_FILE_SYNC_MAX_BATCH` | `262144` | `[256, 8388608]` | 单批合计字符上限 |
+| `KHY_FILE_SYNC_MAX_DOC` | `4194304` | `[1024, 67108864]` | 单文档字符上限 |
+| `KHY_FILE_SYNC_LEASE_MS` | `45000` | `[1000, 3600000]` | 编辑租约 TTL（活动续期） |
+| `KHY_FILE_SYNC_IDLE_MS` | `300000` | `[10000, 86400000]` | 会话空闲回收阈值 |
+
+后七项以 `KHY_FILE_SYNC` 为 `parent`：总门控关 → 子项一并失效（`flagRegistry` 集中施加父→子优先级）。
+
+### 8.8 测试与验证
+
+| 套件 | 数量 | 覆盖 |
+|---|---|---|
+| `src/services/__tests__/crdt_engine.test.js` | 51 | 路径/opId/baseVersion/range/超大/编码/二进制校验；rebase 与三类真重叠；同输入同输出 |
+| `src/services/__tests__/session_registry.test.js` | 29 | 注册幂等与边界；订阅授权；租约申请/续期/惰性过期/抢占；断线即释放；快照恢复脏数据边界 |
+| `src/services/__tests__/file_sync_bus.test.js` | 47 | 门控与降级；版本模型与幂等；扇出 fail-soft；重连补齐与逐出重同步；独占；跨实例持久化；WS 消息族向后兼容；端到端最小路径 |
+| `src/services/__tests__/file_sync_wiring.test.js` | 18 | **真实 aiManagementServer 上**的接线回归：10 类老消息全部穿透；两实例端到端合并；重连补齐；断线即释放租约 |
+
+全部时钟/磁盘/WebSocket 端口注入，无 sleep、无真实网络、不触碰生产端点。
+
+### 8.9 已知边界
+
+1. **注册表快照是「项目内单机」跨进程口**（`<project>/.khy/file-sync/`）：同机多进程共享事实成立，
+   真正跨主机需要把 `persist` 端口换成共享存储/消息总线——端口已隔离，换实现不动判定逻辑。
+2. **合并层只覆盖文本文件**：二进制、超大文档一律走 §2 文件锁，这是有意的（§8.6）。
+3. **advisory 语义不变**：非 khyos 外部进程（编辑器直存、`cat >`）不参与版本模型；
+   落盘后被外部改写会在下次提交时表现为内容漂移，需靠 §2 锁 + 冲突副本兜底。
+4. **`y-websocket` 未采用**：3.1.0 起该包只剩客户端（服务端迁到 `@y/websocket-server`），
+   而本方案的服务端已长在既有 WS 通道上，无需第二个 WS 服务器。故只保留 `yjs` 依赖。

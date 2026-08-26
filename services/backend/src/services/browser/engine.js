@@ -32,6 +32,45 @@ const UA =
 let _pwModule = null; // resolved module or false (tried, missing)
 let _pwModuleOverride; // undefined = autodetect; any other value is a test override
 
+// 可选浏览器能力的候选包，按优先级排列。真源就是这里：
+// services/backend/package.json 把这两个名字声明为 peerDependenciesMeta.optional
+// （「能被 require 的东西必须有名字」，但有名字不等于要装 —— .npmrc 的
+// auto-install-peers=false 保证默认一个字节都不装）。加减包时同步改那边。
+const PLAYWRIGHT_CANDIDATES = Object.freeze(['playwright', 'playwright-core']);
+
+// 缺依赖提示每进程只打一次：loadPlaywright() 在每次搜索/每个浏览器原子操作前都会被
+// 调用，逐次打印会把降级提示变成刷屏噪音，而刷屏的提示等于没有提示。
+let _pwHintShown = false;
+
+/**
+ * 未装浏览器依赖时打印一次中文、可照做的启用提示。
+ *
+ * 两条路径都给出来，因为代价差三个数量级：本地浏览器要下载约 700 MB，而 engine.js
+ * 本来就支持连远端浏览器（WS/CDP），那条路只需要 playwright-core，不下载任何浏览器。
+ * 不写清体积就等于替使用者做了一个几百 MB 的决定。
+ */
+function _warnPlaywrightMissing() {
+  if (_pwHintShown) return;
+  _pwHintShown = true;
+  try {
+    const total = PLAYWRIGHT_CANDIDATES.length;
+    console.warn(
+      `[browser] 加载浏览器渲染依赖失败（${total} 个候选包 0 个就位：` +
+        `${PLAYWRIGHT_CANDIDATES.join(' / ')}）；本次以「仅 HTTP 请求」模式继续，其余功能不受影响。`
+    );
+    console.warn(
+      '[browser] 需要本地浏览器：npm install --no-save playwright && npx playwright install chromium' +
+        '（会另外下载约 700 MB 浏览器到用户缓存目录，请先确认磁盘与网络）。'
+    );
+    console.warn(
+      '[browser] 已有远端浏览器：npm install --no-save playwright-core，' +
+        '并设置 KHY_PLAYWRIGHT_WS_ENDPOINT 或 KHY_PLAYWRIGHT_CDP_ENDPOINT —— 不下载浏览器。'
+    );
+  } catch {
+    /* 提示打不出来也绝不能影响降级路径本身 */
+  }
+}
+
 /** Resolve the Playwright module (playwright → playwright-core), cached. */
 function loadPlaywright() {
   if (_pwModuleOverride !== undefined) {
@@ -40,9 +79,8 @@ function loadPlaywright() {
   if (_pwModule && _pwModule.chromium) {
     return _pwModule;
   } // already loaded
-  for (const name of ['playwright', 'playwright-core']) {
+  for (const name of PLAYWRIGHT_CANDIDATES) {
     try {
-      // eslint-disable-next-line import/no-dynamic-require, global-require
       const mod = require(name);
       if (mod && mod.chromium) {
         _pwModule = mod;
@@ -52,6 +90,7 @@ function loadPlaywright() {
       /* not installed — try next */
     }
   }
+  _warnPlaywrightMissing();
   // Missing state is not permanently latched: a later require (after a mid-session
   // self-heal install of playwright) can still pick the module up.
   _pwModule = false;

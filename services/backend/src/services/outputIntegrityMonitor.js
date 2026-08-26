@@ -34,6 +34,28 @@ const MAX_RECORDS = 100;
 // 零星替换符的绝对上限:≤ 此数即视为可 strip 的偶发坏字节,不受短文本占比膨胀误伤。
 const SPARSE_ABS = 3;
 
+// ── 重复落盘抑制 ────────────────────────────────────────────────────────────
+//
+// 同一处输出软 bug(比如某个固定的乱码源)每渲染一次就产生一条完全相同的
+// 记录,原来一条不落地全写进 error 日志:实测同一行 `mojibake ...
+// replacement=40` 在日志里逐字重复几十遍。噪音本身还好说,真正的问题是它掩盖
+// 了「这是同一个老问题」这个信息,让用户看到的就是「永远报相同的错误」。
+//
+// 抑制策略:按 `type|detail` 归并,首次照常落盘,之后只在次数达到 2 的幂时再落
+// 一条(带累计次数与被抑制条数),即 1/2/4/8/16… —— 既不淹没日志,也不会让一个
+// 持续恶化的问题彻底静音。
+//
+// 归并表是**有界**的:键数上限 DEDUP_MAX_KEYS,超了按插入序淘汰最老的;单个键
+// 静默超过 DEDUP_WINDOW_MS 视为新一轮事件(重新从「首次」开始),这样问题隔了很
+// 久再复现时不会被上一轮的计数吞掉。
+const DEDUP_MAX_KEYS = 200;
+const DEDUP_WINDOW_MS = 5 * 60_000;
+
+// snapshot 的默认观察窗:health 只关心「现在还在发生吗」。原来 snapshot 返回的是
+// 进程生命周期内的单调累计值,于是一次瞬时乱码会让 health 那条 yellow 挂到进程
+// 退出为止 —— 问题早没了,状态还红着,而且没有任何命令能把它清掉。
+const RECENT_WINDOW_MS = 15 * 60_000;
+
 let _clock = () => Date.now();
 function __setClock(fn) {
   _clock = typeof fn === 'function' ? fn : () => Date.now();
@@ -45,15 +67,63 @@ function __setSink(fn) {
   _sink = typeof fn === 'function' ? fn : null;
 }
 
+// key -> { count, suppressed, lastAt };纯内存,有界。
+const _seen = new Map();
+
+function _isPowerOfTwo(n) {
+  return n > 0 && (n & (n - 1)) === 0;
+}
+
+/**
+ * 判断这条记录该不该落盘,并维护归并计数。
+ *
+ * @returns {null|{count:number, suppressed:number}} null = 本次抑制,不落盘。
+ */
+function _dedupe(entry) {
+  const key = `${entry.type}|${entry.detail}`;
+  const now = Number.isFinite(entry.at) ? entry.at : _clock();
+  const prev = _seen.get(key);
+
+  if (!prev || now - prev.lastAt > DEDUP_WINDOW_MS) {
+    if (!prev && _seen.size >= DEDUP_MAX_KEYS) {
+      // Map 保持插入序,删首个即淘汰最老的键;归并表宁可漏抑制也不能无界增长。
+      const oldest = _seen.keys().next();
+      if (!oldest.done) {
+        _seen.delete(oldest.value);
+      }
+    }
+    _seen.set(key, { count: 1, suppressed: 0, lastAt: now });
+    return { count: 1, suppressed: 0 };
+  }
+
+  prev.count += 1;
+  prev.lastAt = now;
+  if (_isPowerOfTwo(prev.count)) {
+    const suppressed = prev.suppressed;
+    prev.suppressed = 0;
+    return { count: prev.count, suppressed };
+  }
+  prev.suppressed += 1;
+  return null;
+}
+
 function _persist(entry) {
   try {
+    const gate = _dedupe(entry);
+    if (!gate) {
+      return; // 同一条软 bug 的重复出现,已归并计数,不再刷日志
+    }
+    const enriched =
+      gate.count > 1 ? { ...entry, repeat: gate.count, suppressed: gate.suppressed } : entry;
     if (_sink) {
-      _sink(entry);
+      _sink(enriched);
       return;
     }
     const logger = require('../utils/logger');
     if (logger && typeof logger.error === 'function') {
-      logger.error(`[outputIntegrity] ${entry.type}: ${entry.detail}`, entry);
+      const tail =
+        gate.count > 1 ? ` (累计 ${gate.count} 次,期间抑制 ${gate.suppressed} 条重复)` : '';
+      logger.error(`[outputIntegrity] ${entry.type}: ${entry.detail}${tail}`, enriched);
     }
   } catch {
     /* 落日志失败绝不反噬调用点 */
@@ -327,9 +397,10 @@ function assessResize(geom = {}, env = process.env) {
   // **直接跳过 resync**(见 inkRuntime.getInkInstance 注释)→ log-update 行计数与 reflow 后
   // 的物理行错位 → 残线/重复输入框(用户报「放大缩小后刷屏」)。两个方向都强制全屏重绘 →
   // ink 走 fullscreen 分支写 `clearTerminal + fullStaticOutput`。此处的「一帧干净、累积无关」
-  // **依赖 scrollbackPreserve 的平台对称处理**才成立:非 win32 剥 `\x1b[3J`(`\x1b[2J` 原地擦,
-  // 保全 scrollback);win32 则**注入** `\x1b[3J`——Windows 的 `\x1b[2J` 会把旧帧滚进 scrollback,
-  // 若不注入 `3J`,每次全屏重绘反而在回滚里堆叠一份重复 transcript(「同一对话窗口重复显示」)。
+  // **依赖 scrollbackPreserve 的清屏归一化**才成立:非 win32 剥掉 3J(2J 本就是就地擦除,
+  // 于是可视区被清而 scrollback 保全);win32 则把 ED2 清屏改写成「归位 + ED0」——因为
+  // conhost / Windows Terminal 的 ED2 会把旧视口**滚进** scrollback 而非就地擦除,不改写的话
+  // 每次全屏重绘反而在回滚里堆叠一份重复 transcript(「同一对话窗口重复显示」)。
   // 仅列宽不变(纯行数变化,无 reflow)才走增量。
   if (colsChanged && isTTY) {
     const dir = shrunk ? 'shrink' : 'grow';
@@ -352,20 +423,47 @@ function assessResize(geom = {}, env = process.env) {
 }
 
 // ── 被动呈现契约(供 khy health / doctor) ──
-function snapshot() {
+/**
+ * 当前状态快照。
+ *
+ * repaired / unrepaired / byType 是**窗口内**(默认 RECENT_WINDOW_MS)的计数,
+ * 让 health 在问题停止发生后能自行转绿;进程生命周期累计值另放 lifetime 里,
+ * 需要看历史总量的调用方读它。
+ *
+ * @param {object} [opts]
+ * @param {number} [opts.windowMs] - 观察窗宽度,默认 RECENT_WINDOW_MS。
+ */
+function snapshot(opts = {}) {
+  const windowMs =
+    Number.isFinite(opts.windowMs) && opts.windowMs > 0 ? opts.windowMs : RECENT_WINDOW_MS;
+  const since = _clock() - windowMs;
   const byType = {};
+  let repaired = 0;
+  let unrepaired = 0;
   for (const r of _records) {
+    if (Number.isFinite(r.at) && r.at < since) {
+      continue;
+    }
     byType[r.type] = (byType[r.type] || 0) + 1;
+    if (r.repaired) {
+      repaired += 1;
+    } else {
+      unrepaired += 1;
+    }
   }
   return {
     mode: mode(),
-    repaired: _repairedCount,
-    unrepaired: _unrepairedCount,
+    windowMs,
+    repaired,
+    unrepaired,
     byType,
+    lifetime: { repaired: _repairedCount, unrepaired: _unrepairedCount },
     recent: _records.slice(-10),
   };
 }
 
+// 进程生命周期语义:「本进程是否曾经出现过输出软 bug」。判「现在是否仍在发生」
+// 请读 snapshot() 的窗口计数,别用这个。
 function hasSignal() {
   return _repairedCount > 0 || _unrepairedCount > 0;
 }
@@ -374,6 +472,7 @@ function reset() {
   _records.length = 0;
   _repairedCount = 0;
   _unrepairedCount = 0;
+  _seen.clear();
 }
 
 module.exports = {

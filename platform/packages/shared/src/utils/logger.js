@@ -43,8 +43,10 @@ if (process.env.NODE_ENV !== 'production') {
   logger.add(new winston.transports.Console({
     format: winston.format.combine(
       winston.format.colorize(),
-      winston.format.printf(({ timestamp, level, message, ...meta }) => {
-        const metaStr = Object.keys(meta).length > 1 ? ` ${JSON.stringify(meta)}` : '';
+      // defaultMeta 的 service 只对文件里的 JSON 日志有意义。控制台这一行是给人看的,
+      // 把它一并 echo 出去,只会让每条日志都拖着一段 {"service":"khyos"}。
+      winston.format.printf(({ timestamp, level, message, service, ...meta }) => {
+        const metaStr = Object.keys(meta).length > 0 ? ` ${JSON.stringify(meta)}` : '';
         return `${timestamp} [${level}] ${message}${metaStr}`;
       })
     )

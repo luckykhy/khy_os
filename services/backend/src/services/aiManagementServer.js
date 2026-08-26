@@ -54,6 +54,9 @@ const _sessions = new Map();
 let _startTime = 0;
 let _port = 0;
 let _heartbeatTimer = null;
+// 文件级实时同步总线(懒建)。放在模块态里是因为它承载的是**跨会话**事实:某文件
+// 现在有谁在订阅、谁持有编辑租约、历史增量到哪一版。一个 Node 进程一个总线。
+let _fileSyncBus = null;
 const _autoImportLastAt = 0;
 const _autoImportSummary = null;
 const _lastGatewayAssetsSnapshot = null;
@@ -2515,6 +2518,115 @@ function wsSend(session, data) {
   }
 }
 
+/**
+ * 取(或懒建)文件级实时同步总线。所有副作用都通过注入端口进入,故总线本体可脱离
+ * 真实 WebSocket 单测;这里只负责把 send 端口接到本进程的 _sessions 上。
+ * 任何一步失败都返回 null —— 实时同步不可用不该拖垮整个 WS 服务。
+ *
+ * @returns {object|null} 总线实例,不可用时 null
+ */
+function _getFileSyncBus() {
+  if (_fileSyncBus) {
+    return _fileSyncBus;
+  }
+
+  try {
+    const { createBus } = require('./file_sync_bus');
+
+    _fileSyncBus = createBus({
+      projectDir: process.cwd(),
+      logger: console,
+      // 单个订阅者发送失败只算这一个失败,不得阻断同一次扇出里的其他订阅者。
+      send: (sessionId, payload) => {
+        const target = _sessions.get(sessionId);
+
+        if (!target || !target.ws) {
+          return false;
+        }
+
+        try {
+          const WebSocket = require('ws');
+
+          if (target.ws.readyState !== WebSocket.OPEN) {
+            return false;
+          }
+        } catch {
+          /* ws 探测不到状态时仍尝试发送 */
+        }
+
+        wsSend(target, payload);
+
+        return true;
+      },
+    });
+
+    // 跨进程 / 重启后把上次的会话与租约捞回来(失败则从零开始)。
+    _fileSyncBus.restoreRegistry();
+  } catch (err) {
+    _fileSyncBus = null;
+    console.warn(`文件级实时同步不可用，已回落到文件锁路径：${(err && err.message) || err}`);
+  }
+
+  return _fileSyncBus;
+}
+
+/**
+ * 把一条 WS 消息交给文件同步总线试解。**只有**总线认领的类型才算处理掉,其余一律
+ * 返回 false 让既有 switch 的 default 分支照旧回 Unknown message type ——
+ * 终端流、桌面帧、任务轮询等老消息类型零影响。
+ *
+ * @param {object} session WS 会话
+ * @param {object} msg 客户端消息
+ * @returns {boolean} 是否已由文件同步总线处理
+ */
+function _handleFileSyncMessage(session, msg) {
+  const bus = _getFileSyncBus();
+
+  if (!bus) {
+    return false;
+  }
+
+  try {
+    const out = bus.handleMessage(session, msg);
+
+    if (!out || out.handled !== true) {
+      return false;
+    }
+
+    if (out.reply) {
+      wsSend(session, out.reply);
+    }
+
+    return true;
+  } catch (err) {
+    // 总线契约是绝不抛;真抛了也不能连带打死这条 WS 连接。
+    wsSend(session, {
+      type: 'file_op_result',
+      ok: false,
+      error: {
+        code: 'MERGE_FALLBACK',
+        message: `实时合并不可用，已进入文件锁降级路径：${(err && err.message) || err}`,
+        fallback: 'file_lock',
+      },
+    });
+
+    return true;
+  }
+}
+
+/** 断线 / 空闲清理时释放该会话的编辑租约与订阅(fail-soft)。 */
+function _fileSyncDropSession(sessionId) {
+  if (!_fileSyncBus) {
+    return;
+  }
+
+  try {
+    _fileSyncBus.handleDisconnect(sessionId);
+  } catch {
+    /* 清理失败不得阻断会话拆除 */
+  }
+}
+
 function handleWsConnection(ws, req) {
   const sessionId = crypto.randomUUID();
   const session = {
@@ -2605,8 +2717,16 @@ function handleWsConnection(ws, req) {
         case 'khyos_tasks_get':
           handleKhyosTasksGet(session, msg);
           break;
-        default:
+        default: {
+          // 文件级实时同步事件族(subscribe_files / unsubscribe_files / file_*)。
+          // 纯增量挂载在 default 之前:只有总线认领的类型会被拦下,其余照旧回
+          // Unknown message type —— 老客户端零影响。
+          if (_handleFileSyncMessage(session, msg)) {
+            break;
+          }
+
           wsSend(session, { type: 'error', message: `Unknown message type: ${msg.type}` });
+        }
       }
     } catch (err) {
       wsSend(session, { type: 'error', message: err.message });
@@ -2624,6 +2744,18 @@ async function handleWsAuth(session, msg) {
   if (result.ok) {
     session.authenticated = true;
     session.user = result.user;
+
+    // 认证通过后才把会话登记进文件同步注册表 —— 未认证会话不得订阅或编辑。
+    const bus = _getFileSyncBus();
+
+    if (bus) {
+      bus.registerSession({
+        sessionId: session.id,
+        editorId: (result.user && (result.user.username || result.user.id)) || session.id,
+        authenticated: true,
+      });
+    }
+
     wsSend(session, { type: 'auth_ok', sessionId: session.id });
   } else {
     wsSend(session, { type: 'auth_error', message: result.error });
@@ -2891,6 +3023,8 @@ function cleanupSession(sessionId) {
       }
       session.khyosRunner = null;
     }
+    // 断线立即释放编辑租约与订阅,不等租约 TTL 走完 —— 异常退出不会永久占用编辑状态。
+    _fileSyncDropSession(sessionId);
     _sessions.delete(sessionId);
   }
 }
@@ -2934,7 +3068,18 @@ function gcSweep() {
       }
       wsSend(session, { type: 'error', message: 'Session closed: idle timeout' });
       session.ws.close(4002, 'Idle timeout');
+      _fileSyncDropSession(id);
       _sessions.delete(id);
+    }
+  }
+
+  // 文件同步的空闲清扫:回收过期编辑租约与空闲会话。这是**空闲**超时 ——
+  // 每次心跳 / 提交都会续期,持续编辑的会话永不被扫掉。
+  if (_fileSyncBus) {
+    try {
+      _fileSyncBus.sweep();
+    } catch {
+      /* 清扫失败不得阻断心跳 */
     }
   }
 
@@ -3345,5 +3490,14 @@ module.exports = {
     // entry points, so a regression test can assert REPL parity + gate byte-revert.
     _resolveChatAttachments,
     _isWebInlineImagePathEnabled,
+    // File-level realtime sync wiring (T-008). Exposed so a regression test can
+    // drive the REAL server module — not just the bus in isolation — and assert
+    // that (a) the file_* / subscribe_files family is claimed off the `default:`
+    // branch, (b) every legacy message type still falls through untouched, and
+    // (c) disconnect releases edit leases immediately.
+    _getFileSyncBus,
+    _handleFileSyncMessage,
+    _fileSyncDropSession,
+    _sessionsForTest: () => _sessions,
   },
 };

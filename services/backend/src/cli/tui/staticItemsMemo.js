@@ -2,9 +2,9 @@
 
 // staticItemsMemo.js — pure leaf (zero IO, deterministic, never throws).
 //
-// 目的:消除 useQueryBridge 每次 render 都重建整份 `staticItems` 包装数组的浪费。
+// 目的:消除 useQueryBridge 每次 render 都重建 committed 消息包装数组的浪费。
 //
-// 背景(诊断):`staticItems` = banner + messages.map(每条包一层 {kind,key,msg}),在 hook 体里
+// 背景(诊断):`staticItems` = messages.map(每条包一层 {kind,key,msg}),在 hook 体里
 // **每次 render 都重跑**(每个流式帧 ~25fps 的 setStreaming、每次按键的输入 state、每秒 nowTick 都
 // 触发 render)。但 committed transcript(messages)只在真正提交/回溯/压缩时变;绝大多数 render 里
 // messages 引用**原封不动**(useState 值未变)。于是每帧凭空 new 出 N+1 个包装对象 → O(messages)
@@ -14,7 +14,8 @@
 // 修复:按 messages **数组引用**记忆。messages 是 useState 值 —— 仅当内容真变时 setMessages 才产生
 // 新数组引用(已核实:所有写入走 [...m]/concat/map,无原位 push/splice;patchUserCheckpointId 无命中
 // 时返回同引用)。故「引用未变 ⟺ 内容未变」:引用命中 → 复用上次的 items(零分配);引用变 → 重建。
-// 重建时内容与今日 `[{kind:'banner',...}].concat(messages.map(...))` **逐字节等价**(deepEqual)。
+// 重建时内容与 messages.map(...) **逐字节等价**(deepEqual)。启动横幅属于 live UI，
+// 绝不作为 committed transcript item，以免在首条消息提交时被 Ink <Static> 重放。
 //
 // 门控 KHY_STATIC_ITEMS_MEMO 默认开;关 → 每次都重建(逐字节回退今日:每 render 一份新数组)。
 // 纯叶子无跨 render 状态:缓存由调用方(hook 的 useRef)注入 `prev` 并接住返回的 `cache`。
@@ -30,17 +31,15 @@ function isEnabled(env = process.env) {
 }
 
 /**
- * 构造 committed <Static> 区的包装数组 —— 与今日表达式逐字节等价:
- *   [{ kind:'banner', key:'banner' }].concat(messages.map((msg,i)=>({ kind:'message', key:`m${i}`, msg })))
+ * 构造 committed <Static> 区的包装数组。
  * @param {Array} messages
  * @returns {Array<{kind:string,key:string,msg?:*}>}
  */
 function buildStaticItems(messages) {
   const msgs = Array.isArray(messages) ? messages : [];
-  const items = new Array(msgs.length + 1);
-  items[0] = { kind: 'banner', key: 'banner' };
+  const items = new Array(msgs.length);
   for (let i = 0; i < msgs.length; i++) {
-    items[i + 1] = { kind: 'message', key: `m${i}`, msg: msgs[i] };
+    items[i] = { kind: 'message', key: `m${i}`, msg: msgs[i] };
   }
   return items;
 }

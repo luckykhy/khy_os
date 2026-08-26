@@ -55,18 +55,21 @@ async function startInkApp(options = {}) {
   } catch { /* shutdown module optional — waitUntilExit path still prints */ }
 
   // Scrollback preservation (门控 KHY_PRESERVE_SCROLLBACK 默认开): wrap the stdout
-  // we hand to ink in a Proxy that normalizes ink's clearTerminal frame. **平台对称**:
-  // 两类终端都只**剥离** `[3J`(清回滚缓冲),`[2J`/`[H` 原样透传。
-  // 历史上 win32 分支曾反向**注入** `[3J` 去压制重复帧,现已刻意移除 —— 注入会
-  // 直接清空用户正在查看的原生 scrollback,代价高于它修的重复症状
-  // (判断见 scrollbackPreserve.js 头注)。因此 win32 的重复帧改为**从源头不触发**:
-  // 让 live 区高度恒 < rows(liveRegionBudget / liveHeightClamp / overlayLiveBudget 三层),
-  // 而不是事后拿 3J 擦。ink emits `clearTerminal + fullStaticOutput + output` as a
+  // we hand to ink in a Proxy that normalizes ink's clearTerminal frame. **两步归一化**:
+  // 两类终端都先**剥离** 3J(清回滚缓冲);win32 再把剩下的 ED2 清屏改写成「归位 + ED0」。
+  // 历史上 win32 分支曾反向**注入** 3J 去压制重复帧,已刻意移除 —— 注入会直接清空用户
+  // 正在查看的原生 scrollback,代价高于它修的症状。现在 win32 走第三条路:把 clearTerminal
+  // 从 ED2 形式(2J + 0f)**改写**为等价的「归位 + ED0」(H + J)。conhost / Windows Terminal
+  // 的 ED2 语义是「把视口整屏滚进 scrollback 再填白」而非就地擦除,所以每触发一次全屏重绘,
+  // 回滚里就永久多出一份完整的 banner+输入框副本 —— 这正是用户报「UI 显示混乱」的直接成因。
+  // ED0 就地擦除既不滚屏(不留副本)也不动 scrollback(历史仍可上翻),两个目标同时成立。
+  // 本层与「从源头少触发」的三层预算(liveRegionBudget / liveHeightClamp / overlayLiveBudget)
+  // 正交叠加:那层管少触发,本层保证即便触发也不留副本。
+  // ink emits `clearTerminal + fullStaticOutput + output` as a
   // single write() when the live region height >= rows (ink.js:327 / instance.js:132);
   // non-win32 clearTerminal is `[2J[3J[H` and the `3J` wipes native scrollback
   // — which is exactly why long output「滚不到中间」on those terminals; win32 的 clearTerminal
-  // 是 `[2J[0f`(本就无 3J 可剥),conhost 的 `2J` 把旧帧**滚进** scrollback 而非
-  // 就地擦除 → 一旦触发全屏分支就留一份永久副本。We only override
+  // 本就无 3J 可剥,故改走上述 ED0 就地擦除改写。We only override
   // write(); every other property (columns/rows/isTTY/on('resize')/syncOutput backing)
   // is delegated to the real process.stdout so ink's sizing/resize/sync semantics are
   // unchanged. Not touching process.stdout itself means no teardown is required and
@@ -95,7 +98,9 @@ async function startInkApp(options = {}) {
         return function (chunk, ...rest) {
           const normalized = _clearNormalizer.write(chunk);
           const frame = typeof normalized === 'string' ? normalized : String(normalized || '');
-          const forceRailPaint = /\n|\r|\x1b\[2J|\x1b\[3J/.test(frame);
+          // 注意末项 ED0:win32 的 clearTerminal 已被 scrollbackPreserve 改写成 `\x1b[H\x1b[J`,
+          // 若只匹配 2J/3J,全屏重绘时右栏不会重画 → 看板留残影。
+          const forceRailPaint = /\n|\r|\x1b\[2J|\x1b\[3J|\x1b\[J/.test(frame);
           let pre = '';
           let rail = '';
           try { pre = sidebarRail.clearBytes(forceRailPaint); } catch { pre = ''; } // 辅助 UI,永不拖垮渲染

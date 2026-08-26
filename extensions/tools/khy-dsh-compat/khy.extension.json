@@ -1,0 +1,22 @@
+{
+  "id": "khy-dsh-compat",
+  "name": "Khy DSH Compat",
+  "version": "1.0.0",
+  "description": "DeepSeek Harness (dsh / Cordis) 插件兼容层：把上游社区插件注册的工具接进 khy-os 漏斗",
+  "kind": "runtime",
+  "namespace": "dsh",
+  "engines": {
+    "khy": ">=1.1.0"
+  },
+  "main": "index.js",
+  "capabilities": [
+    "tools"
+  ],
+  "tools": [],
+  "permissions": {
+    "network": false,
+    "spawn": false,
+    "database": false
+  },
+  "_note": "本拓展出厂时 tools 为空数组，这是设计而非缺漏：pluginContribResolver._scanEnabledExtensions() 会跳过不声明 tools 的拓展，所以没导入任何上游插件时本拓展完全惰性，既不占广告面也不进 require。导入动作走 `node lib/importPlugin.js <包名>`，它一次性写两处——vendor/ 下的 esbuild 自打包产物 + installed.json 的映射表，并把发现到的工具定义合并进本文件的 tools 数组。工具名默认沿用上游原名（漏斗按 def.name 原样注册，见 [DESIGN-ARCH-069] §5.1）；如果导入时发现重复名称，导入器会拒绝本次导入，不会静默改名。"
+}

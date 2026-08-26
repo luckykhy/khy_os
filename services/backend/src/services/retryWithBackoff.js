@@ -14,7 +14,13 @@
  *   DEFAULT_MIN_DELAY = 300ms
  *   DEFAULT_MAX_DELAY = 30000ms
  *   DEFAULT_JITTER = 1.0 (±100%)
+ *
+ * 轮次上界:所有入口(本函数、retryByErrorKind、persistentRetry)的重试轮次一律经
+ * constants/retryBudget 的 clampRetryRounds 封顶在 MAX_RETRY_ROUNDS(10)。这里只封顶
+ * 不抬升 —— 想少试几轮的调用方照旧传更小的 attempts。
  */
+
+const { MAX_RETRY_ROUNDS, clampRetryRounds } = require('../constants/retryBudget');
 
 const DEFAULT_ATTEMPTS = 3;
 const DEFAULT_MIN_DELAY = 300;
@@ -29,13 +35,19 @@ const DEFAULT_JITTER = 1.0;
 const PERSISTENT_MAX_BACKOFF_MS = 5 * 60 * 1000; // 5 min cap per sleep
 const PERSISTENT_ABSOLUTE_CAP_MS = 6 * 60 * 60 * 1000; // 6 hour hard stop
 const HEARTBEAT_INTERVAL_MS = 30_000; // 30s keepalive
+// 持久模式原来是 `while (true)`,只有 6h 墙钟兜底 —— 轮次不设限,一次 429 可以让请求
+// 悄悄挂上几百轮。现在同样受 MAX_RETRY_ROUNDS 约束(轮次与墙钟谁先到算谁)。
+// 配套把退避起点从 DEFAULT_MIN_DELAY(300ms)抬到 PERSISTENT_MIN_DELAY_MS:轮次一旦
+// 封顶,300ms 起步的指数退避 10 轮只覆盖约 2.5 分钟,等不出一个限流窗口;20s 起步则
+// 10 轮覆盖约 30 分钟。而且对「容量类错误」来说,300ms 后马上重试本来就没有意义。
+const PERSISTENT_MIN_DELAY_MS = 20_000;
 
 /**
  * Execute a function with exponential backoff retry.
  *
  * @param {function} fn - Async function to execute
  * @param {object} [opts]
- * @param {number} [opts.attempts=3] - Max attempts (1 = no retry)
+ * @param {number} [opts.attempts=3] - Max attempts (1 = no retry),上界 MAX_RETRY_ROUNDS
  * @param {number} [opts.minDelayMs=300] - Minimum delay between retries
  * @param {number} [opts.maxDelayMs=30000] - Maximum delay between retries
  * @param {number} [opts.jitter=1.0] - Jitter fraction [0,1]. 1.0 = ±100%
@@ -59,7 +71,10 @@ async function retryWithBackoff(fn, opts = {}) {
     signal,
   } = opts;
 
-  const maxAttempts = Math.max(1, Math.floor(attempts));
+  // 轮次封顶:上界来自 constants/retryBudget(MAX_RETRY_ROUNDS)。调用方/env 传更大的
+  // 数字只会被收敛,不会真的转那么多轮 —— onRetry 里报出去的 maxAttempts 也是收敛后的
+  // 真值,免得进度条显示「3/999」这种做不到的承诺。
+  const maxAttempts = clampRetryRounds(attempts, DEFAULT_ATTEMPTS);
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     // Check abort before each attempt
@@ -275,15 +290,17 @@ function isPersistentRetryable(err) {
 /**
  * Persistent retry mode for CI/unattended environments.
  *
- * Unlike normal retry, this keeps retrying capacity errors (429/529) with
- * capped exponential backoff and periodic heartbeat output. Designed for
+ * Unlike normal retry, this leans hard into capacity errors (429/529): capped
+ * exponential backoff from a 20s floor plus periodic heartbeat output, for
  * long-running CI jobs where dropping the request is worse than waiting.
+ * 但它**不是无限重试**:轮次同样封顶在 MAX_RETRY_ROUNDS(10),与 6h 墙钟双约束。
  *
  * Enable via: KHY_UNATTENDED_RETRY=true environment variable.
  *
  * @param {function} fn - Async function to execute
  * @param {object} [opts]
  * @param {AbortSignal} [opts.signal]
+ * @param {number} [opts.maxRounds=MAX_RETRY_ROUNDS] - 轮次上界,只能往小调。
  * @param {function} [opts.onHeartbeat] - (info) => void. Called every 30s during waits.
  * @param {function} [opts.onRetry] - (info) => void.
  * @param {string} [opts.label]
@@ -292,6 +309,8 @@ function isPersistentRetryable(err) {
 async function persistentRetry(fn, opts = {}) {
   const { signal, onHeartbeat, onRetry, label } = opts;
   const startTime = Date.now();
+  // 轮次上界与普通模式共用同一个真源。opts.maxRounds 只能往小调(clamp 只封顶)。
+  const maxRounds = clampRetryRounds(opts.maxRounds, MAX_RETRY_ROUNDS);
   let attempt = 0;
 
   while (true) {
@@ -308,6 +327,14 @@ async function persistentRetry(fn, opts = {}) {
         throw err;
       }
 
+      // 轮次上界:先于墙钟判定,谁先到算谁。抛错文案带上「N/N 轮」,让日志里能看出
+      // 是「重试轮次用尽」而不是「一次就失败」。
+      if (attempt >= maxRounds) {
+        throw new Error(
+          `Persistent retry exhausted ${attempt}/${maxRounds} rounds${label ? ` (${label})` : ''}: ${err.message}`
+        );
+      }
+
       // Check absolute cap
       const elapsed = Date.now() - startTime;
       if (elapsed >= PERSISTENT_ABSOLUTE_CAP_MS) {
@@ -322,11 +349,14 @@ async function persistentRetry(fn, opts = {}) {
       if (serverDelay && serverDelay > 0) {
         delayMs = Math.min(serverDelay, PERSISTENT_MAX_BACKOFF_MS);
       } else {
-        delayMs = Math.min(DEFAULT_MIN_DELAY * Math.pow(2, attempt - 1), PERSISTENT_MAX_BACKOFF_MS);
+        delayMs = Math.min(
+          PERSISTENT_MIN_DELAY_MS * Math.pow(2, attempt - 1),
+          PERSISTENT_MAX_BACKOFF_MS
+        );
       }
 
       if (onRetry) {
-        onRetry({ attempt, delayMs, err, label, persistent: true });
+        onRetry({ attempt, maxAttempts: maxRounds, delayMs, err, label, persistent: true });
       }
 
       // Chunk long sleep into heartbeat intervals
@@ -796,7 +826,10 @@ module.exports = {
   DEFAULT_JITTER,
   PERSISTENT_MAX_BACKOFF_MS,
   PERSISTENT_ABSOLUTE_CAP_MS,
+  PERSISTENT_MIN_DELAY_MS,
   HEARTBEAT_INTERVAL_MS,
+  // 重试轮次硬上界(真源在 constants/retryBudget,此处转出便于调用方复用同一个数)。
+  MAX_RETRY_ROUNDS,
   // Exposed for tests only (not part of the public retry surface).
   _sleep,
 };

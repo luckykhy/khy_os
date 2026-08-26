@@ -29,8 +29,8 @@
     "vue": "^3.4.0",
     "vue-router": "^4.2.5"
   },
+  "//devDependencies": "曾声明 @playwright/test ^1.62.1，2026-08-25 移除：全仓没有 playwright.config.*、没有 *.spec.ts、没有 e2e 目录、没有一行 import '@playwright/test'、package.json 里没有对应 script、CI 也不调用它——它是一次批量「恢复上游源码」提交带进来的未用依赖。代价是前端 profile 多装 playwright + playwright-core 共约 17.6 MB。后端那条真实的浏览器能力不受影响：它 require 的是 playwright / playwright-core，已在 services/backend 声明为 optional peer。将来真要写 E2E，重新加回来即可。",
   "devDependencies": {
-    "@playwright/test": "^1.62.1",
     "@vitejs/plugin-vue": "^5.0.0",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",

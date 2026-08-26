@@ -24,6 +24,108 @@ const WAL_CHECKPOINT_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
 const MAX_BACKUPS_TO_KEEP = 3;
 const QUICK_CHECK_TIMEOUT_MS = 100;
 
+// ── Lock-aware recovery primitives ──
+
+// Transient Windows file locks surface as these errno codes while a sibling
+// khy process still holds the database open during heal-time file surgery.
+const BUSY_ERRNO = new Set(['EBUSY', 'EPERM', 'EACCES']);
+const BUSY_TEXT_PATTERN = /EBUSY|EPERM|EACCES|sharing violation|resource busy|being used by another process/i;
+
+/**
+ * Detect "file held by another process" style failures from either an Error
+ * object (errno/code) or a plain human-readable message.
+ */
+function _isBusyError(err) {
+  if (!err) return false;
+  if (typeof err === 'string') return BUSY_TEXT_PATTERN.test(err);
+  if (BUSY_ERRNO.has(err.code)) return true;
+  return BUSY_TEXT_PATTERN.test(String(err.message || ''));
+}
+
+/**
+ * Synchronous sleep for retry backoff inside otherwise-sync fs repair paths.
+ */
+function _sleepSync(ms) {
+  try {
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+  } catch {
+    /* SharedArrayBuffer unavailable — proceed without waiting */
+  }
+}
+
+// Backoff ladder for heal-time file operations; total budget ≈ 3.9s per op.
+const FS_RETRY_DELAYS_MS = [100, 250, 500, 1000, 2000];
+
+/**
+ * Run a filesystem operation, tolerating transient locks from sibling khy
+ * processes. Retries only on busy-style errors with a growing delay; any other
+ * error (and exhaustion of the ladder) propagates immediately.
+ */
+function _retryFsOperation(operation, label, meta = {}) {
+  let lastErr = null;
+  for (let attempt = 0; attempt <= FS_RETRY_DELAYS_MS.length; attempt++) {
+    try {
+      return operation();
+    } catch (err) {
+      lastErr = err;
+      if (!_isBusyError(err) || attempt === FS_RETRY_DELAYS_MS.length) break;
+      _sleepSync(FS_RETRY_DELAYS_MS[attempt]);
+      void label; // label reserved for future audit surfacing of retries
+    }
+  }
+  lastErr.attempts = FS_RETRY_DELAYS_MS.length + 1;
+  throw lastErr;
+}
+
+/**
+ * Ask same-install khy processes (the background daemon) to release database
+ * handles before heal-time rename/unlink work. Only ever touches the daemon
+ * recorded in our own pid file — never arbitrary processes.
+ *
+ * `opts.pidFile` overrides the daemon pid file location (tests inject a
+ * temp path; production always uses the real data home).
+ */
+function _releaseKhyDbLocks(dbPath, opts = {}) {
+  try {
+    let pidFile = opts.pidFile;
+    if (!pidFile) {
+      const { getDataDir } = require('../utils/dataHome');
+      pidFile = path.join(getDataDir(), 'daemon.pid');
+    }
+    const info = JSON.parse(fs.readFileSync(pidFile, 'utf-8'));
+    const holderPid = Number(info && info.pid);
+    if (!Number.isFinite(holderPid) || holderPid <= 0 || holderPid === process.pid) {
+      return { attempted: false, stopped: false };
+    }
+
+    _logHealAudit({
+      level: 'warn',
+      message: `数据库文件被本机 khy 守护进程(pid ${holderPid})锁定，停止守护进程以释放句柄`,
+      meta: { dbPath, holderPid },
+    });
+
+    let stopped = false;
+    try {
+      const { daemonStop } = require('./daemonManager');
+      daemonStop();
+      stopped = true;
+    } catch (err) {
+      _logHealAudit({
+        level: 'warn',
+        message: `停止 khy 守护进程失败: ${err.message}`,
+        meta: { dbPath, holderPid },
+      });
+    }
+
+    // Give the OS a moment to actually release the file handles.
+    _sleepSync(500);
+    return { attempted: true, stopped };
+  } catch {
+    // No pid file / unreadable — nothing to release.
+    return { attempted: false, stopped: false };
+  }
+}
+
 // ── State ──
 
 let _checkpointTimer = null;
@@ -207,6 +309,59 @@ function checkIntegrity(dbPath, opts = {}) {
 }
 
 // ── Recovery Procedures ──
+
+/**
+ * Step A0: drop orphaned/mismatched WAL sidecars before touching the main file.
+ *
+ * External file surgery (mirror syncs, cloud-drive conflict copies, partial
+ * archives) can leave a database paired with a -wal/-shm belonging to a
+ * different database generation. SQLite then refuses to open the trio with
+ * "file is not a database" even though the main file itself may be perfectly
+ * healthy. Sidecars are derived state: quarantining them (renamed aside, never
+ * deleted) lets SQLite rebuild them from the main file — the fastest cure, and
+ * zero data loss whenever the main file is intact.
+ */
+function _tryResetSidecars(dbPath, dbName) {
+  const sidecars = ['-wal', '-shm', '-journal']
+    .map(suffix => `${dbPath}${suffix}`)
+    .filter(file => fs.existsSync(file));
+
+  if (sidecars.length === 0) {
+    return { ok: false, reason: 'no sidecar files present' };
+  }
+
+  const stamp = Date.now();
+  try {
+    for (const file of sidecars) {
+      _retryFsOperation(
+        () => fs.renameSync(file, `${file}.orphan-${stamp}`),
+        `quarantine sidecar ${path.basename(file)}`,
+        { dbPath },
+      );
+    }
+  } catch (err) {
+    return {
+      ok: false,
+      reason: `sidecar quarantine failed: ${err.message}`,
+      busy: _isBusyError(err),
+    };
+  }
+
+  const check = checkIntegrity(dbPath);
+  if (check.ok) {
+    _logHealAudit({
+      level: 'info',
+      message: `修复数据库 ${dbName}(清理失配的 WAL 附属文件 ${sidecars.length} 个，主库完好)`,
+      meta: { method: 'sidecar_reset', dbPath, dbName, quarantined: sidecars.length },
+    });
+    return { ok: true, method: 'sidecar_reset', quarantined: sidecars.length };
+  }
+
+  return {
+    ok: false,
+    reason: `main file still unhealthy after sidecar reset: ${check.error}`,
+  };
+}
 
 /**
  * Step A: Try WAL checkpoint to recover from WAL-related issues.
@@ -835,12 +990,22 @@ function _rebuildEmptyDatabase(dbPath, dbName) {
       /* ignore */
     }
 
-    // Remove corrupted files
-    for (const suffix of ['', '-wal', '-shm', '-journal']) {
-      const file = `${dbPath}${suffix}`;
-      if (fs.existsSync(file)) {
-        fs.unlinkSync(file);
+    // Remove corrupted files; on a busy error ask the daemon to release its
+    // handles first, then make one final removal pass.
+    const removeCorruptedFiles = () => {
+      for (const suffix of ['', '-wal', '-shm', '-journal']) {
+        const file = `${dbPath}${suffix}`;
+        if (fs.existsSync(file)) {
+          fs.unlinkSync(file);
+        }
       }
+    };
+    try {
+      removeCorruptedFiles();
+    } catch (removeErr) {
+      if (!_isBusyError(removeErr)) throw removeErr;
+      _releaseKhyDbLocks(dbPath);
+      removeCorruptedFiles();
     }
 
     // Let the application recreate the schema on next access
@@ -862,6 +1027,19 @@ async function healDatabase(dbPath, dbName) {
     message: `Starting recovery for ${dbName}`,
     meta: { dbPath },
   });
+
+  // Step A0: mismatched WAL sidecars (external overwrite / sync accidents).
+  const sidecarResult = _tryResetSidecars(dbPath, dbName);
+  if (sidecarResult.ok) {
+    return { ok: true, method: sidecarResult.method, quarantined: sidecarResult.quarantined };
+  }
+  if (sidecarResult.reason !== 'no sidecar files present') {
+    _logHealAudit({
+      level: 'warn',
+      message: `Sidecar reset did not heal ${dbName}: ${sidecarResult.reason}`,
+      meta: { dbPath, dbName, stage: 'sidecar_reset' },
+    });
+  }
 
   // Step A: WAL checkpoint
   const walResult = _tryWalCheckpoint(dbPath);
@@ -888,12 +1066,28 @@ async function healDatabase(dbPath, dbName) {
       const recovered = recoverResult.recordCount;
       const expected = Math.max(recoverResult.expectedCount || 0, recovered);
 
-      fs.renameSync(dbPath, `${dbPath}.corrupted-${Date.now()}`);
-      fs.renameSync(recoverResult.recoveredPath, dbPath);
-      // The salvaged file carries no sidecars; drop the corrupted ones so the
-      // next open does not replay a WAL belonging to the old file.
-      for (const suffix of ['-wal', '-shm', '-journal']) {
-        try { fs.rmSync(`${dbPath}${suffix}`, { force: true }); } catch { /* ignore */ }
+      const swapInRecovered = () => {
+        _retryFsOperation(
+          () => fs.renameSync(dbPath, `${dbPath}.corrupted-${Date.now()}`),
+          'move corrupted database aside',
+          { dbPath },
+        );
+        fs.renameSync(recoverResult.recoveredPath, dbPath);
+        // The salvaged file carries no sidecars; drop the corrupted ones so the
+        // next open does not replay a WAL belonging to the old file.
+        for (const suffix of ['-wal', '-shm', '-journal']) {
+          try { fs.rmSync(`${dbPath}${suffix}`, { force: true }); } catch { /* ignore */ }
+        }
+      };
+
+      try {
+        swapInRecovered();
+      } catch (swapErr) {
+        if (!_isBusyError(swapErr)) throw swapErr;
+        // A sibling khy process (usually the daemon) still holds the old
+        // handle — ask it to release, then give the swap one final window.
+        _releaseKhyDbLocks(dbPath);
+        swapInRecovered();
       }
 
       _logHealAudit({
@@ -930,8 +1124,13 @@ async function healDatabase(dbPath, dbName) {
     meta: { dbPath, dbName, stage: 'recover' },
   });
 
-  // Step C: Restore from backup
-  const backupResult = _tryRestoreFromBackup(dbPath, dbName);
+  // Step C: Restore from backup. A first failure that smells like a file lock
+  // gets one retry after asking the daemon to release its handles.
+  let backupResult = _tryRestoreFromBackup(dbPath, dbName);
+  if (!backupResult.ok && _isBusyError(backupResult.reason)) {
+    _releaseKhyDbLocks(dbPath);
+    backupResult = _tryRestoreFromBackup(dbPath, dbName);
+  }
   if (backupResult.ok) {
     _logHealAudit({
       level: 'info',
@@ -1303,4 +1502,9 @@ module.exports = {
   // 内部(healEscalationService 的 dbHealth L2 手段复用同一实现,避免重建/通知逻辑分叉)
   _rebuildEmptyDatabase,
   _notifyUser,
+  // 内部(锁感知自愈原语,导出仅供测试)
+  _isBusyError,
+  _retryFsOperation,
+  _releaseKhyDbLocks,
+  _tryResetSidecars,
 };

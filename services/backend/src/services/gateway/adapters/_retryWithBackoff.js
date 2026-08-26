@@ -13,6 +13,10 @@
 // Default transient HTTP status codes that warrant retry —— 与 sibling
 // _errorClassifiers.js 逐字节相同的 9 元集,收敛到其单一真源(它已 export),
 // 避免两处各自维护同一张表(改一处漏另一处 = silent drift)。
+// 重试轮次硬上界的单一真源(与 services/retryWithBackoff.js 共用同一个 10)。本文件是
+// 那个 helper 的适配器侧精简副本,若两处各自维护上界必然 silent drift。
+const { clampRetryRounds } = require('../../../constants/retryBudget');
+
 const { TRANSIENT_STATUS_CODES } = require('./_errorClassifiers');
 
 // Default transient error message patterns
@@ -92,7 +96,7 @@ function sleepAbortable(ms, signal) {
  *
  * @param {function} fn - Async function to execute. Receives { attempt, maxAttempts }.
  * @param {object} [options]
- * @param {number} [options.maxAttempts=3] - Maximum number of attempts (including first)
+ * @param {number} [options.maxAttempts=3] - Maximum number of attempts (including first),上界 MAX_RETRY_ROUNDS
  * @param {number} [options.baseDelayMs=350] - Base delay in milliseconds
  * @param {number} [options.maxDelayMs=1800] - Maximum delay cap
  * @param {number} [options.backoffFactor=1.8] - Exponential factor
@@ -103,7 +107,7 @@ function sleepAbortable(ms, signal) {
  */
 async function retryWithBackoff(fn, options = {}) {
   const {
-    maxAttempts = 3,
+    maxAttempts: _maxAttemptsRequested = 3,
     baseDelayMs = 350,
     maxDelayMs = 1800,
     backoffFactor = 1.8,
@@ -111,6 +115,10 @@ async function retryWithBackoff(fn, options = {}) {
     signal = null,
     onRetry = null,
   } = options;
+
+  // 轮次封顶(只封顶不抬升):传 3 还是 3,传 999 收成 10。fn 收到的 maxAttempts 也是
+  // 收敛后的真值,adapter 侧「第 N/M 次」文案不会承诺做不到的轮数。
+  const maxAttempts = clampRetryRounds(_maxAttemptsRequested, 3);
 
   let lastError;
 

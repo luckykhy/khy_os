@@ -90,3 +90,34 @@ test('the shared aiChatState singleton is the same object both modules require',
   assert.strictEqual(require(STATE).studyMode, !prev);
   s1.studyMode = prev;
 });
+
+test('轻量闲聊不会推进活动工程目标，工程请求与继续保持推进', () => {
+  const core = require(CORE);
+  assert.strictEqual(core._shouldAdvanceActiveGoal(true), false, '故事/笑话等轻量闲聊不得消耗目标轮次');
+  assert.strictEqual(core._shouldAdvanceActiveGoal(false), true, '明确工程请求仍应推进目标');
+  assert.strictEqual(core._shouldAdvanceActiveGoal(undefined), true, '继续命令沿用工程任务链');
+});
+
+test('轻量闲聊清空旧工程锚点，非轻量输入不改写锚点', () => {
+  const core = require(CORE);
+  const priorPlan = { steps: [{ title: '修复横幅' }] };
+  const state = {
+    lastSubstantivePrompt: '修复 Ink 横幅重复输出',
+    lastSubstantiveAt: 12345,
+    lastExecutionPlan: priorPlan,
+  };
+
+  assert.strictEqual(core._clearStaleExecutionAnchorForLightweightConversation(state, false), false);
+  assert.deepStrictEqual(state, {
+    lastSubstantivePrompt: '修复 Ink 横幅重复输出',
+    lastSubstantiveAt: 12345,
+    lastExecutionPlan: priorPlan,
+  });
+
+  assert.strictEqual(core._clearStaleExecutionAnchorForLightweightConversation(state, true), true);
+  assert.deepStrictEqual(state, {
+    lastSubstantivePrompt: '',
+    lastSubstantiveAt: 0,
+    lastExecutionPlan: null,
+  }, '讲个故事等短闲聊不得继承先前工程计划');
+});

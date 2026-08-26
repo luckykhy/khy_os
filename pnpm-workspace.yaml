@@ -1,9 +1,7 @@
 # pnpm workspace 成员清单。
 #
-# 与根 package.json 的 `workspaces` 字段**并存**：迁移期两套布局都要能装，
-# npm lockfile 和现有 node_modules 一律保留，直到 clean checkout、后端/前端/
-# mobile/markdown 测试和发布 dry-run 全部验过，才另开一个提交逐个退役。
-# 顺序与 package.json 保持一致，方便两边对读。
+# 根 package.json 的 workspaces 字段保留用于 npm 发布元数据；仓库开发安装、CI 和生产闭包统一由 pnpm-workspace.yaml 驱动。
+# 独立构建子项目仍在本文件末尾明确排除，避免被 workspace 递归纳入。
 #
 # 刻意**不使用** `tools/*`、`extensions/*` 这类宽 glob：宽 glob 会在有人新建
 # 目录时静默把它拉进 workspace，依赖解析范围因此在无人 review 的情况下变化。

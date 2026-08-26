@@ -299,6 +299,20 @@ const {
   CONTINUE_HINT: _CONTINUE_HINT,
 } = require('../services/query/continuation');
 
+function _shouldAdvanceActiveGoal(lightweightConversation) {
+  return lightweightConversation !== true;
+}
+
+function _clearStaleExecutionAnchorForLightweightConversation(chatState, lightweightConversation) {
+  if (!chatState || lightweightConversation !== true) {
+    return false;
+  }
+  chatState.lastSubstantivePrompt = '';
+  chatState.lastSubstantiveAt = 0;
+  chatState.lastExecutionPlan = null;
+  return true;
+}
+
 async function chat(userMessage, opts = {}) {
   const startTime = Date.now();
   if (opts && typeof opts === 'object') {
@@ -1278,14 +1292,19 @@ async function chat(userMessage, opts = {}) {
     /* non-critical */
   }
 
-  // 持久目标(对齐 Claude Code /goal):若当前项目设有持久目标,每轮注入一段指令让模型持续朝它
+  // 持久目标(对齐 Claude Code /goal):若当前项目设有持久目标,工程请求才注入一段指令让模型持续朝它
   // 推进。单一真源 goalCore;持久化在 goalStore(~/.khyos/goals)。门控 KHY_GOAL 默认开。
   // 有界终止态(KHY_GOAL_BOUNDED 默认开):advanceActiveGoalDirective **每轮递增**轮次计数并
   // 注入剩余预算;耗尽那一轮一次性注入终止指令并退役目标 → 之后停止注入(结构上不再无限跑)。
   let _goalDirective = '';
   try {
     const { advanceActiveGoalDirective } = require('../services/goalStore');
-    _goalDirective = advanceActiveGoalDirective({ cwd: process.cwd() }) || '';
+    // Casual requests are a topic switch, not an instruction to continue the active
+    // engineering goal. Besides preventing irrelevant plans, skip the call entirely
+    // so a story/joke does not consume the goal's bounded-turn budget.
+    _goalDirective = _shouldAdvanceActiveGoal(lightweightConversation)
+      ? advanceActiveGoalDirective({ cwd: process.cwd() }) || ''
+      : '';
     if (_goalDirective) {
       const _terminal = _goalDirective.indexOf('终止态(exhausted)') !== -1;
       onStatus({
@@ -1815,6 +1834,10 @@ async function chat(userMessage, opts = {}) {
         processedMessage = `继续执行之前的任务。原始需求如下：\n"${_chatState.lastSubstantivePrompt.slice(0, 500)}"\n\n请从上次停止的地方继续，不要重复已完成的工作。`;
       }
       // Don't update the anchor — keep pointing at the original task
+    } else if (lightweightConversation) {
+      // A short casual request is still a new intent. Clear stale execution anchors
+      // so it cannot inherit a prior engineering task on this or a later turn.
+      _clearStaleExecutionAnchorForLightweightConversation(_chatState, lightweightConversation);
     } else if (processedMessage.trim().length > 5) {
       // Record as new substantive task (save verbatim, not purified)
       _chatState.lastSubstantivePrompt = userMessage;
@@ -4485,6 +4508,8 @@ module.exports = {
   _assessTaskDifficulty,
   _buildStructuredMessages,
   _isContextOverflowFailure,
+  _shouldAdvanceActiveGoal,
+  _clearStaleExecutionAnchorForLightweightConversation,
   checkModelCapability,
   setAiChatCoreDeps,
 };

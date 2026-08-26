@@ -9,6 +9,10 @@ const Table = require('cli-table3');
 const os = require('os');
 const path = require('path');
 
+// 边框风格的单一真源(纯叶子)。printTable / printErrorPanel / printHelp /
+// printBacktestResult 都问它「这一屏画不画框」,避免开关散进各自的渲染分支。
+const tableStyle = require('./tableStyle');
+
 // ── Mascot & themed icons ────────────────────────────────────────────────────
 
 // Legacy mascot (kept for backward compatibility)
@@ -574,7 +578,20 @@ function printWarn(msg) {
   console.log(chalk.yellow('  ⚠ ') + msg);
 }
 
-function printInfo(msg) {
+// 启动屏的通知行历史上一律挂同一个 `ℹ`，一屏下来全是重复的字母，
+// 看不出哪条讲登录、哪条讲版本。传了 label 就改成中文词前缀（「登录」「版本」
+// 「清理」），靠词本身区分场景，不引入 emoji（仓库约定见本文件顶部的
+// minimal icons, no emoji）。label 按显示宽度而不是字符数补齐：中文字占 2 列，
+// 英文占 1 列，按 length 补会把混排的正文顶歪。
+// 不传 label 时逐字节保持原样 —— 全仓两千多处调用不该被这次改动波及。
+const NOTICE_LABEL_WIDTH = 4;
+
+function printInfo(msg, label) {
+  if (typeof label === 'string' && label.length > 0) {
+    const pad = ' '.repeat(Math.max(0, NOTICE_LABEL_WIDTH - displayWidth(label)));
+    console.log('  ' + chalk.blue(label) + pad + '  ' + msg);
+    return;
+  }
   console.log(chalk.blue('  ℹ ') + msg);
 }
 
@@ -591,19 +608,24 @@ function printErrorPanel(opts) {
   const suggestions = opts.suggestions || [];
   const stack = opts.stack || '';
 
-  const maxW = Math.min((process.stdout.columns || 80) - 4, 72);
-  const innerW = maxW - 4; // 2 border + 2 padding
-
   const dim = chalk.dim;
+  const borderless = tableStyle.isBorderless(process.env);
+  // 无框风格:用一个红色左竖条标示「这是错误块」,而不是画一圈框。竖条 + 正文的
+  // 组合让文件浏览器/编辑器里的红色断块一眼可辨,又不会像满框那样把注意力从错误
+  // 文本抢到线框上。有框风格保留圆角框,供需要的老用户用 KHY_TABLE_BORDERS=full 恢复。
+  const gutter = borderless ? '  ' + chalk.red.bold('│') + ' ' : dim('  │') + '  ';
+  const maxW = Math.min((process.stdout.columns || 80) - 4, 72);
+  const contentW = borderless ? maxW : maxW - 4;
+
   const lines = [];
 
-  // Helper: wrap text to inner width
+  // Helper: wrap text to content width
   function wrapLine(text) {
     const words = text.split(/\s+/);
     const wrapped = [];
     let cur = '';
     for (const w of words) {
-      if (cur && displayWidth(cur + ' ' + w) > innerW) {
+      if (cur && displayWidth(cur + ' ' + w) > contentW) {
         wrapped.push(cur);
         cur = w;
       } else {
@@ -616,22 +638,34 @@ function printErrorPanel(opts) {
     return wrapped.length ? wrapped : [''];
   }
 
-  // Helper: render a padded content line inside the box
+  // Helper: render a content line. 无框时右侧不画 │,正文可随终端宽度自然换行。
   function addLine(text) {
+    if (borderless) {
+      lines.push(gutter + text);
+      return;
+    }
     const w = displayWidth(text);
-    const pad = Math.max(0, innerW - w);
+    const pad = Math.max(0, contentW - w);
     lines.push(dim('  │') + '  ' + text + ' '.repeat(pad) + dim('│'));
   }
 
   function addEmpty() {
-    lines.push(dim('  │') + ' '.repeat(innerW + 2) + dim('│'));
+    if (borderless) {
+      lines.push('');
+      return;
+    }
+    lines.push(dim('  │') + ' '.repeat(contentW + 2) + dim('│'));
   }
 
   // Title bar
-  const titleText = ` ✗ ${title} `;
-  const titleW = displayWidth(titleText);
-  const dashCount = Math.max(0, maxW - titleW - 2);
-  lines.push(dim('  ╭─') + chalk.red.bold(titleText) + dim('─'.repeat(dashCount) + '╮'));
+  if (borderless) {
+    lines.push(chalk.red.bold(`  ✗ ${title}`));
+  } else {
+    const titleText = ` ✗ ${title} `;
+    const titleW = displayWidth(titleText);
+    const dashCount = Math.max(0, maxW - titleW - 2);
+    lines.push(dim('  ╭─') + chalk.red.bold(titleText) + dim('─'.repeat(dashCount) + '╮'));
+  }
 
   addEmpty();
 
@@ -665,32 +699,47 @@ function printErrorPanel(opts) {
     addLine(chalk.dim('▸ Stack trace (ctrl+o to expand)'));
   }
 
-  addEmpty();
-  lines.push(dim('  ╰' + '─'.repeat(maxW) + '╯'));
+  if (!borderless) {
+    addEmpty();
+    lines.push(dim('  ╰' + '─'.repeat(maxW) + '╯'));
+  }
 
   console.log('');
   lines.forEach((l) => console.log(l));
   console.log('');
 }
 
+// 表格默认不画框:边框风格由纯叶子 cli/tableStyle 单点决定(门控 KHY_TABLE_BORDERS,
+// 默认 minimal;设成 full 逐字节回到旧的满格框)。列靠空白分栏 —— 一屏里连着出两三张
+// 表时,网格线比数据更抢眼,这正是「结果里线条太多」的来源。
 function printTable(headers, rows) {
   const plainOutput =
     process.env.NO_COLOR != null ||
     String(process.env.FORCE_COLOR || '').trim() === '0' ||
     !(process.stdout && process.stdout.isTTY);
+  const borderless = tableStyle.isBorderless(process.env);
+  const padding = tableStyle.tablePadding(process.env);
   try {
+    const chars = tableStyle.tableChars(process.env);
     const table = new Table({
       head: headers.map((h) => (plainOutput ? String(h) : chalk.cyan(h))),
+      // chars 为 null(full 风格)时不传,让 cli-table3 用它自己的默认框。
+      ...(chars ? { chars } : {}),
       style: {
-        'padding-left': 1,
-        'padding-right': 1,
+        'padding-left': padding.paddingLeft,
+        'padding-right': padding.paddingRight,
         head: plainOutput ? [] : ['cyan'],
         border: plainOutput ? [] : ['grey'],
       },
     });
     rows.forEach((row) => table.push(row));
     const rendered = table.toString();
-    console.log(plainOutput ? stripAnsi(rendered) : rendered);
+    if (plainOutput) {
+      // plain 模式是管道/重定向场景,输出大概率被机器消费:不缩进、不加线,原样给出。
+      console.log(stripAnsi(rendered));
+      return;
+    }
+    console.log(borderless ? _dressBorderlessTable(rendered) : rendered);
     return;
   } catch {
     // Fallback when cli-table3/string-width has ESM/CJS compatibility issues.
@@ -714,6 +763,29 @@ function printTable(headers, rows) {
     );
     return Math.max(headerW, rowW);
   });
+
+  // 无框回退:表头下压一条细线,其余靠列宽对齐。分隔线宽度按各列显示宽度加列距
+  // 累加,而不是按字符数 —— 中文单元格占 2 列,按 length 算线会短一截。
+  if (borderless) {
+    const gap = ' '.repeat(padding.paddingRight);
+    const renderRow = (cells, paint) =>
+      cells
+        .map((cell, i) => {
+          const text = padToWidth(String(cell), colWidths[i]);
+          return paint && !plainOutput ? paint(text) : text;
+        })
+        .join(gap)
+        .replace(/\s+$/, '');
+    const ruleWidth = colWidths.reduce((sum, w) => sum + w, 0) + padding.paddingRight * (colCount - 1);
+    const rule = '  ' + '─'.repeat(Math.max(1, ruleWidth));
+
+    console.log('  ' + renderRow(headers, (t) => chalk.cyan(t)));
+    console.log(plainOutput ? rule : chalk.dim(rule));
+    for (const row of normalizedRows) {
+      console.log('  ' + renderRow(row, null));
+    }
+    return;
+  }
 
   const top = `  ╭${colWidths.map((w) => '─'.repeat(w + 2)).join('┬')}╮`;
   const mid = `  ├${colWidths.map((w) => '─'.repeat(w + 2)).join('┼')}┤`;
@@ -742,6 +814,42 @@ function printTable(headers, rows) {
   console.log(plainOutput ? bot : chalk.dim(bot));
 }
 
+// 无框表格的收尾:cli-table3 只负责算列宽和补齐,缩进与表头细线由这里加。
+// 之所以后处理而不是自己排版,是因为列宽计算(CJK 双宽、ANSI 不计宽、超长换行)
+// 全在库里,重写一遍等于把同一个 bug 再犯一次。
+//   1. 每行压 2 空格,与 printInfo/printSuccess 那一档缩进对齐;
+//   2. 表头下压一条细线,否则表头会和数据糊成一片;
+//   3. 抹掉行尾空白 —— 补齐留下的尾随空格在选中复制时会一起带走。
+// 线宽按**去掉 ANSI 后的显示宽度**取各行最大值:中文单元格占 2 列,
+// 按字符串长度算线会短一截,而这种短只有人眼能发现。
+function _dressBorderlessTable(rendered) {
+  const lines = String(rendered).split('\n');
+  if (lines.length === 0) {
+    return rendered;
+  }
+  const trimmed = lines.map((l) => l.replace(/\s+$/, ''));
+  const width = trimmed.reduce((max, l) => Math.max(max, displayWidth(stripAnsi(l))), 0);
+  const rule = chalk.dim('  ' + '─'.repeat(Math.max(1, width)));
+  const out = trimmed.map((l) => '  ' + l);
+  // 只有存在数据行时才插线;单表头的空表插线只是又添一条孤零零的横杠。
+  if (out.length > 1) {
+    out.splice(1, 0, rule);
+  }
+  return out.join('\n');
+}
+
+// 内容宽度的细线:给一组「已经上过色」的行,量出它们去掉 ANSI 后的最大显示宽度,
+// 按这个宽度画线。之所以不接受一个数字参数,是因为调用点原本写的都是魔法数(38 个
+// 横杠),行长一变线就要么冒出去、要么缺一截 —— 让线跟着内容走,这类漂移就不存在了。
+// 下限 20 是防退化:数据全空时不要吐出一条一格长的短横。
+function _contentRule(rows) {
+  const width = (Array.isArray(rows) ? rows : []).reduce(
+    (max, r) => Math.max(max, displayWidth(stripAnsi(String(r)))),
+    0
+  );
+  return '  ' + '─'.repeat(Math.max(20, width));
+}
+
 function printQuote(quote) {
   const change = quote.current - quote.preClose;
   const changePct = quote.preClose > 0 ? (change / quote.preClose) * 100 : 0;
@@ -749,22 +857,28 @@ function printQuote(quote) {
   const icon = change >= 0 ? ICON_BULL : ICON_BEAR;
   const arrow = change >= 0 ? '▲' : '▼';
 
+  // 无框风格:标题 + 一条细线 + 缩进数据行(与本文件 printKeybindingsTip 同一节奏),
+  // 不再画三面框。细线宽度按数据行的**实测显示宽度**取最大值 —— 原来那 38 个横杠是
+  // 写死的,行长一变就要么冒出去要么缺一截。
+  const borderless = tableStyle.isBorderless(process.env);
+  const rows = [
+    `现价  ${color(chalk.bold('¥' + quote.current.toFixed(2)))}  ${color(arrow + ' ' + (change >= 0 ? '+' : '') + changePct.toFixed(2) + '%')}`,
+    `开盘  ¥${quote.open.toFixed(2)}  最高  ${chalk.red('¥' + quote.high.toFixed(2))}  最低  ${chalk.green('¥' + quote.low.toFixed(2))}`,
+    `昨收  ¥${quote.preClose.toFixed(2)}  成交量  ${chalk.bold(formatVolume(quote.volume))}`,
+  ];
+  if (quote.date) {
+    rows.push(`时间  ${chalk.dim(quote.date + ' ' + (quote.time || ''))}`);
+  }
+
   console.log('');
   console.log(`  ${icon} ${chalk.bold(quote.name)} ${chalk.dim('(' + quote.symbol + ')')}`);
-  console.log(chalk.dim('  ┌──────────────────────────────────────'));
-  console.log(
-    `  │ 现价  ${color(chalk.bold('¥' + quote.current.toFixed(2)))}  ${color(arrow + ' ' + (change >= 0 ? '+' : '') + changePct.toFixed(2) + '%')}`
-  );
-  console.log(
-    `  │ 开盘  ¥${quote.open.toFixed(2)}  最高  ${chalk.red('¥' + quote.high.toFixed(2))}  最低  ${chalk.green('¥' + quote.low.toFixed(2))}`
-  );
-  console.log(
-    `  │ 昨收  ¥${quote.preClose.toFixed(2)}  成交量  ${chalk.bold(formatVolume(quote.volume))}`
-  );
-  if (quote.date) {
-    console.log(`  │ 时间  ${chalk.dim(quote.date + ' ' + (quote.time || ''))}`);
+  console.log(chalk.dim(borderless ? _contentRule(rows) : '  ┌──────────────────────────────────────'));
+  for (const row of rows) {
+    console.log((borderless ? '  ' : '  │ ') + row);
   }
-  console.log(chalk.dim('  └──────────────────────────────────────'));
+  if (!borderless) {
+    console.log(chalk.dim('  └──────────────────────────────────────'));
+  }
   console.log('');
 }
 
@@ -772,9 +886,7 @@ function printBacktestResult(result) {
   const returnColor = result.totalReturn >= 0 ? chalk.red : chalk.green;
   const icon = result.totalReturn >= 0 ? ICON_BULL : ICON_BEAR;
 
-  console.log('');
-  console.log(`  ${ICON_CHART} ${chalk.bold('回测结果')} ${icon}`);
-  console.log(chalk.dim('  ┌──────────────────────────────────────'));
+  const borderless = tableStyle.isBorderless(process.env);
 
   const rows = [
     ['品种', result.symbol],
@@ -799,15 +911,23 @@ function printBacktestResult(result) {
   // cols) and 4-char (初始资金 → 8 cols) CJK, so padEnd would leave the value
   // column ragged. Pad to a fixed 10-column gutter so values line up.
   const padLabel = (s) => s + ' '.repeat(Math.max(0, 10 - displayWidth(s)));
-  rows.forEach(([label, value]) => {
+  // 无框风格:分组之间用空行断开,不再画 ├╌╌ 虚线 —— 一屏 16 行数据里插三条虚线,
+  // 视觉噪声比它分隔出来的信息还多。装订线 │ 同样去掉,留两空格缩进即可。
+  const body = rows.map(([label, value]) => {
     if (!label && !value) {
-      console.log(chalk.dim('  ├╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌'));
-      return;
+      return borderless ? '' : chalk.dim('  ├╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌');
     }
-    console.log(`  │ ${chalk.dim(padLabel(label))} ${value}`);
+    const line = `${chalk.dim(padLabel(label))} ${value}`;
+    return borderless ? `  ${line}` : `  │ ${line}`;
   });
 
-  console.log(chalk.dim('  └──────────────────────────────────────'));
+  console.log('');
+  console.log(`  ${ICON_CHART} ${chalk.bold('回测结果')} ${icon}`);
+  console.log(chalk.dim(borderless ? _contentRule(body) : '  ┌──────────────────────────────────────'));
+  body.forEach((line) => console.log(line));
+  if (!borderless) {
+    console.log(chalk.dim('  └──────────────────────────────────────'));
+  }
   console.log('');
 }
 
@@ -850,45 +970,22 @@ function printHelp() {
   const pkg = require('../../package.json');
   const displayVersion = pkg.version;
   const cols = process.stdout.columns || 80;
-  const boxW = Math.min(cols - 4, 72);
-  const innerW = boxW - 4; // "│ " + content + " │"
+  const contentW = Math.min(Math.max(40, cols - 6), 72);
   const dim = chalk.dim;
-  const hr = '─'.repeat(boxW - 2);
 
-  // Helper: pad ANSI- and CJK-safe (double-width glyphs counted as 2 columns,
-  // so right borders stay aligned for Chinese labels).
-  const vis = (s) => displayWidth(s);
-  const pad = (s, w) => {
-    const g = Math.max(0, w - vis(s));
-    return s + ' '.repeat(g);
-  };
-  const row = (s) => dim('  │ ') + pad(s, innerW) + dim(' │');
-  const emptyRow = () => row('');
+  // 按显示宽度补齐命令列,让中英文命令和说明保持同一列。
+  const pad = (s, w) => `${s}${' '.repeat(Math.max(0, w - displayWidth(s)))}`;
+  const cmdColW = Math.min(Math.floor(contentW * 0.65), 46);
 
   console.log('');
-  // Title bar
-  const titleText = ` khy OS v${displayVersion} — 命令速查 `;
-  // Measure the title by display width: "命令速查" + "—" are double-width, so
-  // raw .length would under-count and stretch the top border past the body.
-  const titleDashes = boxW - 2 - displayWidth(titleText);
-  const tLeft = Math.floor(titleDashes / 2);
-  const tRight = titleDashes - tLeft;
-  console.log(
-    dim(`  ╭${'─'.repeat(Math.max(1, tLeft))}`) +
-      chalk.cyan.bold(titleText) +
-      dim(`${'─'.repeat(Math.max(1, tRight))}╮`)
-  );
-  console.log(emptyRow());
-  console.log(row(dim('用法: khy <命令> [参数] [--选项]    AI: 直接输入自然语言即可对话')));
-  console.log(emptyRow());
-
-  const { isLegacyWinTerminal } = require('../tools/platformUtils');
-  const _lw = isLegacyWinTerminal();
+  console.log(`  ${chalk.cyan.bold(`khy OS v${displayVersion}`)} ${dim('命令速查')}`);
+  console.log(dim('  ' + '─'.repeat(Math.min(contentW, 56))));
+  console.log(`  ${dim('用法: khy <命令> [参数] [--选项]    AI: 直接输入自然语言即可对话')}`);
+  console.log('');
 
   const groups = [
     {
       name: '核心',
-      icon: _lw ? '*' : '▸',
       cmds: [
         ['app list|install|start|stop|status', '应用管理'],
         ['server start [--port N] | server status', '服务管理'],
@@ -898,7 +995,6 @@ function printHelp() {
     },
     {
       name: 'AI 与网关',
-      icon: _lw ? '+' : '◆',
       cmds: [
         ['gateway status|model|prefer-remote|config|relay', '通道状态与切换'],
         ['models list|pull|import|set|delete', '本地模型管理'],
@@ -910,7 +1006,6 @@ function printHelp() {
     },
     {
       name: '诊断与运维',
-      icon: _lw ? '?' : '⌕',
       cmds: [
         ['doctor', '环境诊断'],
         ['docs maintainer', '维护入口与分层验证'],
@@ -924,7 +1019,6 @@ function printHelp() {
     },
     {
       name: '量化应用',
-      icon: _lw ? '#' : '◐',
       cmds: [
         ['quote|hq <代码|名称>', '实时行情'],
         ['backtest|bt <代码> [--strategy ...]', '策略回测'],
@@ -934,29 +1028,19 @@ function printHelp() {
     },
   ];
 
-  // Calculate optimal column width
-  const cmdColW = Math.min(Math.floor(innerW * 0.65), 46);
-  const descColW = innerW - cmdColW - 3; // 3 for " │ " separator
-
-  groups.forEach((group) => {
-    console.log(row(`${chalk.cyan(group.icon)} ${chalk.cyan.bold(group.name)}`));
-    console.log(row(dim('─'.repeat(innerW))));
+  groups.forEach((group, index) => {
+    if (index > 0) console.log('');
+    console.log(`  ${chalk.cyan.bold(group.name)}`);
     group.cmds.forEach(([cmd, desc]) => {
-      const cmdStr = pad(chalk.white(cmd), cmdColW);
-      console.log(row(`  ${cmdStr} ${dim(desc)}`));
+      console.log(`    ${pad(chalk.white(cmd), cmdColW)}  ${dim(desc)}`);
     });
-    console.log(emptyRow());
   });
 
-  // Examples section
-  console.log(row(dim('示例:')));
-  console.log(row(dim('  khy gateway status     khy doctor     khy hq 茅台')));
-  console.log(row(dim('  khy help gateway       khy docs maintainer')));
-  console.log(emptyRow());
-  console.log(row(dim('更多: khy docs · 帮助主题: khy help <gateway|quant|ops>')));
-
-  // Bottom border
-  console.log(dim(`  ╰${hr}╯`));
+  console.log('');
+  console.log(`  ${dim('示例:')}`);
+  console.log(`    ${dim('khy gateway status     khy doctor     khy hq 茅台')}`);
+  console.log(`    ${dim('khy help gateway       khy docs maintainer')}`);
+  console.log(`  ${dim('更多: khy docs · 帮助主题: khy help <gateway|quant|ops>')}`);
   console.log('');
 
   // Keybinding cheat sheet (navigation / editing / session controls).
@@ -1270,6 +1354,7 @@ module.exports = {
   printErrorPanel,
   printWarn,
   printInfo,
+  NOTICE_LABEL_WIDTH,
   printTable,
   printQuote,
   printBacktestResult,

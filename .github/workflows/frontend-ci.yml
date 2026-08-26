@@ -54,14 +54,13 @@ jobs:
         with:
           # 不写死大版本：跟随当前稳定 LTS。
           node-version: 'lts/*'
-          cache: npm
-          cache-dependency-path: apps/ai-frontend/package-lock.json
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
-      # apps/ai-frontend 不是根 workspace 成员（根 workspaces 只含
-      # platform/packages/shared、services/backend、services/ai-backend），
-      # 因此在本目录内独立安装。
+      # apps/ai-frontend 不是根 workspace 成员（pnpm workspace 成员，
+      # 因此通过根目录的 frontend profile 安装其完整依赖闭包。
       - name: Install
-        run: npm ci
+        run: npm run install:frontend
 
       # vitest 覆盖 src/**/*.test.{js,mjs}（14 个文件 / 162 个用例，实测全绿）。
       - name: Unit tests (vitest)
@@ -117,11 +116,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 'lts/*'
-          cache: npm
-          cache-dependency-path: software/khyquant/frontend/package-lock.json
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install
-        run: npm ci
+        run: npm run install:frontend
 
       # 该前端没有测试脚本，只有 lint:ci（eslint . --max-warnings 0）与 build。
       #

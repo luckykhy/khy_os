@@ -256,17 +256,11 @@ describe('formatters', () => {
     });
   });
 
-  describe('printHelp() box alignment', () => {
-    // string-width is ESM-only on npm >= 5 (so `require('string-width')`
-    // throws under jest's CJS VM). formatters.displayWidth is the project's
-    // own CJK-aware width (string-width with manual fallback) — use it.
+  describe('printHelp() column alignment', () => {
     const stringWidth = fmt.displayWidth;
 
-    function renderHelpBorderWidths() {
+    function renderHelpRows() {
       const calls = [];
-      // console.log is already a jest mock (suppressed in beforeAll); swap its
-      // implementation to capture, then return it to the no-op so the suite's
-      // afterAll mockRestore still has a live mock to restore.
       console.log.mockImplementation((line) => {
         calls.push(typeof line === 'string' ? line : String(line ?? ''));
       });
@@ -275,19 +269,21 @@ describe('formatters', () => {
       } finally {
         console.log.mockImplementation(() => {});
       }
-      // Every box line carries a border glyph; measure its on-screen column span.
-      return calls
-        .filter((l) => /[│╭╮╰╯]/.test(l))
-        .map((l) => stringWidth(l.replace(/\x1b\[[0-9;]*m/g, '')));
+      return calls.map((l) => l.replace(/\x1b\[[0-9;]*m/g, ''));
     }
 
-    test('all border rows share one visual width regardless of CJK labels', () => {
-      const widths = renderHelpBorderWidths();
-      expect(widths.length).toBeGreaterThan(5); // title + body + bottom
-      const distinct = [...new Set(widths)];
-      // A single width proves the top border, every CJK content row, and the
-      // bottom border end at the same column — no double-width drift.
-      expect(distinct).toHaveLength(1);
+    test('命令说明列在中英文命令后保持同一视觉列', () => {
+      const rows = renderHelpRows();
+      const coreDescriptions = new Set(['应用管理', '服务管理', '数据库', '交互辅助']);
+      const descOffsets = [];
+      for (const r of rows) {
+        const m = r.match(/^ {4}(\S.*?\s{2,})(\S.*)$/);
+        if (!m || !coreDescriptions.has(m[2])) continue;
+        const descStart = r.lastIndexOf(m[2]);
+        descOffsets.push(stringWidth(r.slice(0, descStart)));
+      }
+      expect(descOffsets).toHaveLength(4);
+      expect([...new Set(descOffsets)]).toHaveLength(1);
     });
   });
 
@@ -315,18 +311,60 @@ describe('formatters', () => {
 
     test('value column aligns across mixed-width CJK labels', () => {
       const rows = renderRows();
-      // Data rows look like "  │ <label padded> <value>". Measure the column
-      // where the value starts; mixed 2-char (品种) vs 4-char (初始资金) labels
-      // must still align because padding is by display width, not char count.
+      // 无框数据行以两个空格缩进开头;值列仍由显示宽度补齐,不依赖边框字符。
       const valueOffsets = [];
       for (const r of rows) {
-        const m = r.match(/^  │ (.+?)\s{2,}(\S.*)$/);
-        if (!m) continue;
-        const valCol = r.indexOf(m[2], 4);
+        const m = r.match(/^ {2}(\S.*?)\s+(\S.*)$/);
+        if (!m || !/[一-鿿]/.test(m[1])) continue;
+        const valCol = r.lastIndexOf(m[2]);
         valueOffsets.push(stringWidth(r.slice(0, valCol)));
       }
       expect(valueOffsets.length).toBeGreaterThan(5);
       expect([...new Set(valueOffsets)]).toHaveLength(1);
     });
+  });
+});
+
+// printInfo 的 label 前缀:启动屏一屏能冒出七八条通知,全挂同一个 ℹ 就看不出
+// 哪条讲登录、哪条讲版本。补齐必须按显示宽度算 —— 汉字 2 列、英文 1 列,按
+// String.length 补会让中英混排的标签把正文顶歪,而这种歪只有人眼能发现。
+describe('printInfo() 场景词前缀', () => {
+  function render(msg, label) {
+    const calls = [];
+    console.log.mockImplementation((line) => calls.push(line));
+    try {
+      fmt.printInfo(msg, label);
+    } finally {
+      console.log.mockImplementation(() => {});
+    }
+    return calls.at(-1) || '';
+  }
+
+  test('不传 label 时逐字节保持原样（全仓两千多处调用不受影响）', () => {
+    expect(render('X')).toBe('  ℹ X');
+  });
+
+  test('空串 / 非字符串 label 一律回落到原样，不吐出半截前缀', () => {
+    for (const bad of ['', null, undefined, 0, 42, {}, []]) {
+      expect(render('X', bad)).toBe('  ℹ X');
+    }
+  });
+
+  test('中文 label 渲染成「两空格 + 词 + 两空格」', () => {
+    expect(render('mfplg075', '登录')).toBe('  登录  mfplg075');
+  });
+
+  test('中英文 label 混排后正文都落在同一列', () => {
+    const cols = new Set();
+    for (const label of ['登录', '版本', '更新', '来源', 'IDE', 'ok', 'x']) {
+      const line = render('X', label);
+      cols.add(fmt.displayWidth(line.slice(0, line.lastIndexOf('X'))));
+    }
+    expect([...cols]).toEqual([fmt.NOTICE_LABEL_WIDTH + 4]);
+  });
+
+  test('超宽 label 不会把正文吞掉，只是不再对齐（宁可歪也不能截断）', () => {
+    expect(render('X', '这是一个很长的标签')).toContain('这是一个很长的标签');
+    expect(render('X', '这是一个很长的标签')).toMatch(/X$/);
   });
 });

@@ -1061,6 +1061,12 @@ async function route(parsed, context = {}) {
       case 'capability':
         return await require('./handlers/capability').handleCapability(parsed);
 
+      // ── 外部 agent 资产管理(khy agent-assets …) ──
+      // 统一发现/迁移外部 agent 工具的记忆·工具·技能三类资产。写操作默认干跑,
+      // 冲突默认 keep-both(绝不覆盖用户资产)。判定与搬运全在 services/agentAssets。
+      case 'agent-assets':
+        return require('./handlers/agentAssets').handleAgentAssets(parsed);
+
       // ── RTK 省 token 模式(khy rtk …) ──
       // 检测/状态/省量统计/开关。RTK 在 shell 与 grep(content)执行前压缩输出省 token。
       case 'rtk':

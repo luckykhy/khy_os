@@ -1,5 +1,35 @@
 'use strict';
 
+/**
+ * Optional peer packages this module lazy-requires. Declared in
+ * services/backend/package.json as optional peerDependencies, so a default
+ * install carries none of them. Listed here so the missing-dependency hint can
+ * print a copy-pasteable install command instead of pointing at a manifest.
+ */
+const OTEL_OPTIONAL_PACKAGES = Object.freeze([
+  '@opentelemetry/sdk-node',
+  '@opentelemetry/sdk-trace-base',
+  '@opentelemetry/resources',
+  '@opentelemetry/semantic-conventions',
+  '@opentelemetry/instrumentation-http',
+  '@opentelemetry/instrumentation-express',
+  '@opentelemetry/exporter-trace-otlp-http',
+]);
+
+/** Count how many optional packages actually resolve, for a progress-bearing hint. */
+function countResolvableOtelPackages() {
+  let n = 0;
+  for (const name of OTEL_OPTIONAL_PACKAGES) {
+    try {
+      require.resolve(name);
+      n += 1;
+    } catch {
+      /* not installed - that is the case this counter exists to report */
+    }
+  }
+  return n;
+}
+
 let activeSdk = null;
 let pendingStart = null;
 let currentStatus = 'disabled';
@@ -157,9 +187,17 @@ function initializeOpenTelemetry(options = {}) {
     currentStatus = 'failed';
     const missingFeature = error && error.code === 'MODULE_NOT_FOUND';
     if (missingFeature) {
+      const ready = countResolvableOtelPackages();
+      const total = OTEL_OPTIONAL_PACKAGES.length;
       logger.warn(
-        '[otel] OpenTelemetry is enabled but its optional packages are not installed. ' +
-          'Install the @opentelemetry peer dependencies listed in services/backend/package.json.'
+        `[otel] 加载 OpenTelemetry 可选依赖失败（${ready}/${total} 个包就位）；` +
+          '本次以「无链路追踪」模式继续运行，其余功能不受影响。'
+      );
+      logger.warn(
+        '[otel] 需要追踪请安装：npm install --no-save ' + OTEL_OPTIONAL_PACKAGES.join(' ')
+      );
+      logger.warn(
+        '[otel] 不需要追踪：取消 KHY_OTEL_ENABLED / OTEL_EXPORTER_OTLP_ENDPOINT 环境变量即可消除本提示。'
       );
     } else {
       logger.warn(`[otel] Failed to initialize OpenTelemetry: ${message}`);

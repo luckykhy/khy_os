@@ -567,7 +567,7 @@ function createAgenticHarness(options = {}) {
               activatedModes: detectModes(userMessage).modes,
               status: 'in_progress',
               // v2: full conversation context
-              conversationMessages: loopResult?.messages || [],
+              conversationMessages: loopResult?.conversationMessages || [],
               contextSummary: loopResult?.contextSummary || '',
               sessionMeta: {
                 model: chatOpts.model || chatOpts.preferredModel || '',
@@ -711,6 +711,8 @@ function createAgenticHarness(options = {}) {
                     ...chatOpts,
                     _agentContext: runtimeCtx,
                   },
+                  initialMessages: loopResult?.conversationMessages || [],
+                  inheritedDedupKeys: loopResult?.executedCallKeys || new Map(),
                 });
                 allToolCallLogs.push(...(remediationResult?.toolCallLog || []));
                 totalIterations += remediationResult?.iterations || 0;
@@ -833,6 +835,8 @@ function createAgenticHarness(options = {}) {
                   ...loopOptions,
                   chat,
                   chatOpts: { ...chatOpts, _agentContext: runtimeCtx },
+                  initialMessages: loopResult?.conversationMessages || [],
+                  inheritedDedupKeys: loopResult?.executedCallKeys || new Map(),
                 });
                 allToolCallLogs.push(...(verifyFixResult?.toolCallLog || []));
                 totalIterations += verifyFixResult?.iterations || 0;
