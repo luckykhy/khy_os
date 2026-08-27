@@ -1049,7 +1049,11 @@ function invokeToolAsync(tool, prompt, options = {}) {
 
     const _st = _spawnTarget(_effectiveCmd(tool), args);
     const child = spawn(_st.cmd, _st.args, {
-      stdio: ['pipe', 'pipe', 'pipe'],
+      // 不读 stdin 的工具(opencode/aider/openclaw,提示词是位置参数)若仍是 pipe,
+      // 会因「stdin 打开但无输入」而挂起等待 EOF —— opencode run 实测必挂。这里在
+      // useStdin=false 时把 stdin 置为 'ignore'(子进程立即读到 EOF);useStdin=true 的
+      // codex/claude 仍保持 pipe 以便写入提示词。
+      stdio: [tool.useStdin ? 'pipe' : 'ignore', 'pipe', 'pipe'],
       env: process.env,
     });
     const idleTimeoutMs = resolveToolIdleTimeoutMs(tool, options);

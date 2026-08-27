@@ -115,6 +115,22 @@ function resolveOpencodeBin(env = process.env, cwd = process.cwd()) {
       return explicit.trim();
     }
     const bin = _binName();
+    // 由已自动探测到的 opencode 配置位置反推可执行文件(单一真源):配置通常位于
+    // `<opencodeRoot>/config/opencode.json`,可执行文件在 `<opencodeRoot>` 根部。
+    // 这样「配置在哪,exe 在哪」绑定,便于便携安装在任意 tools 目录下(如本机
+    // `<Portable>/Tools/opencode`)都能被准确找到,不依赖 PATH 或特定 node_modules 布局。
+    try {
+      const ocAdapter = require('../../externalApps/opencodeAdapter');
+      const cfg = ocAdapter.configPath(env);
+      if (cfg) {
+        const exe = path.resolve(path.dirname(cfg), '..', bin);
+        if (_existsFile(exe)) {
+          return exe;
+        }
+      }
+    } catch {
+      /* best effort — 配置反推失败则继续既有候选 */
+    }
     for (const base of _candidateBases(env, cwd)) {
       const candidate = path.join(base, ..._PORTABLE_TAIL, bin);
       if (_existsFile(candidate)) {
