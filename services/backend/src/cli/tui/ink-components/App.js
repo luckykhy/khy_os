@@ -11,6 +11,12 @@
 const React = require('react');
 
 const WelcomeBanner = require('./WelcomeBanner');
+// 启动横幅只在「显示字段变化」时重渲。启动期间 footer 会因模型/上下文窗口/网关反复
+// 落值而多次就位，每次都是一帧全屏重绘；在个别终端（win32 的 ED2 清屏语义）上每次
+// 重绘都会在 scrollback 里多留一份横幅副本（即用户报「横幅重复一堆」）。用 React.memo
+// + 值上的 useMemo 保证：横幅内容没变 → 不重渲 → 少出一帧，配合 scrollbackPreserve
+// 的 ED2→ED0 就地擦除，把重复缓解到最低。
+const MemoWelcomeBanner = React.memo(WelcomeBanner);
 const Transcript = require('./Transcript');
 // TranscriptView 的工具行摘要复用 ToolLines 的 summarizeArgs,视图里的
 // `✓ readFile(src/a.js)` 与 committed 区逐字一致(含相对路径/中间截断门控)。
@@ -4266,8 +4272,13 @@ function App({ options = {} }) {
     { isActive: inputActive }
   );
 
-  // Welcome banner props.
-  const bannerProps = _resolveBannerProps(footer, { updateLine: bannerUpdateLine });
+  // Welcome banner props. Memoized on the displayed fields only, so footer
+  // churn that the banner does NOT show (e.g. contextPct) yields the SAME
+  // bannerProps reference → MemoWelcomeBanner skips → no extra live frame.
+  const bannerProps = React.useMemo(
+    () => _resolveBannerProps(footer, { updateLine: bannerUpdateLine }),
+    [footer.model, footer.contextLimit, footer.adapter, bannerUpdateLine]
+  );
 
   // 输入框占位符:优先级阶梯收敛到纯叶子 promptPlaceholder(CC usePromptInputPlaceholder)。
   // 新增「有可编辑排队消息且提示未用尽 → 按 ↑ 编辑」一档;门控关/叶子缺失 → 逐字节回退历史两分支。
@@ -4832,7 +4843,7 @@ function App({ options = {} }) {
               // Startup-only banner (task #23): lives here so the version line tops
               // the left column exactly where the sidebar tops the right column.
               _showStartupBanner
-                ? h(WelcomeBanner, { key: 'live-banner', ...bannerProps, showArt: _bannerShowArt })
+                ? h(MemoWelcomeBanner, { key: 'live-banner', ...bannerProps, showArt: _bannerShowArt })
                 : null,
               // Removable Ctrl+O detail for the latest committed <Static> turn.
               // MessageBlock already force-expands role:'expansion'; keeping this

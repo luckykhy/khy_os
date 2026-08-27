@@ -203,6 +203,33 @@ function readSourceVersion(root, fsImpl = fs) {
   }
 }
 
+/**
+ * 从运行中模块自身推算 khy-os 源码根。
+ *
+ * CLI 的 provenance 描述的是「正在运行这份代码」的来源，而非用户敲 `khy` 时所在的
+ * cwd（例如从 D:\ 或 ~ 启动时，git rev-parse 在 cwd 上找不到仓库 → 更新行为空）。
+ * 本函数沿 __filename 向上找「含 services/backend/package.json 且含 .git」的目录，
+ * 只在确实是一个源码仓安装（dev/git-clone）时返回它；安装在 node_modules / wheel
+ * （无 .git）时返回 null，交由 cwd 路径兜底，行为逐字节回退旧逻辑。
+ */
+function moduleSourceRoot(fsImpl = fs) {
+  let candidate = path.dirname(__filename);
+  for (let i = 0; i < 8; i += 1) {
+    try {
+      if (
+        fsImpl.existsSync(path.join(candidate, 'services', 'backend', 'package.json')) &&
+        fsImpl.existsSync(path.join(candidate, '.git'))
+      ) {
+        return candidate;
+      }
+    } catch { /* keep walking */ }
+    const parent = path.dirname(candidate);
+    if (parent === candidate) break;
+    candidate = parent;
+  }
+  return null;
+}
+
 function detectInstallation(opts = {}) {
   const fsImpl = opts.fs || fs;
   const cwd = opts.cwd || process.env.KHY_OS_ROOT || process.cwd();
@@ -822,7 +849,9 @@ function getSourceProvenance(opts = {}) {
   const result = { ...blank };
   try {
     const fsImpl = opts.fs || fs;
-    const cwd = opts.cwd || process.env.KHY_OS_ROOT || process.cwd();
+    // provenance 默认优先本仓源码根（见 moduleSourceRoot），其次 KHY_OS_ROOT，
+    // 最后才是用户 cwd —— 这样从任意目录启动 khy，横幅都能读到本仓的提交时间。
+    const cwd = opts.cwd || process.env.KHY_OS_ROOT || moduleSourceRoot(fsImpl) || process.cwd();
     // 与 detectInstallation 同序：便携运行时优先于源码仓。
     const portableRoot = findPortableRoot(opts.portableRoot || cwd, fsImpl);
     if (portableRoot) {
@@ -917,7 +946,8 @@ async function getSourceProvenanceAsync(opts = {}) {
   const result = { ...blank };
   try {
     const fsImpl = opts.fs || fs;
-    const cwd = opts.cwd || process.env.KHY_OS_ROOT || process.cwd();
+    // 与同步版同序：只读本地 git 时先落源码根，其次 KHY_OS_ROOT，最后 cwd。
+    const cwd = opts.cwd || process.env.KHY_OS_ROOT || moduleSourceRoot(fsImpl) || process.cwd();
     const portableRoot = findPortableRoot(opts.portableRoot || cwd, fsImpl);
     if (portableRoot) {
       result.kind = 'portable';
