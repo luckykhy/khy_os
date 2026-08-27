@@ -122,20 +122,61 @@ function _healDoc(doc) {
   return { changed };
 }
 
-/** opencode.json 官方路径(XDG:~/.config/opencode/)。OPENCODE_CONFIG 覆盖。 */
+/** 便携布局探测:由本脚本位置推算 khy-os 根 → 其父目录(通常是 <Portable>)→ Tools/opencode/config/opencode.json。
+ *  khy-os 与 Tools 便携同源;在外部 install 环境下回退 XDG 默认,绝不硬编码盘符。 */
+function _portableConfigPath() {
+  try {
+    const khyosRoot = path.resolve(__dirname, '..', '..', '..', '..', '..');
+    return path.join(khyosRoot, '..', 'Tools', 'opencode', 'config', 'opencode.json');
+  } catch {
+    return '';
+  }
+}
+
+function _existsFile(p) {
+  try {
+    return S.readIfExists(p) !== null;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * opencode.json 路径。解析顺序(取**已存在**者,复用真实配置;无则回退默认供写):
+ *   1) OPENCODE_CONFIG           显式指向配置文件
+ *   2) OPENCODE_CONFIG_DIR       opencode 官方 env,指向配置目录(opencode.cmd 便携版正是如此)
+ *   3) <Portable>\Tools\opencode\config\opencode.json   便携布局
+ *   4) XDG:~/.config/opencode/opencode.json             默认
+ * 全部不存在时,返回 1) / 2) 的第一个候选,否则返回 XDG 默认(供 add/remove 创建)。
+ */
 function configPath(env = process.env) {
   if (env && env.OPENCODE_CONFIG) {
     return S.expandHome(env.OPENCODE_CONFIG, env);
   }
+  const candidates = [];
+  if (env && env.OPENCODE_CONFIG_DIR) {
+    candidates.push(path.join(S.expandHome(env.OPENCODE_CONFIG_DIR, env), 'opencode.json'));
+  }
+  const portable = _portableConfigPath();
+  if (portable) {
+    candidates.push(portable);
+  }
   const xdg = (env && env.XDG_CONFIG_HOME) || S.expandHome('~/.config', env);
-  return path.join(xdg, 'opencode', 'opencode.json');
+  const xdgPath = path.join(xdg, 'opencode', 'opencode.json');
+  candidates.push(xdgPath);
+  for (const c of candidates) {
+    if (_existsFile(c)) {
+      return c;
+    }
+  }
+  return candidates[0] || xdgPath;
 }
 
-/** 原始读取(不自愈):供 repair 侦测损坏用。 */
+/** 原始读取(不自愈):供 repair 侦测损坏用。容忍 UTF-8 BOM(部分 opencode 安装会写入)。 */
 function _loadRaw(env) {
   const file = configPath(env);
   const text = S.readIfExists(file);
-  const doc = text ? JSON.parse(text) : {};
+  const doc = text ? JSON.parse(text.replace(/^\uFEFF/, '')) : {};
   if (!doc.provider || typeof doc.provider !== 'object') {
     doc.provider = {};
   }

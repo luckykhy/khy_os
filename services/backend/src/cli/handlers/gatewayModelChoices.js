@@ -549,11 +549,16 @@ async function buildGatewayModelChoices({ onNotice = () => {}, onError = () => {
   // khy 不需要替用户重复配置 endpoint/key——各自 agent 的配置文件就是真源。
   try {
     const projection = require('../../services/gateway/agentModelProjection');
-    // 采纳 claude-code env,让 claudeAdapter 在本会话即可调出 CC 同款模型。
+    // 采纳 claude-code env + opencode 便携配置定位,让对应适配器在本会话即可调出配置同款模型。
     try {
       projection.ensureClaudeCodeEnv(process.env);
     } catch {
-      /* fail-soft: 采纳失败不影响投影列表 */
+      /* fail-soft */
+    }
+    try {
+      projection.ensureOpenCodeEnv(process.env);
+    } catch {
+      /* fail-soft */
     }
     const proj = projection.discover(process.env);
     if (proj.ok && Array.isArray(proj.models) && proj.models.length) {

@@ -31,9 +31,9 @@ function isEnabled(env) {
 }
 
 /**
- * opencode 的 `-m/--model` 只接受 `provider/model` 形式(例如 `anthropic/claude-...`)。
- * khyos 内部的模型 ID 未必是这种形式,贸然传入会让 opencode 报错。故仅当模型串是
- * 非空、两侧都有内容的 `provider/model` 才注入;否则让 opencode 用它自己配置的默认模型。
+ * opencode 的 `-m/--model` 形式为 `provider/model`(首段是 provider,其余是 model;
+ * model 本身可含 `/`,如 `openrouter/z-ai/glm-5.2:free`)。故仅当首段非空且其后还有
+ * 非空模型名才注入;否则让 opencode 用它自己配置的默认模型。
  */
 function looksLikeProviderModel(model) {
   if (typeof model !== 'string') {
@@ -41,11 +41,7 @@ function looksLikeProviderModel(model) {
   }
   const s = model.trim();
   const slash = s.indexOf('/');
-  if (slash <= 0 || slash >= s.length - 1) {
-    return false;
-  }
-  // 只允许单个斜杠(provider/model),排除路径式 a/b/c 以免误判。
-  return s.indexOf('/', slash + 1) === -1;
+  return slash > 0 && slash < s.length - 1;
 }
 
 /**
