@@ -542,6 +542,43 @@ async function buildGatewayModelChoices({ onNotice = () => {}, onError = () => {
     }
   }
 
+  // ── 外部智能体模型投影(自动发现 opencode / claude-code 已配置的模型,复用其配置)──
+  // 投影为 `<模型>(opencode)` / `<模型>(claudecode)`,选中后路由到对应 gateway 适配器:
+  //   · opencode    → opencodeAdapter(指挥 `opencode run`,读它自己的 opencode.json)
+  //   · claude-code → claudeAdapter(会话内先采纳其 env,复用同款 endpoint/token/model)
+  // khy 不需要替用户重复配置 endpoint/key——各自 agent 的配置文件就是真源。
+  try {
+    const projection = require('../../services/gateway/agentModelProjection');
+    // 采纳 claude-code env,让 claudeAdapter 在本会话即可调出 CC 同款模型。
+    try {
+      projection.ensureClaudeCodeEnv(process.env);
+    } catch {
+      /* fail-soft: 采纳失败不影响投影列表 */
+    }
+    const proj = projection.discover(process.env);
+    if (proj.ok && Array.isArray(proj.models) && proj.models.length) {
+      // 只投影其 gateway 适配器通道**已启用**的智能体模型,避免展示「选中但不可调用」的入口。
+      const enabledTypes = new Set(
+        enabledAdapters.map((s) => String(s.type || '').trim().toLowerCase())
+      );
+      const projectedShown = proj.models.filter(
+        (pm) => enabledTypes.has(String(pm.adapter || '').trim().toLowerCase())
+      );
+      for (const pm of projectedShown) {
+        const connTag = pm.protocol === 'anthropic' ? chalk.yellow('🔗中继') : chalk.cyan('⚡直连');
+        const keyTag = pm.hasKey ? chalk.green('● ready') : chalk.dim('● 未含 key');
+        modelChoices.push({
+          name: `${chalk.green('[可用]')} ${pm.name}${connTag ? ` ${connTag}` : ''} ${keyTag}`,
+          value: { adapter: pm.adapter, model: pm.model },
+          disabled: false,
+          externalAgent: true,
+        });
+      }
+    }
+  } catch {
+    /* fail-soft: 投影失败绝不影响主线模型列表 */
+  }
+
   if (modelChoices.length === 0) {
     onNotice('当前无可执行模型可选（已过滤未通过实测的通道）');
     if (preferredIssueAfterProbe && preferredIssueAfterProbe.type === 'unavailable') {

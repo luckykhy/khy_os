@@ -42,11 +42,11 @@ function _load(env) {
   return { file, doc };
 }
 
-/** 从 env 块反推已配置的 provider 集合(凡有 <P>_API_KEY 或 <P>_BASE_URL 即算)。 */
+/** 从 env 块反推已配置的 provider 集合(凡有 <P>_API_KEY / <P>_AUTH_TOKEN / <P>_BASE_URL 即算)。 */
 function _providersFromEnv(envBlock) {
   const ids = new Set();
   for (const k of Object.keys(envBlock)) {
-    const m = k.match(/^([A-Z0-9]+)_(?:API_KEY|BASE_URL)$/);
+    const m = k.match(/^([A-Z0-9]+)_(?:API_KEY|AUTH_TOKEN|BASE_URL)$/);
     if (m) {
       ids.add(m[1].toLowerCase());
     }
@@ -54,14 +54,20 @@ function _providersFromEnv(envBlock) {
   return [...ids];
 }
 
+/** 凭据:优先 AUTH_TOKEN(中继 Bearer),否则 API_KEY(官方 x-api-key)。 */
+function _credential(envBlock, id) {
+  const tokenKey = S.envKeyName(id, 'AUTH_TOKEN');
+  const apiKeyKey = S.envKeyName(id);
+  return envBlock[tokenKey] || envBlock[apiKeyKey] || '';
+}
+
 function _providerView(id, envBlock) {
-  const keyName = S.envKeyName(id);
   const urlName = S.envKeyName(id, 'BASE_URL');
   return {
     id,
     models: envBlock.ANTHROPIC_MODEL ? [envBlock.ANTHROPIC_MODEL] : [],
     endpoint: envBlock[urlName] || '',
-    hasKey: Boolean(envBlock[keyName]),
+    hasKey: Boolean(_credential(envBlock, id)),
   };
 }
 
@@ -182,13 +188,12 @@ function remove({ target, confirmed, removeKeys } = {}, env = process.env) {
  * 以 ANTHROPIC_MODEL 为当前模型。
  */
 function _usableView(id, envBlock) {
-  const keyName = S.envKeyName(id);
   const urlName = S.envKeyName(id, 'BASE_URL');
   const models = envBlock.ANTHROPIC_MODEL ? [envBlock.ANTHROPIC_MODEL] : [];
   return {
     id,
     endpoint: envBlock[urlName] || '',
-    apiKey: envBlock[keyName] || '',
+    apiKey: _credential(envBlock, id) || '',
     models,
     defaultModel: models[0] || '',
   };
