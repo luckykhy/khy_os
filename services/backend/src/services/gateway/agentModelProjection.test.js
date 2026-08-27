@@ -65,7 +65,8 @@ test('discover: projects opencode models tagged (opencode) and callable', (t) =>
   const oc = res.models.filter((m) => m.source === 'opencode');
   assert.strictEqual(oc.length, 2);
   const names = oc.map((m) => m.name).sort();
-  assert.deepStrictEqual(names, ['glm-4.6(opencode)', 'glm-4.6v-flash(opencode)']);
+  // 显示名 = `<模型ID>(<来源>·<提供商>)`
+  assert.deepStrictEqual(names, ['glm-4.6(opencode·zhipu)', 'glm-4.6v-flash(opencode·zhipu)']);
   for (const m of oc) {
     assert.strictEqual(m.adapter, 'opencode');
     assert.strictEqual(m.protocol, 'openai');
@@ -85,7 +86,7 @@ test('discover: projects claude-code model tagged (claudecode) from AUTH_TOKEN',
 
   const cc = res.models.filter((m) => m.source === 'claudecode');
   assert.strictEqual(cc.length, 1);
-  assert.strictEqual(cc[0].name, 'step-3.7-flash(claudecode)');
+  assert.strictEqual(cc[0].name, 'step-3.7-flash(claudecode·anthropic)');
   assert.strictEqual(cc[0].adapter, 'claude');
   assert.strictEqual(cc[0].protocol, 'anthropic');
   assert.strictEqual(cc[0].endpoint, 'https://api.stepfun.com/step_plan');
