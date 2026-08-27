@@ -109,13 +109,13 @@ function main() {
     'packaging/modules/modules.json',
   ];
   const mainVersions = new Set(mainGroup.map(f => versions[f]));
-  for (const f of mainGroup) {
-    console.log(`${f}: ${versions[f]}`);
-  }
   if (mainVersions.size !== 1) {
+    for (const f of mainGroup) {
+      console.log(`${f}: ${versions[f]}`);
+    }
     throw new Error('Version mismatch detected in main khy-os package group');
   }
-  console.log(`Main package version sync check passed: ${[...mainVersions][0]}`);
+  console.log(`Main package version: ${[...mainVersions][0]}`);
 
   // ── Group 2: ai-backend ecosystem ──────────────────────────────────────────
   const aiGroup = [
@@ -123,13 +123,13 @@ function main() {
     'platform/packages/shared/package.json',
   ];
   const aiVersions = new Set(aiGroup.map(f => versions[f]));
-  for (const f of aiGroup) {
-    console.log(`${f}: ${versions[f]}`);
-  }
   if (aiVersions.size !== 1) {
+    for (const f of aiGroup) {
+      console.log(`${f}: ${versions[f]}`);
+    }
     throw new Error('Version mismatch detected in ai-backend ecosystem group');
   }
-  console.log(`AI-backend ecosystem version sync check passed: ${[...aiVersions][0]}`);
+  console.log(`AI-backend ecosystem version: ${[...aiVersions][0]}`);
 
   // ── Group 3: browser UI shared package ───────────────────────────────────────
   const uiGroup = [
@@ -138,13 +138,13 @@ function main() {
     'software/khyquant/frontend/package.json',
   ];
   const uiVersions = new Set(uiGroup.map(f => versions[f]));
-  for (const f of uiGroup) {
-    console.log(`${f}: ${versions[f]}`);
-  }
   if (uiVersions.size !== 1) {
+    for (const f of uiGroup) {
+      console.log(`${f}: ${versions[f]}`);
+    }
     throw new Error('Version mismatch detected in browser UI shared package group');
   }
-  console.log(`Browser UI shared package version sync check passed: ${[...uiVersions][0]}`);
+  console.log(`Browser UI shared package version: ${[...uiVersions][0]}`);
 
   console.log(`\n${initFile}: <dynamic from pyproject.toml>`);
   console.log('All version sync checks passed.');

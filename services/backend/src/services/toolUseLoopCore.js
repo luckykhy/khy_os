@@ -311,6 +311,31 @@ function _fileContentHash(filePath) {
   }
 }
 
+// ── 收尾判定：单一权威信号（替代脆弱散文 hasConclusion 正则）────────────────
+// taskClosure.isFinalDelivery 是「回复是否终态交付」的单一真源（含否定/未来时遮蔽），
+// 修复「已完成第一步，接下来我将重构」被误判为整个任务完成 → 提前收尾。加载失败 fail-soft
+// 回退到旧散文正则（与旧行为逐字节一致），绝不因本模块缺失而改变行为。
+const _taskClosure = (() => {
+  try {
+    return require('./taskClosure');
+  } catch {
+    return null;
+  }
+})();
+function _looksConcluded(reply) {
+  const text = String(reply == null ? '' : reply);
+  if (_taskClosure) {
+    try {
+      return _taskClosure.isFinalDelivery(text);
+    } catch {
+      /* fall through to legacy regex */
+    }
+  }
+  return /(完成|成功|已整理|已创建|已修改|无需|结果|总结|done|completed|summary|created|modified|finished|result)/i.test(
+    text
+  );
+}
+
 // ── Constants ──────────────────────────────────────────────────────
 
 const MAX_ITERATIONS = 100;
@@ -6849,10 +6874,7 @@ async function runToolUseLoop(userMessage, options = {}) {
           !_softRedriveSuppressed
         ) {
           const replyClean = strippedReply.replace(/\s/g, '');
-          const hasConclusion =
-            /(完成|成功|已整理|已创建|已修改|无需|结果|总结|done|completed|summary|created|modified|finished|result)/i.test(
-              strippedReply
-            );
+          const hasConclusion = _looksConcluded(strippedReply);
           if (replyClean.length < 200 && !hasConclusion) {
             noToolNudgeUsed = true;
             _loopBreadcrumb('nudge-continue', {
@@ -7303,10 +7325,7 @@ async function runToolUseLoop(userMessage, options = {}) {
           }
           // 回复太短且缺少结论性内容 — 要求 AI 补充交付说明
           const replyClean = strippedReply.replace(/\s/g, '');
-          const hasConclusion =
-            /(完成|成功|已整理|已创建|已修改|已启动|已打开|已执行|已运行|已验证|已发送|已部署|已安装|无需|不需要|没有.*需要|已经.*整理|看起来.*整洁|桌面.*干净|结果|总结|summary|done|completed|launched|opened|executed|verified|started|no.*needed|already.*clean|organized)/i.test(
-              strippedReply
-            );
+          const hasConclusion = _looksConcluded(strippedReply);
           // 结果守卫(A) 有界补一轮：长前言式承诺（>=80，躲过 <80 条件）也触发同一次性 nudge，
           // 复用 _deliveryConclusionNudgeUsed → 天然有界、绝不死循环。门控关 → _rgForwardPromise=false
           // → 条件退回纯 `< 80` 逐字节回退。
