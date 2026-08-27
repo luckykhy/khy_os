@@ -112,7 +112,9 @@ function _projectSource(entry, env) {
         model: callableModel,
         adapter: entry.adapter,
         source: entry.source,
-        name: `${model}(${entry.label})`,
+        // 显示名 = `<模型ID>(<来源>·<提供商>)`,如 glm-5.3(opencode·opencode-go) ·
+        // agnes-2.5-flash(opencode·agnes) · step-3.7-flash(claudecode·anthropic)。
+        name: `${model}(${entry.label}·${id})`,
         provider: id,
         endpoint,
         hasKey,
