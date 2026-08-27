@@ -149,14 +149,14 @@ function readText(file) {
   }
 }
 
-/** 读 JSON;不存在返 null,存在但解析失败返 { _parseError }。 */
+/** 读 JSON;不存在返 null,存在但解析失败返 { _parseError }。容忍 UTF-8 BOM。 */
 function readJson(file) {
   const text = readText(file);
   if (text === null) {
     return null;
   }
   try {
-    return JSON.parse(text);
+    return JSON.parse(text.replace(/^\uFEFF/, ''));
   } catch (e) {
     return { _parseError: (e && e.message) || String(e) };
   }

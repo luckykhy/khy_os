@@ -97,14 +97,19 @@ function _projectSource(entry, env) {
     const defaultModel = String((p && p.defaultModel) || list[0] || '').trim();
     const endpoint = String((p && p.endpoint) || '').trim();
     const hasKey = Boolean(p && (p.apiKey || p.hasKey));
+    const isOpenCode = entry.app === 'opencode';
     for (const raw of list) {
       const model = String(raw || '').trim();
       if (!model) {
         continue;
       }
+      // 可调用模型 id:
+      //   · opencode  → `provider/model`(opencode run --model 只认该形式;模型名可含斜杠,如 openrouter/z-ai/glm-5.2:free)
+      //   · claude    → 模型名(claudeAdapter 直接以 options.model 使用)
+      const callableModel = isOpenCode ? `${id}/${model}` : model;
       models.push({
         id: model,
-        model,
+        model: callableModel,
         adapter: entry.adapter,
         source: entry.source,
         name: `${model}(${entry.label})`,
@@ -112,7 +117,7 @@ function _projectSource(entry, env) {
         endpoint,
         hasKey,
         isDefault: Boolean(defaultModel && defaultModel === model),
-        protocol: entry.app === 'opencode' ? 'openai' : 'anthropic',
+        protocol: isOpenCode ? 'openai' : 'anthropic',
       });
     }
   }
@@ -188,4 +193,37 @@ function ensureClaudeCodeEnv(env = process.env) {
   }
 }
 
-module.exports = { isEnabled, SOURCES, discover, bySource, ensureClaudeCodeEnv };
+/**
+ * 会话内采纳 opencode 的便携配置定位:若 env 尚未设置 OPENCODE_CONFIG_DIR/OPENCODE_DB,
+ * 但从便携布局可解析到 opencode.json,则注入其**目录**与数据库路径。这样 khy 指挥
+ * `opencode run` 时,opencode 读到的正是用户那套便携配置(复用配置文件,避免重复配置)。
+ *
+ * 只做**缺失才补**、绝不覆盖已有值、绝不抛。
+ * @param {Record<string,string>} env 通常为 process.env
+ * @returns {{ adopted:boolean, count:number, reason?:string }}
+ */
+function ensureOpenCodeEnv(env = process.env) {
+  const e = env || process.env;
+  try {
+    const oc = require('../externalApps/opencodeAdapter');
+    const cfgPath = oc.configPath(e);
+    if (!cfgPath) {
+      return { adopted: false, count: 0, reason: 'no-config-path' };
+    }
+    const configDir = require('path').dirname(cfgPath);
+    let count = 0;
+    if (!e.OPENCODE_CONFIG_DIR) {
+      e.OPENCODE_CONFIG_DIR = configDir;
+      count += 1;
+    }
+    if (!e.OPENCODE_DB) {
+      e.OPENCODE_DB = require('path').join(configDir, 'opencode.db');
+      count += 1;
+    }
+    return { adopted: count > 0, count };
+  } catch (err) {
+    return { adopted: false, count: 0, reason: String((err && err.message) || err) };
+  }
+}
+
+module.exports = { isEnabled, SOURCES, discover, bySource, ensureClaudeCodeEnv, ensureOpenCodeEnv };
