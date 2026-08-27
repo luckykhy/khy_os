@@ -2658,6 +2658,12 @@ const FLAGS = {
   // 关 → discover/import/unimport 整体 no-op(逐字节回退:不注册任何外部 app 模型)。
   KHY_EXTERNAL_APP_IMPORT: { mode: 'default-on', off: 'CANON', default: true },
 
+  // ── 反向发现外部智能体的模型并投影成 khy 可调用模型(agentModelProjection)──────────────
+  // 读 opencode.json / ~/.claude/settings.json 里已配置的模型,投影为 `<模型>(opencode)`
+  // /`<模型>(claudecode)` 并指向对应 gateway 适配器(复用配置文件,避免重复配置)。
+  // 关 → discover/bySource 返回 enabled:false,模型选择器不投影任何外部智能体模型(逐字节回退)。
+  KHY_AGENT_MODEL_PROJECTION: { mode: 'default-on', off: 'CANON', default: true },
+
   // ── 键盘快捷键对齐 Claude Code:反斜杠续行(backslashContinuation)────────────────────
   // Ink TUI 输入框里,Enter 前紧邻一个未转义的 `\` 视为续行:删掉反斜杠并插入换行而非提交
   // (对齐 CC 的通用换行键位)。纯叶子判定尾部反斜杠奇偶(`\\`+Enter 仍字面提交)。关 →
