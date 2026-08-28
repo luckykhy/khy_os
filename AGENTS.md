@@ -89,6 +89,19 @@ User → khy command → Python cli.py → Node.js services/backend/bin/khy.js
 
 [`[DESIGN-ARCH-070] 治理总纲与可执行规则`](docs/03_DESIGN_设计/[DESIGN-ARCH-070]%20治理总纲与可执行规则.md) 将既有规则收拢为 MOD、MEM、TOOL、ACP、API 五个可检索板块，不替代各自单一真源。新增目录、任务入口、工具/扩展或通信/API 契约前，先定位对应条款和它引用的既有规范。`node scripts/ci/check-gov-rules.js` 校验总纲入口、检查脚本目标及 PR gate 接线；层级和工程红线仍分别由既有守卫执行。
 
+### 通道选择判定（五通道决策矩阵）
+
+> 单一真源：[`[DESIGN-ARCH-071] 通道选择决策矩阵`](docs/03_DESIGN_设计/[DESIGN-ARCH-071]%20通道选择决策矩阵.md)。
+> 对 khy-os 做任何「一次读取/一次操作」前，五问自上而下，**首个命中即停**：
+
+1. 信息只在第三方 GUI 画面 / 需视觉验证？→ **看屏幕**（CH-5：desktopControl 总闸 + safetyGate 审批，最后手段）
+2. 要改变系统状态？→ **禁止直写状态文件**，走服务直调/CLI/API 正门（校验、审计、FSM 在门内）
+3. 只读 + schema 稳定 + 文件即真相？→ **直接读状态文件**（CH-1，仅只读豁免）
+4. 与 backend 同一 Node 进程？→ **服务层直调**（CH-2，require 服务模块，fail-soft 契约）
+5. 否则按调用方分流：人/脚本/CI/跨语言 → **CLI**（CH-3）；前端/远程/并发/流式 → **Web API**（CH-4，端点经 serviceDefaults/env/运行时发现，不可达降级 CLI）
+
+原则：结构化优先、只读才直读、写必走正门、视觉只兜底。
+
 ---
 
 ## 如何新增一个 CLI 命令（3 步）
