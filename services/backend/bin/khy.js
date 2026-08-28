@@ -280,8 +280,25 @@ Promise.resolve().then(() => _maybePrintInstallLocationNotice()).catch(() => {})
 
 // Windows 平台强制切换到 UTF-8 编码，防止中文乱码
 if (process.platform === 'win32') {
+  // Spawn System32\chcp.com directly instead of going through `cmd /c chcp`
+  // (skips one cmd.exe process creation: ~80ms vs ~115ms measured on the
+  // critical startup path). Path comes from the SystemRoot env (no literal
+  // drive/dir); on any failure fall back to the legacy cmd form.
   // windowsHide:true 让这第一个 chcp 派生也不闪黑框(patch 已覆盖,这里显式再保一层)。
-  try { require('child_process').execFileSync('cmd', ['/c', 'chcp', '65001'], { stdio: 'pipe', windowsHide: true }); } catch { /* ignore */ }
+  try {
+    const _chcpDirect = process.env.SystemRoot
+      ? path.join(process.env.SystemRoot, 'System32', 'chcp.com')
+      : null;
+    if (_chcpDirect) {
+      try {
+        require('child_process').execFileSync(_chcpDirect, ['65001'], { stdio: 'pipe', windowsHide: true });
+      } catch {
+        require('child_process').execFileSync('cmd', ['/c', 'chcp', '65001'], { stdio: 'pipe', windowsHide: true });
+      }
+    } else {
+      require('child_process').execFileSync('cmd', ['/c', 'chcp', '65001'], { stdio: 'pipe', windowsHide: true });
+    }
+  } catch { /* ignore */ }
 }
 
 /**

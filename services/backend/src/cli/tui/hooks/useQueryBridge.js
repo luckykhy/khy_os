@@ -774,6 +774,16 @@ function useQueryBridge(hostHandlers = {}) {
     // 'core' runs only the heavy submit-path requires; any other tier keeps the
     // FULL stage list in its original order (default behavior unchanged).
     const activeStages = _prewarmTier === 'core' ? stages.filter((s) => s[2] === 'core') : stages;
+    // Grace period before the first non-core (enhanced/diagnostic) stage: the
+    // redis ~0.6s cold require, per-tool isEnabled spawns and the session-
+    // forest scan otherwise land right under the user's first keystrokes after
+    // the input box mounts. Core stages (heaviest submit-path win) still start
+    // immediately. 0 restores the legacy immediate chaining.
+    const _enhancedDelayMs = Math.max(
+      0,
+      parseInt(process.env.KHY_TUI_PREWARM_ENHANCED_DELAY_MS ?? '1200', 10) || 0
+    );
+    const _firstNonCoreIdx = activeStages.findIndex((s) => s[2] !== 'core');
     let cancelled = false;
     let timer = null;
     const runStage = (i) => {
@@ -791,9 +801,12 @@ function useQueryBridge(hostHandlers = {}) {
           `[TUI-DIAG] ${Date.now()} stage=prewarm_${activeStages[i][0]} ms=${Date.now() - t0}\n`
         );
       }
-      timer = setTimeout(() => runStage(i + 1), 0);
+      const _next = i + 1;
+      const _nextDelay = (_enhancedDelayMs > 0 && _next === _firstNonCoreIdx) ? _enhancedDelayMs : 0;
+      timer = setTimeout(() => runStage(_next), _nextDelay);
     };
-    timer = setTimeout(() => runStage(0), 0);
+    const _startDelay = (_enhancedDelayMs > 0 && _firstNonCoreIdx === 0) ? _enhancedDelayMs : 0;
+    timer = setTimeout(() => runStage(0), _startDelay);
     return () => {
       cancelled = true;
       clearTimeout(timer);

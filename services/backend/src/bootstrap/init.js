@@ -19,6 +19,17 @@ const { checkpoint } = require('./startupProfiler');
 const state = require('./state');
 
 let _promise = null;
+let _dbHealthInitPromise = null;
+
+/**
+ * Get the in-flight deferred dbHealthService.init() promise (or null once it
+ * settled / when deferral is disabled). Lets shutdown paths await a still
+ * running background integrity check instead of racing it.
+ * @returns {Promise<void>|null}
+ */
+function getDbHealthInitPromise() {
+  return _dbHealthInitPromise;
+}
 
 /**
  * Run all one-time initialization steps.
@@ -142,21 +153,40 @@ async function _doInit(options) {
     })(),
   ]);
 
-  // 2. Database health service initialization (sequential, after parallel init)
+  // 2. Database health service initialization.
+  //    Deferred by default (KHY_DB_HEALTH_DEFER=0 restores the legacy blocking
+  //    await): the startup integrity check is pure defense — nothing in the
+  //    boot path consumes its result — yet it serially opens and integrity-
+  //    checks every known SQLite file (~100ms warm, growing with DB count and
+  //    size) before the REPL input box is ready. Run it on the background tick
+  //    instead and export the in-flight promise for shutdown/diagnostics.
   checkpoint('init:dbHealth:start');
+  const _deferDbHealth = String(process.env.KHY_DB_HEALTH_DEFER ?? '1').trim() !== '0';
   try {
     const dbHealthService = require('../services/dbHealthService');
-    await dbHealthService.init({ silentConsole: options.machineReadable === true });
-  } catch (err) {
-    // Non-fatal: log and continue. Database health is defensive — if init fails,
-    // the databases might still work, just without auto-healing.
-    try {
-      console.warn(`  ⚠ Database health service init failed: ${err.message}`);
-    } catch {
-      /* ignore */
+    const _initDbHealth = async () => {
+      try {
+        await dbHealthService.init({ silentConsole: options.machineReadable === true });
+      } catch (err) {
+        // Non-fatal: log and continue. Database health is defensive — if init fails,
+        // the databases might still work, just without auto-healing.
+        try {
+          console.warn(`  ⚠ Database health service init failed: ${err.message}`);
+        } catch {
+          /* ignore */
+        }
+      } finally {
+        checkpoint('init:dbHealth:done');
+      }
+    };
+    if (_deferDbHealth) {
+      _dbHealthInitPromise = Promise.resolve().then(_initDbHealth);
+    } else {
+      await _initDbHealth();
     }
+  } catch {
+    /* dbHealthService not available — it is defensive only */
   }
-  checkpoint('init:dbHealth:done');
 
   // 8. Mark as initialized
   state.set('initialized', true);
@@ -171,4 +201,4 @@ function isComplete() {
   return state.get('initialized');
 }
 
-module.exports = { init, isComplete };
+module.exports = { init, isComplete, getDbHealthInitPromise };
