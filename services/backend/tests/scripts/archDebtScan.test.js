@@ -241,6 +241,94 @@ describe('R4 抽取漂移 scanDriftR4', () => {
   });
 });
 
+// ── R2b 巨石增长 scanGodGrowth（T-016 可维护性护栏）───────────────────────────
+describe('R2b 巨石增长 scanGodGrowth', () => {
+  test('基线巨石变长 → 违规并给出 delta', () => {
+    const result = { godFiles: [{ file: 'src/cli/big.js', loc: 13500 }] };
+    const baseline = { godFiles: [{ file: 'src/cli/big.js', loc: 13421 }] };
+    const v = A.scanGodGrowth(result, baseline);
+    assert.strictEqual(v.length, 1);
+    assert.strictEqual(v[0].file, 'src/cli/big.js');
+    assert.strictEqual(v[0].delta, 79);
+    assert.strictEqual(v[0].baselineLoc, 13421);
+    assert.strictEqual(v[0].rule, 'R2b-god-growth');
+  });
+
+  test('缩短或持平 → 不违规（存量债只许减不许增）', () => {
+    const result = { godFiles: [{ file: 'src/cli/big.js', loc: 13000 }] };
+    const baseline = { godFiles: [{ file: 'src/cli/big.js', loc: 13421 }] };
+    assert.strictEqual(A.scanGodGrowth(result, baseline).length, 0);
+  });
+
+  test('基线条目缺 loc（旧格式）→ 诚实跳过，绝不猜', () => {
+    const result = { godFiles: [{ file: 'src/cli/big.js', loc: 99999 }] };
+    const baseline = { godFiles: [{ file: 'src/cli/big.js' }] };
+    assert.strictEqual(A.scanGodGrowth(result, baseline).length, 0);
+  });
+
+  test('基线没有的新巨石 → 归 R2 管，不算 R2b 增长', () => {
+    const result = { godFiles: [{ file: 'src/cli/newGiant.js', loc: 3000 }] };
+    const baseline = { godFiles: [{ file: 'src/cli/big.js', loc: 13421 }] };
+    assert.strictEqual(A.scanGodGrowth(result, baseline).length, 0);
+  });
+
+  test('按超出量降序', () => {
+    const result = {
+      godFiles: [
+        { file: 'src/a.js', loc: 2600 },
+        { file: 'src/b.js', loc: 9500 },
+      ],
+    };
+    const baseline = {
+      godFiles: [
+        { file: 'src/a.js', loc: 2500 },
+        { file: 'src/b.js', loc: 9000 },
+      ],
+    };
+    const v = A.scanGodGrowth(result, baseline);
+    assert.strictEqual(v.length, 2);
+    assert.ok(v[0].delta >= v[1].delta);
+  });
+
+  test('真实代码库：R2b 结果结构合法（每项 delta>0 且带完整字段）', () => {
+    const v = A.scanGodGrowth(A.scanAll(), A.loadBaseline());
+    for (const g of v) {
+      assert.ok(g.file && Number.isInteger(g.loc) && Number.isInteger(g.baselineLoc));
+      assert.ok(g.delta > 0);
+      assert.strictEqual(g.rule, 'R2b-god-growth');
+    }
+  });
+});
+
+// ── --changed 体积分级 classifyChangedLoc（T-016 可维护性护栏）────────────────
+describe('classifyChangedLoc 体积分级', () => {
+  test('阈值边界：>800 error、(500,800] warning、≤500 ok', () => {
+    assert.strictEqual(A.classifyChangedLoc(801), 'error');
+    assert.strictEqual(A.classifyChangedLoc(800), 'warning');
+    assert.strictEqual(A.classifyChangedLoc(501), 'warning');
+    assert.strictEqual(A.classifyChangedLoc(500), 'ok');
+    assert.strictEqual(A.classifyChangedLoc(10), 'ok');
+  });
+
+  test('基线巨石豁免：再长也不在本分级拦（由 R2b 管增长）', () => {
+    assert.strictEqual(A.classifyChangedLoc(13421, { exempt: true }), 'exempt');
+    assert.strictEqual(A.classifyChangedLoc(100, { exempt: true }), 'exempt');
+  });
+
+  test('env 可调阈值（KHY_ARCH_CHANGED_FILE_LOC）', () => {
+    process.env.KHY_ARCH_CHANGED_FILE_LOC = '100';
+    delete require.cache[require.resolve('../../scripts/archDebtScan')];
+    const A2 = require('../../scripts/archDebtScan');
+    assert.strictEqual(A2.classifyChangedLoc(101), 'error');
+    assert.strictEqual(A2.classifyChangedLoc(100), 'ok');
+    delete process.env.KHY_ARCH_CHANGED_FILE_LOC;
+    delete require.cache[require.resolve('../../scripts/archDebtScan')];
+    const A3 = require('../../scripts/archDebtScan');
+    assert.strictEqual(A3.classifyChangedLoc(800), 'warning');
+    assert.strictEqual(A3.classifyChangedLoc(500), 'ok');
+  });
+});
+
 // ── 巨型环切点 analyzeGiantScc（DESIGN-ARCH-021）─────────────────────────────
 describe('巨型环切点 analyzeGiantScc', () => {
   test('环内 services→cli 反向边的破环杠杆与贪心顺序', () => {

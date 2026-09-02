@@ -79,6 +79,13 @@ jobs:
       - name: Check leaf contracts
         run: node scripts/ci/check-leaf-contract.js --changed
 
+      # 架构债棘轮（R1 分层倒置 / R2 新巨石 / R2b 存量巨石增长 / R3 循环依赖）。
+      # 全量扫描（不接受 --changed）：基线是仓库全局属性，只看改动集看不见
+      # 「基线巨石又长了一截」。零依赖、离线可跑。基线重锚：
+      # node services/backend/scripts/archDebtScan.js --update-baseline（承认现状，diff 可审）。
+      - name: Check architecture debt (R1/R2/R2b/R3 vs baseline)
+        run: node services/backend/scripts/archDebtScan.js
+
       # 仓库层级/结构守卫（真源 docs/03_DESIGN_设计/[DESIGN-ARCH-068] 仓库层级板块规范）。
       # 刻意**不**传 --changed：层级是仓库的全局属性，只看改动集会漏掉
       # 「别人搬走了索引文件」「新顶层目录未登记」这类破坏，脚本本身也不接受该参数。

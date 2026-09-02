@@ -24,6 +24,8 @@
     "quality:gate": "npm run check:quality-gates",
     "quality:pr": "node scripts/quality-gate/index.js --mode pr",
     "check:leaf-contract": "node scripts/ci/check-leaf-contract.js --changed",
+    "check:arch-debt": "node services/backend/scripts/archDebtScan.js",
+    "check:arch-debt:changed": "node services/backend/scripts/archDebtScan.js --changed",
     "check:node-syntax": "node scripts/ci/check-node-syntax.js",
     "check:python-syntax": "node scripts/ci/run-python.js scripts/ci/check-python-syntax.py",
     "check:duplication": "node scripts/ci/check-duplication.js",
