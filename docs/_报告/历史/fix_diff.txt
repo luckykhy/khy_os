@@ -1,0 +1,44 @@
+diff --git a/services/backend/src/cli/tui/ink-components/App.js b/services/backend/src/cli/tui/ink-components/App.js
+index d061773..19b9cc5 100644
+--- a/services/backend/src/cli/tui/ink-components/App.js
++++ b/services/backend/src/cli/tui/ink-components/App.js
+@@ -4585,6 +4585,26 @@ function App({ options = {} }) {
+     }
+     return false;
+   })();
++  // 启动横幅「画一次即冻结」:首帧把整个 React 元素快照进 ref,之后所有 re-render 都
++  // 吐回**同一引用**。Ink 看到子元素 identity 不变就不会 emit,live 区的兄弟面板
++  // (footer / task list / prompt)再怎么落值、横幅都不再被重发——根除 win32 上
++  // fullscreen clearTerminal 分支触发的「banner 重复六份」症状。快照在横幅应当退场
++  // (`query.messages.length > 0` 时 _showStartupBanner=false)后清空,让下次冷启动可重
++  // 新生成元素。Ink fullscreen 分支的成片复制副作用详见 scrollbackPreserve.js 头注。
++  const _bannerElementRef = React.useRef(null);
++  if (_bannerElementRef.current === null) {
++    if (_showStartupBanner) {
++      _bannerElementRef.current = h(MemoWelcomeBanner, {
++        key: 'live-banner',
++        ...bannerProps,
++        showArt: _bannerShowArt,
++      });
++    }
++  } else if (!_showStartupBanner) {
++    // Banner 已退场(首条消息已落),下次冷启动可重新生成元素。
++    _bannerElementRef.current = null;
++  }
++  const _liveBannerElement = _bannerElementRef.current;
+   // Rows the banner renders above its version line — SSOT exported by
+   // WelcomeBanner (bannerRowsBeforeVersion) so the sidebar's top edge lands
+   // on the SAME terminal row as `── khy OS vX.X.X ──` without magic numbers.
+@@ -4842,9 +4862,9 @@ function App({ options = {} }) {
+               { flexDirection: 'column', flexGrow: 1 },
+               // Startup-only banner (task #23): lives here so the version line tops
+               // the left column exactly where the sidebar tops the right column.
+-              _showStartupBanner
+-                ? h(MemoWelcomeBanner, { key: 'live-banner', ...bannerProps, showArt: _bannerShowArt })
+-                : null,
++              // 元素身份由 _bannerElementRef 锁定(见上),Ink 看到同一引用就跳过 emit →
++              // win32 fullscreen clearTerminal 分支不再把整份横幅反复刷进 scrollback。
++              _liveBannerElement,
+               // Removable Ctrl+O detail for the latest committed <Static> turn.
+               // MessageBlock already force-expands role:'expansion'; keeping this
+               // outside Static makes the second keypress a true collapse.

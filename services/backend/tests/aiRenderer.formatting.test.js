@@ -63,11 +63,16 @@ describe('aiRenderer markdown normalization', () => {
     expect(plain).toContain('1. 第一条新闻说明');
   });
 
-  test('drops stray m prefix before long separator lines', () => {
+  test('drops stray m prefix and the entire horizontal-rule line', () => {
+    // Models occasionally emit a stray 'm' followed by a long dash sequence
+    // that looks like a separator. Markdown horizontal rules now collapse to
+    // a blank line (see markdownRenderer.js horizontal-rule replacement on
+    // 2026-08-31), so we only assert that the leftover is empty and free of
+    // the leading 'm'.
     const rendered = renderMarkdownLite('m----------------------------');
     const plain = stripAnsi(rendered).trim();
     expect(plain.startsWith('m')).toBe(false);
-    expect(plain.length).toBeGreaterThanOrEqual(10);
+    expect(plain).toBe('');
   });
 
   test('deduplicates repeated leading sentence once', () => {

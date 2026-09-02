@@ -415,8 +415,11 @@ function install(opts = {}) {
     }
 
     // 6. Unknown — crash (server) or log-and-continue (interactive TUI)
-    logger.error(`[CrashRecovery] Unhandled rejection: ${formatUncaughtError(reason)}`);
-    _logRemediation(logger, reason, '未处理的 Promise 拒绝');
+    // 收敛变更：以前这里打 logger.error 三行；现在先走一次 reportKhyError 拿
+    // 结构化面板，再补一行 [CrashRecovery] 头部 banner 表明这是未捕获的
+    // Promise 拒绝（不是普通 handler 错误）。面板与单行 error 永远不会同时出现，
+    // 因为 reportKhyError 在 interactive 模式下走 fatal 分支只补一行横幅。
+    _reportAndLog('未处理的 Promise 拒绝', reason, logger);
     if (!exitOnUnknown) {
       return;
     }
@@ -456,8 +459,7 @@ function install(opts = {}) {
     }
 
     // Unknown — crash (server) or log-and-continue (interactive TUI)
-    logger.error(`[CrashRecovery] Uncaught exception: ${formatUncaughtError(error)}`);
-    _logRemediation(logger, error, '未捕获异常');
+    _reportAndLog('未捕获异常', error, logger);
     if (!exitOnUnknown) {
       return;
     }
@@ -466,6 +468,25 @@ function install(opts = {}) {
     } catch {}
     process.exit(1);
   });
+}
+
+/**
+ * 把错误交给 reportKhyError 渲染；同时给 winston/console 留一行 banner，
+ * 这样运维 grep 「[CrashRecovery]」 仍能定位所有未捕获异常，不会因为
+ * 走结构化面板而失去日志可检索性。
+ *
+ * 收敛变更：以前 logger.error(\`[CrashRecovery] Unhandled rejection: ${stack}\`)
+ * 会重复打印一遍 stack；现在只打一行 banner，详细渲染交由 reportKhyError。
+ */
+function _reportAndLog(label, err, logger) {
+  try {
+    // 延迟 require：避免 install() 被错误地调用时产生循环依赖。
+    const { reportKhyError } = require('../cli/reportKhyError');
+    reportKhyError(err, { action: label, target: '进程级', progress: '未捕获' });
+  } catch (renderErr) {
+    // 兜底：reportKhyError 自己崩了也要打印原 err，绝不丢错。
+    logger.error(`[CrashRecovery] ${label}: ${formatUncaughtError(err)}`);
+  }
 }
 
 /**

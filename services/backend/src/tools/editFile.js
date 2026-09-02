@@ -23,7 +23,10 @@ module.exports = defineTool({
   description:
     'Replace an exact substring in an existing file (precise in-place edit). ' +
     'Use it to modify existing files without touching unrelated content; use writeFile only for new files or full rewrites. ' +
-    'Constraints: old_string must match the file text EXACTLY (including whitespace) and be unique unless replace_all is true; the call fails otherwise — add more surrounding context to disambiguate.',
+    'Constraints: old_string must match the file text EXACTLY (including whitespace) and be unique unless replace_all is true; the call fails otherwise — add more surrounding context to disambiguate. ' +
+    // 「先红后绿」diff 显示规则(对齐 FileEditTool.prompt() 与 cli/diffRenderer.js):
+    // 空/新文件 → 只 +绿;修改 → 先全部 -红、后全部 +绿,不词级配对;文字总结按同序重述。
+    'When describing the edit, render the diff in this exact order: empty/new file → green `+` lines only; existing file edited → red `-` lines FIRST (all of them), then green `+` lines (all of them), never paired side-by-side, no word-level highlighting.',
   category: 'filesystem',
   risk: 'medium',
   isReadOnly: false,

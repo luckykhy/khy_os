@@ -4,9 +4,14 @@
 from __future__ import annotations
 
 import difflib
+import sys
 from pathlib import Path
 
-from pip_packaging_rules import render_manifest
+#PYTHONSAFEPATH (or `python -P`) omits the script directory from sys.path,
+# breaking the sibling import below. Make the import location-independent.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from pip_packaging_rules import render_manifest  # noqa: E402
 
 
 def main() -> int:

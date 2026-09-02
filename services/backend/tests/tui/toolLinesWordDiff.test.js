@@ -23,16 +23,16 @@ function joinSegs(segs) {
   return segs.map((s) => s.text).join('');
 }
 
-describe('tuiWordDiffEnabled (gate, default on)', () => {
-  test('default (unset) → on', () => {
-    expect(tuiWordDiffEnabled({})).toBe(true);
+describe('tuiWordDiffEnabled (gate, default OFF under 「先红后绿」)', () => {
+  // 「先红后绿」语义下不做 del/add 词级配对/高亮,所以默认 off;保留门控以备紧急回滚。
+  test('default (unset) → off', () => {
+    expect(tuiWordDiffEnabled({})).toBe(false);
   });
   test.each(['0', 'false', 'off', 'no', 'FALSE', 'Off'])('=%s → off', (v) => {
     expect(tuiWordDiffEnabled({ KHY_TUI_WORD_DIFF: v })).toBe(false);
   });
-  test('any other value → on', () => {
-    expect(tuiWordDiffEnabled({ KHY_TUI_WORD_DIFF: '1' })).toBe(true);
-    expect(tuiWordDiffEnabled({ KHY_TUI_WORD_DIFF: 'yes' })).toBe(true);
+  test.each(['1', 'true', 'yes', 'on', 'TRUE', 'On'])('=%s → on (legacy word-diff 回滚)', (v) => {
+    expect(tuiWordDiffEnabled({ KHY_TUI_WORD_DIFF: v })).toBe(true);
   });
 });
 

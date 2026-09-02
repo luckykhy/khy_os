@@ -22,6 +22,17 @@ async function startInkApp(options = {}) {
     crashRecovery.install({ logger: console, exitOnUnknown: false });
   } catch { /* crashRecovery unavailable — degrade gracefully */ }
 
+  // Session hang watchdog (KHY_SESSION_WATCHDOG, default on): async hangs and
+  // sync stalls on the interactive surface become observable (honest log +
+  // diagnostics + onHang hook). It never kills — governance Rule 3. Fail-soft
+  // by design and idempotent per process (safe across TUI retry/fallback).
+  try {
+    require('../../services/sessionWatchdog').installSessionWatchdog({
+      env: process.env,
+      logger: console,
+    });
+  } catch { /* watchdog optional — never blocks TUI startup */ }
+
   // Ensure JSX requires work and the ink namespace is resolved before mount.
   inkRuntime.registerJsx();
   const { render } = await inkRuntime.loadInk();
@@ -64,7 +75,15 @@ async function startInkApp(options = {}) {
   // 回滚里就永久多出一份完整的 banner+输入框副本 —— 这正是用户报「UI 显示混乱」的直接成因。
   // ED0 就地擦除既不滚屏(不留副本)也不动 scrollback(历史仍可上翻),两个目标同时成立。
   // 本层与「从源头少触发」的三层预算(liveRegionBudget / liveHeightClamp / overlayLiveBudget)
-  // 正交叠加:那层管少触发,本层保证即便触发也不留副本。
+  // 正交叠加:那层管少触发,本层保证即便触发也不留副本 —— 其中 KHY_SUPPRESS_STATIC_REPRINT
+  // (第三层,getStaticSnapshot 注入 ink 实例的 fullStaticOutput)更进一步把 fullscreen 帧
+  // `clearTerminal + fullStaticOutput + output` 里冗余的整段转录重发剥掉:static 内容早已
+  // 增量写进终端,重写超过视口高度必然滚屏,把重印头部推进 scrollback 形成第二/三份完整副本
+  // (用户报「启动后历史重复几次」的直接成因)。KHY_FULLSCREEN_TAILCUT(第四层,getRows 注入
+  // 视口行数)再把已验证帧的活动区 output 尾切到 rows-1 行 —— live 区触顶时重印超高 output
+  // 的头部行必然滚出视口(印了也看不见),却会在 scrollback 逐帧堆叠副本(用户报「对话中重复
+  // 渲染多次」的直接成因),尾切后整帧不滚屏、可见终态逐字节等价。校验失败/实例缺失 → 逐字节
+  // 回退今日行为。
   // ink emits `clearTerminal + fullStaticOutput + output` as a
   // single write() when the live region height >= rows (ink.js:327 / instance.js:132);
   // non-win32 clearTerminal is `[2J[3J[H` and the `3J` wipes native scrollback
@@ -90,7 +109,29 @@ async function startInkApp(options = {}) {
   const _realOut = process.stdout;
   const _clearNormalizer = scrollbackPreserve.createClearTerminalNormalizer(
     process.env,
-    process.platform
+    process.platform,
+    {
+      // 第三层(全屏帧整段转录重发抑制)的校验源:ink 实例的 fullStaticOutput。
+      // render() 的同步首帧不可能命中 fullscreen 分支(lastOutputHeight 从 0 起步),
+      // 而 inkRuntime.setApp/setRenderStdout 紧跟 render() 之后注册 —— 真正能触发
+      // fullscreen 分支的帧到来时实例必已注册。fail-soft:null → 该帧逐字节回退今日行为。
+      getStaticSnapshot: () => {
+        try {
+          const inst = inkRuntime.getInkInstance();
+          return inst && typeof inst.fullStaticOutput === 'string' ? inst.fullStaticOutput : null;
+        } catch {
+          return null;
+        }
+      },
+      // 第四层(全屏帧活区尾切)的视口几何源:live 区高度 ≥ rows 时,ED0 就地擦除后
+      // 重印超高 output 仍会把帧的头/尾行滚进 scrollback 逐帧堆叠(重复渲染根因)。
+      // 注入真实视口行/列数 + 显示宽度函数(与 liveHeightClamp 同一 formatters.displayWidth
+      // 单源,CJK/emoji 感知、已剥 ANSI),叶子把已验证帧的 output 尾切到 rows-1 个视觉行
+      // 保证不滚屏;rows 取不到(部分 Windows 终端报 0)→ 叶子侧不切,逐字节回退。
+      getRows: () => process.stdout.rows,
+      getColumns: () => process.stdout.columns,
+      measureWidth: (s) => require('../../formatters').displayWidth(s),
+    }
   );
   const _tuiStdout = new Proxy(_realOut, {
     get(target, prop) {

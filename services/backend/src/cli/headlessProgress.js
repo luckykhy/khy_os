@@ -19,6 +19,15 @@
 
 const flagRegistry = require('../services/flagRegistry');
 
+// 分级判定复用 toolDisplayPolicy（显示矩阵单一真源）。require 失败按 core 显示
+// —— 宁可见到，不可漏掉；绝不让分级判定把进度反馈带崩。
+let _tierPolicy = null;
+try {
+  _tierPolicy = require('./toolDisplayPolicy');
+} catch {
+  _tierPolicy = null;
+}
+
 // 从工具参数里择一条最能说明「在干什么」的显著字段(路径/命令/查询等),截断避免刷屏。
 const _PARAM_KEYS = [
   'path',
@@ -505,14 +514,16 @@ function shouldEmitProgress(env = process.env, isTTY = false) {
 }
 
 /**
- * 工具开始行:`{icon} {displayName} {salientArg}`
+ * 工具开始行:`[{▌ }] {icon} {displayName} {salientArg}`——core 工具（显示矩阵 core 档，
+ * 未注册默认 core）加 `▌ ` 前缀抢占焦点，minor 保持原行。
  */
 function formatToolStart(name, params) {
   try {
     const icon = _icon(name);
     const disp = _displayName(name);
     const arg = _salientArg(params);
-    return arg ? `${icon} ${disp} ${arg}` : `${icon} ${disp}`;
+    const focus = _tierPolicy && _tierPolicy.isCoreToolDisplay(name) ? '▌ ' : '';
+    return arg ? `${focus}${icon} ${disp} ${arg}` : `${focus}${icon} ${disp}`;
   } catch {
     return `• ${String(name || 'tool')}`;
   }

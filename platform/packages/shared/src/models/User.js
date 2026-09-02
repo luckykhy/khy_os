@@ -91,6 +91,21 @@ const User = sequelize.define('User', {
     allowNull: true,
     field: 'send_key',
     comment: 'ServerChan SendKey for WeChat push notifications'
+  },
+  // ARCH-074: 登录别名集合（不含 username/email）。全局唯一，应用层校验。
+  // 不建 DB unique index：JSON 字段 unique 在不同 DB 引擎上行为不一致；
+  // 唯一性由 loginKeyResolver + register 路径的 service 层校验保证。
+  aliases: {
+    type: DataTypes.JSON,
+    allowNull: false,
+    defaultValue: [],
+    comment: '登录别名集合（不含 username/email）。应用层全局唯一。'
+  },
+  // ARCH-074: 昵称，仅展示用，不参与登录。banner 显示用，门控 KHY_BANNER_USE_DISPLAY_NAME。
+  displayName: {
+    type: DataTypes.STRING(80),
+    allowNull: true,
+    comment: '昵称，仅展示用，不参与登录'
   }
 }, {
   tableName: 'users',
@@ -139,11 +154,13 @@ User.prototype.toJSON = function() {
 // Excludes password / securityAnswer / sendKey and other sensitive columns.
 // Routes that eager-load a User should reference this instead of inlining
 // the field list. Frozen to prevent accidental mutation of the shared list.
-User.PUBLIC_ATTRIBUTES = Object.freeze(['id', 'username', 'email']);
+// ARCH-074: aliases / displayName 已加入展示字段（都不是敏感凭据）。
+User.PUBLIC_ATTRIBUTES = Object.freeze(['id', 'username', 'email', 'displayName', 'aliases']);
 
 // SSOT: minimal user-reference projection for association includes that only
 // need to label who a record belongs to (e.g. author/admin badges). Narrower
 // than PUBLIC_ATTRIBUTES — omits email. Frozen; copy with [...] before storing.
-User.REFERENCE_ATTRIBUTES = Object.freeze(['id', 'username']);
+// ARCH-074: displayName 已加入；alias 列表不适合作 badge 标签（可能多个），不加。
+User.REFERENCE_ATTRIBUTES = Object.freeze(['id', 'username', 'displayName']);
 
 module.exports = User;

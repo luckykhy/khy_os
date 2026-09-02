@@ -37,6 +37,13 @@ const isWatch = process.argv.includes('--watch');
 const externalDeps = [
   ...Object.keys(pkg.dependencies || {}),
   ...Object.keys(pkg.peerDependencies || {}),
+  // Native / dynamic-load addons that esbuild cannot bundle. Native bindings
+  // must resolve at runtime; the pure JS surface we depend on is small enough
+  // that the runtime require is cheap.
+  'sqlite3',
+  'better-sqlite3',
+  'bindings',
+  'file-uri-to-path',
   // Node built-ins
   'fs', 'path', 'os', 'crypto', 'http', 'https', 'net', 'tls', 'url',
   'child_process', 'stream', 'events', 'util', 'assert', 'buffer',
@@ -48,7 +55,11 @@ const externalDeps = [
   'node:readline', 'node:zlib', 'node:worker_threads',
 ];
 
-const banner = `/* KHY OS Backend v${pkg.version} | ${new Date().toISOString().split('T')[0]} */`;
+const banner = `/* KHY OS Backend v${pkg.version} | ${new Date().toISOString().split('T')[0]} */\n`;
+// Note: shebang is auto-prepended by esbuild on every entry-point output.
+// Adding one in banner.js produces a duplicate shebang (`#!\n#!`) that Node
+// CJS loader rejects with "Invalid or unexpected token". The version stamp
+// sits on line 2 (or 3 if the auto-shebang precedes it).
 
 // ── Shared options ──
 
@@ -92,7 +103,11 @@ const configs = [
     minifyIdentifiers: false,
     minifySyntax: isProd,
   },
-  // CLI entry point
+// CLI entry point — the production startup path (DESIGN-PERF-001 v1 §阶段 A).
+// esbuild auto-prepends the `#!` shebang; the banner.js string supplies only
+// the version stamp on line 2. Invoke via `node dist/cli.cjs` from the
+// portable install (or rely on `bin/khy.js` falling back to source when
+// KHY_NO_BUNDLE=1).
   {
     ...sharedOptions,
     entryPoints: ['bin/khy.js'],
@@ -100,12 +115,35 @@ const configs = [
     format: 'cjs',
     minify: isProd,
     minifyWhitespace: isProd,
-    minifyIdentifiers: false,
+    minifyIdentifiers: false, // Keep identifiers readable for debugging
     minifySyntax: isProd,
     banner: {
-      js: `#!/usr/bin/env node\n${banner}`,
+      js: banner,
+    },
+    define: {
+      ...sharedOptions.define,
+      'process.env.KHY_BUNDLED_CLI': '"true"',
     },
   },
+  // CLI minified ESM bundle (DESIGN-PERF-001 v1 §阶段 A — DISABLED).
+// esbuild's ESM output translates every CJS `require()` into a dynamic
+// `require()` stub that Node's ESM loader refuses to satisfy at runtime
+// (Error: Dynamic require of "path" is not supported). khy's source code is
+// 99% CJS with module-level requires; ESM bundling is not viable without
+// rewriting the require graph. The CommonJS `dist/cli.cjs` target above
+// remains the production startup path — invoke as `node dist/cli.cjs` or
+// rely on the source fallback (`bin/khy.js`). The KHY_NO_BUNDLE gate in
+// bin/khy.js detects both files and prefers the .cjs bundle.
+// Original ESM config retained below for future re-evaluation once the
+// require graph is converted to ESM-aware imports.
+//   {
+//     entryPoints: ['bin/khy.js'],
+//     outfile: 'dist/cli.mjs',
+//     format: 'esm',
+//     minify: ...,
+//     external: [...externalDeps, 'ink', 'react'],
+//     define: { ...sharedOptions.define, 'process.env.KHY_BUNDLED_CLI': '"true"' },
+//   },
 ];
 
 // ── Main ──

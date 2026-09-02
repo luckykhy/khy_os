@@ -32,6 +32,7 @@
 | [DEPLOY-MAN-020] AI供应商与APIKey配置.md | 供应商与Key配置 | 定稿 |
 | [DEPLOY-MAN-021] IDE桥接模式.md | 复用IDE凭据桥接 | 定稿 |
 | PORTABLE.md | 便携化打包与启动 | 定稿·未编号 |
+| LAN-FIREWALL.md | 局域网登录防火墙放行（ARCH-074 配套） | 定稿·未编号 |
 
 > `PORTABLE.md` 沿用历史无编号文件名（`README.md` 与多处脚本按此路径引用）。
 > 补编号需同步改写全部入站引用，属独立一轮工作；此处如实登记，不假装已合规。

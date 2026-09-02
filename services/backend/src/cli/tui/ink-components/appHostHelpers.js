@@ -197,6 +197,39 @@ function _getStatusLabel(status, activity) {
   return detail ? `${base} · ${detail}` : base;
 }
 
+/**
+ * 回合阶段标签（v2）：把 turnPhaseTracker 快照渲染成
+ *   「第 2 轮 · 执行工具 · 已执行 3 个工具 · 1 次回到推理 · <activity>」
+ *
+ * 阶段链 = 等待输入 → 推理 → 判断是否完成 → 执行工具 → 处理结果 →（未完成回到
+ * 推理 | 校验 → 完成）。快照缺位（tracker fail-soft 缺席/旧会话/阶段还是
+ * waiting_input）时逐字节返回 baseLabel —— spinner 文案不因这次改动而变。
+ *
+ * @param {object|null} snapshot - useQueryBridge.query.turnPhase（turnPhaseTracker.snapshot()）
+ * @param {string} baseLabel - _getStatusLabel 的传统产物，作降级与 activity 载体
+ * @returns {string}
+ */
+function _turnPhaseLabel(snapshot, baseLabel) {
+  if (!snapshot || typeof snapshot !== 'object') return baseLabel;
+  if (snapshot.phase === 'waiting_input' || snapshot.phase === 'done') return baseLabel;
+  const parts = [];
+  const it = Number(snapshot.iteration) || 0;
+  const max = Number(snapshot.maxIterations) || 0;
+  if (it > 0) parts.push(max > 0 ? `第 ${it}/${max} 轮` : `第 ${it} 轮`);
+  if (snapshot.label) parts.push(String(snapshot.label));
+  const tools = Number(snapshot.toolCalls) || 0;
+  if (tools > 0) parts.push(`已执行 ${tools} 个工具`);
+  const backs = Number(snapshot.loopBacks) || 0;
+  if (backs > 0) parts.push(`${backs} 次回到推理`);
+  if (parts.length === 0) return baseLabel;
+  // baseLabel 形如「思考中… · <activity>」；阶段标签已表达阶段语义，只把
+  // activity 部分（首个 · 之后的剩余）接在阶段链后面，避免「执行工具 · 执行工具…」重复。
+  const base = String(baseLabel || '');
+  const sep = base.indexOf(' · ');
+  const activity = sep >= 0 ? base.slice(sep + 3).trim() : '';
+  return activity ? `${parts.join(' · ')} · ${activity}` : parts.join(' · ');
+}
+
 // Lazily-bound shared live-activity deriver (single source: statusLabels). Turns
 // the live turn state into a concrete "what is happening right now" string — the
 // running tool's target, the current reasoning, or the gateway detail — so the
@@ -388,6 +421,7 @@ module.exports = {
   tuiUnsupportedReason,
   _taskActivity,
   _getStatusLabel,
+  _turnPhaseLabel,
   _liveActivity,
   _spinnerCcTokensEnabled,
   _estimateTok,

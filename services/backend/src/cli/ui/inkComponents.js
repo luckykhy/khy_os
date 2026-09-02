@@ -415,14 +415,19 @@ function Select(props) {
         const realIdx = filteredIndices[i];
         const isSelected = selected.has(realIdx);
 
-        let prefix = isCursor ? chalk.cyan(CURSOR_CHAR + ' ') : '  ';
+        let prefix = isCursor && !opt.disabled ? chalk.cyan(CURSOR_CHAR + ' ') : '  ';
         if (multi) {
           prefix += isSelected
             ? chalk.green(SELECTED_CHAR + ' ')
             : chalk.dim(UNSELECTED_CHAR + ' ');
         }
 
-        const label = isCursor ? chalk.cyan(opt.label) : opt.label;
+        let label;
+        if (opt.disabled) {
+          label = chalk.dim(opt.label);
+        } else {
+          label = isCursor ? chalk.cyan(opt.label) : opt.label;
+        }
         const desc = opt.description ? chalk.dim(` — ${opt.description}`) : '';
         process.stdout.write(`\x1B[K${prefix}${label}${desc}\n`);
         totalLines++;
@@ -487,9 +492,15 @@ function Select(props) {
 
       if (key.name === 'up' || key.name === 'k') {
         cursor = (cursor - 1 + filtered.length) % filtered.length;
+        while (filtered[cursor]?.disabled && filtered.length > 1) {
+          cursor = (cursor - 1 + filtered.length) % filtered.length;
+        }
         render();
       } else if (key.name === 'down' || key.name === 'j') {
         cursor = (cursor + 1) % filtered.length;
+        while (filtered[cursor]?.disabled && filtered.length > 1) {
+          cursor = (cursor + 1) % filtered.length;
+        }
         render();
       } else if (key.name === 'space' && multi) {
         const realIdx = filteredIndices[cursor];
@@ -500,6 +511,10 @@ function Select(props) {
         }
         render();
       } else if (key.name === 'return') {
+        if (filtered[cursor]?.disabled) {
+          render();
+          return;
+        }
         cleanup();
         if (typeof process.stdin.setRawMode === 'function') {
           process.stdin.setRawMode(false);
@@ -803,8 +818,10 @@ async function selectMenu({ message, choices, multi = false, allowOther = false,
       typeof ch === 'string'
         ? { name: ch, value: ch }
         : {
-            name: ch.name || ch.label || String(ch.value),
+            name: _stripAnsi(ch.name || ch.label || String(ch.value)),
             value: ch.value !== undefined ? ch.value : ch.name,
+            disabled: !!ch.disabled,
+            color: ch.color,
           }
     );
     if (allowOther) {
@@ -851,6 +868,7 @@ async function selectMenu({ message, choices, multi = false, allowOther = false,
       label: ch.name || ch.label || String(ch.value),
       value: ch.value !== undefined ? ch.value : ch.name,
       description: ch.description || '',
+      disabled: !!ch.disabled,
     };
   });
 

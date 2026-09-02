@@ -138,6 +138,8 @@ const reduceStreamReset = _qbt.reduceStreamReset;
 const buildStreamResetNotice = _qbt.buildStreamResetNotice;
 const splitSealedText = _qbt.splitSealedText;
 const planStageFlush = _qbt.planStageFlush;
+// Turn-end burst dedup (defense-in-depth, see flushCompletedStages/finalize).
+const dedupAdjacentAssistantBursts = _qbt.dedupAdjacentAssistantBursts;
 const formatCompactionResult = _qbt.formatCompactionResult;
 const tlAppendThinking = _qbt.tlAppendThinking;
 const submitGateBusy = _qbt.submitGateBusy;
@@ -448,6 +450,19 @@ function useQueryBridge(hostHandlers = {}) {
   // so the spinner can show WHAT a stalled turn is actually waiting on.
   const [statusDetail, setStatusDetail] = useState('');
   const [turnStartedAt, setTurnStartedAt] = useState(null);
+  // 回合阶段快照（turnPhaseTracker）：等待输入→推理→执行工具→拿结果→判断完成→
+  // 回到推理→完成 的用户可读阶段链。快照是 pure & total（无变化返回同一引用），
+  // setTurnPhase 同引用时 React 跳过重渲染。
+  const [turnPhase, setTurnPhase] = useState(null);
+  const turnPhaseTrackerRef = useRef(null);
+  if (turnPhaseTrackerRef.current === null) {
+    try {
+      turnPhaseTrackerRef.current = require('../../../services/stateMachine/turnPhaseTracker').createTurnPhaseTracker();
+    } catch {
+      turnPhaseTrackerRef.current = null; // fail-soft：无阶段显示，不影响回合
+    }
+  }
+  const _tpTracker = turnPhaseTrackerRef.current;
   const [adapterInfo, setAdapterInfo] = useState({});
   // Latest turn's reported token usage, used to show a TRUE context-window fill
   // in the footer (previously the footer pinned contextPct to 0 — a fake 0%).
@@ -1070,7 +1085,28 @@ function useQueryBridge(hostHandlers = {}) {
           }
           return { ...s, timeline: [...remainder, ...segs.slice(k + 1)] };
         }
-        return { ...s, timeline: s.timeline.slice(k) };
+        // Rebuild the flat text/tools mirrors from the REMAINING timeline so
+        // the fallback render path (StreamingBlock renders streaming.text /
+        // streaming.tools when the timeline is empty) can never re-show
+        // already-committed content: after a full drain the mirrors are empty
+        // exactly when the timeline is — otherwise the just-committed
+        // <Static> row visually duplicates in the live region until the next
+        // chunk or finalize. Accepts both segment shapes (singular `tool` +
+        // grouped `tools`).
+        const nextTimeline = s.timeline.slice(k);
+        let nextText = '';
+        const nextTools = [];
+        for (const e of nextTimeline) {
+          if (!e) continue;
+          if (e.type === 'text') {
+            nextText += e.text || '';
+          } else if (e.type === 'tool' && e.tool) {
+            nextTools.push(e.tool);
+          } else if (e.type === 'tools' && Array.isArray(e.tools)) {
+            nextTools.push(...e.tools);
+          }
+        }
+        return { ...s, timeline: nextTimeline, text: nextText, tools: nextTools };
       }, true);
       return true;
     },
@@ -1209,6 +1245,16 @@ function useQueryBridge(hostHandlers = {}) {
       turnAckEmittedRef.current = false;
       setStatus('thinking');
       setStatusDetail('');
+      // 回合阶段链复位 + 记录「已接收输入」起点（等待输入→推理 之间的截断点）。
+      if (_tpTracker) {
+        try {
+          _tpTracker.reset();
+          _tpTracker.noteShellPhase('thinking');
+          setTurnPhase(_tpTracker.snapshot());
+        } catch {
+          /* observer only */
+        }
+      }
       setCompaction(null);
       setStreamingBoth(
         { text: '', tools: [], thinking: '', timeline: [], selfRender: selfRenderRef.current },
@@ -1737,7 +1783,23 @@ function useQueryBridge(hostHandlers = {}) {
           }
           bcast({ type: 'chunk_tool_result', content: chunk.text || chunk.content || '' });
         } else if (chunk.type === 'notice' || chunk.type === 'status') {
-          safeSetStatus(chunk.phase || idlePhase());
+          // 视觉代理阶段（v2）：网关 describe-and-return 切识图模型时发带 phase 的
+          // status chunk（'vision' / 'vision-done'）。喂给回合阶段链显示
+          // 「视觉模型识图中 → 结果回注 → 继续推理」；粗粒度 status 归到 thinking，
+          // 避免未知 token 打碎 spinner 文案。
+          if (chunk.phase === 'vision' || chunk.phase === 'vision-done') {
+            if (_tpTracker) {
+              try {
+                _tpTracker.noteShellPhase(chunk.phase);
+                setTurnPhase(_tpTracker.snapshot());
+              } catch {
+                /* observer only */
+              }
+            }
+            safeSetStatus('thinking');
+          } else {
+            safeSetStatus(chunk.phase || idlePhase());
+          }
           safeSetDetail(chunk.message || chunk.text || chunk.content);
         } else if (chunk.type === 'assistant_message') {
           // 用户可见的中间消息(如视觉路由说明:文本模型先说明「我无法识别图片,正在调用视觉模型」)。
@@ -2522,10 +2584,39 @@ function useQueryBridge(hostHandlers = {}) {
                   intents: recentToolSigsRef.current.map((e) => e.intentKey).filter(Boolean),
                 },
                 onControlRequest,
-                onToolCall: (name, params, _iteration, toolId) =>
-                  pushToolFromLoop(name, params, toolId),
-                onToolResult: (name, params, res, _iteration, _elapsed, toolId) =>
-                  markToolResult(name, res, params, toolId),
+                // 回合阶段链：loop FSM 每次转移 → tracker → spinner 显示
+                // 「第 N 轮 · 阶段 · 已执行 M 个工具 · K 次回到推理」。
+                onPhase: (e) => {
+                  if (!_tpTracker) return;
+                  try {
+                    _tpTracker.onLoopEvent(e);
+                    setTurnPhase(_tpTracker.snapshot());
+                  } catch {
+                    /* observer only */
+                  }
+                },
+                onToolCall: (name, params, _iteration, toolId) => {
+                  if (_tpTracker) {
+                    try {
+                      _tpTracker.noteToolStart();
+                      setTurnPhase(_tpTracker.snapshot());
+                    } catch {
+                      /* observer only */
+                    }
+                  }
+                  pushToolFromLoop(name, params, toolId);
+                },
+                onToolResult: (name, params, res, _iteration, _elapsed, toolId) => {
+                  if (_tpTracker) {
+                    try {
+                      _tpTracker.noteToolResult();
+                      setTurnPhase(_tpTracker.snapshot());
+                    } catch {
+                      /* observer only */
+                    }
+                  }
+                  markToolResult(name, res, params, toolId);
+                },
                 // 自维护顾问人面(§2 工具路径):AI 面已由 loop 注入 currentMessage,这里只把给人
                 // 看的一行作为 notice 追加(闲时可见)。best-effort,绝不影响本轮。
                 onSelfEditAdvisory: (adv) => {
@@ -2665,6 +2756,28 @@ function useQueryBridge(hostHandlers = {}) {
         // still-pending tool) into history, carrying the turn's metadata. Most
         // stages were already committed incrementally as they completed.
         const committedRemainder = flushCompletedStages(true, meta);
+        // If the live timeline was already empty (every stage was drained by
+        // an earlier mid-stream force=false commit and nothing arrived since),
+        // the prior flush made no setMessages call and the committed
+        // assistant fragment still carries continuation:true. Mark it terminal
+        // here so the next user message gets the expected marginTop:1
+        // separator — closing the multi-iteration dedup loop.
+        if (committedTurnRef.current) {
+          setMessages((m) => {
+            if (m.length === 0) {
+              return m;
+            }
+            const lastIdx = m.length - 1;
+            const last = m[lastIdx];
+            if (!last || last.role !== 'assistant' || last.continuation !== true) {
+              return m;
+            }
+            return [
+              ...m.slice(0, lastIdx),
+              { ...last, continuation: false, ...meta, timestamp: Date.now() },
+            ];
+          });
+        }
         // Non-streaming-adapter fallback: nothing ever streamed (empty timeline,
         // no fragments committed) but the adapter returned a reply payload. Commit
         // it as the sole assistant message. Truth precedence still prefers the
@@ -2686,6 +2799,19 @@ function useQueryBridge(hostHandlers = {}) {
             ]);
           }
         }
+        // Defense-in-depth: the mid-stream force=false commit path already
+        // merges fragments into a single assistant message, and the force=true
+        // finalize above subsumes / marks terminal. Any SECOND wave of
+        // identical commits would still slip through as a flood of
+        // byte-identical assistant rows (e.g. a renderer that prints the
+        // already-committed row again). One more sweep at the very end of
+        // the turn collapses those adjacent bursts — gated by content +
+        // timeline fingerprint AND a short time window (default 5s) so two
+        // genuinely independent "ok" replies in different turns are NEVER
+        // merged. Pure & total: returns the same array on no-op, so React
+        // skips a re-render. Gate KHY_TUI_DEDUP_WINDOW_MS (0/false/off/no →
+        // entire sweep off), semantics locked by queryBridgeTimelineLeaf.
+        setMessages((m) => dedupAdjacentAssistantBursts(m, process.env));
         // Record context occupancy from the turn's reported usage so the footer
         // shows a real fill percentage instead of a hardcoded 0%.
         const usage = result && result.tokenUsage;
@@ -3368,6 +3494,7 @@ function useQueryBridge(hostHandlers = {}) {
     streaming,
     status,
     statusDetail,
+    turnPhase,
     compaction,
     contextPlan,
     controlRequest,

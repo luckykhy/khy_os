@@ -110,7 +110,14 @@ function FormFlow({ fields = [], title, onResolve }) {
     if (choices.length === 0) {
       return;
     }
-    setCursor((c) => (c + dir + choices.length) % choices.length);
+    setCursor((c) => {
+      let next = (c + dir + choices.length) % choices.length;
+      // Skip disabled (separator / header) rows
+      while (choices[next]?.disabled && choices.length > 1) {
+        next = (next + dir + choices.length) % choices.length;
+      }
+      return next;
+    });
   };
 
   useInput((ch, key) => {
@@ -179,14 +186,14 @@ function FormFlow({ fields = [], title, onResolve }) {
       }
       if (navCh && navCh >= '1' && navCh <= '9') {
         const idx = parseInt(navCh, 10) - 1;
-        if (idx >= 0 && idx < choices.length) {
+        if (idx >= 0 && idx < choices.length && !choices[idx]?.disabled) {
           commit(choices[idx].value);
         }
         return;
       }
       if (key.return) {
         const picked = choices[cursor];
-        if (picked) {
+        if (picked && !picked.disabled) {
           commit(picked.value);
         }
         return;
@@ -241,10 +248,24 @@ function FormFlow({ fields = [], title, onResolve }) {
   if (isSelect) {
     const rows = choices.map((c, i) => {
       const active = i === cursor;
+      const isDisabled = !!c.disabled;
       const box = isMulti ? (checked.has(c.value) ? '[x] ' : '[ ] ') : '';
+      if (isDisabled) {
+        // Non-interactive header / separator row: dimmed, no number, no cursor.
+        const color = c.color || undefined;
+        return h(
+          Text,
+          { key: `c-${i}`, dimColor: true, color },
+          `   ${c.name}`
+        );
+      }
       return h(
         Text,
-        { key: `c-${i}`, color: active ? 'cyan' : undefined, bold: active },
+        {
+          key: `c-${i}`,
+          color: active ? 'cyan' : c.color || undefined,
+          bold: active,
+        },
         `   ${active ? MARKER : ' '} ${box}${i + 1}. ${c.name}`
       );
     });

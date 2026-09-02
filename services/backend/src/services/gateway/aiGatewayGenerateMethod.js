@@ -1096,7 +1096,7 @@ const AIGatewayGenerateMethod = {
         _forwardedVisibleTextLen = 0;
       }
     };
-    const emitStatus = (text) => {
+    const emitStatus = (text, phase) => {
       if (gatewayAbort.signal.aborted) {
         return;
       }
@@ -1113,7 +1113,12 @@ const AIGatewayGenerateMethod = {
           _lastStatusText = normalized;
           _lastStatusAt = now;
           // status = 网关自造心跳,非真实推进 → 门开时不重置 idle(交由 funnel 按门控判定)。
-          forwardGatewayChunk({ type: 'status', text: normalized }, false);
+          // phase（v2，可选）：视觉代理等结构化阶段标记，TUI 回合阶段链消费；
+          // 不传时逐字节保持旧 chunk 形状。
+          forwardGatewayChunk(
+            phase ? { type: 'status', text: normalized, phase } : { type: 'status', text: normalized },
+            false
+          );
         }
       } catch {
         /* best effort */
@@ -2778,6 +2783,14 @@ const AIGatewayGenerateMethod = {
               // 冗余首句「我无法直接识别图片内容。」折成「<prev> 不可用，正在改用 <model> 继续识别...」。
               let _attIdx = 0;
               let _prevAttemptModel = null;
+              // v2 阶段通知：进入视觉代理（describe-and-return）前发带 phase 的 status chunk，
+              // TUI 回合阶段链显示「视觉模型识图中」。status 通道是静默旁路（非 assistant 消息），
+              // 不受 KHY_VISION_INTERMEDIATE_MESSAGE 门控；fail-soft，emitStatus 自带去重与吞错。
+              emitStatus(
+                `当前模型不支持图片，已切换视觉模型 ${_primaryModel} 识别图片，识别结果将回传给当前模型作答`,
+                'vision'
+              );
+              let _successModel = null;
               for (const _att of _attempts) {
                 _describeAttempted = true;
                 if (_intermediateEnabled && _attIdx === 0) {
@@ -2845,6 +2858,7 @@ const AIGatewayGenerateMethod = {
                       model: _att.model,
                     });
                     if (_injection) {
+                      _successModel = _att.model || _primaryModel;
                       prompt = `${prompt || ''}\n\n${_injection}`;
                       // 复用 _ocrFallbackApplied 防重入 + _ocrFallbackText 供 finishResult 网络
                       // 中断时用已识别文本诚实兜底(等同 OCR 兜底的落盘语义)。剥图:原文本模型
@@ -2886,6 +2900,16 @@ const AIGatewayGenerateMethod = {
                 // OPS-145:本候选已失败(成功分支在上方 break),记下模型名供下一候选提示「<prev> 不可用」。
                 _prevAttemptModel = _att.model || _prevAttemptModel;
                 _attIdx += 1;
+              }
+
+              // v2 阶段通知：视觉代理阶段收口（成功/失败都发，tracker 的 vision 阶段不悬挂）。
+              if (_describeAttempted) {
+                emitStatus(
+                  _describeDone
+                    ? `视觉模型 ${_successModel || _primaryModel} 识图完成，结果已回传当前模型继续作答`
+                    : '视觉模型识图未成功，转入兜底路径（OCR / 模型替换）继续处理图片',
+                  'vision-done'
+                );
               }
 
               if (!_describeDone && _describeAttempted) {

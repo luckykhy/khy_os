@@ -198,7 +198,9 @@ Usage:
 - Use replace_all for replacing and renaming strings across the file. This parameter is useful if you want to rename a variable for instance.
 - Only add comments where the logic isn't self-evident. Don't add docstrings, comments, or type annotations to code you didn't change.
 - Don't add features, refactor code, or make "improvements" beyond what was asked.
-- Do not combine a requested fix with unrelated cleanup or cosmetic rewrites unless the task cannot be completed safely without them.` +
+- Do not combine a requested fix with unrelated cleanup or cosmetic rewrites unless the task cannot be completed safely without them.
+
+When describing the edit back to the user, render the diff in this exact order: empty/new file → green `+` lines only; existing file edited → list red `-` lines FIRST (all of them), then green `+` lines (all of them), never pair them side-by-side, and skip word-level highlighting. The runtime renderer in cli/diffRenderer.js and ToolLines.js follows the same order, so any prose summary you write should mirror it (e.g. "removed N lines, then added M lines").` +
       this.weakModelToolNote()
     );
   }

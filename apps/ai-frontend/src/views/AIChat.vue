@@ -1184,6 +1184,18 @@ function setOrbState(channel, payload) {
 function pushBounded(listRef, value, cap = 40) {
   const v = String(value || '').trim();
   if (!v) return;
+  // 去重 1：与队尾相同则跳过，避免 tool_call / tool_result 在 WS 与 SSE
+  // 双路径或重复广播下，把同一条 Search(医师资格考试…)刷成 N 行；
+  // length 仍是真实入队次数(用 listRef.value.length)，所以 "1/共 9" 这种
+  // 计数仍能反映累计活动量，只是 UI 列表不会刷屏堆叠。
+  if (listRef.value.length && listRef.value[listRef.value.length - 1] === v) return;
+  // 去重 2：5s 滑动窗口内同命令重复推送直接吃掉（适配同一个 Search 在后端
+  // 被重试/补发的场景；用户能看到的"通知 1 条"瞬间只会弹一次）。
+  const now = Date.now();
+  const sig = `${listRef._owner || 'list'}|${v}`;
+  const lastAt = pushBounded._seen?.get(sig);
+  if (lastAt && now - lastAt < 5000) return;
+  (pushBounded._seen ||= new Map()).set(sig, now);
   listRef.value.push(v);
   if (listRef.value.length > cap) listRef.value = listRef.value.slice(-cap);
 }

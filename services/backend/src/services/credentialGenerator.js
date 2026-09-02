@@ -259,6 +259,66 @@ function loadOrCreateDefaultAdminCredentials(env = process.env) {
   return { username, password, created: true, fromEnv: false, filePath };
 }
 
+/**
+ * ARCH-074: 确保 aio backend User 表里的默认管理员有有效密码。
+ *
+ * 背景：历史上 `default-admin` 的密码可能由早期播种路径以"无密码 / 占位"
+ * 方式写入（如 SHA-1 直存或简单字符串），导致 `/api/auth/login` bcrypt 校验
+ * 永远失败、本机也因无密码文件而无法登录。
+ *
+ * 行为（fail-soft / 幂等）：
+ *   1. 调用 `loadOrCreateDefaultAdminCredentials` 拿到当前有效 username + password
+ *   2. 尝试从 `@khy/shared/models` 拿 User 模型；若不可用（aio backend 未启 / 数据库不通），
+ *      返回 `{ ok: false, reason: '数据库不可用' }`，**不抛**
+ *   3. 按 username 查找 admin 用户；若不存在（aio backend 还没播种），返回 ok:false
+ *   4. 用 bcrypt 校验当前密码；若校验通过 → ok:true, updated:false
+ *   5. 否则把 User.password 改成新密码（hook 自动 bcrypt），返回 ok:true, updated:true
+ *
+ * @returns {Promise<{ok: boolean, updated?: boolean, reason?: string,
+ *                    username?: string}>}
+ */
+async function ensureDefaultAdminPassword(env = process.env) {
+  let creds;
+  try {
+    creds = loadOrCreateDefaultAdminCredentials(env);
+  } catch (err) {
+    return { ok: false, reason: `生成凭据失败: ${err.message || String(err)}` };
+  }
+  let User;
+  try {
+    ({ User } = require('@khy/shared/models'));
+  } catch (err) {
+    return { ok: false, reason: 'aio backend 数据库模型不可用（未安装或未同步）' };
+  }
+  let admin;
+  try {
+    admin = await User.findOne({ where: { username: creds.username } });
+  } catch (err) {
+    return { ok: false, reason: `查询默认管理员失败: ${err.message || String(err)}` };
+  }
+  if (!admin) {
+    return { ok: false, reason: '默认管理员尚未在数据库中创建（aio backend 第一次启动？）' };
+  }
+  // 1) bcrypt 校验当前密码
+  let valid = false;
+  try {
+    valid = await admin.comparePassword(creds.password);
+  } catch {
+    valid = false;
+  }
+  if (valid) {
+    return { ok: true, updated: false, username: creds.username };
+  }
+  // 2) 写新密码（beforeUpdate hook 会自动 bcrypt）
+  try {
+    admin.password = creds.password;
+    await admin.save();
+    return { ok: true, updated: true, username: creds.username };
+  } catch (err) {
+    return { ok: false, reason: `更新默认管理员密码失败: ${err.message || String(err)}` };
+  }
+}
+
 module.exports = {
   resolveDefaultAdminUsername,
   resolveDefaultAdminEmail,
@@ -268,4 +328,6 @@ module.exports = {
   loadOrCreateDefaultAdminCredentials,
   getCredentialsDir,
   getDefaultAdminCredentialsPath,
+  // ARCH-074
+  ensureDefaultAdminPassword,
 };

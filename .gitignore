@@ -21,11 +21,17 @@ build/
 *.db-wal
 *.sqlite
 *.sqlite3
+# sqlite WAL-mode sidecars are runtime artifacts recreated on every open;
+# tracking them made the worktree permanently dirty (same class as *.db-wal above).
+*.sqlite-shm
+*.sqlite-wal
 
 # Environment & secrets
 .env
 .env.local
 .env.*.local
+# .env 备份/清理存档（由清理脚本改写产生，含密钥，绝不入库）
+.env.bak-*
 
 # Local data directories
 .khy/
@@ -132,6 +138,10 @@ docs/_assets/mermaid.min.js
 # Debug/test artifacts
 #   ai-gateway-failures.json —— jest --json --outputFile 的残留汇总，无生产者。
 ai-gateway-failures.json
+#   一次性测试运行器输出转储（可再生，无生产者登记）。
+jest_out.txt
+test_out.txt
+tmp_test.txt
 #   publish/ —— scripts/release/build-payload-assets.js 的默认输出目录（--out 不给时），
 #   一跑就是 38 MB 的 Release 资产（加密源码快照 + muya 产物）。此前**未被忽略**，
 #   任何一次 `git add -A` 都会把它整包提交进来。
@@ -167,3 +177,6 @@ nul
 
 # khy portable sync 在目标根生成的运行时记录（含机器本地 sourceRoot），不应入库
 .sync-manifest.json
+
+# machine-local tooling state (taste learner cache etc.)
+.commandcode/

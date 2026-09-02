@@ -24,6 +24,8 @@
 //     (App.js「rendering PromptFrame + FooterBar + ModelPicker together grows the live region
 //     past the terminal height … visually duplicates the prompt chrome」),此前只对 ModelPicker
 //     生效,漏了同样独占输入的 KhyOsView(其 useInput 把按键送内核串口,Esc 关闭)。
+//     覆盖层注册表真源见 ./regionLayout.js#OWNING_OVERLAYS —— 本函数是「门控 + 列表过滤」的薄包装,
+//     不内联覆盖层清单。新加独占输入的覆盖层请改 regionLayout,不要改本函数。
 //   • overlayBodyRows:把覆盖层正文预算从「rows-6」收紧为「rows - chrome - margin」,留出余量
 //     吸收 hint / 补全菜单 / 任务清单等残留兄弟,使总高**严格 < rows**。
 //
@@ -70,24 +72,36 @@ function _rows(rows) {
  * 是否有「独占输入的全屏覆盖层」正挂载 → 壳据此隐藏 PromptFrame / FooterBar。
  *
  * 判定只看**已确认独占 stdin 的覆盖层**(它们各自的 useInput 消费按键,App 顶层 useInput
- * 对其 yield),故隐藏输入框不会让用户失去输入能力:
+ * 对其 yield),故隐藏输入框不会让用户失去输入能力。覆盖层清单的 SSOT 在
+ * ./regionLayout.js#OWNING_OVERLAYS,本函数只是「门控 + 列表过滤」的薄包装 —— 新加独占
+ * 输入的覆盖层请改 regionLayout 的注册表,不要动本函数。
+ *
  *   • modelPicker(ModelPicker,/model)—— 仓库既有行为,门控关时仍只认它;
- *   • khyosOpen(KhyOsView,/khyos·/os)—— 本次补齐;按键直送内核串口,屏上已有内核自己的
- *     提示符,同屏再画一个 khy 输入框本就是两个互相矛盾的输入面(修 UX 的同时修高度)。
+ *   • khyosOpen(KhyOsView,/khyos·/os)—— 按键直送内核串口,屏上已有内核自己的提示符,
+ *     同屏再画一个 khy 输入框本就是两个互相矛盾的输入面(修 UX 的同时修高度)。
  *
- * 刻意**不**含 topologyView / RewindPicker / FormFlow:它们高度随内容变化、未观测到贴顶,
- * 归入本判定属推测性扩大改动集。日后如确认贴顶,只需在此处加一个 flag。
+ * OWNING_OVERLAYS 里 hideChrome=false 的覆盖层(rewindPicker / rollbackPicker / formFlow /
+ * topologyView)刻意不在隐藏之列:它们高度随内容变化、未观测到贴顶,归入本判定属推测性
+ * 扩大改动集。日后如确认贴顶,在 regionLayout.OWNING_OVERLAYS 把对应 key 的 hideChrome
+ * 翻成 true,本判定自动跟随。
  *
- * @param {{ modelPicker?:boolean, khyosOpen?:boolean }} [flags]
+ * @param {object} [flags] App 的覆盖层 state 镜像({modelPicker, khyosOpen, rewindPicker, ...})
  * @param {object} [env]
  * @returns {boolean}
  */
 function ownsLiveRegion(flags = {}, env = process.env) {
-  const f = flags || {};
+  const f = flags && typeof flags === 'object' ? flags : {};
   if (!isEnabled(env)) {
     return !!f.modelPicker; // legacy:只有 ModelPicker 隐藏 chrome
   }
-  return !!f.modelPicker || !!f.khyosOpen;
+  let hiding;
+  try {
+    hiding = require('./regionLayout').overlaysHidingChrome(f);
+  } catch {
+    // regionLayout 不可用(老 build / 文件缺失)→ 字节级回退今日判定
+    return !!f.modelPicker || !!f.khyosOpen;
+  }
+  return Array.isArray(hiding) && hiding.length > 0;
 }
 
 /**

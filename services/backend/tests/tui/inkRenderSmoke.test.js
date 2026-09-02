@@ -1759,6 +1759,34 @@ describeOrSkip('Ink TUI render smoke (src/cli/tui/ink-components)', () => {
       const over = frame.split(NL).filter((ln) => displayWidth(ln) > 60);
       expect(over).toEqual([]);
     });
+
+    test('协作链接行：bridge.running=true 时展示 URL/PIN/端数；未运行时整行省略', async () => {
+      const bannerFrameWithBridge = async (bridge) => stripAnsi(
+        await renderCompFrame('WelcomeBanner', {
+          ...CASES.WelcomeBanner, showArt: false, bridge,
+        })
+      );
+      // running → 全字段都进 banner
+      const live = await bannerFrameWithBridge({
+        running: true,
+        url: 'http://192.168.1.10:8123',
+        pin: '482910',
+        clientCount: 2,
+        tokenShort: 'abc12345',
+      });
+      expect(live).toContain('协作');
+      expect(live).toContain('http://192.168.1.10:8123');
+      expect(live).toContain('PIN');
+      expect(live).toContain('482910');
+      expect(live).toContain('2 端');
+      expect(live).toContain('abc12345');
+      // not running → 整行省略（连「协作」两个字都不出现）
+      const idle = await bannerFrameWithBridge({ running: false });
+      expect(idle).not.toContain('协作');
+      // null/undefined → 同步回退到 bridgeServer.getStatusSnapshot，未启动也是 falsy，整行省略
+      const none = await bannerFrameWithBridge(null);
+      expect(none).not.toContain('协作');
+    });
   });
 
   // ── bannerProps 组装纯函数（从 App 体的 try 抽出，独立可断言）─────────────
@@ -1803,6 +1831,24 @@ describeOrSkip('Ink TUI render smoke (src/cli/tui/ink-components)', () => {
       } finally {
         mod.getSourceProvenance = orig;
       }
+    });
+
+    test('bridge 透传到 props；未传时不引入字段（不强行读 bridgeServer，保持纯函数契约）', () => {
+      const App = require('../../src/cli/tui/ink-components/App');
+      const fn = App._resolveBannerProps;
+      // 传 bridge → 原样进 props
+      const bridge = {
+        running: true,
+        url: 'http://192.168.1.10:8123',
+        pin: '482910',
+        clientCount: 0,
+        tokenShort: 'abc12345',
+      };
+      const withBridge = fn({ model: 'claude-opus-5' }, { updateLine: 'x', bridge });
+      expect(withBridge.bridge).toBe(bridge);
+      // 不传 bridge → props 里没有 bridge 字段，渲染路径绝不会因 banner 而读 bridgeServer。
+      const noBridge = fn({ model: 'claude-opus-5' }, { updateLine: 'x' });
+      expect(noBridge.bridge).toBeUndefined();
     });
   });
 });

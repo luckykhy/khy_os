@@ -373,46 +373,14 @@ function renderStructuredDiff(oldContent, newContent, filePath = '') {
 }
 
 // 经典 ANSI 路径的单个「改动块」渲染:把一段连续的删除行 dels[] 与紧随的新增行 adds[]
-// 按 1:1 配对做词级高亮(配对外的多余删/增行各自单独渲染)。与历史 renderStructuredDiff
-// 的逐行渲染**逐字节同构**(同前缀格式 / 同 bgHex 着色 / 同 wordDiff / 同整宽补白),
-// 只是改为对「按 hunk 切分后的局部 del/add 行」而非「整个首末改动跨度」操作。
+// 按「先红后绿」渲染 —— 列出所有红色 - 行,再列出所有绿色 + 行;不做 1:1 词级配对/高亮
+// (用户在多行同 hunk 改动时更易看出「哪些被删、哪些被加」的批量边界,而逐对高亮
+// 让 -/+ 行交错出现,反而不易读)。与历史 renderStructuredDiff 的逐行渲染格式
+// **逐字节同构**(同前缀格式 / 同 bgHex 着色 / 同整宽补白),只是把同一 hunk 内的
+// del/add 行顺序从「按配对交错」改为「先 del 后 add」。
 function _emitChangeBlock(rendered, dels, adds, pad, _wd) {
-  const pairCount = Math.min(dels.length, adds.length);
-  for (let p = 0; p < pairCount; p++) {
-    const rm = dels[p];
-    const ad = adds[p];
-    const numRm = String(rm.num).padStart(pad);
-    const numAd = String(ad.num).padStart(pad);
-    if (_wd) {
-      const result = _wd.renderWordDiffLine(rm.text, ad.text, THEME);
-      if (result) {
-        const _pfxRm = `  ${numRm} - `;
-        const _pfxAd = `  ${numAd} + `;
-        const _padRm = _padToFull(displayWidth(_pfxRm) + displayWidth(result.oldRendered));
-        const _padAd = _padToFull(displayWidth(_pfxAd) + displayWidth(result.newRendered));
-        rendered.push(
-          c().bgHex(THEME.diffRemoved).hex('#FFFFFF')(_pfxRm) +
-            result.oldRendered +
-            (_padRm ? c().bgHex(THEME.diffRemoved).hex('#FFFFFF')(_padRm) : '')
-        );
-        rendered.push(
-          c().bgHex(THEME.diffAdded).hex('#FFFFFF')(_pfxAd) +
-            result.newRendered +
-            (_padAd ? c().bgHex(THEME.diffAdded).hex('#FFFFFF')(_padAd) : '')
-        );
-        continue;
-      }
-    }
-    const _bodyRm = `  ${numRm} - ${rm.text}`;
-    const _bodyAd = `  ${numAd} + ${ad.text}`;
-    rendered.push(
-      c().bgHex(THEME.diffRemoved).hex('#FFFFFF')(_bodyRm + _padToFull(displayWidth(_bodyRm)))
-    );
-    rendered.push(
-      c().bgHex(THEME.diffAdded).hex('#FFFFFF')(_bodyAd + _padToFull(displayWidth(_bodyAd)))
-    );
-  }
-  for (let p = pairCount; p < dels.length; p++) {
+  // 1. 红色 - 行(原文件内容)全部先列
+  for (let p = 0; p < dels.length; p++) {
     const rm = dels[p];
     const num = String(rm.num).padStart(pad);
     const _body = `  ${num} - ${rm.text}`;
@@ -420,7 +388,8 @@ function _emitChangeBlock(rendered, dels, adds, pad, _wd) {
       c().bgHex(THEME.diffRemoved).hex('#FFFFFF')(_body + _padToFull(displayWidth(_body)))
     );
   }
-  for (let p = pairCount; p < adds.length; p++) {
+  // 2. 绿色 + 行(新文件内容)全部后列
+  for (let p = 0; p < adds.length; p++) {
     const ad = adds[p];
     const num = String(ad.num).padStart(pad);
     const _body = `  ${num} + ${ad.text}`;
@@ -428,12 +397,14 @@ function _emitChangeBlock(rendered, dels, adds, pad, _wd) {
       c().bgHex(THEME.diffAdded).hex('#FFFFFF')(_body + _padToFull(displayWidth(_body)))
     );
   }
+  // _wd(词级高亮)参数保留以维持 caller 接线,但「先红后绿」语义下不再做词级配对。
 }
 
 /**
  * 真分 hunk 的结构化 diff 渲染(门控开路径)。消费既有 computeStructuredDiffHunks SSOT
  * —— 同一引擎已被默认 TUI(ToolLines.js)采用 —— 故经典 ANSI 路径与 TUI 收敛:
- *  - 每个 hunk 的 ctx/del/add 行各自渲染(ctx dim、del/add bgHex + 词级高亮);
+ *  - 每个 hunk 的 ctx/del/add 行各自渲染(ctx dim、del/add 整行 bgHex,无词级配对);
+ *  - 同一 hunk 内**先红后绿**:所有 del 行(红 -)先列、再列所有 add 行(绿 +);
  *  - 相邻 hunk 间按 gapBefore 插 dim「⋯ N unchanged lines」分隔(对齐 TUI 的 ⋯ 行),
  *    绝不再把首末改动间的未改行重绘成 churn;
  *  - 末尾 └ 摘要走 editStatLine SSOT,喂 hunk 的**真**±计数(realAdded/realRemoved)。
@@ -446,13 +417,6 @@ function _renderStructuredDiffHunked(oldContent, newContent) {
   });
   if ((added === 0 && removed === 0) || !hunks.length) {
     return '';
-  }
-
-  let _wd;
-  try {
-    _wd = require('./wordDiff');
-  } catch {
-    /* fallback to line-level */
   }
 
   // gutter 数字位宽:取所有 hunk 行号的最大位数(单一真源 diffGutter,门控关 → 恒 4 位)。
@@ -482,7 +446,7 @@ function _renderStructuredDiffHunked(oldContent, newContent) {
         p++;
         continue;
       }
-      // 收集一段连续的 del 行 + 紧随的 add 行,交给 _emitChangeBlock 做配对词级高亮。
+      // 收集一段连续的 del 行 + 紧随的 add 行,交给 _emitChangeBlock 做「先红后绿」渲染。
       const dels = [];
       while (p < rows.length && rows[p].kind === 'del') {
         dels.push(rows[p]);
@@ -493,7 +457,7 @@ function _renderStructuredDiffHunked(oldContent, newContent) {
         adds.push(rows[p]);
         p++;
       }
-      _emitChangeBlock(rendered, dels, adds, _pad, _wd);
+      _emitChangeBlock(rendered, dels, adds, _pad);
     }
   }
 
@@ -525,14 +489,8 @@ function _renderStructuredDiffLegacy(oldContent, newContent, filePath = '') {
     rendered.push(`  ${c().dim(num)}   ${c().dim(oldLines[k])}`);
   }
 
-  // Word-level diff: pair removed/added lines for inline highlighting
-  let _wd;
-  try {
-    _wd = require('./wordDiff');
-  } catch {
-    /* fallback to line-level */
-  }
-
+  // 「先红后绿」渲染:列出全部红色 - 行(原内容),再列出全部绿色 + 行(新内容);
+  // 不做词级配对/高亮(对齐 hunked 路径的 _emitChangeBlock 新语义)。
   const removedLines = [];
   for (let k = removeStart; k < removeEnd; k++) {
     removedLines.push({ num: k + 1, text: oldLines[k] });
@@ -542,49 +500,8 @@ function _renderStructuredDiffLegacy(oldContent, newContent, filePath = '') {
     addedLines.push({ num: k + 1, text: newLines[k] });
   }
 
-  // Pair removed/added lines 1:1 for word-level diff, extras go unpaired
-  const pairCount = Math.min(removedLines.length, addedLines.length);
-
-  for (let p = 0; p < pairCount; p++) {
-    const rm = removedLines[p];
-    const ad = addedLines[p];
-    const numRm = String(rm.num).padStart(_pad);
-    const numAd = String(ad.num).padStart(_pad);
-
-    if (_wd) {
-      const result = _wd.renderWordDiffLine(rm.text, ad.text, THEME);
-      if (result) {
-        // 整宽色条:前缀(纯文本)+ 词级高亮内容(含 ANSI,displayWidth 剥 ANSI 测宽)。
-        const _pfxRm = `  ${numRm} - `;
-        const _pfxAd = `  ${numAd} + `;
-        const _padRm = _padToFull(displayWidth(_pfxRm) + displayWidth(result.oldRendered));
-        const _padAd = _padToFull(displayWidth(_pfxAd) + displayWidth(result.newRendered));
-        rendered.push(
-          c().bgHex(THEME.diffRemoved).hex('#FFFFFF')(_pfxRm) +
-            result.oldRendered +
-            (_padRm ? c().bgHex(THEME.diffRemoved).hex('#FFFFFF')(_padRm) : '')
-        );
-        rendered.push(
-          c().bgHex(THEME.diffAdded).hex('#FFFFFF')(_pfxAd) +
-            result.newRendered +
-            (_padAd ? c().bgHex(THEME.diffAdded).hex('#FFFFFF')(_padAd) : '')
-        );
-        continue;
-      }
-    }
-    // Fallback: line-level
-    const _bodyRm = `  ${numRm} - ${rm.text}`;
-    const _bodyAd = `  ${numAd} + ${ad.text}`;
-    rendered.push(
-      c().bgHex(THEME.diffRemoved).hex('#FFFFFF')(_bodyRm + _padToFull(displayWidth(_bodyRm)))
-    );
-    rendered.push(
-      c().bgHex(THEME.diffAdded).hex('#FFFFFF')(_bodyAd + _padToFull(displayWidth(_bodyAd)))
-    );
-  }
-
-  // Unpaired removed lines (more removals than additions)
-  for (let p = pairCount; p < removedLines.length; p++) {
+  // 1. 红色 - 行(原文件)全部先列
+  for (let p = 0; p < removedLines.length; p++) {
     const rm = removedLines[p];
     const num = String(rm.num).padStart(_pad);
     const _body = `  ${num} - ${rm.text}`;
@@ -593,8 +510,8 @@ function _renderStructuredDiffLegacy(oldContent, newContent, filePath = '') {
     );
   }
 
-  // Unpaired added lines (more additions than removals)
-  for (let p = pairCount; p < addedLines.length; p++) {
+  // 2. 绿色 + 行(新文件)全部后列
+  for (let p = 0; p < addedLines.length; p++) {
     const ad = addedLines[p];
     const num = String(ad.num).padStart(_pad);
     const _body = `  ${num} + ${ad.text}`;

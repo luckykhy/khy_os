@@ -60,7 +60,12 @@ try {
 try { require('../src/bootstrap/windowsSpawnHardening').installWindowsSpawnHardening(); } catch { /* best effort */ }
 
 // ── Fast startup: single env var to disable all optional background tasks ──
-if (process.env.KHY_FAST_STARTUP === '1') {
+// Default-on (DESIGN-PERF-001 v1 §阶段 B): bridge server / source-heal SHA-256
+// scan / task cleanup are best-effort background work that does not gate the
+// REPL hot path; turning them off by default drops 200-600ms of CPU contention
+// and removes bridge LAN port exposure for users who never pair a phone. Opt
+// back into legacy behavior with KHY_FAST_STARTUP=0.
+if (process.env.KHY_FAST_STARTUP !== '0') {
   process.env.KHY_BRIDGE_AUTOSTART = process.env.KHY_BRIDGE_AUTOSTART ?? '0';
   process.env.KHY_SOURCE_HEAL = process.env.KHY_SOURCE_HEAL ?? '0';
   process.env.KHY_TASK_CLEANUP = process.env.KHY_TASK_CLEANUP ?? '0';
@@ -548,14 +553,19 @@ function _emitFatal(err) {
     require('fs').writeSync(2, msg);
   } catch { /* 连 fd 2 都写不了：已尽力，不再制造二次异常 */ }
 }
+// 收敛变更（v2）：unhandledRejection / uncaughtException 的渲染全权交给
+// crashRecovery.install() —— 它走 reportKhyError 自动按 severity 选面板或
+// 单行，且对 fatal/config 自动 process.exit。这里不再重复 _emitFatal，
+// 否则同一个异常会被打两次（[CrashRecovery] banner + ✗ stack）。
+//
+// _emitFatal 仍保留函数定义与导出，供外部调用方需要「绕过 crashRecovery
+// 直接写 fd 2」的场景使用（命令行 --print 模式的兜底）。
 process.on('unhandledRejection', (err) => {
-  _emitFatal(err);
   if (!isInteractiveRun()) {
-    process.exit(1);  // 非交互模式：直接退出
+    process.exit(1);  // 非交互模式：crashRecovery 也会 exit，这里兜底
   }
 });
 process.on('uncaughtException', (err) => {
-  _emitFatal(err);
   const fatalCodes = new Set(['ERR_IPC_CHANNEL_CLOSED', 'EPIPE']); // 致命错误码，必须退出
   if (!isInteractiveRun() || fatalCodes.has(err?.code)) {
     process.exit(1);  // 非交互模式或致命错误：退出进程

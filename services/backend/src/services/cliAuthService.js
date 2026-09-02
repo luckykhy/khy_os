@@ -81,7 +81,16 @@ function _ensureDir() {
 function _loadCredentials() {
   try {
     if (fs.existsSync(_credentialsFile())) {
-      return JSON.parse(fs.readFileSync(_credentialsFile(), 'utf-8'));
+      const raw = JSON.parse(fs.readFileSync(_credentialsFile(), 'utf-8'));
+      // ARCH-074: 软校验 aliases 字段。非数组/含非字符串元素 → 视为空。
+      if (raw && typeof raw === 'object') {
+        if (!Array.isArray(raw.aliases)) {
+          raw.aliases = [];
+        } else {
+          raw.aliases = raw.aliases.filter((a) => typeof a === 'string');
+        }
+      }
+      return raw;
     }
   } catch {
     /* ignore */
@@ -268,8 +277,11 @@ function getSessionAuthToken() {
 /**
  * Register a new account.
  * Tries server first (shared with frontend), falls back to local.
+ *
+ * ARCH-074: 第六个可选参数 `aliases` (string[])：登录别名集合（不含 username/email）。
+ * 跨账号唯一性由 aio backend /api/auth/register 保证；本机兜底时直接落进 credentials.json。
  */
-async function register(username, password, email, securityQuestion, securityAnswer) {
+async function register(username, password, email, securityQuestion, securityAnswer, aliases) {
   if (!username || username.length < 2) {
     return { success: false, error: '用户名至少 2 个字符' };
   }
@@ -295,6 +307,10 @@ async function register(username, password, email, securityQuestion, securityAns
     serverData.securityQuestion = securityQuestion;
     serverData.securityAnswer = securityAnswer;
   }
+  // ARCH-074: 透传别名到 aio backend register 端点；服务端负责跨账号唯一性校验。
+  if (Array.isArray(aliases) && aliases.length > 0) {
+    serverData.aliases = aliases.filter((a) => typeof a === 'string' && a.trim().length > 0);
+  }
 
   const serverResult = await _serverRequest('POST', '/api/auth/register', serverData);
   let serverToken = null;
@@ -316,6 +332,12 @@ async function register(username, password, email, securityQuestion, securityAns
     deviceId: `${os.platform()}-${os.hostname()}`,
     serverSynced: !!serverToken,
   };
+  // ARCH-074: alias 镜像到本机（离线登录也按 alias 查找）。server 返回的 aliases 优先。
+  if (serverAuthData && serverAuthData.user && Array.isArray(serverAuthData.user.aliases)) {
+    creds.aliases = serverAuthData.user.aliases.filter((a) => typeof a === 'string');
+  } else if (Array.isArray(aliases)) {
+    creds.aliases = aliases.filter((a) => typeof a === 'string' && a.trim().length > 0);
+  }
 
   // Store security question locally too
   if (securityQuestion && securityAnswer) {
@@ -349,12 +371,32 @@ async function register(username, password, email, securityQuestion, securityAns
 // default admin persisted at .khy/credentials/default-admin.json (created by
 // the unified credentialGenerator during first seeding). No credentials file
 // → no builtin fallback: login must go through the server or local register.
+//
+// ARCH-074: 每次调用前先异步触发 ensureDefaultAdminPassword（fire-and-forget，
+// 不阻塞离线 fallback），保证 aio backend User 表里的默认管理员密码
+// 与本机 default-admin.json 同步。该调用是幂等的且 fail-soft（数据库不可用时
+// 静默返回），不抛错、不影响 CLI 登录。
 function _loadBuiltinAccounts() {
   const raw = String(process.env.CLI_BUILTIN_ACCOUNTS || '').trim();
   if (!raw) {
     try {
-      const { readDefaultAdminCredentials } = require('./credentialGenerator');
-      const creds = readDefaultAdminCredentials();
+      const credentialGenerator = require('./credentialGenerator');
+      // fire-and-forget: 不 await CLI 启动；失败仅 stderr
+      if (typeof credentialGenerator.ensureDefaultAdminPassword === 'function') {
+        credentialGenerator
+          .ensureDefaultAdminPassword()
+          .then((result) => {
+            if (result && result.ok && result.updated) {
+              console.log(
+                `[cliAuthService] 默认管理员密码已在数据库中更新为新随机密码，username=${result.username}`
+              );
+            }
+          })
+          .catch(() => {
+            /* best-effort */
+          });
+      }
+      const creds = credentialGenerator.readDefaultAdminCredentials();
       if (creds) {
         return [{ username: creds.username, password: creds.password, role: 'admin' }];
       }
@@ -407,6 +449,10 @@ async function login(username, password, timeoutMs) {
     // Update local credentials to match server (keeps offline fallback in sync)
     const { hash, salt } = _hashPassword(password);
     const existing = _loadCredentials() || {};
+    // ARCH-074: 镜像 server 返回的 aliases（应用层保证 username 不在 aliases 里）
+    const serverAliases = Array.isArray(serverUser.aliases)
+      ? serverUser.aliases.filter((a) => typeof a === 'string')
+      : [];
     const creds = {
       ...existing,
       username: serverUser.username || username,
@@ -414,6 +460,7 @@ async function login(username, password, timeoutMs) {
       passwordHash: hash,
       passwordSalt: salt,
       serverSynced: true,
+      aliases: serverAliases,
     };
     // Sync security question from server if available
     if (serverUser.securityQuestion && !creds.securityQuestion) {
@@ -426,7 +473,12 @@ async function login(username, password, timeoutMs) {
       serverRefreshExpiresAt: serverAuthData.refreshExpiresAt || '',
     });
 
-    return { success: true, username: creds.username, source: 'server' };
+    return {
+      success: true,
+      username: creds.username,
+      matchedBy: serverAuthData.matchedBy || 'username',
+      source: 'server',
+    };
   }
 
   // Server unreachable or login failed on server — try local
@@ -440,7 +492,15 @@ async function login(username, password, timeoutMs) {
     return { success: false, error: '本机尚未注册。请先使用 register 命令注册' };
   }
 
-  if (creds.username !== username) {
+  // ARCH-074: 本机按 username / email / aliases 任一查找
+  const credAliases = Array.isArray(creds.aliases) ? creds.aliases : [];
+  const localMatchedBy = (() => {
+    if (creds.username === username) return 'username';
+    if (creds.email && creds.email === username) return 'email';
+    if (credAliases.includes(username)) return 'alias';
+    return null;
+  })();
+  if (!localMatchedBy) {
     return { success: false, error: '用户名不匹配' };
   }
 
@@ -449,7 +509,7 @@ async function login(username, password, timeoutMs) {
   }
 
   _saveSession(username, null);
-  return { success: true, username, source: 'local' };
+  return { success: true, username, matchedBy: localMatchedBy, source: 'local' };
 }
 
 /**

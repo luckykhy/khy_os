@@ -38,6 +38,14 @@ if errorlevel 1 (
 )
 
 echo.
+echo [3/3] Enabling NTFS transparent compression (best-effort, background)...
+if exist "%PROJECT_ROOT%\scripts\install\enable-ntfs-compression.ps1" (
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%PROJECT_ROOT%\scripts\install\enable-ntfs-compression.ps1" -ProjectRoot "%PROJECT_ROOT%"
+) else (
+    echo       Compression helper not found, skipped.
+)
+
+echo.
 echo [OK] khy command configured.
 echo Project: %PROJECT_ROOT%
 echo Wrappers: %BIN_DIR%

@@ -13,7 +13,29 @@ const { safeReadJsonSync } = require('../services/configGuard');
 // service layer no longer requires cli/ui/permissionDialog directly; this is the
 // single legit load point that wires the cli → services injection.
 require('./ui/permissionDialog');
-const { foldOutput } = require('./toolDisplayPolicy');
+// toolDisplayPolicy + streamingMarkdown are pure render-pipeline leaves: their
+// export is only consumed by helpers invoked from inside startRepl when a turn
+// actually fires. Lazy-getter them so the 13,589-line REPL module no longer
+// pulls their transitive tree into the cold-start parse budget.
+const _toolDisplayPolicy = () => (_toolDisplayPolicyMod ??= require('./toolDisplayPolicy'));
+let _toolDisplayPolicyMod = null;
+function foldOutput(...args) {
+  return _toolDisplayPolicy().foldOutput(...args);
+}
+const _streamingMarkdown = () => (_streamingMarkdownMod ??= require('./streamingMarkdown'));
+let _streamingMarkdownMod = null;
+// MarkdownStreamState is a class; expose it lazily so the source import is
+// deferred until a turn actually streams. Bind the prototype so `new` keeps
+// working without forcing eager evaluation.
+const MarkdownStreamState = new Proxy(function () {}, {
+  construct(_target, args) {
+    return new (_streamingMarkdown().MarkdownStreamState)(...args);
+  },
+  get(_target, prop) {
+    return _streamingMarkdown().MarkdownStreamState[prop];
+  },
+});
+MarkdownStreamState.prototype = _streamingMarkdown().MarkdownStreamState.prototype;
 const {
   createTaskMindMap,
   createIdleTaskMindMap,
@@ -202,12 +224,26 @@ const {
   _buildDirTree,
 } = require('./repl/toolOutputRender');
 const { formatStatusMessage } = require('./statusMessageFormatter');
-const { MarkdownStreamState } = require('./streamingMarkdown');
 const { toolResultReflection: _toolResultReflection } = require('./toolResultVoice');
 
 // 渲染去重纯叶子(门控 KHY_RENDER_DEDUP 默认开):判最终文本是否已在本回合流式展示过。
 // 惰性 require + null 回退:即便文件缺失也不阻断 REPL。
 const _renderDedup = _tryOr(() => require('./renderDedup'), null);
+// repl/clipboardCommands.js owns the clipboard bridge/relay command handlers
+// (T-020 B3) — adapter injected (SCC member), busy/FSM via setters.
+const { createClipboardCommands: _createClipboardCommands } = require('./repl/clipboardCommands');
+// repl/shellEscape.js owns the `!` shell escape cluster (T-020 B4a) — queue state
+// encapsulated, formatShellEscapeContext injected (host-injected at load).
+const { createShellEscape: _createShellEscape } = require('./repl/shellEscape');
+// repl/deferredStatuses.js owns the post-stream deferred-status replay (T-020 B5)
+// — the buffer array is passed by reference from this closure.
+const { createDeferredStatusFlush: _createDeferredStatusFlush } = require('./repl/deferredStatuses');
+// repl/permissionBar.js owns the permission bar cluster (mode state + auto-compact
+// anchor + bar renderers) — behavior-preserving god-file split, T-020 B2'.
+const { createPermissionBar: _createPermissionBar } = require('./repl/permissionBar');
+// repl/startupHeader.js owns the startup visuals cluster (mascot probe + Claude-style
+// welcome box + post-banner notices) — behavior-preserving god-file split, T-017 batch 1.
+const { createStartupVisuals } = require('./repl/startupHeader');
 
 // ── Cross-round session state (process-scoped = one session) ──
 // Layer 2: mutable module-level state that survives across REPL turns within
@@ -630,12 +666,89 @@ async function startRepl(options = {}) {
       return;
     } catch (err) {
       process.stderr.write(`Ink TUI init failed: ${err.message}\n${err.stack}\n`);
-      process.exit(1);
+      // ── TUI self-heal ladder (KHY_TUI_SELF_HEAL, default on) ──
+      // A TUI crash no longer kills the session:
+      //   1) restore terminal basics (ink may have died with raw mode on);
+      //   2) force a source heal (bypasses the 24h throttle) — if the crash was
+      //      caused by spot file corruption, the pristine snapshot repairs it;
+      //   3) heal actually repaired files → retry startInkApp ONCE (state
+      //      changed, a retry has a concrete reason to succeed);
+      //   4) still broken (source bug / dev tree / no snapshot) → degrade to
+      //      the classic readline REPL below instead of process.exit(1), so
+      //      the user keeps a working chat surface.
+      // Opt out with KHY_TUI_SELF_HEAL=0|false|off → legacy print-and-exit.
+      const selfHealRaw = String(process.env.KHY_TUI_SELF_HEAL || 'true').toLowerCase();
+      if (selfHealRaw === '0' || selfHealRaw === 'false' || selfHealRaw === 'off') {
+        process.exit(1);
+      }
+      // 1) Best-effort terminal restore.
+      try {
+        if (process.stdin.isTTY && process.stdin.isRaw) {
+          process.stdin.setRawMode(false);
+        }
+      } catch {
+        /* best-effort */
+      }
+      process.stderr.write('\n');
+      // 2) Crash-triggered source heal (sync; managed subtree only, fail-soft).
+      let healedCount = 0;
+      try {
+        const healRes = require('../services/sourceHealService').runStartupHeal({
+          reason: 'tui-crash',
+          force: true,
+          log: (line) => {
+            try {
+              process.stderr.write(`${line}\n`);
+            } catch {
+              /* ignore */
+            }
+          },
+        });
+        healedCount = (healRes && healRes.healed) || 0;
+      } catch {
+        /* self-heal is optional; never blocks the fallback */
+      }
+      // 3) Retry once only when the heal actually changed files on disk.
+      if (healedCount > 0) {
+        try {
+          process.stderr.write(
+            `  TUI 自愈: 已修复 ${healedCount} 个文件，重试 Ink TUI (1/1)...\n`
+          );
+          const { startInkApp: restartInkApp } = require('./tui/app.js');
+          await restartInkApp(options);
+          return;
+        } catch (err2) {
+          process.stderr.write(`Ink TUI retry failed: ${err2.message}\n`);
+        }
+      }
+      // 4) Degrade to the classic readline REPL below (same process). The Ink
+      //    ownership flag must be cleared or in-process handlers would keep
+      //    avoiding inquirer for a UI that no longer exists.
+      try {
+        delete process.env.KHY_INK_TUI_ACTIVE;
+      } catch {
+        /* ignore */
+      }
+      process.stderr.write(
+        '  Ink TUI 仍不可用，已降级到经典命令行模式（如需彻底关闭 Ink TUI 可设 KHY_FULL_TUI=0）。\n'
+      );
     }
   }
 
   // Non-TTY (piped) mode: minimal non-interactive handler
   process.env.KHY_REPL_ACTIVE = '1';
+  // Session hang watchdog for the classic interactive surface (same service the
+  // Ink TUI installs; idempotent, so the TUI-crash fallback path stays safe).
+  if (process.stdout.isTTY) {
+    try {
+      require('../services/sessionWatchdog').installSessionWatchdog({
+        env: process.env,
+        logger: console,
+      });
+    } catch {
+      /* watchdog optional — never blocks the REPL */
+    }
+  }
   const runtimeMode = String(
     options.mode || process.env.KHY_RUNTIME_MODE || 'khyquant'
   ).toLowerCase();
@@ -751,55 +864,6 @@ async function startRepl(options = {}) {
   // Set terminal window title
   setTerminalTitle('khy OS');
 
-  function tryPrintMascotImagePreview() {
-    if (!process.stdout.isTTY) {
-      return false;
-    }
-    const term = String(process.env.TERM_PROGRAM || '');
-    const supportsInlineImage =
-      term === 'iTerm.app' || term === 'WezTerm' || !!process.env.KITTY_WINDOW_ID;
-
-    const configured = String(process.env.KHY_MASCOT_IMAGE || '').trim();
-    const candidates = [];
-    if (configured) {
-      candidates.push(path.resolve(configured));
-    }
-    candidates.push(path.resolve(__dirname, '../../assets/mascot/xuanniao-original.jpg'));
-
-    for (const imgPath of candidates) {
-      if (!fs.existsSync(imgPath)) {
-        continue;
-      }
-      if (supportsInlineImage) {
-        try {
-          const imageService = require('../services/imageService');
-          const image = imageService.readImageFromFile(imgPath);
-          imageService.printImagePreview(image);
-          return true;
-        } catch {
-          // Try terminal text fallback (chafa) below.
-        }
-      }
-      try {
-        const { spawnSync } = require('child_process');
-        const cols = fmt().getTerminalColumns();
-        const width = Math.max(36, Math.min(72, cols - 8));
-        const height = Math.max(12, Math.min(24, Math.floor(width * 0.45)));
-        const result = spawnSync('chafa', [`--size=${width}x${height}`, imgPath], {
-          encoding: 'utf-8',
-          stdio: ['ignore', 'pipe', 'pipe'],
-        });
-        if (result && result.status === 0 && String(result.stdout || '').trim()) {
-          console.log('');
-          console.log(String(result.stdout).trimEnd());
-          return true;
-        }
-      } catch {
-        // Try the next candidate path.
-      }
-    }
-    return false;
-  }
 
   /**
    * Print resume recovery hints from saved session metadata.
@@ -870,362 +934,22 @@ async function startRepl(options = {}) {
     }
   }
 
-  let _startupHeaderRendered = false;
-  /**
-   * Render the startup banner/box (Claude-style bordered header or legacy banner).
-   * @closuredeps {boolean} _startupHeaderRendered - once-only render guard (startRepl-scoped, declared above)
-   * @closuredeps {Object} c - chalk instance (startRepl-scoped)
-   * @closuredeps {boolean} claudeUiEnabled - UI mode flag (startRepl-scoped)
-   * @closuredeps {boolean} showGettingStarted - getting-started toggle (startRepl-scoped)
-   * @closuredeps {Function} printBanner - legacy banner printer (destructured from fmt(), startRepl-scoped)
-   * @closuredeps {Function} getClassicMonsterPetLines - mascot sprite lines (destructured from fmt(), startRepl-scoped)
-   * @closuredeps {Function} tryPrintMascotImagePreview - sibling nested function (startRepl-scoped)
-   * @closuredeps {Function} ai - lazy ai module loader (module-scoped)
-   * @closuredeps {Function} fmt - lazy formatters loader (module-scoped)
-   */
-  function renderStartupHeader(force = false) {
-    if (_startupHeaderRendered && !force) {
-      return;
-    }
-    _startupHeaderRendered = true;
-    const aiProvider = ai().getActiveProvider();
-    if (!claudeUiEnabled) {
-      printBanner(VERSION, aiProvider);
-      if (showGettingStarted) {
-        try {
-          const gettingStarted = require('../services/gettingStartedService');
-          gettingStarted.displayGettingStarted();
-        } catch {
-          /* non-critical */
-        }
-      }
-      return;
-    }
-
-    let modelName = '';
-    let effortLabel = '高强度';
-    let billingType = '按量计费';
-    let adapterName = '';
-    let modelSource = '';
-    try {
-      const gateway = require('../services/gateway/aiGateway');
-      const active = gateway.getActiveAdapter();
-      modelName = active?.activeModel || '';
-      adapterName = active?.name || active?.type || '';
-      // Where the startup model came from (env / lastVerified / adapterDefault),
-      // stamped by getActiveAdapter(); used below to disclose fallback selection.
-      modelSource = active?.modelSource || '';
-    } catch {
-      /* best effort */
-    }
-
-    if (!modelName) {
-      modelName = process.env.GATEWAY_PREFERRED_MODEL || 'auto';
-    }
-    if (!adapterName) {
-      adapterName = process.env.GATEWAY_PREFERRED_ADAPTER || aiProvider || 'auto';
-    }
-
-    // Determine billing type
-    if (/ollama|local|llama/i.test(adapterName)) {
-      billingType = '本地模型';
-    } else if (/relay|web|clipboard/i.test(adapterName)) {
-      billingType = '中继通道';
-    }
-
-    // Effort level
-    try {
-      const effort = ai().getEffort ? ai().getEffort() : 'high';
-      const labels = { max: '最大强度', high: '高强度', medium: '中强度', low: '低强度' };
-      effortLabel = labels[effort] || '高强度';
-    } catch {
-      /* best effort */
-    }
-
-    const cols = fmt().getTerminalColumns();
-
-    // Try original mascot image first (inline image or chafa fallback),
-    // then keep the text UI below as stable fallback.
-    const imagePreviewShown = tryPrintMascotImagePreview();
-
-    // ── Claude Code style bordered box ──
-    // Layout:
-    // ╭─── khy OS vX.Y.Z ───────────────────────────╮
-    // │                                               │
-    // │   Welcome back!        Tips for getting started│
-    // │                        Run /init to create...  │
-    // │   [mascot sprite]                              │
-    // │                        Recent activity         │
-    // │                        No recent activity      │
-    // │                                               │
-    // │   Model with effort · Billing                 │
-    // │       /working/directory                      │
-    // ╰───────────────────────────────────────────────╯
-
-    const boxWidth = Math.min(cols - 4, 76);
-    // Inner content width: box is "  ╭...╮" where visible = 2 indent + boxWidth chars.
-    // Content lines: "  │ " (4 visible) + content + " │" (2 visible) = boxWidth,
-    // so content area = boxWidth - 6. But use boxWidth - 2 for border chars total.
-    const contentWidth = boxWidth - 2; // between │ and │ (including padding spaces)
-    const innerWidth = contentWidth - 2; // minus " " padding on each side: "│ {inner} │"
-    const dim = c.dim;
-    const orange = c.hex('#D77757');
-
-    // Measure visible display width, stripping ANSI codes and accounting for CJK/emoji
-    const visLen = (s) => {
-      const stripped = fmt().stripAnsi(s);
-      let w = 0;
-      for (const ch of stripped) {
-        w += getDisplayWidthChar(ch);
-      }
-      return w;
-    };
-
-    // Pad/truncate content to exact visible width
-    const padLine = (content, width) => {
-      const gap = Math.max(0, width - visLen(content));
-      return content + ' '.repeat(gap);
-    };
-
-    // Helper: build a full box row "  │ {content padded to innerWidth} │"
-    const boxRow = (content) => {
-      return dim('  │ ') + padLine(content, innerWidth) + dim(' │');
-    };
-
-    // Title line
-    const titleText = ` khy OS v${VERSION} `;
-    const topDashes = contentWidth - titleText.length; // dashes between ╭ and ╮
-    const topLeft = Math.floor(topDashes / 2);
-    const topRight = topDashes - topLeft;
-    console.log('');
-    console.log(
-      dim(`  ╭${'─'.repeat(Math.max(1, topLeft))}`) +
-        dim(titleText) +
-        dim(`${'─'.repeat(Math.max(1, topRight))}╮`)
-    );
-
-    // Pet sprite + right-side info
-    const petBronze = c.hex('#D77757');
-    const petLinesFallback =
-      typeof getClassicMonsterPetLines === 'function'
-        ? getClassicMonsterPetLines(petBronze)
-        : (() => {
-            // Inline fallback: Chinese phoenix (Xuan Niao) single-color
-            const z = petBronze;
-            const d = c.dim;
-            return [
-              `       ${z('▄█▄')}`,
-              `     ${z('▄█▀█▀█▄')}`,
-              `     ${z('█▌░▀░▐█')}`,
-              `      ${z('▜███▛')}`,
-              `  ${z('▗▟████████▙▖')}`,
-              `   ${z('▝▀▀▄██▄▀▀▘')}`,
-              `       ${d('▐▌')}`,
-            ];
-          })();
-    const petLines = imagePreviewShown ? Array(7).fill('') : petLinesFallback;
-
-    // Left column width (pet + "Welcome back!")
-    const leftColW = Math.floor(innerWidth * 0.45);
-    const rightColW = innerWidth - leftColW;
-
-    // Tips / activity section — 动态信息
-    const green = c.hex('#4EBA65');
-
-    // Auth method detection
-    let authMethod = 'API 密钥';
-    try {
-      if (/relay|clipboard/i.test(adapterName)) {
-        authMethod = '中继';
-      } else if (/oauth/i.test(adapterName)) {
-        authMethod = 'OAuth';
-      } else if (/ollama|local/i.test(adapterName)) {
-        authMethod = '本地';
-      } else if (process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY) {
-        authMethod = 'API 密钥';
-      }
-    } catch {}
-
-    // Context window
-    let ctxWindow = '';
-    try {
-      const contextLimit = ai().getContextLimit ? ai().getContextLimit() : 0;
-      if (contextLimit > 0) {
-        ctxWindow = `${Math.round(contextLimit / 1000)}k 令牌`;
-      }
-    } catch {}
-
-    // Gateway status
-    let gatewayStatus = '';
-    try {
-      const gw = require('../services/gateway/aiGateway');
-      const statuses = typeof gw.getStatus === 'function' ? gw.getStatus() : [];
-      const available = statuses.filter((s) => s.available);
-      if (available.length > 0) {
-        gatewayStatus = `${available.length} 个适配器就绪`;
-      } else if (statuses.length > 0) {
-        gatewayStatus = '已配置，检测中';
-      } else {
-        gatewayStatus = '就绪';
-      }
-    } catch {
-      gatewayStatus = '就绪';
-    }
-
-    // Git branch —— 启动横幅的分支读取。这是**启动阻塞路径**上的一次同步 git
-    // 派生;与 gitContextService._git / workspaceGitInit 对齐,默认走「无 shell 派生」
-    // (spawnSync 直接派生 git,去掉 Windows execSync 的 cmd.exe 中介,cmd.exe → git
-    // 两个进程降为单个 git.exe)。Git Bash 优先解析是 win32 专属关切,故仅在 win32 上
-    // 调检测器(Unix 保持 'git' 字面量,零 `git --version` 探针,与历史逐字节一致)。
-    // 门控 KHY_GIT_SHELL_FREE(default-on CANON);门关 / 无法安全分词 / 任何异常
-    // → 逐字节回退历史 execSync 字符串路径。全程 fail-soft:任何失败 → 分支留空。
-    let gitBranch = '';
-    try {
-      const { execSync, spawnSync } = require('child_process');
-
-      let gitPath = 'git';
-      if (process.platform === 'win32') {
-        try {
-          const detected = require('../services/gitExecutableDetector').detectGitExecutable();
-          if (detected) {
-            gitPath = detected;
-          }
-        } catch {
-          /* 检测失败 → 保持 'git'（历史行为） */
-        }
-      }
-
-      let readViaSpawn = false;
-      try {
-        const plan = require('../services/gitSpawnPlan');
-        if (plan.isShellFreeGitEnabled(process.env)) {
-          const argv = plan.toGitArgv('rev-parse --abbrev-ref HEAD');
-          if (argv) {
-            readViaSpawn = true;
-            const res = spawnSync(gitPath, argv, {
-              encoding: 'utf8',
-              timeout: 3000,
-              stdio: ['pipe', 'pipe', 'pipe'],
-              windowsHide: true,
-            });
-            if (res && !res.error && res.status === 0) {
-              gitBranch = String(res.stdout == null ? '' : res.stdout).trim();
-            }
-          }
-        }
-      } catch {
-        readViaSpawn = false;
-      }
-
-      if (!readViaSpawn) {
-        // 逐字节回退:门关 / 无法分词 / 判定异常 → 历史 execSync 字符串路径。
-        const quotedGit = gitPath === 'git' ? 'git' : `"${gitPath}"`;
-        gitBranch = execSync(`${quotedGit} rev-parse --abbrev-ref HEAD`, {
-          encoding: 'utf8',
-          timeout: 3000,
-          stdio: ['pipe', 'pipe', 'pipe'],
-        }).trim();
-      }
-    } catch {}
-
-    const tipsHeader = green('系统');
-    const tipsBody = dim(`认证: ${authMethod}${ctxWindow ? ` · 上下文: ${ctxWindow}` : ''}`);
-    const actHeader = green('状态');
-    const actBody = dim(`网关: ${gatewayStatus}${gitBranch ? ` · 分支: ${gitBranch}` : ''}`);
-
-    // Row 1: empty
-    console.log(boxRow(''));
-
-    // Row 2: "Welcome back!" + tips header
-    const welcomeText = c.bold('欢迎回来');
-    console.log(boxRow(padLine(`  ${welcomeText}`, leftColW) + padLine(tipsHeader, rightColW)));
-
-    // Rows 3..N: phoenix lines + right-side intro/status
-    // Spread right-side content across the 7-line sprite height
-    const rightLines = ['', tipsBody, '', actHeader, actBody, '', ''];
-    for (let i = 0; i < petLines.length; i++) {
-      const right = rightLines[i] || '';
-      console.log(boxRow(padLine(`  ${petLines[i]}`, leftColW) + padLine(right, rightColW)));
-    }
-
-    // Row 6: empty
-    console.log(boxRow(''));
-
-    // Row 7: model info
-    const modelInfo = `${modelName} · ${effortLabel} · ${billingType}`;
-    console.log(boxRow(`  ${dim(modelInfo)}`));
-
-    // Row 7.5: model-source disclosure — only when the model is a fallback
-    // (not the user's env preference), so users see WHY this model was picked.
-    const sourceLabels = {
-      lastVerified: '模型来源: 上次会话记忆',
-      adapterDefault: '模型来源: 适配器默认',
-    };
-    if (sourceLabels[modelSource]) {
-      console.log(boxRow(`  ${dim(sourceLabels[modelSource])}`));
-    }
-
-    // Row 8: working directory
-    console.log(boxRow(`  ${dim(formatShortCwd())}`));
-
-    // Bottom border
-    console.log(dim(`  ╰${'─'.repeat(contentWidth)}╯`));
-    console.log('');
-
-    // ── 模型退役启动提示（对齐 CC 启动期 model-deprecation-warning）──
-    // 门控 KHY_MODEL_DEPRECATION_NOTICE（默认开）。若当前钉选模型已排定退役日期，
-    // 启动时给一行 CC 风格提示（时态感知：已于/将于）。当前 khy 型号(opus-4-x 等)不在
-    // 退役表 → 无提示；仅当有人钉到旧代模型才触发。全 best-effort，绝不阻断启动。
-    try {
-      const fp = require('../services/futureProofing');
-      const notice = fp.getModelRetirementNotice(modelName, {
-        adapterName,
-        nowMs: Date.now(),
-      });
-      if (notice) {
-        console.log('  ' + c.yellow(notice));
-        console.log('');
-      }
-    } catch {
-      /* 退役提示是增益，绝不阻断启动 */
-    }
-
-    // ── 未完成构建发现横幅 ──
-    // 若当前工作目录存在被打断（断电/断网/token耗尽/Ctrl+C/khy故障）残留的可续检查点，
-    // 在启动时主动提示，并给出确切续作命令。全 best-effort，绝不阻断启动。
-    try {
-      const resumeAdvisor = require('../services/resumeAdvisor');
-      try {
-        resumeAdvisor.pendingForCwd && require('../services/boulderState').purgeExpired?.();
-      } catch {}
-      const pending = resumeAdvisor.pendingForCwd(process.cwd());
-      if (pending) {
-        const hint = resumeAdvisor.formatStartupHint(pending, { color: c });
-        if (hint) {
-          console.log(hint);
-          console.log('');
-        }
-      }
-    } catch {
-      /* 发现性是增益，绝不阻断启动 */
-    }
-
-    // ── 启动轮换提示（对齐 CC tips「背后的逻辑」）──
-    // 门控 KHY_STARTUP_TIPS（默认开）。从内置 tips 注册表按 per-tip cooldownSessions 冷却 +
-    // isRelevant 相关性过滤，选「最久未显示」的一条，跨会话持久化 numStartups/tipsHistory，
-    // 在横幅后浮现一行。门控关/无候选 → 不显示（逐字节回退今日行为：今日 tips 为死代码，
-    // 本就不显示任何提示）。全 best-effort，绝不阻断启动。
-    try {
-      const tipStore = require('../services/tipHistoryStore');
-      const tip = tipStore.bumpStartupAndSelectTip(process.env);
-      if (tip && tip.text) {
-        console.log('  ' + dim('※ 提示  ' + tip.text));
-        console.log('');
-      }
-    } catch {
-      /* 轮换提示是增益，绝不阻断启动 */
-    }
-  }
+  // ── Startup visuals cluster — extracted to repl/startupHeader.js (T-017 batch 1) ──
+  // Factory wiring: every @closuredeps entry documented at the old inner defs is
+  // passed explicitly; the once-only guard (_startupHeaderRendered) moved into the
+  // module. Behavior-preserving: same identifiers, same call order, same output.
+  const { renderStartupHeader, resetStartupHeaderRendered } = createStartupVisuals({
+    ai,
+    fmt,
+    c,
+    VERSION,
+    getDisplayWidthChar,
+    formatShortCwd,
+    printBanner,
+    getClassicMonsterPetLines,
+    claudeUiEnabled,
+    showGettingStarted,
+  });
 
   // ── 默认适配器新鲜度校验 ──
   // Force-refresh detection ONLY on the adapter about to be shown as the
@@ -1362,30 +1086,10 @@ async function startRepl(options = {}) {
   let _busyStreaming = false; // true 当 AI 正在流式输出文本/thinking，不应重绘 prompt
   let _transientStatusActive = false; // true when an in-place status line occupies the current row — keepalive/prompt must not overwrite it
   const _deferredStatuses = []; // statuses buffered while _busyStreaming, flushed when streaming ends
-  function _flushDeferredStatuses() {
-    if (_deferredStatuses.length === 0) {
-      return;
-    }
-    const batch = _deferredStatuses.splice(0);
-    // Plan is NOT shown here — it should have appeared before text, not after.
-    // Only replay non-noise statuses that are still meaningful post-stream.
-    const renderer = require('./aiRenderer');
-    for (const s of batch) {
-      // Skip plan (stale — text already shown), skip low-value infrastructure noise
-      if (s.phase === 'plan') {
-        continue;
-      }
-      if (/已自动优化|Metrics|metrics|档位/i.test(s.text)) {
-        continue;
-      }
-      // Skip completion/connection confirmations — already obvious from the response
-      if (/完成处理|已连接并响应|已连接|通道状态刷新/i.test(s.text)) {
-        continue;
-      }
-      // Show remaining deferred statuses in dim white (infrastructure, not delivery)
-      renderer.printStepLine('done', s.phase || '状态', '', s.text);
-    }
-  }
+  // Deferred-status flush — extracted to repl/deferredStatuses.js (T-020 B5 first
+  // slice). The buffer array stays owned here, passed by reference (push/splice
+  // semantics identical across the boundary — no ref-object conversion needed).
+  const _flushDeferredStatuses = _createDeferredStatusFlush(_deferredStatuses);
   let _planMode = false;
   let _fastMode = false;
   let _localMode = false; // force local-only processing (Tier 1 + Tier 2, no AI model)
@@ -1483,20 +1187,15 @@ async function startRepl(options = {}) {
   });
 
   // ── Unhandled rejection safety net ──
-  // async line handlers return Promises that EventEmitter ignores; if the
-  // handler throws after its first await, the rejection is completely silent.
-  // This global handler surfaces the error and resets REPL state so the user
-  // is never left staring at a blank prompt with no feedback.
-  process.on('unhandledRejection', (reason) => {
-    try {
-      const msg = reason?.message || String(reason) || 'unknown async error';
-      console.error(`\n  \u274C Unhandled async error: ${msg}\n`);
-      if (reason?.stack && process.env.KHY_DEBUG) {
-        console.error(reason.stack);
-      }
-    } catch {
-      /* truly fatal */
-    }
+  // 收敛变更（v2）：crashRecovery.install 已经在 bin/khy.js 顶层注册过
+  // process.on('unhandledRejection') 并走 reportKhyError 渲染面板；
+  // 这里不再重复打 `console.error('Unhandled async error: ...')`，避免
+  // 同一个 promise rejection 被打印两次（一次 [CrashRecovery] banner +
+  // 一次 ❌ Unhandled async error）。
+  //
+  // REPL 仍有自己的职责：**恢复会话状态**——把 _busy 重置、把 FSM 拉回
+  // idle、重新拉 prompt。打印交由 crashRecovery + reportKhyError 负责。
+  process.on('unhandledRejection', (_reason) => {
     try {
       _busy = false;
       if (_replFsm) {
@@ -1504,7 +1203,7 @@ async function startRepl(options = {}) {
       }
       rl.prompt();
     } catch {
-      /* ignore */
+      /* ignore — we're already in an error path */
     }
   });
 
@@ -2922,192 +2621,15 @@ async function startRepl(options = {}) {
     }
   }
 
-  function _getPermissionModeState() {
-    try {
-      const toolCalling = require('../services/toolCalling');
-      if (
-        toolCalling &&
-        typeof toolCalling.isDangerousMode === 'function' &&
-        toolCalling.isDangerousMode()
-      ) {
-        return { label: 'bypass permissions on', color: '#FF6B80' };
-      }
-    } catch {
-      /* best effort */
-    }
-
-    try {
-      const permStore = require('../services/permissionStore');
-      const profile =
-        typeof permStore.getProfile === 'function' ? permStore.getProfile() : 'normal';
-      if (profile === 'yolo') {
-        return { label: 'bypass permissions on', color: '#FF6B80' };
-      }
-      if (profile === 'strict') {
-        return { label: 'ask before all tools on', color: '#FFFFFF' };
-      }
-      if (profile === 'acceptEdits') {
-        return { label: 'accept edits on', color: '#7EE787' };
-      }
-      // auto (CC-aligned): routine calls auto-approved, destructive/high-risk still ask.
-      if (profile === 'auto') {
-        return { label: 'auto on', color: '#79C0FF' };
-      }
-      // dontAsk (CC-aligned): deny-by-default; startup/settings only (not in cycle),
-      // but display it when set via KHY_PERMISSION_MODE=dontAsk.
-      if (profile === 'dontAsk') {
-        return { label: "don't ask on", color: '#D2A8FF' };
-      }
-      return null;
-    } catch {
-      return null;
-    }
-  }
-
-  // 本轮自动压缩的**真实**触发 token 数(绝对值)。取 hudState.contextWindow.budget
-  // (由 aiChatCore 每轮请求前经 hudRenderer.setContextBudget 发布)并过
-  // contextRouter.autoCompactTriggerTokens —— 该函数是 routeContextStrategy 触发
-  // 条件的代数逆,故底栏倒计时与真实压缩行为不可能漂移。
-  // 首轮请求前 budget 为 0 → 返回 0,contextWarning 叶子自动降级到比例路径。
-  function _autoCompactAt(state) {
-    try {
-      const budget = state && state.contextWindow && state.contextWindow.budget;
-      if (!budget || budget <= 0) {
-        return 0;
-      }
-      return require('../services/contextRouter').autoCompactTriggerTokens(budget);
-    } catch {
-      return 0;
-    }
-  }
-
-  function _renderPermissionBar() {
-    if (!process.stdout.isTTY) {
-      return;
-    }
-    const cols = fmt().getTerminalColumns();
-
-    // Left: mode text when non-default; fallback to shortcuts hint (Claude-style).
-    const modeState = _getPermissionModeState();
-    const permLeft = modeState
-      ? c.hex(modeState.color || '#FFFFFF')(modeState.label)
-      : c.hex('#FFFFFF').dim('(shift+tab to cycle)');
-
-    // Right: auto-compact progress. The countdown is gated to CC's warning
-    // band (only near the threshold) and measured against khy's REAL
-    // auto-compact trigger (contextWindow.used vs ratio*window), not the old
-    // cumulative-sessionTokens-vs-raw-limit approximation. See
-    // cli/contextWarning.js. Gate KHY_CONTEXT_WARNING off → legacy behavior.
-    let compactRight = '';
-    try {
-      const hud = require('./hudRenderer');
-      const state = hud.getState();
-      const limit = state.contextWindow.limit || UNKNOWN_MODEL_CONTEXT_WINDOW;
-      const cw = require('./contextWarning');
-      if (cw.isEnabled(process.env)) {
-        const decision = cw.buildContextWarning({
-          tokenUsage: state.contextWindow.used || 0,
-          contextWindow: limit,
-          autoCompactEnabled: true,
-          autoCompactThresholdTokens: _autoCompactAt(state),
-          lastCompactionUsed: state.contextWindow.lastCompactionUsed || 0,
-        });
-        if (decision.show) {
-          compactRight =
-            decision.style === 'error'
-              ? c.hex('#E5484D')(decision.text)
-              : decision.style === 'warning'
-                ? c.hex('#E2A336')(decision.text)
-                : c.dim(decision.text);
-        }
-      } else {
-        // Legacy byte-fallback: session total vs raw limit, always shown.
-        const sessionTokens = state.sessionTokens.total || 0;
-        if (sessionTokens > 0 && limit > 0) {
-          const usedPct = Math.round((sessionTokens / limit) * 100);
-          const remaining = Math.max(0, 100 - usedPct);
-          compactRight = c.dim(`${remaining}% until auto-compact`);
-        }
-      }
-      // Don't show percentage when no tokens used yet (just started)
-    } catch {
-      // Don't show on error
-    }
-
-    const stripAnsi = (s) => fmt().stripAnsi(s);
-    const truncatePlain = (s, n) => {
-      const t = String(s || '');
-      if (n <= 0) {
-        return '';
-      }
-      if (t.length <= n) {
-        return t;
-      }
-      return n <= 1 ? t.slice(0, n) : t.slice(0, n - 1) + '…';
-    };
-    const plainLeft = stripAnsi(permLeft);
-    const rightLen = stripAnsi(compactRight).length;
-    const leftBudget = Math.max(1, cols - rightLen - 2);
-    const safeLeft =
-      plainLeft.length > leftBudget ? c.dim(truncatePlain(plainLeft, leftBudget)) : permLeft;
-    const leftLen = stripAnsi(safeLeft).length;
-    const pad = Math.max(1, cols - leftLen - rightLen - 1);
-
-    console.log(safeLeft + ' '.repeat(pad) + compactRight);
-  }
-
-  function _buildPermissionBarText() {
-    if (!process.stdout.isTTY) {
-      return '';
-    }
-    try {
-      const cols = fmt().getTerminalColumns();
-      const modeState = _getPermissionModeState();
-      const permLeft = modeState
-        ? c.hex(modeState.color || '#FFFFFF')(modeState.label)
-        : c.hex('#FFFFFF').dim('(shift+tab to cycle)');
-      let compactRightPlain = '';
-      let ctxRightPlain = '';
-      try {
-        const hud = require('./hudRenderer');
-        const state = hud.getState();
-        const limit = state.contextWindow.limit || UNKNOWN_MODEL_CONTEXT_WINDOW;
-        const sessionTokens = state.sessionTokens.total || 0;
-        const ctxUsed = state.contextWindow.used || 0;
-        if (limit > 0) {
-          const ctxPct = Math.max(0, Math.min(100, Math.round((ctxUsed / limit) * 100)));
-          ctxRightPlain = `${ctxPct}% ctx`;
-        }
-        // Auto-compact countdown: same SSOT as _renderPermissionBar (warning
-        // band + 真实触发点 contextRouter.autoCompactTriggerTokens)。Plain text here;
-        // the footer composer dims it. Gate KHY_CONTEXT_WARNING off → legacy byte-fallback.
-        const cw = require('./contextWarning');
-        if (cw.isEnabled(process.env)) {
-          const decision = cw.buildContextWarning({
-            tokenUsage: ctxUsed,
-            contextWindow: limit,
-            autoCompactEnabled: true,
-            autoCompactThresholdTokens: _autoCompactAt(state),
-            lastCompactionUsed: state.contextWindow.lastCompactionUsed || 0,
-          });
-          if (decision.show) {
-            compactRightPlain = decision.text;
-          }
-        } else if (sessionTokens > 0 && limit > 0) {
-          const usedPct = Math.round((sessionTokens / limit) * 100);
-          const remaining = Math.max(0, 100 - usedPct);
-          compactRightPlain = `${remaining}% until auto-compact`;
-        }
-      } catch {
-        /* ignore */
-      }
-      const rightPlain = [ctxRightPlain, compactRightPlain].filter(Boolean).join(' · ');
-      // 纯排版数学（测量/截断/补白/硬钳位）已抽到 repl/footerLayout（REQ-2026-002）。
-      return _composePermissionFooter({ permLeft, rightPlain, cols, dim: c.dim });
-    } catch {
-      return '';
-    }
-  }
+  // Permission bar cluster (mode state + auto-compact anchor + bar renderers) —
+  // extracted to repl/permissionBar.js (T-020 B2'). Behavior-preserving: bodies
+  // verbatim, closure deps (c/fmt) injected; leaf modules re-required internally.
+  const {
+    _getPermissionModeState,
+    _autoCompactAt,
+    _renderPermissionBar,
+    _buildPermissionBarText,
+  } = _createPermissionBar({ c, fmt });
 
   let _frameRendered = false; // track whether decoration has been rendered
   let _cachedBottomRule = ''; // cached bottom rule for _refreshLine repaint
@@ -3958,51 +3480,14 @@ async function startRepl(options = {}) {
   // bypasses the tool-approval prompt but still flows through the single
   // cross-platform shell tool (Windows UTF-8 / idle-timeout / truncation
   // included), so behaviour matches what the AI would get.
-  let _pendingShellEscapes = []; // queued {command, body, code} → injected as leading context next turn
-  const _SHELL_ESCAPE_CTX_MAX =
-    parseInt(process.env.KHY_SHELL_ESCAPE_CTX_MAX || '8000', 10) || 8000;
-
-  async function _runShellEscape(command) {
-    console.log(c.hex('#FF8C42').bold(`! ${command}`));
-    let result;
-    try {
-      const shellTool = require('../tools/shellCommand');
-      result = await shellTool.execute({ command }, {});
-    } catch (err) {
-      result = { success: false, error: err && err.message ? err.message : String(err) };
-    }
-    const body = String((result && (result.output || result.error)) || '').replace(/\s+$/, '');
-    const code =
-      result && Number.isFinite(result.exitCode)
-        ? result.exitCode
-        : result && result.success
-          ? 0
-          : 1;
-    if (body) {
-      console.log(body);
-    } else {
-      console.log(c.dim('(无输出)'));
-    }
-    if (!result || !result.success) {
-      console.log(c.hex('#FF6B6B')(`  └ 退出码 ${code}`));
-    }
-    return { command, body: body || '(无输出)', code, success: !!(result && result.success) };
-  }
-
-  function _enqueueShellEscapeContext(rec) {
-    if (rec && rec.command) {
-      _pendingShellEscapes.push(rec);
-    }
-  }
-
-  // Drain queued escapes into a single tagged context block (consumed once per
-  // turn). Returns '' when nothing is queued. Total size is capped so a chatty
-  // command (`!find /`) cannot blow the context budget.
-  function _drainShellEscapeContext() {
-    const block = formatShellEscapeContext(_pendingShellEscapes, _SHELL_ESCAPE_CTX_MAX);
-    _pendingShellEscapes = [];
-    return block;
-  }
+  // Queue state fully encapsulated in the module (T-020 B4a) — the closure had
+  // zero external references to _pendingShellEscapes; callers touch only the
+  // three functions below. formatShellEscapeContext was injected at host load.
+  const {
+    _runShellEscape,
+    _enqueueShellEscapeContext,
+    _drainShellEscapeContext,
+  } = _createShellEscape({ c, formatShellEscapeContext });
 
   // Archive of all pasted content by _pasteCounter, so queued [Pasted text #N] tags
   // can be expanded even after _pendingPaste is consumed or cleared.
@@ -5311,6 +4796,8 @@ async function startRepl(options = {}) {
             } else if (selected.flag === 'plan') {
               _planMode = true;
               printInfo('计划模式已开启 — AI 将先规划再执行');
+              console.log(c.dim('  ⚠ 只读模式：AI 只能读取/分析，不能修改文件或执行命令'));
+              console.log(c.dim('  计划审批后才会执行写操作'));
             } else if (selected.flag === 'vim') {
               if (_vimHandler && _vimHandler.isActive()) {
                 _vimHandler.disable();
@@ -7527,72 +7014,31 @@ async function startRepl(options = {}) {
       return;
     }
 
+    // Wiring: busy/FSM side effects stay owned by this closure (T-020 B3).
+    const _clipboardCommands = _createClipboardCommands({
+      c,
+      printInfo,
+      printSuccess,
+      printError,
+      fsmFire: (evt) => {
+        if (_replFsm) _replFsm.fire(evt);
+      },
+      setBusy: (v) => {
+        _busy = v;
+      },
+      startBusyPromptKeepalive: _startBusyPromptKeepalive,
+    });
+    const {
+      _handleClipboardBridgeCommand,
+      _handleClipboardRelayCommand,
+    } = _clipboardCommands;
+
     // ── Clipboard image bridge commands (Windows bitmap -> file path) ────
     const clipBridgeMatch =
       /^(?:clipboard\s+bridge|clipboard\s+img2file|剪贴板桥接)(?:\s+(.+))?$/i.exec(trimmed);
     if (clipBridgeMatch) {
-      const action = String(clipBridgeMatch[1] || 'status')
-        .trim()
-        .toLowerCase();
       try {
-        const bridge = require('../services/windowsClipboardImg2FileService');
-        const showStatus = () => {
-          const status = bridge.getClipboardImg2FileBridgeStatus();
-          if (!status.supported) {
-            printInfo('图片粘贴桥接仅支持 Windows 平台');
-            return;
-          }
-          if (!status.enabled) {
-            printInfo('图片粘贴桥接已禁用（设置 KHY_CLIPBOARD_IMG2FILE_ENABLED=true 可启用）');
-            return;
-          }
-          if (status.running) {
-            const pollMs = status.meta?.pollMs || 500;
-            const keepFiles = status.meta?.keepFiles || 8;
-            printSuccess(
-              `图片粘贴桥接运行中：位图监听 ${pollMs}ms/次，保留最近 ${keepFiles} 张，PID ${status.pid}`
-            );
-          } else {
-            printInfo('图片粘贴桥接未运行，可执行: clipboard bridge start');
-          }
-        };
-
-        if (action === 'start' || action === 'on' || action === 'enable' || action === '开启') {
-          const result = bridge.startClipboardImg2FileBridge();
-          if (result.started) {
-            const pollMs = result.meta?.pollMs || 500;
-            printSuccess(`图片粘贴桥接已启动：监听位图剪贴板并注入路径文本（轮询 ${pollMs}ms）`);
-          } else if (result.reason === 'already_running') {
-            printInfo('图片粘贴桥接已在运行中');
-          } else {
-            showStatus();
-          }
-        } else if (
-          action === 'stop' ||
-          action === 'off' ||
-          action === 'disable' ||
-          action === '关闭'
-        ) {
-          const stopped = bridge.stopClipboardImg2FileBridge();
-          if (stopped) {
-            printSuccess('图片粘贴桥接已停止');
-          } else {
-            printInfo('图片粘贴桥接未运行');
-          }
-        } else if (action === 'restart' || action === '重启') {
-          bridge.stopClipboardImg2FileBridge();
-          const result = bridge.startClipboardImg2FileBridge();
-          if (result.started || result.reason === 'already_running') {
-            printSuccess('图片粘贴桥接重启完成');
-          } else {
-            showStatus();
-          }
-        } else if (action === 'help' || action === 'h' || action === '?') {
-          printInfo('用法: clipboard bridge [status|start|stop|restart]');
-          printInfo('说明: 自动把剪贴板位图转换为 PNG 文件路径，便于在 CLI 中 Ctrl+V');
-        } else {
-          showStatus();
-        }
+        await _handleClipboardBridgeCommand(String(clipBridgeMatch[1] || ''));
       } catch (err) {
         printError(`图片粘贴桥接操作失败: ${err.message}`);
       }
@@ -7600,77 +7046,20 @@ async function startRepl(options = {}) {
       return;
     }
 
-    // ── Clipboard relay commands ──────────────────────────────────
+
+    // ── Clipboard relay commands ──
     const clipRelayMatch = /^(?:clipboard\s+relay|剪贴板中继|webai)(?:\s+(.+))?$/i.exec(trimmed);
     if (clipRelayMatch) {
-      const subCmd = (clipRelayMatch[1] || '').trim().toLowerCase();
-
       try {
         const clipAdapter = require('../services/gateway/adapters/clipboardRelayAdapter');
-
-        // Sub-commands: service list, service set, open, or direct prompt
-        if (subCmd === 'list' || subCmd === '列表') {
-          const services = clipAdapter.getServices();
-          const current = clipAdapter.getPreferredService();
-          printInfo('可用的 Web AI 服务:');
-          for (const [key, svc] of Object.entries(services)) {
-            const marker = key === current ? c.green(' ← 当前') : '';
-            console.log(
-              `  ${c.cyan(key.padEnd(10))} ${svc.name.padEnd(20)} ${c.dim(svc.url)}${marker}`
-            );
-          }
-        } else if (subCmd.startsWith('set ') || subCmd.startsWith('切换 ')) {
-          const serviceKey = subCmd.replace(/^(set|切换)\s+/i, '').trim();
-          if (clipAdapter.setService(serviceKey)) {
-            const services = clipAdapter.getServices();
-            printSuccess(`已切换到 ${services[serviceKey].name}`);
-          } else {
-            printError(`未知服务: ${serviceKey} — 运行 clipboard relay list 查看可用服务`);
-          }
-        } else if (subCmd === 'open' || subCmd === '打开') {
-          const services = clipAdapter.getServices();
-          const current = clipAdapter.getPreferredService();
-          const svc = services[current];
-          clipAdapter.openBrowser(svc.url);
-          printInfo(`已打开 ${svc.name}: ${svc.url}`);
-        } else if (subCmd === 'status' || subCmd === '状态' || !subCmd) {
-          const status = clipAdapter.getStatus();
-          if (status.available) {
-            printSuccess(status.detail);
-          } else {
-            printError(status.detail);
-          }
-        } else {
-          // Treat as a prompt to relay via clipboard
-          _busy = true;
-          if (_replFsm) {
-            _replFsm.fire('input_start');
-            _replFsm.fire('submit');
-          }
-          _startBusyPromptKeepalive();
-          try {
-            const result = await clipAdapter.generate(subCmd);
-            if (result.success) {
-              const renderer = require('./aiRenderer');
-              renderer.printStepLine('success', 'AI 回复', result.provider);
-              const rendered = renderer.renderAiResponse(result.content);
-              printLines(rendered, '  ');
-            } else {
-              printError(result.content);
-            }
-          } finally {
-            _busy = false;
-            if (_replFsm) {
-              _replFsm.fire('done');
-            }
-          }
-        }
+        await _handleClipboardRelayCommand((clipRelayMatch[1] || '').trim().toLowerCase(), clipAdapter);
       } catch (err) {
         printError(`剪贴板中继失败: ${err.message}`);
       }
       rl.prompt();
       return;
     }
+
 
     // Image analysis — file path or clipboard paste
     const imageMatch = trimmed.match(
@@ -7988,7 +7377,7 @@ async function startRepl(options = {}) {
         } catch {
           console.clear();
         }
-        _startupHeaderRendered = false;
+        resetStartupHeaderRendered();
         try {
           renderStartupHeader(true);
         } catch {}
@@ -11990,6 +11379,27 @@ async function startRepl(options = {}) {
                 }
                 if (_taskMindMap) {
                   _taskMindMap.markIterationSummary(summary);
+                }
+              },
+              // 回合阶段链（v2）：循环 FSM 的关键截断点映射到标题相位，让
+              // 「判断是否完成 / 校验」也有可见反馈。只改标题不加打印行 ——
+              // REPL 已有 per-round 信息与工具步骤行，再加行会刷屏。
+              onPhase: (e) => {
+                try {
+                  if (!e || typeof e !== 'object') return;
+                  if (e.to === 'execute_tools') {
+                    updateTitlePhase('tool');
+                  } else if (e.to === 'final_response') {
+                    updateTitlePhase('generating');
+                  } else if (
+                    e.to === 'send_to_ai' ||
+                    e.to === 'parse_ai_output' ||
+                    e.to === 'verify_gate'
+                  ) {
+                    updateTitlePhase('thinking');
+                  }
+                } catch {
+                  /* observer only */
                 }
               },
               onIteration: (iteration) => {

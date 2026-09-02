@@ -52,6 +52,7 @@ let ws = null;
 let authed = false;
 let resizeObserver = null;
 let manualClose = false;
+let wheelHandler = null;
 
 const statusTag = computed(() => {
   switch (status.value) {
@@ -192,6 +193,37 @@ function stopKernel() {
   if (ws && authed) ws.send(JSON.stringify({ type: 'khyos_stop' }));
 }
 
+// ── Ctrl+滚轮 缩放 (修复 xterm 缩放后留残影) ────────────────────────────────
+//
+// xterm.js 在字体变更后只重画 cell,但底层 canvas 不重置 → 残留旧字号痕迹。
+// 手动接管 Ctrl+wheel:阻止浏览器原生滚动,改完 fontSize 后立刻
+//   1) clear 清空底层 cell buffer
+//   2) fitAddon.fit() 重新按新字号反算 cols/rows
+//   3) refresh(0, rows-1) 强制全屏重绘
+// 这样三步把 xterm 的内部 dirty tracking 整盘作废,canvas 纹理就不会保留旧 glyph。
+function zoomTerminal(delta) {
+  if (!term) return;
+  const cur = Number(term.options.fontSize || 14);
+  const next = Math.min(32, Math.max(8, cur + delta));
+  if (next === cur) return;
+  term.options.fontSize = next;
+  try {
+    term.clear();
+  } catch {
+    /* xterm 内部异常不影响流程 */
+  }
+  try {
+    fitAddon && fitAddon.fit();
+  } catch {
+    /* 忽略:字体过大时容器宽度不够,fit 可能抛 */
+  }
+  try {
+    term.refresh(0, Math.max(0, term.rows - 1));
+  } catch {
+    /* 忽略 */
+  }
+}
+
 // Navigate to the graphical desktop viewer. The kernel keeps running for this
 // session (the desktop view reuses the same /ws session and re-sends khyos_start,
 // which is idempotent server-side), so the framebuffer is available immediately.
@@ -234,6 +266,19 @@ onMounted(() => {
     }
   });
   resizeObserver.observe(termEl.value);
+
+  // Ctrl+滚轮 = 调字号:阻止浏览器原生滚动,改完字号后清空 cell buffer 并全屏 refresh,
+  // 避免 xterm.js 缩放后旧字号残影 (Issue: Ctrl+wheel leaves ghost glyphs)。
+  wheelHandler = (ev) => {
+    if (!ev || !ev.ctrlKey) return;
+    // 阻止 ctrl+wheel 在浏览器里触发系统级页面缩放 + 防止页面外溢滚动。
+    ev.preventDefault();
+    ev.stopPropagation();
+    // deltaY > 0 = 向下滚 → 字号变小;向上滚 → 字号变大。一次 ±1,避免跳级。
+    const delta = ev.deltaY > 0 ? -1 : 1;
+    zoomTerminal(delta);
+  };
+  termEl.value.addEventListener('wheel', wheelHandler, { passive: false });
 
   connect();
 });

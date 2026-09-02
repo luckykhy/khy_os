@@ -1,6 +1,6 @@
 // queryBridgeTimeline 叶子级测试 —— 锁定「从 useQueryBridge 抽出的有序回合时间线 + 工具叙述
-// 纯助手」的独立契约:叶子可单独 require、22 个导出齐备且为函数、时间线段模型不变、结果投影
-// 携带失败字段、叙述 beat fail-soft(可脱离 React state 单测)。
+// 纯助手」的独立契约:叶子可单独 require、23 个导出齐备且为函数、时间线段模型不变、结果投影
+// 携带失败字段、叙述 beat fail-soft(可脱离 React state 单测)、回合末去重清扫语义。
 //
 // 抽出范式同 localBrainCalc/localBrainProviderConfig(降上帝文件·DESIGN-ARCH-051)。经 hook
 // module.exports 再导出的端到端契约由 tests/tui/*.test.js 覆盖;本测只对叶子本体,证抽出后自洽。
@@ -14,17 +14,17 @@ const assert = require('node:assert/strict');
 
 const leaf = require('../../src/cli/tui/hooks/queryBridgeTimeline');
 
-// hook 体 + module.exports 消费的 22 个纯助手,抽出后必须全部从叶子导出且为函数。
+// hook 体 + module.exports 消费的 23 个纯助手,抽出后必须全部从叶子导出且为函数。
 const EXPORTS = [
   'tlAppendText', 'tlPushTool', 'splitSealedText', 'planStageFlush', 'formatCompactionResult',
   'tlAppendThinking', 'submitGateBusy', 'tlStampThinkingDuration', 'resolveSelfRender',
   'summarizeControlInput', 'buildDecisionRecord', 'tlResolveTool', 'computeToolPreface',
   'computeToolProgress', 'computeToolOutcome', 'shouldFlushTerminalOutcome',
   'computePlanAnnouncement', 'computePlanProgress', 'reduceToolPush', 'reduceToolResult',
-  'reduceAgentTree', 'projectToolResultForView',
+  'reduceAgentTree', 'projectToolResultForView', 'dedupAdjacentAssistantBursts',
 ];
 
-test('叶子可单独 require,22 个纯助手齐备且为函数', () => {
+test('叶子可单独 require,23 个纯助手齐备且为函数', () => {
   for (const name of EXPORTS) {
     assert.equal(typeof leaf[name], 'function', `缺少导出 ${name}`);
   }
@@ -133,4 +133,137 @@ test('buildDecisionRecord:权限决定与 QA 两类记录成形,null 输入不�
 test('重复 require 命中同一单例(模块缓存稳定)', () => {
   const again = require('../../src/cli/tui/hooks/queryBridgeTimeline');
   assert.equal(again, leaf);
+});
+
+// ── dedupAdjacentAssistantBursts ────────────────────────────────────────────
+// Safety contract: only adjacent assistant rows with byte-identical content +
+// timeline AND timestamps inside a short window collapse. Anything else — a
+// user row between, a different content, a different timeline, or timestamps
+// far apart — must be left alone. These tests lock that contract so future
+// edits can't widen the dedup into a regression.
+test('dedup:雪崩式完全相同 assistant 行在窗口内被压成 1 条', () => {
+  const T = 1_000_000;
+  const tl = [{ type: 'text', text: 'A' }, { type: 'tool', tool: { name: 'Bash', result: { ok: true } } }];
+  const messages = [
+    { role: 'user', content: 'hi', timestamp: T - 1000 },
+    { role: 'assistant', content: 'A', timeline: tl, timestamp: T },
+    { role: 'assistant', content: 'A', timeline: tl, timestamp: T + 10 },
+    { role: 'assistant', content: 'A', timeline: tl, timestamp: T + 20 },
+    { role: 'assistant', content: 'A', timeline: tl, timestamp: T + 30 },
+  ];
+  const out = leaf.dedupAdjacentAssistantBursts(messages);
+  assert.equal(out.length, 2);
+  assert.equal(out[0].role, 'user');
+  assert.equal(out[1].role, 'assistant');
+  // The OLDEST assistant row survives (arrival order is preserved).
+  assert.equal(out[1].timestamp, T);
+});
+
+test('dedup:user 行夹在 assistant 中间断开 burst,绝不被合并', () => {
+  const T = 1_000_000;
+  const tl = [{ type: 'text', text: 'ok' }];
+  const messages = [
+    { role: 'assistant', content: 'ok', timeline: tl, timestamp: T },
+    { role: 'user', content: 'thanks', timestamp: T + 5 },
+    { role: 'assistant', content: 'ok', timeline: tl, timestamp: T + 10 },
+  ];
+  const out = leaf.dedupAdjacentAssistantBursts(messages);
+  // 两条 assistant 各自独立(user 在中间断开 burst)。
+  assert.equal(out.length, 3);
+  assert.equal(out[0].content, 'ok');
+  assert.equal(out[1].role, 'user');
+  assert.equal(out[2].content, 'ok');
+});
+
+test('dedup:content 相同但 timeline 不同,不被合并(同一工具不同次调用)', () => {
+  const T = 1_000_000;
+  const messages = [
+    { role: 'assistant', content: 'A', timeline: [{ type: 'tool', tool: { name: 'Bash', input: { command: 'ls' }, result: { ok: true } } }], timestamp: T },
+    { role: 'assistant', content: 'A', timeline: [{ type: 'tool', tool: { name: 'Bash', input: { command: 'pwd' }, result: { ok: true } } }], timestamp: T + 10 },
+  ];
+  const out = leaf.dedupAdjacentAssistantBursts(messages);
+  assert.equal(out.length, 2);
+});
+
+test('dedup:时间戳超出窗口不合并(默认 5s)', () => {
+  const T = 1_000_000;
+  const tl = [{ type: 'text', text: 'A' }];
+  const messages = [
+    { role: 'assistant', content: 'A', timeline: tl, timestamp: T },
+    { role: 'assistant', content: 'A', timeline: tl, timestamp: T + 10_000 },
+  ];
+  const out = leaf.dedupAdjacentAssistantBursts(messages);
+  assert.equal(out.length, 2);
+});
+
+test('dedup:可通过 KHY_TUI_DEDUP_WINDOW_MS=0 关闭(默认 5s)', () => {
+  const T = 1_000_000;
+  const tl = [{ type: 'text', text: 'A' }];
+  const messages = [
+    { role: 'assistant', content: 'A', timeline: tl, timestamp: T },
+    { role: 'assistant', content: 'A', timeline: tl, timestamp: T + 1 },
+  ];
+  // 显式 off:即使时间戳相邻也不合并
+  const off = leaf.dedupAdjacentAssistantBursts(messages, { KHY_TUI_DEDUP_WINDOW_MS: '0' });
+  assert.equal(off.length, 2);
+  // 默认窗口:相邻 1ms 仍合并(因为 1ms < 5000ms)
+  const def = leaf.dedupAdjacentAssistantBursts(messages);
+  assert.equal(def.length, 1);
+});
+
+test('dedup:user message 永不参与合并(从不主动 drop user)', () => {
+  const T = 1_000_000;
+  const messages = [
+    { role: 'user', content: 'a', timestamp: T },
+    { role: 'user', content: 'a', timestamp: T + 1 },
+  ];
+  const out = leaf.dedupAdjacentAssistantBursts(messages);
+  assert.equal(out.length, 2);
+});
+
+test('dedup:非法输入(null/非数组)原样返回', () => {
+  assert.deepEqual(leaf.dedupAdjacentAssistantBursts(null), null);
+  assert.deepEqual(leaf.dedupAdjacentAssistantBursts(undefined), undefined);
+  assert.deepEqual(leaf.dedupAdjacentAssistantBursts('nope'), 'nope');
+  assert.deepEqual(leaf.dedupAdjacentAssistantBursts([]), []);
+});
+
+test('dedup:窗口放宽(KHY_TUI_DEDUP_WINDOW_MS=2000)允许 2s 内合并', () => {
+  const T = 1_000_000;
+  const tl = [{ type: 'text', text: 'A' }];
+  const messages = [
+    { role: 'assistant', content: 'A', timeline: tl, timestamp: T },
+    { role: 'assistant', content: 'A', timeline: tl, timestamp: T + 1500 },
+  ];
+  // 默认 5s:1500ms 在窗口内,合并
+  assert.equal(leaf.dedupAdjacentAssistantBursts(messages).length, 1);
+  // 收窄到 1s:1500ms 超出,保留
+  const narrow = leaf.dedupAdjacentAssistantBursts(messages, { KHY_TUI_DEDUP_WINDOW_MS: '1000' });
+  assert.equal(narrow.length, 2);
+});
+
+test('dedup:无时间戳的两条 assistant 始终保留(防止无 timestamp 的旧消息被误合并)', () => {
+  const tl = [{ type: 'text', text: 'A' }];
+  const messages = [
+    { role: 'assistant', content: 'A', timeline: tl },
+    { role: 'assistant', content: 'A', timeline: tl },
+  ];
+  // 无时间戳是「保守不合并」的硬规则 —— 即使关闭模式也保留,防止
+  // 没有时间戳的旧消息被任何 race condition 误合并。
+  const def = leaf.dedupAdjacentAssistantBursts(messages);
+  assert.equal(def.length, 2);
+  const off = leaf.dedupAdjacentAssistantBursts(messages, { KHY_TUI_DEDUP_WINDOW_MS: '0' });
+  assert.equal(off.length, 2);
+});
+
+test('dedup:turn-stats / error / notice 角色完全跳过(只对 assistant 生效)', () => {
+  const T = 1_000_000;
+  const messages = [
+    { role: 'turn-stats', content: '✓ 1m', timestamp: T },
+    { role: 'turn-stats', content: '✓ 1m', timestamp: T + 1 },
+    { role: 'error', content: 'boom', timestamp: T },
+    { role: 'error', content: 'boom', timestamp: T + 1 },
+  ];
+  const out = leaf.dedupAdjacentAssistantBursts(messages);
+  assert.equal(out.length, 4);
 });
