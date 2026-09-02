@@ -18,6 +18,13 @@
  *   R4 抽取漂移（Duplication drift）：re-export 助手模块符号，却仍内部调本地同名旧副本。
  *   巨型环切点（Giant-SCC leverage）：逐条 services→cli 反向边的破环杠杆 + 贪心批量顺序。
  *
+ * R2b 巨石增长门禁（T-016 可维护性护栏）：基线已承认的巨石文件若比基线**更长** → 违规。
+ *   存量债只许减不许增——R2 用「新文件」拦新增，R2b 用「行数比对」拦存量增长。
+ *
+ * --changed 模式（改动文件体积分级，T-016）：
+ *   新增/修改的 src/**.js 超过 800 行 → error（阻断）；超过 500 行 → warning。
+ *   已在巨石基线里的文件豁免本分级（它们由 R2b 管增长，不重复拦）。
+ *
  * 用法：
  *   node scripts/archDebtScan.js              # 人类可读报告；新增债务(超基线)→ 退出码 1
  *   node scripts/archDebtScan.js --json       # 机器可读 JSON
@@ -25,11 +32,13 @@
  *   node scripts/archDebtScan.js --drift [--json]    # R4 抽取漂移分析（只读，退码 0）
  *   node scripts/archDebtScan.js --scc   [--json]    # 巨型环切点杠杆分析（只读，退码 0）
  *   node scripts/archDebtScan.js --god-report [--json] # 上帝组件拆分待办（只读，退码 0）
+ *   node scripts/archDebtScan.js --changed [--strict-warnings] # 改动文件体积分级（R2b 同样生效）
  *
  * 防呆：本工具**只读**扫描，绝不改业务代码。基线机制让 CI 只拦**新增**债务，不因存量
  * 历史债误杀（增量治理，非一刀切）。任何解析异常都跳过该文件而非崩溃。
  */
 
+const cp = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
@@ -39,6 +48,8 @@ const BASELINE_FILE = path.join(__dirname, 'arch-debt-baseline.json');
 
 // ── 可调阈值（env 覆盖，零硬编码红线）────────────────────────────────────────
 const GOD_FILE_LOC = intEnv('KHY_ARCH_GOD_FILE_LOC', 2500);
+const CHANGED_FILE_LOC_MAX = intEnv('KHY_ARCH_CHANGED_FILE_LOC', 800);
+const CHANGED_FILE_WARN_LOC = intEnv('KHY_ARCH_CHANGED_FILE_WARN', 500);
 
 function intEnv(name, def) {
   const n = parseInt(String(process.env[name] || ''), 10);
@@ -129,6 +140,55 @@ function scanGodFiles(srcDir = SRC_DIR, threshold = GOD_FILE_LOC) {
   }
   out.sort((a, b) => b.loc - a.loc);
   return out;
+}
+
+// ── R2b 巨石增长：基线已承认的巨石不许比基线更长 ─────────────────────────────
+/**
+ * 存量巨石增长门禁。R2 只拦「新出现的巨石文件」，拦不住「既存巨石继续长」——
+ * 基线指纹仅含文件名（diffNew 对 godFiles 按 file 比对），长到 2 万行也无人知晓。
+ * 本规则按「当前 loc vs 基线 loc」直接比对补上这个洞：delta>0 即违规。
+ * 基线条目缺 loc（旧格式）时跳过——无法比对就诚实不报，绝不猜。
+ *
+ * @param {{godFiles:Array<{file:string,loc:number}>}} result  scanAll() 结果
+ * @param {{godFiles?:Array<{file:string,loc?:number}>}} baseline loadBaseline() 结果
+ * @returns {Array<{file,loc,baselineLoc,delta,rule:'R2b-god-growth'}>} 按超出量降序
+ */
+function scanGodGrowth(result, baseline) {
+  const baseLoc = new Map();
+  for (const g of baseline.godFiles || []) {
+    if (g && typeof g.file === 'string' && Number.isInteger(g.loc)) baseLoc.set(g.file, g.loc);
+  }
+  const out = [];
+  for (const g of result.godFiles || []) {
+    const base = baseLoc.get(g.file);
+    if (base !== undefined && g.loc > base) {
+      out.push({
+        file: g.file,
+        loc: g.loc,
+        baselineLoc: base,
+        delta: g.loc - base,
+        rule: 'R2b-god-growth',
+      });
+    }
+  }
+  out.sort((a, b) => b.delta - a.delta);
+  return out;
+}
+
+/**
+ * 改动文件体积分级（纯函数，供 --changed 模式与单测共用）。
+ * 已在巨石基线里的文件豁免（exempt）——它们由 R2b 管增长，此分级不再重复拦，
+ * 否则任何对 replSession.js 的改动都会被 800 行红线挡死，拆分工作无法进行。
+ *
+ * @param {number} loc 当前行数
+ * @param {{exempt?:boolean}} [opts]
+ * @returns {'exempt'|'error'|'warning'|'ok'}
+ */
+function classifyChangedLoc(loc, opts = {}) {
+  if (opts.exempt) return 'exempt';
+  if (loc > CHANGED_FILE_LOC_MAX) return 'error';
+  if (loc > CHANGED_FILE_WARN_LOC) return 'warning';
+  return 'ok';
 }
 
 // ── God-file 拆分待办（只读，给单人维护者一份可执行的拆分清单）─────────────────
@@ -595,6 +655,7 @@ function computeNew(result, baseline) {
   return {
     layering: diffNew('layering', result.layering, baseline),
     godFiles: diffNew('godFiles', result.godFiles, baseline),
+    godGrowth: scanGodGrowth(result, baseline),
     cycles: diffNewCycles(result, baseline),
   };
 }
@@ -714,11 +775,16 @@ function formatReport(result, neu) {
     for (const v of result.layering) L.push(`  ${v.file}:${v.line} → ${v.target}`);
     L.push('');
   }
-  const newCount = neu.layering.length + neu.godFiles.length + neu.cycles.length;
+  const newCount =
+    neu.layering.length + neu.godFiles.length + neu.godGrowth.length + neu.cycles.length;
   if (newCount > 0) {
     L.push(`⚠️  超出基线的【新增】架构债: ${newCount} 项 — CI 门禁失败`);
     for (const v of neu.layering) L.push(`  + [R1] ${v.file}:${v.line} → ${v.target}`);
     for (const g of neu.godFiles) L.push(`  + [R2] ${g.file} (${g.loc} 行)`);
+    for (const g of neu.godGrowth)
+      L.push(
+        `  + [R2b] ${g.file} 增长 ${g.delta} 行 (${g.baselineLoc} → ${g.loc}) — 存量巨石只许减不许增`
+      );
     for (const c of neu.cycles) L.push(`  + [R3] ${c.members.join(' ⇄ ')}`);
   } else {
     L.push('✅ 无超出基线的新增架构债。');
@@ -809,6 +875,107 @@ function formatGodReport(items, threshold = GOD_FILE_LOC) {
   return L.join('\n');
 }
 
+// ── --changed 模式：改动文件体积分级（T-016 可维护性护栏）─────────────────────
+/**
+ * 与 check-agent-rules.js 的 listChangedFiles() 同一取数契约：
+ * GIT_BASE_REF（CI）→ staged → HEAD，core.quotePath=false 保中文路径可解析。
+ * git 完全不可用时返回 **null**（与「无改动」区分）——调用方必须诚实失败，绝不假绿。
+ *
+ * @returns {string[]|null} 相对仓库根的改动文件路径列表；无法确定时 null
+ */
+function listChangedFiles() {
+  const git = 'git -c core.quotePath=false';
+  const opts = { cwd: BACKEND_ROOT, stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8' };
+  const run = (cmd) => {
+    try {
+      return cp.execSync(cmd, opts).trim();
+    } catch {
+      return '';
+    }
+  };
+  const split = (out) => out.split('\n').map((s) => s.trim()).filter(Boolean);
+  const baseRef = String(process.env.GIT_BASE_REF || '').trim();
+  if (baseRef) {
+    const out = run(`${git} diff --name-only --diff-filter=ACMR ${baseRef}...HEAD`);
+    if (out) return split(out);
+  }
+  const staged = run(`${git} diff --name-only --cached --diff-filter=ACMR`);
+  if (staged) return split(staged);
+  const head = run(`${git} diff --name-only --diff-filter=ACMR HEAD`);
+  if (head) return split(head);
+  return null;
+}
+
+/** --changed 模式人类可读报告。 */
+function formatChangedReport({ errors, warnings, exempt, scanned, undetermined }) {
+  const L = [];
+  L.push('khyos 改动文件体积门禁 (archDebtScan --changed)');
+  L.push('='.repeat(48));
+  L.push(
+    `改动且已扫描的 src/**.js: ${scanned} 个  ` +
+      `(error >${CHANGED_FILE_LOC_MAX} 行 / warning >${CHANGED_FILE_WARN_LOC} 行 / 基线巨石豁免)`
+  );
+  L.push('');
+  for (const e of errors) L.push(`  ✗ [error]   ${e.file} (${e.loc} 行) — 新文件/改动文件超过 ${CHANGED_FILE_LOC_MAX} 行上限`);
+  for (const w of warnings) L.push(`  ⚠ [warning] ${w.file} (${w.loc} 行) — 超过 ${CHANGED_FILE_WARN_LOC} 行，建议拆分`);
+  for (const x of exempt) L.push(`  · [exempt]  ${x.file} (${x.loc} 行) — 已在巨石基线，由 R2b 管增长`);
+  L.push('');
+  if (errors.length) {
+    L.push(`✗ ${errors.length} 个改动文件超过 ${CHANGED_FILE_LOC_MAX} 行 — 门禁失败。`);
+    L.push('  请按职责拆为聚焦模块（原文件保留 re-export 薄 facade 保契约不变）。');
+  } else if (undetermined) {
+    L.push('✗ 无法用 git 确定改动集（git 不可用或空仓库？）——未扫描即不假绿。');
+  } else if (warnings.length) {
+    L.push(`⚠ ${warnings.length} 个改动文件超过 ${CHANGED_FILE_WARN_LOC} 行（warning 级；--strict-warnings 时阻断）。`);
+  } else {
+    L.push('✅ 改动文件体积全部达标。');
+  }
+  return L.join('\n');
+}
+
+/**
+ * --changed 门禁主流程。返回进程退出码：error>0 或（--strict-warnings 且 warning>0）→ 1。
+ * 扫描范围与 R2 一致（services/backend/src/**.js）；基线巨石文件豁免分级。
+ */
+function runChangedGate(argv = []) {
+  const changed = listChangedFiles();
+  const undetermined = changed === null;
+  const list = changed || [];
+  const prefix = 'services/backend/';
+  const baseline = loadBaseline();
+  const baseGod = new Set((baseline.godFiles || []).map((g) => g.file));
+  const errors = [];
+  const warnings = [];
+  const exempt = [];
+  let scanned = 0;
+  for (const relPath of list) {
+    if (!relPath.startsWith(prefix) || !relPath.endsWith('.js')) continue;
+    const relToBackend = relPath.slice(prefix.length);
+    if (!relToBackend.startsWith('src/')) continue;
+    let loc;
+    try {
+      loc = fs.readFileSync(path.join(BACKEND_ROOT, relToBackend), 'utf8').split('\n').length;
+    } catch {
+      continue; // deleted between diff and read → skip honestly
+    }
+    scanned++;
+    const verdict = classifyChangedLoc(loc, { exempt: baseGod.has(relToBackend) });
+    const entry = { file: relToBackend, loc, verdict };
+    if (verdict === 'error') errors.push(entry);
+    else if (verdict === 'warning') warnings.push(entry);
+    else if (verdict === 'exempt') exempt.push(entry);
+  }
+  const strict = argv.includes('--strict-warnings');
+  const json = argv.includes('--json');
+  const summary = { errors, warnings, exempt, scanned, undetermined };
+  process.stdout.write(
+    (json ? JSON.stringify(summary, null, 2) : formatChangedReport(summary)) + '\n'
+  );
+  if (errors.length > 0 || undetermined) return 1;
+  if (strict && warnings.length > 0) return 1;
+  return 0;
+}
+
 function main(argv = process.argv.slice(2)) {
   // 新增只读子命令：不参与默认 CI 退码门禁，始终退码 0（除解析异常）。
   if (argv.includes('--drift')) {
@@ -837,6 +1004,11 @@ function main(argv = process.argv.slice(2)) {
     return 0;
   }
 
+  // --changed：改动文件体积分级（有退码门禁，故置于只读子命令之后、默认全量扫描之前）。
+  if (argv.includes('--changed')) {
+    return runChangedGate(argv);
+  }
+
   const result = scanAll();
 
   if (argv.includes('--update-baseline')) {
@@ -862,7 +1034,8 @@ function main(argv = process.argv.slice(2)) {
     process.stdout.write(formatReport(result, neu) + '\n');
   }
 
-  const newCount = neu.layering.length + neu.godFiles.length + neu.cycles.length;
+  const newCount =
+    neu.layering.length + neu.godFiles.length + neu.godGrowth.length + neu.cycles.length;
   return newCount > 0 ? 1 : 0;
 }
 
@@ -875,7 +1048,11 @@ module.exports = {
   extractRequires,
   scanLayering,
   scanGodFiles,
+  scanGodGrowth,
   scanGodReport,
+  classifyChangedLoc,
+  listChangedFiles,
+  runChangedGate,
   buildRequireGraph,
   _sccComponents,
   findCycles,
@@ -894,8 +1071,11 @@ module.exports = {
   formatDriftReport,
   formatSccReport,
   formatGodReport,
+  formatChangedReport,
   main,
   SRC_DIR,
   BASELINE_FILE,
   GOD_FILE_LOC,
+  CHANGED_FILE_LOC_MAX,
+  CHANGED_FILE_WARN_LOC,
 };
