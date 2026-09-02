@@ -1223,19 +1223,14 @@ function _renderMarkdownLiteInner(text) {
         .join('\n');
       return langLine ? `${langLine}\n${codeLines}` : codeLines;
     })
-    // Horizontal rules (---, ***, ___) — render as a full-width dim rule. A
-    // full deletion (empty line) breaks the "strip stray m prefix, keep the
-    // separator" contract (aiRenderer.formatting.test.js) and leaves model
-    // separators invisible. Width follows the effective render columns so the
-    // rule spans the same width the body wraps to.
+    // Horizontal rules (---, ***, ___) — drop to a blank line. The previous
+    // full-width / compact dim rule felt like visual noise between paragraphs
+    // (see the "线太多" complaint on 2026-08-31). Surrounding markdown already
+    // provides a blank line above and below for visual separation; rendering
+    // an explicit rule on top of that was redundant. We keep the placeholder
+    // so the surrounding pipeline can still match the rule shape.
     .replace(/^(\s*)[-*_]{3,}\s*$/gm, (_m, indent) => {
-      // Deduct the preserved leading indent from the rule width so
-      // `indent width + rule width` never exceeds the wrap budget. The `-6`
-      // margin mirrors aiRenderer's wrapLine budget exactly; without the indent
-      // deduction the extra leading columns push the rule past the limit and it
-      // soft-wraps into the "staircase" break.
-      const cols = Math.max(10, _effectiveCols() - 6 - displayWidth(indent));
-      return `${indent}${c().dim('─'.repeat(cols))}`;
+      return '';
     })
     // Headers — visual hierarchy: h1 > h2 > h3..h6. 加粗/层级由 textEmphasisPolicy 单一真源裁定。
     // `big` 为 DEC 双宽行首前缀(默认关·实验性):必须置于物理行**最前**才生效,故紧跟换行/行首,

@@ -2,14 +2,17 @@
  * Minimal auth route for AI Management Backend.
  * Shares the same User model and JWT_SECRET as the trading system,
  * so credentials are interchangeable.
+ *
+ * ARCH-074: /login 现在接受 username / email / alias 三种 login key（统一 resolveLoginKey）；
+ * /register 接受可选 aliases 数组并校验跨账号唯一性。
  */
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const { Sequelize } = require('sequelize');
+const { Sequelize, Op } = require('sequelize');
 const { User } = require('@khy/shared/models');
 const { authenticateToken } = require('../middleware/auth');
-const { Op } = Sequelize;
+const { resolveLoginKey, normalizeAliases, findAliasConflicts } = require('../services/loginKeyResolver');
 
 const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET, {
@@ -38,6 +41,8 @@ router.get('/default-admin', async (req, res) => {
 });
 
 // POST /api/auth/login
+// ARCH-074: username 字段现在统一为「login key」——可以是 username / email / alias。
+// 解析顺序由 services/loginKeyResolver.resolveLoginKey 决定。
 router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -48,10 +53,10 @@ router.post('/login', async (req, res) => {
         .json({ success: false, message: 'Username and password are required' });
     }
 
-    const user = await User.findOne({
-      where: { [Op.or]: [{ username }, { email: username }] },
-    });
-
+    const { user, matchedBy, error } = await resolveLoginKey(username);
+    if (error) {
+      console.warn(`[auth/login] resolveLoginKey error: ${error}`);
+    }
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
@@ -78,9 +83,89 @@ router.post('/login', async (req, res) => {
     const userData = user.toJSON();
     delete userData.password;
 
-    res.json({ success: true, data: { token, user: userData } });
+    return res.json({
+      success: true,
+      data: { token, user: userData, matchedBy },
+    });
   } catch (err) {
     console.error('Auth error:', err.message);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// POST /api/auth/register
+// ARCH-074: 接受可选 aliases: string[]。校验跨账号唯一性。
+router.post('/register', async (req, res) => {
+  try {
+    const { username, email, password, aliases } = req.body;
+
+    if (!username || !password) {
+      return res
+        .status(400)
+        .json({ success: false, message: 'Username and password are required' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+    }
+
+    // 规范化 alias（去重 / 字符集 / 长度）
+    const { aliases: normalizedAliases, errors: aliasErrors } = normalizeAliases(aliases || []);
+    if (aliasErrors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'alias 校验失败',
+        details: aliasErrors,
+      });
+    }
+    // alias 不允许与自身 username / email 重复
+    const lowerUsername = String(username).toLowerCase();
+    const lowerEmail = String(email || '').toLowerCase();
+    const selfConflict = normalizedAliases.find(
+      (a) => a.toLowerCase() === lowerUsername || (email && a.toLowerCase() === lowerEmail)
+    );
+    if (selfConflict) {
+      return res.status(400).json({
+        success: false,
+        message: `alias "${selfConflict}" 与 username/email 重复`,
+      });
+    }
+    // 跨账号唯一性
+    const { conflicts } = await findAliasConflicts(normalizedAliases, { User });
+    if (conflicts.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'alias 已被其他账号占用',
+        conflicts,
+      });
+    }
+    // username 唯一性（DB 层 unique + 防御性 pre-check）
+    const existing = await User.findOne({
+      where: {
+        [Op.or]: [{ username }, email ? { email } : { id: -1 }],
+      },
+    });
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        message: 'Username or email already taken',
+      });
+    }
+
+    const user = await User.create({
+      username,
+      email: email || `${username}@local.invalid`,
+      password,
+      aliases: normalizedAliases,
+    });
+    const token = generateToken(user.id);
+    const userData = user.toJSON();
+    delete userData.password;
+    return res.json({ success: true, data: { token, user: userData } });
+  } catch (err) {
+    console.error('Register error:', err.message);
+    if (err.name === 'SequelizeUniqueConstraintError') {
+      return res.status(409).json({ success: false, message: 'Username or email already taken' });
+    }
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });

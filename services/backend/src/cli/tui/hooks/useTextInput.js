@@ -31,7 +31,40 @@ const PASTE_NEWLINE_GUARD_MS = 110;
 const PASTE_FLUSH_MS = 30;
 
 function stripPasteMarkers(s) {
-  return s.replace(/\[200~/g, '').replace(/\[201~/g, '');
+  return s.replace(/\x1b\[200~/g, '').replace(/\x1b\[201~/g, '');
+}
+
+// ── Typing-time toolUseLoop prefetch (DESIGN-PERF-001 v1 §阶段 D) ──
+// The first submit pays for parsing toolUseLoopCore.js (12,715 lines) on
+// demand — that cold load runs AFTER the user message is pushed but BEFORE
+// the first await, freezing the first paint by 200-400ms. We start the
+// prewarm during the seconds the user is typing so the cache is hot by the
+// time Enter is pressed. Throttled: one in-flight prewarm at a time, gated
+// by a 30s idle so idle pauses don't keep re-triggering. KHY_NO_PREFETCH=1
+// forces legacy on-demand loading (preserves 1.4s first-paint for users who
+// want to see the prompt immediately and never submit).
+let _prewarmInFlight = false;
+let _prewarmLastTs = 0;
+const PREFETCH_MIN_INTERVAL_MS = 30000;
+const PREFETCH_TEXT_THRESHOLD = 3;
+function _maybePrewarmToolUseLoop() {
+  if (_prewarmInFlight) return;
+  if (Date.now() - _prewarmLastTs < PREFETCH_MIN_INTERVAL_MS) return;
+  if (String(process.env.KHY_NO_PREFETCH ?? '').trim() === '1') return;
+  _prewarmLastTs = Date.now();
+  _prewarmInFlight = true;
+  setImmediate(() => {
+    try {
+      // Same module the runQuery path lazy-loads; touching it via require
+      // populates the module cache. Fail-soft: missing module must never
+      // affect the input box or the keystroke handler.
+      require('../../../services/toolUseLoop');
+    } catch {
+      /* prewarm is best-effort; submit-time load retries on demand */
+    } finally {
+      _prewarmInFlight = false;
+    }
+  });
 }
 
 let _mouseModule = null;
@@ -70,6 +103,13 @@ function useTextInput({ onSubmit, onChange, onHistoryEmpty, mouseModule } = {}) 
       setCursor(next);
       if (fireChange && onChange) {
         onChange(next.text);
+      }
+      // Typing-time prefetch: once the user types at least 3 characters, the
+      // toolUseLoop cold-load is no longer idle prewarm; it has a real
+      // chance of paying off at submit time. The prewarm helper internally
+      // throttles to once per 30s, so this stays free.
+      if (fireChange && next && next.text && next.text.length >= PREFETCH_TEXT_THRESHOLD) {
+        _maybePrewarmToolUseLoop();
       }
     },
     [onChange]

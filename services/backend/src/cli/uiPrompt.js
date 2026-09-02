@@ -81,6 +81,8 @@ const UNSUPPORTED_KEYS = ['when', 'filter', 'transformer'];
 // Normalize an inquirer choice (string | {name,value} | {name,value,short}) into
 // FormFlow's { name, value } shape. Separators (inquirer.Separator instances or
 // {type:'separator'}) are dropped — FormFlow has no separator row.
+// `disabled` and `color` are preserved so callers can render non-interactive
+// header rows in a distinct color.
 function _normalizeChoice(choice) {
   if (choice == null) {
     return null;
@@ -94,7 +96,14 @@ function _normalizeChoice(choice) {
     }
     const value = 'value' in choice ? choice.value : choice.name;
     const name = choice.name != null ? String(choice.name) : String(value);
-    return { name, value };
+    const out = { name, value };
+    if (choice.disabled) {
+      out.disabled = true;
+    }
+    if (choice.color) {
+      out.color = choice.color;
+    }
+    return out;
   }
   return null;
 }

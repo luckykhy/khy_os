@@ -74,7 +74,7 @@
 // 关键目标：输入文本的 `input` ref 完全内聚在本组件内部，用户打字时只重渲染本组件，
 // 不再触发父组件 AIChat.vue 的消息列表 patch（消除输入卡顿）。
 // 父子通过 defineEmits/ defineProps 通信，父组件通过 ref 调用 setText/clear/focus。
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import { Paperclip, Microphone } from '@element-plus/icons-vue';
 
 const props = defineProps({
@@ -175,8 +175,21 @@ async function onVoiceInput() {
 function setText(text) {
   input.value = typeof text === 'string' ? text : (text && text.prompt) || '';
 }
-function clear() {
+async function clear() {
   input.value = '';
+  // 关键:IME 中文上屏 / 长文本回车发送时,<el-input type="textarea" :autosize>
+  // 的 inline 高度还停在扩展行数,仅设 input.value='' 不会同步触发 autosize
+  // 重算,导致 DOM 上残留一长串占位行。把 autosize 强制重置到 minRows=1,
+  // 再下一帧让 Vue 把空字符串 commit 到 textarea,即可消除多余空行。
+  await nextTick();
+  const inst = chatInputRef.value;
+  if (inst && typeof inst.resizeTextarea === 'function') {
+    try {
+      inst.resizeTextarea();
+    } catch (_) {
+      /* element-plus 内部可能重命名,失败就交给下一帧自动 */
+    }
+  }
 }
 function focus() {
   chatInputRef.value?.focus?.();

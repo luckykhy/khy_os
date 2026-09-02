@@ -1558,180 +1558,6 @@ function crossTurnRepeatDecision(call, recentSigs, state, env) {
   return { steer: true, message, displayHint, signature: sig, intentKey };
 }
 
-const DEFAULT_CAPABILITY_POLICY = Object.freeze({
-  enabled: true,
-  blockMode: 'strict',
-  tasks: [
-    {
-      key: 'file_edit',
-      patterns: [
-        '修改',
-        '编辑',
-        '重构',
-        '实现',
-        '修复',
-        '新增',
-        '添加',
-        '删除',
-        '替换',
-        '写入',
-        '创建文件',
-        'apply patch',
-        'edit file',
-        'write file',
-        'refactor',
-        'implement',
-        'fix',
-        'update',
-        'replace',
-        'remove',
-        'delete',
-      ],
-      requiredTools: ['editFile', 'writeFile', 'shellCommand', 'file_edit', 'file_write'],
-      reason: '当前环境缺少文件编辑/写入能力（edit/write/shell 工具不可用）。',
-    },
-    {
-      key: 'shell_exec',
-      patterns: [
-        '运行命令',
-        '执行命令',
-        '终端',
-        'shell',
-        'bash',
-        'cmd',
-        '运行测试',
-        '构建',
-        '编译',
-        '安装依赖',
-        'npm',
-        'pnpm',
-        'yarn',
-        'pytest',
-        'cargo',
-        'go test',
-        'make',
-        'docker',
-        'kubectl',
-      ],
-      requiredTools: ['shellCommand', 'run_tests', 'build_project', 'lint_code', 'executeCode'],
-      reason: '当前环境缺少命令执行能力（shell/build/test 工具不可用）。',
-    },
-    {
-      key: 'web_search',
-      patterns: [
-        '联网',
-        '上网',
-        '互联网',
-        'web search',
-        '网页搜索',
-        '搜索网页',
-        '查网页',
-        'fetch url',
-        '访问网站',
-        'browser search',
-      ],
-      requiredTools: ['webSearch', 'webFetch', 'search'],
-      reason: '当前环境缺少联网检索能力（webSearch/webFetch 不可用）。',
-    },
-    {
-      key: 'app_launch',
-      patterns: [
-        '打开应用',
-        '启动应用',
-        '打开程序',
-        '打开浏览器',
-        'open app',
-        'launch app',
-        'start app',
-        'open browser',
-      ],
-      requiredTools: ['open_app', 'shellCommand'],
-      reason: '当前环境缺少应用启动能力（open_app/shell 工具不可用）。',
-    },
-  ],
-  model: {
-    enabled: true,
-    ignoreIssuePatterns: ['上下文可能不够'],
-    blockWhenHardIssueCountAtLeast: 2,
-    blockWhenComplexAndHardIssueCountAtLeast: 1,
-    complexMinChars: 160,
-    maxRecommendations: 3,
-  },
-});
-
-const _cloneCapabilityTasks = require('../utils/cloneCapabilityTasks');
-
-function _mergeCapabilityPolicy(basePolicy = {}, overridePolicy = {}) {
-  const baseModel = basePolicy && typeof basePolicy.model === 'object' ? basePolicy.model : {};
-  const overrideModel =
-    overridePolicy && typeof overridePolicy.model === 'object' ? overridePolicy.model : {};
-  return {
-    ...basePolicy,
-    ...(overridePolicy || {}),
-    tasks: Array.isArray(overridePolicy?.tasks)
-      ? _cloneCapabilityTasks(overridePolicy.tasks)
-      : _cloneCapabilityTasks(basePolicy.tasks || []),
-    model: {
-      ...baseModel,
-      ...overrideModel,
-    },
-  };
-}
-
-function _defaultCapabilityPolicyPath() {
-  // Portable-aware app home; fallback to the legacy env-based resolution.
-  try {
-    const { getAppHome } = require('../utils/dataHome');
-    return path.join(getAppHome(), 'capability-policy.json');
-  } catch {
-    /* fall through to legacy resolution */
-  }
-  const home = String(process.env.HOME || process.env.USERPROFILE || '').trim();
-  if (!home) {
-    return '';
-  }
-  return path.join(home, '.khyquant', 'capability-policy.json');
-}
-
-function _loadCapabilityPolicy(options = {}) {
-  let policy = _mergeCapabilityPolicy(DEFAULT_CAPABILITY_POLICY, {});
-
-  if (options && options.capabilityPolicy && typeof options.capabilityPolicy === 'object') {
-    policy = _mergeCapabilityPolicy(policy, options.capabilityPolicy);
-  }
-
-  const envPolicyJson = String(process.env.KHY_CAPABILITY_POLICY_JSON || '').trim();
-  if (envPolicyJson) {
-    try {
-      const parsed = JSON.parse(envPolicyJson);
-      if (parsed && typeof parsed === 'object') {
-        policy = _mergeCapabilityPolicy(policy, parsed);
-      }
-    } catch {
-      /* ignore malformed JSON */
-    }
-  }
-
-  const policyPath = String(
-    options.capabilityPolicyFile ||
-      process.env.KHY_CAPABILITY_POLICY_FILE ||
-      _defaultCapabilityPolicyPath()
-  ).trim();
-  if (policyPath && fs.existsSync(policyPath)) {
-    try {
-      const parsed = JSON.parse(String(fs.readFileSync(policyPath, 'utf-8') || '{}'));
-      if (parsed && typeof parsed === 'object') {
-        policy = _mergeCapabilityPolicy(policy, parsed);
-      }
-    } catch {
-      /* ignore malformed file */
-    }
-  }
-
-  return policy;
-}
-
-// ── 启用工具名集合记忆(Ch2「不要每轮重建可复用结构」) ──────────────────────────────
 // _assessExecutionCapability 每轮对话都调 _collectEnabledToolNameSet 为能力门重建一份「启用工具
 // 名 + 别名」集合:对每个启用工具名逐个跑 _expandToolNameVariants(Set 构建 + 4 次 regex +
 // normalizeToolCall)。其产物只是启用工具名集合的纯函数(_expandToolNameVariants 无 env/Date/
@@ -1811,189 +1637,6 @@ function _collectEnabledToolNameSet() {
   return built;
 }
 
-function _hasAnyToolEnabled(enabledToolSet, candidates = []) {
-  if (!(enabledToolSet instanceof Set) || enabledToolSet.size === 0) {
-    return false;
-  }
-  for (const name of candidates) {
-    const variants = _expandToolNameVariants(name);
-    for (const variant of variants) {
-      if (enabledToolSet.has(variant)) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-function _containsPattern(text, pattern) {
-  const haystack = String(text || '');
-  if (pattern instanceof RegExp) {
-    return pattern.test(haystack);
-  }
-  const raw = String(pattern || '').trim();
-  if (!raw) {
-    return false;
-  }
-  if (raw.startsWith('re:')) {
-    try {
-      return new RegExp(raw.slice(3), 'i').test(haystack);
-    } catch {
-      return haystack.toLowerCase().includes(raw.slice(3).toLowerCase());
-    }
-  }
-  return haystack.toLowerCase().includes(raw.toLowerCase());
-}
-
-function _detectCapabilityNeeds(message = '', policy = DEFAULT_CAPABILITY_POLICY) {
-  const text = String(message || '');
-  if (!text) {
-    return [];
-  }
-  const tasks = Array.isArray(policy?.tasks) ? policy.tasks : [];
-  const hits = [];
-  for (const task of tasks) {
-    if (!task || typeof task !== 'object') {
-      continue;
-    }
-    const patterns = Array.isArray(task.patterns) ? task.patterns : [];
-    if (patterns.some((pattern) => _containsPattern(text, pattern))) {
-      hits.push(task);
-    }
-  }
-  return hits;
-}
-
-function _assessExecutionCapability(userMessage, options = {}) {
-  const policy = _loadCapabilityPolicy(options);
-  const gateEnabled = _envFlagEnabled(
-    options.capabilityGate,
-    _envFlagEnabled(process.env.KHY_TASK_CAPABILITY_GATE, true)
-  );
-  const enabled = gateEnabled && _envFlagEnabled(policy.enabled, true);
-  const mode = String(policy.blockMode || 'strict')
-    .trim()
-    .toLowerCase();
-  const assessment = {
-    enabled,
-    mode: mode === 'warn' || mode === 'warning' || mode === 'warn-only' ? 'warn' : 'strict',
-    canProceed: true,
-    reasons: [],
-    warnings: [],
-    recommendations: [],
-  };
-  if (!enabled) {
-    return assessment;
-  }
-
-  const text = String(userMessage || '').trim();
-  if (!text) {
-    return assessment;
-  }
-
-  const needs = _detectCapabilityNeeds(text, policy);
-  const enabledToolSet = _collectEnabledToolNameSet();
-  for (const need of needs) {
-    const requiredTools = Array.isArray(need?.requiredTools) ? need.requiredTools : [];
-    if (requiredTools.length === 0) {
-      continue;
-    }
-    const hasTool = _hasAnyToolEnabled(enabledToolSet, requiredTools);
-    if (!hasTool) {
-      assessment.reasons.push(
-        String(need.reason || `当前环境缺少执行能力：${need.key || 'unknown-task'}`).trim()
-      );
-    }
-  }
-
-  try {
-    // Resolve the model-capability checker via the neutral port instead of a
-    // reverse require to cli/ai (DESIGN-ARCH-021, Batch 3). Unregistered → null →
-    // pre-check skipped, identical to the prior require-failure branch.
-    const checkModelCapability = require('./modelCapabilityPort').getModelCapabilityChecker();
-    if (typeof checkModelCapability === 'function') {
-      const modelCheck = checkModelCapability(text);
-      if (modelCheck && Array.isArray(modelCheck.issues) && modelCheck.issues.length > 0) {
-        const modelCfg = policy && typeof policy.model === 'object' ? policy.model : {};
-        if (_envFlagEnabled(modelCfg.enabled, true)) {
-          const ignoreList = Array.isArray(modelCfg.ignoreIssuePatterns)
-            ? modelCfg.ignoreIssuePatterns
-            : [];
-          const hardIssues = modelCheck.issues.filter((issue) => {
-            const textIssue = String(issue || '');
-            return !ignoreList.some((p) => _containsPattern(textIssue, p));
-          });
-          const complexOrAction = _isComplexTask(text).isComplex || _looksLikeActionRequest(text);
-          const hardIssueMin = Math.max(
-            1,
-            parseInt(String(modelCfg.blockWhenHardIssueCountAtLeast ?? '2'), 10) || 2
-          );
-          const complexHardIssueMin = Math.max(
-            1,
-            parseInt(String(modelCfg.blockWhenComplexAndHardIssueCountAtLeast ?? '1'), 10) || 1
-          );
-          const complexMinChars = Math.max(
-            20,
-            parseInt(String(modelCfg.complexMinChars ?? '160'), 10) || 160
-          );
-          const shouldBlockByModel =
-            hardIssues.length >= hardIssueMin ||
-            (hardIssues.length >= complexHardIssueMin &&
-              complexOrAction &&
-              text.length >= complexMinChars);
-
-          if (shouldBlockByModel) {
-            assessment.reasons.push(`模型能力预判不足：${hardIssues.join('；')}`);
-          } else if (modelCheck.issues.length > 0) {
-            assessment.warnings.push(`模型能力提醒：${modelCheck.issues.join('；')}`);
-          }
-
-          if (Array.isArray(modelCheck.recommendations) && modelCheck.recommendations.length > 0) {
-            const labels = modelCheck.recommendations
-              .map((item) => String(item?.label || item?.key || '').trim())
-              .filter(Boolean);
-            assessment.recommendations.push(...labels);
-          }
-        }
-      }
-    }
-  } catch {
-    /* best effort */
-  }
-
-  const modelCfg = policy && typeof policy.model === 'object' ? policy.model : {};
-  const maxRecommendations = Math.max(
-    1,
-    parseInt(String(modelCfg.maxRecommendations ?? '3'), 10) || 3
-  );
-  assessment.reasons = _dedupeText(assessment.reasons);
-  assessment.warnings = _dedupeText(assessment.warnings);
-  assessment.recommendations = _dedupeText(assessment.recommendations).slice(0, maxRecommendations);
-
-  if (assessment.mode === 'warn' && assessment.reasons.length > 0) {
-    assessment.warnings.push(
-      ...assessment.reasons.map((reason) => `预判阻断已降级为告警：${reason}`)
-    );
-    assessment.reasons = [];
-    assessment.warnings = _dedupeText(assessment.warnings);
-  }
-
-  assessment.canProceed = assessment.reasons.length === 0;
-  return assessment;
-}
-
-function _formatCapabilityFailureResponse(assessment) {
-  const reasons = Array.isArray(assessment?.reasons) ? assessment.reasons : [];
-  const lines = ['抱歉，执行前能力预判未通过，当前无法可靠完成该任务。'];
-  for (let i = 0; i < reasons.length; i++) {
-    lines.push(`${i + 1}. ${reasons[i]}`);
-  }
-  if (Array.isArray(assessment?.recommendations) && assessment.recommendations.length > 0) {
-    lines.push(`建议切换模型后重试：${assessment.recommendations.join('、')}`);
-  }
-  lines.push('你可以把任务拆小、补充更具体上下文，或明确可用工具后再试。');
-  return lines.join('\n');
-}
 
 function _extractDecisionPreview(reply = '') {
   const plain = _stripToolCalls(_stripExecutionPlan(String(reply || '')))
@@ -2144,6 +1787,7 @@ function _isPureFirstTurnGreeting(userMessage, options = {}) {
  * @param {function} [options.onCapabilityCheck] - Callback when execution capability is assessed: (assessment)
  * @param {function} [options.onDecision] - Callback when each round decision is made: ({ iteration, mode, preview, toolCount, tools })
  * @param {function} [options.onIterationSummary] - Callback after each round tools finish: ({ iteration, total, succeeded, failed, denied, deduped, readOnlyOnly })
+ * @param {function} [options.onPhase] - Callback on every loop FSM transition: ({ from, to, event, iteration, at })
  * @returns {Promise<{ finalResponse: string, toolCallLog: Array, iterations: number, provider?: string }>}
  */
 // P0.3 子代理上下文传递:仅对「生成子代理」类工具调用,把父对话最近若干条消息
@@ -2179,13 +1823,14 @@ async function runToolUseLoop(userMessage, options = {}) {
     onCapabilityCheck,
     onDecision,
     onIterationSummary,
+    onPhase, // ({from,to,event,iteration,at}) => void — 每次循环 FSM 转移的阶段通知（turnPhaseTracker 消费）
     onCheckpoint,
     getSteerMessages, // () => string[] — 拉取并清空 steer 消息（忙碌输入 steer 模式）
     consumeUrgentSteer, // () => boolean — /s! 紧急 steer 信号（pull-clear）：cancel 后置真则注入修正并原地重发，而非整体 bail
     onInterrupt, // (interruptEvent) => void — Phase 2: interrupt notification
     interruptSignal, // { interrupted, _event, _resumePromise } — Phase 2: mutable signal
     initialMessages, // Array — prior conversation messages for continuation rounds
-    onControlRequest, // async ({requestId, request}) => controlResponse — host interactive channel (AskUserQuestion)
+    onControlRequest: onControlRequestRaw, // async ({requestId, request}) => controlResponse — host interactive channel (AskUserQuestion)
     onCost, // (tokenUsage) => void — projects per-turn token usage (generator adapters emit `cost` events)
     onThinking, // (text) => void — projects loop-progress thinking text (generator adapters emit `thinking` events)
     onExitPlanMode, // (exitParams) => void — CC 对齐计划模式:模型调 ExitPlanMode 时把计划交回宿主(TUI 审阅框)
@@ -2227,9 +1872,18 @@ async function runToolUseLoop(userMessage, options = {}) {
     }
   }
 
-  // Shadow FSM instance for this run (observation only; may be null, fail-soft).
-  const _loopFsm = _createLoopFsm('toolLoop');
+  // Shadow FSM + phase observation wiring — extracted to
+  // services/toolUseLoop/loopObservability.js (T-021 C3-P1 first slice).
+  // Behavior-preserving; _currentIteration became iterationRef.current (the
+  // onPhase hook reads the ref at fire time — same capture semantics).
+  const {
+    loopFsm: _loopFsm,
+    iterationRef: _iterationRef,
+    emitLoopPhaseEvent: _emitLoopPhaseEvent,
+    wrapForkPhase: _wrapForkPhase,
+  } = _setupLoopObservability({ onPhase, createLoopFsm: _createLoopFsm });
   _lastLoopFsm = _loopFsm;
+  const onControlRequest = _wrapForkPhase(onControlRequestRaw);
 
   const originalUserMessage = String(userMessage || '');
   const gatedInput = applyIntentGate(originalUserMessage, options.intentGate || {});
@@ -2621,68 +2275,38 @@ async function runToolUseLoop(userMessage, options = {}) {
     };
   }
 
-  // Model-capability tier → harness profile. Resolved early (the model id is
-  // available from options/chatOpts before effectiveChatOpts is built) so its
-  // dials can shape the loop cap below and the scaffolding gates downstream.
-  // Only T0 (frontier) relaxes; T1/T2/T3 keep current behavior. See modelTier.js.
-  const _harnessProfile = _modelTier.harnessProfile(
-    _modelTier.resolveTier(
-      String(
-        (chatOpts && chatOpts.model) || options?.model || process.env.GATEWAY_PREFERRED_MODEL || ''
-      )
-    )
-  );
-  _loopBreadcrumb('harness-profile', _harnessProfile);
-
-  // Is the active model known to LACK reliable native tool calling? If so, the
-  // text-parse fallback below (a turn with no structured toolUseBlocks) is the
-  // EXPECTED, first-class path — the model is driven via <tool_call> text
-  // interception, NOT an adapter defect — so we emit a calm breadcrumb instead of
-  // the alarming "adapter should return structured blocks" warning. This is the
-  // mechanism that lets pure-text models (no function calling) still call khy
-  // tools. SSOT: modelToolingCapability (gate-aware; off → stays false → legacy
-  // warning text, byte-identical).
-  let _modelLacksNativeTools = false;
+  // Harness/protocol context (tier profile + native-tooling detection + protocol
+  // seam) — extracted to services/toolUseLoop/protocolContext.js (T-021 C3-P2).
+  // Behavior-preserving; the bag is destructured into the original underscore
+  // names so downstream references stay unchanged.
+  let _toolCap = null;
   try {
-    const _toolCap = require('./gateway/modelToolingCapability');
-    const _modelForCap = String(
-      (chatOpts && chatOpts.model) || options?.model || process.env.GATEWAY_PREFERRED_MODEL || ''
-    );
-    // 名字只作辅助:实测裁决(toolCapabilityStore 的 live probe / 被动学习)胜过按名字的
-    // SMALL_MODEL_HINTS 启发。与三处决策门(khyUpgradeRuntime 教学门 + relay/multiFree 剥离门)
-    // 同源同参——此前本处漏传 measured,名字在此成了事实主判据(一个实测能原生调工具的
-    // flash/lite 模型仍被误标为「文本协议·预期」)。best-effort:store 不可用 → measured=null →
-    // 回落 provisional 名字启发(仍安全)。
-    let _measuredCap = null;
-    try {
-      _measuredCap = require('./gateway/toolCapabilityStore').getVerdict(_modelForCap);
-    } catch {
-      /* best effort */
-    }
-    _modelLacksNativeTools =
-      _toolCap.isEnabled() &&
-      _toolCap.modelLacksReliableToolCalling(_modelForCap, { measured: _measuredCap });
+    _toolCap = require('./gateway/modelToolingCapability');
   } catch {
-    /* fail-soft: keep the alarming default off */
+    /* fail-soft: capability detection degrades to false */
   }
-
-  // Tool-call PROTOCOL seam. The unified loop serves both cloud (native tool_use)
-  // and weak-local (text <tool_call>) models. The active protocol is dispatch-
-  // driven: an explicit options.toolCallProtocol (set by the local-mode dispatch,
-  // which KNOWS it is talking to a local adapter) is authoritative; otherwise fall
-  // back to the harness profile (default 'native' for every tier). Only the TEXT
-  // branch routes through the adapter — the native parse/format stays inline and
-  // byte-identical, so the cloud path is untouched.
+  let _toolCapStore = null;
+  try {
+    _toolCapStore = require('./gateway/toolCapabilityStore');
+  } catch {
+    /* fail-soft */
+  }
   const _toolProtocolAdapter = require('./toolProtocolAdapter');
-  const _activeProtocol =
-    options && (options.toolCallProtocol === 'text' || options.toolCallProtocol === 'native')
-      ? options.toolCallProtocol
-      : _harnessProfile.toolCallProtocol || 'native';
-  const _isTextProtocol = _activeProtocol === 'text';
-  const _activeAdapter = _toolProtocolAdapter.resolveAdapter(_activeProtocol);
-  if (_isTextProtocol) {
-    _loopBreadcrumb('tool-protocol', { protocol: _activeProtocol });
-  }
+  const {
+    harnessProfile: _harnessProfile,
+    modelLacksNativeTools: _modelLacksNativeTools,
+    activeProtocol: _activeProtocol,
+    isTextProtocol: _isTextProtocol,
+    activeAdapter: _activeAdapter,
+  } = _resolveProtocolContext({
+    chatOpts,
+    options,
+    modelTier: _modelTier,
+    loopBreadcrumb: _loopBreadcrumb,
+    toolCap: _toolCap,
+    toolCapStore: _toolCapStore,
+    toolProtocolAdapter: _toolProtocolAdapter,
+  });
 
   const resolvedMaxIterations = _resolveMaxIterations(requestedMaxIterations);
   const transientRecoveryMax = _resolveTransientRecoveryMax(originalUserMessage, options);
@@ -3536,6 +3160,7 @@ async function runToolUseLoop(userMessage, options = {}) {
         budget.useGrace();
       }
       const iteration = budget.used;
+      _iterationRef.current = iteration; // 供 onPhase 观察者读取当前轮次
       _sawStreamedText = false; // 问题 #1: 每轮重置，用于检测非流式适配器并补发说明
       if (interruptSignal) {
         interruptSignal._currentIteration = iteration;
@@ -5286,89 +4911,20 @@ async function runToolUseLoop(userMessage, options = {}) {
       // are authoritative (see `hasStructuredToolUse` gate below). stop_reason
       // is only consulted as a secondary hint for the degraded text-parse path.
       // Text-based <tool_call> parsing is a fallback for non-native adapters.
-      let toolCalls;
-      const hasStructuredToolUse =
-        Array.isArray(aiResult.toolUseBlocks) && aiResult.toolUseBlocks.length > 0;
-      const stopReasonIsToolUse = normalizedStopReason === 'tool_use';
-
-      if (_isTextProtocol) {
-        // Text protocol is FIRST-CLASS here (weak-local models): parse <tool_call>
-        // JSON from raw model text via the adapter. Not a degraded fallback — no
-        // warning. Still canonicalized so downstream execution matches the native
-        // path exactly.
-        toolCalls = _activeAdapter.parseToolCalls(aiResult).map(_canonicalizeToolCall);
-      } else if (hasStructuredToolUse) {
-        // Native structured tool_use from Claude/OpenAI API — authoritative path
-        // Filter out server_tool_use blocks — these are handled server-side (e.g. tool_search)
-        // and must not be dispatched to local tool execution.
-        toolCalls = aiResult.toolUseBlocks
-          .filter((block) => block.type !== 'server_tool_use')
-          .map((block) => {
-            const name = block.name || block.function?.name || '';
-            let params = block.input || block.params || block.function?.arguments || {};
-            if (typeof params === 'string') {
-              try {
-                params = JSON.parse(params);
-              } catch {
-                params = {};
-              }
-            }
-            const normalized = normalizeToolCall(name, params);
-            return {
-              name: normalized.name,
-              params: normalized.params,
-              _toolUseId: block.id || block.tool_use_id || null,
-              _structured: true,
-            };
-          })
-          .map(_canonicalizeToolCall);
-      } else if (stopReasonIsToolUse) {
-        // stop_reason says tool_use but no structured blocks — adapter 可能未正确传递。
-        // 不静默放弃，回退到文本解析尝试恢复工具调用。
-        _loopBreadcrumb('tool-parse-fallback', {
-          stopReason: aiResult.stopReason,
-          reason: 'no toolUseBlocks',
-        });
-        toolCalls = _parseToolCalls(aiResult.reply).map(_canonicalizeToolCall);
-        if (toolCalls.length > 0) {
-          _loopBreadcrumb('tool-parse-recovered', {
-            count: toolCalls.length,
-            method: 'text-fallback',
-          });
-        }
-      } else {
-        // Text-based <tool_call> parsing. For models known to lack native tool
-        // calling this is the EXPECTED text-interception path (calm breadcrumb);
-        // for a model that SHOULD return structured blocks it signals an adapter
-        // gap (warning). Either way the call is parsed + executed identically.
-        toolCalls = _parseToolCalls(aiResult.reply).map(_canonicalizeToolCall);
-        if (toolCalls.length > 0) {
-          if (_modelLacksNativeTools) {
-            _loopBreadcrumb('tool-parse-text-protocol', {
-              count: toolCalls.length,
-              expected: true,
-            });
-          } else {
-            _loopBreadcrumb('tool-parse-text-fallback', {
-              count: toolCalls.length,
-              reason: 'adapter-gap',
-            });
-          }
-        }
-      }
-
-      // Parse-failure diagnostic (P2, observability only — no behavior change):
-      // the response carried a structured tool_use signal or a tool_use
-      // stop_reason, yet parsing yielded zero tool calls. Surface it so silent
-      // "model wanted a tool but nothing ran" turns are attributable.
-      if (toolCalls.length === 0 && (hasStructuredToolUse || stopReasonIsToolUse)) {
-        _loopBreadcrumb('tool-parse-empty-despite-signal', {
-          iteration,
-          stopReason: aiResult.stopReason,
-          hasStructuredToolUse,
-          replyHead: String(aiResult.reply || '').slice(0, 200),
-        });
-      }
+      // 2. Parse tool calls from AI response — decision chain extracted to
+      // services/toolUseLoop/resolveToolCalls.js (T-021 C3-P7 first slice).
+      // Behavior-preserving: s20 signal semantics + breadcrumbs byte-identical.
+      let toolCalls = resolveToolCalls({
+        aiResult,
+        normalizedStopReason,
+        isTextProtocol: _isTextProtocol,
+        activeAdapter: _activeAdapter,
+        modelLacksNativeTools: _modelLacksNativeTools,
+        iteration,
+        parseToolCalls: _parseToolCalls,
+        canonicalizeToolCall: _canonicalizeToolCall,
+        loopBreadcrumb: _loopBreadcrumb,
+      });
 
       // 跨轮「答案回声」断路器(重复输出统一缺口:无跨轮答案文本比对)。在工具执行 + 门级联**之前**,
       // 判断本轮答案是否复现了此前已流式过的某个答案 → 结论前早返,阻止「下一次」重复流(封顶到已流式的
@@ -5500,10 +5056,27 @@ async function runToolUseLoop(userMessage, options = {}) {
         if (_exitPlan) {
           const _exitParams = _exitPlan.params || {};
           if (_exitParams.action !== 'cancel' && typeof onExitPlanMode === 'function') {
+            // 分叉阶段通知：回合在此分叉出「等待计划审批」，用户批准/取消都发生在
+            // 循环之外（批准 = 新回合）。FSM 此前停在 parse_ai_output 被非终态遗弃，
+            // 补 fire('finish') 让影子机诚实收口（阶段链显示「等待选择 → 已完成」）。
+            if (typeof onPhase === 'function') {
+              try {
+                onPhase({ kind: 'fork', fork: 'plan_review', at: Date.now() });
+              } catch {
+                /* observer only */
+              }
+            }
             try {
               onExitPlanMode(_exitParams);
             } catch {
               /* fail-soft:计划投递绝不阻断收口 */
+            }
+          }
+          if (_loopFsm) {
+            try {
+              _loopFsm.fire('finish', { planExit: true });
+            } catch {
+              /* shadow FSM never throws */
             }
           }
           let _planProse = _stripToolCalls(_stripExecutionPlan(aiResult.reply));
@@ -7857,6 +7430,7 @@ async function runToolUseLoop(userMessage, options = {}) {
       }
 
       // 3a. Preflight permission batch check (first iteration, 2+ tools)
+      _loopBreadcrumb('tool-exec-preflight', { iteration, tools: toolCalls.length });
       if (
         iteration === 1 &&
         toolCalls.length >= 2 &&
@@ -7900,6 +7474,7 @@ async function runToolUseLoop(userMessage, options = {}) {
       if (_loopFsm) {
         _loopFsm.fire('tools_found', { iteration, count: toolCalls.length });
       }
+      _loopBreadcrumb('tool-exec-start', { iteration, count: toolCalls.length });
       const toolResults = [];
 
       // ── Feature-gated ToolExecutionEngine (Phase 4B) ──
@@ -8087,6 +7662,7 @@ async function runToolUseLoop(userMessage, options = {}) {
           _hookStopReason = engine._hookStopReason || '';
         }
       } else {
+        _loopBreadcrumb('tool-exec-batching', { iteration, calls: toolCalls.length });
         // ── Order-preserving batched execution (s02) ──
         // Replaces the old "all-parallel-then-all-sequential" split (which reordered
         // tool calls relative to how the model emitted them) with contiguous
@@ -8993,6 +8569,7 @@ async function runToolUseLoop(userMessage, options = {}) {
           }
 
           // Execute sequential calls (this batch's serial calls, in order)
+          _loopBreadcrumb('tool-exec-sequential', { iteration, calls: sequentialCalls.length });
           for (const call of sequentialCalls) {
             // D9: Chunk-level interrupt — check between sequential tool calls
             // This allows interrupting a long chain of tool executions without
@@ -9979,6 +9556,7 @@ async function runToolUseLoop(userMessage, options = {}) {
           }
         } // end for (_batch of _execBatches) — order-preserving batched execution
       } // end else (original inline execution)
+      _loopBreadcrumb('tool-exec-done', { iteration, results: toolResults.length });
 
       // 4b. AskUserQuestion interactive resolution.
       // AskUserQuestionTool returns a structured { type:'question', questions }
@@ -11359,606 +10937,7 @@ async function runToolUseLoop(userMessage, options = {}) {
 
 // ── Parsing ────────────────────────────────────────────────────────
 
-/**
- * Parse tool calls from AI response text.
- * Supports two formats:
- *   1. <tool_call>tool_name(param1, param2)</tool_call>
- *   2. <tool_call>{"name": "tool", "params": {...}}</tool_call>
- *
- * @param {string} text - AI response text
- * @returns {Array<{name: string, params: object}>}
- */
-function _parseToolCalls(text) {
-  if (!text) {
-    return [];
-  }
 
-  const calls = [];
-
-  // ── Fake Tool Wrapper 检测（借鉴 DeepSeek-TUI TOOL_CALL_START_MARKERS） ──
-  // 过滤代码块内、解释性短语后的伪造 tool_call 标记
-  const _isFakeToolCall = (matchIndex) => {
-    const before = text.slice(Math.max(0, matchIndex - 600), matchIndex);
-    // 在代码块 (```) 内 → 伪造
-    const backtickCount = (before.match(/```/g) || []).length;
-    if (backtickCount % 2 === 1) {
-      return true;
-    } // 奇数个 ``` = 在代码块内
-    // 在行内代码 (`) 内 → 伪造
-    const linePrefix = before.split('\n').pop() || '';
-    const inlineBackticks = (linePrefix.match(/`/g) || []).length;
-    if (inlineBackticks % 2 === 1) {
-      return true;
-    }
-    // 前导是解释性短语（如 "例如"、"比如"、"the format is"） → 可疑
-    if (
-      /(?:例如|比如|for example|like|the format|such as|示例|样例)\s*[:：]?\s*$/i.test(linePrefix)
-    ) {
-      return true;
-    }
-    return false;
-  };
-
-  // Format 1: JSON-style tool calls
-  const jsonMatches = [...text.matchAll(/<tool_call>\s*(\{[\s\S]*?\})\s*<\/tool_call>/g)];
-  for (const match of jsonMatches) {
-    // Fake tool wrapper 检测
-    if (_isFakeToolCall(match.index)) {
-      continue;
-    }
-    try {
-      const { safeJsonParse } = require('./gateway/safeJsonParse');
-      const parsed = safeJsonParse(match[1], null);
-      if (parsed && parsed.name) {
-        const normalized = normalizeToolCall(parsed.name, parsed.params || parsed.arguments || {});
-        // Avoid only true duplicates (same tool + same params) — 与 Format 2/2b 对称。
-        // 弱模型(如 agnes-2.0-flash)会在单次 completion 里把整段输出重复两遍(A+A),
-        // 若含 <tool_call>{JSON}</tool_call> 工具调用则产生两个逐字相同的调用;二者落入同一
-        // 并行批次、在 executedCallKeys 记录首个之前都读到空 Map → 双双执行(如 local_knowledge
-        // 同 query 失败两遍)→ 用户看到「搜索过程重复两次」。Format 2/2b 早有此去重,Format 1
-        // 缺失属不对称遗漏;此处补齐(仅折叠精确相同调用,非精确/合法不同参数逐字保留)。
-        const sameCallExists = calls.some(
-          (c) =>
-            c.name === normalized.name &&
-            JSON.stringify(c.params || {}) === JSON.stringify(normalized.params || {})
-        );
-        if (!sameCallExists) {
-          calls.push({ name: normalized.name, params: normalized.params });
-        }
-      }
-    } catch {
-      /* skip malformed JSON */
-    }
-  }
-
-  // Format 2: function-call-style tool calls
-  // e.g. <tool_call>git_status()</tool_call> or <tool_call>shellCommand(command: "dir")</tool_call>
-  const funcMatches = [
-    ...text.matchAll(/<tool_call>\s*([\w_]+)\s*\(([\s\S]*?)\)\s*<\/tool_call>/g),
-  ];
-  for (const match of funcMatches) {
-    // Fake tool wrapper 检测
-    if (_isFakeToolCall(match.index)) {
-      continue;
-    }
-    const rawName = match[1];
-    const argsStr = match[2].trim();
-
-    const params = _parseFunctionArgs(rawName, argsStr);
-    const normalized = normalizeToolCall(rawName, params);
-    // Avoid only true duplicates (same tool + same params)
-    const sameCallExists = calls.some(
-      (c) =>
-        c.name === normalized.name &&
-        JSON.stringify(c.params || {}) === JSON.stringify(normalized.params || {})
-    );
-    if (sameCallExists) {
-      continue;
-    }
-    calls.push({ name: normalized.name, params: normalized.params });
-  }
-
-  // Format 2b: <function=NAME>BODY</function> dialect (open-model / harmony text channel).
-  // Primary format — always scanned. Shares the SSOT leaf with toolCallParser.js; arg parsing,
-  // normalization and fake-call fence guard reuse this loop's existing helpers.
-  try {
-    const _fnTag = require('./functionTagToolCall');
-    for (const tag of _fnTag.extractFunctionTags(text, process.env)) {
-      if (_isFakeToolCall(tag.index)) {
-        continue;
-      }
-      // Nested `<parameter=NAME>VALUE</parameter>` dialect first (harmony / open-model
-      // text channel). Without this the args fall through to _parseFunctionArgs's
-      // key=value branch, which mis-splits `<parameter=pattern>` into a bogus key and
-      // leaks the literal tag into the value → `Invalid tool parameters`
-      // (goal 2026-07-11 transcript). Falls back to _parseFunctionArgs for the JSON /
-      // key:value / bare-string BODY shapes that dialect doesn't cover.
-      const paramTags = _fnTag.parseParameterTags(tag.argsText);
-      const params = paramTags || _parseFunctionArgs(tag.name, tag.argsText);
-      const normalized = normalizeToolCall(tag.name, params);
-      const dup = calls.some(
-        (c) =>
-          c.name === normalized.name &&
-          JSON.stringify(c.params || {}) === JSON.stringify(normalized.params || {})
-      );
-      if (!dup) {
-        calls.push({ name: normalized.name, params: normalized.params });
-      }
-    }
-  } catch {
-    /* leaf missing or gate off → byte-revert (dialect simply unparsed) */
-  }
-
-  // Format 3: natural-language tool calls from local models
-  // e.g. 【调用策略列表：all】 / 【调用回测：symbol=000300 strategy=ma_cross】
-  if (calls.length === 0) {
-    const naturalSource = _stripExecutionPlan(String(text || ''));
-    const naturalCalls = _parseNaturalToolCalls(naturalSource);
-    if (naturalCalls.length > 0) {
-      return naturalCalls.map((call) => {
-        const normalized = normalizeToolCall(call.name, call.params || {});
-        return { ...call, name: normalized.name, params: normalized.params };
-      });
-    }
-  }
-
-  // Format 4: 截断 tool_call 修复 — 响应以未闭合的 <tool_call> 结尾
-  if (calls.length === 0) {
-    const truncM = text.match(/<tool_call>\s*(\{[\s\S]*)$/);
-    if (truncM && !_isFakeToolCall(truncM.index)) {
-      const fragment = truncM[1].trim();
-      if (fragment.length > 15 && /"name"\s*:\s*"/.test(fragment)) {
-        try {
-          const { safeJsonParse } = require('./gateway/safeJsonParse');
-          const repaired = safeJsonParse(fragment, null);
-          if (repaired && repaired.name) {
-            const norm = normalizeToolCall(
-              repaired.name,
-              repaired.params || repaired.arguments || {}
-            );
-            calls.push({ name: norm.name, params: norm.params, _repaired: true });
-            _loopBreadcrumb('tool-parse-truncated-recovered', { name: norm.name });
-          }
-        } catch {
-          /* 修复失败 */
-        }
-      }
-    }
-  }
-
-  // Format 5: UI-prefixed ToolName(args) — 小模型常用格式（训练数据中常见）
-  // e.g. ▶ Bash(ls ~/Desktop) / ⌕ Search() / ◆ Write(path="...")
-  // Support multiple visual prefixes used by terminal renderers.
-  if (calls.length === 0) {
-    const prefixedMatches = [...text.matchAll(/[▶⌕◆⏺⎿]\s*([\w_]+)\s*\(([^)]*)\)/g)];
-    for (const m of prefixedMatches) {
-      if (_isFakeToolCall(m.index)) {
-        continue;
-      }
-      const rawName = m[1];
-      const argsStr = m[2].trim();
-      const params = argsStr ? _parseFunctionArgs(rawName, argsStr) : {};
-      const normalized = normalizeToolCall(rawName, params);
-      const dup = calls.some(
-        (c) =>
-          c.name === normalized.name &&
-          JSON.stringify(c.params || {}) === JSON.stringify(normalized.params || {})
-      );
-      if (!dup) {
-        calls.push({ name: normalized.name, params: normalized.params });
-      }
-    }
-  }
-
-  // Format 6: 裸 ToolName(args) — 独占一行，无 <tool_call> / ▶ 前缀
-  // 小模型（如 SenseNova Flash-Lite）直接输出 "Bash()" 或 "Read(/tmp/x)"
-  // 渲染器 aiRenderer 已能识别此格式（加 ▶ 显示），但解析侧缺少匹配
-  // 安全措施：必须工具名在已知别名中，且行首匹配，避免误捕普通函数调用
-  if (calls.length === 0) {
-    const _KNOWN_BARE_TOOLS =
-      /^(bash|shell|sh|command|read|readfile|write|writefile|edit|editfile|grep|rg|glob|find|ls|websearch|webfetch|search|agent|task)$/i;
-    const lines = text.split('\n');
-    for (let li = 0; li < lines.length; li++) {
-      const stripped = lines[li].replace(/^\s*[>│┃├└╰❯▸›•*-]+\s*/u, '').trim();
-      if (!stripped) {
-        continue;
-      }
-      const bm = stripped.match(/^([A-Za-z][A-Za-z0-9_]{0,24})\s*\(([\s\S]*)\)\s*$/);
-      if (!bm) {
-        continue;
-      }
-      const rawName = bm[1];
-      const rawArgs = bm[2].trim();
-      // 只接受已知工具名
-      if (!_KNOWN_BARE_TOOLS.test(rawName)) {
-        continue;
-      }
-      // 代码块内跳过
-      const textBefore = lines.slice(0, li).join('\n');
-      if ((textBefore.match(/```/g) || []).length % 2 === 1) {
-        continue;
-      }
-      const params = rawArgs ? _parseFunctionArgs(rawName, rawArgs) : {};
-      const normalized = normalizeToolCall(rawName, params);
-      const dup = calls.some(
-        (c) =>
-          c.name === normalized.name &&
-          JSON.stringify(c.params || {}) === JSON.stringify(normalized.params || {})
-      );
-      if (!dup) {
-        calls.push({ name: normalized.name, params: normalized.params });
-      }
-    }
-  }
-
-  // Format 7: JSON in markdown code block — weak models (minimax, qwen-small) wrap
-  // tool calls in ```json or ```tool_call fences:
-  //   ```json\n{"name":"Bash","arguments":{"command":"ls"}}\n```
-  //   ```\n{"name":"Read","parameters":{"file_path":"/tmp"}}\n```
-  if (calls.length === 0) {
-    const codeBlockMatches = [
-      ...text.matchAll(/```(?:json|tool_call|tool|function)?\s*\n(\{[\s\S]*?\})\s*\n```/g),
-    ];
-    for (const m of codeBlockMatches) {
-      if (_isFakeToolCall(m.index)) {
-        continue;
-      }
-      try {
-        const { safeJsonParse } = require('./gateway/safeJsonParse');
-        const parsed = safeJsonParse(m[1], null);
-        if (parsed && parsed.name && typeof parsed.name === 'string') {
-          const params =
-            parsed.arguments || parsed.parameters || parsed.params || parsed.input || {};
-          const normalized = normalizeToolCall(parsed.name, params);
-          const dup = calls.some(
-            (c) =>
-              c.name === normalized.name &&
-              JSON.stringify(c.params || {}) === JSON.stringify(normalized.params || {})
-          );
-          if (!dup) {
-            calls.push({ name: normalized.name, params: normalized.params });
-          }
-        }
-      } catch {
-        /* skip malformed */
-      }
-    }
-  }
-
-  // Format 8: 截断裸工具调用 — 模型输出 "Bash(" 或 "Read(/tmp" 但括号未闭合
-  // (was Format 7, renumbered after JSON code block format insertion)
-  // 这是 max_tokens 截断的常见表现，尤其在低阶模型 + 4096 token 限制下
-  if (calls.length === 0) {
-    const _KNOWN_TRUNC =
-      /^(bash|shell|read|readfile|write|writefile|edit|editfile|grep|glob|find|ls|websearch|webfetch|search)$/i;
-    const lastLines = text.split('\n').slice(-5);
-    for (const line of lastLines) {
-      const stripped = line.replace(/^\s*[>│┃├└╰❯▸›•*-]+\s*/u, '').trim();
-      const tm = stripped.match(/^([A-Za-z][A-Za-z0-9_]{0,24})\s*\(([^)]*?)$/);
-      if (!tm) {
-        continue;
-      }
-      const rawName = tm[1];
-      if (!_KNOWN_TRUNC.test(rawName)) {
-        continue;
-      }
-      // 代码块内跳过
-      const textBefore = text.slice(0, text.lastIndexOf(line));
-      if ((textBefore.match(/```/g) || []).length % 2 === 1) {
-        continue;
-      }
-      const argsStr = tm[2].trim();
-      const params = argsStr ? _parseFunctionArgs(rawName, argsStr) : {};
-      const normalized = normalizeToolCall(rawName, params);
-      calls.push({ name: normalized.name, params: normalized.params, _repaired: true });
-      _loopBreadcrumb('tool-parse-bare-truncated', { name: normalized.name });
-      break; // 只修复最后一个截断调用
-    }
-  }
-
-  return calls;
-}
-
-function _parseNaturalToolCalls(text) {
-  if (!text) {
-    return [];
-  }
-  const out = [];
-  const src = String(text);
-
-  const matches = [
-    ...src.matchAll(/【\s*调用\s*([^：:\]】\n]{1,32})\s*(?:[：:]\s*([^】]*?))?\s*】/g),
-  ];
-  for (const m of matches) {
-    // Lenient line-prefix check: allow 【调用】 anywhere in the line.
-    // Only skip if the prefix looks like a plan description header
-    // (e.g. inside a markdown code block or deeply nested structure).
-    const linePrefix =
-      src
-        .slice(0, m.index || 0)
-        .split('\n')
-        .pop() || '';
-    const inCodeBlock = /```/.test(src.slice(Math.max(0, (m.index || 0) - 500), m.index));
-    if (inCodeBlock) {
-      continue;
-    }
-
-    const rawAction = String(m[1] || '').trim();
-    const rawArg = String(m[2] || '').trim();
-    const toolName = _mapNaturalActionToTool(rawAction);
-    if (!toolName) {
-      continue;
-    }
-
-    // Relaxed tail check: allow most trailing text.
-    // Only skip if it looks like a plan-description line with significant
-    // natural-language explanation after the tag AND the tool is not an action tool.
-    const endIdx = (m.index || 0) + m[0].length;
-    const tail = src.slice(endIdx).split('\n')[0].trim();
-    const allowTailForActionTool =
-      toolName === 'open_app' ||
-      toolName === 'shell_command' ||
-      toolName === 'write_file' ||
-      toolName === 'read_file' ||
-      toolName === 'editFile';
-    // Only skip if tail is a long CJK explanation (>15 chars), suggesting a plan description
-    if (!allowTailForActionTool && tail.length > 15 && !/^[，,。.!！?？:：;；\s]*$/.test(tail)) {
-      continue;
-    }
-
-    const params = _buildNaturalToolParams(toolName, rawArg);
-    out.push({ name: toolName, params, natural: true, rawAction, rawArg });
-  }
-
-  return out;
-}
-
-function _mapNaturalActionToTool(action) {
-  const raw = String(action || '').trim();
-  if (!raw) {
-    return null;
-  }
-  const key = raw.toLowerCase().replace(/\s+/g, '');
-  if (NATURAL_ACTION_TO_TOOL[key]) {
-    return NATURAL_ACTION_TO_TOOL[key];
-  }
-  if (NATURAL_ACTION_TO_TOOL[raw]) {
-    return NATURAL_ACTION_TO_TOOL[raw];
-  }
-
-  // Fuzzy fallback for slight phrasing differences
-  if (/(回测|backtest)/i.test(raw)) {
-    return 'backtest';
-  }
-  if (/(k线|kline|日线|周线|月线|分钟线)/i.test(raw)) {
-    return 'data_fetch';
-  }
-  if (/(策略|strategy)/i.test(raw)) {
-    return 'strategy_list';
-  }
-  if (/(行情|报价|价格|quote|price)/i.test(raw)) {
-    return 'quote';
-  }
-  if (/(搜索|search|web)/i.test(raw)) {
-    return 'web_search';
-  }
-  if (/(读取|read)/i.test(raw)) {
-    return 'read_file';
-  }
-  if (/(写入|write)/i.test(raw)) {
-    return 'write_file';
-  }
-  if (/(脚手架|scaffold|创建项目|项目结构|目录结构|批量创建|并行写入)/i.test(raw)) {
-    return 'scaffoldFiles';
-  }
-  if (/(命令|shell|bash|terminal|cmd)/i.test(raw)) {
-    return 'shell_command';
-  }
-  if (/(打开|启动|运行|应用|程序|浏览器|open|launch|run)/i.test(raw)) {
-    return 'open_app';
-  }
-  if (/(git状态|gitstatus)/i.test(raw)) {
-    return 'git_status';
-  }
-  if (/(git差异|gitdiff)/i.test(raw)) {
-    return 'git_diff';
-  }
-  return null;
-}
-
-function _parseLooseKv(argText = '') {
-  const out = {};
-  const s = String(argText || '').trim();
-  if (!s) {
-    return out;
-  }
-  const parts = s.split(/[\s,，]+/).filter(Boolean);
-  for (const p of parts) {
-    const m = p.match(/^([a-zA-Z_]+)=(.+)$/);
-    if (m) {
-      out[m[1]] = m[2];
-    }
-  }
-  return out;
-}
-
-function _cleanParams(obj = {}) {
-  return Object.fromEntries(
-    Object.entries(obj).filter(([, v]) => v !== undefined && v !== null && v !== '')
-  );
-}
-
-function _buildNaturalToolParams(toolName, argText) {
-  const raw = String(argText || '').trim();
-  const kv = _parseLooseKv(raw);
-
-  if (toolName === 'strategy_list' || toolName === 'git_status') {
-    return {};
-  }
-
-  if (toolName === 'quote') {
-    return _cleanParams({ symbol: kv.symbol || kv.code || raw });
-  }
-
-  if (toolName === 'backtest') {
-    const firstToken = raw.split(/\s+/).filter(Boolean)[0];
-    return _cleanParams({
-      symbol: kv.symbol || kv.code || firstToken || '000300',
-      strategy: kv.strategy,
-      start: kv.start,
-      end: kv.end,
-      capital: kv.capital !== undefined ? _coerceValue(String(kv.capital)) : undefined,
-    });
-  }
-
-  if (toolName === 'data_fetch') {
-    const parts = raw.split(/\s+/).filter(Boolean);
-    return _cleanParams({
-      symbol: kv.symbol || kv.code || parts[0] || '000001',
-      period: kv.period || parts[1],
-    });
-  }
-
-  if (toolName === 'search') {
-    return _cleanParams({ keyword: kv.keyword || raw });
-  }
-
-  if (toolName === 'web_search') {
-    return _cleanParams({ query: kv.query || kv.keyword || raw || '最新市场信息' });
-  }
-
-  if (toolName === 'read_file') {
-    return _cleanParams({ path: raw.replace(/^\/+/, '') });
-  }
-
-  if (toolName === 'write_file') {
-    const [filePath, ...rest] = raw.split('|');
-    return _cleanParams({
-      path: (filePath || '').trim(),
-      content: rest.join('|').trim(),
-    });
-  }
-
-  if (toolName === 'shell_command') {
-    return _cleanParams({ command: raw });
-  }
-
-  if (toolName === 'open_app') {
-    return _cleanParams({ name: raw || kv.name || kv.app || kv.application });
-  }
-
-  if (toolName === 'git_diff') {
-    return raw ? _cleanParams({ file: raw }) : {};
-  }
-
-  return {};
-}
-
-/**
- * Parse function-call-style arguments into an object.
- * Maps positional args to parameter names based on tool schema.
- *
- * @param {string} toolName
- * @param {string} argsStr - Raw argument string
- * @returns {object}
- */
-function _parseFunctionArgs(toolName, argsStr) {
-  if (!argsStr) {
-    return {};
-  }
-
-  // Try JSON parse first (e.g. {"symbol": "sh600519"} or {"command": "dir"})
-  try {
-    if (argsStr.startsWith('{')) {
-      return JSON.parse(argsStr);
-    }
-  } catch {
-    /* fall through */
-  }
-
-  // Try key: "value" pairs (AI often uses this format, e.g. command: "dir /b", cwd: "D:\\")
-  const kvColonRe = /(\w+)\s*:\s*(?:"([^"]*?)"|'([^']*?)'|([^,)]+))/g;
-  let kvMatch;
-  const colonParams = {};
-  let hasColonPairs = false;
-  while ((kvMatch = kvColonRe.exec(argsStr)) !== null) {
-    hasColonPairs = true;
-    // Quoted values (groups 2/3) stay as strings; unquoted (group 4) get type coercion
-    if (kvMatch[2] !== undefined) {
-      colonParams[kvMatch[1]] = kvMatch[2];
-    } else if (kvMatch[3] !== undefined) {
-      colonParams[kvMatch[1]] = kvMatch[3];
-    } else {
-      colonParams[kvMatch[1]] = _coerceValue((kvMatch[4] ?? '').trim());
-    }
-  }
-  if (hasColonPairs) {
-    return colonParams;
-  }
-
-  // Try key=value pairs (e.g. symbol=sh600519, staged=true)
-  if (argsStr.includes('=')) {
-    const params = {};
-    const pairs = argsStr.split(',').map((s) => s.trim());
-    for (const pair of pairs) {
-      const [key, ...rest] = pair.split('=');
-      const value = rest
-        .join('=')
-        .trim()
-        .replace(/^["']|["']$/g, '');
-      params[key.trim()] = _coerceValue(value);
-    }
-    return params;
-  }
-
-  // Positional argument: map to the first required parameter
-  try {
-    const toolRegistry = require('../tools');
-    const normalized = normalizeToolCall(toolName, {}).name || toolName;
-    const tool = toolRegistry.get(normalized);
-    if (tool && tool.inputSchema) {
-      const firstRequired = Object.entries(tool.inputSchema).find(([, rule]) => rule.required);
-      if (firstRequired) {
-        return { [firstRequired[0]]: argsStr.replace(/^["']|["']$/g, '') };
-      }
-    }
-  } catch {
-    /* registry not available */
-  }
-
-  // Fallback: use 'command' as the default param (most common tool)
-  return { command: argsStr.replace(/^["']|["']$/g, '') };
-}
-
-/**
- * Coerce string values to appropriate JS types.
- */
-function _coerceValue(str) {
-  if (str === 'true') {
-    return true;
-  }
-  if (str === 'false') {
-    return false;
-  }
-  if (str === 'null') {
-    return null;
-  }
-  const num = Number(str);
-  if (!isNaN(num) && str !== '') {
-    return num;
-  }
-  return str;
-}
-
-// ── Formatting ─────────────────────────────────────────────────────
-
-/**
- * Steer 注入辅助函数 — 将用户方向修正消息追加到 currentMessage。
- * 从 getSteerMessages 回调拉取并清空 steer 队列。
- * @param {string} currentMessage
- * @param {function|undefined} getSteerMessages - () => string[]
- * @returns {string} 可能追加了 steer 块的 currentMessage
- */
 function _injectSteerIfPresent(currentMessage, getSteerMessages) {
   if (typeof getSteerMessages !== 'function') {
     return currentMessage;
@@ -12265,6 +11244,12 @@ function _getActiveModelContextWindow() {
 // ── Tail helpers isolated in a sibling module (god-file split) ──
 // Import the helper surface this core calls, then inject the core-defined bindings the helpers read.
 // Both run at core load, before runToolUseLoop is ever invoked, so the relocated bodies stay byte-identical.
+  // T-021 C3-P1: FSM/phase observation wiring (mutation-capture via iterationRef).
+  const { setupLoopObservability: _setupLoopObservability } = require('./toolUseLoop/loopObservability');
+  // T-021 C3-P7: tool-call resolution decision chain (s20 semantics, breadcrumbs).
+  // T-021 C3-P2: harness profile + native-tooling detection + protocol seam.
+  const { resolveProtocolContext: _resolveProtocolContext } = require('./toolUseLoop/protocolContext');
+  const { resolveToolCalls } = require('./toolUseLoop/resolveToolCalls');
 const {
   _appLaunchInterruptPrecedenceEnabled,
   _appLaunchRecovery,
@@ -12335,6 +11320,15 @@ const {
   maybeAttachCognitiveObserver,
   maybeForgeStructuredIntent,
 } = require('./toolUseLoopHelpers');
+  // ── SSOT alignment (T-021 C1): module.exports already delegated these to the extracted
+  // single-source modules, but the loop still ran stale local copies that had drifted
+  // from their SSOT. All call sites now route through the SSOT; the dead local copies
+  // (policy-load chain + capability assess cluster + local _parseToolCalls) are gone.
+  const _parseToolCalls = (...args) => _toolCallParser.parseToolCalls(...args);
+  const _assessExecutionCapability = (...args) =>
+    _capabilityAssess.assessExecutionCapability(...args);
+  const _formatCapabilityFailureResponse = (...args) =>
+    _capabilityAssess.formatCapabilityFailureResponse(...args);
 require('./toolUseLoopHelpers').setToolUseLoopHelpersDeps({
   _APP_TARGET_PROBE_BINS,
   _SEARCH_TERM_STOPWORDS,

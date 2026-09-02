@@ -5,6 +5,71 @@ All notable changes to khy OS will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.1.14
+
+### Added
+
+- **TUI 区域划分 SSOT**（`services/backend/src/cli/tui/ink-components/regionLayout.js`）
+  - 新建区域划分单一真源文件，定义 25 个区域 ID（9 顶层 + 6 大区 + 10 小区），三层层级结构。
+  - 大区值是小区值的前缀（`main.output` → `main.output.hdr`），层级可推导，测试断言锁住。
+  - 覆盖层注册表 `OWNING_OVERLAYS` 集中声明 6 个独占输入覆盖层，`hideChrome` 字段决定是否隐藏 PROMPT/FOOTER。
+  - 几何契约 `sidebarTopAnchorRows()` / `railCols()` 作为跨区域顶对齐 / 栏宽的单一真源。
+  - 主区最小高度 `MAIN_MIN_HEIGHT = 6`，内容不足时用空行填充，确保主区始终有可读的最低高度。
+  - 契约测试 `tests/cli/tui/regionLayout.test.js`（20 个断言）锁住区域顺序、层级、覆盖层判定。
+  - 新增 `COMPLETION_MENU` 顶层区域（斜杠命令 / @file 补全菜单），职责边界原则：每个区域只管自己的渲染，不干涉其他区域。
+  - 新增 `STATUS_AREA` 顶层区域（PROMPT 之下 5 行空行），输入区固定置底，预留未来扩展。
+  - 渲染顺序调整：PROMPT 移到 FOOTER 之后（固定置底），COMPLETION_MENU 移到 PROMPT 之前（浮在上方）。
+
+- **TUI 区域注释标签**（`services/backend/src/cli/tui/ink-components/App.js`）
+  - 渲染数组每个 children 块前加 `[区域②.X]` 注释标题，grep `区域` 即可定位所有区域边界。
+  - MAIN 左列总览注释列出 6 大区 + 10 小区的完整索引。
+
+- **输出区分级显示矩阵落地**（`services/backend/src/cli/toolDisplayPolicy.js`）
+  - 显示矩阵单一真源补齐 [DESIGN-ARCH-073] §2.3 声明的契约：57 个家族全部登记 `tier`（core/minor）与 `intentLabel`，`ALIASES` 覆盖工具注册表全部 151 个工具（此前 10 家族 / 147 个工具落 DEFAULT 无分级语义）。
+  - 新增导出 `getToolTier` / `isCoreToolDisplay` / `buildCoreFocusLine`（`▌ 说明：目标` 三段式焦点行）；`DEFAULT_POLICY.tier='core'`（未注册工具默认 core，宁可见到不可漏掉）。
+  - 接线两条渲染路径：`steps.js` `printStepLine` 新增 `opts.toolName`（core 且 active 态指示点换 `▌` 锚点，旧签名逐字节回退）；`headlessProgress.js` `formatToolStart` core 工具加 `▌ ` 前缀（stderr，stdout 机器契约不动）。
+  - 契约测试 `src/cli/toolDisplayMatrix.test.js` / `src/cli/toolDisplayTier.render.test.js` 由红转绿（11/11）；存量回归 headlessProgress / foldOutputMarker / collapseConsecutiveDuplicates / toolPrefaceStreaming 共 96 用例全过。
+
+### Changed
+
+- **`/菜单` 与 `/commands` 分类区域上色**（`services/backend/src/cli/menu.js`、`services/backend/src/cli/commandCatalogUi.js`、`services/backend/src/cli/ui/inkComponents.js`、`services/backend/src/cli/uiPrompt.js`、`services/backend/src/cli/tui/ink-components/FormFlow.js`）
+  - **改了什么**：`menu.js#showMainMenu` 为两个分类组（平台核心 / 量化交易）添加彩色分区标题与彩色图标 —— 平台核心为青色、量化交易为红色，icons 在分类色下渲染，光标选中时仅文本标为青色不遮图标颜色；`commandCatalogUi.js#CATEGORY_MAP` 为四个分类（量化交易 / AI 助手 / 系统 / 应用管理）补 `color` 字段并在 `renderCommandCatalog` 接入；`inkComponents.js#Select` 透传 `disabled` 字段、光标上下跳过禁用项、禁用项不套青色且渲染为灰色；TUI 桥接路径（`selectMenu` → `uiPrompt._normalizeChoice` → `FormFlow`）也透传 `disabled` 与 `color`，`FormFlow` 在渲染时为禁用项使用 `dimColor` + 分类色、跳过光标导航、回车键与数字键均跳过禁用项，确保 `/菜单` 在 ink TUI 下也能看到彩色分类。
+  - **为什么**：菜单分类区域缺觉知分明度，用户易混淆系统管理与量化交易指令群。
+  - **影响范围**：`/菜单`、`/commands` 以及所有走 `selectMenu` 路径的交互式菜单彩色渲染；Legacy Windows 终端回退到 ASCII 标记，无行为变更。
+
+- **`overlayLiveBudget.js` 薄包装化**
+  - `ownsLiveRegion()` 改为引用 `regionLayout.overlaysHidingChrome()`，不再内联覆盖层清单。
+  - 新加独占输入覆盖层只需改 `regionLayout.js#OWNING_OVERLAYS`，无需触碰 `overlayLiveBudget`。
+
+- **MAIN_TOOL_* 重命名为 MAIN_OUTPUT.*（破坏性）**
+  - `MAIN_TOOL_HDR` → `MAIN_OUTPUT_HDR`（`main.tool-hdr` → `main.output.hdr`）
+  - `MAIN_TOOL_OUTPUT` → `MAIN_OUTPUT_VIEW`（`main.tool-output` → `main.output.view`）
+  - `MAIN_TOOL_INLINE` → `MAIN_OUTPUT_INLINE`（`main.tool-inline` → `main.output.inline`）
+
+- **新增 MAIN 子区域 ID（破坏性）**
+  - `MAIN_REASONING`（`main.reasoning`）—— 思考区大区
+  - `MAIN_REASONING_LIVE`（`main.reasoning.live`）—— 思考区 live 段
+  - `MAIN_REASONING_COMMITTED`（`main.reasoning.committed`）—— 思考区 committed 段
+  - `MAIN_TIP`（`main.tip`）—— 提示区大区
+  - `MAIN_TIP_DOUBLE_PRESS`（`main.tip.double-press`）—— 双击提示（1.5s 消失）
+  - `MAIN_ACTIVITY`（`main.activity`）—— 活动区大区（原有 4 个小区挂到其下）
+
+- **文档更新**（`docs/03_DESIGN_设计/[DESIGN-ARCH-016] AI_Agent显示规范.md`）
+  - 新增 §7「终端分区」章节，完整记录三层区域结构、命名约定、几何契约、覆盖层规则、维护流程。
+
+- **仓库结构卫生收口**（`docs/_报告/历史/`、`docs/00_INDEX_文档索引.md`、`.gitignore`、`scripts/ci/repo-layout-baseline.json`）
+  - 根目录 `fix_diff.txt` / `stash_patch.txt` 收容进 `docs/_报告/历史/`（`root-whitelist` 守卫归零），另清理 `{` 与 `services/backend/{jest_out,tmp_test,test_out}.txt` 一次性测试输出，归档记录见 `docs/_报告/历史/2026-09-根目录补丁存档-归档记录.md`。
+  - `.gitignore` 补防回渗规则：`*.sqlite-shm` / `*.sqlite-wal`、`.env.bak-*`、一次性测试输出（jest_out.txt / test_out.txt / tmp_test.txt）。
+  - 6 篇新文档补登主索引与就近索引（DESIGN-ARCH-072/073、DESIGN-PERF-001、DESIGN-SIZE-001、IMPL-DOC-001、快速配置说明），并补登漏网的 DESIGN-OTHER-005；阶段总数校正（03: 71→78、04: 37→38、07: 177→178）。
+  - 结构基线下调（只降不升）：dangling-task 115→86、cross-layer-require 43→38、unresolved-require 24→0。
+
+### Fixed
+
+- **启动/长回合后历史在滚动缓冲里重复出现 2~3 份**（`services/backend/src/cli/tui/scrollbackPreserve.js`、`tui/app.js`）
+  - **改了什么**：scrollbackPreserve 增加第三层「全屏帧整段转录重发抑制」（门控 `KHY_SUPPRESS_STATIC_REPRINT`，默认开）。识别 ink fullscreen 分支（ink.js:327 / instance.js:132）的单次 write `clearTerminal + fullStaticOutput + output`，用 inkRuntime 实例的 `fullStaticOutput` 做**字节级前缀校验**，通过则剥离冗余的整段转录重发，只留「就地清屏 + 活动帧」；跨 write 拆开的帧先暂存快照再判，`flush()` 兜底归还。`tui/app.js` 为规范化器注入 `getStaticSnapshot` 读取 ink 实例缓冲。快照缺失 / 校验失败 / 任一门控关（`KHY_PRESERVE_SCROLLBACK` 为总门）→ 逐字节回退今日行为。回归测试 `tests/cli/scrollbackPreserve.reprintGuard.test.js`（19 用例：四形态帧头、防误伤、拆帧、冻结快照、Buffer、门控组合）。
+  - **为什么**：ink 在活动区高度 ≥ 终端行数时每次都把**累积的全部**已提交 `<Static>` 转录重写一遍；即使第二层已把清屏头改写为 ED0 就地擦除，只要转录高度超过视口，重写本身就必然滚屏，把重印头部推进原生 scrollback —— 与增量提交时已写入的同一批消息形成第二、三份完整副本（用户报「启动后会话重复几次」）。而重发是纯冗余：该分支只在上一帧活动区填满视口时触发，彼时全部转录早已增量写入终端。既有防线（liveRegionBudget / liveHeightClamp / overlayLiveBudget）只钳流式正文等特定成分，盖不住覆盖层、展开态等一切可能超顶的帧。
+  - **影响范围**：仅影响 ink TUI 的 stdout 字节流；`<Static>` 增量提交模型、右栏看板画笔（`forceRailPaint` 检测 `\x1b[J` 不受剥离影响）、复制粘贴行为均不变。正常路径零延迟（帧单次 write 即判即剥），拆帧路径最多延迟到下一次 write 或退出 flush。
+
 ## 1.1.12
 
 khy OS 1.1.12 — 补齐 Android APK 构建编排与发布版本同步。

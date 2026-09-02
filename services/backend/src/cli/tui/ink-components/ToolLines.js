@@ -402,6 +402,9 @@ function buildWriteDiffRows(diffCtx, expanded = false) {
   // Flatten hunks into rows, inserting a dim "⋯ N unchanged lines" separator
   // between non-adjacent hunks so multi-spot edits read honestly instead of one
   // miscounted mega-block.
+  // 「先红后绿」:同一 hunk 内把所有 del 行(红 -)先列出,再列出所有 add 行(绿 +);
+  // ctx 行留在原位(行号上下文)。同一段「连续 del/add 子序列」按「先 del 后 add」重排。
+  // 不再做 del/add 词级配对(planWordDiffPairs 仍按顺序扫描,新顺序下找不到匹配)。
   for (const hunk of hunks) {
     if (hunk.gapBefore > 0) {
       rows.push({
@@ -411,8 +414,28 @@ function buildWriteDiffRows(diffCtx, expanded = false) {
     } else if (hunk.gapBefore === 0) {
       rows.push({ kind: 'gap', text: '⋯' });
     }
-    for (const r of hunk.rows) {
-      rows.push(r);
+    // 一次扫描:遇到 ctx 直接 push;遇到一段「连续 del/add」子序列时,
+    // 先收集完所有连续 del、再收集所有连续 add,然后按「先 del 后 add」push。
+    let _i = 0;
+    while (_i < hunk.rows.length) {
+      const r = hunk.rows[_i];
+      if (r.kind === 'ctx') {
+        rows.push(r);
+        _i++;
+      } else {
+        const _segDels = [];
+        const _segAdds = [];
+        while (_i < hunk.rows.length && hunk.rows[_i].kind === 'del') {
+          _segDels.push(hunk.rows[_i]);
+          _i++;
+        }
+        while (_i < hunk.rows.length && hunk.rows[_i].kind === 'add') {
+          _segAdds.push(hunk.rows[_i]);
+          _i++;
+        }
+        for (const d of _segDels) rows.push(d);
+        for (const a of _segAdds) rows.push(a);
+      }
     }
   }
 
@@ -523,18 +546,16 @@ function buildShellDiffRows(text, expanded = false) {
   return rows.length ? rows : null;
 }
 
-// Word-level (intra-line) diff highlighting in the TUI. The classic ANSI diff
-// paths (diffRenderer.renderDiff / renderStructuredDiff) already paint only the
-// changed sub-spans via wordDiff.renderWordDiffLine, but the ink TUI — the
-// default UI — only ever coloured whole ±lines. This gate brings the TUI to
-// parity with CC's StructuredDiffFallback (pair a removed line with its added
-// counterpart, token-diff, highlight changed words). Gate KHY_TUI_WORD_DIFF
-// (default on). =0/false/off/no → off → byte-identical whole-line rendering.
+// Word-level (intra-line) diff highlighting in the TUI. 「先红后绿」渲染下不做词级
+// 配对/高亮:同一 hunk 内所有 del 行(红 -)先列、再列所有 add 行(绿 +),整行铺底色,
+// 不再做 1:1 配对或词级子段高亮(planWordDiffPairs 因此被禁用)。保留门控
+// KHY_TUI_WORD_DIFF 以便紧急回滚;默认 off(=0/false/off/no)。设 =1/yes/on 仍可启用
+// 旧的 1:1 配对词级高亮(但行顺序不变,仍是「先红后绿」)。
 function tuiWordDiffEnabled(env = process.env) {
   const flag = String((env && env.KHY_TUI_WORD_DIFF) || '')
     .trim()
     .toLowerCase();
-  return !(flag === '0' || flag === 'false' || flag === 'off' || flag === 'no');
+  return flag === '1' || flag === 'true' || flag === 'yes' || flag === 'on';
 }
 
 /**

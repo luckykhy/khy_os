@@ -41,6 +41,7 @@ const { useVimInput } = require('../hooks/useVimInput');
 const { useCompletions, applyCompletion } = require('../hooks/useCompletions');
 const { useTopic } = require('../hooks/useTopic');
 const { useSidebarNav } = require('../hooks/useSidebarNav');
+const { tuiErrorOf } = require('../tuiErrorAdapter');
 const topicBar = require('../runtime/topicBar');
 const sidebarRail = require('../runtime/sidebarRail');
 // 有效列宽单一真源:右栏激活时 ink 只能画到 cols - 栏宽。门控关 → 真实列宽 → legacy。
@@ -68,6 +69,8 @@ const _sessionColorState = require('../../sessionColorState');
 // no longer force an unconditional re-render (the render-storm "loaded gun").
 const { footersEqual } = require('../footerStability');
 const inkRuntime = require('../inkRuntime');
+// 主区最小高度 SSOT:MAIN 左列 Box 的 minHeight 消费此处。
+const { MAIN_MIN_HEIGHT } = require('./regionLayout');
 
 // Live-region height coordinator (anti scroll-jump). Pure leaf; fail-soft require
 // so a missing module byte-reverts to legacy reserves. Gate KHY_LIVE_HEIGHT_BUDGET.
@@ -228,6 +231,7 @@ const {
   tuiUnsupportedReason,
   _taskActivity,
   _getStatusLabel,
+  _turnPhaseLabel,
   _liveActivity,
   _spinnerCcTokensEnabled,
   _estimateTok,
@@ -298,11 +302,16 @@ const _submitModules = (() => {
  * 横幅整行省略而不是显示占位值。绝不抛、绝不联网、绝不 spawn 包管理器。
  *
  * @param {object} [footer] 底部状态对象（{ model?, contextLimit?, adapter? }）
- * @param {object} [overrides] 测试注入用（{ pkg?, updateLine? }）
+ * @param {object} [overrides] 测试注入用（{ pkg?, updateLine?, bridge? }）
  * @returns {object} bannerProps
  */
 function _resolveBannerProps(footer = {}, overrides = {}) {
   const props = {};
+  // 协作链接透传：原样交给 WelcomeBanner，未运行就 falsy，行内自行省略。
+  // 由 bannerProps 的 useMemo 依赖把 bridgeStatus 的变化喂进来。
+  if (overrides.bridge) {
+    props.bridge = overrides.bridge;
+  }
   try {
     // CC 后端口径对齐(与页脚统一):横幅同样走友好模型名 + ccFormatTokens 的窗口大小。
     // model 经 FooterBar.formatModelLabel(裸 slug → "Opus 4.8",未知 → 原样);
@@ -1196,7 +1205,7 @@ function App({ options = {} }) {
       gw = null;
     }
     if (!gw || typeof gw.buildGatewayModelChoices !== 'function') {
-      push('error', '模型选择不可用');
+      push('error', tuiErrorOf(new Error('模型选择不可用'), { action: '探测模型', target: '网关' }));
       return;
     }
     let built;
@@ -1208,7 +1217,7 @@ function App({ options = {} }) {
         onNotice: (msg) => {
           gwNotices.push(msg);
         },
-        onError: (msg) => push('error', msg),
+        onError: (msg) => push('error', tuiErrorOf(msg, { action: '探测模型', target: '网关' })),
       });
       if (gwNotices.length > 0) {
         const summary = gwNotices[0];
@@ -1228,7 +1237,7 @@ function App({ options = {} }) {
       if (flushOnError) {
         flushOnError();
       }
-      push('error', '探测模型失败：' + (err.message || err));
+      push('error', tuiErrorOf(err, { action: '探测模型', target: '网关' }));
       return;
     }
     // Empty case already emitted its own explanatory notices in build().
@@ -1330,7 +1339,7 @@ function App({ options = {} }) {
         gw = null;
       }
       if (!gw || typeof gw.buildVendorModelChoices !== 'function') {
-        push('error', '模型切换不可用');
+        push('error', tuiErrorOf(new Error('模型切换不可用'), { action: '切换模型', target: '网关' }));
         return;
       }
       // Buffer vendor probe notices so they collapse into a single block, same as
@@ -1353,12 +1362,12 @@ function App({ options = {} }) {
           onNotice: (msg) => {
             gwNotices.push(msg);
           },
-          onError: (msg) => push('error', msg),
+          onError: (msg) => push('error', tuiErrorOf(msg, { action: '探测模型', target: '网关' })),
         });
       } catch (err) {
         // No picker mounts on this path, so flushing immediately is safe.
         flushNotices();
-        push('error', '探测模型失败：' + (err.message || err));
+        push('error', tuiErrorOf(err, { action: '探测模型', target: '网关' }));
         return;
       }
       // Empty case already emitted its own explanatory notice in build(); no
@@ -1529,7 +1538,7 @@ function App({ options = {} }) {
         cliAuth = null;
       }
       if (!cliAuth) {
-        push('error', '账号服务不可用');
+        push('error', tuiErrorOf(new Error('账号服务不可用'), { action: '账号', target: '服务' }));
         return true;
       }
 
@@ -1579,8 +1588,15 @@ function App({ options = {} }) {
         const result = await cliAuth.login(answers.username, answers.password);
         if (result.success) {
           push('notice', `登录成功! 欢迎, ${result.username}`);
+          // 登录态变了 → 清掉「画一次即冻结」的 banner 元素引用，
+          // 下次渲染会重新生成 WelcomeBanner（拿到新的 cliAuth.checkSession().username）。
+          try {
+            _bannerElementRef.current = null;
+          } catch {
+            /* ref 可能尚未初始化，首帧渲染前 harmless */
+          }
         } else {
-          push('error', result.error || '登录失败');
+          push('error', tuiErrorOf(result.error || new Error('登录失败'), { action: '登录', target: '账号' }));
         }
         return true;
       }
@@ -1595,7 +1611,7 @@ function App({ options = {} }) {
           fields: [
             {
               name: 'username',
-              label: '用户名 (至少 2 字符):',
+              label: '用户名 (至少 2 字符，**即账号**):',
               validate: (v) => v.trim().length >= 2 || '至少 2 个字符',
             },
             {
@@ -1611,21 +1627,52 @@ function App({ options = {} }) {
               validate: (v, a) => v === a.password || '两次密码不一致',
             },
             { name: 'email', label: '邮箱 (可选):', validate: () => true },
+            {
+              // ARCH-074: 登录别名，逗号分隔。可留空（=不使用别名）。
+              // 仅做粗粒度校验（不含逗号 / 长度合理），精确字符集由后端保证。
+              name: 'aliases',
+              label: '别名 (可选，逗号分隔;用于局域网/别机登录):',
+              validate: (v) => {
+                if (!v) return true;
+                const items = String(v)
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean);
+                if (items.length > 8) return '最多 8 个别名';
+                if (items.some((s) => s.length > 32)) return '单个别名最多 32 字符';
+                return true;
+              },
+            },
           ],
         });
         if (!answers) {
           push('notice', '已取消注册');
           return true;
         }
+        const aliasesList = String(answers.aliases || '')
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
         const result = await cliAuth.register(
           answers.username,
           answers.password,
-          answers.email || undefined
+          answers.email || undefined,
+          aliasesList.length > 0 ? aliasesList : undefined
         );
         if (result.success) {
-          push('notice', `注册成功! 欢迎, ${result.username}`);
+          push(
+            'notice',
+            `注册成功! 欢迎, ${result.username}` +
+              (aliasesList.length > 0 ? `\n别名: ${aliasesList.join(', ')}` : '')
+          );
+          // 注册即自动登录 → 账号已变化 → 让 banner 重新渲染出新用户名。
+          try {
+            _bannerElementRef.current = null;
+          } catch {
+            /* ref 未就绪时忽略 */
+          }
         } else {
-          push('error', result.error || '注册失败');
+          push('error', tuiErrorOf(result.error || new Error('注册失败'), { action: '注册', target: '账号' }));
         }
         return true;
       }
@@ -1662,7 +1709,7 @@ function App({ options = {} }) {
         if (result.success) {
           push('notice', '密码修改成功');
         } else {
-          push('error', result.error || '修改失败');
+          push('error', tuiErrorOf(result.error || new Error('修改失败'), { action: '改密', target: '账号' }));
         }
         return true;
       }
@@ -1687,11 +1734,11 @@ function App({ options = {} }) {
       gw = null;
     }
     if (!gw) {
-      push('error', '网关服务不可用');
+      push('error', tuiErrorOf(new Error('网关服务不可用'), { action: '网关', target: '服务' }));
       return;
     }
     const onNotice = (c) => push('notice', c);
-    const onError = (c) => push('error', c);
+    const onError = (c) => push('error', tuiErrorOf(c, { action: '网关', target: '服务' }));
 
     const top = await askForm({
       title: 'API Key 配置',
@@ -2275,6 +2322,15 @@ function App({ options = {} }) {
         exit();
         return;
       }
+      // /logout：登录态已切回「未登录」→ 让 banner 在下次渲染时重新读取 cliAuth.checkSession()
+      // 拿到回退值（OS 用户名），不再冻结在旧用户名上。
+      if (parsed.command === 'logout') {
+        try {
+          _bannerElementRef.current = null;
+        } catch {
+          /* ref 未就绪时忽略 */
+        }
+      }
       // 命令跑完(可能是 /goal set/clear)→ 立即刷新页脚目标指示器,不等 30s 心跳。
       try {
         refreshGoalActive();
@@ -2573,6 +2629,15 @@ function App({ options = {} }) {
       setPlanGenText('');
       setCurrentPlan(null);
       setPlanPhase('generating');
+      // 计划模式只读提醒：AI 只能读取/分析，不能修改文件或执行命令
+      query.setMessages((m) => [
+        ...m,
+        {
+          role: 'system',
+          content: '⚠ 计划模式已开启（只读）：AI 只能读取/分析，不能修改文件或执行命令。计划审批后才会执行写操作。',
+          timestamp: Date.now(),
+        },
+      ]);
       try {
         const res = await planModeService.enterPlanMode(request, ai, {
           onChunk: (chunk) => {
@@ -4276,8 +4341,8 @@ function App({ options = {} }) {
   // churn that the banner does NOT show (e.g. contextPct) yields the SAME
   // bannerProps reference → MemoWelcomeBanner skips → no extra live frame.
   const bannerProps = React.useMemo(
-    () => _resolveBannerProps(footer, { updateLine: bannerUpdateLine }),
-    [footer.model, footer.contextLimit, footer.adapter, bannerUpdateLine]
+    () => _resolveBannerProps(footer, { updateLine: bannerUpdateLine, bridge: bridgeStatus }),
+    [footer.model, footer.contextLimit, footer.adapter, bannerUpdateLine, bridgeStatus]
   );
 
   // 输入框占位符:优先级阶梯收敛到纯叶子 promptPlaceholder(CC usePromptInputPlaceholder)。
@@ -4585,6 +4650,26 @@ function App({ options = {} }) {
     }
     return false;
   })();
+  // 启动横幅「画一次即冻结」:首帧把整个 React 元素快照进 ref,之后所有 re-render 都
+  // 吐回**同一引用**。Ink 看到子元素 identity 不变就不会 emit,live 区的兄弟面板
+  // (footer / task list / prompt)再怎么落值、横幅都不再被重发——根除 win32 上
+  // fullscreen clearTerminal 分支触发的「banner 重复六份」症状。快照在横幅应当退场
+  // (`query.messages.length > 0` 时 _showStartupBanner=false)后清空,让下次冷启动可重
+  // 新生成元素。Ink fullscreen 分支的成片复制副作用详见 scrollbackPreserve.js 头注。
+  const _bannerElementRef = React.useRef(null);
+  if (_bannerElementRef.current === null) {
+    if (_showStartupBanner) {
+      _bannerElementRef.current = h(MemoWelcomeBanner, {
+        key: 'live-banner',
+        ...bannerProps,
+        showArt: _bannerShowArt,
+      });
+    }
+  } else if (!_showStartupBanner) {
+    // Banner 已退场(首条消息已落),下次冷启动可重新生成元素。
+    _bannerElementRef.current = null;
+  }
+  const _liveBannerElement = _bannerElementRef.current;
   // Rows the banner renders above its version line — SSOT exported by
   // WelcomeBanner (bannerRowsBeforeVersion) so the sidebar's top edge lands
   // on the SAME terminal row as `── khy OS vX.X.X ──` without magic numbers.
@@ -4800,11 +4885,20 @@ function App({ options = {} }) {
     }
   }
   // 独占输入的全屏覆盖层是否正挂载(→ 隐藏 PromptFrame / FooterBar,见下方注释)。
-  // fail-soft:叶子不可用 → 回退历史「只认 modelPicker」判定。
+  // 覆盖层清单真源见 ./regionLayout.js#OWNING_OVERLAYS —— App 这里把所有「独占输入」覆盖层
+  // 的 state 镜像打包传过去, 由 ownsLiveRegion 过滤 hideChrome=true 的项。 fail-soft:
+  // 叶子不可用 → 回退历史「只认 modelPicker」判定。
   let _overlayOwnsLive;
   try {
     _overlayOwnsLive = overlayLiveBudget.ownsLiveRegion(
-      { modelPicker: !!modelPicker, khyosOpen: !!khyosOpen },
+      {
+        modelPicker: !!modelPicker,
+        khyosOpen: !!khyosOpen,
+        rewindPicker: !!rewindPicker,
+        rollbackPicker: !!rollbackPicker,
+        formFlow: !!formFlow,
+        topologyView: !!topologyView,
+      },
       process.env
     );
   } catch {
@@ -4813,6 +4907,11 @@ function App({ options = {} }) {
   return h(
     Box,
     { flexDirection: 'column', width: _railContentCols || undefined },
+    // ── 区域① BANNER + 已 commit 转录(全屏,跨越 MAIN/SIDEBAR)─────────────────
+    //   <Static> 装历史 commit 的对话,首屏时含 WelcomeBanner;一旦首个 turn commit,
+    //   banner 永久转入 scrollback,MAIN 顶部回到最新消息。区域划分的真源见
+    //   ./regionLayout.js#REGION,本数组的兄弟顺序与该 SSOT 一一对应 —— 任何新增 /
+    //   调整区域,先改 regionLayout 再改这里。
     // Committed transcript output via <Static>. Always mounted so
     // that suspending the live UI does not reprint scrollback.
     h(Static, { items: query.staticItems }, (item) => {
@@ -4839,14 +4938,31 @@ function App({ options = {} }) {
             { flexDirection: 'row', alignItems: 'flex-start' },
             h(
               Box,
-              { flexDirection: 'column', flexGrow: 1 },
-              // Startup-only banner (task #23): lives here so the version line tops
-              // the left column exactly where the sidebar tops the right column.
-              _showStartupBanner
-                ? h(MemoWelcomeBanner, { key: 'live-banner', ...bannerProps, showArt: _bannerShowArt })
-                : null,
-              // Removable Ctrl+O detail for the latest committed <Static> turn.
-              // MessageBlock already force-expands role:'expansion'; keeping this
+              { flexDirection: 'column', flexGrow: 1, minHeight: MAIN_MIN_HEIGHT },
+              // ── 区域② MAIN 左列(三层结构:6 大区 + 10 小区)────────────────────
+              //   顶 → 底大区索引(详细说明见 regionLayout.js#REGION):
+              //     ②.1  MAIN_TEXT       流式正文(不含思考);t${i} / 'text' 等文本段
+              //     ②.2  MAIN_REASONING  思考区(大区);含 live + committed 两个小区
+              //     ②.3  MAIN_OUTPUT     输出大区(工具相关);含 HDR / VIEW / INLINE 三个小区
+              //     ②.4  MAIN_ACTIVITY   活动区(忙态指示);含 SPINNER / QUEUE / STEER / INTERRUPT
+              //     ②.5  MAIN_TIP        提示区(大区);含 DOUBLE_PRESS 一个小区
+              //     ②.6  MAIN_SUBVIEW    局部子视图;Ctrl+O 详情 + PlanApproval + TranscriptView
+              //   几何契约:列宽 = regionLayout.railCols() - sidebarWidth,横向收缩由
+              //   contentWidth 透传给 StreamingBlock。
+              //
+              //   注意:StreamingBlock 内部顺序 = 正文(②.1) → 思考(②.2) → 工具头行(②.3.1)
+              //   → 工具内联结果(②.3.3),四者在 children 数组里压在同一个 <StreamingBlock>
+              //   节点下,但物理上是四个独立子区域。下方标注**仅指代 StreamingBlock 整体**,
+              //   不要再在 StreamingBlock 内部追加区域注释。
+
+              // [区域① BANNER 副本] Startup-only banner (task #23): lives here so the version
+              // line tops the left column exactly where the sidebar tops the right column.
+              // 元素身份由 _bannerElementRef 锁定(见上),Ink 看到同一引用就跳过 emit →
+              // win32 fullscreen clearTerminal 分支不再把整份横幅反复刷进 scrollback。
+              _liveBannerElement,
+
+              // [区域②.6 MAIN_SUBVIEW · Ctrl+O 详情] Removable detail for the latest committed
+              // <Static> turn. MessageBlock already force-expands role:'expansion'; keeping this
               // outside Static makes the second keypress a true collapse.
               committedExpansion
                 ? h(Transcript.MessageBlock, {
@@ -4854,9 +4970,16 @@ function App({ options = {} }) {
                     msg: committedExpansion,
                   })
                 : null,
+
+              // [区域②.1 + ②.2 + ②.3.1 + ②.3.3 共四子区域合并渲染 = StreamingBlock]
               // Live streaming turn. 任务#12: while the board is visible this block only
               // spans the LEFT column, so its wrap/height budgets must use the left-
               // column width (contentWidth) — board off → null → legacy full width.
+              // 内部子区域:
+              //   ②.1   MAIN_TEXT          — body / t${i} / 'text' 等流式文本段(不含思考)
+              //   ②.2   MAIN_REASONING     — think-ell / think 思考段(gate:streaming.thinking)
+              //   ②.3.1 MAIN_OUTPUT_HDR    — ToolLines / ProcessGroup 的 `✓ readFile(...)` 头行
+              //   ②.3.3 MAIN_OUTPUT_INLINE — ToolLines 头行之下的 literal output + diff 行
               query.streaming
                 ? h(StreamingBlock, {
                     streaming: query.streaming,
@@ -4866,27 +4989,31 @@ function App({ options = {} }) {
                     contentWidth: (_sidebarOn || _railOut) && _mainColsV > 0 ? _mainColsV : null,
                   })
                 : null,
+
+              // [区域②.6 MAIN_SUBVIEW · 完工标]
               query.status === 'done' ? h(Text, { dimColor: true }, '✱ 完成') : null,
 
+              // [区域②.6 MAIN_SUBVIEW · PlanApproval + plan 执行态 Spinner]
               // Plan-mode surface (stage 3): generation preview, approval view, or the
               // execution spinner. Step progress itself lands in the transcript.
               planPhase === 'generating'
                 ? h(PlanApproval, { generating: true, genText: planGenText })
                 : null,
               planPhase === 'reviewing' ? h(PlanApproval, { plan: currentPlan }) : null,
+              // [区域②.4a MAIN_ACTIVITY_SPINNER · plan 执行态] 计划在执行时切换到这个 Spinner
               planPhase === 'executing'
                 ? h(Box, { marginTop: 1 }, h(Spinner, { label: '执行计划中…' }))
                 : null,
 
-              // Shell peek panel (块4 SUBVIEW): live tool command + output, ↓ to open
-              // while executing, ← to return, ↑/↓ to scroll.
+              // [区域②.3.2 MAIN_OUTPUT_VIEW] Shell peek panel (块4 SUBVIEW): live tool
+              // command + output, ↓ to open while executing, ← to return, ↑/↓ to scroll.
               shellViewOpen
                 ? h(ShellView, { streaming: query.streaming, scroll: shellScroll })
                 : null,
 
-              // Transcript 视图(CC app:toggleTranscript):全量会话的可滚动回看,
-              // Ctrl+O 开关。行数组与视口高度由 _transcriptView 一次算好,键位分支
-              // 与组件切片共用同一组数字。
+              // [区域②.6 MAIN_SUBVIEW · TranscriptView] Transcript 视图(CC app:toggleTranscript):
+              // 全量会话的可滚动回看,Ctrl+O 开关。行数组与视口高度由 _transcriptView 一次算好,
+              // 键位分支与组件切片共用同一组数字。
               transcriptOpen && _transcriptView
                 ? h(TranscriptView, {
                     lines: _transcriptView.lines,
@@ -4896,17 +5023,29 @@ function App({ options = {} }) {
                   })
                 : null,
 
+              // [区域②.4 MAIN_ACTIVITY 大区,含 4 个小区合并渲染] 活体活动区主体:
+              // busy 期间一个共享 Box 内同步挂四件。物理渲染顺序按下方书写序,
+              // 但每件都有独立小区 ID,便于后续单独隐藏:
+              //   ②.4.1 MAIN_ACTIVITY_SPINNER   Spinner + CompactionProgress
+              //   ②.4.2 MAIN_ACTIVITY_QUEUE     队列面板
+              //   ②.4.3 MAIN_ACTIVITY_STEER     方向修正提示
+              //   ②.4.4 MAIN_ACTIVITY_INTERRUPT Esc 中断提示
               busy && !awaitingUserChoice
                 ? query.status === 'compacting'
+                  // [区域②.4.1 MAIN_ACTIVITY_SPINNER · 压缩中]
                   ? h(CompactionProgress, { compaction: query.compaction })
                   : h(
                       Box,
                       { marginTop: 1, flexDirection: 'column' },
+                      // [区域②.4.1 MAIN_ACTIVITY_SPINNER · 主忙态]
                       h(Spinner, {
-                        label: _getStatusLabel(
-                          query.status,
-                          _liveActivity(query.status, query.streaming, query.statusDetail) ||
-                            _taskActivity()
+                        label: _turnPhaseLabel(
+                          query.turnPhase,
+                          _getStatusLabel(
+                            query.status,
+                            _liveActivity(query.status, query.streaming, query.statusDetail) ||
+                              _taskActivity()
+                          )
                         ),
                         detail: query.statusDetail,
                         ..._spinnerProgress(
@@ -4916,7 +5055,9 @@ function App({ options = {} }) {
                           query.streaming
                         ),
                       }),
+                      // [区域②.4.2 MAIN_ACTIVITY_QUEUE]
                       ...(query.queueLen > 0 ? _renderQueuePanel(query.queueItems) : []),
+                      // [区域②.4.3 MAIN_ACTIVITY_STEER]
                       ...(query.steerLen > 0
                         ? [
                             h(
@@ -4926,6 +5067,7 @@ function App({ options = {} }) {
                             ),
                           ]
                         : []),
+                      // [区域②.4.4 MAIN_ACTIVITY_INTERRUPT]
                       // Discoverability of the interrupt affordance (对齐 CC isLoading footer
                       // "esc to interrupt"). Only when NOTHING is queued — with a queue the
                       // panel above already shows the accurate two-step "Esc 取回并清空；再按
@@ -4951,7 +5093,7 @@ function App({ options = {} }) {
                     )
                 : null,
 
-              // Help overlay.
+              // [区域②.6 MAIN_SUBVIEW · HelpMenu] Help overlay.
               showHelp ? h(HelpMenu, null) : null,
 
               // Input mode indicator (CC PromptInputModeIndicator).
@@ -5030,6 +5172,12 @@ function App({ options = {} }) {
                 : h(
                     Box,
                     {
+                      // ── 区域③ SIDEBAR(仅宽终端显示)────────────────────────────
+                      //   顶对齐 MAIN 左列第一行(顶偏移由 bannerRowsBeforeVersion
+                      //   单源控制 —— regionLayout.sidebarTopAnchorRows())。内容由
+                      //   buildSidebarLines 纯叶子驱动:任务清单 + 工具活动 +
+                      //   排队消息 + 背景通知。窄屏(_sidebarOn=false && _railOut=false)
+                      //   → 整块不挂,MAIN 占满全宽。
                       // Top-right anchor (post-first-message): pin the hugging board
                       // to the row's top edge explicitly (alignSelf flex-start) so it
                       // can never ride the bottom of a tall left column; no banner
@@ -5048,6 +5196,10 @@ function App({ options = {} }) {
               : null
           ), // end upper row — everything below stays full terminal width
 
+          // ── 区域④ TASK_PANEL(全宽任务看板)─────────────────────────────────
+          //   唯一全宽兄弟节点,夹在 MAIN/SIDEBAR 上行与 PROMPT 下行之间,Ctrl+T
+          //   隐藏(tasksHidden=true 时整块被传空 lines+hiddenLines,生命周期由
+          //   _taskProps 驱动)。语义分两段:本会话任务 + 项目任务。
           // Canonical task checklist: full-width sibling between the latest
           // transcript/live content and the prompt. The existing heartbeat keeps
           // store and plan status changes current; coordinated empty lines unmount it.
@@ -5058,15 +5210,27 @@ function App({ options = {} }) {
             ...(tasksHidden ? { lines: [], hidden: 0, hiddenLines: [] } : {}),
           }),
 
-          // Prompt input. Hidden while an input-owning full-screen overlay is
-          // mounted: rendering PromptFrame + FooterBar + overlay together grows the
-          // live region past the terminal height, which desyncs ink's erase-line
-          // accounting after static output (see pendingGatewayNoticeRef comment)
-          // and visually duplicates the prompt chrome. Such an overlay owns input
-          // while open (top-level useInput yields), so hiding the frame is safe.
-          // 判定收敛到 overlayLiveBudget:除 ModelPicker 外,/khyos 的 KhyOsView 同样独占
-          // 输入且自身已占 rows-3,再叠输入框/页脚必然触发 ink 全屏重绘(win32 每帧往
-          // scrollback 堆一份永久副本 =「输出重复两次 + 输入框残影」)。
+          // ── 区域⑤ COMPLETION_MENU(斜杠命令补全菜单)────────────────────────
+          //   浮在 PROMPT 上方;completion.active 时挂载。
+          //   职责:斜杠命令 / @file 补全菜单;不干涉 PROMPT / FOOTER / OVERLAY。
+          completion.active
+            ? h(CompletionMenu, { completion, selectedIndex, marginLeft: _completionMarginLeft })
+            : null,
+
+          // Reverse-incremental history search prompt (Ctrl+R). Thin read-only
+          // overlay; state comes from the historyReverseSearch leaf.
+          revSearch && _HistorySearchOverlay
+            ? h(_HistorySearchOverlay, { state: revSearch })
+            : null,
+
+          // [区域②.5.1 MAIN_TIP_DOUBLE_PRESS] Transient double-press affordance
+          // ("再按一次 Ctrl-C 退出" 等). 1.5s 自动消失,由 showHint() 驱动。
+          hint ? h(Text, { dimColor: true }, hint) : null,
+
+          // ── 区域⑥ PROMPT(输入框)────────────────────────────────────────────
+          //   独占输入覆盖层挂载期间被隐藏,判定真源见
+          //   regionLayout.overlaysHidingChrome —— 这里只读 _overlayOwnsLive 标志。
+          //   职责:输入框;不干涉 FOOTER / STATUS_AREA / OVERLAY。
           _overlayOwnsLive
             ? null
             : h(PromptFrame, {
@@ -5079,23 +5243,11 @@ function App({ options = {} }) {
                 mic: { active: dictating, onClick: toggleDictation },
               }),
 
-          // Completion dropdown (slash / @file).
-          completion.active
-            ? h(CompletionMenu, { completion, selectedIndex, marginLeft: _completionMarginLeft })
-            : null,
-
-          // Reverse-incremental history search prompt (Ctrl+R). Thin read-only
-          // overlay; state comes from the historyReverseSearch leaf.
-          revSearch && _HistorySearchOverlay
-            ? h(_HistorySearchOverlay, { state: revSearch })
-            : null,
-
-          // Transient double-press affordance ("再按一次 Ctrl-C 退出" 等).
-          hint ? h(Text, { dimColor: true }, hint) : null,
-
-          // Footer. When the pinned topic bar is unavailable, the current topic is
-          // shown here as a fallback (块3 degraded path).
-          // (FooterBar likewise hidden while an input-owning overlay is open — see above.)
+          // ── 区域⑦ FOOTER(状态栏,输入框正下方)──────────────────────────────
+          //   与区域⑥ PROMPT 共享同一 _overlayOwnsLive 标志,独占输入覆盖层期间同步隐藏。
+          //   显示:模型 + 精度 + 上下文用量(已用 / 窗口)+ 权限模式 + local/fast/voice
+          //   徽标 + 协作桥状态 + 当前持久目标 + 置顶栏降级时显示 topic。
+          //   职责:状态栏;不干涉 PROMPT / OVERLAY。
           _overlayOwnsLive
             ? null
             : h(FooterBar, {
@@ -5111,6 +5263,26 @@ function App({ options = {} }) {
                 goalActive,
               }),
 
+          // ── 区域⑧ STATUS_AREA(状态区,页尾 5 行空行,FOOTER 之下)────────────
+          //   固定在终端最底部;预留未来扩展(实时状态 / 快捷操作 / 系统通知)。
+          //   职责:5 行空行占位;不干涉 PROMPT / OVERLAY。
+          //   当前渲染:5 个空 Box 行,高度固定不随内容变化。
+          _overlayOwnsLive
+            ? null
+            : h(Box, { flexDirection: 'column', height: 5 },
+                h(Text, null, ''),
+                h(Text, null, ''),
+                h(Text, null, ''),
+                h(Text, null, ''),
+                h(Text, null, ''),
+              ),
+
+          // ── 区域⑨ OVERLAY(全屏覆盖层,独占输入时挂载)─────────────────────────
+          //   注册表真源见 ./regionLayout.js#OWNING_OVERLAYS,六类覆盖层按需挂载,
+          //   不占纵向顺序。新加独占输入的覆盖层:在 OWNING_OVERLAYS 加一行 +
+          //   在 App.js 加 state + 这里加判定。覆盖层对 PROMPT/FOOTER 的隐藏
+          //   由 _overlayOwnsLive 统一驱动。
+
           // Control-request overlay: AskUserQuestion → selection menu, else permission.
           query.controlRequest
             ? isQuestionRequest(query.controlRequest)
@@ -5124,7 +5296,7 @@ function App({ options = {} }) {
                 })
             : null,
 
-          // Native model picker overlay (/model).
+          // [regionLayout.OWNING_OVERLAYS.modelPicker — /model,已确认贴顶,hideChrome=true]
           modelPicker
             ? h(ModelPicker, {
                 choices: modelPicker.choices,
@@ -5133,7 +5305,7 @@ function App({ options = {} }) {
               })
             : null,
 
-          // Native rewind-target picker overlay (Phase 2 double-ESC 回溯).
+          // [regionLayout.OWNING_OVERLAYS.rewindPicker — 双击 Esc 触发的回溯选择,hideChrome=false]
           rewindPicker
             ? h(RewindPicker, {
                 targets: rewindPicker.targets,
@@ -5141,7 +5313,7 @@ function App({ options = {} }) {
               })
             : null,
 
-          // Native /rollback checkpoint picker overlay (reuses RewindPicker).
+          // [regionLayout.OWNING_OVERLAYS.rollbackPicker — /rollback 检查点选择(复用 RewindPicker),hideChrome=false]
           rollbackPicker
             ? h(RewindPicker, {
                 targets: rollbackPicker.targets,
@@ -5150,7 +5322,7 @@ function App({ options = {} }) {
               })
             : null,
 
-          // Native sequential-form overlay (/login, /register, /passwd).
+          // [regionLayout.OWNING_OVERLAYS.formFlow — /login /register /passwd /apikey 等顺序表单,hideChrome=false]
           formFlow
             ? h(FormFlow, {
                 fields: formFlow.fields,
@@ -5159,13 +5331,12 @@ function App({ options = {} }) {
               })
             : null,
 
-          // KHY OS kernel terminal overlay (/khyos): boots the bare-metal kernel
-          // under QEMU and bridges its serial console. Esc returns to the AI chat.
+          // [regionLayout.OWNING_OVERLAYS.khyosOpen — /khyos /os,QEMU 内核串口,已确认贴顶,hideChrome=true]
           khyosOpen ? h(KhyOsView, { onExit: () => setKhyosOpen(false) }) : null,
 
-          // 会话拓扑「森林」只读面板(/topology view)。TopologyPanel 自身只着色;
-          // 走树/字形/标签全来自共享 SSOT(sessionTopology)。Esc/Enter 关闭(主
-          // useInput 0d 分支消费)。
+          // [regionLayout.OWNING_OVERLAYS.topologyView — /topology view 会话森林只读视图,hideChrome=false]
+          // 会话拓扑「森林」只读面板。TopologyPanel 自身只着色;走树/字形/标签全来自共享
+          // SSOT(sessionTopology)。Esc/Enter 关闭(主 useInput 0d 分支消费)。
           topologyView
             ? h(
                 Box,

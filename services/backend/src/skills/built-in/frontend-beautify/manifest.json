@@ -1,0 +1,30 @@
+{
+  "name": "frontend-beautify",
+  "description": "美化 khyos 三个前端（ai-frontend / khyquant frontend / khy-mobile）。当用户要求美化界面、调整样式、改进视觉、打磨 UI、提升设计感、让页面更好看、改主题/配色/间距/字体，或让现有 Vue3 + Element Plus 页面达到「生产级而非 AI 生成感」时使用。也用于统一三端设计语言、建立设计 token、暗色主题调优、数据密集型交易/监控界面排版。",
+  "user_invocable": true,
+  "trigger": "/frontend-beautify",
+  "aliases": [
+    "/beautify",
+    "/美化",
+    "/前端美化",
+    "/ui"
+  ],
+  "category": "frontend",
+  "tags": [
+    "frontend",
+    "ui",
+    "beautify",
+    "vue3",
+    "element-plus",
+    "design",
+    "theme",
+    "css"
+  ],
+  "platforms": [
+    "khy-os",
+    "khy-quant"
+  ],
+  "context": "inline",
+  "source": "khyos user skill (adapted from baoyu-design, MIT)",
+  "when_to_use": "用户要求美化界面、调整样式、改进视觉、打磨 UI、提升设计感、让页面更好看、改主题/配色/间距/字体时；统一三端设计语言时；数据密集页面排版优化时。"
+}

@@ -438,8 +438,15 @@ process.stdout.write(`\x1B[1;${rows - 1}r`);
 运行：`node scripts/ci/check-agent-rules.js --changed`
 
 它会校验改动文件中是否有硬编码端点模式、含糊的通用状态文本、
-可疑的硬超时用法，以及在非全屏备用缓冲区上下文之外使用的
-ANSI 滚动区转义（DECSTBM）。
+可疑的硬超时用法，在非全屏备用缓冲区上下文之外使用的
+ANSI 滚动区转义（DECSTBM），以及**无退出路径的明显死循环**
+（`while (true)` / `for (;;)` / `while True:` 体内无 break/return/throw/exit；
+刻意的无限循环用 `khy-allow-unbounded-loop: <理由>` 注释豁免，warning 级）。
+
+运行时兜底：交互会话默认装有 `services/sessionWatchdog.js`（门控
+`KHY_SESSION_WATCHDOG`，默认开）——异步卡死（空闲超限）与同步阻塞（事件循环
+节拍漂移）都会诚实上报并给出诊断，**绝不自动杀进程**；真·同步死循环无法自报
+（物理边界），由本静态体检在提交前拦截。
 
 ---
 

@@ -520,6 +520,33 @@ def run_postinstall(backend_dir: Path | None = None) -> int:
     if tray_report["ok"]:
         print("  [devenv] [OK] 已注册开机自启 → Khy 托盘")
 
+    # Enable transparent filesystem compression (NTFS LZX / btrfs zstd / ZFS)
+    # on the installed trees. Python has no post-install hook, so this runs on
+    # first launch via the postinstall self-heal; heavy work is detached and
+    # the step is gated (KHY_FS_COMPRESS=0), idempotent and fully fail-soft.
+    try:
+        from khy_platform.fs_compress import schedule_install_compression
+
+        compress_targets = [get_install_path()]
+        try:
+            from khy_platform.node_provisioner import node_home
+
+            compress_targets.append(node_home())
+        except Exception:
+            pass
+        compress_report = schedule_install_compression(compress_targets)
+        for target, mode in compress_report:
+            if mode in {"ntfs", "btrfs", "zfs"}:
+                print(f"  [devenv] [OK] 透明压缩已启用 ({mode})：{target}（后台重写存量文件，新文件自动继承）")
+            elif mode in {"btrfs-attr-only", "zfs-already-on"}:
+                print(f"  [devenv] [OK] 透明压缩已就位 ({mode})：{target}")
+            elif mode == "unsupported":
+                print(f"  [devenv] [INFO] 文件系统不支持透明压缩，已跳过：{target}")
+            else:
+                print(f"  [devenv] [WARN] 透明压缩未能启用 ({mode})：{target}", file=sys.stderr)
+    except Exception:  # never interrupt install
+        pass
+
     return 0
 
 

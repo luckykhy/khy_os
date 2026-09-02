@@ -200,14 +200,15 @@
 | [OPS-MAN-175] 首次运行自动登录与凭据.md | 默认管理员生成·CLI自动登录·凭据落盘位置 | 定稿 |
 | [OPS-MAN-176] 数据备份与恢复.md | 数据备份与恢复 | 定稿 |
 | config-auto-repair.md | 网关配置自动修复与重置 | 定稿 |
+| 快速配置说明.md | API 厂商快速配置 | 定稿 |
 
 > `[OPS-MAN-175]` 由根目录 6 份自动登录会话日志（`AUTO_LOGIN_ENABLED.md`、
 > `FIXED_AUTO_LOGIN.md`、`FINAL_AUTO_LOGIN_COMPLETE.md`、`FINAL_AUTO_LOGIN_GUIDE.md`、
 > `PASSWORD_AUTO_FILL.md`、`CLI_AUTO_USERNAME.md`）合并去重而成（归档日期 2026-08-15），
 > 已剔除原文中的机器专属路径与用户名。编号 174 预留给任务入口总表。
 
-> 📌 **本清单已于 2026-08-17 补全到 177 份**（176 份编号件 + 1 份未编号 `config-auto-repair.md`，
-> 编号 001–176 连续无空号、无重号）。此前本表只列到 79 行，缺 071–164 等 98 份——
+> 📌 **本清单已于 2026-08-17 补全到 177 份、2026-09-01 复核为 178 份**（176 份编号件 + 2 份未编号
+> `config-auto-repair.md`、`快速配置说明.md`，编号 001–176 连续无空号、无重号）。此前本表只列到 79 行，缺 071–164 等 98 份——
 > 与主索引 `docs/00_INDEX_文档索引.md` 同轮补齐，两处现已一致（`npm run check:layout` 的
 > `docs-index-complete` 实测为 0）。新增本目录文档时，**本表与主索引都要补一行**。
 

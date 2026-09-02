@@ -1,6 +1,6 @@
 {
   "name": "khy-os-backend",
-  "version": "1.1.13",
+  "version": "1.1.14",
   "description": "Khy OS AI platform backend with default app runtime",
   "main": "server.js",
   "bin": {

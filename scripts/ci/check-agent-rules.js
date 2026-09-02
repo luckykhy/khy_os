@@ -10,6 +10,7 @@
  *  2) opaque generic status strings
  *  3) suspicious hard-timeout kill patterns
  *  4) ANSI scroll-region escapes (DECSTBM) outside full-screen alt-buffer UIs
+ *  5) obvious unbounded loops (while(true)/for(;;)/while True: with no exit path)
  *
  * Usage:
  *   node scripts/ci/check-agent-rules.js --changed
@@ -292,6 +293,89 @@ const SELF_BASENAME = path.basename(__filename);
 
 function isSelfScript(normPath) {
   return path.basename(normPath) === SELF_BASENAME;
+}
+
+// ── Rule 5 helpers: brace-matching body scan for unbounded loops ───────────
+
+/**
+ * Skip a JS string/template literal starting at `start` (the quote char).
+ * Handles escapes and `${...}` interpolation (recursively skipping nested
+ * strings inside it). Returns the index of the closing quote, or -1 if the
+ * literal never closes (defensive: caller stays silent rather than guess).
+ */
+function _skipJsString(text, start) {
+  const quote = text[start];
+  for (let i = start + 1; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '\\') {
+      i++;
+      continue;
+    }
+    if (quote === '`' && ch === '$' && text[i + 1] === '{') {
+      let depth = 1;
+      let j = i + 2;
+      while (j < text.length && depth > 0) {
+        const c2 = text[j];
+        if (c2 === '{') {
+          depth++;
+        } else if (c2 === '}') {
+          depth--;
+        } else if (c2 === '"' || c2 === "'" || c2 === '`') {
+          j = _skipJsString(text, j);
+          if (j < 0) return -1;
+        }
+        j++;
+      }
+      if (depth !== 0) return -1;
+      i = j - 1;
+      continue;
+    }
+    if (ch === quote) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+/**
+ * Find the index just past the `}` that closes the `{...}` block opening at
+ * or after `from`. Strings, template literals and comments are skipped so a
+ * brace inside them cannot unbalance the scan. Returns -1 when there is no
+ * block or the scan is inconclusive — the caller then stays silent, because
+ * a heuristic gate must never guess its way into a false positive.
+ */
+function _findJsBlockEnd(text, from) {
+  let i = from;
+  while (i < text.length && /\s/.test(text[i])) i++;
+  if (text[i] !== '{') return -1;
+  let depth = 0;
+  for (; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '"' || ch === "'" || ch === '`') {
+      i = _skipJsString(text, i);
+      if (i < 0) return -1;
+      continue;
+    }
+    if (ch === '/' && text[i + 1] === '/') {
+      const nl = text.indexOf('\n', i);
+      if (nl < 0) return -1;
+      i = nl;
+      continue;
+    }
+    if (ch === '/' && text[i + 1] === '*') {
+      const end = text.indexOf('*/', i + 2);
+      if (end < 0) return -1;
+      i = end + 1;
+      continue;
+    }
+    if (ch === '{') {
+      depth++;
+    } else if (ch === '}') {
+      depth--;
+      if (depth === 0) return i + 1;
+    }
+  }
+  return -1;
 }
 
 function checkFile(relPath, findings) {
@@ -596,6 +680,98 @@ function checkFile(relPath, findings) {
           : 'Scroll-region escape (DECSTBM) detected in an inline context. It corrupts terminal scrollback; confine it to a full-screen alternate buffer (?1049h).',
         trimmed,
       );
+    }
+  }
+
+  // Rule 5: obviously unbounded loops (死循环体检).
+  //
+  // Only the canonical always-true forms are detectable — `while (true)`,
+  // `for (;;)`, Python `while True:`. Conditional hangs (`while (!done)` with
+  // a flag nobody sets) are the halting problem and out of scope; the runtime
+  // counterpart is services/sessionWatchdog.js (idle/stall observation).
+  // A hit is a warning ONLY when the body offers NO exit path (break / return
+  // / throw / process.exit / raise): flagging every intentional server accept
+  // loop or `while (true) { ... if (x) break; }` would train readers to ignore
+  // the gate. An intentional infinite loop is exempted with an inline marker
+  // comment `khy-allow-unbounded-loop: <reason>` on the header line (or the
+  // line above it) — same pattern as Rule 1c's khy-allow-abs-path.
+  // Test files and this gate itself are exempt.
+  if (!isTestFile && !isSelf) {
+    const isJsLike = /\.(?:js|cjs|mjs|ts|tsx|vue)$/.test(normPath);
+    const isPy = /\.py$/.test(normPath);
+
+    if (isJsLike) {
+      const loopHeaderRegex = /\bwhile\s*\(\s*(?:true|1)\s*\)|\bfor\s*\(\s*;\s*;\s*\)/g;
+      let loopMatch;
+      while ((loopMatch = loopHeaderRegex.exec(text)) !== null) {
+        const lineStart = text.lastIndexOf('\n', loopMatch.index) + 1;
+        const nlIdx = text.indexOf('\n', loopMatch.index);
+        const headerLine = text.slice(lineStart, nlIdx < 0 ? text.length : nlIdx);
+        const trimmedHeader = headerLine.trim();
+        if (/^\s*(?:\/\/|\/?\*|\*|#)/.test(trimmedHeader)) continue; // comment line
+        const prevLineStart = text.lastIndexOf('\n', lineStart - 2) + 1;
+        const prevLine = text.slice(prevLineStart, Math.max(prevLineStart, lineStart - 1));
+        if (/khy-allow-unbounded-loop/i.test(headerLine) || /khy-allow-unbounded-loop/i.test(prevLine)) {
+          continue;
+        }
+        const bodyEnd = _findJsBlockEnd(text, loopMatch.index + loopMatch[0].length);
+        if (bodyEnd < 0) continue; // inconclusive scan → stay silent
+        const body = text.slice(loopMatch.index, bodyEnd);
+        if (/(?:^|[^\w.])break\b|\breturn\b|\bthrow\b|\bprocess\.(?:exit|abort)\s*\(/.test(body)) {
+          continue; // has an exit path — bounded, not a finding
+        }
+        pushFinding(
+          findings,
+          'warning',
+          'no-unbounded-loop',
+          relPath,
+          text.slice(0, loopMatch.index).split(/\r?\n/).length,
+          'Loop with no exit path detected (while(true)/for(;;) without break/return/throw). Add a bounded exit, or exempt with `khy-allow-unbounded-loop: <reason>`.',
+          trimmedHeader.slice(0, 180),
+        );
+      }
+    }
+
+    if (isPy) {
+      // Python `while True:` — the body is the following lines indented deeper
+      // than the header; scan it for break/return/raise/exit.
+      const pyHeaderRegex = /^[^\n\S]*while\s+True\s*:/gm;
+      let pyMatch;
+      while ((pyMatch = pyHeaderRegex.exec(text)) !== null) {
+        const linesBefore = text.slice(0, pyMatch.index).split(/\r?\n/);
+        const headerLineNo = linesBefore.length; // 1-based index of the header line
+        const headerText = linesBefore[linesBefore.length - 1] ?? '';
+        if (/^\s*#/.test(headerText.trim())) continue;
+        const prevLine = linesBefore[linesBefore.length - 2] ?? '';
+        if (/khy-allow-unbounded-loop/i.test(headerText) || /khy-allow-unbounded-loop/i.test(prevLine)) {
+          continue;
+        }
+        const baseIndent = (headerText.match(/^[^\n\S]*/) || [''])[0].length;
+        const bodyLines = [];
+        for (let j = headerLineNo; j < lines.length; j++) {
+          const l = lines[j];
+          if (!l.trim()) {
+            bodyLines.push(l);
+            continue;
+          }
+          const indent = (l.match(/^[^\n\S]*/) || [''])[0].length;
+          if (indent <= baseIndent) break;
+          bodyLines.push(l);
+        }
+        const body = bodyLines.join('\n');
+        if (/\bbreak\b|\breturn\b|\braise\b|\bsys\.exit\s*\(|\bexit\s*\(/.test(body)) {
+          continue;
+        }
+        pushFinding(
+          findings,
+          'warning',
+          'no-unbounded-loop',
+          relPath,
+          headerLineNo,
+          'Loop with no exit path detected (while True: without break/return/raise). Add a bounded exit, or exempt with `khy-allow-unbounded-loop: <reason>`.',
+          headerText.trim().slice(0, 180),
+        );
+      }
     }
   }
 }

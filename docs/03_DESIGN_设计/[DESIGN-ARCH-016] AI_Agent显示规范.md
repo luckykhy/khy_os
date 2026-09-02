@@ -189,3 +189,128 @@ Agent **必须**在启动时判定运行模式，并据此选择通道。**严�
   由 `services/backend/src/services/toolUseLoop.js` 的 `runToolUseLoop` 起点幂等挂载。
   用户自然语言层见 `cli/aiRenderer.js` / `cli/repl.js`（已对工具轨迹做归一化，
   不向用户暴露任何内部字段）。
+
+---
+
+## 7. 终端分区（TUI 区域划分）
+
+khyOS TUI 的显示区域分为三层：**顶层(9)** → **大区(6)** → **小区(10)**，共 25 个区域 ID。
+
+区域 ID 的单一真源(SSOT)在 `services/backend/src/cli/tui/ink-components/regionLayout.js`。
+App.js 的渲染数组是「按本文件声明的顺序」拼装的契约消费者，不能在其中夹塞未声明的兄弟节点。
+
+**职责边界原则**：每个区域只管自己的渲染，不干涉其他区域的显示/隐藏/尺寸。
+修改某个区域时，只允许动该区域对应的组件 + regionLayout.js 的 ID 定义，
+不允许在该区域的渲染逻辑里掺入其他区域的判定条件。
+
+### 7.1 命名层级约定
+
+| 层级 | REGION JS key | REGION 值 | 示例 |
+|------|--------------|-----------|------|
+| 顶层 | 下划线 | 连字符/单词 | `BANNER: 'banner'`, `TASK_PANEL: 'task-panel'` |
+| 大区 | `MAIN_XXX` | `main.xxx` | `MAIN_OUTPUT: 'main.output'` |
+| 小区 | `MAIN_XXX_YYY` | `main.xxx.yyy` | `MAIN_OUTPUT_HDR: 'main.output.hdr'` |
+
+约束：
+- 值禁止下划线（测试断言）
+- key 禁止点（JS 语法限制）
+- 大区值是小区值的前缀（层级可推导，测试断言）
+
+### 7.2 顶层区域（9 个，自顶向下）
+
+| 编号 | ID | 组件 | 职责边界 |
+|------|-----|------|----------|
+| ① | `BANNER` | `WelcomeBanner` | 启动横幅，顶部，首轮 commit 后进 scrollback；不干涉 MAIN / SIDEBAR |
+| ② | `MAIN` | 左列 Box | 主区（宏观 ID，内部按 6 大区 + 10 小区拆解）；不干涉 PROMPT / FOOTER / OVERLAY |
+| ③ | `SIDEBAR` | `SidebarPanel` | 侧栏（可选，仅宽终端），顶对齐 MAIN 第一行；不干涉 MAIN / TASK_PANEL |
+| ④ | `TASK_PANEL` | `TaskListPanel` | 全宽任务看板，Ctrl+T 隐藏；不干涉 MAIN / SIDEBAR |
+| ⑤ | `COMPLETION_MENU` | `CompletionMenu` | 斜杠命令 / @file 补全菜单，浮在 PROMPT 上方；不干涉 PROMPT |
+| ⑥ | `FOOTER` | `FooterBar` | 状态栏，显示模型/精度/上下文/权限模式/桥接/目标；不干涉 PROMPT / OVERLAY |
+| ⑦ | `PROMPT` | `PromptFrame` | 输入框，固定置底（terminal rows - 6）；不干涉 STATUS_AREA / OVERLAY |
+| ⑧ | `STATUS_AREA` | 5 行空行 | 状态区，PROMPT 之下 5 行空行，预留未来扩展；不干涉 PROMPT |
+| ⑨ | `OVERLAY` | 多种覆盖层 | 全屏覆盖层，独占输入时使用；不干涉其他区域 |
+
+### 7.3 MAIN 大区（6 个宏观组）
+
+| 编号 | ID | 说明 |
+|------|-----|------|
+| ②.1 | `MAIN_TEXT` | 流式正文（不含思考）；StreamingBlock 内 `t${i}` / `'text'` 等文本段 |
+| ②.2 | `MAIN_REASONING` | 思考区（大区）；含 live + committed 两个小区 |
+| ②.3 | `MAIN_OUTPUT` | 输出大区（工具相关）；含 HDR / VIEW / INLINE 三个小区 |
+| ②.4 | `MAIN_ACTIVITY` | 活动区（忙态指示）；含 SPINNER / QUEUE / STEER / INTERRUPT 四个小区 |
+| ②.5 | `MAIN_TIP` | 提示区（大区）；含 DOUBLE_PRESS 一个小区 |
+| ②.6 | `MAIN_SUBVIEW` | 局部子视图；Ctrl+O 详情 + PlanApproval + TranscriptView |
+
+### 7.4 MAIN 小区（10 个，挂在大区之下）
+
+#### 思考区（②.2 MAIN_REASONING）
+
+| 编号 | ID | 落点 | 说明 |
+|------|-----|------|------|
+| ②.2.1 | `MAIN_REASONING_LIVE` | `StreamingBlock.js:194/196` | 思考区（live 段）；`'think-ell'` / `'think'` 行；gate: `streaming.thinking` |
+| ②.2.2 | `MAIN_REASONING_COMMITTED` | `Transcript.js:411-431` | 思考区（committed 段）；`'k${i}'` 行；gate: timeline `e.type==='thinking'` |
+
+#### 输出大区（②.3 MAIN_OUTPUT）
+
+| 编号 | ID | 落点 | 说明 |
+|------|-----|------|------|
+| ②.3.1 | `MAIN_OUTPUT_HDR` | `ToolLines.js:921-929` | 工具说明区 —— `✓ readFile(src/a.js)` 摘要头行；`ToolLines.summarizeArgs` 派生 |
+| ②.3.2 | `MAIN_OUTPUT_VIEW` | `App.js:4951-4953` → `ShellView.js` | 工具结果展示区（检视子视图）—— ShellView；↓ while turn is executing |
+| ②.3.3 | `MAIN_OUTPUT_INLINE` | `ToolLines.js:754-770 / 621-669` | 工具结果展示区（内联行）—— literal output + ±diff 行 |
+
+#### 活动区（②.4 MAIN_ACTIVITY）
+
+| 编号 | ID | 落点 | 说明 |
+|------|-----|------|------|
+| ②.4.1 | `MAIN_ACTIVITY_SPINNER` | `App.js:4982-4995` | Spinner + CompactionProgress；状态指示核心 |
+| ②.4.2 | `MAIN_ACTIVITY_QUEUE` | `App.js:4997` | 排队消息条数（`已排 N 条待发`）|
+| ②.4.3 | `MAIN_ACTIVITY_STEER` | `App.js:4999-5007` | 方向修正提示（`⟳ N 条方向修正待注入`）|
+| ②.4.4 | `MAIN_ACTIVITY_INTERRUPT` | `App.js:5009-5028` | Esc 中断提示（`⎋ ${hint}`）；`interruptHint` 派生 |
+
+#### 提示区（②.5 MAIN_TIP）
+
+| 编号 | ID | 落点 | 说明 |
+|------|-----|------|------|
+| ②.5.1 | `MAIN_TIP_DOUBLE_PRESS` | `App.js:5189` | 双击提示（1.5s 自动消失）；`showHint()` 驱动 |
+
+### 7.5 几何契约
+
+#### 横向栏宽
+
+物理列宽的单一真源：`regionLayout.railCols()`（消费 `effectiveCols.stickyCols`）。
+SidebarPanel / StreamingBlock / TaskListPanel 的宽度预算均消费此处。
+
+#### 纵向顶对齐
+
+SidebarPanel 必须贴在 BANNER 之下 = MAIN 的同一行，纵向偏移等于 `bannerRowsBeforeVersion()`。
+改 WelcomeBanner 起始行数时，只动 `bannerRowsBeforeVersion()` 一处，本契约自动跟随。
+
+#### 覆盖层隐藏规则
+
+独占输入的全屏覆盖层注册表在 `regionLayout.js#OWNING_OVERLAYS`。
+`hideChrome=true` 的覆盖层在挂载期间隐藏 ⑤ PROMPT + ⑥ FOOTER（防 ink 全屏分支触发 win32 scrollback 重复 + 输入框残影）。
+
+已知覆盖层：
+
+| key | 组件 | hideChrome | 说明 |
+|-----|------|------------|------|
+| `modelPicker` | `ModelPicker` | true | /model，已确认贴顶 |
+| `khyosOpen` | `KhyOsView` | true | /khyos，QEMU 内核串口，已确认贴顶 |
+| `rewindPicker` | `RewindPicker` | false | 双击 Esc 触发的回溯选择 |
+| `rollbackPicker` | `RewindPicker` | false | /rollback 检查点选择 |
+| `formFlow` | `FormFlow` | false | /login /register /passwd 等顺序表单 |
+| `topologyView` | `TopologyPanel` | false | /topology view 会话森林只读视图 |
+
+### 7.6 维护流程
+
+- **新增子区域**：在 `regionLayout.js#REGION` 加一行 + 加进 `MAIN_SUBREGIONS` + 改测试预期数组。
+- **调整顺序**：改 `TOP_LEVEL_ORDER`（顶层）/ 调整 `MAIN_SUBREGIONS` 顺序（子区域）。
+- **隐藏某一子区域**：在 App.js 把对应 `[区域②.X]` 注释的 children 包上条件渲染即可。
+- **新增独占输入覆盖层**：在 `OWNING_OVERLAYS` 加一行 + App.js 加 state + 渲染数组加条件分支。如确认贴顶，把对应 key 的 `hideChrome` 翻成 `true`。
+
+### 7.7 相关文件
+
+- SSOT：`services/backend/src/cli/tui/ink-components/regionLayout.js`
+- 覆盖层判定：`services/backend/src/cli/tui/ink-components/overlayLiveBudget.js`
+- 渲染数组：`services/backend/src/cli/tui/ink-components/App.js`
+- 契约测试：`services/backend/tests/cli/tui/regionLayout.test.js`

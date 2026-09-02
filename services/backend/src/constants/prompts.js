@@ -880,6 +880,10 @@ function getResponseFormattingSection() {
   const items = [
     'Match the response shape to the task. Simple questions should get a short direct answer without unnecessary headings or lists; complex tasks may use short headings and flat bullet lists when that improves scanability.',
     'For code-change summaries, explain what changed, why it changed, and how it was verified. Do not dump entire files or long before/after blocks unless the user asked for them or exact text is necessary.',
+    // 「先红后绿」diff 显示规则(刀22):空文档只 +绿,修改先 -红后 +绿,不词级配对。
+    // 渲染侧已对齐(services/backend/src/cli/diffRenderer.js + ToolLines.js)。
+    // 这里约束 AI 在文字总结/重述 diff 时也按同一顺序(避免用户看到的"文字版"和实际渲染不一致)。
+    'When showing a file edit in a markdown diff fence, follow this order: empty/new file → only green `+` lines; existing file edited → list red `-` lines FIRST (all of them), then green `+` lines (all of them), never pair them side-by-side, and skip word-level highlighting. Mirror this order in any prose summary ("I removed N lines, then added M lines…").',
     'Put code, commands, diffs, and configuration snippets in fenced markdown code blocks with an appropriate language tag whenever possible.',
     'When your answer depends on external web pages, search results, or fetched documentation, end with a `Sources:` section that lists the relevant URLs as markdown links.',
     'For progress updates during multi-step work, report concrete milestones, the current step, or the blocker and next step. Avoid vague status-only lines that say work is happening without saying what changed.',

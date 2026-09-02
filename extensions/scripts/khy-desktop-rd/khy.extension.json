@@ -1,0 +1,22 @@
+{
+  "id": "khy-desktop-rd",
+  "name": "Desktop RD — 桌面端调研档案",
+  "version": "0.1.0",
+  "description": "桌面端路线选型的外部开源项目参考材料：OpenFlux (Tauri v2 + Node Sidecar) / goose (Electron + 多 LLM) / ChatML (Tauri 2 + Go) / one-api (khy-os 视觉风格源头) / kbar (Cmd+K 组件范式)。仅供选型评审，不参与运行时。",
+  "kind": "asset",
+  "namespace": "desktop-rd",
+  "engines": {
+    "khy": ">=1.6.0"
+  },
+  "main": null,
+  "capabilities": [],
+  "provides": [],
+  "commands": [],
+  "mcp": null,
+  "permissions": {
+    "network": false,
+    "spawn": false,
+    "database": false
+  },
+  "_note": "调研类拓展（reference kind），只读。包含 4 个外部开源项目的调研档案 + 1 个 UI 组件范式。指向：[DESIGN-OTHER-005] docs/03_DESIGN_设计/[DESIGN-OTHER-005] desktop-rd-桌面端调研指针.md。后续桌面端实施时建议从本目录的 openflux/goose/chatml 三个项目吸取范式。"
+}

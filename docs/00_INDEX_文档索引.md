@@ -12,11 +12,11 @@
 |---|---|---:|---:|
 | 01 | `01_INIT_立项/` | 2 | 2 |
 | 02 | `02_CONCEPTS_概念入门/` | 33 | 目录入口（见下） |
-| 03 | `03_DESIGN_设计/` | 71 | 71 |
-| 04 | `04_IMPL_实现/` | 37 | 37 |
+| 03 | `03_DESIGN_设计/` | 78 | 78 |
+| 04 | `04_IMPL_实现/` | 38 | 38 |
 | 05 | `05_TEST_测试/` | 9 | 9 |
 | 06 | `06_DEPLOY_部署/` | 22 | 22 |
-| 07 | `07_OPS_运维/` | 177 | 177 |
+| 07 | `07_OPS_运维/` | 178 | 178 |
 | 08 | `08_MGMT_项目管理/` | 38 | 38 |
 | 09 | `09_STORY_修仙学AI/` | 29 | 目录入口（见下） |
 | — | `_AI协作预设包/`（跨阶段·分「给人看/给AI看」两线 + 可安装 skills/） | 12 文档 + 8 skill | — |
@@ -139,10 +139,16 @@
 - [`DESIGN-ARCH-069` 拓展契约与核心边界规范](03_DESIGN_设计/%5BDESIGN-ARCH-069%5D%20拓展契约与核心边界规范.md) — **「什么是核、什么是拓展」的单一真源**：核 = 壳+漏斗+网关；一个拓展 = 一个目录 + 一份 `khy.extension.json`；五个拓展根与优先级；发现→惰性激活→停用；删目录即消失。`[DESIGN-ARCH-068]` 是其上位法，由 `npm run check:layout` 的 `extension-contract` 规则强制
 - [`DESIGN-ARCH-070` 治理总纲与可执行规则](03_DESIGN_设计/%5BDESIGN-ARCH-070%5D%20治理总纲与可执行规则.md) — **既有治理规则的索引与缺口登记**：MOD、MEM、TOOL、ACP、API 五板块；不推翻既有单一真源；由 `node scripts/ci/check-gov-rules.js` 守住总纲与 CI 接线。
 - [`DESIGN-ARCH-071` 通道选择决策矩阵](03_DESIGN_设计/%5BDESIGN-ARCH-071%5D%20通道选择决策矩阵.md) — **「一次操作该走哪条通道」的单一真源**：五通道（直接读状态/服务层直调/CLI/Web API/看屏幕）五问判定顺序、适用/禁止/降级与反模式；`AGENTS.md`「通道选择判定」节是其首屏压缩版。
+- [`DESIGN-ARCH-072` 任务最小闭环-裁决接线与交付台账](03_DESIGN_设计/%5BDESIGN-ARCH-072%5D%20任务最小闭环-裁决接线与交付台账.md) — 普通任务从「模型想停」到「交付完成」的最小闭环单一真源：收尾仲裁门（close/redrive/close_partial 三态）+ 交付台账 `khy deliveries`
+- [`DESIGN-ARCH-073` khyos 核心任务循环-稳定交付总纲](03_DESIGN_设计/%5BDESIGN-ARCH-073%5D%20khyos%20核心任务循环-稳定交付总纲.md) — 任务从受理到交付的核心循环运行时契约（登记→执行→裁决→交付→台账 + 想停轮 20 道门序），`072` 的上位总纲
+- [`DESIGN-ARCH-074` khyos 账号体系收口-用户名唯一键 alias 软冲突 密码必填 局域网登录](03_DESIGN_设计/%5BDESIGN-ARCH-074%5D%20khyos%20账号体系收口-用户名唯一键%20alias%20软冲突%20密码必填%20局域网登录.md) — 账号=用户名；alias 全局唯一软冲突；强制密码；ai-backend 默认绑 0.0.0.0 让 LAN 上其他机器可用账号密码登录。承接用户反馈「khyos 欢迎语和登录账号不对」并扩大账号体系口径
 - [`DESIGN-OTHER-001` Khyos-数学重塑-实施提示词链](03_DESIGN_设计/%5BDESIGN-OTHER-001%5D%20Khyos-数学重塑-实施提示词链.md)
 - [`DESIGN-OTHER-002` _cbssp_分阶段防闪退提示词](03_DESIGN_设计/%5BDESIGN-OTHER-002%5D%20_cbssp_分阶段防闪退提示词.md)
 - [`DESIGN-OTHER-003` khy-系统提示词结构图](03_DESIGN_设计/%5BDESIGN-OTHER-003%5D%20khy-系统提示词结构图.md)
 - [`DESIGN-OTHER-004` 特性访问-提示词胶囊-2026-06-01](03_DESIGN_设计/%5BDESIGN-OTHER-004%5D%20特性访问-提示词胶囊-2026-06-01.md)
+- [`DESIGN-OTHER-005` desktop-rd-桌面端调研指针](03_DESIGN_设计/%5BDESIGN-OTHER-005%5D%20desktop-rd-桌面端调研指针.md) — 指向 `extensions/scripts/khy-desktop-rd/`：4 个外部开源桌面 AI Agent 项目（OpenFlux / goose / ChatML / one-api）+ Cmd+K 组件范式（kbar）的归档与对比，待路线评审
+- [`DESIGN-PERF-001` khy-cli-交互流畅度修复方案-v1](03_DESIGN_设计/%5BDESIGN-PERF-001%5D%20khy-cli-交互流畅度修复方案-v1.md) — khy CLI 流畅度对位调研（10 处推断校正）与三阶段修复方案（fast-startup 默认化 / CLI bundle / 首 token 解耦），只立项未动码
+- [`DESIGN-SIZE-001` khy-os 体积优化方案](03_DESIGN_设计/%5BDESIGN-SIZE-001%5D%20khy-os%20体积优化方案.md) — 开发盘占 1.25GB → 分发 bundle <15MB 的三层优化：删可弃物 / 依赖替代 / 三档分发（Draft）
 - [`DESIGN-RESEARCH`（未编号）跨Agent技能MCP统一管理-阶段一调研](03_DESIGN_设计/%5BDESIGN-RESEARCH%5D%20跨Agent技能MCP统一管理-阶段一调研.md) — 只读调研：现有 `ccMcpBridge`/`ocMcpBridge`/`*SkillBridge` 只发现不写入，缺 agent 注册表与统一 import 原语；立法清单冻结前不动代码
 - [`DESIGN-LEGISLATION`（未编号）跨Agent技能MCP统一管理-阶段二立法清单](03_DESIGN_设计/%5BDESIGN-LEGISLATION%5D%20跨Agent技能MCP统一管理-阶段二立法清单.md) — 阶段三实现的冻结依据：`khy unify` 的 export/import/list/sync 范围、MCP 与技能 bridge 注册表、存量纳管写入口；依据阶段一调研 §1-§5 与铁律 F1-F8
 
@@ -154,6 +160,7 @@
 
 ## 04_IMPL_实现
 
+- [`IMPL-DOC-001` 任务完成判断地图](04_IMPL_实现/%5BIMPL-DOC-001%5D%20任务完成判断地图.md) — 「任务何时算做完」的三条通道架构地图（taskClosure 三态仲裁 / goalStopGate 四门 / 后台 FSM），改收尾与预算逻辑前必读
 - [`IMPL-RPT-001` executeCode-进程级真隔离-2026-06-10](04_IMPL_实现/%5BIMPL-RPT-001%5D%20executeCode-进程级真隔离-2026-06-10.md)
 - [`IMPL-RPT-002` kiro-连接修复-2026-06-05](04_IMPL_实现/%5BIMPL-RPT-002%5D%20kiro-连接修复-2026-06-05.md)
 - [`IMPL-RPT-003` tui-inquirer闪退修复-2026-06-05](04_IMPL_实现/%5BIMPL-RPT-003%5D%20tui-inquirer闪退修复-2026-06-05.md)
@@ -191,6 +198,7 @@
 - [`IMPL-RPT-041` Qoder接入khy网关与开机自启实现记录-2026-07-13](04_IMPL_实现/%5BIMPL-RPT-041%5D%20Qoder接入khy网关与开机自启实现记录-2026-07-13.md)
 - [`IMPL-RPT-042` 交互过程与输出结构化-持久化与机器可读输出-2026-07-27](04_IMPL_实现/%5BIMPL-RPT-042%5D%20交互过程与输出结构化-持久化与机器可读输出-2026-07-27.md)
 - [`IMPL-RPT-043` 输出截断根治与无感接续-max_tokens元数据缺失与锚点续写-2026-08-07](04_IMPL_实现/%5BIMPL-RPT-043%5D%20输出截断根治与无感接续-max_tokens元数据缺失与锚点续写-2026-08-07.md)
+- [`IMPL-RPT-044` khyos 账号体系收口实施记录-ARCH-074-2026-09-02](04_IMPL_实现/%5BIMPL-RPT-044%5D%20khyos%20账号体系收口实施记录-ARCH-074-2026-09-02.md) — 承接 [DESIGN-ARCH-074]：User.aliases/displayName + loginKeyResolver + 默认账号密码自动补齐 + ai-backend 绑 0.0.0.0 让 LAN 端可登录
 
 > 编号 034–039 为历史断档（删除后不回收，见 [MGMT-STD-001] 第 2.4 条），非漏链。
 
@@ -230,12 +238,13 @@
 - [`DEPLOY-MAN-020` AI供应商与APIKey配置](06_DEPLOY_部署/%5BDEPLOY-MAN-020%5D%20AI供应商与APIKey配置.md) — Ollama / 11 家供应商的**真实**变量名；`JWT_SECRET` 无需手写（自动生成）
 - [`DEPLOY-MAN-021` IDE桥接模式](06_DEPLOY_部署/%5BDEPLOY-MAN-021%5D%20IDE桥接模式.md) — 复用 Claude Code / Cursor / Windsurf / VS Code 已有凭据，不需额外 API Key
 - [`PORTABLE`（未编号）便携化打包与启动](06_DEPLOY_部署/PORTABLE.md) — 源码三档启动 + 发布版一键打包 + 数据宿主隔离
+- [`LAN-FIREWALL`（未编号）局域网登录防火墙放行](06_DEPLOY_部署/LAN-FIREWALL.md) — ARCH-074 配套文档：ai-backend 默认绑 0.0.0.0，让 LAN 上其他机器可用账号密码登录；本文给出 Windows / macOS / Linux 三平台防火墙放行命令
 
 ## 07_OPS_运维
 
 > 📦 **pip 安装从这里开始**：[`OPS-MAN-027` 快速开始](07_OPS_运维/%5BOPS-MAN-027%5D%20快速开始.md) → [`OPS-MAN-043` 从0到高手](07_OPS_运维/%5BOPS-MAN-043%5D%20从0到高手-新手成长路线与pip安装后清单.md) ⭐ → [`OPS-MAN-023` 完整功能清单](07_OPS_运维/%5BOPS-MAN-023%5D%20pip安装后-完整功能清单.md) → [`OPS-MAN-024` 按需配置体验](07_OPS_运维/%5BOPS-MAN-024%5D%20pip安装后-按需配置体验.md)；门槛与还原见 [`OPS-MAN-028` 环境要求](07_OPS_运维/%5BOPS-MAN-028%5D%20环境要求.md) / [`OPS-MAN-037` 完整还原](07_OPS_运维/%5BOPS-MAN-037%5D%20pip安装后-完整还原与全功能开启指南.md)。
 
-> 🗂️ **本区 177 份怎么读**：001–070 是**使用与配置手册**（上手、指南、速查）；071–164 多为**单点能力的落地记录**，
+> 🗂️ **本区 178 份怎么读**：001–070 是**使用与配置手册**（上手、指南、速查）；071–164 多为**单点能力的落地记录**，
 > 按族群成串阅读更省力 —— 还原/离机自检族（075·076·079·082·084–090·095·105·107·108·110·113·114·117·119·128·130·133）多由
 > `scripts/restore-*.js --gen-doc` 确定性生成，**请勿手改**；OCR 兜底诚实与显示降噪族（104·109·111·112·115·116·118·120·122·124·126·127·132·134·138·140·142·144·145·148·150·159·161·164）；
 > 读前防卡死守卫族（121·123·125·129·143·146·147·149）；波次调度与结果诚实族（083·087·091–094·097–099·101）；
@@ -418,6 +427,7 @@
 - [`OPS-MAN-175` 首次运行自动登录与凭据](07_OPS_运维/%5BOPS-MAN-175%5D%20首次运行自动登录与凭据.md) — 默认管理员如何生成、密码落在哪、CLI 为什么不需要先起后端
 - [`OPS-MAN-176` 数据备份与恢复](07_OPS_运维/%5BOPS-MAN-176%5D%20数据备份与恢复.md) — `khy backup` 全流程：备份集布局、备什么不备什么、SQLite 只能热备、恢复的五道闸、保留策略语义、JSON 原子写迁移
 - [`config-auto-repair`（未编号）](07_OPS_运维/config-auto-repair.md) — 启动时自动检测并修复网关配置问题，含手动重置入口
+- [`快速配置说明`（未编号）](07_OPS_运维/快速配置说明.md) — `khy gateway` API 厂商快速配置：输入 Key 即自动完成配置，附支持厂商表
 
 ## 08_MGMT_项目管理
 

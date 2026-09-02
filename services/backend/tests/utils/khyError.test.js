@@ -148,7 +148,10 @@ test('toKhyError 接受字符串 / null / 非 Error 而不炸', () => {
 
 test('formatKhyError 把 message 与 hint 合成一行可直接打印的文案', () => {
   const line = formatKhyError(khyError('CONTEXT_COMPRESS_FAILED', '摘要链路失败'));
-  assert.match(line, /^摘要链路失败/);
+  // v2 改动：行首带 [category] 前缀，让用户一眼看出错误来自哪一类。
+  // 测试也同步更新断言 —— 分类前缀是这次结构化的核心收益。
+  assert.match(line, /^\[upstream\]/);
+  assert.match(line, /摘要链路失败/);
   assert.match(line, /提示：/);
   assert.ok(!line.includes('\n'), '必须是单行，终端渲染不做多行拼接');
   // 普通 Error 也能格式化（先经 toKhyError 归一）。

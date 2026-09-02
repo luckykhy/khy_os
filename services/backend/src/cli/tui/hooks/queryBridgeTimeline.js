@@ -273,6 +273,167 @@ function planStageFlush(timeline, { force = false, sealTrailing = false } = {}) 
   return { k, sealed };
 }
 
+// ── dedupAdjacentAssistantBursts(回合末去重清扫,纯叶子)──────────────────────
+// The mid-stream force=false commit path already merges into a single assistant
+// message (path b), and force=true finalize subsumes / marks terminal. A second
+// wave of identical commits is still possible if any path appends an assistant
+// row whose content + timeline are byte-identical to the previous one. This
+// helper scans the message array and collapses adjacent assistant rows with
+// identical content + timeline whose timestamps fall inside a short window
+// (default 5s, env override) — long enough to cover any "double-commit" race
+// inside one turn, short enough that two genuinely separate replies ("ok" /
+// "ok" an hour later) are NEVER merged. The OLDEST row is kept so the
+// committed history reads in arrival order.
+//
+// Anti-misuse: this is a *burst* dedup. It only ever collapses rows that are
+// (a) adjacent in the array, (b) both `role:'assistant'`, (c) byte-identical
+// content + timeline, and (d) within the time window. Any user message
+// between two assistant rows immediately breaks the run, so a real
+// "user: thanks → assistant: 不客气" sequence is never touched. Pure +
+// total: returns the same array on no-op or non-array input.
+//
+// 门控语义(测试锁定):KHY_TUI_DEDUP_WINDOW_MS 的值含义不依赖元数据是否存在 ——
+// '0'/'false'/'off'/'no' = 整个清扫 OFF(早返回同一数组);N>0 = 窗口 N 毫秒;
+// 未设置 = 默认 5000。任一行缺 timestamp → 一律保留(防旧历史被误合并)。
+const DEDUP_OFF = new Set(['0', 'false', 'off', 'no']);
+const DEDUP_DEFAULT_WINDOW_MS = 5000;
+
+function _normalizeTimelineForFingerprint(tl) {
+  if (!Array.isArray(tl)) {
+    return '';
+  }
+  // Stable, allocation-light key: each segment's type + a projection of the
+  // fields that survive into rendering AND distinguish real-world tool
+  // calls. Input is folded to a short hash-shaped string so two `Bash`
+  // calls with different commands don't collide; result is collapsed to
+  // a kind letter (O/ok, E/error, P/pending) so a 5KB command output
+  // doesn't drag the fingerprint through. Throwing a different error
+  // message (text vs message vs reason) is also collapsed — those are
+  // diagnostic, not identity.
+  const parts = [];
+  for (const e of tl) {
+    if (!e || typeof e !== 'object') {
+      parts.push('?');
+      continue;
+    }
+    if (e.type === 'text') {
+      parts.push('t:' + String(e.text || ''));
+    } else if (e.type === 'thinking') {
+      parts.push('h:' + String(e.text || '') + (e.durationMs ? '#' + e.durationMs : ''));
+    } else if (e.type === 'tools' && Array.isArray(e.tools)) {
+      const inner = e.tools.map((t) => (t ? _toolFingerprint(t) : '?')).join(',');
+      parts.push('g:' + inner);
+    } else if (e.type === 'tool' && e.tool) {
+      parts.push('o:' + _toolFingerprint(e.tool));
+    } else {
+      parts.push('?');
+    }
+  }
+  return parts.join('|');
+}
+
+// Per-tool projection: name + result kind + a folded input hash. A different
+// input argument produces a different hash (so two `Bash` calls with `ls`
+// vs `pwd` don't collapse); the hash is bounded so a 5KB grep pattern still
+// fits. No timestamp / no result text / no _khyTrace — those don't define
+// the tool's identity for dedup purposes.
+function _toolFingerprint(t) {
+  if (!t || typeof t !== 'object') {
+    return '?';
+  }
+  const r = t.result;
+  const rk = !r
+    ? 'P'
+    : r.isError || r.is_error
+      ? 'E'
+      : 'O';
+  let inputStr = '';
+  const raw = t.input ?? t.args ?? t.parameters ?? t.arguments;
+  if (raw !== undefined && raw !== null) {
+    if (typeof raw === 'string') {
+      inputStr = raw;
+    } else {
+      try {
+        inputStr = JSON.stringify(raw);
+      } catch {
+        inputStr = String(raw);
+      }
+    }
+  }
+  // 32-bit FNV-1a — cheap, no crypto dep, deterministic across runs. Caps
+  // collision surface at the tool-grain (we're already inside a per-tool
+  // bucket so even a 1-in-2^32 accidental match is astronomically safer
+  // than today).
+  let h = 0x811c9dc5;
+  for (let i = 0; i < inputStr.length; i++) {
+    h ^= inputStr.charCodeAt(i);
+    h = (h * 0x01000193) >>> 0;
+  }
+  return String(t.name || '') + ':' + rk + ':' + h.toString(36);
+}
+
+function _assistantFingerprint(m) {
+  // content is the primary key (it's what the user sees); the timeline
+  // projection is the tie-breaker that prevents a follow-up "ok" reply
+  // from collapsing with a tool-bearing previous reply that happened to
+  // have the same content string.
+  return (
+    'c=' +
+    String(m && m.content ? m.content : '') +
+    ';t=' +
+    _normalizeTimelineForFingerprint(m && Array.isArray(m.timeline) ? m.timeline : [])
+  );
+}
+
+function dedupAdjacentAssistantBursts(messages, env = process.env) {
+  if (!Array.isArray(messages) || messages.length < 2) {
+    return messages;
+  }
+  if (env && env.KHY_TUI_DEDUP_WINDOW_MS !== undefined) {
+    const v = String(env.KHY_TUI_DEDUP_WINDOW_MS).trim().toLowerCase();
+    if (DEDUP_OFF.has(v)) {
+      return messages;
+    }
+  }
+  let windowMs = DEDUP_DEFAULT_WINDOW_MS;
+  if (env && env.KHY_TUI_DEDUP_WINDOW_MS !== undefined) {
+    const n = parseInt(String(env.KHY_TUI_DEDUP_WINDOW_MS), 10);
+    if (Number.isFinite(n) && n >= 0) {
+      windowMs = n;
+    }
+  }
+  const out = [messages[0]];
+  let dropped = 0;
+  for (let i = 1; i < messages.length; i++) {
+    const prev = out[out.length - 1];
+    const cur = messages[i];
+    const sameAssistant =
+      prev && cur && prev.role === 'assistant' && cur.role === 'assistant';
+    let collapsible = false;
+    if (sameAssistant) {
+      const fpPrev = _assistantFingerprint(prev);
+      const fpCur = _assistantFingerprint(cur);
+      if (fpPrev === fpCur) {
+        const tPrev = Number(prev.timestamp) || 0;
+        const tCur = Number(cur.timestamp) || 0;
+        // If either side has no timestamp, only collapse when window is 0
+        // (opt-in aggressive mode); otherwise play safe and keep both.
+        if (tPrev && tCur && Math.abs(tCur - tPrev) <= windowMs) {
+          collapsible = true;
+        } else if (!tPrev && !tCur && windowMs === 0) {
+          collapsible = true;
+        }
+      }
+    }
+    if (collapsible) {
+      dropped++;
+      continue;
+    }
+    out.push(cur);
+  }
+  return dropped > 0 ? out : messages;
+}
+
 // Format the real context-compaction result into a single scrollback line.
 // Reads the {tokensBefore, tokensAfter, durationMs} the backend reports on the
 // `compacted` status event. Returns '' when there is nothing meaningful to show
@@ -960,6 +1121,7 @@ module.exports = {
   buildStreamResetNotice,
   splitSealedText,
   planStageFlush,
+  dedupAdjacentAssistantBursts,
   formatCompactionResult,
   tlAppendThinking,
   submitGateBusy,

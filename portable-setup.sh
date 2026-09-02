@@ -21,6 +21,16 @@ for name in khy khy-os khyquant; do
 done
 "$BIN_DIR/khy" --help >/dev/null
 
+# Transparent filesystem compression (Linux btrfs/zfs, best-effort, background;
+# honest no-op elsewhere). Must never fail the installer.
+COMPRESSOR="$PROJECT_ROOT/scripts/install/enable-fs-compression.sh"
+if [ -f "$COMPRESSOR" ]; then
+  printf '\n[3/3] Enabling transparent filesystem compression (best-effort, background)...\n'
+  bash "$COMPRESSOR" --project-root "$PROJECT_ROOT" || true
+else
+  printf '\n[3/3] Compression helper not found, skipped.\n'
+fi
+
 printf '\n[OK] khy command configured.\n'
 printf 'Project: %s\n' "$PROJECT_ROOT"
 printf 'Wrappers: %s\n' "$BIN_DIR"

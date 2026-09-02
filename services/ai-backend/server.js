@@ -94,6 +94,21 @@ app.use('/api/news', require('./src/routes/news'));
 // ── Database Initialization ──
 async function start() {
   const PORT = parseInt(process.env.AI_MGMT_PORT, 10) || 9090;
+  // ARCH-074: 默认绑 0.0.0.0，让 LAN 上其他机器可以通过 /api/auth/login 等公开端点
+  // 使用账号密码登录本机。AI_MGMT_HOST 可由 env 覆盖（如收紧到 127.0.0.1 仅本机）。
+  // 单端口争用时由 PORT 自动探测下一可用端口（与 backend 同样的端口韧性契约）。
+  let AI_MGMT_HOST = '0.0.0.0';
+  try {
+    const { AI_MGMT_HOST: hostFromDefaults } = require('./src/constants/serviceDefaults');
+    if (typeof hostFromDefaults === 'string' && hostFromDefaults.length > 0) {
+      AI_MGMT_HOST = hostFromDefaults;
+    }
+  } catch {
+    /* serviceDefaults 加载失败时退回硬编码默认 */
+  }
+  if (process.env.AI_MGMT_HOST && process.env.AI_MGMT_HOST.length > 0) {
+    AI_MGMT_HOST = process.env.AI_MGMT_HOST;
+  }
 
   const { sequelize } = require('./src/config/database');
   let _dbRetryTimer = null;
@@ -125,15 +140,19 @@ async function start() {
     scheduleDbReconnect();
   }
 
-  const server = app.listen(PORT, () => {
+  const server = app.listen(PORT, AI_MGMT_HOST, () => {
     console.log('');
     console.log('  ╔══════════════════════════════════════╗');
     console.log('  ║   KHY AI Management Backend          ║');
     console.log(`  ║   Running on port ${PORT}              ║`);
+    console.log(`  ║   Bound to ${AI_MGMT_HOST}              ║`);
     console.log('  ╚══════════════════════════════════════╝');
     console.log('');
     console.log(`  Health:   http://localhost:${PORT}/api/health`);
     console.log(`  Gateway:  http://localhost:${PORT}/api/ai-gateway/status`);
+    if (AI_MGMT_HOST === '0.0.0.0' || AI_MGMT_HOST === '::') {
+      console.log(`  LAN:      ${PORT}/tcp 放行后,其他机器可 http://<本机IP>:${PORT}/api/auth/login`);
+    }
     console.log('');
   });
 

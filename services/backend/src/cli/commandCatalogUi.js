@@ -31,6 +31,7 @@ const CATEGORY_MAP = [
   {
     name: '量化交易',
     icon: '◐',
+    color: chalk.red,
     cmds: [
       ['quote', '实时行情'],
       ['backtest', '策略回测'],
@@ -43,6 +44,7 @@ const CATEGORY_MAP = [
   {
     name: 'AI 助手',
     icon: '◆',
+    color: chalk.blue,
     cmds: [
       ['gateway', 'AI 网关状态与切换'],
       ['models', '本地模型管理'],
@@ -54,6 +56,7 @@ const CATEGORY_MAP = [
   {
     name: '系统',
     icon: '▸',
+    color: chalk.cyan,
     cmds: [
       ['doctor', '环境诊断'],
       ['server', '后端服务'],
@@ -66,6 +69,7 @@ const CATEGORY_MAP = [
   {
     name: '应用管理',
     icon: '+',
+    color: chalk.green,
     cmds: [
       ['app', '应用安装与运行'],
       ['modules', '模块化打包'],
@@ -109,6 +113,7 @@ function buildCommandCatalog() {
   return CATEGORY_MAP.map((group) => ({
     name: group.name,
     icon: group.icon,
+    color: group.color,
     items: group.cmds.map(([command, label]) => ({
       command,
       label,
@@ -169,7 +174,8 @@ function renderCommandCatalog() {
   const cmdColW = Math.min(Math.floor(innerW * 0.62), 44);
 
   catalog.forEach((group) => {
-    console.log(row(`${chalk.cyan(iconOf(group.icon))} ${chalk.cyan.bold(group.name)}`));
+    const colorFn = group.color || chalk.cyan;
+    console.log(row(`${colorFn(iconOf(group.icon))} ${colorFn.bold(group.name)}`));
     console.log(row(dim('─'.repeat(Math.max(0, innerW)))));
     group.items.forEach((item) => {
       const aliasText = item.aliases.length ? dim(` (${item.aliases.join(', ')})`) : '';

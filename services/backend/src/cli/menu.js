@@ -5,6 +5,8 @@
 let _inquirer;
 const inq = () => (_inquirer ??= require('inquirer'));
 const { printInfo } = require('./formatters');
+const chalkModule = require('chalk');
+const chalk = chalkModule.default || chalkModule;
 
 let _selectMenu;
 const getSelectMenu = () => {
@@ -29,38 +31,42 @@ const sep = (label = '────────────') => ({
   disabled: true,
 });
 
+/**
+ * Colored category-header separator — visually groups menu items by domain.
+ * Dims the header text so it reads as a section label, not an action.
+ * `colorName` is a chalk/ink-compatible key (e.g. 'cyan', 'red') used both
+ * for ANSI rendering (non-TUI Select path) and ink Text color prop (TUI path).
+ */
+const catSep = (label, colorName) => ({
+  name: chalk.dim(chalk[colorName](_lw ? `-- ${label} --` : `── ${label} ──`)),
+  value: `__sep_${Date.now()}_${Math.random()}`,
+  disabled: true,
+  color: colorName,
+});
+
 async function showMainMenu() {
   const sm = getSelectMenu();
   if (sm && process.stdin.isTTY && process.stdout.isTTY) {
-    // 使用统一选择器（无依赖，原生渲染）
-    const result = await sm({
-      message: '请选择操作:',
-      choices: [
-        {
-          name: `${_e('⚙️ ', '[S] ')}系统管理`,
-          value: 'system',
-          description: '服务/数据库/初始化',
-        },
-        { name: `${_e('📦', '[A]')} 应用管理`, value: 'app', description: '安装/启停/状态' },
-        {
-          name: `${_e('🌐', '[G]')} AI 网关 / 中转`,
-          value: 'gateway',
-          description: '模型路由/配置',
-        },
-        { name: `${_e('🤖', '[I]')} AI 助手设置`, value: 'ai', description: 'AI 配置与权限' },
-        {
-          name: `${_e('🧠', '[T]')} 模型训练 / 导出`,
-          value: 'training',
-          description: '训练/微调/导出',
-        },
-        { name: `${_e('📚', '[D]')} 教程文档`, value: 'docs' },
-        { name: `${_e('🔧', '[X]')} 环境诊断`, value: 'doctor' },
-        { name: `${_e('📈', '[Q]')} 实时行情查询`, value: 'quote', description: 'khyquant' },
-        { name: `${_e('📊', '[B]')} 策略回测`, value: 'backtest', description: 'khyquant' },
-        { name: `${_e('💾', '[M]')} 数据管理`, value: 'data', description: 'khyquant' },
-        { name: `${_e('↩️ ', '[R] ')}返回命令行`, value: 'back' },
-      ],
-    });
+    // Category color scheme — each group gets a distinct hue so regions
+    // are scannable at a glance. Icons inherit the category color; the
+    // cursor highlight (cyan) only applies to the text label.
+    const choices = [
+      catSep('平台核心', 'cyan'),
+      { name: `${chalk.cyan(_e('⚙️ ', '[S] '))}系统管理`, value: 'system', description: '服务/数据库/初始化', color: 'cyan' },
+      { name: `${chalk.cyan(_e('📦', '[A]'))} 应用管理`, value: 'app', description: '安装/启停/状态', color: 'cyan' },
+      { name: `${chalk.cyan(_e('🌐', '[G]'))} AI 网关 / 中转`, value: 'gateway', description: '模型路由/配置', color: 'cyan' },
+      { name: `${chalk.cyan(_e('🤖', '[I]'))} AI 助手设置`, value: 'ai', description: 'AI 配置与权限', color: 'cyan' },
+      { name: `${chalk.cyan(_e('🧠', '[T]'))} 模型训练 / 导出`, value: 'training', description: '训练/微调/导出', color: 'cyan' },
+      { name: `${chalk.cyan(_e('📚', '[D]'))} 教程文档`, value: 'docs', color: 'cyan' },
+      { name: `${chalk.cyan(_e('🔧', '[X]'))} 环境诊断`, value: 'doctor', color: 'cyan' },
+      catSep('量化交易', 'red'),
+      { name: `${chalk.red(_e('📈', '[Q]'))} 实时行情查询`, value: 'quote', description: 'khyquant', color: 'red' },
+      { name: `${chalk.red(_e('📊', '[B]'))} 策略回测`, value: 'backtest', description: 'khyquant', color: 'red' },
+      { name: `${chalk.red(_e('💾', '[M]'))} 数据管理`, value: 'data', description: 'khyquant', color: 'red' },
+      sep(),
+      { name: `${_e('↩️ ', '[R] ')}返回命令行`, value: 'back' },
+    ];
+    const result = await sm({ message: '请选择操作:', choices });
     return result || 'back';
   }
 
@@ -71,18 +77,18 @@ async function showMainMenu() {
       name: 'action',
       message: '请选择操作:',
       choices: [
-        sep(_lw ? '-------- 平台核心 --------' : '──────── 平台核心 ────────'),
-        { name: `${_e('⚙️ ', '[S] ')}系统管理`, value: 'system' },
-        { name: `${_e('📦', '[A]')} 应用管理`, value: 'app' },
-        { name: `${_e('🌐', '[G]')} AI 网关 / 中转`, value: 'gateway' },
-        { name: `${_e('🤖', '[I]')} AI 助手设置`, value: 'ai' },
-        { name: `${_e('🧠', '[T]')} 模型训练 / 导出`, value: 'training' },
-        { name: `${_e('📚', '[D]')} 教程文档`, value: 'docs' },
-        { name: `${_e('🔧', '[X]')} 环境诊断`, value: 'doctor' },
-        sep(_lw ? '------ 默认应用 khyquant ------' : '────── 默认应用 khyquant ──────'),
-        { name: `${_e('📈', '[Q]')} 实时行情查询`, value: 'quote' },
-        { name: `${_e('📊', '[B]')} 策略回测`, value: 'backtest' },
-        { name: `${_e('💾', '[M]')} 数据管理`, value: 'data' },
+        catSep('平台核心', 'cyan'),
+        { name: `${chalk.cyan(_e('⚙️ ', '[S] '))}系统管理`, value: 'system', color: 'cyan' },
+        { name: `${chalk.cyan(_e('📦', '[A]'))} 应用管理`, value: 'app', color: 'cyan' },
+        { name: `${chalk.cyan(_e('🌐', '[G]'))} AI 网关 / 中转`, value: 'gateway', color: 'cyan' },
+        { name: `${chalk.cyan(_e('🤖', '[I]'))} AI 助手设置`, value: 'ai', color: 'cyan' },
+        { name: `${chalk.cyan(_e('🧠', '[T]'))} 模型训练 / 导出`, value: 'training', color: 'cyan' },
+        { name: `${chalk.cyan(_e('📚', '[D]'))} 教程文档`, value: 'docs', color: 'cyan' },
+        { name: `${chalk.cyan(_e('🔧', '[X]'))} 环境诊断`, value: 'doctor', color: 'cyan' },
+        catSep('量化交易', 'red'),
+        { name: `${chalk.red(_e('📈', '[Q]'))} 实时行情查询`, value: 'quote', color: 'red' },
+        { name: `${chalk.red(_e('📊', '[B]'))} 策略回测`, value: 'backtest', color: 'red' },
+        { name: `${chalk.red(_e('💾', '[M]'))} 数据管理`, value: 'data', color: 'red' },
         sep(),
         { name: `${_e('↩️ ', '[R] ')}返回命令行`, value: 'back' },
       ],

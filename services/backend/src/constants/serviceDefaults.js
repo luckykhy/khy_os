@@ -85,6 +85,11 @@ const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://localhost:11434';
 const INFERENCE_SERVER_PORT = parseInt(process.env.INFERENCE_SERVER_PORT || '8765', 10);
 const BACKEND_PORT = parseInt(process.env.PORT || '3000', 10);
 
+// ARCH-074: ai-backend listen 绑定的 host。默认 '0.0.0.0'（Node express 默认行为），
+// 让 LAN 上其他机器可以访问 /api/auth/login 等公开鉴权端点。
+// 如需收紧到仅本机，设 AI_MGMT_HOST=127.0.0.1。
+const AI_MGMT_HOST = process.env.AI_MGMT_HOST || '0.0.0.0';
+
 // ── AI provider preset endpoints (gateway/providerPresets.js SSOT) ──────────
 // One-click preset base URLs for aggregators / popular providers. The literal
 // default lives ONLY here (Zero Hardcoding): providerPresets.js imports these
@@ -454,6 +459,8 @@ const exported = {
   INFERENCE_SERVER_PORT,
   getAiBackendUrl,
   BACKEND_PORT,
+  // ARCH-074
+  AI_MGMT_HOST,
   REDIS_KEY_PREFIX,
   // AI provider preset endpoints single source of truth (providerPresets.js)
   OPENROUTER_BASE_URL,

@@ -26,6 +26,10 @@ const {
   getToolDisplayName,
   getToolFamilyIcon,
 } = require('./renderTheme');
+const { isCoreToolDisplay } = require('./toolDisplayPolicy');
+
+// core 工具的焦点锚点（[DESIGN-ARCH-073] §2.3）：▌ 加粗焦点行 > 头行 > ⎿ 结果行。
+const FOCUS_ANCHOR = '▌';
 
 const _sparkleTimers = new Set();
 
@@ -133,8 +137,10 @@ function startSparkle(label, target = '', detail = '') {
  * @param {string} label - e.g. "Read", "Bash", "Write", "Search", "Update"
  * @param {string} [target] - e.g. "src/cli/repl.js", "node -c ..."
  * @param {string} [detail] - e.g. "(ctrl+o to expand)", "-> OK"
+ * @param {{ toolName?: string }} [opts] - 传 toolName 时按显示矩阵分级：core 工具在
+ *   active 态把指示点换成 ▌ 焦点锚点；不传则保持旧渲染（逐字节兼容）。
  */
-function printStepLine(status, label, target = '', detail = '') {
+function printStepLine(status, label, target = '', detail = '', opts = {}) {
   if (!process.stdout.isTTY) {
     return;
   }
@@ -158,6 +164,13 @@ function printStepLine(status, label, target = '', detail = '') {
     default:
       dot = c().dim(DOT_PENDING);
       break;
+  }
+
+  // core 工具（opts.toolName 命中显示矩阵 core 档）→ 指示点换成 ▌ 焦点锚点。
+  // 仅 'active' 态强调（执行中的焦点行）；未传 toolName 的旧调用方逐字节回退。
+  const _toolName = opts && typeof opts === 'object' ? opts.toolName : null;
+  if (status === 'active' && _toolName && isCoreToolDisplay(_toolName)) {
+    dot = c().hex(THEME.text).bold(FOCUS_ANCHOR);
   }
 
   const targetStr = target ? c().dim(`(${target})`) : '';

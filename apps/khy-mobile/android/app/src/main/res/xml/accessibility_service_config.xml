@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  KhyAccessibilityService —— 无障碍服务配置。
+  包名：com.khyos.companion  类：KhyAccessibilityService
+  能力：retrieveInteractiveWindows（拿 UI 树） + performGlobalAction（GLOBAL_ACTION_HOME / BACK / NOTIFICATIONS）
+  关键事件：click / longClick / scroll / textChange / windowStateChanged / windowContentChanged
+  不监听 keyEvent（避免和系统冲突）
+  feedbackType：通用
+-->
+<accessibility-service
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeViewClicked|typeViewLongClicked|typeViewScrolled|typeViewTextChanged|typeWindowStateChanged|typeWindowContentChanged|typeNotificationStateChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagDefault|flagRetrieveInteractiveWindows|flagReportViewIds"
+    android:canRetrieveWindowContent="true"
+    android:canPerformGestures="true"
+    android:description="@string/accessibility_service_description"
+    android:notificationTimeout="100"
+    android:settingsActivity="com.khyos.companion.MainActivity"
+/>
