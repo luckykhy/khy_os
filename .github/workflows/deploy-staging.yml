@@ -43,7 +43,7 @@ jobs:
           cache: 'pip'
 
       - name: Install backend dependencies
-        working-directory: services/backend
+        # install:core is a root-level pnpm filtered install; run from root.
         run: npm run install:core
 
       - name: Run test suite (Jest + node:test)
