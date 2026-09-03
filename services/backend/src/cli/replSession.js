@@ -1084,7 +1084,7 @@ async function startRepl(options = {}) {
     /* debug log optional */
   }
   let _busyStreaming = false; // true 当 AI 正在流式输出文本/thinking，不应重绘 prompt
-  let _transientStatusActive = false; // true when an in-place status line occupies the current row — keepalive/prompt must not overwrite it
+  const _tstatus = { active: false }; // in-place status line state (objectified T-020 B5 groundwork: passable to extracted modules)
   const _deferredStatuses = []; // statuses buffered while _busyStreaming, flushed when streaming ends
   // Deferred-status flush — extracted to repl/deferredStatuses.js (T-020 B5 first
   // slice). The buffer array stays owned here, passed by reference (push/splice
@@ -3044,7 +3044,7 @@ async function startRepl(options = {}) {
     }
     // Don't overwrite an in-place transient status line — doing so pushes it
     // to a new row and causes stacking/flooding.
-    if (_transientStatusActive) {
+    if (_tstatus.active) {
       return;
     }
     if (
@@ -3157,7 +3157,7 @@ async function startRepl(options = {}) {
       // Skip repaint when a transient in-place status line is occupying the
       // current row — repainting the prompt would push it to a new line and
       // cause the "flooding" bug where status lines stack up.
-      if (_transientStatusActive) {
+      if (_tstatus.active) {
         return;
       }
       // 距上次重绘超过 400ms 才重绘（避免和 console.log 触发的重绘重复）
@@ -8120,7 +8120,7 @@ async function startRepl(options = {}) {
         const line = (c2.default || c2).dim(`  · ${text}`);
         process.stdout.write(`\r\x1b[K${line}`);
         _transientStatusOpen = true;
-        _transientStatusActive = true; // Block keepalive/prompt from overwriting this line
+        _tstatus.active = true; // Block keepalive/prompt from overwriting this line
         // Do NOT restart spinner or call showBusyInterjectPrompt here.
         // The line stays in-place; the next status overwrites it via
         // \r\x1b[K, and real content clears it via _flushTransientStatus.
@@ -8131,7 +8131,7 @@ async function startRepl(options = {}) {
           return;
         }
         _transientStatusOpen = false;
-        _transientStatusActive = false;
+        _tstatus.active = false;
         if (process.stdout.isTTY) {
           process.stdout.write('\r\x1b[K');
         }
@@ -9606,7 +9606,7 @@ async function startRepl(options = {}) {
             }
             _liveStatusOpen = false;
             _liveStatusKey = '';
-            _transientStatusActive = false;
+            _tstatus.active = false;
           };
           const _printSuppressedStatusSummary = () => {
             // Only show the folded-status summary in detailed mode or when
@@ -9768,7 +9768,7 @@ async function startRepl(options = {}) {
                       process.stdout.write('\r\x1b[K');
                     }
                     _onStatusTransientOpen = false;
-                    _transientStatusActive = false;
+                    _tstatus.active = false;
                     _flushTransientStatus(); // also clear emitRuntimeStatus transient
                   }
                   return onChunk(chunk);
@@ -9976,7 +9976,7 @@ async function startRepl(options = {}) {
                         /* ignore */
                       }
                     }
-                    _transientStatusActive = true; // Block keepalive/prompt
+                    _tstatus.active = true; // Block keepalive/prompt
                     // Do NOT restart spinner here — it would fight with the
                     // live-status line for the same terminal row, causing
                     // duplicate/stacking lines on screen.
@@ -10073,14 +10073,14 @@ async function startRepl(options = {}) {
                     _clearVisibleBusyPromptLine();
                     process.stdout.write(`\r\x1b[K${c.dim(`  · ${txt}`)}`);
                     _onStatusTransientOpen = true;
-                    _transientStatusActive = true; // Block keepalive/prompt
+                    _tstatus.active = true; // Block keepalive/prompt
                   };
                   // Helper: print permanent status line
                   const _printOnStatusTerminal = (st, lbl, tgt, dtl) => {
                     if (_onStatusTransientOpen && process.stdout.isTTY) {
                       process.stdout.write('\r\x1b[K');
                       _onStatusTransientOpen = false;
-                      _transientStatusActive = false;
+                      _tstatus.active = false;
                     }
                     _flushTransientStatus();
                     spinner.stop();
@@ -12835,7 +12835,7 @@ async function startRepl(options = {}) {
       }
       _busyStreaming = false;
       _flushDeferredStatuses();
-      _transientStatusActive = false; // Reset transient guard
+      _tstatus.active = false; // Reset transient guard
       _busyHintShownAt = 0; // 重置 hint，下次忙碌可再次显示
       _busyInterruptState = null; // 重置忙碌态中断逃生阀连按序列,不跨轮泄漏
       _busyInterjectRequested = false;
