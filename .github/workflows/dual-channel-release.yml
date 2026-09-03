@@ -55,7 +55,10 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        working-directory: services/backend
+        # install:core is the root package.json pnpm filtered install (the
+        # pnpm-workspace.yaml and lockfile live at the repo root); it must run
+        # from the root. Inside a workspace subdir, `npm run` resolves the
+        # nearest package.json (khy-os-backend) and fails with Missing script.
         run: npm run install:core
 
       - name: Run test suite (Jest)

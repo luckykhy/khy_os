@@ -253,7 +253,7 @@ jobs:
       # 这里刻意不加 --ignore-scripts：better-sqlite3 是原生模块，
       # 跳过安装脚本会导致所有触及数据库的测试在 require 阶段就失败。
       - name: Install backend dependencies
-        working-directory: services/backend
+        # install:core is a root-level pnpm filtered install; run from root.
         run: npm run install:core
 
       - name: Jest
