@@ -76,7 +76,7 @@ async function tableExists(sequelize, tableName) {
  * 一律取表名小写比对。库里多出的表(sqlite_sequence 等内部表)不影响判定。
  */
 async function missingModelTables(sequelize) {
-  require('../models'); // 确保全部 model 注册,sequelize.models 完整
+  require('../constants/models'); // 确保全部 model 注册,sequelize.models 完整
   const queryInterface = sequelize.getQueryInterface();
   const existingRaw = await queryInterface.showAllTables();
   const existing = new Set(
@@ -187,7 +187,7 @@ async function ensureManageDbSeeded(env) {
 
   try {
     const bcrypt = require('bcryptjs');
-    const { sequelize } = require('../models');
+    const { sequelize } = require('../constants/models');
 
     // 1. schema drift 自愈:任一已注册 model 表缺失则 sync(additive·CREATE IF NOT
     //    EXISTS)。覆盖两种病症:(a) 空库(users 缺失)—— 首装从未 seed;(b) 老库缺新表

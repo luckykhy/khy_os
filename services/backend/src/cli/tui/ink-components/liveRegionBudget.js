@@ -43,9 +43,9 @@ const BASE_CHROME = 9;
 // StreamingBlock 历史 reserve 基数(字节回退目标):`9 + min(toolCount,6)`。
 const LEGACY_BASE = 9;
 // 任务清单封顶比例与硬上下限。
-const TASK_CAP_RATIO = 0.3;
-const TASK_CAP_MIN = 3;
-const TASK_CAP_MAX = 10;
+const TASK_CAP_RATIO = 0.6;  // 任务面板占终端高度的比例（从 0.5 提升到 0.6）
+const TASK_CAP_MIN = 8;       // 最少显示行数（从 5 提升到 8）
+const TASK_CAP_MAX = 30;      // 最多显示行数（从 20 提升到 30）
 // 兄弟面板存在时,在 reserve 上多留的安全余量,确保 `streaming + 兄弟 < rows`(严格小于,
 // 因 ink 在 height >= rows 时即触发全屏清屏)。仅在确有兄弟面板时施加,使「无兄弟」case
 // 与 legacy 逐字节一致。
@@ -67,7 +67,7 @@ const TOPIC_FOOTER_ROWS = 1;
 // clearTerminal 是 `\x1b[2J\x1b[0f`(无 3J 可剥),每次触顶都是一份**永久** scrollback 副本 →
 // 反应式钳制(resolveExtraReserve)追不上,必须前馈多留:用此静态余量吸收 markdown 换行/围栏
 // 边框等数据相关的正文增高,使 Windows 上从第一帧起就稳定 < rows。
-const WIN_SAFETY_MARGIN = 2;
+const WIN_SAFETY_MARGIN = 10;
 
 // 测量反馈钳制(measurement-feedback clamp)的目标缓冲:把 ink 实测的 live 区高度压到
 // `rows - CLAMP_MARGIN`(留 2 行吸收 markdown/换行的 +1 离散化)。resolveStreamReserve 是

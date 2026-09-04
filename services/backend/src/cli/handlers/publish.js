@@ -108,7 +108,7 @@ const {
   _extractProjectField,
   _readState,
   _isLikelyVersion,
-} = require('../../services/publish/projectState');
+} = require('../../services/domain/deploy/publish/projectState.js');
 // Generic dependency-free helpers, likewise extracted to the services layer.
 const {
   _toInt,
@@ -116,7 +116,7 @@ const {
   _markFailure,
   _isTruthyFlag,
   _pickFirstNonEmpty,
-} = require('../../services/publish/publishUtils');
+} = require('../../services/domain/deploy/publish/publishUtils.js');
 // Pure deploy-bundle artifact generators (Dockerfile/compose/env/README + the
 // filename timestamp), extracted to the services layer; imported back by name.
 const {
@@ -126,7 +126,7 @@ const {
   _writeDockerBundleReadme,
   _writePipInstallBundleReadme,
   _timestampForFileName,
-} = require('../../services/publish/bundleArtifacts');
+} = require('../../services/domain/deploy/publish/bundleArtifacts.js');
 // Print-free shared bundle helpers (JSON read, recursive copy, backend detection,
 // ASCII tree, INSTALL_LAYOUT writer, archive packer) + the docker out-dir/skip-set
 // constants, extracted to the services layer; imported back by their original names.
@@ -141,7 +141,7 @@ const {
   _buildAsciiTree,
   _writeInstallLayoutArtifacts,
   _buildDockerBundleArchive,
-} = require('../../services/publish/bundleCommon');
+} = require('../../services/domain/deploy/publish/bundleCommon.js');
 // Docker deploy-bundle builder, extracted to the services layer with logger
 // injection (the remote subsystem can now build a bundle without reaching up into
 // cli/handlers). publish.js injects its own print* formatters below so the CLI
@@ -151,7 +151,7 @@ const {
   _resolveDockerBackendSource,
   _copyBackendForDockerBundle,
   _ensureSharedDependencyForBundle,
-} = require('../../services/publish/dockerBundleBuilder');
+} = require('../../services/domain/deploy/publish/dockerBundleBuilder.js');
 const { assessArchiveExtractCompat } = require('../../services/restoreArchiveExtractCheck');
 const { verifyRestoreCompleteness } = require('../../services/restoreCompletenessCheck');
 const { assessRestorePreflight } = require('../../services/restorePreflightCheck');

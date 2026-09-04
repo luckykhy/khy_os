@@ -18,8 +18,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { distillSkillFromSources } = require('./skills/skillSourceDistiller');
-const { runThreatScan, shouldAllowLearn } = require('./skills/skillThreatScanner');
+const { distillSkillFromSources } = require('./domain/skills/skills/skillSourceDistiller');
+const { runThreatScan, shouldAllowLearn } = require('./domain/skills/skills/skillThreatScanner');
 
 // Portable-aware app home resolved at load (legacy const semantics preserved).
 function _appHome() {
@@ -828,7 +828,7 @@ function _skillJourneyEnabled(env = process.env) {
  */
 function _gatherJourneyMemories() {
   try {
-    const memdir = require('../memdir');
+    const memdir = require('../memdir/memdir');
     if (!memdir || typeof memdir.listMemories !== 'function') {
       return [];
     }
@@ -870,7 +870,7 @@ function getSkillJourney(options = {}) {
     skills = [];
   }
   const memories = _gatherJourneyMemories();
-  const { buildJourneyTimeline } = require('./skills/journeyTimeline');
+  const { buildJourneyTimeline } = require('./domain/skills/skills/journeyTimeline');
   return buildJourneyTimeline({ skills, memories });
 }
 

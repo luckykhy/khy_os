@@ -118,7 +118,7 @@ export const getInstrumentInfo = (symbol, normalizeSymbolCodeFn = defaultNormali
 
   const info = INSTRUMENT_MAP[lookupSymbol]
   if (info) {
-    console.log(`✅ 找到标的信息: ${symbol} -> ${normalizedSymbol} -> ${lookupSymbol}, 上市日期: ${info.listingDate}`)
+    if (import.meta.env.DEV) { console.log(`✅ 找到标的信息: ${symbol} -> ${normalizedSymbol} -> ${lookupSymbol}, 上市日期: ${info.listingDate}`) }
     return info
   }
 
@@ -151,22 +151,22 @@ export const generateMockKlineData = ({
   const data = []
   const finalSymbol = symbol || contract || '000001.SH'
 
-  console.log('='.repeat(80))
-  console.log('🔥🔥🔥 generateMockKlineData 被调用！')
-  console.log('🔥 当前时间:', new Date().toLocaleString())
-  console.log('🔥 selectedSymbol.value:', selectedSymbol)
-  console.log('🔥 props.contract:', contract)
-  console.log('🔥 最终使用的symbol:', finalSymbol)
-  console.log('� selectedPeriod.value:', selectedPeriod)
-  console.log('='.repeat(80))
+  if (import.meta.env.DEV) { console.log('='.repeat(80)) }
+  if (import.meta.env.DEV) { console.log('🔥🔥🔥 generateMockKlineData 被调用！') }
+  if (import.meta.env.DEV) { console.log('🔥 当前时间:', new Date().toLocaleString()) }
+  if (import.meta.env.DEV) { console.log('🔥 selectedSymbol.value:', selectedSymbol) }
+  if (import.meta.env.DEV) { console.log('🔥 props.contract:', contract) }
+  if (import.meta.env.DEV) { console.log('🔥 最终使用的symbol:', finalSymbol) }
+  if (import.meta.env.DEV) { console.log('� selectedPeriod.value:', selectedPeriod) }
+  if (import.meta.env.DEV) { console.log('='.repeat(80)) }
 
   const instrumentInfo = getInstrumentInfoFn(finalSymbol)
   const listingDate = new Date(instrumentInfo.listingDate)
   const basePrice = instrumentInfo.basePrice
   const now = new Date()
 
-  console.log(`📊 生成K线数据: ${finalSymbol}`)
-  console.log(`📅 上市时间: ${listingDate.toLocaleDateString()}, 基础价格: ${basePrice}`)
+  if (import.meta.env.DEV) { console.log(`📊 生成K线数据: ${finalSymbol}`) }
+  if (import.meta.env.DEV) { console.log(`📅 上市时间: ${listingDate.toLocaleDateString()}, 基础价格: ${basePrice}`) }
 
   let seed = getSymbolSeedFn(finalSymbol)
   const seededRandom = () => {
@@ -178,20 +178,20 @@ export const generateMockKlineData = ({
   const normalizedSymbol = String(finalSymbol).toLowerCase()
   const isHS300 = finalSymbol.includes('000300') || finalSymbol.includes('sh000300') || normalizedSymbol.includes('000300')
 
-  console.log('🔍 检查是否为沪深300:')
-  console.log(`   - symbol: "${finalSymbol}"`)
-  console.log(`   - symbol.includes('000300'): ${finalSymbol.includes('000300')}`)
-  console.log(`   - symbol.includes('sh000300'): ${finalSymbol.includes('sh000300')}`)
-  console.log(`   - symbol.toLowerCase().includes('000300'): ${normalizedSymbol.includes('000300')}`)
-  console.log(`   - isHS300: ${isHS300}`)
-  console.log(`   - selectedPeriod: ${selectedPeriod}`)
+  if (import.meta.env.DEV) { console.log('🔍 检查是否为沪深300:') }
+  if (import.meta.env.DEV) { console.log(`   - symbol: "${finalSymbol}"`) }
+  if (import.meta.env.DEV) { console.log(`   - symbol.includes('000300'): ${finalSymbol.includes('000300')}`) }
+  if (import.meta.env.DEV) { console.log(`   - symbol.includes('sh000300'): ${finalSymbol.includes('sh000300')}`) }
+  if (import.meta.env.DEV) { console.log(`   - symbol.toLowerCase().includes('000300'): ${normalizedSymbol.includes('000300')}`) }
+  if (import.meta.env.DEV) { console.log(`   - isHS300: ${isHS300}`) }
+  if (import.meta.env.DEV) { console.log(`   - selectedPeriod: ${selectedPeriod}`) }
 
   if (isHS300 && selectedPeriod === '1d') {
-    console.log('🔥🔥🔥 使用新的沪深300数据生成算法！')
-    console.log('🔥 起始价格: 807.78')
+    if (import.meta.env.DEV) { console.log('🔥🔥🔥 使用新的沪深300数据生成算法！') }
+    if (import.meta.env.DEV) { console.log('🔥 起始价格: 807.78') }
     currentPrice = 807.78
     const totalDays = Math.floor((now.getTime() - listingDate.getTime()) / (1000 * 60 * 60 * 24))
-    console.log('🔥 总天数:', totalDays)
+    if (import.meta.env.DEV) { console.log('🔥 总天数:', totalDays) }
 
     const cycles = [
       { start: 0, end: 0.095, trend: 6.8, volatility: 0.025 },
@@ -288,9 +288,9 @@ export const generateMockKlineData = ({
   }
 
   if (data.length > 0) {
-    console.log(`✅ K线数据生成完成: ${data.length} 条, 时间范围: ${new Date(data[0].time * 1000).toLocaleDateString()} - ${new Date(data[data.length - 1].time * 1000).toLocaleDateString()}`)
+    if (import.meta.env.DEV) { console.log(`✅ K线数据生成完成: ${data.length} 条, 时间范围: ${new Date(data[0].time * 1000).toLocaleDateString()} - ${new Date(data[data.length - 1].time * 1000).toLocaleDateString()}`) }
   } else {
-    console.log('⚠️ K线数据生成完成，但没有可用数据')
+    if (import.meta.env.DEV) { console.log('⚠️ K线数据生成完成，但没有可用数据') }
   }
 
   return data

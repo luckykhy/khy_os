@@ -1754,7 +1754,7 @@ function buildDirectToolDefs() {
     // 允许名单仍然说了算：补充只是让「已被允许的名字」在拓展形态下依旧广告得出去，
     // 不是给拓展开一条绕过名单的后门。
     try {
-      const declared = require('../../plugins/pluginContribResolver').listDeclaredTools();
+      const declared = require('../../domain/extensions/plugins/pluginContribResolver').listDeclaredTools();
       for (const d of declared) {
         if (!_CODEX_DIRECT_ALLOWED_TOOLS.has(d.name) || seen.has(d.name)) {
           continue;
@@ -2218,7 +2218,7 @@ async function runCodexDirect(prompt, options = {}) {
     // `KHY_TRAJECTORY_QUARANTINE=0`（逃生口）时保留旧的自动批准行为以便迁移。
     let quarantinePolicy, riskGate;
     try {
-      quarantinePolicy = require('../../trajectoryProvenance/quarantinePolicy');
+      quarantinePolicy = require('../../domain/trajectory/trajectoryProvenance/quarantinePolicy');
       riskGate = require('../../riskGate');
     } catch {
       /* 隔离子系统不可用：退回旧行为（下方按 gateEnabled=false 处理） */

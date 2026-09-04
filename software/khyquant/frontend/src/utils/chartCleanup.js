@@ -14,7 +14,7 @@ export function removeSeries(chart, series) {
   try {
     chart.removeSeries(series)
   } catch (error) {
-    console.log('移除系列时出错:', error.message)
+    if (import.meta.env.DEV) { console.log('移除系列时出错:', error.message) }
   }
 }
 
@@ -37,7 +37,7 @@ export function safelyDisposeChart(chart, seriesList = []) {
     // 然后移除图表
     chart.remove()
   } catch (error) {
-    console.log('清理图表时出错:', error.message)
+    if (import.meta.env.DEV) { console.log('清理图表时出错:', error.message) }
   }
 }
 
@@ -68,7 +68,7 @@ export function createChartCleanup(chartRef, seriesRefs = {}) {
         }
       })
     } catch (error) {
-      console.log('清理图表时出错:', error.message)
+      if (import.meta.env.DEV) { console.log('清理图表时出错:', error.message) }
     }
   }
 }

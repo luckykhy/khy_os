@@ -11,4 +11,4 @@
  * is a normal downward dependency.
  */
 
-module.exports = require('../../services/hooks/hookSystem');
+module.exports = require('hookSystem.js');

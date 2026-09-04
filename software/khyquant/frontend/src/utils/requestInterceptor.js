@@ -64,7 +64,7 @@ export function setupRequestInterceptor() {
     }
   );
 
-  console.log('✅ Axios拦截器已设置');
+  if (import.meta.env.DEV) { console.log('✅ Axios拦截器已设置'); }
 }
 
 /**
@@ -144,7 +144,7 @@ function showErrorMessage(message, errorType) {
  */
 export function resetErrorCount() {
   consecutiveErrors = 0;
-  console.log('✅ 错误计数已重置');
+  if (import.meta.env.DEV) { console.log('✅ 错误计数已重置'); }
 }
 
 export default {

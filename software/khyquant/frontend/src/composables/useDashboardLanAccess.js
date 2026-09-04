@@ -30,7 +30,7 @@ export function useDashboardLanAccess() {
         currentHostname !== 'localhost'
       ) {
         lanIpAddress.value = currentHostname
-        console.log('✅ 使用当前访问域名:', currentHostname)
+        if (import.meta.env.DEV) { console.log('✅ 使用当前访问域名:', currentHostname) }
         return
       }
 
@@ -38,15 +38,15 @@ export function useDashboardLanAccess() {
         const response = await axios.get('/api/system/network-info')
         if (response.data && response.data.data && response.data.data.lanIp) {
           lanIpAddress.value = response.data.data.lanIp
-          console.log('✅ 从后端获取局域网IP:', lanIpAddress.value)
+          if (import.meta.env.DEV) { console.log('✅ 从后端获取局域网IP:', lanIpAddress.value) }
 
           if (response.data.data.allCandidates) {
-            console.log('📋 所有候选IP:', response.data.data.allCandidates)
+            if (import.meta.env.DEV) { console.log('📋 所有候选IP:', response.data.data.allCandidates) }
           }
           return
         }
       } catch {
-        console.log('⚠️ 后端API获取IP失败，尝试前端方法')
+        if (import.meta.env.DEV) { console.log('⚠️ 后端API获取IP失败，尝试前端方法') }
       }
 
       const pc = new RTCPeerConnection({ iceServers: [] })
@@ -82,7 +82,7 @@ export function useDashboardLanAccess() {
           }
 
           candidateIps.push({ ip, priority })
-          console.log('🔍 WebRTC检测到IP:', ip, '优先级:', priority)
+          if (import.meta.env.DEV) { console.log('🔍 WebRTC检测到IP:', ip, '优先级:', priority) }
         }
       }
 
@@ -90,8 +90,8 @@ export function useDashboardLanAccess() {
         if (!lanIpAddress.value && candidateIps.length > 0) {
           candidateIps.sort((a, b) => a.priority - b.priority)
           lanIpAddress.value = candidateIps[0].ip
-          console.log('✅ 通过WebRTC选择局域网IP:', lanIpAddress.value)
-          console.log(
+          if (import.meta.env.DEV) { console.log('✅ 通过WebRTC选择局域网IP:', lanIpAddress.value) }
+          if (import.meta.env.DEV) { console.log( }
             '📋 所有候选IP:',
             candidateIps.map((c) => `${c.ip} (优先级${c.priority})`).join(', ')
           )
@@ -101,7 +101,7 @@ export function useDashboardLanAccess() {
           const hostname = window.location.hostname
           if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
             lanIpAddress.value = hostname
-            console.log('✅ 使用hostname作为IP:', hostname)
+            if (import.meta.env.DEV) { console.log('✅ 使用hostname作为IP:', hostname) }
           }
         }
 
@@ -138,11 +138,11 @@ export function useDashboardLanAccess() {
         width: 200,
         margin: 1,
         color: {
-          dark: '#000000',
-          light: '#ffffff'
+          dark: 'var(--khy-black)',
+          light: 'var(--khy-white)'
         }
       })
-      console.log('✅ 二维码生成成功')
+      if (import.meta.env.DEV) { console.log('✅ 二维码生成成功') }
     } catch (error) {
       console.error('❌ 二维码生成失败:', error)
       ElMessage.error('二维码生成失败')

@@ -23,7 +23,7 @@ const { printSuccess, printError, printInfo, printTable } = require('../formatte
  */
 async function handleDevice(subCommand, args, options = {}) {
   const env = process.env;
-  const { getManager } = require('../../services/deviceApps/deviceAppManager');
+  const { getManager } = require('../../services/domain/desktop/deviceApps/deviceAppManager.js');
 
   const sub = subCommand || 'list';
 
@@ -131,9 +131,9 @@ async function handleDevice(subCommand, args, options = {}) {
  * @param {string} appId 用户给的卸载目标(包 ID 或应用显示名)
  */
 async function _handleUninstallRouted(appId, options, env, mgr) {
-  const { decideUninstallRoute } = require('../../services/deviceApps/uninstallRoute');
-  const policy = require('../../services/deviceApps/deviceAppsPolicy');
-  const { getNativeUninstaller } = require('../../services/deviceApps/nativeUninstaller');
+  const { decideUninstallRoute } = require('../../services/domain/desktop/deviceApps/uninstallRoute.js');
+  const policy = require('../../services/domain/desktop/deviceApps/deviceAppsPolicy.js');
+  const { getNativeUninstaller } = require('../../services/domain/desktop/deviceApps/nativeUninstaller.js');
 
   const native = getNativeUninstaller(env);
   let nativeMatches = [];
@@ -234,7 +234,7 @@ async function _handleDownload(args, options, env) {
   const {
     downloadWithProgress,
     formatBytes,
-  } = require('../../services/deviceApps/deviceAppsDownloader');
+  } = require('../../services/domain/desktop/deviceApps/deviceAppsDownloader.js');
   let progressEnabled = true;
   try {
     progressEnabled = require('../../services/flagRegistry').isFlagEnabled(

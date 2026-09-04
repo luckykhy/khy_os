@@ -19,7 +19,7 @@ const playwrightSearch = require('./playwrightSearch');
 // (兜底「按日期排序」,与引擎是否真认 URL 参数无关)。
 let _freshness = null;
 try {
-  _freshness = require('./search/searchFreshness');
+  _freshness = require('./domain/query/search/searchFreshness');
 } catch {
   /* optional */
 }
@@ -72,7 +72,7 @@ function _applyRecency(results, window) {
 // 扇出(无需改源码);(2) discoverEmergingSources 从结果里挖出反复出现的新冒头权威源。
 let _discovery = null;
 try {
-  _discovery = require('./search/searchSourceDiscovery');
+  _discovery = require('./domain/query/search/searchSourceDiscovery');
 } catch {
   /* optional */
 }
@@ -810,13 +810,13 @@ function _parseMojeekHtml(html) {
   }
   let sel;
   try {
-    sel = require('./search/mojeekEngine').MOJEEK_SELECTORS;
+    sel = require('./domain/query/search/mojeekEngine').MOJEEK_SELECTORS;
   } catch {
     return [];
   }
   let norm = null;
   try {
-    norm = require('./search/mojeekEngine').normalizeMojeekRow;
+    norm = require('./domain/query/search/mojeekEngine').normalizeMojeekRow;
   } catch {
     norm = null;
   }
@@ -1515,7 +1515,7 @@ async function searchMojeek(query, freshWindow = null) {
 
   let url;
   try {
-    url = require('./search/mojeekEngine').buildMojeekUrl(trimmedQuery);
+    url = require('./domain/query/search/mojeekEngine').buildMojeekUrl(trimmedQuery);
   } catch {
     url = '';
   }
@@ -2003,7 +2003,7 @@ const DEFAULT_ENGINE_ORDER = ['baidu', 'bing-cn', 'duckduckgo', 'mojeek', 'sogou
  */
 function _mojeekEnabled() {
   try {
-    return require('./search/mojeekEngine').isMojeekEnabled(process.env);
+    return require('./domain/query/search/mojeekEngine').isMojeekEnabled(process.env);
   } catch {
     return true; // 叶子不可用 → 保持 default-on,不因缺失而静默丢引擎
   }

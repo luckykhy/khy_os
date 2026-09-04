@@ -27,7 +27,7 @@ const os = require('os');
 
 let _PLATFORM = null;
 try {
-  _PLATFORM = require('./envSymbiosis/platformIds').PLATFORM;
+  _PLATFORM = require('./domain/state/envSymbiosis/platformIds').PLATFORM;
 } catch {
   _PLATFORM = null;
 }

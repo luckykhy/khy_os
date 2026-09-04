@@ -265,18 +265,8 @@ function _severityZh(sev) {
 // always the exact, non-destructive command the user can run to actually clean —
 // deletion stays behind DiskCleanupTool's human confirmation gate, never here.
 function _humanBytes(n) {
-  const b = Number(n) || 0;
-  if (b < 1024) {
-    return `${b} B`;
-  }
-  const units = ['KB', 'MB', 'GB', 'TB'];
-  let v = b / 1024;
-  let i = 0;
-  while (v >= 1024 && i < units.length - 1) {
-    v /= 1024;
-    i++;
-  }
-  return `${v.toFixed(1)} ${units[i]}`;
+  // 安全修复：使用统一工具函数
+  return require('../utils/humanBytes').humanBytes(n);
 }
 
 function _junkLines(junk) {

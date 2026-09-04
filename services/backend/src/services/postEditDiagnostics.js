@@ -46,7 +46,7 @@ function _key(filePath, cwd) {
 
 function _syntaxErrors(file, cwd) {
   try {
-    const { quickSyntaxCheck } = require('./verificationAgent');
+    const { quickSyntaxCheck } = require('../agents/built-in/verificationAgent');
     const res = quickSyntaxCheck([file], cwd);
     return res && Array.isArray(res.errors) ? res.errors : [];
   } catch {

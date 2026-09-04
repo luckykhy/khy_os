@@ -289,7 +289,7 @@ function patrol(opts = {}) {
     return result;
   }
 
-  const svc = require('./agentFs/agentFsService');
+  const svc = require('./domain/agents/agentFs/agentFsService');
   let id = opts.companionId;
   if (!id) {
     try {

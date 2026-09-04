@@ -371,11 +371,11 @@ async function autoDetectAndEnable() {
 
 // 惰性加载内核管理器 + 配置生成器(避免模块加载期循环依赖;二者才是 IO/纯叶子边界)。
 function _coreManager() {
-  return require('./proxy/proxyCoreManager');
+  return require('./domain/network/proxy/proxyCoreManager');
 }
 
 function _configGen() {
-  return require('./proxy/proxyCoreConfigGen');
+  return require('./domain/network/proxy/proxyCoreConfigGen');
 }
 
 /**

@@ -77,7 +77,7 @@
         </div>
         <div v-if="!loading && strategyStore.strategies.length === 0" class="m-empty">
           <p>No strategies yet</p>
-          <p style="color: #999; font-size: 13px;">Tap "Create Strategy" to start</p>
+          <p style="color: var(--khy-gray-400); font-size: 13px;">Tap "Create Strategy" to start</p>
         </div>
       </div>
 
@@ -288,7 +288,7 @@
 
         <el-form-item label="公开策略">
           <el-switch v-model="strategyForm.isPublic" />
-          <span style="margin-left: 10px; color: #999; font-size: 12px;">
+          <span style="margin-left: 10px; color: var(--khy-gray-400); font-size: 12px;">
             公开后其他用户可以查看和使用
           </span>
         </el-form-item>
@@ -541,7 +541,7 @@
           
           <el-descriptions :column="2" border>
             <el-descriptions-item label="初始本金">
-              <span style="font-size: 16px; font-weight: 600; color: #409eff;">
+              <span style="font-size: 16px; font-weight: 600; color: var(--khy-primary);">
                 ¥{{ backtestResult.summary.initialCapital?.toLocaleString() || '0' }}
               </span>
             </el-descriptions-item>
@@ -553,13 +553,13 @@
             </el-descriptions-item>
             
             <el-descriptions-item label="总买入金额">
-              <span style="font-size: 14px; color: #67c23a;">
+              <span style="font-size: 14px; color: var(--khy-success);">
                 ¥{{ (backtestResult.summary.totalBuyAmount || 0).toLocaleString() }}
               </span>
             </el-descriptions-item>
             
             <el-descriptions-item label="总卖出金额">
-              <span style="font-size: 14px; color: #f56c6c;">
+              <span style="font-size: 14px; color: var(--khy-danger);">
                 ¥{{ (backtestResult.summary.totalSellAmount || 0).toLocaleString() }}
               </span>
             </el-descriptions-item>
@@ -579,7 +579,7 @@
             </el-descriptions-item>
             
             <el-descriptions-item label="净盈亏">
-              <span style="font-size: 16px; font-weight: 600;" :style="{ color: backtestResult.summary.totalProfit >= 0 ? '#f56c6c' : '#67c23a' }">
+              <span style="font-size: 16px; font-weight: 600;" :style="{ color: backtestResult.summary.totalProfit >= 0 ? 'var(--khy-danger)' : 'var(--khy-success)' }">
                 {{ backtestResult.summary.totalProfit >= 0 ? '+' : '' }}¥{{ (backtestResult.summary.totalProfit || 0).toFixed(2) }}
                 <span style="font-size: 12px; margin-left: 8px;">
                   ({{ backtestResult.summary.totalReturn >= 0 ? '+' : '' }}{{ backtestResult.summary.totalReturn?.toFixed(2) || '0' }}%)
@@ -588,13 +588,13 @@
             </el-descriptions-item>
             
             <el-descriptions-item label="平均盈利">
-              <span style="color: #f56c6c;">
+              <span style="color: var(--khy-danger);">
                 ¥{{ (backtestResult.summary.avgProfit || 0).toFixed(2) }}
               </span>
             </el-descriptions-item>
             
             <el-descriptions-item label="平均亏损">
-              <span style="color: #67c23a;">
+              <span style="color: var(--khy-success);">
                 ¥{{ (backtestResult.summary.avgLoss || 0).toFixed(2) }}
               </span>
             </el-descriptions-item>
@@ -819,7 +819,7 @@
             <el-table-column prop="quantity" label="数量" width="100" />
             <el-table-column prop="profit" label="盈亏" width="120">
               <template #default="{ row }">
-                <span v-if="row.type === 'sell'" :style="{ color: row.profit >= 0 ? '#67C23A' : '#F56C6C' }">
+                <span v-if="row.type === 'sell'" :style="{ color: row.profit >= 0 ? 'var(--khy-success)' : 'var(--khy-danger)' }">
                   {{ row.profit >= 0 ? '+' : '' }}{{ row.profit?.toFixed(2) || '-' }}
                   <span style="font-size: 12px; margin-left: 4px;">
                     ({{ row.return >= 0 ? '+' : '' }}{{ (row.return * 100).toFixed(2) }}%)
@@ -971,7 +971,7 @@ onMounted(async () => {
 // 监听回测对话框打开，初始化图表
 watch(showBacktestDialog, async (newValue) => {
   if (newValue) {
-    console.log('📊 回测对话框已打开，准备初始化图表')
+    if (import.meta.env.DEV) { console.log('📊 回测对话框已打开，准备初始化图表') }
     // 设置默认日期（最近10年，与智能交易界面一致）
     if (!backtestForm.startDate) {
       const endDate = new Date()
@@ -998,13 +998,13 @@ watch(showBacktestDialog, async (newValue) => {
 // 监听周期变化（已简化：只支持日线）
 watch(chartPeriod, async () => {
   // 由于只支持日线，不需要重新聚合数据
-  console.log('📊 周期固定为日线，无需重新聚合')
+  if (import.meta.env.DEV) { console.log('📊 周期固定为日线，无需重新聚合') }
 })
 
 // 监听信号显示开关
 watch(showSignalsOnChart, () => {
-  console.log('🔄 信号显示开关切换:', showSignalsOnChart.value)
-  console.log('📊 图表状态:', {
+  if (import.meta.env.DEV) { console.log('🔄 信号显示开关切换:', showSignalsOnChart.value) }
+  if (import.meta.env.DEV) { console.log('📊 图表状态:', { }
     chart: !!backtestChart.value,
     series: !!backtestCandlestickSeries.value,
     tradeSignals: backtestTradeSignals.value?.length || 0,  // 🔥 使用交易信号
@@ -1013,10 +1013,10 @@ watch(showSignalsOnChart, () => {
   
   if (backtestChart.value && backtestCandlestickSeries.value) {
     if (showSignalsOnChart.value && backtestTradeSignals.value && backtestTradeSignals.value.length > 0) {  // 🔥 使用交易信号
-      console.log('📊 显示信号标记，数量:', backtestTradeSignals.value.length)
+      if (import.meta.env.DEV) { console.log('📊 显示信号标记，数量:', backtestTradeSignals.value.length) }
       displaySignalsOnBacktestChart(backtestTradeSignals.value, backtestKlineData.value)
     } else {
-      console.log('📊 隐藏信号标记')
+      if (import.meta.env.DEV) { console.log('📊 隐藏信号标记') }
       backtestCandlestickSeries.value.setMarkers([])
     }
   } else {
@@ -1027,7 +1027,7 @@ watch(showSignalsOnChart, () => {
 // 监听辅助线显示开关
 watch(showAuxiliaryLines, () => {
   if (backtestChart.value && backtestKlineData.value) {
-    console.log('📊 辅助线显示切换:', showAuxiliaryLines.value)
+    if (import.meta.env.DEV) { console.log('📊 辅助线显示切换:', showAuxiliaryLines.value) }
     // 重新初始化图表以清除或显示辅助线
     initBacktestChart()
     updateBacktestChart(backtestKlineData.value, backtestSignals.value, backtestAuxiliaryData.value)
@@ -1093,7 +1093,7 @@ async function loadAvailableInstruments() {
 
     if (response.data && response.data.success) {
       availableInstruments.value = response.data.data.instruments
-      console.log('✅ 可用工具加载成功:', availableInstruments.value.length, '个')
+      if (import.meta.env.DEV) { console.log('✅ 可用工具加载成功:', availableInstruments.value.length, '个') }
       
       // 如果还没有选择工具，默认选择第一个股票
       if (!backtestForm.symbol && availableInstruments.value.length > 0) {
@@ -1123,7 +1123,7 @@ function onInstrumentTypeChange() {
 
 // 处理标的选择
 function handleInstrumentSelect(instrument) {
-  console.log('✅ 选择标的:', instrument)
+  if (import.meta.env.DEV) { console.log('✅ 选择标的:', instrument) }
   backtestForm.symbol = instrument.code
   // 根据标的类型自动设置工具类型
   if (instrument.type) {
@@ -1267,14 +1267,14 @@ async function editStrategy(strategy) {
 
 // 回测策略
 function backtestStrategy(strategy) {
-  console.log('🎯 准备回测策略:', strategy)
+  if (import.meta.env.DEV) { console.log('🎯 准备回测策略:', strategy) }
   currentStrategy.value = strategy
   backtestResult.value = null
   backtestKlineData.value = null
   backtestSignals.value = null
   backtestTradeSignals.value = null  // 🔥 清空交易信号
   showBacktestDialog.value = true
-  console.log('📊 回测对话框已打开，当前策略ID:', currentStrategy.value.id)
+  if (import.meta.env.DEV) { console.log('📊 回测对话框已打开，当前策略ID:', currentStrategy.value.id) }
 }
 
 // 执行回测
@@ -1292,7 +1292,7 @@ async function runBacktest() {
 
   backtesting.value = true
   try {
-    console.log('🔄 开始回测，参数:', {
+    if (import.meta.env.DEV) { console.log('🔄 开始回测，参数:', { }
       strategyId: currentStrategy.value.id,
       symbol: backtestForm.symbol,
       initialCapital: backtestForm.initialCapital,
@@ -1321,7 +1321,7 @@ async function runBacktest() {
         return
       }
       backtestDataSource.value = 'tick_csv'
-      console.log('📊 Tick CSV解析完成:', parsedTickData.meta)
+      if (import.meta.env.DEV) { console.log('📊 Tick CSV解析完成:', parsedTickData.meta) }
     } else {
       // 🔥 默认使用完整历史K线（从上市到现在，与智能交易界面一致）
       fullKlineData = await generateBacktestKlineData(
@@ -1331,9 +1331,9 @@ async function runBacktest() {
       )
     }
 
-    console.log('📊 生成回测K线数据:', fullKlineData.length, '条')
+    if (import.meta.env.DEV) { console.log('📊 生成回测K线数据:', fullKlineData.length, '条') }
     if (fullKlineData.length > 0) {
-      console.log('📊 完整数据时间范围:', {
+      if (import.meta.env.DEV) { console.log('📊 完整数据时间范围:', { }
         start: new Date(fullKlineData[0].time * 1000).toLocaleDateString(),
         end: new Date(fullKlineData[fullKlineData.length - 1].time * 1000).toLocaleDateString()
       })
@@ -1349,16 +1349,16 @@ async function runBacktest() {
     
     if (strategy.code) {
       try {
-        console.log('🚀 开始执行策略代码...')
-        console.log('📊 策略名称:', strategy.name)
-        console.log('📊 策略语言:', strategy.language)
-        console.log('📊 K线数据长度:', fullKlineData.length)
+        if (import.meta.env.DEV) { console.log('🚀 开始执行策略代码...') }
+        if (import.meta.env.DEV) { console.log('📊 策略名称:', strategy.name) }
+        if (import.meta.env.DEV) { console.log('📊 策略语言:', strategy.language) }
+        if (import.meta.env.DEV) { console.log('📊 K线数据长度:', fullKlineData.length) }
         
         const result = await executeStrategyCode(strategy, fullKlineData)
         
-        console.log('📊 策略执行结果:', result)
-        console.log('📊 原始信号数量:', result?.signals?.length || 0)
-        console.log('📊 辅助线数量:', result?.auxiliaryData ? Object.keys(result.auxiliaryData).length : 0)
+        if (import.meta.env.DEV) { console.log('📊 策略执行结果:', result) }
+        if (import.meta.env.DEV) { console.log('📊 原始信号数量:', result?.signals?.length || 0) }
+        if (import.meta.env.DEV) { console.log('📊 辅助线数量:', result?.auxiliaryData ? Object.keys(result.auxiliaryData).length : 0) }
         
         strategySignals = result?.signals || []
         auxiliaryData = result?.auxiliaryData || {}
@@ -1376,17 +1376,17 @@ async function runBacktest() {
           return signal
         }).filter(signal => signal.time) // 过滤掉没有时间的信号
         
-        console.log('✅ 信号时间信息已添加，有效信号:', strategySignals.length, '个')
+        if (import.meta.env.DEV) { console.log('✅ 信号时间信息已添加，有效信号:', strategySignals.length, '个') }
         if (strategySignals.length > 0) {
-          console.log('📊 信号示例:', strategySignals.slice(0, 3))
+          if (import.meta.env.DEV) { console.log('📊 信号示例:', strategySignals.slice(0, 3)) }
         }
         
         if (auxiliaryData && Object.keys(auxiliaryData).length > 0) {
-          console.log('✅ 辅助线数据:', Object.keys(auxiliaryData))
+          if (import.meta.env.DEV) { console.log('✅ 辅助线数据:', Object.keys(auxiliaryData)) }
           // 打印每条辅助线的数据点数量
           Object.keys(auxiliaryData).forEach(key => {
             const lineData = auxiliaryData[key]
-            console.log(`  - ${key}: ${lineData?.data?.length || 0} 个数据点`)
+            if (import.meta.env.DEV) { console.log(`  - ${key}: ${lineData?.data?.length || 0} 个数据点`) }
           })
         } else {
           console.warn('⚠️ 没有辅助线数据')
@@ -1409,9 +1409,9 @@ async function runBacktest() {
       signal.time >= startTimestamp && signal.time <= endTimestamp
     )
     
-    console.log('📊 全部信号数量:', strategySignals.length, '个')
-    console.log('📊 回测范围内的信号:', backtestSignals.length, '个')
-    console.log('📊 回测时间范围:', {
+    if (import.meta.env.DEV) { console.log('📊 全部信号数量:', strategySignals.length, '个') }
+    if (import.meta.env.DEV) { console.log('📊 回测范围内的信号:', backtestSignals.length, '个') }
+    if (import.meta.env.DEV) { console.log('📊 回测时间范围:', { }
       start: backtestForm.startDate,
       end: backtestForm.endDate,
       startTimestamp: startTimestamp,
@@ -1502,7 +1502,7 @@ async function runBacktest() {
             timestamp: signal.time
           })
           
-          console.log(`买入: 价格=${signal.price}, 数量=${quantity}, 成本=${buyCost.toFixed(2)}`)
+          if (import.meta.env.DEV) { console.log(`买入: 价格=${signal.price}, 数量=${quantity}, 成本=${buyCost.toFixed(2)}`) }
         }
       } else if (isSellSignal && position > 0) {
         // 🔑 卖出：计算本次交易盈亏
@@ -1543,7 +1543,7 @@ async function runBacktest() {
           timestamp: signal.time
         })
         
-        console.log(`卖出: 价格=${signal.price}, 数量=${quantity}, 盈亏=${profit.toFixed(2)}, 累计盈亏=${totalProfit.toFixed(2)}`)
+        if (import.meta.env.DEV) { console.log(`卖出: 价格=${signal.price}, 数量=${quantity}, 盈亏=${profit.toFixed(2)}, 累计盈亏=${totalProfit.toFixed(2)}`) }
         
         position = 0
       }
@@ -1589,7 +1589,7 @@ async function runBacktest() {
         isForceClose: true  // 标记为强制平仓
       })
       
-      console.log(`🔚 回测结束强制平仓: 价格=${lastPrice.toFixed(2)}, 数量=${quantity}, 盈亏=${profit.toFixed(2)}, 累计盈亏=${totalProfit.toFixed(2)}`)
+      if (import.meta.env.DEV) { console.log(`🔚 回测结束强制平仓: 价格=${lastPrice.toFixed(2)}, 数量=${quantity}, 盈亏=${profit.toFixed(2)}, 累计盈亏=${totalProfit.toFixed(2)}`) }
       
       position = 0
     }
@@ -1598,7 +1598,7 @@ async function runBacktest() {
     const totalFees = totalBuyFees + totalSellFees + totalStampTax
     
     // 🔥 打印交易统计
-    console.log('📊 交易统计:', {
+    if (import.meta.env.DEV) { console.log('📊 交易统计:', { }
       总交易次数: trades.length,
       买入次数: trades.filter(t => t.type === 'buy').length,
       卖出次数: trades.filter(t => t.type === 'sell').length,
@@ -1623,9 +1623,9 @@ async function runBacktest() {
     const profitFormula = profitBreakdown.map(item => item.profitFormatted).join(' + ')
     const totalProfitCalculated = profitBreakdown.reduce((sum, item) => sum + item.profit, 0)
     
-    console.log('📊 盈亏明细:', profitBreakdown)
-    console.log('📊 盈亏公式:', profitFormula)
-    console.log('📊 计算总盈亏:', totalProfitCalculated.toFixed(2))
+    if (import.meta.env.DEV) { console.log('📊 盈亏明细:', profitBreakdown) }
+    if (import.meta.env.DEV) { console.log('📊 盈亏公式:', profitFormula) }
+    if (import.meta.env.DEV) { console.log('📊 计算总盈亏:', totalProfitCalculated.toFixed(2)) }
     
     // 🔑 计算最终权益：初始资金 + 累计盈亏（已包含所有交易）
     const finalCapital = backtestForm.initialCapital + totalProfit
@@ -1752,7 +1752,7 @@ async function runBacktest() {
     }
     
     // 🔥 打印回测结果摘要
-    console.log('📊 回测结果摘要:', {
+    if (import.meta.env.DEV) { console.log('📊 回测结果摘要:', { }
       总收益率: totalReturn.toFixed(2) + '%',
       最终权益: finalCapital.toFixed(2),
       交易次数: sellTrades.length,
@@ -1773,13 +1773,13 @@ async function runBacktest() {
       reason: trade.reason
     }))
     
-    console.log('📊 生成交易信号标记:', tradeSignals.length, '个')
-    console.log('📊 交易信号详情:', tradeSignals)
+    if (import.meta.env.DEV) { console.log('📊 生成交易信号标记:', tradeSignals.length, '个') }
+    if (import.meta.env.DEV) { console.log('📊 交易信号详情:', tradeSignals) }
     
     // 🔥 保存交易信号到专用变量（不会被周期切换覆盖）
     backtestTradeSignals.value = tradeSignals
     
-    console.log('📊 backtestTradeSignals.value 已设置:', backtestTradeSignals.value.length, '个')
+    if (import.meta.env.DEV) { console.log('📊 backtestTradeSignals.value 已设置:', backtestTradeSignals.value.length, '个') }
     
     // 7. 初始化并更新图表
     await nextTick()
@@ -1788,7 +1788,7 @@ async function runBacktest() {
     // 🔥 只使用日线数据，不需要聚合
     updateBacktestChart(fullKlineData, tradeSignals, auxiliaryData)
     
-    console.log('📊 图表更新后 backtestTradeSignals.value:', backtestTradeSignals.value?.length || 0, '个')
+    if (import.meta.env.DEV) { console.log('📊 图表更新后 backtestTradeSignals.value:', backtestTradeSignals.value?.length || 0, '个') }
     
     // 8. 保存回测结果
     try {
@@ -1842,7 +1842,7 @@ async function runBacktest() {
       // 🔥 保存到 localStorage（用于回测分析页面显示）
       try {
         strategyStore.saveBacktestToLocalStorage(enhancedResult)
-        console.log('✅ 回测结果已保存到 localStorage')
+        if (import.meta.env.DEV) { console.log('✅ 回测结果已保存到 localStorage') }
       } catch (localStorageError) {
         console.error('❌ 保存到 localStorage 失败:', localStorageError)
       }
@@ -1873,7 +1873,7 @@ async function runBacktest() {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       })
       
-      console.log('✅ 回测结果已保存到数据库')
+      if (import.meta.env.DEV) { console.log('✅ 回测结果已保存到数据库') }
       ElMessage.success('回测完成，结果已保存')
     } catch (saveError) {
       console.error('❌ 保存回测结果失败:', saveError)
@@ -1892,7 +1892,7 @@ async function runBacktest() {
 async function generateBacktestKlineData(symbol, startDate, endDate) {
   // 🔥 优先尝试从后端API获取真实数据（使用与SimpleTradingInterface相同的API）
   try {
-    console.log('🌐 尝试从后端API获取真实数据:', symbol)
+    if (import.meta.env.DEV) { console.log('🌐 尝试从后端API获取真实数据:', symbol) }
     
     // 获取标的上市时间，从上市开始获取完整历史数据
     const instrumentInfo = getInstrumentInfo(symbol)
@@ -1902,7 +1902,7 @@ async function generateBacktestKlineData(symbol, startDate, endDate) {
     const actualStartDate = startDate ? new Date(startDate) : listingDate
     const actualEndDate = endDate ? new Date(endDate) : new Date()
     
-    console.log(`📅 获取历史数据: ${actualStartDate.toLocaleDateString()} - ${actualEndDate.toLocaleDateString()}`)
+    if (import.meta.env.DEV) { console.log(`📅 获取历史数据: ${actualStartDate.toLocaleDateString()} - ${actualEndDate.toLocaleDateString()}`) }
     
     // 转换周期格式
     const periodMap = {
@@ -1914,7 +1914,7 @@ async function generateBacktestKlineData(symbol, startDate, endDate) {
     
     // 🔥 使用与SimpleTradingInterface相同的API路径和方法
     const apiUrl = `${getApiBaseUrl()}/comprehensive-data/kline`
-    console.log('📡 API URL:', apiUrl)
+    if (import.meta.env.DEV) { console.log('📡 API URL:', apiUrl) }
     
     const response = await axios.get(apiUrl, {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
@@ -1927,12 +1927,12 @@ async function generateBacktestKlineData(symbol, startDate, endDate) {
       timeout: 30000 // 30秒超时
     })
     
-    console.log('✅ 后端API响应:', response.data.source, '数据条数:', response.data.kline?.length || 0)
+    if (import.meta.env.DEV) { console.log('✅ 后端API响应:', response.data.source, '数据条数:', response.data.kline?.length || 0) }
     
     if (response.data.kline && response.data.kline.length > 0) {
       // 🔥 记录数据源信息
       backtestDataSource.value = response.data.source || 'unknown'
-      console.log(`📊 使用数据源: ${backtestDataSource.value}`)
+      if (import.meta.env.DEV) { console.log(`📊 使用数据源: ${backtestDataSource.value}`) }
       
       // 转换数据格式为 lightweight-charts 需要的格式
       return response.data.kline.map(item => ({
@@ -1950,7 +1950,7 @@ async function generateBacktestKlineData(symbol, startDate, endDate) {
   
   // 🔥 生成模拟数据（完全采用SimpleTradingInterface的方法）
   backtestDataSource.value = 'enhanced_mock' // 标记为模拟数据
-  console.log('📊 生成模拟K线数据:', symbol, startDate, endDate)
+  if (import.meta.env.DEV) { console.log('📊 生成模拟K线数据:', symbol, startDate, endDate) }
   
   const data = []
   
@@ -1978,10 +1978,10 @@ async function generateBacktestKlineData(symbol, startDate, endDate) {
     end = new Date(endDate)
   }
   
-  console.log(`📅 标的: ${instrumentInfo.name}`)
-  console.log(`📅 上市时间: ${listingDate.toLocaleDateString()}`)
-  console.log(`📅 数据起始: ${actualStartDate.toLocaleDateString()}`)
-  console.log(`📅 数据结束: ${end.toLocaleDateString()}`)
+  if (import.meta.env.DEV) { console.log(`📅 标的: ${instrumentInfo.name}`) }
+  if (import.meta.env.DEV) { console.log(`📅 上市时间: ${listingDate.toLocaleDateString()}`) }
+  if (import.meta.env.DEV) { console.log(`📅 数据起始: ${actualStartDate.toLocaleDateString()}`) }
+  if (import.meta.env.DEV) { console.log(`📅 数据结束: ${end.toLocaleDateString()}`) }
   
   // 验证日期有效性
   if (isNaN(actualStartDate.getTime()) || isNaN(end.getTime())) {
@@ -2116,10 +2116,10 @@ async function generateBacktestKlineData(symbol, startDate, endDate) {
     }
   }
   
-  console.log(`✅ 模拟K线数据生成完成: ${data.length} 条`)
+  if (import.meta.env.DEV) { console.log(`✅ 模拟K线数据生成完成: ${data.length} 条`) }
   if (data.length > 0) {
-    console.log(`📊 价格范围: ${basePrice.toFixed(2)} -> ${currentPrice.toFixed(2)}`)
-    console.log(`📊 时间范围: ${new Date(data[0].time * 1000).toLocaleDateString()} - ${new Date(data[data.length-1].time * 1000).toLocaleDateString()}`)
+    if (import.meta.env.DEV) { console.log(`📊 价格范围: ${basePrice.toFixed(2)} -> ${currentPrice.toFixed(2)}`) }
+    if (import.meta.env.DEV) { console.log(`📊 时间范围: ${new Date(data[0].time * 1000).toLocaleDateString()} - ${new Date(data[data.length-1].time * 1000).toLocaleDateString()}`) }
   } else {
     console.error('❌ 生成的K线数据为空！')
     console.error('❌ 参数:', { symbol, actualStartDate, end })
@@ -2180,7 +2180,7 @@ function aggregateKlineData(dailyData, period) {
     return dailyData // 日线不需要聚合
   }
   
-  console.log(`📊 开始聚合数据: ${dailyData.length} 条日线 -> ${period}`)
+  if (import.meta.env.DEV) { console.log(`📊 开始聚合数据: ${dailyData.length} 条日线 -> ${period}`) }
   
   const aggregated = []
   let currentBar = null
@@ -2245,7 +2245,7 @@ function aggregateKlineData(dailyData, period) {
     aggregated.push(currentBar)
   }
   
-  console.log(`✅ 聚合完成: ${aggregated.length} 条${period}`)
+  if (import.meta.env.DEV) { console.log(`✅ 聚合完成: ${aggregated.length} 条${period}`) }
   return aggregated
 }
 
@@ -2257,19 +2257,19 @@ async function executeStrategyCode(strategy, klineData) {
   }
   
   try {
-    console.log('🚀 执行策略代码:', strategy.name, '语言:', strategy.language)
-    console.log('📊 K线数据:', klineData.length, '条')
+    if (import.meta.env.DEV) { console.log('🚀 执行策略代码:', strategy.name, '语言:', strategy.language) }
+    if (import.meta.env.DEV) { console.log('📊 K线数据:', klineData.length, '条') }
     
     // All languages execute via backend vm sandbox
     try {
-      console.log('📝 策略代码长度:', strategy.code.length, '字符, 语言:', strategy.language || 'javascript')
+      if (import.meta.env.DEV) { console.log('📝 策略代码长度:', strategy.code.length, '字符, 语言:', strategy.language || 'javascript') }
       const result = await executeSandbox({
         code: strategy.code,
         klineData,
         parameters: strategy.parameters || {},
         language: strategy.language || 'javascript'
       })
-      console.log('✅ 策略沙箱执行完成, signals:', result.signals?.length || 0)
+      if (import.meta.env.DEV) { console.log('✅ 策略沙箱执行完成, signals:', result.signals?.length || 0) }
       return result
     } catch (error) {
       console.error('❌ 策略执行失败:', error)
@@ -2348,7 +2348,7 @@ function initBacktestChart() {
       wickDownColor: '#51cf66'
     })
     
-    console.log('✅ 回测图表初始化成功')
+    if (import.meta.env.DEV) { console.log('✅ 回测图表初始化成功') }
   } catch (error) {
     console.error('❌ 回测图表初始化失败:', error)
   }
@@ -2364,7 +2364,7 @@ function updateBacktestChart(klineData, signals, auxiliaryData) {
   try {
     // 设置K线数据
     backtestCandlestickSeries.value.setData(klineData)
-    console.log('✅ K线数据已设置:', klineData.length, '条')
+    if (import.meta.env.DEV) { console.log('✅ K线数据已设置:', klineData.length, '条') }
     
     // 显示信号标记
     if (showSignalsOnChart.value && signals && signals.length > 0) {
@@ -2373,11 +2373,11 @@ function updateBacktestChart(klineData, signals, auxiliaryData) {
     
     // 显示辅助线
     if (showAuxiliaryLines.value && auxiliaryData && Object.keys(auxiliaryData).length > 0) {
-      console.log('📊 准备显示辅助线，数量:', Object.keys(auxiliaryData).length)
+      if (import.meta.env.DEV) { console.log('📊 准备显示辅助线，数量:', Object.keys(auxiliaryData).length) }
       displayAuxiliaryLinesOnChart(auxiliaryData)
     }
     
-    console.log('✅ 回测图表更新成功')
+    if (import.meta.env.DEV) { console.log('✅ 回测图表更新成功') }
   } catch (error) {
     console.error('❌ 回测图表更新失败:', error)
   }
@@ -2391,9 +2391,9 @@ function displaySignalsOnBacktestChart(signals, klineData) {
   }
   
   try {
-    console.log('🎯 准备显示信号标记:', signals.length, '个')
-    console.log('📊 K线数据范围:', klineData.length, '条')
-    console.log('📊 信号示例:', signals.slice(0, 3))
+    if (import.meta.env.DEV) { console.log('🎯 准备显示信号标记:', signals.length, '个') }
+    if (import.meta.env.DEV) { console.log('📊 K线数据范围:', klineData.length, '条') }
+    if (import.meta.env.DEV) { console.log('📊 信号示例:', signals.slice(0, 3)) }
     
     const markers = []
     
@@ -2420,23 +2420,23 @@ function displaySignalsOnBacktestChart(signals, klineData) {
       markers.push({
         time: signalTime,
         position: isBuy ? 'belowBar' : 'aboveBar',
-        color: isBuy ? '#26a69a' : '#ef5350',
+        color: isBuy ? '#26a69a' : 'var(--khy-danger)',
         shape: isBuy ? 'arrowUp' : 'arrowDown',
         text: (signal.reason || (isBuy ? '买' : '卖')).substring(0, 10)  // 🔥 限制文本长度
       })
     }
     
     if (markers.length > 0) {
-      console.log('📊 准备设置的标记数据:', markers)
-      console.log('📊 第一个标记:', markers[0])
-      console.log('📊 K线时间范围:', {
+      if (import.meta.env.DEV) { console.log('📊 准备设置的标记数据:', markers) }
+      if (import.meta.env.DEV) { console.log('📊 第一个标记:', markers[0]) }
+      if (import.meta.env.DEV) { console.log('📊 K线时间范围:', { }
         first: klineData[0]?.time,
         last: klineData[klineData.length - 1]?.time
       })
 
       // Set markers directly (no clear-then-set to avoid flicker)
       backtestCandlestickSeries.value.setMarkers(markers)
-      console.log('✅ 信号标记已显示:', markers.length, '个')
+      if (import.meta.env.DEV) { console.log('✅ 信号标记已显示:', markers.length, '个') }
 
       if (backtestChart.value) {
         backtestChart.value.timeScale().fitContent()
@@ -2457,8 +2457,8 @@ function displayAuxiliaryLinesOnChart(auxiliaryData) {
   }
   
   try {
-    console.log('🎨 开始显示辅助线:', Object.keys(auxiliaryData))
-    console.log('🎨 辅助线数据详情:', auxiliaryData)
+    if (import.meta.env.DEV) { console.log('🎨 开始显示辅助线:', Object.keys(auxiliaryData)) }
+    if (import.meta.env.DEV) { console.log('🎨 辅助线数据详情:', auxiliaryData) }
     
     const klineData = backtestKlineData.value
     let successCount = 0
@@ -2472,7 +2472,7 @@ function displayAuxiliaryLinesOnChart(auxiliaryData) {
         return
       }
       
-      console.log(`📊 处理辅助线 "${lineName}"，原始数据点数:`, lineConfig.data.length)
+      if (import.meta.env.DEV) { console.log(`📊 处理辅助线 "${lineName}"，原始数据点数:`, lineConfig.data.length) }
       
       // 基于当前K线数据重新计算辅助线
       const expandedLineData = []
@@ -2490,7 +2490,7 @@ function displayAuxiliaryLinesOnChart(auxiliaryData) {
             value: parseFloat(high.toFixed(2))
           })
         })
-        console.log(`✅ 多线重新计算完成: ${expandedLineData.length} 个数据点`)
+        if (import.meta.env.DEV) { console.log(`✅ 多线重新计算完成: ${expandedLineData.length} 个数据点`) }
       } else if (lineName === '空线' || lineName.includes('下轨')) {
         // 空线（箱体下轨）：使用滚动窗口的最低价
         klineData.forEach((candle, index) => {
@@ -2502,7 +2502,7 @@ function displayAuxiliaryLinesOnChart(auxiliaryData) {
             value: parseFloat(low.toFixed(2))
           })
         })
-        console.log(`✅ 空线重新计算完成: ${expandedLineData.length} 个数据点`)
+        if (import.meta.env.DEV) { console.log(`✅ 空线重新计算完成: ${expandedLineData.length} 个数据点`) }
       } else if (lineName === '箱体中线' || lineName.includes('中线')) {
         // 箱体中线：上轨和下轨的平均值
         klineData.forEach((candle, index) => {
@@ -2516,7 +2516,7 @@ function displayAuxiliaryLinesOnChart(auxiliaryData) {
             value: parseFloat(mid.toFixed(2))
           })
         })
-        console.log(`✅ 箱体中线重新计算完成: ${expandedLineData.length} 个数据点`)
+        if (import.meta.env.DEV) { console.log(`✅ 箱体中线重新计算完成: ${expandedLineData.length} 个数据点`) }
       } else if (lineName.startsWith('MA')) {
         // 移动平均线：直接使用原始数据
         lineConfig.data.forEach(point => {
@@ -2527,7 +2527,7 @@ function displayAuxiliaryLinesOnChart(auxiliaryData) {
             })
           }
         })
-        console.log(`✅ ${lineName} 数据处理完成: ${expandedLineData.length} 个数据点`)
+        if (import.meta.env.DEV) { console.log(`✅ ${lineName} 数据处理完成: ${expandedLineData.length} 个数据点`) }
       } else {
         // 其他类型的辅助线，直接使用原始数据
         lineConfig.data.forEach(point => {
@@ -2538,7 +2538,7 @@ function displayAuxiliaryLinesOnChart(auxiliaryData) {
             })
           }
         })
-        console.log(`✅ ${lineName} 数据处理完成: ${expandedLineData.length} 个数据点`)
+        if (import.meta.env.DEV) { console.log(`✅ ${lineName} 数据处理完成: ${expandedLineData.length} 个数据点`) }
       }
       
       if (expandedLineData.length === 0) {
@@ -2563,13 +2563,13 @@ function displayAuxiliaryLinesOnChart(auxiliaryData) {
         
         lineSeries.setData(expandedLineData)
         successCount++
-        console.log(`✅ 辅助线 "${lineName}" 显示成功，颜色: ${color}`)
+        if (import.meta.env.DEV) { console.log(`✅ 辅助线 "${lineName}" 显示成功，颜色: ${color}`) }
       } catch (error) {
         console.error(`❌ 显示辅助线 "${lineName}" 失败:`, error)
       }
     })
     
-    console.log(`✅ 辅助线显示完成，成功: ${successCount}/${Object.keys(auxiliaryData).length}`)
+    if (import.meta.env.DEV) { console.log(`✅ 辅助线显示完成，成功: ${successCount}/${Object.keys(auxiliaryData).length}`) }
   } catch (error) {
     console.error('❌ 显示辅助线失败:', error)
   }
@@ -2588,12 +2588,12 @@ function getLineColor(key) {
     'lower': '#45B7D1',
     '多线': '#FF6B6B',
     '空线': '#26a69a',
-    '箱体中线': '#FFA726',
+    '箱体中线': 'var(--khy-warning)',
     'BOLL_UPPER': '#FF6B6B',
     'BOLL_MIDDLE': '#4ECDC4',
     'BOLL_LOWER': '#45B7D1'
   }
-  return colors[key] || '#999999'
+  return colors[key] || 'var(--khy-gray-400)'
 }
 
 // 计算指标（简化版）
@@ -2918,7 +2918,7 @@ function onLanguageChange(newLanguage) {
 
 // 处理通达信公式解析
 function handleTdxParse(result) {
-  console.log('📊 通达信公式解析结果:', result)
+  if (import.meta.env.DEV) { console.log('📊 通达信公式解析结果:', result) }
   
   // 如果有参数，自动填充到参数JSON
   if (result.parameters && result.parameters.length > 0) {
@@ -2941,7 +2941,7 @@ function handleTdxParse(result) {
 // 处理选择变化
 function handleSelectionChange(selection) {
   selectedStrategyIds.value = selection.map(s => s.id)
-  console.log('📊 已选择策略:', selectedStrategyIds.value)
+  if (import.meta.env.DEV) { console.log('📊 已选择策略:', selectedStrategyIds.value) }
 }
 
 // 清除选择
@@ -3207,7 +3207,7 @@ async function handleBatchCopy() {
 }
 
 .code-tips pre {
-  background: #f5f5f5;
+  background: var(--khy-gray-50);
   padding: 10px;
   border-radius: 4px;
   font-size: 12px;
@@ -3242,11 +3242,11 @@ async function handleBatchCopy() {
 
 .template-icon {
   font-size: 20px;
-  color: #409eff;
+  color: var(--khy-primary);
 }
 
 .template-description {
-  color: #666;
+  color: var(--khy-gray-500);
   margin-bottom: 10px;
   min-height: 40px;
 }
@@ -3294,7 +3294,7 @@ async function handleBatchCopy() {
 }
 
 .instrument-sector {
-  color: #888;
+  color: var(--khy-gray-400);
   font-size: 12px;
 }
 
@@ -3413,7 +3413,7 @@ async function handleBatchCopy() {
 }
 
 .m-strategy-card {
-  background: #fff;
+  background: var(--khy-white);
   border: 1px solid #ebeef5;
   border-radius: var(--radius-md);
   padding: 14px 16px;
@@ -3472,15 +3472,15 @@ async function handleBatchCopy() {
   min-height: 36px;
   border: 1px solid #dcdfe6;
   border-radius: var(--radius-sm);
-  background: #fff;
-  color: #409eff;
+  background: var(--khy-white);
+  color: var(--khy-primary);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   touch-action: manipulation;
 }
 .m-action-btn:active { background: #f5f7fa; }
-.m-action-btn.danger { color: #f56c6c; border-color: #fde2e2; }
+.m-action-btn.danger { color: var(--khy-danger); border-color: #fde2e2; }
 .m-action-btn.danger:active { background: #fef0f0; }
 
 .m-empty {

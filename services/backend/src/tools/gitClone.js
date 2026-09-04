@@ -1,5 +1,5 @@
-const forgeClient = require('../services/forge/forgeClient');
-const forgeCore = require('../services/forge/forgeCore');
+const forgeClient = require('../services/domain/build/forge/forgeClient.js');
+const forgeCore = require('../services/domain/build/forge/forgeCore.js');
 
 const { defineTool } = require('./_baseTool');
 

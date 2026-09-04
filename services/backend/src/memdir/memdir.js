@@ -661,7 +661,7 @@ function selectRelevantMemories(query, opts = {}) {
   // early bootstrap that pulls in memdir never depends on it.
   let _enrich;
   try {
-    _enrich = require('../services/memoryEngine/memoryRecallTokens').enrichTokens;
+    _enrich = require('../services/domain/memory/memoryEngine/memoryRecallTokens.js').enrichTokens;
   } catch {
     _enrich = (t) => t;
   }
@@ -1124,7 +1124,7 @@ const PROGRESS_INDEX_NAME = 'PROGRESS.md';
  */
 function appendProjectProgress(entry, projectRoot) {
   const { getProjectMemoryDir } = require('./paths');
-  const progress = require('../services/memoryEngine/progressLog');
+  const progress = require('../services/domain/memory/memoryEngine/progressLog.js');
   const dir = getProjectMemoryDir(projectRoot);
   const filePath = path.join(dir, PROGRESS_INDEX_NAME);
   if (!progress.isEnabled(process.env)) {
@@ -1179,7 +1179,7 @@ function appendProjectProgress(entry, projectRoot) {
  */
 function loadProjectProgressPrompt(projectRoot) {
   try {
-    const progress = require('../services/memoryEngine/progressLog');
+    const progress = require('../services/domain/memory/memoryEngine/progressLog.js');
     if (!progress.isRecallEnabled(process.env)) {
       return null;
     }

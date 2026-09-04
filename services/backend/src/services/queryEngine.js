@@ -724,7 +724,7 @@ class QueryEngine {
       process.env.KHY_STRUCTURED_OUTPUT !== 'false'
     ) {
       try {
-        structuredHarness = require('./structuredResults/turnEnvelope').buildTurnEnvelope(
+        structuredHarness = require('./domain/structured/structuredResults/turnEnvelope').buildTurnEnvelope(
           finalResult,
           { summary: reply }
         );
@@ -1060,7 +1060,7 @@ class QueryEngine {
       process.env.KHY_STRUCTURED_OUTPUT !== 'false'
     ) {
       try {
-        structured = require('./structuredResults/turnEnvelope').buildTurnEnvelope(finalResult, {
+        structured = require('./domain/structured/structuredResults/turnEnvelope').buildTurnEnvelope(finalResult, {
           summary: reply,
         });
       } catch {

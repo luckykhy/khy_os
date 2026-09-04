@@ -77,7 +77,7 @@ class CtxInspectTool extends BaseTool {
       };
     }
 
-    const { computeContextStats } = require('../../services/context/ctxWindowStats');
+    const { computeContextStats } = require('../../services/domain/session/context/ctxWindowStats.js');
 
     // 读 HUD 会话态单例(只读快照);拿不到则退化为空态(诚实标注)。
     let hud = null;
@@ -133,7 +133,7 @@ class CtxInspectTool extends BaseTool {
         const {
           analyzeContextBreakdown,
           renderContextBreakdownLines,
-        } = require('../../services/context/contextBreakdown');
+        } = require('../../services/domain/session/context/contextBreakdown.js');
         const { estimateTokens } = require('../../services/textHeuristics');
         const sections = [];
         try {
@@ -180,14 +180,14 @@ class CtxInspectTool extends BaseTool {
             const {
               analyzeContextSuggestions,
               renderContextSuggestionLines,
-            } = require('../../services/context/contextSuggestions');
+            } = require('../../services/domain/session/context/contextSuggestions.js');
 
             // 真实 per-tool-call 分解(数据源:ai.js 活动 _messages 快照)。
             let toolCallsByType = null;
             try {
               const {
                 analyzeMessageBreakdown,
-              } = require('../../services/context/messageBreakdown');
+              } = require('../../services/domain/session/context/messageBreakdown.js');
               const { getConversation } = require('../../cli/ai');
               if (typeof getConversation === 'function') {
                 const mb = analyzeMessageBreakdown(

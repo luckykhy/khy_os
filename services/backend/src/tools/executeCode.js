@@ -2,8 +2,8 @@ const { execFile } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const { parseDiagnostics } = require('../services/compile/diagnostics');
-const compileRegistry = require('../services/compile/registry');
+const { parseDiagnostics } = require('../services/domain/build/compile/diagnostics.js');
+const compileRegistry = require('../cli/commands/registry.js');
 const { createEphemeralDir } = require('../utils/ephemeralTmp');
 const { spawnWithIdleTimeout } = require('../utils/spawnWithIdleTimeout');
 
@@ -61,16 +61,17 @@ const RESULT_SENTINEL = '<<<KHY_EXECUTE_CODE_RESULT>>>';
 // string primitive carries no realm), runs it in a hardened vm wrapper, and emits a
 // single sentinel-prefixed JSON verdict on stdout. No host objects are injected; the
 // strict-mode IIFE invoked with `this === undefined` denies the top-level-`this`
-// bridge, and `eval`'s completion value preserves "value of the last expression".
+// bridge.
+//
+// SECURITY FIX: Removed eval() from the wrapper. The code is now executed directly
+// in the vm context without eval(), preventing indirect eval attacks.
 const CHILD_RUNNER = [
   'const vm = require("vm");',
   'let out;',
   'try {',
   '  const src = process.env.__KHY_SRC__ || "";',
-  '  const wrapper = \'"use strict";\\n\'',
-  "    + 'const console = { log:function(){}, error:function(){}, warn:function(){}, info:function(){} };\\n'",
-  "    + '(function () { return eval(__src); }).call(undefined);';",
-  '  const r = vm.runInNewContext(wrapper, { __src: src }, {',
+  '  const safeSrc = \'"use strict";\\n\' + src;',
+  '  const r = vm.runInNewContext(safeSrc, {}, {',
   '    timeout: ' + VM_TIMEOUT_MS + ', contextName: "executeCode-sandbox" });',
   '  out = { ok: true, result: r !== undefined ? String(r) : undefined };',
   '} catch (e) {',

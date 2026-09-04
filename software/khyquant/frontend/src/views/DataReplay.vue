@@ -128,7 +128,7 @@
         </el-col>
         <el-col :span="6">
           <el-card class="account-card">
-            <div class="account-num" :style="{color: totalReturn >= 0 ? '#67c23a' : '#f56c6c'}">
+            <div class="account-num" :style="{color: totalReturn >= 0 ? 'var(--khy-success)' : 'var(--khy-danger)'}">
               {{ totalReturn >= 0 ? '+' : '' }}{{ totalReturn.toFixed(2) }}%
             </div>
             <div class="account-label">总收益率</div>
@@ -359,11 +359,11 @@ const initChart = () => {
   })
 
   candleSeries = chart.addCandlestickSeries({
-    upColor: '#ef5350',
+    upColor: 'var(--khy-danger)',
     downColor: '#26a69a',
-    borderUpColor: '#ef5350',
+    borderUpColor: 'var(--khy-danger)',
     borderDownColor: '#26a69a',
-    wickUpColor: '#ef5350',
+    wickUpColor: 'var(--khy-danger)',
     wickDownColor: '#26a69a',
   })
 

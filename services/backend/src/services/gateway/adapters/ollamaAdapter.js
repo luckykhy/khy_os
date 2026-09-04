@@ -686,7 +686,7 @@ function buildChatMessages(prompt, options, { hasTools = false } = {}) {
   const messages = [];
   let _flattenOL;
   try {
-    _flattenOL = require('../../../services/contentBlockUtils').flattenContent;
+    _flattenOL = require('../../contentBlockUtils').flattenContent;
   } catch {
     _flattenOL = (c) => String(c || '');
   }

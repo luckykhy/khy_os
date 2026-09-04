@@ -90,7 +90,7 @@ async function handleRollback(command, subCommand, args, options) {
     // back honestly to the most recent available checkpoint and say so.
     let codeNote = '代码未恢复(无可用检查点)';
     try {
-      const ckpt = require('../../services/workspace/checkpointService');
+      const ckpt = require('../../services/domain/workspace/workspace/checkpointService.js');
       const ckCwd = process.env.KHYQUANT_CWD || projectDir;
       if (plan && plan.hasCheckpoint) {
         ckpt.restoreCheckpoint(ckCwd, plan.checkpointId);

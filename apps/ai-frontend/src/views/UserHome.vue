@@ -202,7 +202,7 @@ function enterAdmin() {
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.18);
   border: 1px solid rgba(255, 255, 255, 0.35);
-  color: #fff;
+  color: var(--khy-white);
   font-weight: 800;
   font-size: 26px;
   flex-shrink: 0;
@@ -214,7 +214,7 @@ function enterAdmin() {
 
 .home-hero-title {
   margin: 0;
-  color: #fff;
+  color: var(--khy-white);
   font-weight: 700;
   font-size: 22px;
   letter-spacing: 0.3px;
@@ -232,7 +232,7 @@ function enterAdmin() {
   z-index: 1;
   background: rgba(255, 255, 255, 0.16) !important;
   border-color: rgba(255, 255, 255, 0.35) !important;
-  color: #fff !important;
+  color: var(--khy-white) !important;
 }
 
 .home-alert {

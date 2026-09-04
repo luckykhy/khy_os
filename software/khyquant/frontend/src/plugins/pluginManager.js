@@ -110,7 +110,7 @@ export function installPlugins(app, router, pinia) {
   }
 
   if (pluginState.plugins.length > 0) {
-    console.log(
+    if (import.meta.env.DEV) { console.log( }
       `[PluginManager] ${pluginState.plugins.length} plugin(s) loaded:`,
       pluginState.plugins.map(p => p.displayName).join(', ')
     )

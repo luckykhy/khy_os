@@ -339,7 +339,7 @@
           </div>
           <div v-else-if="quotesLoading" class="empty-state-quotes">
             <div class="empty-icon">
-              <el-icon :size="80" color="#409eff"><Loading /></el-icon>
+              <el-icon :size="80" color="var(--khy-primary)"><Loading /></el-icon>
             </div>
             <div class="empty-title">正在加载行情数据...</div>
             <div class="empty-description">正在从服务器获取最新行情快照</div>
@@ -434,7 +434,7 @@
             <el-table-column prop="name" label="策略名称" min-width="120">
               <template #default="scope">
                 <div class="strategy-name">
-                  <el-icon color="#409eff"><Document /></el-icon>
+                  <el-icon color="var(--khy-primary)"><Document /></el-icon>
                   <span>{{ scope.row.name }}</span>
                 </div>
               </template>
@@ -663,7 +663,7 @@ const loadDashboardData = async () => {
     if (response.data.success) {
       const data = response.data.data;
       
-      console.log('📊 后端返回的数据:', {
+      if (import.meta.env.DEV) { console.log('📊 后端返回的数据:', { }
         stats: data.stats,
         strategiesCount: data.recentStrategies?.length,
         backtestsCount: data.recentBacktests?.length,
@@ -693,7 +693,7 @@ const loadDashboardData = async () => {
         createdAt: formatDate(b.createdAt)
       }))
       
-      console.log('✅ 主页数据加载成功:', {
+      if (import.meta.env.DEV) { console.log('✅ 主页数据加载成功:', { }
         strategies: recentStrategies.value.length,
         backtests: recentBacktests.value.length,
         stats: stats.value
@@ -801,7 +801,7 @@ onMounted(async () => {
   }
   
   // 🔥 步骤3: 自动加载自选标的的行情数据
-  console.log('📊 自动加载自选标的行情数据...')
+  if (import.meta.env.DEV) { console.log('📊 自动加载自选标的行情数据...') }
   await loadFavoriteQuotesData()
   
   // 🔥 步骤4: 切换到自选标的分类显示
@@ -868,7 +868,7 @@ onUnmounted(() => {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   padding: var(--spacing-md);
-  background: #fff;
+  background: var(--khy-white);
 }
 
 .handover-retention-header {
@@ -1134,7 +1134,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
   padding: 12px 24px;
-  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  background: linear-gradient(135deg, var(--khy-gray-900) 0%, #2d2d2d 100%);
   border: 3px solid #FFD700;
   border-radius: 50px;
   color: #FFD700;
@@ -1266,11 +1266,11 @@ onUnmounted(() => {
 }
 
 .stat-card-primary::before {
-  background: linear-gradient(90deg, #409eff, #66b1ff);
+  background: linear-gradient(90deg, var(--khy-primary), #66b1ff);
 }
 
 .stat-card-success::before {
-  background: linear-gradient(90deg, #67c23a, #85ce61);
+  background: linear-gradient(90deg, var(--khy-success), #85ce61);
 }
 
 .stat-card-warning::before {
@@ -1278,7 +1278,7 @@ onUnmounted(() => {
 }
 
 .stat-card-danger::before {
-  background: linear-gradient(90deg, #f56c6c, #f78989);
+  background: linear-gradient(90deg, var(--khy-danger), #f78989);
 }
 
 .stat-icon-wrapper {
@@ -1652,11 +1652,11 @@ onUnmounted(() => {
 }
 
 .price-up {
-  color: #f56c6c;
+  color: var(--khy-danger);
 }
 
 .price-down {
-  color: #67c23a;
+  color: var(--khy-success);
 }
 
 .price-neutral {

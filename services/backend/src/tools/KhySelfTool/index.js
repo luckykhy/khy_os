@@ -88,7 +88,7 @@ Returns structured data; do not confuse khy's own source dir with the user's pro
 
   _loadCatalog() {
     try {
-      const cc = require('../../services/commandCatalog/commandCatalog');
+      const cc = require('../../services/domain/catalog/commandCatalog/commandCatalog.js');
       if (typeof cc.buildCommandCatalog === 'function') {
         return cc.buildCommandCatalog();
       }

@@ -13,7 +13,7 @@
  * readFile.js define a tool with the same name, the subdirectory version wins.
  *
  * Usage:
- *   const tools = require('./tools');
+ *   const tools = require('../cli/handlers/tools.js');
  *   tools.getAll()           // → Map<name, tool>
  *   tools.get('quote')       // → tool definition
  *   tools.getDefinitions()   // → function-calling format array
@@ -89,7 +89,6 @@ function loadTools() {
   if (_loaded) {
     return;
   }
-  _loaded = true;
 
   // ── Phase 1: Load subdirectory-based tools (BaseTool classes) ───
   try {
@@ -222,6 +221,8 @@ function loadTools() {
   } catch {
     /* commandRegistry not available */
   }
+
+  _loaded = true;
 }
 
 /**
@@ -306,14 +307,14 @@ function getDefinitions(profileId, options = {}) {
     const beforeCount = tools.size;
     tools = _filterDeferred(tools);
     const afterCount = tools.size;
-    if (process.env.KHY_DEBUG_TOOLS === '1' && (profileId === undefined || profileId === 'full')) {
+    if (process.env.KHY_DEBUG_TOOLS === '1') {
       console.error(
         `[DEBUG-PROFILE] getDefinitions(profileId=${profileId}) deferred: ${beforeCount}→${afterCount}, revealedDeferred=[${[..._revealedDeferred].join(',')}]`
       );
     }
   }
   const schemaLevel = options && options.schemaLevel;
-  if (process.env.KHY_DEBUG_TOOLS === '1' && (profileId === undefined || profileId === 'full')) {
+  if (process.env.KHY_DEBUG_TOOLS === '1') {
     console.error(
       `[DEBUG-PROFILE] getDefinitions returning ${tools.size} tools: [${[...tools.keys()].join(', ')}]`
     );
@@ -436,14 +437,18 @@ async function execute(name, params = {}, context = {}) {
     const toolCalling = require('../services/toolCalling');
     const result = await toolCalling.executeTool(name, p, context || {});
     return normalizeToolResult(result);
-  } catch {
-    // toolCalling not available — execute directly (no permission check)
-    try {
-      const result = await tool.execute(p, context);
-      return normalizeToolResult(result);
-    } catch (err) {
-      return { success: false, error: err.message, content: err.message };
+  } catch (err) {
+    // Only fall back to direct execution when toolCalling module itself fails to load.
+    // Any other error (permission denial, validation failure, etc.) must propagate.
+    if (err && err.code === 'MODULE_NOT_FOUND') {
+      try {
+        const result = await tool.execute(p, context);
+        return normalizeToolResult(result);
+      } catch (err2) {
+        return { success: false, error: err2.message, content: err2.message };
+      }
     }
+    throw err;
   }
 }
 
@@ -561,7 +566,9 @@ function isDenied(name, rules) {
       return true;
     }
     if (rule.tool.includes('*')) {
-      const pattern = new RegExp('^' + rule.tool.replace(/\*/g, '.*') + '$');
+      // Escape all regex special chars except *, then convert * to .*
+      const escaped = rule.tool.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+      const pattern = new RegExp('^' + escaped + '$');
       if (pattern.test(name)) {
         return true;
       }

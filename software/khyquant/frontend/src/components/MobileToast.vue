@@ -143,19 +143,19 @@ defineExpose({
 
 /* Toast类型样式 */
 .toast-success {
-  border: 2px solid #67c23a;
+  border: 2px solid var(--khy-success);
 }
 
 .toast-success .toast-icon {
-  color: #67c23a;
+  color: var(--khy-success);
 }
 
 .toast-error {
-  border: 2px solid #f56c6c;
+  border: 2px solid var(--khy-danger);
 }
 
 .toast-error .toast-icon {
-  color: #f56c6c;
+  color: var(--khy-danger);
 }
 
 .toast-warning {
@@ -167,11 +167,11 @@ defineExpose({
 }
 
 .toast-info {
-  border: 2px solid #409eff;
+  border: 2px solid var(--khy-primary);
 }
 
 .toast-info .toast-icon {
-  color: #409eff;
+  color: var(--khy-primary);
 }
 
 /* Toast图标 */
@@ -190,7 +190,7 @@ defineExpose({
 .toast-message {
   font-size: 16px;
   font-weight: 600;
-  color: #fff;
+  color: var(--khy-white);
   margin: 0 0 4px 0;
   line-height: 1.5;
   word-wrap: break-word;
@@ -198,7 +198,7 @@ defineExpose({
 
 .toast-description {
   font-size: 14px;
-  color: #ccc;
+  color: var(--khy-gray-200);
   margin: 0;
   line-height: 1.5;
   word-wrap: break-word;
@@ -215,7 +215,7 @@ defineExpose({
   background: rgba(255, 255, 255, 0.1);
   border: none;
   border-radius: 50%;
-  color: #fff;
+  color: var(--khy-white);
   font-size: 18px;
   cursor: pointer;
   transition: background 0.2s;

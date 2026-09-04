@@ -152,10 +152,9 @@ function safeLs(dir) {
   }
 }
 
-// Thin delegate to the canonical formatter (utils/formatBytes); the default
-// 3-tier B/KB/MB cascade is byte-identical to the previous local implementation.
+// Thin delegate to the canonical formatter (utils/humanBytes)
 function humanSize(bytes) {
-  return _formatBytesAtom(bytes);
+  return require('../utils/humanBytes').humanBytes(bytes);
 }
 
 function atomicWriteText(filePath, content) {

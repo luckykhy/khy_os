@@ -353,6 +353,9 @@ function validateSyntax() {
   const lines = code.split('\n')
 
   // Real JavaScript syntax check via Function constructor
+  // SECURITY: new Function() is used here ONLY for syntax validation, not execution.
+  // The function is never called - it only checks if the code parses correctly.
+  // This is a common pattern for client-side syntax checking.
   try {
     new Function('data', 'params', code)
   } catch (syntaxError) {
@@ -548,7 +551,7 @@ defineExpose({
   font-size: 14px;
   line-height: 1.6;
   color: #303133;
-  background: #ffffff;
+  background: var(--khy-white);
   pointer-events: none;
   z-index: 1;
   white-space: pre-wrap;
@@ -577,7 +580,7 @@ defineExpose({
 }
 
 :deep(.hl-comment) {
-  color: #999999;
+  color: var(--khy-gray-400);
   font-style: italic;
 }
 

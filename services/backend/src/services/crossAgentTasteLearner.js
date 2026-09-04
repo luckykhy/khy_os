@@ -373,7 +373,7 @@ function _getUsageScan() {
     return _usageScan;
   }
   try {
-    _usageScan = require('./ccSwitch/usageScan');
+    _usageScan = require('./domain/config/ccSwitch/usageScan');
   } catch {
     _usageScan = false; // remember the failure
   }
@@ -546,7 +546,7 @@ function discoverSessionFiles(opts = {}) {
   if (usageScan) {
     let providerApps;
     try {
-      const { APPS } = require('./ccSwitch/constants');
+      const { APPS } = require('./domain/config/ccSwitch/constants');
       providerApps = Object.values(APPS);
     } catch {
       providerApps = [];

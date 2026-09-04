@@ -60,7 +60,7 @@ const c = {
 const ok = (msg) => console.log(c.green('  ✓ ') + msg);
 const fail = (msg) => console.log(c.red('  ✗ ') + msg);
 const warn = (msg) => console.log(c.yellow('  ⚠ ') + msg);
-const info = (msg) => console.log(c.blue('  ℹ ') + msg);
+const info = (msg) => console.log(c.blue('  i ') + msg);
 const step = (n, msg) => console.log(c.cyan(`\n  [${n}] `) + c.bold(msg));
 
 // ── Platform detection ───────────────────────────────────────────────────────

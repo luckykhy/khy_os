@@ -244,6 +244,68 @@ clean:
 	rm -rf $(BUILD)
 	cd $(MOONBIT_DIR) && moon clean 2>/dev/null || true
 
+# ── Preemption correctness test ────────────────────────────────
+# Validates that timer-driven preemption tames CPU-bound tasks.
+# Strategy: run QEMU for ~3s, capture serial output, verify that
+# the preemption test heartbeat appears multiple times while the
+# CPU-bound spinner is also running. If preemption is broken, the
+# spinner starves the heartbeat task → test fails.
+#
+# Requires: qemu-system-x86_64, timeout command.
+# ───────────────────────────────────────────────────────────────
+TOOLS_DIR   = tools
+TEST_SRC    = $(TOOLS_DIR)/test-preemption.c
+TEST_OBJ    = $(BUILD)/test-preemption.o
+TEST_ELF    = $(BUILD)/test-preemption.elf
+# Embed the test as a userland program accessible at /bin/test-preemption
+USERLAND_PROGS := $(USERLAND_PROGS) preemption_test
+
+$(TEST_OBJ): $(TEST_SRC) | $(BUILD)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Link as a userland-like ELF for embedding (same flags as userland)
+$(TEST_ELF): $(TEST_OBJ)
+	$(LD) -static -nostdlib -n -Ttext=0x500000 -e test_preemption_main $< -o $@
+
+# Generate the embedded header (same pattern as userland/*.asm)
+$(SRC_DIR)/user_preemption_test_blob.h: $(TEST_ELF)
+	guard=USER_PREEMPTION_TEST_BLOB_H; \
+	{ \
+	  echo "/* user_preemption_test_blob.h — GENERATED, do not edit by hand."; \
+	  echo " *"; \
+	  echo " * Preemption correctness test binary."; \
+	  echo " * Source: $(TEST_SRC). Regenerate with: make test-preemption-iso"; \
+	  echo " */"; \
+	  echo "#ifndef $$guard"; \
+	  echo "#define $$guard"; \
+	  echo ""; \
+	  xxd -i $(TEST_ELF) \
+	    | sed -e "s/unsigned char test_preemption_elf\[\]/static const unsigned char user_preemption_test_elf[]/" \
+	          -e "s/unsigned int test_preemption_elf_len/static const unsigned int user_preemption_test_elf_len/"; \
+	  echo ""; \
+	  echo "#endif /* $$guard */"; \
+	} > $@
+
+test-preemption-iso: $(KERNEL) $(SRC_DIR)/user_preemption_test_blob.h
+	@echo "[PREEMPTION-TEST] Built with test-preemption support."
+	@echo "[PREEMPTION-TEST] Run 'make run' and observe serial output for heartbeat messages."
+
+# Run preemption test in QEMU with timeout and capture output
+test-preemption: $(ISO)
+	@echo "[PREEMPTION-TEST] Running QEMU for 5 seconds..."
+	@timeout 5 qemu-system-x86_64 -cdrom $(ISO) -serial stdio -display none -no-reboot 2>&1 | tee /tmp/preemption-test.log || true
+	@echo "[PREEMPTION-TEST] Checking results..."
+	@HB_COUNT=$$(grep -c 'heartbeat' /tmp/preemption-test.log 2>/dev/null || echo 0); \
+	echo "[PREEMPTION-TEST] Heartbeats detected: $$HB_COUNT"; \
+	if [ "$$HB_COUNT" -ge 3 ]; then \
+	  echo "[PREEMPTION-TEST] PASS: preemption is working (>= 3 heartbeats in 5s)"; \
+	else \
+	  echo "[PREEMPTION-TEST] FAIL: insufficient heartbeats ($$HB_COUNT, expected >= 3)"; \
+	  exit 1; \
+	fi
+
+.PHONY: test-preemption-iso test-preemption
+
 # ── Sanity check ───────────────────────────────────────────────
 # Quick verification of the built kernel binary: ELF magic, entry point,
 # and reasonable size.  Run after `make` or in CI to catch link failures

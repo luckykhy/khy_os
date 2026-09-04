@@ -16,6 +16,7 @@ const http = require('http');
 const https = require('https');
 const os = require('os');
 const path = require('path');
+const crypto = require('crypto');
 
 const _cleanInput = require('../utils/collapseWhitespaceLoose');
 
@@ -1622,8 +1623,8 @@ async function _fetchJokeFromWeb(category) {
     return text;
   };
 
-  // cache-bust: 时间戳 + 随机数，让 CDN / 服务端每次返回不同结果
-  const _bust = () => `_t=${Date.now()}&_r=${Math.random().toString(36).slice(2, 8)}`;
+  // cache-bust: 时间戳 + 密码学安全随机数，让 CDN / 服务端每次返回不同结果
+  const _bust = () => `_t=${Date.now()}&_r=${crypto.randomBytes(4).toString('hex')}`;
 
   // ── 默认中文优先，每个方案最多重试 3 次拿到不重复的 ──
 
@@ -2347,7 +2348,7 @@ async function _rawWebSearch(query) {
  * @returns {Promise<Array|null>}
  */
 async function _unifiedWebSearch(query) {
-  const { unifiedSearch } = require('./search/unifiedSearch');
+  const { unifiedSearch } = require('./domain/query/search/unifiedSearch');
 
   const deps = {
     async webSearch(q) {

@@ -154,21 +154,21 @@ function initCharts() {
     width: chartRef.value.clientWidth,
     height: parseInt(props.chartHeight) || 500,
     layout: {
-      background: { type: ColorType.Solid, color: '#1a1a1a' },
-      textColor: '#ccc',
+      background: { type: ColorType.Solid, color: 'var(--khy-gray-900)' },
+      textColor: 'var(--khy-gray-200)',
     },
     grid: {
-      vertLines: { color: '#333' },
-      horzLines: { color: '#333' },
+      vertLines: { color: 'var(--khy-gray-700)' },
+      horzLines: { color: 'var(--khy-gray-700)' },
     },
     crosshair: {
       mode: 1,
     },
     rightPriceScale: {
-      borderColor: '#555',
+      borderColor: 'var(--khy-gray-600)',
     },
     timeScale: {
-      borderColor: '#555',
+      borderColor: 'var(--khy-gray-600)',
       timeVisible: true,
       secondsVisible: false,
     },
@@ -188,29 +188,29 @@ function initCharts() {
     width: volumeRef.value.clientWidth,
     height: 150,
     layout: {
-      background: { type: ColorType.Solid, color: '#1a1a1a' },
-      textColor: '#ccc',
+      background: { type: ColorType.Solid, color: 'var(--khy-gray-900)' },
+      textColor: 'var(--khy-gray-200)',
     },
     grid: {
-      vertLines: { color: '#333' },
-      horzLines: { color: '#333' },
+      vertLines: { color: 'var(--khy-gray-700)' },
+      horzLines: { color: 'var(--khy-gray-700)' },
     },
     rightPriceScale: {
-      borderColor: '#555',
+      borderColor: 'var(--khy-gray-600)',
     },
     timeScale: {
-      borderColor: '#555',
+      borderColor: 'var(--khy-gray-600)',
       visible: false,
     },
   })
 
   // 创建K线系列
   candlestickSeries.value = mainChart.value.addCandlestickSeries({
-    upColor: '#ef5350',
+    upColor: 'var(--khy-danger)',
     downColor: '#26a69a',
-    borderUpColor: '#ef5350',
+    borderUpColor: 'var(--khy-danger)',
     borderDownColor: '#26a69a',
-    wickUpColor: '#ef5350',
+    wickUpColor: 'var(--khy-danger)',
     wickDownColor: '#26a69a',
   })
 
@@ -298,10 +298,10 @@ function updateMovingAverages() {
   maSeries.value = {}
 
   const colors = {
-    MA5: '#fff',
-    MA10: '#ffeb3b',
+    MA5: 'var(--khy-white)',
+    MA10: 'var(--khy-warning)',
     MA20: '#e91e63',
-    MA30: '#00bcd4'
+    MA30: 'var(--khy-info)'
   }
 
   indicators.value.forEach(indicator => {
@@ -341,7 +341,7 @@ function updateSignalMarkers() {
     return
   }
 
-  console.log('🔄 StrategyKLineChart: 更新信号标记', props.signals.length, '个信号')
+  if (import.meta.env.DEV) { console.log('🔄 StrategyKLineChart: 更新信号标记', props.signals.length, '个信号') }
 
   // 清除现有的信号覆盖层
   const existingOverlay = chartRef.value.querySelector('#signal-overlay')
@@ -408,7 +408,7 @@ function updateSignalMarkers() {
           kline: klineData[closestIndex]
         }
         
-        console.log(`📍 信号 ${signalIndex + 1} 时间匹配:`, {
+        if (import.meta.env.DEV) { console.log(`📍 信号 ${signalIndex + 1} 时间匹配:`, { }
           signalTime: signal.time,
           signalTimestamp: signalTimestamp,
           matchedKlineTime: new Date(klineData[closestIndex].timestamp).toISOString(),
@@ -463,7 +463,7 @@ function updateSignalMarkers() {
         top: ${Math.max(5, Math.min(95, topPercent))}%;
         width: 20px;
         height: 20px;
-        color: ${signal.type === 'buy' ? '#ef5350' : '#26a69a'};
+        color: ${signal.type === 'buy' ? 'var(--khy-danger)' : '#26a69a'};
         display: flex;
         align-items: center;
         justify-content: center;
@@ -527,7 +527,7 @@ function updateSignalMarkers() {
 
       marker.style.opacity = '0'
 
-      console.log(`✅ 信号 ${signalIndex + 1} 已定位:`, {
+      if (import.meta.env.DEV) { console.log(`✅ 信号 ${signalIndex + 1} 已定位:`, { }
         type: signal.type,
         price: signalPrice,
         leftPercent: leftPercent.toFixed(1),
@@ -540,7 +540,7 @@ function updateSignalMarkers() {
     }
   })
 
-  console.log('✅ StrategyKLineChart: 所有信号标记已根据实际位置设置')
+  if (import.meta.env.DEV) { console.log('✅ StrategyKLineChart: 所有信号标记已根据实际位置设置') }
 }
 
 function handleResize() {
@@ -560,7 +560,7 @@ function handleResize() {
 <style scoped>
 .strategy-kline-container {
   width: 100%;
-  background: #1a1a1a;
+  background: var(--khy-gray-900);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -571,7 +571,7 @@ function handleResize() {
   align-items: center;
   padding: 15px 20px;
   background: #252525;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid var(--khy-gray-700);
 }
 
 .symbol-info {
@@ -583,12 +583,12 @@ function handleResize() {
 .symbol-name {
   font-size: 18px;
   font-weight: bold;
-  color: #fff;
+  color: var(--khy-white);
 }
 
 .symbol-code {
   font-size: 14px;
-  color: #999;
+  color: var(--khy-gray-400);
 }
 
 .strategy-name {
@@ -596,7 +596,7 @@ function handleResize() {
   align-items: center;
   gap: 5px;
   font-size: 14px;
-  color: #409eff;
+  color: var(--khy-primary);
   padding: 4px 12px;
   background: rgba(64, 158, 255, 0.1);
   border-radius: var(--radius-md);
@@ -616,7 +616,7 @@ function handleResize() {
 .signal-stats {
   padding: 15px 20px;
   background: #252525;
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--khy-gray-700);
 }
 
 .stat-item {
@@ -624,23 +624,23 @@ function handleResize() {
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: #1a1a1a;
+  background: var(--khy-gray-900);
   border-radius: 4px;
 }
 
 .stat-item .label {
-  color: #999;
+  color: var(--khy-gray-400);
   font-size: 14px;
 }
 
 .stat-item .value {
   font-size: 16px;
   font-weight: bold;
-  color: #fff;
+  color: var(--khy-white);
 }
 
 .stat-item .value.buy {
-  color: #ef5350;
+  color: var(--khy-danger);
 }
 
 .stat-item .value.sell {
@@ -648,11 +648,11 @@ function handleResize() {
 }
 
 :deep(.el-checkbox) {
-  color: #ccc;
+  color: var(--khy-gray-200);
 }
 
 :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
-  background-color: #409eff;
-  border-color: #409eff;
+  background-color: var(--khy-primary);
+  border-color: var(--khy-primary);
 }
 </style>

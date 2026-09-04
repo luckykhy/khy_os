@@ -617,7 +617,7 @@ onMounted(() => {
 .stat-number {
   font-size: 28px;
   font-weight: bold;
-  color: #409eff;
+  color: var(--khy-primary);
   margin-bottom: 5px;
 }
 
@@ -628,7 +628,7 @@ onMounted(() => {
 
 .stat-icon {
   font-size: 32px;
-  color: #409eff;
+  color: var(--khy-primary);
   opacity: 0.8;
 }
 
@@ -713,7 +713,7 @@ onMounted(() => {
   background: #f8f9fa;
   padding: 15px;
   border-radius: var(--radius-sm);
-  border-left: 4px solid #409eff;
+  border-left: 4px solid var(--khy-primary);
   line-height: 1.6;
   color: #606266;
   margin: 0;

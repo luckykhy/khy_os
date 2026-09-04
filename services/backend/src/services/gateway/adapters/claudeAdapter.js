@@ -46,7 +46,7 @@ let _genaiEvents = null;
 function genai() {
   if (_genaiEvents === null) {
     try {
-      _genaiEvents = require('../../agentsight/genaiEvents');
+      _genaiEvents = require('../../domain/agents/agentsight/genaiEvents');
     } catch {
       _genaiEvents = false;
     }
@@ -1944,7 +1944,7 @@ function buildDirectToolDefs() {
     //      「内置永远赢」（activateContributedTool 只在正常解析返回 null 后才触发）同向；
     //   ③ 整段 try/catch —— 拓展目录坏掉不该让模型清单构建失败。
     try {
-      const declared = require('../../plugins/pluginContribResolver').listDeclaredTools();
+      const declared = require('../../domain/extensions/plugins/pluginContribResolver').listDeclaredTools();
       for (const d of declared) {
         if (pool.has(d.name) || defs.some((x) => x.name === d.name)) {
           continue;

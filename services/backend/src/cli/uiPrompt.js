@@ -14,7 +14,7 @@
  *
  * Rather than rewrite every dropped-to-classic command, handlers swap
  *   const inquirer = require('inquirer');         // ← old
- *   const { promptCompat } = require('../uiPrompt'); // ← new
+ *   const { promptCompat } = require('uiPrompt.js'); // ← new
  * and call `promptCompat(questions)` with the SAME inquirer question array.
  * When Ink is active and registered, the questions are translated to a FormFlow
  * spec and collected natively; otherwise the real inquirer is invoked, so the

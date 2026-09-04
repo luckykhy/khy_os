@@ -58,7 +58,7 @@ function detectStacks(cwd) {
   const dir = _resolveRoot(cwd);
   const stacks = [];
   try {
-    const { detectProject } = require('./deploy/projectDetector');
+    const { detectProject } = require('./domain/deploy/deploy/projectDetector');
     const plan = detectProject(dir) || {};
     if (plan.type && plan.type !== 'unknown') {
       stacks.push(String(plan.type));

@@ -20,6 +20,12 @@ const GOVERNANCE_DOC = 'docs/03_DESIGN_设计/[DESIGN-ARCH-070] 治理总纲与�
 const GOVERNANCE_SCRIPT = 'scripts/ci/check-gov-rules.js';
 const REQUIRED_BLOCKS = ['GOV-MOD', 'GOV-MEM', 'GOV-TOOL', 'GOV-ACP', 'GOV-API'];
 
+// ── ACP Protocol Version ────────────────────────────────────────────────
+const ACP_PROTOCOL_VERSION = '1.0';
+
+// ── ACP Schema Validation ────────────────────────────────────────────────
+const ACP_SCHEMA_PATH = 'services/backend/src/contracts/acp/acp-message.schema.json';
+
 function readText(relPath) {
   const abs = path.join(repoRoot, relPath);
   return fs.existsSync(abs) ? fs.readFileSync(abs, 'utf8') : null;
@@ -73,6 +79,50 @@ function checkGovernanceRegistration(findings, packageJson) {
   }
 }
 
+/**
+ * Check ACP protocol compliance.
+ * Verifies that acpTransport.js exports the required protocol functions
+ * with trace/deadline/version metadata support (GOV-ACP-001, GOV-ACP-003).
+ */
+function checkAcpProtocolCompliance(findings) {
+  const transportPath = path.join(repoRoot, 'services', 'backend', 'src', 'services', 'acpTransport.js');
+  if (!fs.existsSync(transportPath)) {
+    return; // acpTransport.js not found, skip
+  }
+  
+  const source = fs.readFileSync(transportPath, 'utf8');
+  
+  // Check for meta field support in createRequest/createResponse/createErrorResponse
+  const hasMetaSupport = /\bcreateRequest\s*\([^)]*meta/.test(source) &&
+                         /\bcreateResponse\s*\([^)]*meta/.test(source) &&
+                         /\bcreateErrorResponse\s*\([^)]*meta/.test(source);
+  if (!hasMetaSupport) {
+    addFinding(findings, 'GOV-ACP-003', 'acpTransport.js',
+      'ACP 消息构造函数必须支持 meta 字段（trace/deadline/version）。');
+  }
+  
+  // Check for trace ID generation
+  const hasTraceId = /generateTraceId|crypto\.randomBytes/.test(source);
+  if (!hasTraceId) {
+    addFinding(findings, 'GOV-ACP-003', 'acpTransport.js',
+      'ACP 必须生成可传播的 trace ID。');
+  }
+  
+  // Check for deadline support
+  const hasDeadline = /createDeadline|deadline/.test(source);
+  if (!hasDeadline) {
+    addFinding(findings, 'GOV-ACP-003', 'acpTransport.js',
+      'ACP 必须支持请求 deadline。');
+  }
+  
+  // Check for protocol version constant
+  const hasProtocolVersion = /ACP_PROTOCOL_VERSION|protocol.*version/i.test(source);
+  if (!hasProtocolVersion) {
+    addFinding(findings, 'GOV-ACP-004', 'acpTransport.js',
+      'ACP 必须声明协议版本常量。');
+  }
+}
+
 function main() {
   const findings = [];
   const packageText = readText('package.json');
@@ -86,6 +136,7 @@ function main() {
   }
 
   checkGovernanceDocument(findings);
+  checkAcpProtocolCompliance(findings);
   if (packageJson === null) {
     addFinding(findings, 'GOV-TOOL-004', 'package.json', '缺少根 package.json，无法验证检查入口。');
   } else {

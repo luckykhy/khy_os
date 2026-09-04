@@ -603,18 +603,18 @@ onUnmounted(() => {
   padding: 14px 16px;
   border: 1px solid #e5ebf5;
   border-radius: 10px;
-  background: linear-gradient(180deg, #ffffff, #f8fbff);
+  background: linear-gradient(180deg, var(--khy-white), #f8fbff);
   box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
 }
 
 .asset-stat--blue {
-  border-left: 3px solid #3b82f6;
+  border-left: 3px solid var(--khy-primary);
 }
 .asset-stat--amber {
-  border-left: 3px solid #f59e0b;
+  border-left: 3px solid var(--khy-warning);
 }
 .asset-stat--green {
-  border-left: 3px solid #10b981;
+  border-left: 3px solid var(--khy-success);
 }
 .asset-stat--rose {
   border-left: 3px solid #f43f5e;
@@ -649,7 +649,7 @@ onUnmounted(() => {
   height: 200px;
   border: 1px solid #e5ebf5;
   border-radius: 8px;
-  background: #fff;
+  background: var(--khy-white);
 }
 
 .checkout-qr-missing {

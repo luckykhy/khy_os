@@ -23,15 +23,15 @@
 const { printInfo, printError, printTable, printSuccess } = require('../formatters');
 
 function _core() {
-  return require('../../services/messaging/msgChannelCore');
+  return require('../../services/domain/messaging/messaging/msgChannelCore.js');
 }
 
 function _store() {
-  return require('../../services/messaging/msgConfigStore');
+  return require('../../services/domain/messaging/messaging/msgConfigStore.js');
 }
 
 function _sender() {
-  return require('../../services/messaging/msgSender');
+  return require('../../services/domain/messaging/messaging/msgSender.js');
 }
 
 function _persist(value, deps) {

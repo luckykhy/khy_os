@@ -4,7 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const genericExtractor = require('../services/reverseEngineer/genericExtractor');
+const genericExtractor = require('../services/domain/data/reverseEngineer/genericExtractor.js');
 const _expandPath = require('../utils/expandEnvPath');
 
 const { defineTool } = require('./_baseTool');
@@ -269,7 +269,7 @@ async function _extractAsar(asarPath, outputDir, listOnly) {
     parseHeaderSize,
     parseHeader,
     flattenEntries,
-  } = require('../services/reverseEngineer/asarArchive');
+  } = require('../services/domain/data/reverseEngineer/asarArchive.js');
 
   const fd = fs.openSync(asarPath, 'r');
   try {

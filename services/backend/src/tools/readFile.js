@@ -234,7 +234,7 @@ module.exports = defineTool({
           buildBinaryReadRefusal,
         } = require('./readBinaryGuard');
         if (binaryReadGuardEnabled(process.env)) {
-          const { detectFile } = require('../services/formatInspect/fileFormatDetector');
+          const { detectFile } = require('../services/domain/structured/formatInspect/fileFormatDetector.js');
           const fmt = detectFile(filePath);
           if (isBinaryForRead(fmt)) {
             // 1) 先试按格式路由到提取器,真正读出内容(提取器全有界,故不会卡死)。

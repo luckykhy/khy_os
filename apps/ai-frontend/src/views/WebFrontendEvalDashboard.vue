@@ -250,10 +250,10 @@ onMounted(refresh);
   margin-top: 2px;
 }
 .stat-card--blue .stat-value {
-  color: #409eff;
+  color: var(--khy-primary);
 }
 .stat-card--green .stat-value {
-  color: #67c23a;
+  color: var(--khy-success);
 }
 .stat-card--amber .stat-value {
   color: #e6a23c;

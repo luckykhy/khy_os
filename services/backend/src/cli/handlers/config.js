@@ -119,7 +119,7 @@ const _normalizeCompatibility = require('../../utils/normalizeCompatibility');
 // 语言偏好归一收敛到纯叶子单一真源(SSOT),与 /lang 命令面、prompts.js
 // getLanguageSection 共用同一归一逻辑;此处保留薄包装以维持调用点不变。
 function _normalizeLanguagePreference(raw = '') {
-  return require('../../services/config/langPreference').normalizeLanguage(raw);
+  return require('../../services/domain/config/config/langPreference.js').normalizeLanguage(raw);
 }
 
 function _pickFirstNonEmpty(...candidates) {
@@ -1070,7 +1070,7 @@ function _handleConfigGet(args = [], options = {}) {
     });
     return true;
   }
-  printInfo(`${key} = ${value === undefined ? '(not set)' : value}`);
+  printTable([['Key', 'Value']], [[key, value === undefined ? '(not set)' : value]]);
   return true;
 }
 
@@ -1109,10 +1109,8 @@ function _handleConfigLayers(options = {}) {
     return true;
   }
 
-  printInfo('已生效的 settings 层（低→高优先级，后者覆盖前者）:');
-  for (const layer of layers) {
-    printInfo(`  • ${layer.name}: ${layer.file}`);
-  }
+  console.log('');
+  printTable(['层级', '文件'], layers.map((l) => [l.name, l.file]));
   const rows = Object.entries(value).map(([key, val]) => [
     key,
     typeof val === 'object' ? JSON.stringify(val) : String(val),

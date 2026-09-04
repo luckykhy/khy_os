@@ -148,7 +148,7 @@ function verifyActionClaims(text, toolCallLog = [], env) {
     if (!isEnabled(env)) {
       return [];
     }
-    const { reconcile } = require('./trajectoryProvenance/claimReconciler');
+    const { reconcile } = require('./domain/trajectory/trajectoryProvenance/claimReconciler');
     const r = reconcile(
       String(text == null ? '' : text),
       Array.isArray(toolCallLog) ? toolCallLog : [],

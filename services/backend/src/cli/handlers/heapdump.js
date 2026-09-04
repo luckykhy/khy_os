@@ -43,7 +43,7 @@ async function handleHeapdump(_subCommand, _args = [], _options = {}) {
 
   let sessionId = '';
   try {
-    sessionId = require('../../services/session/sessionForestService').getCurrentSessionId() || '';
+    sessionId = require('../../services/domain/session/session/sessionForestService.js').getCurrentSessionId() || '';
   } catch {
     /* best-effort; manual dump tolerates no session */
   }

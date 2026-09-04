@@ -9,10 +9,16 @@
  */
 
 const { AUDIT_AGENT } = require('./built-in/auditAgent');
+const { BROWSER_AGENT } = require('./built-in/browserAgent');
+const { COMPUTER_USE_AGENT } = require('./built-in/computerUseAgent');
 const { SECURITY_AGENT } = require('./built-in/securityAgent');
 const { PERFORMANCE_AGENT } = require('./built-in/performanceAgent');
 const { DEBUG_AGENT } = require('./built-in/debugAgent');
 const { DOC_AGENT } = require('./built-in/docAgent');
+const { GEN_IMAGE_AGENT } = require('./built-in/genImageAgent');
+const { INIT_AGENT } = require('./built-in/initAgent');
+const { KNOWLEDGE_AGENT } = require('./built-in/knowledgeAgent');
+const { KNOWLEDGE_PLAN_AGENT } = require('./built-in/knowledgePlanAgent');
 const { REFACTOR_AGENT } = require('./built-in/refactorAgent');
 const { DEPLOY_AGENT } = require('./built-in/deployAgent');
 const { EXPLORE_AGENT } = require('./built-in/exploreAgent');
@@ -25,6 +31,8 @@ const { READING_AGENT } = require('./built-in/readingAgent');
 const { RESEARCH_AGENT } = require('./built-in/researchAgent');
 const { REVIEW_AGENT } = require('./built-in/reviewAgent');
 const { STATUSLINE_SETUP_AGENT } = require('./built-in/statuslineSetup');
+const { ULTRA_PLAN_AGENT } = require('./built-in/ultraPlanAgent');
+const { ULTRA_REVIEW_AGENT } = require('./built-in/ultraReviewAgent');
 const { VERIFICATION_AGENT } = require('./built-in/verificationAgent');
 
 /**
@@ -48,6 +56,14 @@ const { VERIFICATION_AGENT } = require('./built-in/verificationAgent');
  * @param {boolean} [opts.enableRefactor] - Enable refactor (code restructuring) agent (default true)
  * @param {boolean} [opts.enableDeploy] - Enable deploy (CI/CD and release) agent (default true)
  * @param {boolean} [opts.enableReview] - Enable review (code quality reviewer) agent (default true)
+ * @param {boolean} [opts.enableBrowser] - Enable browser automation agent (default true)
+ * @param {boolean} [opts.enableComputerUse] - Enable computer use / GUI automation agent (default true)
+ * @param {boolean} [opts.enableGenImage] - Enable image generation agent (default true)
+ * @param {boolean} [opts.enableInit] - Enable project initialization agent (default true)
+ * @param {boolean} [opts.enableKnowledge] - Enable knowledge management agent (default true)
+ * @param {boolean} [opts.enableKnowledgePlan] - Enable knowledge planning agent (default true)
+ * @param {boolean} [opts.enableUltraPlan] - Enable multi-agent deep parallel planning agent (default true)
+ * @param {boolean} [opts.enableUltraReview] - Enable multi-agent deep parallel review agent (default true)
  * @returns {Array<import('./types').AgentDefinition>}
  */
 function getBuiltInAgents(opts = {}) {
@@ -68,6 +84,14 @@ function getBuiltInAgents(opts = {}) {
     enableRefactor = true,
     enableDeploy = true,
     enableReview = true,
+    enableBrowser = true,
+    enableComputerUse = true,
+    enableGenImage = true,
+    enableInit = true,
+    enableKnowledge = true,
+    enableKnowledgePlan = true,
+    enableUltraPlan = true,
+    enableUltraReview = true,
   } = opts;
 
   // Allow disabling all built-in agents via env var (useful for SDK users)
@@ -139,6 +163,38 @@ function getBuiltInAgents(opts = {}) {
 
   if (enableReview) {
     agents.push(REVIEW_AGENT);
+  }
+
+  if (enableBrowser) {
+    agents.push(BROWSER_AGENT);
+  }
+
+  if (enableComputerUse) {
+    agents.push(COMPUTER_USE_AGENT);
+  }
+
+  if (enableGenImage) {
+    agents.push(GEN_IMAGE_AGENT);
+  }
+
+  if (enableInit) {
+    agents.push(INIT_AGENT);
+  }
+
+  if (enableKnowledge) {
+    agents.push(KNOWLEDGE_AGENT);
+  }
+
+  if (enableKnowledgePlan) {
+    agents.push(KNOWLEDGE_PLAN_AGENT);
+  }
+
+  if (enableUltraPlan) {
+    agents.push(ULTRA_PLAN_AGENT);
+  }
+
+  if (enableUltraReview) {
+    agents.push(ULTRA_REVIEW_AGENT);
   }
 
   return agents;

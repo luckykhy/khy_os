@@ -138,7 +138,7 @@ function _isReadyForAutoPrefer({ env = process.env } = {}) {
  */
 function _readConfigJson(env = process.env) {
   const dir = env.COMMAND_CODE_HOME
-    ? require('../../externalApps/_shared').expandHome(env.COMMAND_CODE_HOME, env)
+    ? require('../../domain/network/externalApps/_shared').expandHome(env.COMMAND_CODE_HOME, env)
     : path.join(os.homedir(), '.commandcode');
   const file = path.join(dir, 'config.json');
   if (!fs.existsSync(file)) return { defaultModel: '', dir };
@@ -156,7 +156,7 @@ function _readConfigJson(env = process.env) {
 
 function _readProvidersJson(env = process.env) {
   const dir = env.COMMAND_CODE_HOME
-    ? require('../../externalApps/_shared').expandHome(env.COMMAND_CODE_HOME, env)
+    ? require('../../domain/network/externalApps/_shared').expandHome(env.COMMAND_CODE_HOME, env)
     : path.join(os.homedir(), '.commandcode');
   const file = path.join(dir, 'providers.json');
   if (!fs.existsSync(file)) return [];

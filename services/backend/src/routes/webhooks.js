@@ -15,7 +15,7 @@
  * 记录后丢弃 —— 这是既有限制,不在本次范围内。
  *
  * Register this router in the Express app:
- *   app.use('/webhooks', require('./routes/webhooks'));
+ *   app.use('/webhooks', require('webhooks.js'));
  */
 
 const express = require('express');
@@ -69,7 +69,7 @@ router.post('/slack', express.raw({ type: 'application/json' }), (req, res) => {
 
 function _getSlackChannel() {
   try {
-    const { getMessageRouter } = require('../services/channels/messageRouter');
+    const { getMessageRouter } = require('../services/domain/messaging/channels/messageRouter.js');
     const router = getMessageRouter();
     const channels = router.getChannels();
     const slack = channels.find((ch) => ch.name === 'slack');
@@ -86,7 +86,7 @@ function _getSlackChannel() {
 /** 取某个已注册的消息渠道(dingtalk/feishu/wecom),未注册返回 null。 */
 function _getChannel(name) {
   try {
-    const { getMessageRouter } = require('../services/channels/messageRouter');
+    const { getMessageRouter } = require('../services/domain/messaging/channels/messageRouter.js');
     return getMessageRouter()._channels?.get(name) || null;
   } catch {
     return null;

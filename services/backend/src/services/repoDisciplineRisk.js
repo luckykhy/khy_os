@@ -30,7 +30,7 @@
 
 // 复用既有纯叶子真源——绝不重造提交质量评分与路径分级。
 const evolutionPolicy = require('./evolutionPolicy');
-const forgeCore = require('./forge/forgeCore');
+const forgeCore = require('./domain/build/forge/forgeCore');
 
 const REPO_DISCIPLINE_MARKER = 'KHY_REPO_DISCIPLINE';
 

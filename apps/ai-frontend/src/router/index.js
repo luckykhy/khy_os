@@ -101,6 +101,12 @@ const routes = [
         meta: { requiresAdmin: true },
       },
       {
+        path: 'traffic',
+        name: 'TrafficMonitor',
+        component: viewLoaders['/traffic'],
+        meta: { requiresAdmin: true },
+      },
+      {
         path: 'settings',
         name: 'AISettings',
         component: viewLoaders['/settings'],

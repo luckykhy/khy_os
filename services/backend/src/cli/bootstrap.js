@@ -7,12 +7,31 @@ const path = require('path');
 let _initialized = false;
 let _sequelize = null;
 
-async function bootstrap({ syncSchema = false, silent = false } = {}) {
+async function bootstrap({ syncSchema = false, silent = false, onProgress = null } = {}) {
   if (_initialized) {
     return { sequelize: _sequelize };
   }
 
+  // When the TUI is running a CLI command, show progress even if silent=true
+  // because the TUI has cleared its frame and the user would see nothing.
+  let _tuiCli = false;
+  try {
+    _tuiCli = require('./formatters').isTuiRunningCliCommand();
+  } catch {
+    /* ignore */
+  }
+  const _effectiveSilent = silent && !_tuiCli && !onProgress;
+
+  const _emit = (msg) => {
+    if (onProgress) {
+      onProgress(msg);
+    } else if (!_effectiveSilent) {
+      console.log(msg);
+    }
+  };
+
   // Delegate to bootstrap pipeline if available (env, defaults, shutdown handlers)
+  _emit('初始化环境...');
   try {
     const { init } = require('../bootstrap/init');
     await init();
@@ -46,15 +65,16 @@ async function bootstrap({ syncSchema = false, silent = false } = {}) {
 
   // 3. Initialize database (auto-detect PG vs SQLite)
   //    Mute database.js module-level console output in silent mode
+  _emit('初始化数据库...');
   const origLog = console.log;
   const origWarn = console.warn;
-  if (silent) {
+  if (silent && !_tuiCli) {
     console.log = () => {};
     console.warn = () => {};
   }
   const db = require('../config/database');
   _sequelize = await db.initDatabase();
-  if (silent) {
+  if (silent && !_tuiCli) {
     console.log = origLog;
     console.warn = origWarn;
   }
@@ -63,7 +83,7 @@ async function bootstrap({ syncSchema = false, silent = false } = {}) {
   // Keeps CLI/database features healthy after upgrades without manual commands.
   try {
     const { runAutoDbMigration } = require('../bootstrap/dbAutoMigration');
-    await runAutoDbMigration({ silent, reason: 'cli-bootstrap' });
+    await runAutoDbMigration({ silent: silent && !onProgress, reason: 'cli-bootstrap' });
   } catch {
     // Non-critical: command handlers can still run with best-effort schema.
   }
@@ -113,15 +133,14 @@ async function bootstrap({ syncSchema = false, silent = false } = {}) {
     .catch(() => {});
 
   // 4. Register all model associations
+  _emit('注册数据模型...');
   require('../models');
 
   // 5. Verify connection
+  _emit('验证数据库连接...');
   try {
     await _sequelize.authenticate();
-    if (!silent) {
-      const mode = process.env.DB_MODE || 'unknown';
-      console.log(`  Database connected (${mode})`);
-    }
+    _emit(`数据库已连接 (${process.env.DB_MODE || 'unknown'})`);
   } catch (err) {
     if (!silent) {
       console.error('  Database connection failed:', err.message);
@@ -130,11 +149,10 @@ async function bootstrap({ syncSchema = false, silent = false } = {}) {
 
   // 6. Sync schema if requested
   if (syncSchema) {
+    _emit('同步数据库结构...');
     try {
       await _sequelize.sync({ force: false });
-      if (!silent) {
-        console.log('  Schema synchronized');
-      }
+      _emit('数据库结构已同步');
     } catch (err) {
       if (!silent) {
         console.error('  Schema sync failed:', err.message);

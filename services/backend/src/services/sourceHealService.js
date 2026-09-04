@@ -30,7 +30,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { sweepBundledOrphans } = require('./orphanSweep/orphanSweep');
+const { sweepBundledOrphans } = require('./domain/maintenance/orphanSweep/orphanSweep');
 const policy = require('./sourceHealPolicy');
 const {
   SNAPSHOT_ENC_NAME,

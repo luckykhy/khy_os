@@ -115,7 +115,7 @@ test('buildTierDirective:门开含三级 + 全部元工具 + 单一规范名规�
 test('集成:注册表里每个已注册工具都能分到一个层级(1/2/3),无 null/未知', () => {
   let tools = [];
   try {
-    const map = require('../../tools').getAll();
+    const map = require('../../cli/handlers/tools').getAll();
     if (map && typeof map.values === 'function') {
       tools = Array.from(map.values());
     } else if (Array.isArray(map)) {

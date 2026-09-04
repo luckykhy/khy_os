@@ -16,7 +16,7 @@
  *
  * 契约:纯函数、确定性、不 mutate。`|| ''` 令 falsy(含 undefined 零参)→ 返 '(empty)'。
  *
- * 各消费方保留同名本地 `const NAME = require('.../maskToken')`→ 调用点逐字节不变。
+ * 各消费方保留同名本地 `const NAME = require('maskToken.js')`→ 调用点逐字节不变。
  */
 
 function maskToken(raw) {

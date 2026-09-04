@@ -51,19 +51,16 @@ function _readMergedTaskLines() {
   }
 }
 
-// Permission modes cycled by Shift+Tab. The cycle is 5-wide
-// (default → acceptEdits → plan → auto → bypass), mirroring Claude Code's
-// Shift+Tab order (auto/bypass slot after plan). `acceptEdits` is CC's
-// "auto-accept edits" sweet spot (non-destructive fs edits auto-approved,
-// shell/destructive still prompt); `auto` auto-approves routine calls but still
-// prompts for destructive/high-risk (deterministic riskGate analog of CC's
-// classifier-gated auto). The sixth CC mode, `dontAsk`, is startup/settings only
-// (KHY_PERMISSION_MODE=dontAsk) and intentionally NOT in the cycle — matching CC.
+// Permission modes cycled by Shift+Tab. The cycle is 7-wide
+// (default → acceptEdits → plan → auto → bypass → RedPass), mirroring Claude
+// Shift+Tab order (auto/bypass slot after plan, RedPass at end).
+// `acceptEdits` is CC's "auto-accept edits" sweet spot; `auto` auto-approves
+// routine calls but still prompts for destructive/high-risk; `bypass` allows
+// everything except critical red line. RedPass is a special adversarial testing
+// mode that replaces the system prompt to probe model safety boundaries.
 // Each mode maps to a KHY permissionStore profile that actually gates tool
-// execution — see applyPermissionMode(). NOTE: the old readline REPL's modes
-// were default/auto/bypass with an inverted bypass→strict mapping; we use CC's
-// clearer semantics (bypass = allow everything).
-const PERMISSION_MODES = ['default', 'acceptEdits', 'plan', 'auto', 'bypass'];
+// execution — see applyPermissionMode().
+const PERMISSION_MODES = ['default', 'acceptEdits', 'plan', 'auto', 'bypass', 'RedPass'];
 
 // Apply a permission mode to the real tool-gating singletons. The TUI state
 // alone is cosmetic — tool execution is gated by permissionStore._profile (and
@@ -97,6 +94,8 @@ function applyPermissionMode(mode) {
     if (mode === 'bypass') {
       toolCalling.enableDangerousMode();
       toolCalling.acknowledgeDangerousMode();
+    } else if (mode === 'RedPass') {
+      toolCalling.disableDangerousMode();
     } else {
       toolCalling.disableDangerousMode();
     }

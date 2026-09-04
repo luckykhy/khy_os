@@ -302,7 +302,7 @@
 
         <el-form-item label="公开策略">
           <el-switch v-model="newStrategy.isPublic" />
-          <span style="margin-left: 10px; color: #999; font-size: 12px;">
+          <span style="margin-left: 10px; color: var(--khy-gray-400); font-size: 12px;">
             公开后其他用户可以查看和使用
           </span>
         </el-form-item>
@@ -576,7 +576,7 @@ function selectStrategy(strategy) {
 // 加载策略到交易界面
 async function loadToTrading(strategy) {
   try {
-    console.log('🔄 开始加载策略到交易界面:', strategy.name)
+    if (import.meta.env.DEV) { console.log('🔄 开始加载策略到交易界面:', strategy.name) }
     
     // 设置加载状态
     loadingStrategyId.value = strategy.id
@@ -597,7 +597,7 @@ async function loadToTrading(strategy) {
       showClose: true
     })
     
-    console.log('✅ 策略加载完成:', strategy.name)
+    if (import.meta.env.DEV) { console.log('✅ 策略加载完成:', strategy.name) }
     
   } catch (error) {
     console.error('❌ 加载策略到交易界面失败:', error)
@@ -873,15 +873,15 @@ onMounted(async () => {
   
   // 监听策略事件
   const onStrategyCreated = (strategy) => {
-    console.log('📢 策略创建事件:', strategy.name)
+    if (import.meta.env.DEV) { console.log('📢 策略创建事件:', strategy.name) }
   }
   
   const onStrategyUpdated = (strategy) => {
-    console.log('📢 策略更新事件:', strategy.name)
+    if (import.meta.env.DEV) { console.log('📢 策略更新事件:', strategy.name) }
   }
   
   const onStrategyDeleted = (strategy) => {
-    console.log('📢 策略删除事件:', strategy.name)
+    if (import.meta.env.DEV) { console.log('📢 策略删除事件:', strategy.name) }
     // 如果删除的是当前加载的策略，清除加载状态
     if (loadedStrategyId.value === strategy.id) {
       loadedStrategyId.value = null
@@ -889,7 +889,7 @@ onMounted(async () => {
   }
   
   const onBacktestCompleted = ({ strategy, result }) => {
-    console.log('📢 回测完成事件:', strategy.name, result)
+    if (import.meta.env.DEV) { console.log('📢 回测完成事件:', strategy.name, result) }
     if (strategyStore.selectedStrategy?.id === strategy.id) {
       quickBacktestResult.value = result
     }
@@ -930,8 +930,8 @@ onUnmounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #111;
-  color: #fff;
+  background: var(--khy-gray-900);
+  color: var(--khy-white);
 }
 
 .manager-header {
@@ -939,12 +939,12 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 15px;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid var(--khy-gray-700);
 }
 
 .manager-header h3 {
   margin: 0;
-  color: #fff;
+  color: var(--khy-white);
   font-size: 16px;
 }
 
@@ -960,8 +960,8 @@ onUnmounted(() => {
 }
 
 .strategy-item {
-  background: #1a1a1a;
-  border: 1px solid #333;
+  background: var(--khy-gray-900);
+  border: 1px solid var(--khy-gray-700);
   border-radius: 6px;
   padding: 15px;
   margin-bottom: 10px;
@@ -970,8 +970,8 @@ onUnmounted(() => {
 }
 
 .strategy-item:hover {
-  border-color: #555;
-  background: #222;
+  border-color: var(--khy-gray-600);
+  background: var(--khy-gray-800);
 }
 
 .strategy-item.active {
@@ -991,7 +991,7 @@ onUnmounted(() => {
 .strategy-name {
   font-size: 14px;
   font-weight: bold;
-  color: #fff;
+  color: var(--khy-white);
   margin-bottom: 5px;
   display: flex;
   align-items: center;
@@ -1006,7 +1006,7 @@ onUnmounted(() => {
 
 .detail-item {
   font-size: 12px;
-  color: #888;
+  color: var(--khy-gray-400);
 }
 
 .strategy-stats {
@@ -1016,7 +1016,7 @@ onUnmounted(() => {
 
 .stat-item {
   font-size: 12px;
-  color: #ccc;
+  color: var(--khy-gray-200);
 }
 
 .profit-positive {
@@ -1028,7 +1028,7 @@ onUnmounted(() => {
 }
 
 .profit-neutral {
-  color: #ccc;
+  color: var(--khy-gray-200);
 }
 
 .strategy-actions {
@@ -1039,8 +1039,8 @@ onUnmounted(() => {
 
 /* 快速回测面板 */
 .quick-backtest-panel {
-  border-top: 1px solid #333;
-  background: #1a1a1a;
+  border-top: 1px solid var(--khy-gray-700);
+  background: var(--khy-gray-900);
 }
 
 .panel-header {
@@ -1048,8 +1048,8 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 10px 15px;
-  border-bottom: 1px solid #333;
-  background: #222;
+  border-bottom: 1px solid var(--khy-gray-700);
+  background: var(--khy-gray-800);
 }
 
 .panel-title {
@@ -1064,7 +1064,7 @@ onUnmounted(() => {
 
 .quick-result {
   padding: 15px;
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--khy-gray-700);
 }
 
 .result-stats {
@@ -1075,7 +1075,7 @@ onUnmounted(() => {
 }
 
 .stat-card {
-  background: #222;
+  background: var(--khy-gray-800);
   padding: 10px;
   border-radius: 4px;
   text-align: center;
@@ -1083,14 +1083,14 @@ onUnmounted(() => {
 
 .stat-label {
   font-size: 12px;
-  color: #888;
+  color: var(--khy-gray-400);
   margin-bottom: 4px;
 }
 
 .stat-value {
   font-size: 16px;
   font-weight: bold;
-  color: #fff;
+  color: var(--khy-white);
 }
 
 .stat-value.profit-positive {
@@ -1132,12 +1132,12 @@ onUnmounted(() => {
 }
 
 .detection-item .label {
-  color: #ccc;
+  color: var(--khy-gray-200);
   min-width: 80px;
 }
 
 .detection-item .confidence {
-  color: #888;
+  color: var(--khy-gray-400);
   font-size: 12px;
 }
 
@@ -1168,7 +1168,7 @@ onUnmounted(() => {
 
 .recommendation-item.warning {
   background: rgba(255, 193, 7, 0.1);
-  color: #ffc107;
+  color: var(--khy-warning);
 }
 
 .recommendation-item.success {
@@ -1198,7 +1198,7 @@ onUnmounted(() => {
 }
 
 .manual-config {
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--khy-gray-700);
   padding-top: 15px;
   margin-top: 10px;
   display: none; /* 隐藏手动配置选项 */
@@ -1209,9 +1209,9 @@ onUnmounted(() => {
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   font-size: 13px;
   line-height: 1.5;
-  background: #1a1a1a;
-  color: #fff;
-  border: 1px solid #444;
+  background: var(--khy-gray-900);
+  color: var(--khy-white);
+  border: 1px solid var(--khy-gray-600);
 }
 
 .instrument-option {
@@ -1230,68 +1230,68 @@ onUnmounted(() => {
 }
 
 .instrument-sector {
-  color: #888;
+  color: var(--khy-gray-400);
   font-size: 12px;
 }
 
 /* Element Plus 样式覆盖 */
 :deep(.el-dialog) {
-  background: #1a1a1a;
-  border: 1px solid #333;
+  background: var(--khy-gray-900);
+  border: 1px solid var(--khy-gray-700);
 }
 
 :deep(.el-dialog__header) {
-  background: #222;
-  border-bottom: 1px solid #333;
+  background: var(--khy-gray-800);
+  border-bottom: 1px solid var(--khy-gray-700);
 }
 
 :deep(.el-dialog__title) {
-  color: #fff;
+  color: var(--khy-white);
 }
 
 :deep(.el-dialog__body) {
-  background: #1a1a1a;
-  color: #fff;
+  background: var(--khy-gray-900);
+  color: var(--khy-white);
 }
 
 :deep(.el-form-item__label) {
-  color: #ccc;
+  color: var(--khy-gray-200);
 }
 
 :deep(.el-input__wrapper) {
-  background: #222;
-  border-color: #444;
+  background: var(--khy-gray-800);
+  border-color: var(--khy-gray-600);
 }
 
 :deep(.el-input__inner) {
-  color: #fff;
+  color: var(--khy-white);
 }
 
 :deep(.el-select .el-input__wrapper) {
-  background: #222;
-  border-color: #444;
+  background: var(--khy-gray-800);
+  border-color: var(--khy-gray-600);
 }
 
 :deep(.el-input-number .el-input__wrapper) {
-  background: #222;
-  border-color: #444;
+  background: var(--khy-gray-800);
+  border-color: var(--khy-gray-600);
 }
 
 :deep(.el-textarea__inner) {
-  background: #222;
-  border-color: #444;
-  color: #fff;
+  background: var(--khy-gray-800);
+  border-color: var(--khy-gray-600);
+  color: var(--khy-white);
 }
 
 :deep(.el-button) {
-  background: #333;
-  border-color: #555;
-  color: #ccc;
+  background: var(--khy-gray-700);
+  border-color: var(--khy-gray-600);
+  color: var(--khy-gray-200);
 }
 
 :deep(.el-button:hover) {
-  background: #555;
-  border-color: #777;
+  background: var(--khy-gray-600);
+  border-color: var(--khy-gray-500);
 }
 
 :deep(.el-button--primary) {
@@ -1310,7 +1310,7 @@ onUnmounted(() => {
 }
 
 :deep(.el-empty) {
-  color: #888;
+  color: var(--khy-gray-400);
 }
 
 :deep(.el-tag) {
@@ -1336,15 +1336,15 @@ onUnmounted(() => {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1a1a1a;
+  background: var(--khy-gray-900);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #555;
+  background: var(--khy-gray-600);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #777;
+  background: var(--khy-gray-500);
 }
 </style>

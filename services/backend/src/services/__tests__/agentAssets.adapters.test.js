@@ -15,15 +15,15 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const claudeCode = require('../agentAssets/adapters/claudeCode');
-const dsh = require('../agentAssets/adapters/deepseekHarness');
-const harness = require('../agentAssets/adapters/harness');
-const khyOs = require('../agentAssets/adapters/khyOs');
-const openclaw = require('../agentAssets/adapters/openclaw');
-const opencode = require('../agentAssets/adapters/opencode');
-const M = require('../agentAssets/assetModel');
-const registry = require('../agentAssets/registry');
-const sync = require('../agentAssets/sync');
+const claudeCode = require('../domain/agents/agentAssets/adapters/claudeCode');
+const dsh = require('../domain/agents/agentAssets/adapters/deepseekHarness');
+const harness = require('../domain/agents/agentAssets/adapters/harness');
+const khyOs = require('../domain/agents/agentAssets/adapters/khyOs');
+const openclaw = require('../domain/agents/agentAssets/adapters/openclaw');
+const opencode = require('../domain/agents/agentAssets/adapters/opencode');
+const M = require('../domain/agents/agentAssets/assetModel');
+const registry = require('../domain/agents/agentAssets/registry');
+const sync = require('../domain/agents/agentAssets/sync');
 
 // ── 临时资产树工具 ──────────────────────────────────────────────────────
 

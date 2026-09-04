@@ -185,7 +185,7 @@ function maybeAutoCheckpointProgress(reason, folderNameHint) {
   try {
     let leaf;
     try {
-      leaf = require('../services/memoryEngine/sessionCheckpoint');
+      leaf = require('../services/domain/memory/memoryEngine/sessionCheckpoint.js');
     } catch {
       return false;
     }
@@ -958,14 +958,25 @@ async function handleAiStatus(options = {}) {
   }
 
   console.log('');
-  printInfo(`技术细节开关: ${_onOff(switchStates.techEnabled)}`);
-  printInfo(`开放模式开关: ${_onOff(switchStates.unrestrictedEnabled)}`);
-  printInfo(
-    `Owner 控制: ${ownerStatus.configured ? chalk().green('CONFIGURED') : chalk().yellow('NOT CONFIGURED')}`
+  printTable(
+    ['开关', '状态'],
+    [
+      ['技术细节', _onOff(switchStates.techEnabled)],
+      ['开放模式', _onOff(switchStates.unrestrictedEnabled)],
+      [
+        'Owner 控制',
+        ownerStatus.configured
+          ? chalk().green('CONFIGURED')
+          : chalk().yellow('NOT CONFIGURED'),
+      ],
+      [
+        'Owner 更新',
+        ownerStatus.updatedAt
+          ? new Date(ownerStatus.updatedAt).toLocaleString('zh-CN')
+          : '-',
+      ],
+    ]
   );
-  if (ownerStatus.updatedAt) {
-    printInfo(`Owner 更新: ${new Date(ownerStatus.updatedAt).toLocaleString('zh-CN')}`);
-  }
   if (!ownerStatus.configured) {
     printInfo('建议先运行 ai owner init 初始化 Owner Secret，再使用 ai tech/ai unrestricted');
   }
@@ -984,12 +995,23 @@ async function handleAiOwner(action = 'status', options = {}) {
 
   if (cmd === 'status') {
     const st = owner.getOwnerControlStatus();
-    printInfo(
-      `Owner 控制: ${st.configured ? chalk().green('CONFIGURED') : chalk().yellow('NOT CONFIGURED')}`
+    printTable(
+      ['指标', '值'],
+      [
+        [
+          'Owner 控制',
+          st.configured
+            ? chalk().green('CONFIGURED')
+            : chalk().yellow('NOT CONFIGURED'),
+        ],
+        [
+          '最近更新',
+          st.updatedAt
+            ? new Date(st.updatedAt).toLocaleString('zh-CN')
+            : '-',
+        ],
+      ]
     );
-    if (st.updatedAt) {
-      printInfo(`最近更新: ${new Date(st.updatedAt).toLocaleString('zh-CN')}`);
-    }
     if (!st.configured) {
       printInfo('运行 ai owner init 初始化 Owner Secret');
     }

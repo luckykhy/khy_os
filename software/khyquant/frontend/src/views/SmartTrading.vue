@@ -413,15 +413,15 @@ function handleContractChange(contract) {
 }
 
 function handlePeriodChange(period) {
-  console.log('周期变更:', period)
+  if (import.meta.env.DEV) { console.log('周期变更:', period) }
 }
 
 function handleSignalLoaded(signals) {
-  console.log('信号加载:', signals.length)
+  if (import.meta.env.DEV) { console.log('信号加载:', signals.length) }
 }
 
 function handleOrderPlaced(order) {
-  console.log('订单提交:', order)
+  if (import.meta.env.DEV) { console.log('订单提交:', order) }
 }
 
 async function refreshAllData() {
@@ -453,7 +453,7 @@ async function testAllSources() {
     // 模拟测试所有数据源
     for (const source of availableSources.value) {
       if (source.enabled) {
-        console.log(`测试数据源: ${source.name}`)
+        if (import.meta.env.DEV) { console.log(`测试数据源: ${source.name}`) }
         await new Promise(resolve => setTimeout(resolve, 500))
       }
     }
@@ -513,11 +513,11 @@ onMounted(() => {
 
   // 监听数据源变更事件
   onDataSourceEvent('source-changed', (data) => {
-    console.log('数据源变更:', data)
+    if (import.meta.env.DEV) { console.log('数据源变更:', data) }
   })
 
   onDataSourceEvent('data-updated', (data) => {
-    console.log('数据更新:', data)
+    if (import.meta.env.DEV) { console.log('数据更新:', data) }
   })
 })
 
@@ -557,7 +557,7 @@ onUnmounted(() => {
 
 .system-status {
   font-size: 12px;
-  color: #67C23A;
+  color: var(--khy-success);
   margin-left: 12px;
 }
 
@@ -629,7 +629,7 @@ onUnmounted(() => {
 
 .source-item.active {
   background: rgba(64, 158, 255, 0.1);
-  border-color: #409EFF;
+  border-color: var(--khy-primary);
 }
 
 .source-item.disabled {
@@ -648,9 +648,9 @@ onUnmounted(() => {
   font-size: 8px;
 }
 
-.source-icon.source-connected { color: #67C23A; }
+.source-icon.source-connected { color: var(--khy-success); }
 .source-icon.source-warning { color: #E6A23C; }
-.source-icon.source-disconnected { color: #F56C6C; }
+.source-icon.source-disconnected { color: var(--khy-danger); }
 
 .source-name {
   font-weight: 500;
@@ -696,9 +696,9 @@ onUnmounted(() => {
   font-weight: 500;
 }
 
-.quality-high { color: #67C23A; }
+.quality-high { color: var(--khy-success); }
 .quality-medium { color: #E6A23C; }
-.quality-low { color: #F56C6C; }
+.quality-low { color: var(--khy-danger); }
 .quality-simulated { color: #909399; }
 
 /* 中间交易界面 */
@@ -753,7 +753,7 @@ onUnmounted(() => {
   font-weight: 500;
 }
 
-.sync-ok { color: #67C23A; }
+.sync-ok { color: var(--khy-success); }
 .sync-warning { color: #E6A23C; }
 
 /* 系统提醒 */
@@ -776,7 +776,7 @@ onUnmounted(() => {
 
 .alert-item.info {
   background: rgba(64, 158, 255, 0.1);
-  border-left: 3px solid #409EFF;
+  border-left: 3px solid var(--khy-primary);
 }
 
 .alert-item.warning {
@@ -786,7 +786,7 @@ onUnmounted(() => {
 
 .alert-item.success {
   background: rgba(103, 194, 58, 0.1);
-  border-left: 3px solid #67C23A;
+  border-left: 3px solid var(--khy-success);
 }
 
 .alert-icon {
@@ -874,7 +874,7 @@ onUnmounted(() => {
 }
 .m-agent-card:active { background: rgba(255, 255, 255, 0.08); }
 .m-agent-card.active {
-  border-color: #409EFF;
+  border-color: var(--khy-primary);
   background: rgba(64, 158, 255, 0.08);
 }
 .m-agent-card.disabled { opacity: 0.5; }
@@ -886,10 +886,10 @@ onUnmounted(() => {
   margin-bottom: 6px;
 }
 .m-source-dot { font-size: 10px; }
-.m-source-dot.source-connected { color: #67C23A; }
+.m-source-dot.source-connected { color: var(--khy-success); }
 .m-source-dot.source-warning { color: #E6A23C; }
-.m-source-dot.source-disconnected { color: #F56C6C; }
-.m-source-name { font-size: 15px; font-weight: 500; color: #fff; }
+.m-source-dot.source-disconnected { color: var(--khy-danger); }
+.m-source-name { font-size: 15px; font-weight: 500; color: var(--khy-white); }
 
 .m-card-stats {
   display: flex;
@@ -942,20 +942,20 @@ onUnmounted(() => {
   background: #2a2a3a;
   border: 1px solid #3a3a4a;
   border-radius: 20px;
-  color: #fff;
+  color: var(--khy-white);
   font-size: 14px;
   outline: none;
   min-height: 44px;
 }
-.m-chat-input::placeholder { color: #666; }
-.m-chat-input:focus { border-color: #409EFF; }
+.m-chat-input::placeholder { color: var(--khy-gray-500); }
+.m-chat-input:focus { border-color: var(--khy-primary); }
 .m-chat-send {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: #409EFF;
+  background: var(--khy-primary);
   border: none;
-  color: #fff;
+  color: var(--khy-white);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -998,7 +998,7 @@ onUnmounted(() => {
   justify-content: center;
   background: none;
   border: none;
-  color: #999;
+  color: var(--khy-gray-400);
   font-size: 24px;
   cursor: pointer;
 }
@@ -1015,10 +1015,10 @@ onUnmounted(() => {
   width: 100%;
   min-height: 48px;
   margin-top: 16px;
-  background: #409EFF;
+  background: var(--khy-primary);
   border: none;
   border-radius: 10px;
-  color: #fff;
+  color: var(--khy-white);
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;

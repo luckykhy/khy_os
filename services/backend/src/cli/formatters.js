@@ -578,12 +578,12 @@ function printWarn(msg) {
   console.log(chalk.yellow('  ⚠ ') + msg);
 }
 
-// 启动屏的通知行历史上一律挂同一个 `ℹ`，一屏下来全是重复的字母，
+// 启动屏的通知行历史上一律挂同一个前缀，一屏下来全是重复的字母，
 // 看不出哪条讲登录、哪条讲版本。传了 label 就改成中文词前缀（「登录」「版本」
 // 「清理」），靠词本身区分场景，不引入 emoji（仓库约定见本文件顶部的
 // minimal icons, no emoji）。label 按显示宽度而不是字符数补齐：中文字占 2 列，
 // 英文占 1 列，按 length 补会把混排的正文顶歪。
-// 不传 label 时逐字节保持原样 —— 全仓两千多处调用不该被这次改动波及。
+// 不传 label 时用 ASCII 'i' 前缀，避免 Windows 终端 ℹ (U+2139) 渲染为方块。
 const NOTICE_LABEL_WIDTH = 4;
 
 function printInfo(msg, label) {
@@ -592,7 +592,7 @@ function printInfo(msg, label) {
     console.log('  ' + chalk.blue(label) + pad + '  ' + msg);
     return;
   }
-  console.log(chalk.blue('  ℹ ') + msg);
+  console.log(chalk.blue('  i ') + msg);
 }
 
 /**
@@ -1194,9 +1194,25 @@ function printHelpTopic(topicInput = '') {
   return true;
 }
 
-async function withSpinner(text, fn, { muteOutput = false } = {}) {
-  // When TUI is active, skip all spinner stdout — TUI handles display.
-  if (process.stdout.isTTY) {
+// Set by the TUI when it clears the ink frame to run a CLI command handler
+// (e.g. /review, /backtest). When true, withSpinner writes directly to stdout
+// because the TUI's own spinner is suspended and the screen is cleared.
+// Also read by bootstrap() to show progress even when silent=true.
+let tuiRunningCliCommand = false;
+function isTuiRunningCliCommand() {
+  return tuiRunningCliCommand;
+}
+
+// Module-level progress callback for withSpinner. When set, the spinner text
+// is updated in-place with real progress from the caller.
+let _spinnerProgressCb = null;
+
+async function withSpinner(text, fn, { muteOutput = false, onProgress = null } = {}) {
+  // When the Ink TUI owns the screen AND no CLI command is currently running,
+  // skip all spinner stdout — TUI handles display via its own DynamicSpinner.
+  // When a CLI command IS running (tuiRunningCliCommand === true), the TUI has
+  // cleared its frame and we should show progress directly.
+  if (process.env.KHY_INK_TUI_ACTIVE === '1' && !tuiRunningCliCommand) {
     return fn();
   }
   // On Windows, ora's ANSI cursor control conflicts with readline in REPL mode,
@@ -1205,7 +1221,6 @@ async function withSpinner(text, fn, { muteOutput = false } = {}) {
 
   let spinner;
   if (useSimpleSpinner) {
-    // Simple fallback: just print the text, no animated spinner
     process.stdout.write(chalk.cyan(`  ◌ ${text}...`));
     spinner = {
       succeed: (msg) => {
@@ -1214,15 +1229,15 @@ async function withSpinner(text, fn, { muteOutput = false } = {}) {
       fail: (msg) => {
         process.stdout.write('\r' + chalk.red(`  ✗ ${msg || text}`) + '\n');
       },
+      update: (msg) => {
+        process.stdout.write('\r' + chalk.cyan(`  ◌ ${msg}`) + '...'.padEnd(40));
+      },
     };
   } else {
     try {
       const ora = (await import('ora')).default;
-      // discardStdin: false prevents ora from pausing/closing stdin,
-      // which would destroy any active readline interface and crash the REPL.
       spinner = ora({ text, indent: 2, discardStdin: false }).start();
     } catch {
-      // ora dynamic import may fail — fall back to simple text spinner
       process.stdout.write(chalk.cyan(`  ◌ ${text}`));
       spinner = {
         succeed: (msg) => {
@@ -1231,9 +1246,37 @@ async function withSpinner(text, fn, { muteOutput = false } = {}) {
         fail: (msg) => {
           process.stdout.write('\r' + chalk.red(`  ✗ ${msg || text}`) + '\n');
         },
+        update: (msg) => {
+          process.stdout.write('\r' + chalk.cyan(`  ◌ ${msg}`) + '...'.padEnd(40));
+        },
       };
     }
   }
+
+  // Wire up the progress callback so fn() can update spinner text in real-time.
+  _spinnerProgressCb = onProgress;
+  const _spinnerStart = Date.now();
+  const _reportProgress = (msg) => {
+    if (spinner && typeof spinner.update === 'function') {
+      try {
+        spinner.update(msg);
+      } catch {
+        /* spinner update is best-effort */
+      }
+    }
+    if (_spinnerProgressCb) {
+      _spinnerProgressCb(msg);
+    }
+  };
+
+  // Auto-timer: update spinner text every second with elapsed time, even if
+  // fn() never calls onProgress. Prevents the spinner from looking frozen.
+  const _timer = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - _spinnerStart) / 1000);
+    if (elapsed > 0) {
+      _reportProgress(`${text} (${elapsed}s)`);
+    }
+  }, 1000);
 
   // Suppress noisy service logs (console + winston) while spinner runs
   let origLog, origWarn, origError, origLogLevel;
@@ -1244,7 +1287,6 @@ async function withSpinner(text, fn, { muteOutput = false } = {}) {
     console.log = () => {};
     console.warn = () => {};
     console.error = () => {};
-    // Also silence winston console transport
     try {
       const logger = require('../utils/logger');
       origLogLevel = logger.level;
@@ -1255,6 +1297,8 @@ async function withSpinner(text, fn, { muteOutput = false } = {}) {
   }
 
   const restore = () => {
+    _spinnerProgressCb = null;
+    clearInterval(_timer);
     if (!muteOutput) {
       return;
     }
@@ -1270,7 +1314,7 @@ async function withSpinner(text, fn, { muteOutput = false } = {}) {
   };
 
   try {
-    const result = await fn();
+    const result = await fn(_reportProgress);
     restore();
     spinner.succeed();
     return result;
@@ -1394,4 +1438,7 @@ module.exports = {
   getClassicMonsterPetLines,
   // Farewell
   getRandomFarewell,
+  // TUI CLI command flag
+  setTuiRunningCliCommand: (v) => { tuiRunningCliCommand = !!v; },
+  isTuiRunningCliCommand,
 };

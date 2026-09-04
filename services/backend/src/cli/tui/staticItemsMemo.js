@@ -37,9 +37,11 @@ function isEnabled(env = process.env) {
  */
 function buildStaticItems(messages) {
   const msgs = Array.isArray(messages) ? messages : [];
-  const items = new Array(msgs.length);
+  const items = new Array(msgs.length + 1);
+  // Banner 作为第一个 item,渲染在顶部
+  items[0] = { kind: 'banner', key: 'banner' };
   for (let i = 0; i < msgs.length; i++) {
-    items[i] = { kind: 'message', key: `m${i}`, msg: msgs[i] };
+    items[i + 1] = { kind: 'message', key: `m${i}`, msg: msgs[i] };
   }
   return items;
 }

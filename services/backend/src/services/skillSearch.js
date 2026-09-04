@@ -47,7 +47,7 @@ function searchSkills(query, options = {}) {
 
   // Search manifest-based skills
   try {
-    const skillModule = require('../skills/index');
+    const skillModule = require('./skills/index');
     const skills = skillModule.getCachedSkills();
 
     for (const skill of skills.values()) {
@@ -110,7 +110,7 @@ function searchSkills(query, options = {}) {
   // Search MCP tools
   if (includeMcp) {
     try {
-      const mcp = require('./mcp/index');
+      const mcp = require('./domain/messaging/mcp/index');
       const mcpTools = mcp.listMCPTools();
       for (const tool of mcpTools) {
         const score = _scoreMcpTool(tool, q);
@@ -157,7 +157,7 @@ function surfaceRelevantSkills(message) {
   if (triggerMatch) {
     const trigger = triggerMatch[0];
     try {
-      const skillModule = require('../skills/index');
+      const skillModule = require('./skills/index');
       const skill = skillModule.findSkill(trigger);
       if (skill) {
         result.explicit = _toSearchResult(skill);
@@ -201,7 +201,7 @@ function buildSystemReminder(options = {}) {
 
   // Native skills
   try {
-    const skillModule = require('../skills/index');
+    const skillModule = require('./skills/index');
     const listing = skillModule.formatSkillListing(Math.floor(charBudget * 0.7), {
       cwd: process.cwd(),
     });
@@ -215,7 +215,7 @@ function buildSystemReminder(options = {}) {
   // MCP tools
   if (includeMcp) {
     try {
-      const mcp = require('./mcp/index');
+      const mcp = require('./domain/messaging/mcp/index');
       const tools = mcp.listMCPTools();
       if (tools.length > 0) {
         const mcpBudget = charBudget - sections.reduce((s, sec) => s + sec.length, 0);
@@ -251,7 +251,7 @@ function buildSystemReminder(options = {}) {
   // MCP server instructions
   if (includeMcp) {
     try {
-      const mcp = require('./mcp/index');
+      const mcp = require('./domain/messaging/mcp/index');
       const instructions = mcp.getMCPInstructions();
       if (instructions.length > 0) {
         sections.push('\n' + instructions.join('\n\n'));

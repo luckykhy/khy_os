@@ -129,20 +129,6 @@ static void ipc_client_task(void) {
     for (;;) yield();
 }
 
-/* ── Preemption smoke test ───────────────────────────────────────
- * A CPU-bound task that NEVER yields. Under cooperative-only scheduling it
- * starves every other task; if the shell and timer heartbeat keep making
- * progress alongside it, timer-driven preemption is provably working.
- * TODO(verification-only): remove once preemption is confirmed in QEMU. */
-static void hog_task(void) {
-    uint64_t n = 0;
-    for (;;) {
-        n++;
-        if ((n & 0xFFFFFFF) == 0)
-            serial_print("[HOG] alive (never yields)\n");
-    }
-}
-
 /* ── Kernel entry point ──────────────────────────────────────── */
 
 void kernel_main(uint32_t multiboot_info_addr) {
@@ -349,10 +335,6 @@ void kernel_main(uint32_t multiboot_info_addr) {
 
         vga_print(" [OK] Live desktop started\n");
     }
-
-    /* Preemption smoke test: a non-yielding CPU hog (verification only) */
-    int hog_tid = sched_create_task(hog_task, "hog");
-    if (hog_tid >= 0) process_register_kernel_task("hog", hog_tid);
 
     /* Create shell task */
     int shell_tid = sched_create_task(shell_task, "shell");

@@ -74,9 +74,11 @@ function FooterBar({
   localMode,
   fastMode,
   voiceMode,
+  autoRedPass,
   bridge,
   goalActive,
   contextPlan,
+  cooldownUntilMs,
 }) {
   const { Box, Text } = inkRuntime.get();
   const h = React.createElement;
@@ -114,14 +116,16 @@ function FooterBar({
         acceptEdits: 'accept edits',
         plan: 'plan mode (read-only)',
         bypass: 'bypass permissions on',
+        RedPass: 'RedPass (adversarial)',
       }
     : {
         default: '询问权限',
         acceptEdits: '接受编辑',
         plan: '规划模式（只读）',
         bypass: '绕过权限',
+        RedPass: '破甲测试（红队）',
       };
-  const permColors = { acceptEdits: 'green', plan: 'cyan', bypass: 'yellow' };
+  const permColors = { acceptEdits: 'green', plan: 'cyan', bypass: 'yellow', RedPass: 'red' };
   const permLabel = permLabels[permissionMode] || permLabels.default;
   const permColor = permColors[permissionMode];
   const cycleHint = preferEnglishUi ? '(shift+tab to cycle)' : '(shift+tab 切换)';
@@ -207,6 +211,7 @@ function FooterBar({
       localMode ? h(Text, { color: 'green' }, '  ◆ 本地模式 (/local)') : null,
       fastMode ? h(Text, { color: 'yellow' }, '  ◆ 快速模式 (/fast)') : null,
       voiceMode ? h(Text, { color: 'magenta' }, '  ◆ 语音模式 (/voice)') : null,
+      autoRedPass ? h(Text, { color: 'red' }, '  🔴 自动破甲 (拒绝时切换 RedPass)') : null,
       // CC 对齐:设有活动持久目标时,页脚常驻 `◎ /goal 进行中 (Nm)` 指示器(elapsedLabel
       // 由纯叶子 goalKickoff.formatGoalElapsed 产出)。goalActive 为 null(门控关/无目标/异常)→
       // 不渲该段(逐字节回退今日页脚)。中英文状态词尊重语言偏好(preferEnglishUi)。
@@ -219,6 +224,14 @@ function FooterBar({
               ' (' +
               goalActive.elapsedLabel +
               ')'
+          )
+        : null,
+      // Cooldown countdown: show remaining seconds when security guard is throttling
+      cooldownUntilMs > 0
+        ? h(
+            Text,
+            { color: 'red' },
+            '  ⏳ 冷却 ' + Math.max(0, Math.ceil((cooldownUntilMs - Date.now()) / 1000)) + 's'
           )
         : null
     ),

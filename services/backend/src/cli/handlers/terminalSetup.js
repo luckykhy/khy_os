@@ -18,7 +18,7 @@
 
 const os = require('os');
 
-const plan = require('../../services/terminal/terminalSetupPlan');
+const plan = require('../../services/domain/desktop/terminal/terminalSetupPlan.js');
 const { printInfo, printSuccess, printWarn } = require('../formatters');
 
 /**

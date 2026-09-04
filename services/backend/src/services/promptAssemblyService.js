@@ -65,7 +65,7 @@ function computeStablePrefixHash(systemPromptText) {
 
   // Memory section
   try {
-    const { buildMemorySystemSection } = require('../services/memoryKairos');
+    const { buildMemorySystemSection } = require('./memoryKairos');
     inputs.push(buildMemorySystemSection());
   } catch {
     /* optional */
@@ -156,7 +156,7 @@ function buildStableSystemMessage(systemPromptText, forceRebuild = false) {
 
   // Long-term memory section
   try {
-    const { buildMemorySystemSection } = require('../services/memoryKairos');
+    const { buildMemorySystemSection } = require('./memoryKairos');
     const memorySection = buildMemorySystemSection();
     if (memorySection.trim()) {
       parts.push(memorySection);

@@ -18,7 +18,7 @@
  *
  * 契约:确定性 fail-soft;catch 吞异常返 false;不 mutate。
  *
- * 各消费方保留同名本地 `const _localName = require('.../existsSyncSafe')` → 调用点逐字节不变。
+ * 各消费方保留同名本地 `const _localName = require('existsSyncSafe.js')` → 调用点逐字节不变。
  */
 
 const fs = require('fs');

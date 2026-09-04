@@ -47,7 +47,7 @@
         <div v-if="coreDownload && coreDownload.supported" class="egress-dl">
           <div class="egress-dl-row">
             <span class="egress-dl-label">下载地址({{ coreDownload.version }}):</span>
-            <a :href="coreDownload.url" target="_blank" rel="noopener" class="egress-dl-url">{{
+            <a :href="coreDownload.url" target="_blank" rel="noopener noreferrer" class="egress-dl-url">{{
               coreDownload.url
             }}</a>
             <el-button
@@ -77,7 +77,7 @@
           请下载 mihomo(clash-meta)内核放到 <code>~/.khyquant/bin/</code> (<a
             href="https://github.com/MetaCubeX/mihomo/releases"
             target="_blank"
-            rel="noopener"
+            rel="noopener noreferrer"
             >官方 releases</a
           >), 或改用 http 类型节点 / 本机 Clash。
         </p>

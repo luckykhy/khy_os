@@ -5,7 +5,7 @@ const path = require('path');
 
 const _safeLower = require('../utils/trimLowerCase');
 
-const { detectProject, verify } = require('./verificationAgent');
+const { detectProject, verify } = require('../agents/built-in/verificationAgent');
 
 const BUGFIX_INTENT_PATTERN =
   /(修复|bug|fix(?:ing|ed)?|hotfix|回归|regression|故障|错误|报错|异常|崩溃|crash|fails?|failing|broken|defect|issue)/i;

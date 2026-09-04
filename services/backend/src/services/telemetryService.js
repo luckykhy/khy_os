@@ -560,7 +560,7 @@ function getUnifiedStats() {
 
   // Merge audit log stats (non-critical)
   try {
-    const { getAuditStats } = require('./auditLog');
+    const { getAuditStats } = require('../middleware/auditLog');
     const auditStats = getAuditStats();
     stats.audit = {
       totalCalls: auditStats.totalCalls,

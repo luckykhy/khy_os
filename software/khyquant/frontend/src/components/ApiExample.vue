@@ -227,7 +227,7 @@ async function listSignals() {
   margin-bottom: 24px;
 }
 .step-card {
-  background: #fafafa;
+  background: var(--khy-gray-50);
   border: 1px solid #ebeef5;
   border-radius: 8px;
   padding: 20px;
@@ -256,7 +256,7 @@ async function listSignals() {
 .result.error {
   background: #fef0f0;
   border: 1px solid #fde2e2;
-  color: #f56c6c;
+  color: var(--khy-danger);
 }
 .result pre {
   margin: 8px 0 0 0;

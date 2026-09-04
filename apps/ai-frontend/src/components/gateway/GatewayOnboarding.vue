@@ -214,7 +214,7 @@ function toggle() {
   height: 24px;
   border-radius: 50%;
   background: var(--el-color-primary);
-  color: #fff;
+  color: var(--khy-white);
   font-weight: 700;
   font-size: 13px;
   display: flex;

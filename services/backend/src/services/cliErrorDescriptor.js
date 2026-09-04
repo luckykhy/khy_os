@@ -28,7 +28,7 @@ const {
 
 let codes = null;
 try {
-  codes = require('./failsafe/errorCodes');
+  codes = require('./domain/security/failsafe/errorCodes');
 } catch {
   /* failsafe 字典缺失时降级，不影响主流程 */
 }

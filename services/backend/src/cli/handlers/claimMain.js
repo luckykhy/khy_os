@@ -20,8 +20,8 @@
 
 const os = require('os');
 
-const leaf = require('../../services/claimMain/claimMainPlan');
-const store = require('../../services/claimMain/claimMainStore');
+const leaf = require('../../services/domain/maintenance/claimMain/claimMainPlan.js');
+const store = require('../../services/domain/maintenance/claimMain/claimMainStore.js');
 
 // try/catch combinator 单一真源 utils/tryOr:执行 fn,任何异常 → dflt。
 const _safe = require('../../utils/tryOr');

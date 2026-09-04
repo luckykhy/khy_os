@@ -234,7 +234,7 @@ function _maps() {
   if (_strategyMaps) {
     return _strategyMaps;
   }
-  const S = require('./metaplan/constraintStrategy').STRATEGIES;
+  const S = require('./domain/project/metaplan/constraintStrategy').STRATEGIES;
   const elementToStrategy = { [TOP]: S.PROMPT_SOFT, [SOFT]: S.CODE_HARD, [BOTTOM]: S.SYSTEM_BLOCK };
   const strategyToElement = { [S.PROMPT_SOFT]: TOP, [S.CODE_HARD]: SOFT, [S.SYSTEM_BLOCK]: BOTTOM };
   _strategyMaps = { elementToStrategy, strategyToElement };

@@ -92,7 +92,7 @@ const loadPositions = async () => {
     const response = await request.get('/trading/positions')
     if (response.success) {
       positions.value = response.data || []
-      console.log('✅ 持仓加载成功:', positions.value.length, '个')
+      if (import.meta.env.DEV) { console.log('✅ 持仓加载成功:', positions.value.length, '个') }
     }
   } catch (error) {
     console.error('❌ 加载持仓失败:', error)
@@ -180,7 +180,7 @@ defineExpose({
 
 <style scoped>
 .positions-panel {
-  background: #1a1a1a;
+  background: var(--khy-gray-900);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -190,10 +190,10 @@ defineExpose({
   justify-content: space-between;
   align-items: center;
   padding: 12px 15px;
-  background: linear-gradient(to bottom, #2a2a2a, #1a1a1a);
-  border-bottom: 1px solid #333;
+  background: linear-gradient(to bottom, #2a2a2a, var(--khy-gray-900));
+  border-bottom: 1px solid var(--khy-gray-700);
   font-weight: 600;
-  color: #fff;
+  color: var(--khy-white);
 }
 
 .panel-content {
@@ -202,12 +202,12 @@ defineExpose({
 
 :deep(.el-table) {
   background: transparent;
-  color: #ccc;
+  color: var(--khy-gray-200);
 }
 
 :deep(.el-table th) {
   background: #2a2a2a;
-  color: #ccc;
+  color: var(--khy-gray-200);
   font-weight: 600;
 }
 
@@ -216,11 +216,11 @@ defineExpose({
 }
 
 :deep(.el-table td) {
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid var(--khy-gray-700);
 }
 
 :deep(.el-table__empty-text) {
-  color: #666;
+  color: var(--khy-gray-500);
 }
 
 .profit-up {
@@ -251,11 +251,11 @@ defineExpose({
 }
 
 .summary-item .label {
-  color: #888;
+  color: var(--khy-gray-400);
 }
 
 .summary-item .value {
-  color: #fff;
+  color: var(--khy-white);
   font-weight: 600;
 }
 

@@ -69,7 +69,7 @@ function _htmlParsingAvailable() {
 function _loadEngines(env, configText) {
   try {
     // eslint-disable-next-line global-require
-    const disc = require('./search/searchSourceDiscovery');
+    const disc = require('./domain/query/search/searchSourceDiscovery');
     if (typeof disc.loadDynamicEngines !== 'function') {
       return [];
     }
@@ -85,7 +85,7 @@ function _discoveryEnabled(env) {
   // 语义为默认开（仅 0/false/off 关）。绝不在此重实现闸，否则会与真实加载行为背离。
   try {
     // eslint-disable-next-line global-require
-    const disc = require('./search/searchSourceDiscovery');
+    const disc = require('./domain/query/search/searchSourceDiscovery');
     if (typeof disc.isEnabled === 'function') {
       return !!disc.isEnabled(env);
     }

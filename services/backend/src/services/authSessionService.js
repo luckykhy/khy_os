@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { Op } = require('sequelize');
 
-const { User, AuthSession, UserAuthState } = require('../models');
+const { User, AuthSession, UserAuthState } = require('../constants/models');
 
 const DEFAULT_ACCESS_EXPIRES_IN =
   process.env.AUTH_ACCESS_EXPIRES_IN || process.env.JWT_EXPIRES_IN || '7d';

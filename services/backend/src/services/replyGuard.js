@@ -22,7 +22,7 @@
  * 整体 no-op,逐字节回退到现状。
  */
 
-const continuation = require('./query/continuation');
+const continuation = require('./domain/query/query/continuation');
 
 const ENV_FLAG = 'KHY_REPLY_GUARD';
 

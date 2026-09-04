@@ -35,7 +35,7 @@ function lazyDeploy() {
 }
 
 function lazyLedger() {
-  return require('../../services/deploy/deployLedger');
+  return require('../../services/domain/deploy/deploy/deployLedger.js');
 }
 
 function printUsage() {

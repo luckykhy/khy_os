@@ -680,11 +680,11 @@ function initCharts() {
   // 创建K线系列
   candlestickSeries.value = mainChart.value.addCandlestickSeries({
     upColor: '#26a69a',
-    downColor: '#ef5350',
+    downColor: 'var(--khy-danger)',
     borderUpColor: '#26a69a',
-    borderDownColor: '#ef5350',
+    borderDownColor: 'var(--khy-danger)',
     wickUpColor: '#26a69a',
-    wickDownColor: '#ef5350',
+    wickDownColor: 'var(--khy-danger)',
   })
 
   // 创建成交量系列
@@ -846,10 +846,10 @@ function updateIndicators() {
   if (!klineData || klineData.length === 0) return
   
   const colors = {
-    MA5: '#fff',
-    MA10: '#ffeb3b',
+    MA5: 'var(--khy-white)',
+    MA10: 'var(--khy-warning)',
     MA20: '#e91e63',
-    MA30: '#00bcd4'
+    MA30: 'var(--khy-info)'
   }
 
   enabledIndicators.value.forEach(indicator => {
@@ -890,7 +890,7 @@ function displaySignals() {
     return
   }
 
-  console.log('🔄 UnifiedTradingInterface: 显示信号 (安全模式)')
+  if (import.meta.env.DEV) { console.log('🔄 UnifiedTradingInterface: 显示信号 (安全模式)') }
   
   // 使用安全的信号显示方式，不创建DOM覆盖层
   if (candlestickSeries.value && signals.value.length > 0) {
@@ -915,7 +915,7 @@ function displaySignals() {
       candlestickSeries.value.setMarkers(markers)
       signalMarkers.value = markers
       
-      console.log(`✅ 成功显示 ${markers.length} 个信号标记`)
+      if (import.meta.env.DEV) { console.log(`✅ 成功显示 ${markers.length} 个信号标记`) }
     } catch (error) {
       console.error('❌ 显示信号标记失败:', error)
     }
@@ -1000,7 +1000,7 @@ function toggleSignalDisplay() {
       candlestickSeries.value.setMarkers([])
       signalMarkers.value = []
     }
-    console.log('🔄 信号显示已隐藏')
+    if (import.meta.env.DEV) { console.log('🔄 信号显示已隐藏') }
   }
   ElMessage.info(showSignals.value ? '已显示策略信号' : '已隐藏策略信号')
 }
@@ -1012,7 +1012,7 @@ function clearSignals() {
     candlestickSeries.value.setMarkers([])
     signalMarkers.value = []
   }
-  console.log('🧹 信号已清除')
+  if (import.meta.env.DEV) { console.log('🧹 信号已清除') }
   ElMessage.info('交易信号已清除')
 }
 
@@ -1377,7 +1377,7 @@ function formatDateTime(date) {
 }
 
 .buy-signal {
-  color: #ef5350 !important;
+  color: var(--khy-danger) !important;
 }
 
 .sell-signal {
@@ -1418,7 +1418,7 @@ function formatDateTime(date) {
 }
 
 .sell-order {
-  color: #ef5350;
+  color: var(--khy-danger);
 }
 
 .buy-order {
@@ -1580,7 +1580,7 @@ function formatDateTime(date) {
 }
 
 .signal-row.buy {
-  border-left-color: #ef5350;
+  border-left-color: var(--khy-danger);
 }
 
 .signal-row.sell {
@@ -1600,7 +1600,7 @@ function formatDateTime(date) {
 
 .signal-row.buy .signal-icon,
 .signal-row.buy .signal-text {
-  color: #ef5350;
+  color: var(--khy-danger);
 }
 
 .signal-row.sell .signal-icon,
@@ -1769,13 +1769,13 @@ function formatDateTime(date) {
 }
 
 .status-indicator.disconnected {
-  background: #ef5350;
-  box-shadow: 0 0 6px #ef5350;
+  background: var(--khy-danger);
+  box-shadow: 0 0 6px var(--khy-danger);
 }
 
 /* 价格颜色 */
 .price-up {
-  color: #ef5350 !important;
+  color: var(--khy-danger) !important;
 }
 
 .price-down {
@@ -1783,7 +1783,7 @@ function formatDateTime(date) {
 }
 
 .direction-up {
-  color: #ef5350;
+  color: var(--khy-danger);
 }
 
 .direction-down {
@@ -1791,7 +1791,7 @@ function formatDateTime(date) {
 }
 
 .positive {
-  color: #ef5350;
+  color: var(--khy-danger);
 }
 
 .negative {
@@ -1862,8 +1862,8 @@ function formatDateTime(date) {
 }
 
 :deep(.el-button--danger) {
-  --el-button-bg-color: #ef5350;
-  --el-button-border-color: #ef5350;
+  --el-button-bg-color: var(--khy-danger);
+  --el-button-border-color: var(--khy-danger);
 }
 
 :deep(.el-button--success) {

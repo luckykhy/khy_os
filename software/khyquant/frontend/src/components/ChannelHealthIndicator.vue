@@ -94,14 +94,14 @@ function statusClass(status) {
   display: inline-block;
   transition: background-color 0.3s;
 }
-.health-dot.healthy { background-color: #52c41a; }
+.health-dot.healthy { background-color: var(--khy-success); }
 .health-dot.degraded { background-color: #faad14; }
 .health-dot.critical { background-color: #ff4d4f; }
-.health-dot.unknown { background-color: #999; }
+.health-dot.unknown { background-color: var(--khy-gray-400); }
 
 .health-label {
   font-size: 11px;
-  color: #999;
+  color: var(--khy-gray-400);
 }
 
 .health-popover {
@@ -133,12 +133,12 @@ function statusClass(status) {
 .close-btn {
   cursor: pointer;
   font-size: 16px;
-  color: #999;
+  color: var(--khy-gray-400);
 }
 
 .popover-empty {
   font-size: 12px;
-  color: #666;
+  color: var(--khy-gray-500);
   padding: 8px 0;
   text-align: center;
 }
@@ -162,7 +162,7 @@ function statusClass(status) {
   border-radius: 50%;
   flex-shrink: 0;
 }
-.ch-dot.healthy { background-color: #52c41a; }
+.ch-dot.healthy { background-color: var(--khy-success); }
 .ch-dot.degraded { background-color: #faad14; }
 .ch-dot.critical { background-color: #ff4d4f; }
 
@@ -175,7 +175,7 @@ function statusClass(status) {
 }
 
 .ch-state {
-  color: #888;
+  color: var(--khy-gray-400);
   font-size: 11px;
 }
 
@@ -190,7 +190,7 @@ function statusClass(status) {
   padding-top: 6px;
   border-top: 1px solid var(--el-border-color, #333);
   font-size: 11px;
-  color: #999;
+  color: var(--khy-gray-400);
 }
 
 .fade-enter-active, .fade-leave-active {

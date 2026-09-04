@@ -18,7 +18,7 @@
  * 用法:`/fork [--at <leafUuid>] [<新标题...>]`。门控 KHY_FORK 默认开;关 → 命令不接管(字节回退)。
  */
 
-const leaf = require('../../services/session/sessionForkPlan');
+const leaf = require('../../services/domain/session/session/sessionForkPlan.js');
 const { printInfo, printError, printSuccess, printWarn } = require('../formatters');
 
 function _persistence() {

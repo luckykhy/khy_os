@@ -446,6 +446,8 @@ const FLAGS = {
   KHY_GLOB_SALIENCE_MIN: { mode: 'numeric', default: 40, min: 1, max: 100000 },
   // 专用列目录工具 ListDir(替代 agent 被推去用 Bash ls/find 裸 dump);关 → 工具不注册(=今日行为)。
   KHY_LISTDIR_TOOL: { mode: 'default-on', off: 'CANON', default: true },
+  // 代码库地图工具 CodebaseMap(生成轻量项目结构地图,不读文件内容);关 → 工具不注册。
+  KHY_CODEBASE_MAP_TOOL: { mode: 'default-on', off: 'CANON', default: true },
 
   // ── 「进一步」:C/D 盘符 / 深树的剩余接缝(承 KHY_FILE_SALIENCE)──────────────────
   // 接缝3:深树目录体积热点。byDir 只按顶层单段分组,对 Users/AppData/.../ 深树近乎无分辨率;

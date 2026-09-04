@@ -354,7 +354,7 @@ const CUSTOM_VALIDATORS = {
     }
     // 没有现成 verificationReport 时,现场跑一次 test 步骤。
     try {
-      const { verify, detectProject } = require('./verificationAgent');
+      const { verify, detectProject } = require('../agents/built-in/verificationAgent');
       const project = detectProject(projectRoot);
       const available = new Set((project?.steps || []).map((step) => String(step).toLowerCase()));
       if (!available.has('test')) {
@@ -805,7 +805,7 @@ async function evaluateDeliveryEnhanced(params = {}) {
 
     if (params.adversarial?.executeAI) {
       try {
-        const { adversarialVerify } = require('./verificationAgent');
+        const { adversarialVerify } = require('../agents/built-in/verificationAgent');
         adversarialResult = await adversarialVerify({
           files: _extractChangedFiles(toolCallLog),
           cwd,

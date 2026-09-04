@@ -18,7 +18,7 @@
  *
  * 契约:纯函数、确定性、不 mutate。`|| ''` 令 falsy → ''。`/_/g` 的 g 是全替所需。
  *
- * 各消费方保留同名本地 `const _localName = require('.../trimLowerStripUnderscores')` → 调用点逐字节不变。
+ * 各消费方保留同名本地 `const _localName = require('trimLowerStripUnderscores.js')` → 调用点逐字节不变。
  */
 
 function trimLowerStripUnderscores(name) {

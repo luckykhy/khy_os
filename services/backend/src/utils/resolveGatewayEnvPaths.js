@@ -23,7 +23,7 @@ const path = require('path');
  *   (forest 布局:__dirname=services/backend/src/utils,`../../.env` 落在 services/backend/.env。)
  *
  * 契约:确定性(给定 env + fs 状态)、不 mutate 入参、返回新对象。
- *   各消费方保留同名本地绑定 `const NAME = require('.../resolveGatewayEnvPaths')`→ 调用点逐字节不变。
+ *   各消费方保留同名本地绑定 `const NAME = require('resolveGatewayEnvPaths.js')`→ 调用点逐字节不变。
  */
 
 function resolveGatewayEnvPaths() {

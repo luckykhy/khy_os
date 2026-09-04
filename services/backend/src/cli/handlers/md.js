@@ -46,7 +46,7 @@ function flagOn(name) {
  */
 function resolveToolsDir() {
   try {
-    return require('../../services/extensions/markdownWorkbench').resolveDir();
+    return require('../../services/domain/extensions/extensions/markdownWorkbench.js').resolveDir();
   } catch (_) {
     return null; // 模块被裁剪 → 与「没装这个拓展」同一路径，不新增分支
   }

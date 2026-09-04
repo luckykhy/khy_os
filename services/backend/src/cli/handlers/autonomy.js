@@ -20,7 +20,7 @@
  * 门控 KHY_AUTONOMY 默认开;关 → 命令不接管(字节回退)。
  */
 
-const leaf = require('../../services/autonomy/autonomyInspectPlan');
+const leaf = require('../../services/domain/agents/autonomy/autonomyInspectPlan.js');
 
 // try/catch combinator 单一真源 utils/tryOr:执行 fn,任何异常 → dflt。
 const _safe = require('../../utils/tryOr');
@@ -31,7 +31,7 @@ const { printInfo, printError, printSuccess, printWarn } = require('../formatter
 
 /** 编排服务(可能因门控/缺依赖不可用 → null)。 */
 function _orch() {
-  return _safe(() => require('../../services/orchestrator/orchestrationService'), null);
+  return _safe(() => require('../../services/domain/state/orchestrator/orchestrationService.js'), null);
 }
 
 /** 采集只读快照(每面独立 best-effort;缺面 → 该字段 undefined,叶子据此渲染「不可用」)。 */
@@ -62,7 +62,7 @@ async function _gatherSnapshot() {
   );
 
   const rd = await _safeAsync(
-    async () => require('../../services/remotedev/remoteDevService').status({}),
+    async () => require('../../services/domain/network/remotedev/remoteDevService.js').status({}),
     null
   );
   if (rd && rd.session && rd.session.state) {

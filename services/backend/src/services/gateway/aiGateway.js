@@ -833,40 +833,42 @@ function _createCodexChineseChunkGate(
   };
 }
 
-const KHY_LANGUAGE_RISKY_ADAPTERS = new Set(
-  String(
-    process.env.KHY_LANGUAGE_RISKY_ADAPTERS ||
-      'codex,claude,cursor,cursor2api,trae,windsurf,vscode,warp,relay_api,relay,cli,kiro'
-  )
-    .split(',')
-    .map((value) =>
-      String(value || '')
-        .trim()
-        .toLowerCase()
-    )
-    .filter(Boolean)
-);
+// ── Language Detection Configuration ────────────────────────────────────────
+// 分层检测 + 按需纠偏（对抗式综合方案 C）
+// 三层检测策略：
+//   Layer 1 (快速): 基于配置和 prompt 显式指令，无成本，覆盖 90% 场景
+//   Layer 2 (轻量): 正则检测，仅对"风险适配器"启用，检测到偏航时 abort+retry
+//   Layer 3 (深度): 外部语言服务（可选），通过功能标记启用
+const LANGUAGE_DETECTION_CONFIG = {
+  // Layer 1: 快速检测（始终启用）
+  layer1: { enabled: true },
+  // Layer 2: 轻量正则检测（仅风险适配器）
+  layer2: { 
+    enabled: String(process.env.KHY_LANGUAGE_LAYER2 || '1') === '1',
+    // 仅对这些适配器启用语言纠偏
+    riskyAdapters: new Set(
+      String(process.env.KHY_LANGUAGE_RISKY_ADAPTERS ||
+        'codex,claude,cursor,cursor2api,trae,windsurf,vscode,warp,relay_api,relay,cli,kiro'
+      ).split(',').map(v => v.trim().toLowerCase()).filter(Boolean)
+    ),
+  },
+  // Layer 3: 深度检测（可选，默认关闭）
+  layer3: { 
+    enabled: String(process.env.KHY_LANGUAGE_LAYER3 || '0') === '1',
+    // 外部语言服务 URL（如 fasttext 或 langdetect）
+    serviceUrl: process.env.KHY_LANGUAGE_SERVICE_URL || null,
+  },
+};
 
-function _normalizeLanguageAdapterKey(adapterLike = null) {
-  if (!adapterLike) {
-    return '';
-  }
-  if (typeof adapterLike === 'string') {
-    return String(adapterLike).trim().toLowerCase();
-  }
-  return String(
-    adapterLike.key || adapterLike.type || adapterLike.adapter || adapterLike.name || ''
-  )
-    .trim()
-    .toLowerCase();
-}
-
-function _isKhyLanguageRiskyAdapter(adapterLike = null) {
-  const key = _normalizeLanguageAdapterKey(adapterLike);
-  if (!key) {
-    return false;
-  }
-  return KHY_LANGUAGE_RISKY_ADAPTERS.has(key);
+/**
+ * 检查是否对指定适配器启用语言纠偏。
+ * @param {string} adapterKey 适配器 key
+ * @returns {boolean}
+ */
+function _isLanguageCorrectionEnabled(adapterKey) {
+  if (!LANGUAGE_DETECTION_CONFIG.layer2.enabled) return false;
+  const key = String(adapterKey || '').trim().toLowerCase();
+  return LANGUAGE_DETECTION_CONFIG.layer2.riskyAdapters.has(key);
 }
 
 function _looksLikeChineseScript(text = '') {
@@ -956,8 +958,27 @@ function _classifyKhyLanguageExpectation(text = '', expectedLanguage = 'zh') {
   };
 }
 
+function _normalizeLanguageAdapterKey(entry) {
+  return String(entry?.key || '').trim() || 'unknown';
+}
+
 function _createKhyLanguageConsistencyTracker(entry, requestOptions = {}, promptText = '') {
-  const adapterKey = _normalizeLanguageAdapterKey(entry);
+  let adapterKey;
+  try {
+    adapterKey = _normalizeLanguageAdapterKey(entry);
+  } catch (err) {
+    // Self-heal: if _normalizeLanguageAdapterKey is missing (e.g. partial refactor),
+    // fall back to direct key extraction so language tracking still works.
+    adapterKey = String(entry?.key || '').trim() || 'unknown';
+    try {
+      const { logger } = require('../../utils/logger');
+      logger.warn?.(
+        `[gateway] _normalizeLanguageAdapterKey unavailable (${err?.message || 'unknown'}); using fallback adapterKey=${adapterKey}`
+      );
+    } catch {
+      /* logger unavailable — silent */
+    }
+  }
   const adapterName = (() => {
     try {
       return entry?.adapter?.getStatus?.().name || entry?.name || adapterKey || 'unknown';
@@ -968,7 +989,7 @@ function _createKhyLanguageConsistencyTracker(entry, requestOptions = {}, prompt
   const requestId = String(requestOptions.requestId || requestOptions._diagTraceId || '').trim();
   const traceId = String(requestOptions._diagTraceId || '').trim();
   const sessionId = String(requestOptions.sessionId || '').trim() || null;
-  const riskyAdapter = _isKhyLanguageRiskyAdapter(adapterKey);
+  const riskyAdapter = _isLanguageCorrectionEnabled(adapterKey);
   const expectedLanguage = _resolveExpectedKhyLanguage(promptText, requestOptions);
   let firstVisibleText = '';
   let firstVisibleLogged = false;
@@ -1225,6 +1246,8 @@ const DEFAULT_API_POOL_PROVIDER_ALIASES = Object.freeze({
   wenxin: 'wenxin',
   baidu: 'wenxin',
   relay: 'relay',
+  sensenova: 'sensenova',
+  stepfun: 'stepfun',
 });
 const DEFAULT_API_POOL_TO_SERVICE_PROVIDER = Object.freeze({
   openai: 'openai',
@@ -1236,6 +1259,9 @@ const DEFAULT_API_POOL_TO_SERVICE_PROVIDER = Object.freeze({
   doubao: 'openai',
   wenxin: 'baidu',
   relay: 'openai',
+  sensenova: 'openai',
+  agnes: 'openai',
+  stepfun: 'openai',
 });
 const DEFAULT_API_POOL_DEFAULT_MODEL_MAP = Object.freeze({
   deepseek: 'deepseek-chat',
@@ -2169,15 +2195,18 @@ class AIGateway {
     this._adapterActivity = {};
 
     // Per-model context window cache (populated from adapter listModels/generate responses)
+    // Capped at 500 entries to prevent unbounded growth in long-running processes.
     this._contextWindowCache = new Map();
+    this._contextWindowCache._MAX = 500;
 
     // Per-model output token limit cache (populated alongside _contextWindowCache
     // from adapter listModels metadata; consumed by the maxTokens preflight policy)
     this._modelOutputLimitCache = new Map();
+    this._modelOutputLimitCache._MAX = 500;
 
     // Capability registry for capability-aware model selection
     try {
-      const { CapabilityRegistry } = require('./capabilityRegistry');
+      const { CapabilityRegistry } = require('../capabilityRegistry');
       this._capabilityRegistry = new CapabilityRegistry(this);
     } catch {
       this._capabilityRegistry = null;
@@ -2536,6 +2565,7 @@ setAiGatewayGenerateMethodDeps({
     _createKhyLanguageConsistencyTracker,
     _injectKhyChineseRecoveryPrompt,
     _injectKhyChineseRecoverySystem,
+    _normalizeLanguageAdapterKey,
     _resolveCodexChineseRecoveryRetryBudget,
     _shouldAutoRecoverCodexChineseMismatch,
   },

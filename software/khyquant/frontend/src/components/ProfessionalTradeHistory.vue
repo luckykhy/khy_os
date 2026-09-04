@@ -647,7 +647,7 @@ async function loadTrades() {
     if (response.success) {
       // 🔥 使用 validateApiArrayField 验证响应数据，正确的路径是 data.list
       trades.value = validateApiArrayField(response, 'data.list', [])
-      console.log('✅ 加载交易记录成功:', trades.value.length, '条')
+      if (import.meta.env.DEV) { console.log('✅ 加载交易记录成功:', trades.value.length, '条') }
     } else {
       trades.value = []
     }
@@ -663,7 +663,7 @@ async function loadTrades() {
 // 🔥 新增：处理新订单事件
 function handleNewOrder(event) {
   const newTrade = event.detail
-  console.log('📥 收到新订单:', newTrade)
+  if (import.meta.env.DEV) { console.log('📥 收到新订单:', newTrade) }
   
   // 添加到列表顶部
   trades.value.unshift(newTrade)
@@ -683,7 +683,7 @@ onUnmounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background: var(--khy-white);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -706,7 +706,7 @@ onUnmounted(() => {
 
 .title-icon {
   font-size: 16px;
-  color: #3b82f6;
+  color: var(--khy-primary);
 }
 
 .title {
@@ -810,11 +810,11 @@ onUnmounted(() => {
 }
 
 .price-change.price-up {
-  color: #ef4444;
+  color: var(--khy-danger);
 }
 
 .price-change.price-down {
-  color: #10b981;
+  color: var(--khy-success);
 }
 
 .quantity-value {
@@ -843,11 +843,11 @@ onUnmounted(() => {
 }
 
 .profit-positive {
-  color: #ef4444;
+  color: var(--khy-danger);
 }
 
 .profit-negative {
-  color: #10b981;
+  color: var(--khy-success);
 }
 
 .profit-neutral {

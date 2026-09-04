@@ -31,7 +31,7 @@ const CATEGORIES = Object.freeze({
 
 const SEVERITIES = Object.freeze({
   SILENT: { code: 'silent', rank: 0, label: 'silent',  icon: '',    color: 'dim'    },
-  INFO:   { code: 'info',   rank: 1, label: 'info',    icon: 'ℹ',   color: 'blue'   },
+  INFO:   { code: 'info',   rank: 1, label: 'info',    icon: 'i',    color: 'blue'   },
   WARN:   { code: 'warn',   rank: 2, label: 'warn',    icon: '⚠',   color: 'yellow' },
   ERROR:  { code: 'error',  rank: 3, label: 'error',   icon: '✗',   color: 'red'    },
   FATAL:  { code: 'fatal',  rank: 4, label: 'fatal',   icon: '✗',   color: 'red.bold' },

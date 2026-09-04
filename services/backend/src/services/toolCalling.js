@@ -41,7 +41,7 @@ const { rewriteWindowsDesktopPath } = require('../utils/pathCompat');
 const _toolNameVariants = require('../utils/toolNameVariants');
 
 const { getCapabilityMatrix } = require('./capabilityMatrix');
-const { SEAMS: CAP_SEAMS } = require('./capabilityMatrix/seams');
+const { SEAMS: CAP_SEAMS } = require('./domain/catalog/capabilityMatrix/seams');
 const {
   normalizeToolName,
   normalizeToolParams,
@@ -62,7 +62,7 @@ const {
 const flagRegistry = require('./flagRegistry');
 // 插件按需激活(门控 KHY_PLUGIN_LAZY_LOAD,默认开):纯叶子——扩展工具不常驻注册表,
 // 仅在 executeTool 正常解析落空后按名懒加载并注册(见 if(!descriptor) 前)。零环,无副作用。
-const pluginContribResolver = require('./plugins/pluginContribResolver');
+const pluginContribResolver = require('./domain/extensions/plugins/pluginContribResolver');
 // App-launch pure leaves (fail-soft: a missing bundled copy must never crash the
 // tool layer — both have byte-identical fallbacks baked in).
 //   - winAppPaths: parse Windows `App Paths` registry into installed-app records
@@ -103,7 +103,7 @@ function _loadToolPolicy() {
   let defaultPolicyPath = '';
   try {
     defaultPolicyPath = path.join(
-      require('./../utils/dataHome').getAppHome(),
+      require('../utils/dataHome').getAppHome(),
       'capability-policy.json'
     );
   } catch {
@@ -1371,7 +1371,7 @@ async function _maybeRouteSelfHeal(toolName, params, traceContext) {
   }
   try {
     const { makeToolRunner } = require('./resilience');
-    const { FallbackTreeWithHeal } = require('./selfHeal');
+    const { FallbackTreeWithHeal } = require('../cli/handlers/selfHeal');
     const runner = makeToolRunner(executeTool, { ...(traceContext || {}) });
     const onDegrade = (text) => {
       try {
@@ -1596,7 +1596,7 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
     toolName.startsWith('plugin__')
   ) {
     try {
-      const pluginBridge = require('./plugins/pluginToolBridge');
+      const pluginBridge = require('./domain/extensions/plugins/pluginToolBridge');
       if (pluginBridge.isPluginTool(toolName)) {
         return await pluginBridge.executePluginTool(toolName, params, traceContext);
       }
@@ -1986,7 +1986,7 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
         /* execApproval optional */
       }
       if (!alreadyHooked) {
-        const hookSystem = require('./hooks/hookSystem');
+        const hookSystem = require('../cli/hooks/hookSystem');
         if (typeof hookSystem.isInitialized === 'function' && hookSystem.isInitialized()) {
           const hr = await hookSystem.trigger('PreToolUse', {
             toolName: permissionKey,
@@ -2397,7 +2397,7 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
   // kill-switch KHY_METACONSTRAINT=off；能力层异常一律 fail-open 落回既有管线。byte-identical（offDisables）。
   if (getCapabilityMatrix().isEnabledAt(CAP_SEAMS.POST_TOOL_GOVERNANCE, 'metaConstraint', {})) {
     try {
-      const guard = require('./metaConstraint/toolFunnelGuard');
+      const guard = require('./domain/quality/metaConstraint/toolFunnelGuard');
       const verdict = await guard.enforce({
         tool: permissionKey,
         params: normalizedParams,
@@ -2459,7 +2459,7 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
     });
     // Audit denied call
     try {
-      const { logToolExecution } = require('./auditLog');
+      const { logToolExecution } = require('../middleware/auditLog');
       logToolExecution({
         tool: permissionKey,
         params: normalizedParams,
@@ -2586,7 +2586,7 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
       return;
     }
     try {
-      require('./evoEngine/frictionBridge').observeFailure({
+      require('./domain/maintenance/evoEngine/frictionBridge').observeFailure({
         signal: 'tool-failure',
         surface: permissionKey,
         error: failure instanceof Error ? failure : (failure && failure.error) || failure,
@@ -2850,7 +2850,7 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
         return null;
       }
       try {
-        const healing = require('./dependency/healingLoop');
+        const healing = require('./domain/network/dependency/healingLoop');
         return await healing.heal({
           toolName: permissionKey,
           failure: failureSignal,
@@ -2880,7 +2880,7 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
         }
         if (outcome) {
           try {
-            runErr._depHealing = require('./dependency/healingLoop').summarizeForAgent(outcome);
+            runErr._depHealing = require('./domain/network/dependency/healingLoop').summarizeForAgent(outcome);
           } catch {
             /* guidance best-effort */
           }
@@ -2953,7 +2953,7 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
         result = outcome.result; // retry after install succeeded
       } else if (outcome) {
         try {
-          const healing = require('./dependency/healingLoop');
+          const healing = require('./domain/network/dependency/healingLoop');
           const summary = healing.summarizeForAgent(outcome);
           if (summary && result && typeof result === 'object') {
             result._depHealing = summary;
@@ -2983,7 +2983,7 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
         });
         // Audit
         try {
-          const { logToolExecution } = require('./auditLog');
+          const { logToolExecution } = require('../middleware/auditLog');
           logToolExecution({
             tool: permissionKey,
             params: normalizedParams,
@@ -3038,7 +3038,7 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
     }
     // Audit successful call
     try {
-      const { logToolExecution } = require('./auditLog');
+      const { logToolExecution } = require('../middleware/auditLog');
       logToolExecution({
         tool: permissionKey,
         params: normalizedParams,
@@ -3188,7 +3188,7 @@ async function executeTool(toolName, params = {}, traceContext = {}) {
     }
     // Audit failed call
     try {
-      const { logToolExecution } = require('./auditLog');
+      const { logToolExecution } = require('../middleware/auditLog');
       logToolExecution({
         tool: permissionKey,
         params: normalizedParams,
@@ -3395,7 +3395,7 @@ async function getToolDefinitionsForUser(userId) {
     return base;
   }
   try {
-    const pluginBridge = require('./plugins/pluginToolBridge');
+    const pluginBridge = require('./domain/extensions/plugins/pluginToolBridge');
     const pluginTools = await pluginBridge.listUserPluginTools(userId);
     if (!pluginTools || !pluginTools.length) {
       return base;

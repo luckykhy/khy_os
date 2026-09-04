@@ -134,7 +134,7 @@ function _collectTargets(env) {
     projectDataHome: env.KHY_PROJECT_DATA_HOME || undefined,
   };
 
-  const { buildUninstallTargets } = require('../../services/uninstall/uninstallPlan');
+  const { buildUninstallTargets } = require('../../services/domain/maintenance/uninstall/uninstallPlan.js');
   const raw = buildUninstallTargets(
     {
       homedir: os.homedir(),
@@ -297,7 +297,7 @@ function _ledgerDataHomeReadOnly(env) {
 /** 读并解析台账 jsonl(逐行 fail-soft,坏行跳过)。缺失 → []。 */
 function _readLedgerEntries(env) {
   try {
-    const { ledgerPath } = require('../../services/uninstall/installLedger');
+    const { ledgerPath } = require('../../services/domain/maintenance/uninstall/installLedger.js');
     const file = ledgerPath(_ledgerDataHomeReadOnly(env));
     if (!file || !fs.existsSync(file)) {
       return [];
@@ -398,7 +398,7 @@ function _executeRollbackStep(step, opts = {}) {
 
 /** 读台账 → computeRollback → 逐步执行。返回汇总(含 dryRun 预览)。 */
 function _rollbackLedger(env, opts = {}) {
-  const { computeRollback } = require('../../services/uninstall/installLedger');
+  const { computeRollback } = require('../../services/domain/maintenance/uninstall/installLedger.js');
   const entries = _readLedgerEntries(env);
   const { steps, skipped } = computeRollback(entries, { env });
   const results = [];
@@ -417,7 +417,7 @@ function _rollbackLedger(env, opts = {}) {
  */
 async function handleUninstall(subCommand, args, options = {}) {
   const env = process.env;
-  const { uninstallEnabled } = require('../../services/uninstall/uninstallPlan');
+  const { uninstallEnabled } = require('../../services/domain/maintenance/uninstall/uninstallPlan.js');
   if (!uninstallEnabled(env)) {
     printWarn('卸载命令已被 KHY_UNINSTALL 禁用（当前为关闭状态）。');
     return true;
@@ -445,7 +445,7 @@ async function handleUninstall(subCommand, args, options = {}) {
   let ledgerEnabled = false;
   let ledgerPreview = null;
   try {
-    const { isLedgerEnabled } = require('../../services/uninstall/installLedger');
+    const { isLedgerEnabled } = require('../../services/domain/maintenance/uninstall/installLedger.js');
     if (isLedgerEnabled(env)) {
       ledgerPreview = _rollbackLedger(env, { dryRun: true }); // 只读预览，不删不停
       ledgerEnabled = ledgerPreview.entryCount > 0;

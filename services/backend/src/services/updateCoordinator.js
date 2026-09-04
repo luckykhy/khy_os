@@ -401,7 +401,7 @@ function schedulePortableRollback(detail, opts = {}) {
   if (typeof opts.scheduleDeferredRollback === 'function') {
     return opts.scheduleDeferredRollback(detail, opts);
   }
-  return require('./updateAdapters/portableAdapter')._scheduleDeferredRollback(detail, opts);
+  return require('./domain/network/updateAdapters/portableAdapter')._scheduleDeferredRollback(detail, opts);
 }
 
 async function checkUpdate(opts = {}) {
@@ -573,7 +573,7 @@ async function checkUpdate(opts = {}) {
       const checkPortable =
         typeof opts.checkPortable === 'function'
           ? opts.checkPortable
-          : require('./updateAdapters/portableAdapter').checkPortable;
+          : require('./domain/network/updateAdapters/portableAdapter').checkPortable;
       result = await checkPortable(installation, { ...opts, channel });
     }
 
@@ -632,7 +632,7 @@ async function stageUpdate(opts = {}) {
     const stagePackage =
       typeof opts.stagePackage === 'function'
         ? opts.stagePackage
-        : require('./updateAdapters/packageAdapter').stagePackageUpdate;
+        : require('./domain/network/updateAdapters/packageAdapter').stagePackageUpdate;
     const result = await stagePackage(current, {
       ...opts,
       onProgress: opts.onProgress,
@@ -650,7 +650,7 @@ async function stageUpdate(opts = {}) {
     const stagePortable =
       typeof opts.stagePortable === 'function'
         ? opts.stagePortable
-        : require('./updateAdapters/portableAdapter').stagePortable;
+        : require('./domain/network/updateAdapters/portableAdapter').stagePortable;
     const result = await stagePortable(current.source, {
       ...opts,
       channel: current.channel,
@@ -735,7 +735,7 @@ async function applyUpdate(opts = {}) {
       result = { success: true, changed: true, to: current.target.commit };
     } else if (current.source.type === 'package') {
       if (typeof opts.applyPackage === 'function') result = await opts.applyPackage(current, opts);
-      else result = require('./updateAdapters/packageAdapter').applyPackageUpdate(current, opts);
+      else result = require('./domain/network/updateAdapters/packageAdapter').applyPackageUpdate(current, opts);
     } else if (current.source.type === 'portable') {
       const portableOpts = {
         ...opts,
@@ -748,7 +748,7 @@ async function applyUpdate(opts = {}) {
         },
       };
       if (typeof opts.applyPortable === 'function') result = await opts.applyPortable(current, portableOpts);
-      else result = await require('./updateAdapters/portableAdapter').applyPortable(current, portableOpts);
+      else result = await require('./domain/network/updateAdapters/portableAdapter').applyPortable(current, portableOpts);
       if (result && result.success && !result.deferred) result.postApplyHandled = true;
     } else {
       result = { success: false, error: 'unknown installation type' };

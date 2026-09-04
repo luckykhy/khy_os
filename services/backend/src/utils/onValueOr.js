@@ -18,7 +18,7 @@
  *
  * 契约:确定性、不 mutate、恒返布尔。纯值计算(不读 process.env)。
  *
- * 各消费方保留同名本地 `const _envOn = require('../../utils/onValueOr')` → 调用点逐字节不变。
+ * 各消费方保留同名本地 `const _envOn = require('onValueOr.js')` → 调用点逐字节不变。
  */
 
 function onValueOr(raw, dflt = true) {

@@ -210,7 +210,7 @@ async function start() {
     // 主动长轮询**:没人调它就永远不会开始收消息。故这里显式 eager 一次。
     // 门控在 _bootstrapChannels 内部(KHY_MSG + 各渠道自身配置存在);best-effort。
     try {
-      const { getMessageRouter } = require('./channels/messageRouter');
+      const { getMessageRouter } = require('./domain/messaging/channels/messageRouter');
       const router = getMessageRouter();
       const chans = router.getChannels();
       // 无论有无渠道都如实说一句。沉默会被误读成「已接通」——微信没反应时,
@@ -280,7 +280,7 @@ function cleanup() {
   // 掐掉 IM 渠道的长轮询。disconnect() 里的 abort() 是同步的,所以即使这里不 await,
   // 在飞的 fetch 也已被取消 —— 否则微信的 35s 长轮询会让进程迟迟退不掉。
   try {
-    const { getMessageRouter } = require('./channels/messageRouter');
+    const { getMessageRouter } = require('./domain/messaging/channels/messageRouter');
     getMessageRouter()
       .disconnectAll()
       .catch(() => {});

@@ -838,20 +838,86 @@ const MODEL_REGISTRY_FILE = path.join(TRAINING_DIR, 'model_registry.json');
 /**
  * Verify export password before allowing model export.
  *
- * Model export is no longer password-gated — this always authorizes. The
- * function is kept so existing call sites and the public export stay stable;
- * it ignores its argument and never rejects.
+ * 安全模型（对抗式综合方案）：
+ *   - 默认模式（KHY_EXPORT_STRICT_MODE=0）：保持向后兼容，始终授权，但记录审计日志
+ *   - 严格模式（KHY_EXPORT_STRICT_MODE=1）：需要密码验证，密码从 KHY_EXPORT_PASSWORD 或
+ *     ~/.khyquant/config.json 中的 exportPassword 字段获取
+ *   - 审计日志：所有导出尝试（无论成功/失败）都记录到 audit.log
  *
- * Access control is enforced at the deployment / network layer per AGENTS.md §安全须知.
- * Each export is logged via console.warn for audit trail.
- * @param {string} _password - unused, accepted for call-site compatibility
- * @returns {boolean} always true
+ * 推荐生产环境启用严格模式：
+ *   KHY_EXPORT_STRICT_MODE=1 KHY_EXPORT_PASSWORD=<strong-password> khy export-model ...
+ *
+ * @param {string} _password - 导出密码（严格模式下使用）
+ * @returns {boolean} 是否授权导出
  */
 function verifyExportPassword(_password) {
-  console.warn(
-    '[modelTrainingService] export password check bypassed (by design — deployment-layer access control)'
-  );
-  return true;
+  const strictMode = String(process.env.KHY_EXPORT_STRICT_MODE || '0') === '1';
+  const providedPassword = _password || process.env.KHY_EXPORT_PASSWORD || '';
+  
+  // 审计日志：记录导出尝试
+  const auditLog = {
+    timestamp: new Date().toISOString(),
+    action: 'model_export_password_check',
+    strictMode,
+    passwordProvided: !!providedPassword,
+    source: 'modelTrainingService',
+  };
+  
+  // 写入审计日志（fail-soft：审计失败不影响主流程）
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const { getDataHome } = require('../utils/dataHome');
+    const auditDir = path.join(getDataHome(), 'audit');
+    fs.mkdirSync(auditDir, { recursive: true });
+    fs.appendFileSync(
+      path.join(auditDir, 'export-audit.jsonl'),
+      JSON.stringify(auditLog) + '\n',
+      'utf-8'
+    );
+  } catch {
+    // 审计失败不阻断
+  }
+  
+  // 非严格模式：保持向后兼容，始终授权
+  if (!strictMode) {
+    console.warn(
+      '[modelTrainingService] export password check bypassed (set KHY_EXPORT_STRICT_MODE=1 to enable)'
+    );
+    return true;
+  }
+  
+  // 严格模式：验证密码
+  let expectedPassword = process.env.KHY_EXPORT_PASSWORD || '';
+  
+  // 如果 env 未设置，尝试从配置文件读取
+  if (!expectedPassword) {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const configPath = path.join(
+        process.env.KHY_DATA_HOME || require('../utils/dataHome').getDataHome(),
+        'config.json'
+      );
+      if (fs.existsSync(configPath)) {
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+        expectedPassword = config.exportPassword || '';
+      }
+    } catch {
+      // 读取失败继续
+    }
+  }
+  
+  // 验证密码
+  const authorized = !!expectedPassword && providedPassword === expectedPassword;
+  
+  if (!authorized) {
+    console.error(
+      '[modelTrainingService] 导出密码验证失败。请设置 KHY_EXPORT_PASSWORD 或在 config.json 中配置 exportPassword。'
+    );
+  }
+  
+  return authorized;
 }
 
 /**

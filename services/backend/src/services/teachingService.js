@@ -49,7 +49,7 @@ function captureTeaching(opts = {}) {
 
   let svc;
   try {
-    svc = require('./agentFs/agentFsService');
+    svc = require('./domain/agents/agentFs/agentFsService');
   } catch {
     return { captured: false, reason: 'agentfs-unavailable' };
   }

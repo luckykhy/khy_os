@@ -365,7 +365,7 @@ async function runAgents(subtasks, opts = {}) {
   // leak into JSON-serialized agentStates. A broken FSM module is tolerated.
   const agentFsms = subtasks.map((st, i) => {
     try {
-      return require('./stateMachine/agentLifecycle').createAgentLifecycleFsm({
+      return require('./domain/state/stateMachine/agentLifecycle').createAgentLifecycleFsm({
         name: `cliAgent-${i}-${st.role}`,
       });
     } catch {
@@ -539,7 +539,7 @@ async function synthesizeResults(agentResults, originalRequest, aiModule) {
     // 失败原因 / 空产出，给出「哪个代理失败、为何失败、下一步建议」的诚实说明；
     // 确无任何信息可呈现时才回落套话。
     try {
-      const _salvaged = require('./query/activeAssist').composeAgentAllFailedFallback(agentResults);
+      const _salvaged = require('./domain/query/query/activeAssist').composeAgentAllFailedFallback(agentResults);
       if (_salvaged) {
         return _salvaged;
       }

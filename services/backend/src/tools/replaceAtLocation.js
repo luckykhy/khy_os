@@ -10,8 +10,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const { detectFile } = require('../services/formatInspect/fileFormatDetector');
-const { replaceAtLocation, locateWord } = require('../services/formatInspect/textAddress');
+const { detectFile } = require('../services/domain/structured/formatInspect/fileFormatDetector.js');
+const { replaceAtLocation, locateWord } = require('../services/domain/structured/formatInspect/textAddress.js');
 
 const { defineTool } = require('./_baseTool');
 let _fileHistory;

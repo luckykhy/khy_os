@@ -33,7 +33,7 @@ const React = require('react');
 // 保留「拒绝」首位的安全护栏(除非用户显式 opt-in),由 orderOptions 的 highRisk 分支处理。
 const permissionOptionOrder = require('../../../services/permissionOptionOrder');
 // L2 会话免审门控（默认开，可逆）的单一真源——决定是否渲染「本会话内总是允许此类」第三项。
-const { isL2SessionAllowEnabled } = require('../../../services/syscallGateway/permissionCache');
+const { isL2SessionAllowEnabled } = require('../../../services/syscallGateway').permissionCache;
 const inkRuntime = require('../inkRuntime');
 
 const MARKER = '❯';

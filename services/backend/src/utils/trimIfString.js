@@ -14,7 +14,7 @@
  *
  * 契约:纯函数、确定性、不 mutate、恒返字符串。
  *
- * 各消费方保留同名本地 `const _s = require('.../trimIfString')` → 调用点逐字节不变。
+ * 各消费方保留同名本地 `const _s = require('trimIfString.js')` → 调用点逐字节不变。
  */
 
 function trimIfString(v) {

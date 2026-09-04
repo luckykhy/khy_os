@@ -25,8 +25,8 @@ const { getCapabilityMatrix } = require('./capabilityMatrix');
 const {
   serializeRoute: _serializeCapRoute,
   formatRouteHuman: _formatCapRoute,
-} = require('./capabilityMatrix/route');
-const { SEAMS: CAP_SEAMS } = require('./capabilityMatrix/seams');
+} = require('./domain/catalog/capabilityMatrix/route');
+const { SEAMS: CAP_SEAMS } = require('./domain/catalog/capabilityMatrix/seams');
 const { normalizeToolCall } = require('./claudeCompat');
 const { runWithConcurrency } = require('./concurrencyLimiter');
 const { diagnostics, generateTraceId: genDiagTraceId } = require('./diagnosticEvents');
@@ -114,11 +114,11 @@ const _resultGuard = _tryOr(() => require('../cli/resultGuard'), null);
 // 这些已下达的工具调用不需要模型即可完成——惯性把它们跑完,并在「重连」的下一次模型
 // 调用里显式告知模型「曾断线、据惯性结果续跑勿重复」,实现无感衔接。坏块(截断、参数
 // 残缺)在此挡掉。纯叶子、fail-soft:模块缺失则退化为原「盲目执行」行为。
-const _inertia = _tryOr(() => require('./query/inertiaCompletion'), null);
+const _inertia = _tryOr(() => require('./domain/query/query/inertiaCompletion'), null);
 
 // 无感续写默认预算地板(纯叶子)。fail-soft:缺失则 _resolveTransientRecoveryMax
 // 逐字节回退现状默认值 small=0/normal=1/large=3。门控 KHY_SEAMLESS_RESUME 默认开。
-const _seamlessResume = _tryOr(() => require('./query/seamlessResume'), null);
+const _seamlessResume = _tryOr(() => require('./domain/query/query/seamlessResume'), null);
 
 // Bug 哨兵(goal 2026-06-25):让 bug 越早暴露 + 从被动响应升级为主动监听发现 + 被动兜底。
 // 循环里的 fail-soft catch 不再静默吞咽,而是经 tripwire 登记成可观测信号;snapshot 接进
@@ -143,7 +143,7 @@ let _toolLoopFsmFactory;
 function _createLoopFsm(name) {
   if (_toolLoopFsmFactory === undefined) {
     _toolLoopFsmFactory = _tryOr(
-      () => require('./stateMachine/toolLoopPhases').createToolLoopFsm,
+      () => require('./domain/state/stateMachine/toolLoopPhases').createToolLoopFsm,
       null
     );
   }
@@ -154,7 +154,7 @@ function _createLoopFsm(name) {
     const fsm = _toolLoopFsmFactory({ name });
     // Optional stderr transition logger (KHY_STATE_DEBUG=1 only); fail-soft.
     try {
-      require('./stateMachine/debugLog').attachDebugLog(fsm, name);
+      require('./domain/state/stateMachine/debugLog').attachDebugLog(fsm, name);
     } catch {
       /* debug log optional */
     }
@@ -285,7 +285,7 @@ function _getHookSystem() {
   }
 
   try {
-    const hs = require('./hooks/hookSystem');
+    const hs = require('../cli/hooks/hookSystem');
     // Auto-initialize if not yet done (registers built-in guards)
     if (typeof hs.isInitialized === 'function' && !hs.isInitialized()) {
       hs.init(process.env.KHYQUANT_CWD || process.cwd());
@@ -1894,32 +1894,33 @@ async function runToolUseLoop(userMessage, options = {}) {
   //   模型收到 DESKTOP_DIRECTIVE 但工具面板中根本看不到这些工具。
   //   与 cliAgentRunner 子代理路径同款机制（#4 工具发现），但作用于主聊天流。
   if (gatedInput.activatedModes && gatedInput.activatedModes.includes('desktop')) {
-    console.error('[DEBUG-CU] desktop mode detected, attempting tool reveal...');
+    const _dbgCU = process.env.KHY_DEBUG_CU === '1';
+    if (_dbgCU) console.error('[DEBUG-CU] desktop mode detected, attempting tool reveal...');
     try {
       const { selectToolsToActivate } = require('./toolClusterActivation');
       const names = selectToolsToActivate(originalUserMessage);
-      console.error('[DEBUG-CU] selectToolsToActivate returned:', JSON.stringify(names));
+      if (_dbgCU) console.error('[DEBUG-CU] selectToolsToActivate returned:', JSON.stringify(names));
       if (names.length > 0) {
         try {
           const toolRegistry = require('../tools');
           const ensureFn = toolRegistry.ensureTool || toolRegistry.ensureToolForContext;
-          console.error('[DEBUG-CU] ensureFn:', typeof ensureFn);
+          if (_dbgCU) console.error('[DEBUG-CU] ensureFn:', typeof ensureFn);
           if (typeof ensureFn === 'function') {
             for (const name of names) {
               try {
                 const result = await ensureFn(name);
-                console.error('[DEBUG-CU] ensureTool', name, ':', JSON.stringify(result));
+                if (_dbgCU) console.error('[DEBUG-CU] ensureTool', name, ':', JSON.stringify(result));
               } catch (e) {
-                console.error('[DEBUG-CU] ensureTool', name, 'error:', e.message);
+                if (_dbgCU) console.error('[DEBUG-CU] ensureTool', name, 'error:', e.message);
               }
             }
           }
         } catch (e) {
-          console.error('[DEBUG-CU] toolRegistry error:', e.message);
+          if (_dbgCU) console.error('[DEBUG-CU] toolRegistry error:', e.message);
         }
       }
     } catch (e) {
-      console.error('[DEBUG-CU] outer error:', e.message);
+      if (_dbgCU) console.error('[DEBUG-CU] outer error:', e.message);
     }
   }
 
@@ -3028,31 +3029,31 @@ async function runToolUseLoop(userMessage, options = {}) {
     let _truncationAccumulator = ''; // Accumulated text from truncated responses
     // s11: diminishing-returns guard for truncation recovery. Thresholds are
     // env-overridable (no hardcoding); the module supplies the fallback defaults.
-    const _maxTokensRecovery = require('./query/maxTokensRecovery');
+    const _maxTokensRecovery = require('./domain/query/query/maxTokensRecovery');
     // 续接策略单一真源：判定错误类型可否自动续接 + 提供「继续」提示文案。
-    const _continuation = require('./query/continuation');
+    const _continuation = require('./domain/query/query/continuation');
     // 惯性接续单一真源（goal 2026-06-25「多处链接不稳定的地方可以使用惯性接续」）：
     // 在连接不稳定的三处接缝（transient 重试 / empty-reply / stall-nudge），把「丢弃
     // 已流出前缀 + from-scratch」改为「捕获前缀 + 无缝续接」。无前缀时回落到逐字一致的
     // 旧 from-scratch 指令，纯增量、向后兼容。生命周期镜像上面的 _truncationAccumulator。
-    const _inertialContinuation = require('./query/inertialContinuation');
+    const _inertialContinuation = require('./domain/query/query/inertialContinuation');
     let _inertialCarryover = ''; // 跨 continue 持久保存的已产出前缀（惯性）
     // 主动协助 + 被动兜底（goal 2026-06-25）：缺总结/全失败/空闲超时三处裸露的被动接缝,
     // 由 activeAssist 单源裁定是否主动补救。一次性计数器在循环外声明,见下方。
-    const _activeAssist = require('./query/activeAssist');
+    const _activeAssist = require('./domain/query/query/activeAssist');
     // 搜索循环主动收敛单源:连续 N 轮纯搜索且未综合 → 主动强制一轮禁工具的综合作答,
     // 不放任「换词搜索」绕圈子到超时(详见模块头)。
-    const _searchConvergence = require('./query/searchConvergence');
+    const _searchConvergence = require('./domain/query/query/searchConvergence');
     // 响应防抖 / 抗抖动：剥离前缀残留套话拒绝 + 丢弃废稿的流式重置帧。
-    const _responseDebounce = require('./query/responseDebounce');
+    const _responseDebounce = require('./domain/query/query/responseDebounce');
     // 流式重复退化守卫：实时发现 token 级 chanting（同片段反复），供本轮矫正使用。
-    const _streamRepetitionGuard = require('./query/streamRepetitionGuard');
+    const _streamRepetitionGuard = require('./domain/query/query/streamRepetitionGuard');
     // 跨轮「答案回声」断路器 + 软交付门抑制:见 answerEchoGuard 模块头(修重复输出)。
     const _answerEchoGuard = require('./answerEchoGuard');
     // 单次 completion 内「整段答案逐字重复两遍(A+A)」折叠:见 replyDedup 模块头(修重复输出)。
     const _replyDedup = require('./replyDedup');
     // 弱模型自然早停的一次性自动续写缓解(默认关):见 shortStopContinuation 模块头(缓解截断)。
-    const _shortStopContinuation = require('./query/shortStopContinuation');
+    const _shortStopContinuation = require('./domain/query/query/shortStopContinuation');
     let _negligibleContinuations = 0;
     const _truncationMinChars = (() => {
       const n = parseInt(process.env.KHY_TRUNCATION_MIN_CHARS || '', 10);
@@ -3128,7 +3129,7 @@ async function runToolUseLoop(userMessage, options = {}) {
     // refreshMcpToolPool() below actually finds connected servers. No-op when no
     // servers are configured; gated off (KHY_MCP_AUTOCONNECT=false) = legacy.
     try {
-      await require('./mcp/autoConnect').ensureMcpConnected({
+      await require('./domain/messaging/mcp/autoConnect').ensureMcpConnected({
         projectDir: process.env.KHYQUANT_CWD || process.cwd(),
       });
     } catch {
@@ -3558,7 +3559,7 @@ async function runToolUseLoop(userMessage, options = {}) {
       let _streamingExec = null;
       if (isStreamingExecEnabled(process.env)) {
         try {
-          const { StreamingToolExecutor } = require('./query/streamingToolExecutor');
+          const { StreamingToolExecutor } = require('./domain/query/query/streamingToolExecutor');
           const toolCalling = require('./toolCalling');
           let toolRegistry;
           try {
@@ -3621,7 +3622,7 @@ async function runToolUseLoop(userMessage, options = {}) {
           }
         }
         if (_drained.length) {
-          const _notif = require('./query/taskNotification').buildTaskNotifications(_drained);
+          const _notif = require('./domain/query/query/taskNotification').buildTaskNotifications(_drained);
           if (_notif) {
             currentMessage = `${_notif}\n\n${currentMessage || ''}`;
             if (onToolResult) {
@@ -3671,7 +3672,7 @@ async function runToolUseLoop(userMessage, options = {}) {
       // tools callable this turn, and a disconnect drops them. Cheap no-op when
       // no servers are connected; never throws into the loop.
       try {
-        require('./mcp/toolPool').refreshMcpToolPool();
+        require('./domain/messaging/mcp/toolPool').refreshMcpToolPool();
       } catch {
         /* MCP pool refresh is best-effort and never blocks the loop */
       }
@@ -5537,7 +5538,7 @@ async function runToolUseLoop(userMessage, options = {}) {
         if (_verifyGateRounds < maxRounds) {
           const filesToVerify = [..._allModifiedFiles];
           const gateCwd = effectiveChatOpts?.cwd || process.env.KHYQUANT_CWD || process.cwd();
-          const { quickSyntaxCheck, adversarialVerifyEnsemble } = require('./verificationAgent');
+          const { quickSyntaxCheck, adversarialVerifyEnsemble } = require('../agents/built-in/verificationAgent');
 
           let gateFailed = false;
           let gateInjection = '';
@@ -5656,7 +5657,7 @@ async function runToolUseLoop(userMessage, options = {}) {
         if (substantiveCalls >= threshold && _nonEditVerifyRounds < maxRounds) {
           const draftConclusion = _stripToolCalls(_stripExecutionPlan(aiResult.reply));
           try {
-            const { evidenceSufficiencyEnsemble } = require('./verificationAgent');
+            const { evidenceSufficiencyEnsemble } = require('../agents/built-in/verificationAgent');
             const verdictResult = await evidenceSufficiencyEnsemble({
               taskDescription: originalUserMessage || userMessage,
               toolResults: toolCallLog,
@@ -5830,8 +5831,8 @@ async function runToolUseLoop(userMessage, options = {}) {
                 return _runAgent({ role, prompt });
               }
               try {
-                const { runRepairTransaction } = require('./selfRepair/transactionRunner');
-                const prim = require('./selfRepair/primitives').create({});
+                const { runRepairTransaction } = require('./domain/maintenance/selfRepair/transactionRunner');
+                const prim = require('./domain/maintenance/selfRepair/primitives').create({});
                 const r = await runRepairTransaction({
                   runFix: () => _runAgent({ role, prompt }),
                   snapshot: prim.snapshot,
@@ -8440,7 +8441,7 @@ async function runToolUseLoop(userMessage, options = {}) {
               // ledger (recording-side SSOT for deterministic replay). 防呆①: best-effort
               // after result exists; never mutates result/model-visible content nor throws.
               try {
-                require('./trajectoryReplay/replayLedger').recordToolTurn({
+                require('./domain/trajectory/trajectoryReplay/replayLedger').recordToolTurn({
                   sessionId: traceSessionId,
                   name: call.name,
                   params: call.params,
@@ -9170,15 +9171,11 @@ async function runToolUseLoop(userMessage, options = {}) {
                   ...(call._traceContext || {}),
                 });
               } catch (err) {
-                // Fallback: try tool registry directly
-                try {
-                  const toolRegistry = require('../tools');
-                  result = await toolRegistry.execute(call.name, call.params);
-                } catch (err2) {
-                  const { ToolError: TE } = require('./toolError');
-                  const te2 = TE.isToolError(err2) ? err2 : TE.fromGenericError(err2);
-                  result = { ...te2.toStructuredResult(), _aiContext: te2.toAIContext() };
-                }
+                // Do NOT fall back to toolRegistry.execute() — that would bypass all permission checks.
+                // Wrap the error the same way the parallel path does.
+                const { ToolError: TE } = require('./toolError');
+                const te = TE.isToolError(err) ? err : TE.fromGenericError(err);
+                result = { ...te.toStructuredResult(), _aiContext: te.toAIContext() };
               }
               _ibPlan.cleanup();
               // Honest CN notice when the bounded block-wait expired → forced cancel.
@@ -9342,7 +9339,7 @@ async function runToolUseLoop(userMessage, options = {}) {
             // ledger (recording-side SSOT for deterministic replay). 防呆①: best-effort
             // after result exists; never mutates result/model-visible content nor throws.
             try {
-              require('./trajectoryReplay/replayLedger').recordToolTurn({
+              require('./domain/trajectory/trajectoryReplay/replayLedger').recordToolTurn({
                 sessionId: traceSessionId,
                 name: call.name,
                 params: call.params,
@@ -9355,7 +9352,7 @@ async function runToolUseLoop(userMessage, options = {}) {
 
             // Audit logging (non-critical)
             try {
-              const { logToolExecution } = require('./auditLog');
+              const { logToolExecution } = require('../middleware/auditLog');
               logToolExecution({
                 tool: call.name,
                 params: call.params,
@@ -10193,7 +10190,7 @@ async function runToolUseLoop(userMessage, options = {}) {
           _allModifiedFiles.add(f);
         }
         if (modifiedFiles.length > 0) {
-          const { quickSyntaxCheck } = require('./verificationAgent');
+          const { quickSyntaxCheck } = require('../agents/built-in/verificationAgent');
           const syntaxResult = quickSyntaxCheck(
             modifiedFiles,
             effectiveChatOpts?.cwd || process.cwd()
@@ -11245,11 +11242,11 @@ function _getActiveModelContextWindow() {
 // Import the helper surface this core calls, then inject the core-defined bindings the helpers read.
 // Both run at core load, before runToolUseLoop is ever invoked, so the relocated bodies stay byte-identical.
   // T-021 C3-P1: FSM/phase observation wiring (mutation-capture via iterationRef).
-  const { setupLoopObservability: _setupLoopObservability } = require('./toolUseLoop/loopObservability');
+  const { setupLoopObservability: _setupLoopObservability } = require('./domain/catalog/toolUseLoop/loopObservability');
   // T-021 C3-P7: tool-call resolution decision chain (s20 semantics, breadcrumbs).
   // T-021 C3-P2: harness profile + native-tooling detection + protocol seam.
-  const { resolveProtocolContext: _resolveProtocolContext } = require('./toolUseLoop/protocolContext');
-  const { resolveToolCalls } = require('./toolUseLoop/resolveToolCalls');
+  const { resolveProtocolContext: _resolveProtocolContext } = require('./domain/catalog/toolUseLoop/protocolContext');
+  const { resolveToolCalls } = require('./domain/catalog/toolUseLoop/resolveToolCalls');
 const {
   _appLaunchInterruptPrecedenceEnabled,
   _appLaunchRecovery,

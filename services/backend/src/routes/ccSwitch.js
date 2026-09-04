@@ -14,7 +14,7 @@ const express = require('express');
 const router = express.Router();
 
 // Re-inject HTTP deps from Express's own send helpers.
-const api = require('../services/ccSwitch/apiHandlers');
+const api = require('../services/domain/config/ccSwitch/apiHandlers.js');
 
 router.all('*', (req, res, next) => {
   const { sendJson, sendError, parseBody } = _expressAdapters(res, req);

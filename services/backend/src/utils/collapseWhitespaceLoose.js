@@ -17,7 +17,7 @@
  * 契约:纯函数(确定性、无 IO、不 mutate)。`/\s+/g` 的 g 是 replace 全替所需,非 test/exec 无状态隐患。
  * 无参调用 → String(undefined||'')→'',与各消费方 `(x='')` 默认参等价。
  *
- * 各消费方保留同名本地 `const _xxx = require('.../utils/collapseWhitespaceLoose')` → 调用点逐字节不变。
+ * 各消费方保留同名本地 `const _xxx = require('collapseWhitespaceLoose.js')` → 调用点逐字节不变。
  */
 
 function collapseWhitespaceLoose(s) {

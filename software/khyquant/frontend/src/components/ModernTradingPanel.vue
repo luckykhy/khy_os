@@ -124,7 +124,7 @@
           <span class="label">交易模式:</span>
           <span class="value">
             <el-tag type="warning" size="small">自动交易</el-tag>
-            <span style="margin-left: 8px; font-size: 11px; color: #f59e0b;">
+            <span style="margin-left: 8px; font-size: 11px; color: var(--khy-warning);">
               策略将自动监控市场并执行买卖
             </span>
           </span>
@@ -850,8 +850,8 @@ async function loadAvailableStrategies() {
       return
     }
 
-    console.log('开始加载策略列表...')
-    console.log('Token:', token ? '已设置' : '未设置')
+    if (import.meta.env.DEV) { console.log('开始加载策略列表...') }
+    if (import.meta.env.DEV) { console.log('Token:', token ? '已设置' : '未设置') }
 
     const response = await axios.get('/api/strategy', {
       headers: { Authorization: `Bearer ${token}` },
@@ -861,19 +861,19 @@ async function loadAvailableStrategies() {
       }
     })
 
-    console.log('策略API响应:', response.data)
+    if (import.meta.env.DEV) { console.log('策略API响应:', response.data) }
 
     if (response.data.success) {
       // 修复：后端返回的是 data.list 而不是 data.strategies
       const strategies = response.data.data.list || response.data.data.strategies || []
       availableStrategies.value = strategies
-      console.log('已加载策略数量:', strategies.length)
+      if (import.meta.env.DEV) { console.log('已加载策略数量:', strategies.length) }
       
       if (strategies.length === 0) {
         console.warn('策略列表为空')
         ElMessage.info('暂无可用策略，请先在策略管理中创建策略')
       } else {
-        console.log('策略列表:', strategies.map(s => ({ id: s.id, name: s.name })))
+        if (import.meta.env.DEV) { console.log('策略列表:', strategies.map(s => ({ id: s.id, name: s.name }))) }
       }
     } else {
       console.error('加载策略失败:', response.data.message)
@@ -1202,7 +1202,7 @@ onMounted(() => {
 .symbol-code {
   font-size: 18px;
   font-weight: 700;
-  color: #10b981;
+  color: var(--khy-success);
   font-family: 'Consolas', monospace;
 }
 
@@ -1226,11 +1226,11 @@ onMounted(() => {
 }
 
 .price-change.positive {
-  color: #ef4444;
+  color: var(--khy-danger);
 }
 
 .price-change.negative {
-  color: #10b981;
+  color: var(--khy-success);
 }
 
 /* 各个区块 */
@@ -1268,7 +1268,7 @@ onMounted(() => {
   padding: 0;
   background: rgba(16, 185, 129, 0.1);
   border: 1px solid rgba(16, 185, 129, 0.3);
-  color: #10b981;
+  color: var(--khy-success);
 }
 
 .adjust-btn:hover {
@@ -1307,7 +1307,7 @@ onMounted(() => {
 
 .market-text {
   display: block;
-  color: #3b82f6;
+  color: var(--khy-primary);
   font-size: 14px;
   margin-bottom: 8px;
 }
@@ -1342,7 +1342,7 @@ onMounted(() => {
 }
 
 .ref-price-item .value {
-  color: #10b981;
+  color: var(--khy-success);
   font-size: 16px;
   font-weight: 700;
   font-family: 'Consolas', monospace;
@@ -1387,7 +1387,7 @@ onMounted(() => {
 .price-range-hint {
   margin-top: 8px;
   font-size: 12px;
-  color: #f59e0b;
+  color: var(--khy-warning);
   text-align: center;
 }
 
@@ -1403,7 +1403,7 @@ onMounted(() => {
   flex: 1;
   background: rgba(16, 185, 129, 0.1);
   border-color: rgba(16, 185, 129, 0.3);
-  color: #10b981;
+  color: var(--khy-success);
   font-size: 12px;
 }
 
@@ -1447,11 +1447,11 @@ onMounted(() => {
 }
 
 .budget-item .value.insufficient {
-  color: #ef4444;
+  color: var(--khy-danger);
 }
 
 .budget-item .value.leverage {
-  color: #f59e0b;
+  color: var(--khy-warning);
 }
 
 /* 交易按钮 */
@@ -1486,7 +1486,7 @@ onMounted(() => {
 }
 
 .buy-btn {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
+  background: linear-gradient(135deg, var(--khy-danger), #dc2626);
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
 }
 
@@ -1495,7 +1495,7 @@ onMounted(() => {
 }
 
 .sell-btn {
-  background: linear-gradient(135deg, #10b981, #059669);
+  background: linear-gradient(135deg, var(--khy-success), #059669);
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 
@@ -1504,7 +1504,7 @@ onMounted(() => {
 }
 
 .strategy-btn {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
+  background: linear-gradient(135deg, var(--khy-warning), #d97706);
   box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
 }
 
@@ -1521,7 +1521,7 @@ onMounted(() => {
   background: rgba(245, 158, 11, 0.1);
   border: 1px solid rgba(245, 158, 11, 0.3);
   border-radius: 6px;
-  color: #f59e0b;
+  color: var(--khy-warning);
   font-size: 13px;
   margin-top: 16px;
 }
@@ -1629,12 +1629,12 @@ onMounted(() => {
 }
 
 .strategy-info-item .profit-positive {
-  color: #ef4444;
+  color: var(--khy-danger);
   font-weight: 700;
 }
 
 .strategy-info-item .profit-negative {
-  color: #10b981;
+  color: var(--khy-success);
   font-weight: 700;
 }
 
@@ -1653,8 +1653,8 @@ onMounted(() => {
 }
 
 :deep(.el-segmented__item.is-selected) {
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: #fff;
+  background: linear-gradient(135deg, var(--khy-success), #059669);
+  color: var(--khy-white);
 }
 
 /* 移动端优化 */

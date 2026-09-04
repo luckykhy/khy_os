@@ -142,7 +142,7 @@ const refreshData = async () => {
   loading.value = true
   try {
     await updateChart()
-    console.log('手动刷新数据完成')
+    if (import.meta.env.DEV) { console.log('手动刷新数据完成') }
   } catch (error) {
     console.error('刷新数据失败:', error)
   } finally {
@@ -162,7 +162,7 @@ const switchChartType = (type) => {
 const startRealTimeUpdate = () => {
   updateInterval = setInterval(async () => {
     if (chart.value && !loading.value) {
-      console.log('定时更新K线数据...')
+      if (import.meta.env.DEV) { console.log('定时更新K线数据...') }
       await updateChart()
     }
   }, 30000) // 30秒
@@ -179,7 +179,7 @@ const stopRealTimeUpdate = () => {
 // 获取真实K线数据
 const fetchRealKLineData = async () => {
   try {
-    console.log(`获取${props.symbol}的真实K线数据...`)
+    if (import.meta.env.DEV) { console.log(`获取${props.symbol}的真实K线数据...`) }
     
     // 使用临时的股票数据API路径
     const response = await fetch(`/api/trading-agents/stock-data/${props.symbol}`)
@@ -187,7 +187,7 @@ const fetchRealKLineData = async () => {
     
     if (result.success && result.data) {
       dataSource.value = result.data.source
-      console.log(`✅ 成功获取${result.data.kline?.length || 0}条K线数据，数据源: ${dataSource.value}`)
+      if (import.meta.env.DEV) { console.log(`✅ 成功获取${result.data.kline?.length || 0}条K线数据，数据源: ${dataSource.value}`) }
       
       const formattedData = {
         kline: result.data.kline || [],
@@ -221,7 +221,7 @@ const fetchRealKLineData = async () => {
     }
   } catch (error) {
     console.error('获取真实K线数据失败:', error)
-    console.log('使用备用数据源')
+    if (import.meta.env.DEV) { console.log('使用备用数据源') }
     
     // 随机选择一个真实数据源名称
     const realSources = ['新浪财经', '腾讯财经', '网易财经', '东方财富']
@@ -303,7 +303,7 @@ const initChart = async () => {
     return
   }
 
-  console.log('初始化 lightweight-charts 图表')
+  if (import.meta.env.DEV) { console.log('初始化 lightweight-charts 图表') }
 
   try {
     // 创建图表
@@ -311,7 +311,7 @@ const initChart = async () => {
       width: chartContainer.value.clientWidth,
       height: props.height,
       layout: {
-        background: { type: ColorType.Solid, color: '#ffffff' },
+        background: { type: ColorType.Solid, color: 'var(--khy-white)' },
         textColor: '#1f2937',
       },
       grid: {
@@ -340,7 +340,7 @@ const initChart = async () => {
       },
     })
 
-    console.log('图表创建成功')
+    if (import.meta.env.DEV) { console.log('图表创建成功') }
     
     // 创建系列
     createSeries()
@@ -348,7 +348,7 @@ const initChart = async () => {
     // 加载数据
     await updateChart()
     
-    console.log('图表初始化完成')
+    if (import.meta.env.DEV) { console.log('图表初始化完成') }
     
   } catch (error) {
     console.error('初始化图表失败:', error)
@@ -384,11 +384,11 @@ const createSeries = () => {
   if (chartType.value === 'candlestick') {
     // 创建K线系列
     candlestickSeries.value = chart.value.addCandlestickSeries({
-      upColor: '#ef5350',
+      upColor: 'var(--khy-danger)',
       downColor: '#26a69a',
-      borderUpColor: '#ef5350',
+      borderUpColor: 'var(--khy-danger)',
       borderDownColor: '#26a69a',
-      wickUpColor: '#ef5350',
+      wickUpColor: 'var(--khy-danger)',
       wickDownColor: '#26a69a',
     })
 
@@ -407,7 +407,7 @@ const createSeries = () => {
   } else {
     // 创建分时线系列
     lineSeries.value = chart.value.addLineSeries({
-      color: '#2196f3',
+      color: 'var(--khy-primary)',
       lineWidth: 2,
     })
   }
@@ -423,7 +423,7 @@ const recreateChart = async () => {
 const updateChart = async () => {
   if (!chart.value) return
 
-  console.log('开始更新图表数据')
+  if (import.meta.env.DEV) { console.log('开始更新图表数据') }
   
   const data = await fetchRealKLineData()
   
@@ -433,7 +433,7 @@ const updateChart = async () => {
     return
   }
 
-  console.log('获取到数据:', data.kline.length, '条')
+  if (import.meta.env.DEV) { console.log('获取到数据:', data.kline.length, '条') }
 
   try {
     if (chartType.value === 'candlestick') {
@@ -486,7 +486,7 @@ const updateChart = async () => {
     loading.value = false
     lastUpdateTime.value = new Date().toLocaleTimeString()
     
-    console.log('图表更新完成')
+    if (import.meta.env.DEV) { console.log('图表更新完成') }
     
   } catch (error) {
     console.error('更新图表数据失败:', error)
@@ -500,8 +500,8 @@ const updateIndicators = (data) => {
 
   // 只保留两条主要均线：MA20和MA60
   const maColors = {
-    ma20: '#2196f3',  // 蓝色 - 短期趋势
-    ma60: '#ff9800',  // 橙色 - 长期趋势
+    ma20: 'var(--khy-primary)',  // 蓝色 - 短期趋势
+    ma60: 'var(--khy-warning)',  // 橙色 - 长期趋势
   }
 
   // 清除现有均线
@@ -560,7 +560,7 @@ watch(() => props.period, async () => {
 })
 
 onMounted(async () => {
-  console.log('RealTimeKLineChart 组件挂载')
+  if (import.meta.env.DEV) { console.log('RealTimeKLineChart 组件挂载') }
   
   // 立即设置真实数据源名称
   const realSources = ['新浪财经', '腾讯财经', '网易财经', '东方财富']
@@ -597,7 +597,7 @@ onUnmounted(() => {
       chart.value.remove()
       chart.value = null
     } catch (error) {
-      console.log('清理图表时出错:', error)
+      if (import.meta.env.DEV) { console.log('清理图表时出错:', error) }
     }
   }
   window.removeEventListener('resize', handleResize)
@@ -608,7 +608,7 @@ onUnmounted(() => {
 .realtime-kline-chart {
   width: 100%;
   height: 100%;
-  background: #ffffff;
+  background: var(--khy-white);
   border-radius: 4px;
   overflow: hidden;
   display: flex;
@@ -653,7 +653,7 @@ onUnmounted(() => {
 }
 
 .current-price.price-up {
-  color: #ef5350;
+  color: var(--khy-danger);
 }
 
 .current-price.price-down {
@@ -676,11 +676,11 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 11px;
-  color: #888;
+  color: var(--khy-gray-400);
 }
 
 .source-label {
-  color: #666;
+  color: var(--khy-gray-500);
 }
 
 .source-name {
@@ -701,7 +701,7 @@ onUnmounted(() => {
 }
 
 .update-time {
-  color: #888;
+  color: var(--khy-gray-400);
 }
 
 .chart-type-buttons {
@@ -713,8 +713,8 @@ onUnmounted(() => {
   font-size: 11px;
   padding: 4px 8px;
   background: rgba(0, 0, 0, 0.7);
-  border-color: #555;
-  color: #ccc;
+  border-color: var(--khy-gray-600);
+  color: var(--khy-gray-200);
 }
 
 .chart-type-buttons .el-button--primary {
@@ -732,7 +732,7 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  color: #888;
+  color: var(--khy-gray-400);
   z-index: 5;
 }
 
@@ -743,7 +743,7 @@ onUnmounted(() => {
 .chart-container {
   flex: 1;
   width: 100%;
-  background: #ffffff;
+  background: var(--khy-white);
   position: relative;
 }
 

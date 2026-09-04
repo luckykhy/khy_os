@@ -22,7 +22,7 @@
  *
  * 契约:纯函数、确定性、不 mutate、恒返字符串。
  *
- * 各消费方保留同名本地 `const <原名> = require('.../normalizeToolName')` → 调用点逐字节不变。
+ * 各消费方保留同名本地 `const <原名> = require('normalizeToolName.js')` → 调用点逐字节不变。
  */
 
 function normalizeToolName(name) {

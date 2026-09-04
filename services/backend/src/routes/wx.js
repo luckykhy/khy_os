@@ -23,9 +23,9 @@ const crypto = require('crypto');
 const express = require('express');
 
 const daemon = require('../services/daemonManager');
-const store = require('../services/messaging/ilinkAccountStore');
-const bindingStore = require('../services/messaging/ilinkBindingStore');
-const login = require('../services/messaging/ilinkLogin');
+const store = require('../services/domain/messaging/messaging/ilinkAccountStore.js');
+const bindingStore = require('../services/domain/messaging/messaging/ilinkBindingStore.js');
+const login = require('../services/domain/messaging/messaging/ilinkLogin.js');
 
 const router = express.Router();
 

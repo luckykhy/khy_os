@@ -1408,7 +1408,7 @@ async function executePlanSteps(plan, opts) {
 
   // 确保任务面板清理
   try {
-    require('./taskPanelState').clearTasks();
+    require('../cli/taskPanelState').clearTasks();
   } catch {
     /* ignore */
   }
@@ -1774,7 +1774,7 @@ async function _executePlanContinuous(plan, opts) {
   _currentPlan = null;
 
   try {
-    require('./taskPanelState').clearTasks();
+    require('../cli/taskPanelState').clearTasks();
   } catch {
     /* ignore */
   }

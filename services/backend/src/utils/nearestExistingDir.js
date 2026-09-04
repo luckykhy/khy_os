@@ -16,7 +16,7 @@ const path = require('path');
  *   逐层 fs 异常吞掉继续上溯;抵达根(parent===dir)停;全程未命中→null。
  *
  * 契约:确定性(给定 fs 状态)、不 mutate 入参、上限 10 层防无界循环。
- *   各消费方保留同名本地 `const nearestExistingDir = require('.../nearestExistingDir')`→ 调用点逐字节不变。
+ *   各消费方保留同名本地 `const nearestExistingDir = require('nearestExistingDir.js')`→ 调用点逐字节不变。
  */
 
 function nearestExistingDir(filePath) {

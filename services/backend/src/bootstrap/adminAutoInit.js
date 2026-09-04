@@ -43,7 +43,7 @@ async function ensureDefaultAdmin() {
     username = resolveDefaultAdminUsername();
     if (isDisabled()) {
       console.log(
-        `ℹ️ 默认管理员自动初始化已通过 KHY_ADMIN_AUTO_INIT 禁用（用户名: ${username}），跳过`
+        `i 默认管理员自动初始化已通过 KHY_ADMIN_AUTO_INIT 禁用（用户名: ${username}），跳过`
       );
       return { created: false, skipped: true, reason: 'disabled' };
     }

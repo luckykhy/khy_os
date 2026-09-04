@@ -46,7 +46,7 @@ const aiManagementServer = require('../src/services/aiManagementServer');
 // enqueues `workflow_runs` (via ai-backend's router mounted in the management
 // server). Without a worker in-process nothing claims those rows, so runs sit
 // in `queued` forever. The atomic claim makes co-running with server.js safe.
-const workflowRunWorker = require('../src/services/workflow/workflowRunWorker');
+const { workflowRunWorker } = require('../src/services/workflow');
 const { getDataHome, getLegacyDataHome } = require('../src/utils/dataHome');
 
 // Ensure the JWT signing secret exists before the management server handles any
@@ -97,6 +97,12 @@ let lastActiveAt = Date.now();
 let seenAnySession = false;
 let gcTimer = null;
 let shuttingDown = false;
+
+// Bootstrap auth pushed by the CLI (`khy chat` → POST /auth/bootstrap) and
+// fetched by the manage page (`main.js` → GET /auth/bootstrap) to auto-login
+// the browser tab. The control token alone only proves the tab was opened by
+// the launcher; this payload carries the actual API session token.
+let authBootstrap = null;
 
 function parseIntArg(argv, name, fallback) {
   const idx = argv.indexOf(name);
@@ -561,6 +567,49 @@ function createControlServer() {
       sendJson(res, 200, { ok: true });
       shutdown('requested').catch(() => process.exit(1));
       return;
+    }
+
+    // CLI pushes the current session auth token here at manage startup
+    // (gatewayManageDaemon._syncManageAuthBootstrapFromCli), so the page opened
+    // afterwards can auto-login without the user typing credentials.
+    if (req.method === 'POST' && pathname === '/auth/bootstrap') {
+      const bodyRaw = await readBody(req);
+      const body = safeJsonParse(bodyRaw || '{}');
+      const bootstrapToken = String(body.token || '').trim();
+      const ttlMs = Math.max(30_000, parseInt(body.ttlMs, 10) || 30 * 60_000);
+      authBootstrap = {
+        enabled: body.enabled === true && !!bootstrapToken,
+        token: bootstrapToken,
+        username: String(body.username || '').trim(),
+        role: String(body.role || 'user').trim() || 'user',
+        expiresAt: Date.now() + ttlMs,
+      };
+      return sendJson(res, 200, { ok: true, enabled: authBootstrap.enabled });
+    }
+
+    // Manage page fetches the bootstrap payload (expects { data: { token } });
+    // an absent/expired bootstrap answers ok with a null data instead of an
+    // error so the page just falls back to the normal login form.
+    if (req.method === 'GET' && pathname === '/auth/bootstrap') {
+      const valid =
+        authBootstrap &&
+        authBootstrap.enabled &&
+        authBootstrap.token &&
+        Date.now() < authBootstrap.expiresAt;
+      return sendJson(
+        res,
+        200,
+        valid
+          ? {
+              ok: true,
+              data: {
+                token: authBootstrap.token,
+                username: authBootstrap.username,
+                role: authBootstrap.role,
+              },
+            }
+          : { ok: true, data: null }
+      );
     }
 
     if (

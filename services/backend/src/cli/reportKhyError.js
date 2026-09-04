@@ -37,7 +37,7 @@ const crashRecovery = require('../services/crashRecovery');
 let _bootstrap = null;
 function _loadBootstrap() {
   if (_bootstrap === null) {
-    try { _bootstrap = require('./chalkCompat'); }
+    try { _bootstrap = require('../bootstrap/chalkCompat.js'); }
     catch (_) { _bootstrap = {}; }
   }
   return _bootstrap;

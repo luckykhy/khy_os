@@ -16,8 +16,8 @@
  * port the current connection is using.
  */
 
-const svc = require('../../services/remotedev/remoteDevService');
-const { summarizeConnection } = require('../../services/remotedev/remoteDevState');
+const svc = require('../../services/domain/network/remotedev/remoteDevService.js');
+const { summarizeConnection } = require('../../services/domain/network/remotedev/remoteDevState.js');
 const { foldOutput } = require('../toolDisplayPolicy');
 
 function _chalk() {

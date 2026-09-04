@@ -30,7 +30,7 @@ const { printInfo, printWarn, printError } = require('../formatters');
  */
 async function handleToolCheck(subCommand, args = [], options = {}) {
   const env = process.env;
-  const { auditTools, toolContractEnabled } = require('../../services/toolCatalog/toolContract');
+  const { auditTools, toolContractEnabled } = require('../../services/domain/catalog/toolCatalog/toolContract.js');
 
   if (!toolContractEnabled(env)) {
     printWarn(

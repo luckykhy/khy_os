@@ -14,7 +14,7 @@
  *
  * 契约:确定性、不 mutate。注:回退分支读全局 process.env(非纯·env-injection 惯用)。
  *
- * 各消费方保留同名本地 `const _env = require('.../resolveEnv')` → 调用点逐字节不变。
+ * 各消费方保留同名本地 `const _env = require('resolveEnv.js')` → 调用点逐字节不变。
  */
 
 function resolveEnv(env) {

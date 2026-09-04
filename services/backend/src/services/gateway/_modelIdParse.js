@@ -20,7 +20,7 @@
  *   → 导出为 normalizeModelIdCompact。
  *
  * A 与 B **互不等价**(B 额外剥除内部空白),故并列导出、绝不合并;
- * 各消费方保留同名本地绑定(`const normalizeModelId = require('.../_modelIdParse').xxx;`)
+ * 各消费方保留同名本地绑定(`const normalizeModelId = require('./_modelIdParse').xxx;`)
  * → 调用点逐字节不变。
  *
  * 刻意不收敛(变体登记):

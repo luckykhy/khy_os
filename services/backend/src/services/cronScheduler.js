@@ -507,7 +507,7 @@ async function _executeJob(id, job, data) {
   // Deliver to channel if configured and result is non-empty
   if (job.channel && result) {
     try {
-      const { getMessageRouter } = require('./channels/messageRouter');
+      const { getMessageRouter } = require('./domain/messaging/channels/messageRouter');
       const router = getMessageRouter();
       await router.sendToChannel(job.channel, `[Cron: ${id}] ${result.slice(0, 4000)}`);
     } catch {

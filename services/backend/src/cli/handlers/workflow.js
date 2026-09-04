@@ -55,9 +55,9 @@ function _printHelp() {
 function _resolveDeps(deps = {}) {
   const coze = deps.coze || require('@khy/shared/workflow/cozeImport');
   const catalog = deps.catalog || require('@khy/shared/workflow/nodeCatalog');
-  const executor = deps.executor || require('../../services/workflow/workflowExecutor');
-  const core = deps.core || require('../../services/workflow/workflowCliCore');
-  const flowStats = deps.flowStats || require('../../services/workflow/flowStats');
+  const executor = deps.executor || require('../../services/domain/project/workflow/workflowExecutor.js');
+  const core = deps.core || require('../../services/domain/project/workflow/workflowCliCore.js');
+  const flowStats = deps.flowStats || require('../../services/domain/project/workflow/flowStats.js');
   const dataHome = deps.dataHome || require('../../utils/dataHome');
   const fs = deps.fs || require('fs');
   const path = deps.path || require('path');

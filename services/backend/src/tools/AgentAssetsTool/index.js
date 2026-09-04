@@ -14,7 +14,7 @@
  * dryRun=false 才落盘;action=sync/import/export 未确认时只回计划。
  */
 
-const registry = require('../../services/agentAssets/registry');
+const registry = require('../../services/domain/agents/agentAssets/registry.js');
 const { defineTool } = require('../_baseTool');
 
 /**
@@ -131,14 +131,14 @@ module.exports = defineTool({
   },
 
   async execute(params = {}) {
-    const model = require('../../services/agentAssets/assetModel');
+    const model = require('../../services/domain/agents/agentAssets/assetModel.js');
     if (!model.isEnabled(process.env)) {
       return {
         success: false,
         error: '外部 agent 资产层已被门控关闭(KHY_AGENT_ASSETS=off),未读写任何文件',
       };
     }
-    const sync = require('../../services/agentAssets/sync');
+    const sync = require('../../services/domain/agents/agentAssets/sync.js');
     const action = _resolveAction(params);
     const kinds = _kinds(params);
     const dryRun = _isDryRun(params);

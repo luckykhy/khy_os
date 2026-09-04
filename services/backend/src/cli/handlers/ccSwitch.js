@@ -23,8 +23,8 @@ const {
   APP_LABELS,
   PROTOCOLS,
   PROTOCOL_DEFAULT_MODELS,
-} = require('../../services/ccSwitch/constants');
-const store = require('../../services/ccSwitch/store');
+} = require('../../services/domain/collab/proactiveCollaboration/constants.js');
+const store = require('../../services/domain/config/ccSwitch/store.js');
 const maskToken = require('../../utils/maskToken');
 
 // ── Option helpers ──────────────────────────────────────────────────────────
@@ -277,7 +277,7 @@ async function handleCcSwitchUse(args, options) {
     return;
   }
 
-  const appWriters = require('../../services/ccSwitch/appWriters');
+  const appWriters = require('../../services/domain/config/ccSwitch/appWriters.js');
   let allOk = true;
 
   // Apps whose live config references the card key via an env var
@@ -384,7 +384,7 @@ async function handleCcSwitchTest(args, options) {
   if (!key) {
     printWarn('卡片没有可用的密钥，无法测试鉴权（仅测连通性）。');
   }
-  const { testCardConnectivity } = require('../../services/ccSwitch/connectivity');
+  const { testCardConnectivity } = require('../../services/domain/config/ccSwitch/connectivity.js');
   printInfo(`测试卡片「${card.name}」(${card.baseUrl})...`);
   const result = await testCardConnectivity({ card, key });
   if (result.ok) {
@@ -456,7 +456,7 @@ async function handleCcSwitchScan(args, options) {
     printWarn('没有可扫描的应用（可用 --app 指定，如 --app claude-code,codex）。');
     return;
   }
-  const { scanSessions } = require('../../services/ccSwitch/usageScan');
+  const { scanSessions } = require('../../services/domain/config/ccSwitch/usageScan.js');
   printInfo(`扫描 ${apps.map((a) => APP_LABELS[a] || a).join(', ')} 的会话记录（增量）...`);
   const started = Date.now();
   const result = await scanSessions({ apps });
@@ -476,7 +476,7 @@ async function handleCcSwitchScan(args, options) {
 
 // ── scan-status (游标状态) ─────────────────────────────────────────────────
 async function handleCcSwitchScanStatus(args, options) {
-  const { getCursorState } = require('../../services/ccSwitch/usageScan');
+  const { getCursorState } = require('../../services/domain/config/ccSwitch/usageScan.js');
   const state = getCursorState();
   const files = (state && state.files) || {};
   const keys = Object.keys(files);

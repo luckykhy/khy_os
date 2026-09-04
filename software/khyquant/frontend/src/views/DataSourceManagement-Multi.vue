@@ -506,7 +506,7 @@ const addLog = (type, message) => {
   })
   
   // 同时输出到控制台
-  console.log(`[${time}] [${typeLabels[type]}] ${message}`)
+  if (import.meta.env.DEV) { console.log(`[${time}] [${typeLabels[type]}] ${message}`) }
 }
 
 // 清空日志
@@ -840,10 +840,10 @@ const activateSource = async (sourceKey) => {
 
 // 🔥 前往交易页面
 const gotoTrading = (symbol) => {
-  console.log('🔍 跳转到交易页面')
-  console.log('   symbol参数:', symbol)
-  console.log('   symbol类型:', typeof symbol)
-  console.log('   symbol长度:', symbol?.length)
+  if (import.meta.env.DEV) { console.log('🔍 跳转到交易页面') }
+  if (import.meta.env.DEV) { console.log('   symbol参数:', symbol) }
+  if (import.meta.env.DEV) { console.log('   symbol类型:', typeof symbol) }
+  if (import.meta.env.DEV) { console.log('   symbol长度:', symbol?.length) }
   
   if (!symbol) {
     ElMessage.error('标的代码为空,无法跳转')
@@ -851,7 +851,7 @@ const gotoTrading = (symbol) => {
   }
   
   const url = `/trading?symbol=${encodeURIComponent(symbol)}`
-  console.log('   跳转URL:', url)
+  if (import.meta.env.DEV) { console.log('   跳转URL:', url) }
   
   // 使用Vue Router跳转到交易页面,并传递标的代码
   window.location.href = url
@@ -884,7 +884,7 @@ const gotoTrading = (symbol) => {
 }
 
 .debug-header h3 {
-  color: #ffffff;
+  color: var(--khy-white);
   font-size: 16px;
   font-weight: 600;
   margin: 0;
@@ -902,7 +902,7 @@ const gotoTrading = (symbol) => {
 .btn-clear-log {
   padding: 6px 12px;
   background: #3a3a3a;
-  color: #ffffff;
+  color: var(--khy-white);
   border: none;
   border-radius: 4px;
   font-size: 12px;
@@ -955,7 +955,7 @@ const gotoTrading = (symbol) => {
 }
 
 .log-time {
-  color: #888888;
+  color: var(--khy-gray-400);
   flex-shrink: 0;
   width: 90px;
 }
@@ -986,15 +986,15 @@ const gotoTrading = (symbol) => {
 }
 
 .log-entry.success .log-type {
-  color: #66bb6a;
+  color: var(--khy-success);
 }
 
 .log-entry.error .log-type {
-  color: #ef5350;
+  color: var(--khy-danger);
 }
 
 .log-entry.warning .log-type {
-  color: #ffa726;
+  color: var(--khy-warning);
 }
 
 .log-entry.debug .log-type {
@@ -1002,7 +1002,7 @@ const gotoTrading = (symbol) => {
 }
 
 .log-empty {
-  color: #666666;
+  color: var(--khy-gray-500);
   text-align: center;
   padding: 20px;
   font-style: italic;
@@ -1201,15 +1201,15 @@ const gotoTrading = (symbol) => {
 }
 
 .source-status.success .status-dot {
-  background: #10b981;
+  background: var(--khy-success);
 }
 
 .source-status.error .status-dot {
-  background: #ef4444;
+  background: var(--khy-danger);
 }
 
 .source-status.testing .status-dot {
-  background: #f59e0b;
+  background: var(--khy-warning);
   animation: pulse 1.5s ease-in-out infinite;
 }
 
@@ -1373,11 +1373,11 @@ const gotoTrading = (symbol) => {
 }
 
 .sample-change.up {
-  color: #ef4444;
+  color: var(--khy-danger);
 }
 
 .sample-change.down {
-  color: #10b981;
+  color: var(--khy-success);
 }
 
 /* 迷你跳转按钮样式 */

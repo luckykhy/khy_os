@@ -1263,53 +1263,402 @@ async function dispatchTailCommand(command, _ctx) {
 
     case 'coordinator': {
       const coord = require('../coordinator/coordinatorMode');
+      const workerAgent = require('../coordinator/workerAgent');
+      const taskBoard = require('../coordinator/taskBoard');
+
+      // ── Semantic rendering helpers (shared) ──
+      const _statusStyle = {
+        triage: { color: chalk.gray, icon: '○', label: 'triage' },
+        todo: { color: chalk.blue, icon: '◌', label: 'todo' },
+        ready: { color: chalk.cyan, icon: '◐', label: 'ready' },
+        running: { color: chalk.yellow, icon: '●', label: 'running' },
+        blocked: { color: chalk.red, icon: '◉', label: 'blocked' },
+        done: { color: chalk.green, icon: '✓', label: 'done' },
+        archived: { color: chalk.dim, icon: '▣', label: 'archived' },
+        dead_letter: { color: chalk.red.bold, icon: '✗', label: 'dead' },
+      };
+      const _statusBadge = (s) => {
+        const st = _statusStyle[s] || { color: chalk.white, icon: '?', label: s };
+        return `${st.icon} ${st.color(st.label)}`;
+      };
+      const _priorityStyle = {
+        high: { color: chalk.red.bold, label: 'HIGH', weight: 0 },
+        medium: { color: chalk.yellow, label: 'MED', weight: 1 },
+        low: { color: chalk.dim, label: 'LOW', weight: 2 },
+      };
+      const _priorityBadge = (p) => {
+        const st = _priorityStyle[p] || _priorityStyle.medium;
+        return st.color(st.label);
+      };
+      const _shortId = (id) => id ? id.slice(0, 8) + '…' : '-';
+      const _relTime = (ts) => {
+        if (!ts) return '';
+        const diff = Date.now() - ts;
+        const min = Math.floor(diff / 60000);
+        if (min < 1) return 'just now';
+        if (min < 60) return `${min}m ago`;
+        const hr = Math.floor(min / 60);
+        if (hr < 24) return `${hr}h ago`;
+        return `${Math.floor(hr / 24)}d ago`;
+      };
+
+      // ── ON ──
       if (subCommand === 'on') {
         coord.activateCoordinatorMode();
-        printInfo('Coordinator mode activated.');
-      } else if (subCommand === 'off') {
+        console.log(chalk.bold('\n  Coordinator Mode'));
+        console.log(`  ${chalk.green('●')} ${chalk.white.bold('ACTIVATED')}`);
+        console.log(`  Workers will be spawned for sub-tasks`);
+        console.log(`  Max depth: ${chalk.cyan(process.env.KHY_MAX_SPAWN_DEPTH || 3)} | Max children: ${chalk.cyan(process.env.KHY_MAX_CONCURRENT_CHILDREN || 3)}`);
+        console.log('');
+        return true;
+      }
+
+      // ── OFF ──
+      if (subCommand === 'off') {
         coord.deactivateCoordinatorMode();
-        printInfo('Coordinator mode deactivated.');
-      } else if (subCommand === 'status') {
-        printInfo(`Coordinator mode: ${coord.isCoordinatorMode() ? 'ON' : 'OFF'}`);
-      } else if (subCommand === 'board') {
+        console.log(chalk.bold('\n  Coordinator Mode'));
+        console.log(`  ${chalk.red('○')} ${chalk.white.bold('DEACTIVATED')}`);
+        console.log(`  All tasks run in main thread`);
+        console.log('');
+        return true;
+      }
+
+      // ── STATUS ──
+      if (subCommand === 'status') {
+        const isActive = coord.isCoordinatorMode();
+        const workers = workerAgent.listWorkers();
+        const activeWorkers = workers.filter((w) => w.status === 'running' || w.status === 'pending');
+        const tasks = taskBoard.listTasks();
+        const activeTasks = tasks.filter((t) => t.status === 'ready' || t.status === 'running');
+        const blockedTasks = tasks.filter((t) => t.status === 'blocked' || t.status === 'dead_letter');
+
+        console.log(chalk.bold('\n  Coordinator Status'));
+        console.log(`  Mode: ${isActive ? chalk.green('● ON') : chalk.red('○ OFF')}`);
+        console.log('');
+        console.log(`  ${chalk.cyan.bold('Workers')}`);
+        console.log(`    Active:  ${chalk.white.bold(activeWorkers.length)} / ${workers.length}`);
+        console.log(`    Running: ${chalk.yellow(workers.filter((w) => w.status === 'running').length)}`);
+        console.log(`    Pending: ${chalk.cyan(workers.filter((w) => w.status === 'pending').length)}`);
+        console.log(`    Done:    ${chalk.green(workers.filter((w) => w.status === 'completed').length)}`);
+        console.log(`    Error:   ${chalk.red(workers.filter((w) => w.status === 'error').length)}`);
+        console.log('');
+        console.log(`  ${chalk.cyan.bold('Task Board')}`);
+        console.log(`    Total:   ${chalk.white.bold(tasks.length)}`);
+        console.log(`    Active:  ${chalk.yellow(activeTasks.length)}`);
+        console.log(`    Blocked: ${chalk.red(blockedTasks.length)}`);
+        console.log('');
+        return true;
+      }
+
+      // ── WORKERS ──
+      if (subCommand === 'workers') {
+        const workers = workerAgent.listWorkers(args[0]);
+        console.log(chalk.bold('\n  Coordinator Workers'));
+        console.log(`  Total: ${chalk.white.bold(workers.length)} worker${workers.length !== 1 ? 's' : ''}`);
+        const _running = workers.filter((w) => w.status === 'running').length;
+        const _pending = workers.filter((w) => w.status === 'pending').length;
+        const _done = workers.filter((w) => w.status === 'completed').length;
+        const _err = workers.filter((w) => w.status === 'error').length;
+        if (_running > 0) console.log(`  ${chalk.yellow('●')} running: ${_running}`);
+        if (_pending > 0) console.log(`  ${chalk.cyan('◌')} pending: ${_pending}`);
+        if (_done > 0) console.log(`  ${chalk.green('✓')} done: ${_done}`);
+        if (_err > 0) console.log(`  ${chalk.red('✗')} error: ${_err}`);
+        console.log('');
+
+        if (workers.length === 0) {
+          printInfo('暂无 Worker');
+          return true;
+        }
+
+        printTable(
+          ['ID', '状态', '角色', '任务', '开始', '工具', 'Token'],
+          workers.slice(0, 20).map((w) => {
+            const st = _statusStyle[w.status] || { color: chalk.white, icon: '?' };
+            const statusStr = `${st.icon} ${st.color(w.status || '-')}`;
+            const taskShort = (w.task || '-').slice(0, 30);
+            const started = w.startedAt ? _relTime(w.startedAt) : '-';
+            return [
+              chalk.dim(_shortId(w.id)),
+              statusStr,
+              chalk.dim(w.role || '-'),
+              taskShort,
+              chalk.dim(started),
+              w.toolCalls || 0,
+              w.tokens || 0,
+            ];
+          })
+        );
+        return true;
+      }
+
+      // ── SPAWN ──
+      if (subCommand === 'spawn') {
+        const taskPrompt = args.join(' ');
+        if (!taskPrompt) {
+          printInfo('Usage: coordinator spawn <task description>');
+          return true;
+        }
+        console.log(chalk.bold('\n  Spawning Worker...'));
+        console.log(`  Task: ${chalk.white(taskPrompt.slice(0, 60))}`);
+        const worker = await workerAgent.spawnWorker(taskPrompt, { role: 'coder' });
+        console.log(`  ${chalk.green('✓')} Worker spawned: ${chalk.cyan(worker.id)}`);
+        console.log(`  Status: ${_statusBadge(worker.status)}`);
+        console.log('');
+        return true;
+      }
+
+      // ── KILL ──
+      if (subCommand === 'kill') {
+        const workerId = args[0];
+        if (!workerId) {
+          printInfo('Usage: coordinator kill <worker-id>');
+          return true;
+        }
+        const ok = workerAgent.shutdownWorker(workerId);
+        if (ok) {
+          console.log(chalk.bold('\n  Killing Worker...'));
+          console.log(`  ${chalk.red('✗')} Worker ${chalk.cyan(workerId)} stopped`);
+        } else {
+          printInfo(`Worker not found: ${workerId}`);
+        }
+        console.log('');
+        return true;
+      }
+
+      // ── LOG ──
+      if (subCommand === 'log') {
+        const workerId = args[0];
+        if (!workerId) {
+          printInfo('Usage: coordinator log <worker-id>');
+          return true;
+        }
+        const worker = workerAgent.getWorkerStatus(workerId);
+        if (!worker) {
+          printInfo(`Worker not found: ${workerId}`);
+          return true;
+        }
+        console.log(chalk.bold('\n  Worker Log'));
+        console.log(`  ID:      ${chalk.cyan(worker.id)}`);
+        console.log(`  Status:  ${_statusBadge(worker.status)}`);
+        console.log(`  Role:    ${chalk.dim(worker.role || '-')}`);
+        console.log(`  Task:    ${chalk.white((worker.task || '-').slice(0, 80))}`);
+        console.log(`  Started: ${worker.startedAt ? new Date(worker.startedAt).toLocaleString() : '-'}`);
+        console.log(`  Tools:   ${worker.toolCalls || 0}`);
+        console.log(`  Tokens:  ${worker.tokens || 0}`);
+        if (worker.error) {
+          console.log(`  ${chalk.red('Error:')}  ${chalk.red(worker.error)}`);
+        }
+        if (worker.result) {
+          console.log('');
+          console.log(chalk.dim('  ── Result ──'));
+          console.log(worker.result);
+        }
+        console.log('');
+        return true;
+      }
+
+      // ── BOARD ──
+      if (subCommand === 'board') {
         const taskBoard = require('../coordinator/taskBoard');
         const tasks = taskBoard.listTasks();
-        const counts = { pending: 0, claimed: 0, completed: 0, failed: 0 };
-        for (const task of tasks) {
-          if (Object.prototype.hasOwnProperty.call(counts, task.status)) {
-            counts[task.status] += 1;
+
+        // ── View mode: tree (default) ──
+        const viewMode = args[0] || 'tree';
+
+        // ── Build tree from flat list ──
+        const taskMap = new Map();
+        for (const t of tasks) {
+          taskMap.set(t.id, { ...t, children: [] });
+        }
+        const roots = [];
+        for (const t of taskMap.values()) {
+          if (t.parentId && taskMap.has(t.parentId)) {
+            taskMap.get(t.parentId).children.push(t);
+          } else {
+            roots.push(t);
           }
         }
 
-        console.log(chalk.bold('\n  Coordinator Task Board'));
-        console.log(`  Total:     ${tasks.length}`);
-        console.log(`  Pending:   ${counts.pending}`);
-        console.log(`  Claimed:   ${counts.claimed}`);
-        console.log(`  Completed: ${counts.completed}`);
-        console.log(`  Failed:    ${counts.failed}`);
+        // ── Semantic rendering helpers ──
+        const _statusStyle = {
+          triage: { color: chalk.gray, icon: '○', label: 'triage' },
+          todo: { color: chalk.blue, icon: '◌', label: 'todo' },
+          ready: { color: chalk.cyan, icon: '◐', label: 'ready' },
+          running: { color: chalk.yellow, icon: '●', label: 'running' },
+          blocked: { color: chalk.red, icon: '◉', label: 'blocked' },
+          done: { color: chalk.green, icon: '✓', label: 'done' },
+          archived: { color: chalk.dim, icon: '▣', label: 'archived' },
+          dead_letter: { color: chalk.red.bold, icon: '✗', label: 'dead' },
+        };
+        const _statusBadge = (s) => {
+          const st = _statusStyle[s] || { color: chalk.white, icon: '?', label: s };
+          return `${st.icon} ${st.color(st.label)}`;
+        };
 
-        if (tasks.length === 0) {
-          printInfo('任务板暂无任务');
-        } else {
-          console.log('');
-          printTable(
-            ['ID', '状态', '优先级', '负责人', '描述'],
-            tasks
-              .slice(0, 20)
-              .map((task) => [
-                task.id || '-',
-                task.status || '-',
-                task.priority || 'medium',
-                task.assignee || '-',
-                task.description || '-',
-              ])
-          );
-          if (tasks.length > 20) {
-            printInfo(`仅显示前 20 条任务，共 ${tasks.length} 条`);
+        const _priorityStyle = {
+          high: { color: chalk.red.bold, label: 'HIGH', weight: 0 },
+          medium: { color: chalk.yellow, label: 'MED', weight: 1 },
+          low: { color: chalk.dim, label: 'LOW', weight: 2 },
+        };
+        const _priorityBadge = (p) => {
+          const st = _priorityStyle[p] || _priorityStyle.medium;
+          return st.color(st.label);
+        };
+
+        const _shortId = (id) => id ? id.slice(0, 8) + '…' : '-';
+
+        const _relTime = (ts) => {
+          if (!ts) return '';
+          const diff = Date.now() - ts;
+          const min = Math.floor(diff / 60000);
+          if (min < 1) return 'just now';
+          if (min < 60) return `${min}m ago`;
+          const hr = Math.floor(min / 60);
+          if (hr < 24) return `${hr}h ago`;
+          return `${Math.floor(hr / 24)}d ago`;
+        };
+
+        // ── Dependency resolver ──
+        const _depStatus = (node) => {
+          if (!node.dependencies || node.dependencies.length === 0) return '';
+          let resolved = 0;
+          for (const depId of node.dependencies) {
+            const dep = taskMap.get(depId);
+            if (dep && dep.status === 'done') resolved++;
           }
+          const total = node.dependencies.length;
+          if (resolved === total) return chalk.green(`✓ ${resolved}/${total}`);
+          return chalk.yellow(`◐ ${resolved}/${total}`);
+        };
+
+        // ── Progress for parent tasks ──
+        const _progressBar = (node) => {
+          if (!node.children || node.children.length === 0) return '';
+          const done = node.children.filter((c) => c.status === 'done').length;
+          const total = node.children.length;
+          const pct = Math.round((done / total) * 100);
+          const filled = Math.round(pct / 10);
+          const bar = chalk.green('█'.repeat(filled)) + chalk.dim('░'.repeat(10 - filled));
+          return `${bar} ${done}/${total}`;
+        };
+
+        // ── Idle warning ──
+        const _idleWarning = (ts, status) => {
+          if (!ts || status === 'done' || status === 'archived') return '';
+          const min = Math.floor((Date.now() - ts) / 60000);
+          if (min > 30) return chalk.red(`⚠ ${min}m`);
+          if (min > 10) return chalk.yellow(`◌ ${min}m`);
+          return chalk.dim(`${min}m`);
+        };
+
+        // ── Sort: priority desc, then created asc ──
+        const _sortFn = (a, b) => {
+          const pw = (_priorityStyle[a.priority] || _priorityStyle.medium).weight - (_priorityStyle[b.priority] || _priorityStyle.medium).weight;
+          if (pw !== 0) return pw;
+          return (a.createdAt || 0) - (b.createdAt || 0);
+        };
+        roots.sort(_sortFn);
+        for (const r of roots) {
+          if (r.children) r.children.sort(_sortFn);
+        }
+
+        // ── Render tree rows with indentation ──
+        function _renderTree(nodeList, depth, maxRows) {
+          const rows = [];
+          for (const node of nodeList) {
+            if (rows.length >= maxRows) break;
+            const indent = depth > 0 ? '  │ '.repeat(depth - 1) + '  ├─ ' : '';
+            const assignee = node.assignee ? chalk.dim(`@${node.assignee.slice(0, 8)}`) : chalk.dim('─');
+            rows.push([
+              chalk.dim(_shortId(node.id)),
+              _statusBadge(node.status),
+              _priorityBadge(node.priority),
+              assignee,
+              indent + (node.description || node.title || '-'),
+              chalk.dim(_relTime(node.updatedAt)),
+              _depStatus(node),
+              _progressBar(node),
+              _idleWarning(node.updatedAt, node.status),
+            ]);
+            if (node.children?.length) {
+              rows.push(..._renderTree(node.children, depth + 1, maxRows - rows.length));
+            }
+          }
+          return rows;
+        }
+
+        // ── Status summary bar (structured) ──
+        const counts = { triage: 0, todo: 0, ready: 0, running: 0, blocked: 0, done: 0, archived: 0, dead_letter: 0 };
+        for (const t of tasks) {
+          if (Object.prototype.hasOwnProperty.call(counts, t.status)) {
+            counts[t.status]++;
+          }
+        }
+
+        // ── Pipeline view (Kanban columns) ──
+        if (viewMode === 'pipeline') {
+          const cols = ['triage', 'todo', 'ready', 'running', 'blocked', 'done'];
+          const _byStatus = {};
+          for (const s of cols) _byStatus[s] = [];
+          for (const t of tasks) {
+            if (_byStatus[t.status]) _byStatus[t.status].push(t);
+          }
+
+          console.log(chalk.bold('\n  Coordinator Task Board — Pipeline'));
+          console.log(`  Total: ${chalk.white.bold(tasks.length)} task${tasks.length !== 1 ? 's' : ''}`);
+
+          const _bar = cols.filter((s) => counts[s] > 0).map((s) => {
+            const st = _statusStyle[s];
+            return `${st.icon} ${st.color(counts[s])}`;
+          }).join(' → ');
+          console.log(`  ${_bar}\n`);
+
+          // Print each column as a section
+          for (const status of cols) {
+            const items = _byStatus[status];
+            if (items.length === 0) continue;
+            const st = _statusStyle[status];
+            console.log(`  ${st.icon} ${st.color.bold(st.label.toUpperCase())} (${items.length})`);
+            for (const item of items) {
+              const assignee = item.assignee ? chalk.dim(` @${item.assignee.slice(0, 6)}`) : '';
+              const deps = _depStatus(item);
+              const depsStr = deps ? ` [${deps}]` : '';
+              console.log(`    ${chalk.dim(_shortId(item.id))} ${(item.description || item.title || '-').slice(0, 40)}${assignee}${depsStr}`);
+            }
+            console.log('');
+          }
+          if (tasks.length === 0) {
+            printInfo('任务板为空');
+          }
+          return true;
+        }
+
+        // ── Header (tree view) ──
+        console.log(chalk.bold('\n  Coordinator Task Board'));
+        console.log(`  Total: ${chalk.white.bold(tasks.length)} task${tasks.length !== 1 ? 's' : ''}`);
+
+        const _active = Object.entries(counts).filter(([, n]) => n > 0);
+        if (_active.length > 0) {
+          const _bar = _active.map(([s, n]) => {
+            const st = _statusStyle[s];
+            return `${st.icon} ${st.color(n)}`;
+          }).join('  ');
+          console.log(`  ${_bar}`);
+        }
+
+        // ── Table ──
+        console.log('');
+        printTable(
+          ['ID', '状态', '优先级', '负责人', '描述', '更新', '依赖', '进度', '空闲'],
+          _renderTree(roots, 0, 20)
+        );
+        if (tasks.length === 0) {
+          printInfo('任务板为空');
+        } else if (roots.length > 20) {
+          printInfo(`仅显示前 20 条根任务，共 ${tasks.length} 条`);
         }
       } else {
-        printInfo('Usage: coordinator [on|off|status|board]');
+        printInfo('Usage: coordinator [on|off|status|workers|spawn|kill|log|board]');
       }
       return true;
     }

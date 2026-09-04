@@ -120,7 +120,7 @@ function resolveOpencodeBin(env = process.env, cwd = process.cwd()) {
     // 这样「配置在哪,exe 在哪」绑定,便于便携安装在任意 tools 目录下(如本机
     // `<Portable>/Tools/opencode`)都能被准确找到,不依赖 PATH 或特定 node_modules 布局。
     try {
-      const ocAdapter = require('../../externalApps/opencodeAdapter');
+      const ocAdapter = require('../../domain/network/externalApps/opencodeAdapter');
       const cfg = ocAdapter.configPath(env);
       if (cfg) {
         const exe = path.resolve(path.dirname(cfg), '..', bin);

@@ -16,7 +16,7 @@
  *
  * 契约:纯函数、确定性、恒返回布尔、不 mutate、绝不抛。
  *
- * 各消费方保留同名本地 `const _falsy = require('.../isOffValue')` → 调用点逐字节不变。
+ * 各消费方保留同名本地 `const _falsy = require('isOffValue.js')` → 调用点逐字节不变。
  */
 
 function isOffValue(v) {

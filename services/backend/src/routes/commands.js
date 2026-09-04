@@ -26,7 +26,7 @@ const router = express.Router();
  */
 router.get('/', (req, res) => {
   try {
-    const { buildCommandCatalog } = require('../services/commandCatalog/commandCatalog');
+    const { buildCommandCatalog } = require('../services/domain/catalog/commandCatalog/commandCatalog.js');
     let catalog = buildCommandCatalog({}, process.env);
 
     const q = String((req.query && req.query.q) || '')

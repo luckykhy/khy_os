@@ -31,9 +31,9 @@ import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import { createChart, ColorType } from 'lightweight-charts'
 
 // 验证导入
-console.log('createChart 函数:', typeof createChart)
-console.log('ColorType:', ColorType)
-console.log('lightweight-charts v4+ 已导入')
+if (import.meta.env.DEV) { console.log('createChart 函数:', typeof createChart) }
+if (import.meta.env.DEV) { console.log('ColorType:', ColorType) }
+if (import.meta.env.DEV) { console.log('lightweight-charts v4+ 已导入') }
 
 const props = defineProps({
   symbol: {
@@ -135,9 +135,9 @@ watch(() => [props.data, props.signals], () => {
         amount: item.amount ? Number(item.amount) : 0,
       }))
     }
-    console.log('watch 触发 - 克隆并转换数据')
-    console.log('转换后第一条:', clonedData.kline[0])
-    console.log('类型检查:', {
+    if (import.meta.env.DEV) { console.log('watch 触发 - 克隆并转换数据') }
+    if (import.meta.env.DEV) { console.log('转换后第一条:', clonedData.kline[0]) }
+    if (import.meta.env.DEV) { console.log('类型检查:', { }
       open: typeof clonedData.kline[0].open,
       high: typeof clonedData.kline[0].high,
       low: typeof clonedData.kline[0].low,
@@ -153,9 +153,9 @@ function initChart() {
     return
   }
 
-  console.log('初始化图表，容器宽度:', chartContainer.value.clientWidth)
-  console.log('接收到的数据:', props.data)
-  console.log('createChart 类型:', typeof createChart)
+  if (import.meta.env.DEV) { console.log('初始化图表，容器宽度:', chartContainer.value.clientWidth) }
+  if (import.meta.env.DEV) { console.log('接收到的数据:', props.data) }
+  if (import.meta.env.DEV) { console.log('createChart 类型:', typeof createChart) }
 
   if (typeof createChart !== 'function') {
     console.error('createChart 不是一个函数！lightweight-charts 可能没有正确加载')
@@ -168,7 +168,7 @@ function initChart() {
     width: chartContainer.value.clientWidth,
     height: parseInt(props.chartHeight),
     layout: {
-      background: { color: '#ffffff' },
+      background: { color: 'var(--khy-white)' },
       textColor: '#1f2937',
       fontSize: 12,
     },
@@ -225,20 +225,20 @@ function initChart() {
     },
   })
 
-  console.log('图表对象创建成功:', chart.value)
-  console.log('图表对象类型:', typeof chart.value)
+  if (import.meta.env.DEV) { console.log('图表对象创建成功:', chart.value) }
+  if (import.meta.env.DEV) { console.log('图表对象类型:', typeof chart.value) }
   
   // v5 API: 使用 addSeries 方法，传入系列类型
-  console.log('使用 v5 API 创建 K线系列...')
+  if (import.meta.env.DEV) { console.log('使用 v5 API 创建 K线系列...') }
   
   // 创建K线系列 - v4 API
   candlestickSeries.value = chart.value.addCandlestickSeries({
     upColor: '#26a69a',
-    downColor: '#ef5350',
+    downColor: 'var(--khy-danger)',
     borderUpColor: '#26a69a',
-    borderDownColor: '#ef5350',
+    borderDownColor: 'var(--khy-danger)',
     wickUpColor: '#26a69a',
-    wickDownColor: '#ef5350',
+    wickDownColor: 'var(--khy-danger)',
     priceLineVisible: false,
     lastValueVisible: true,
   })
@@ -358,23 +358,23 @@ function updateChart(dataOverride = null) {
     }
   }).filter(item => item !== null)
 
-  console.log('转换后的K线数据示例:', candleData[0])
-  console.log('转换后的成交量数据示例:', volumeData[0])
+  if (import.meta.env.DEV) { console.log('转换后的K线数据示例:', candleData[0]) }
+  if (import.meta.env.DEV) { console.log('转换后的成交量数据示例:', volumeData[0]) }
   
   // 最终验证：确保所有数据都是 number 类型
-  console.log('=== 最终数据类型验证 ===')
-  console.log('candleData[0].open 类型:', typeof candleData[0].open, '值:', candleData[0].open)
-  console.log('candleData[0].high 类型:', typeof candleData[0].high, '值:', candleData[0].high)
-  console.log('candleData[0].low 类型:', typeof candleData[0].low, '值:', candleData[0].low)
-  console.log('candleData[0].close 类型:', typeof candleData[0].close, '值:', candleData[0].close)
-  console.log('volumeData[0].value 类型:', typeof volumeData[0].value, '值:', volumeData[0].value)
+  if (import.meta.env.DEV) { console.log('=== 最终数据类型验证 ===') }
+  if (import.meta.env.DEV) { console.log('candleData[0].open 类型:', typeof candleData[0].open, '值:', candleData[0].open) }
+  if (import.meta.env.DEV) { console.log('candleData[0].high 类型:', typeof candleData[0].high, '值:', candleData[0].high) }
+  if (import.meta.env.DEV) { console.log('candleData[0].low 类型:', typeof candleData[0].low, '值:', candleData[0].low) }
+  if (import.meta.env.DEV) { console.log('candleData[0].close 类型:', typeof candleData[0].close, '值:', candleData[0].close) }
+  if (import.meta.env.DEV) { console.log('volumeData[0].value 类型:', typeof volumeData[0].value, '值:', volumeData[0].value) }
 
   // 更新K线和成交量
-  console.log('准备调用 setData...')
+  if (import.meta.env.DEV) { console.log('准备调用 setData...') }
   candlestickSeries.value.setData(candleData)
-  console.log('K线数据设置成功')
+  if (import.meta.env.DEV) { console.log('K线数据设置成功') }
   volumeSeries.value.setData(volumeData)
-  console.log('成交量数据设置成功')
+  if (import.meta.env.DEV) { console.log('成交量数据设置成功') }
 
   // 更新当前价格
   if (candleData.length > 0) {
@@ -406,8 +406,8 @@ function updateIndicators(dataToUse, klineData) {
   maSeries.value = {}
 
   const maColors = {
-    MA5: '#ffeb3b',
-    MA10: '#2196f3',
+    MA5: 'var(--khy-warning)',
+    MA10: 'var(--khy-primary)',
     MA20: '#e91e63',
     MA30: '#9c27b0',
   }
@@ -475,7 +475,7 @@ function updateSignals(dataToUse, klineData) {
     .map(s => ({
       time: Math.floor(_toMs(klineData[s.index]) / 1000),
       position: 'aboveBar',
-      color: '#ef5350',
+      color: 'var(--khy-danger)',
       shape: 'circle',
       text: '👎',
       size: 2.0
@@ -483,7 +483,7 @@ function updateSignals(dataToUse, klineData) {
 
   // 使用 v5 API 设置标记
   const allMarkers = [...buySignals, ...sellSignals]
-  console.log('设置交易信号标记:', allMarkers.length, '个')
+  if (import.meta.env.DEV) { console.log('设置交易信号标记:', allMarkers.length, '个') }
   candlestickSeries.value.setMarkers(allMarkers)
 }
 
@@ -503,7 +503,7 @@ function handleResize() {
 <style scoped>
 .lightweight-kline-container {
   width: 100%;
-  background: #ffffff;
+  background: var(--khy-white);
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
@@ -546,12 +546,12 @@ function handleResize() {
 }
 .badge-realtime {
   background: rgba(82, 196, 26, 0.15);
-  color: #52c41a;
+  color: var(--khy-success);
   border: 1px solid rgba(82, 196, 26, 0.4);
 }
 .badge-cache {
   background: rgba(255, 193, 7, 0.15);
-  color: #ffc107;
+  color: var(--khy-warning);
   border: 1px solid rgba(255, 193, 7, 0.4);
 }
 .badge-mock {
@@ -574,7 +574,7 @@ function handleResize() {
 }
 
 .current-price.price-down {
-  color: #ef5350;
+  color: var(--khy-danger);
 }
 
 .price-change {
@@ -591,7 +591,7 @@ function handleResize() {
 .chart-container {
   width: 100%;
   position: relative;
-  background: #ffffff;
+  background: var(--khy-white);
 }
 
 :deep(.el-checkbox) {
@@ -610,7 +610,7 @@ function handleResize() {
 }
 
 :deep(.el-checkbox__inner) {
-  background-color: #ffffff;
+  background-color: var(--khy-white);
   border-color: #94a3b8;
 }
 

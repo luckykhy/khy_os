@@ -252,7 +252,7 @@ const loadPositions = async () => {
     const response = await request.get('/trading/positions')
     if (response.success) {
       positions.value = response.data || []
-      console.log('✅ 持仓加载成功:', positions.value.length, '个')
+      if (import.meta.env.DEV) { console.log('✅ 持仓加载成功:', positions.value.length, '个') }
     }
   } catch (error) {
     console.error('❌ 加载持仓失败:', error)
@@ -452,7 +452,7 @@ defineExpose({
 
 <style scoped>
 .enhanced-positions-panel {
-  background: #1a1a1a;
+  background: var(--khy-gray-900);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -462,10 +462,10 @@ defineExpose({
   justify-content: space-between;
   align-items: center;
   padding: 12px 15px;
-  background: linear-gradient(to bottom, #2a2a2a, #1a1a1a);
-  border-bottom: 1px solid #333;
+  background: linear-gradient(to bottom, #2a2a2a, var(--khy-gray-900));
+  border-bottom: 1px solid var(--khy-gray-700);
   font-weight: 600;
-  color: #fff;
+  color: var(--khy-white);
 }
 
 .panel-content {
@@ -474,12 +474,12 @@ defineExpose({
 
 :deep(.el-table) {
   background: transparent;
-  color: #ccc;
+  color: var(--khy-gray-200);
 }
 
 :deep(.el-table th) {
   background: #2a2a2a;
-  color: #ccc;
+  color: var(--khy-gray-200);
   font-weight: 600;
 }
 
@@ -488,11 +488,11 @@ defineExpose({
 }
 
 :deep(.el-table td) {
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid var(--khy-gray-700);
 }
 
 :deep(.el-table__empty-text) {
-  color: #666;
+  color: var(--khy-gray-500);
 }
 
 :deep(.long-position) {
@@ -546,7 +546,7 @@ defineExpose({
 }
 
 .summary-row.total-row {
-  border-top: 1px solid #444;
+  border-top: 1px solid var(--khy-gray-600);
   padding-top: 12px;
   margin-top: 12px;
 }
@@ -558,11 +558,11 @@ defineExpose({
 }
 
 .summary-item .label {
-  color: #888;
+  color: var(--khy-gray-400);
 }
 
 .summary-item .value {
-  color: #fff;
+  color: var(--khy-white);
   font-weight: 600;
 }
 
@@ -572,7 +572,7 @@ defineExpose({
 }
 
 .close-dialog-content {
-  color: #ccc;
+  color: var(--khy-gray-200);
 }
 
 .position-info {
@@ -590,11 +590,11 @@ defineExpose({
 }
 
 .info-row .label {
-  color: #888;
+  color: var(--khy-gray-400);
 }
 
 .info-row .value {
-  color: #fff;
+  color: var(--khy-white);
   font-weight: 500;
 }
 
@@ -613,11 +613,11 @@ defineExpose({
 }
 
 .estimate-item .label {
-  color: #888;
+  color: var(--khy-gray-400);
 }
 
 .estimate-item .value {
-  color: #fff;
+  color: var(--khy-white);
   font-weight: 600;
   font-size: 15px;
 }
@@ -628,29 +628,29 @@ defineExpose({
 }
 
 :deep(.el-dialog) {
-  background: #1a1a1a;
+  background: var(--khy-gray-900);
 }
 
 :deep(.el-dialog__header) {
   background: #2a2a2a;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid var(--khy-gray-700);
 }
 
 :deep(.el-dialog__title) {
-  color: #fff;
+  color: var(--khy-white);
 }
 
 :deep(.el-dialog__body) {
-  background: #1a1a1a;
+  background: var(--khy-gray-900);
 }
 
 :deep(.el-form-item__label) {
-  color: #ccc;
+  color: var(--khy-gray-200);
 }
 
 :deep(.el-input-number .el-input__inner) {
   background: #2a2a2a;
-  border-color: #444;
-  color: #fff;
+  border-color: var(--khy-gray-600);
+  color: var(--khy-white);
 }
 </style>

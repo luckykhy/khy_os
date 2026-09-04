@@ -360,13 +360,13 @@ onUnmounted(() => {
 }
 
 .metric-tile--blue {
-  border-left: 3px solid #3b82f6;
+  border-left: 3px solid var(--khy-primary);
 }
 .metric-tile--green {
-  border-left: 3px solid #10b981;
+  border-left: 3px solid var(--khy-success);
 }
 .metric-tile--amber {
-  border-left: 3px solid #f59e0b;
+  border-left: 3px solid var(--khy-warning);
 }
 .metric-tile--purple {
   border-left: 3px solid #8b5cf6;

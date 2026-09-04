@@ -20,7 +20,7 @@
  * read-only. Auto-registered by the tools/ readdir loader (flat defineTool).
  */
 
-const resolver = require('../services/config/nlConfigResolver');
+const resolver = require('../services/domain/config/config/nlConfigResolver.js');
 
 const { defineTool } = require('./_baseTool');
 // Structured-error SSOT for the failure path (gate KHY_CONFIGURE_STRUCTURED_ERROR).

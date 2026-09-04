@@ -50,7 +50,7 @@ export async function getInstrumentsList(type = 'stock', limit = 0) {
       const parsed = JSON.parse(savedSymbols)
       if (parsed && parsed.length > 0) {
         symbolsList = parsed
-        console.log(`📦 从本地加载 ${symbolsList.length} 个${type}标的`)
+        if (import.meta.env.DEV) { console.log(`📦 从本地加载 ${symbolsList.length} 个${type}标的`) }
       }
     } catch (e) {
       console.warn('解析本地标的列表失败:', e)
@@ -74,7 +74,7 @@ export async function getInstrumentsList(type = 'stock', limit = 0) {
       
       // 永久保存到localStorage
       localStorage.setItem(cacheKey, JSON.stringify(symbolsList))
-      console.log(`✅ 从数据库更新标的列表: ${symbolsList.length} 个${type}`)
+      if (import.meta.env.DEV) { console.log(`✅ 从数据库更新标的列表: ${symbolsList.length} 个${type}`) }
     }
   } catch (error) {
     console.warn(`⚠️ 获取${type}标的列表失败,使用本地列表:`, error.message)
@@ -95,7 +95,7 @@ export async function getMarketQuotes(symbolsList, type = 'stock') {
   
   // 1. 优先尝试从AData获取真实行情数据
   try {
-    console.log(`🔍 尝试从AData获取${type}行情数据...`)
+    if (import.meta.env.DEV) { console.log(`🔍 尝试从AData获取${type}行情数据...`) }
     const response = await axios.get(`${getApiBaseUrl()}/api/comprehensive-data/test-source/adata`, {
       params: { 
         symbols: symbolsList.map(s => s.symbol).join(','),
@@ -126,7 +126,7 @@ export async function getMarketQuotes(symbolsList, type = 'stock') {
         timestamp: Date.now()
       }))
       
-      console.log(`✅ 使用AData实时数据: ${quotes.length} 个${type}`)
+      if (import.meta.env.DEV) { console.log(`✅ 使用AData实时数据: ${quotes.length} 个${type}`) }
       return quotes
     }
   } catch (error) {
@@ -135,7 +135,7 @@ export async function getMarketQuotes(symbolsList, type = 'stock') {
   
   // 1.5 如果AData失败,尝试通用市场行情API
   try {
-    console.log(`🔍 尝试从通用API获取${type}行情数据...`)
+    if (import.meta.env.DEV) { console.log(`🔍 尝试从通用API获取${type}行情数据...`) }
     const response = await axios.get(`${getApiBaseUrl()}/api/market/quotes`, {
       params: { 
         symbols: symbolsList.map(s => s.symbol).join(','),
@@ -166,7 +166,7 @@ export async function getMarketQuotes(symbolsList, type = 'stock') {
         timestamp: Date.now()
       }))
       
-      console.log(`✅ 使用通用API实时数据: ${quotes.length} 个${type}`)
+      if (import.meta.env.DEV) { console.log(`✅ 使用通用API实时数据: ${quotes.length} 个${type}`) }
       return quotes
     }
   } catch (error) {
@@ -185,7 +185,7 @@ export async function getMarketQuotes(symbolsList, type = 'stock') {
           ...item,
           dataSource: '缓存数据'
         }))
-        console.log(`✅ 使用缓存数据: ${quotes.length} 个${type} (${Math.floor(cacheAge / 1000 / 60)} 分钟前)`)
+        if (import.meta.env.DEV) { console.log(`✅ 使用缓存数据: ${quotes.length} 个${type} (${Math.floor(cacheAge / 1000 / 60)} 分钟前)`) }
         return quotes
       }
     } catch (e) {
@@ -194,7 +194,7 @@ export async function getMarketQuotes(symbolsList, type = 'stock') {
   }
   
   // 3. 使用模拟数据
-  console.log(`⚠️ 使用模拟数据: ${type}`)
+  if (import.meta.env.DEV) { console.log(`⚠️ 使用模拟数据: ${type}`) }
   return generateMockQuotes(symbolsList, type)
 }
 
@@ -292,7 +292,7 @@ export function clearAllCache() {
   keys.forEach(type => {
     localStorage.removeItem(`market_quotes_${type}`)
   })
-  console.log('✅ 已清除所有行情缓存')
+  if (import.meta.env.DEV) { console.log('✅ 已清除所有行情缓存') }
 }
 
 /**
@@ -303,7 +303,7 @@ export function clearInstrumentsCache() {
   keys.forEach(type => {
     localStorage.removeItem(`instruments_list_${type}`)
   })
-  console.log('⚠️ 已清除所有标的列表缓存')
+  if (import.meta.env.DEV) { console.log('⚠️ 已清除所有标的列表缓存') }
 }
 
 export default {

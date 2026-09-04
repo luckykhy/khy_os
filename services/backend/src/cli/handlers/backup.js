@@ -22,9 +22,9 @@ const fs = require('fs');
 const path = require('path');
 
 const { BACKUP } = require('../../constants/serviceDefaults');
-const plan = require('../../services/backup/backupAssetPlan');
-const backupService = require('../../services/backup/backupService');
-const restoreService = require('../../services/backup/restoreService');
+const plan = require('../../services/domain/backup/backup/backupAssetPlan.js');
+const backupService = require('../../services/domain/backup/backup/backupService.js');
+const restoreService = require('../../services/domain/backup/backup/restoreService.js');
 const { printInfo, printError, printSuccess, printWarn, printTable } = require('../formatters');
 
 // ── Helpers ──

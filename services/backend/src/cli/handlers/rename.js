@@ -44,7 +44,7 @@ async function handleRename(subCommand, args = [], _options = {}) {
 
   let sessionId = null;
   try {
-    sessionId = require('../../services/session/sessionForestService').getCurrentSessionId();
+    sessionId = require('../../services/domain/session/session/sessionForestService.js').getCurrentSessionId();
   } catch {
     /* best-effort */
   }

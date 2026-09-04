@@ -46,7 +46,7 @@ function _autoHeal(env) {
     if (!_isAutoHealEnabled(env)) {
       return;
     }
-    require('../../externalApps/opencodeAdapter').repair(env);
+    require('../../domain/network/externalApps/opencodeAdapter').repair(env);
   } catch {
     /* fail-soft: healing must never block the invocation */
   }

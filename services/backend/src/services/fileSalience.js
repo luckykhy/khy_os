@@ -26,7 +26,7 @@
  * @module services/fileSalience
  */
 
-const { applyBudget } = require('./contextScope/budgetController');
+const { applyBudget } = require('./domain/session/contextScope/budgetController');
 const flagRegistry = require('./flagRegistry');
 // 注意:**不**在此 require archiveManifestPolicy —— 后者会 require 本模块,成环。
 // 字节格式化直接走 ccFormat SSOT(与 archiveManifestPolicy._formatBytes 同口径,叶子→叶子相对 require 合规)。

@@ -12,7 +12,7 @@
  *   原 promise rejected → resolve `{ __error: true }`。`settled` 闩保证只结算一次。
  *
  * 契约:非纯(setTimeout/clearTimeout 定时器)·不 mutate 入参·绝不抛/绝不 reject。
- *   各消费方保留同名本地 `const _withTimeout = require('../../utils/withTimeout')`
+ *   各消费方保留同名本地 `const _withTimeout = require('withTimeout.js')`
  *   → 调用点逐字节不变。
  */
 

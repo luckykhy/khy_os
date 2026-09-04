@@ -91,7 +91,7 @@ module.exports = defineTool({
     // 仅在真正请求执行工具（runTools）时触发——纯探活/未授权路径不打扰用户。
     const miss = report?.orchestration?.missingDependency;
     if (params.runTools === true && miss && miss.depId) {
-      const { MissingDependencyError } = require('../services/dependency/resolver');
+      const { MissingDependencyError } = require('../services/domain/network/dependency/resolver.js');
       const err = new MissingDependencyError(miss.depId, {
         message: `逆向 ${report?.scan?.family || ''} 产物需要反编译/反汇编工具 ${miss.bin}，本机未安装。`,
       });

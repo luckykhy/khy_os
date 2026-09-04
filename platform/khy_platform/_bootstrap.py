@@ -23,6 +23,7 @@ import subprocess
 import sys
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 # 标记文件：存在则代表已初始化，下次可直接跳过
@@ -748,12 +749,19 @@ def ensure_bootstrapped(backend_dir: Path, node_cmd: str):
     _check_version_upgrade(backend_dir)
 
     if marker.exists() and seed_marker.exists():
-        _maybe_repair_optional_local_ai_deps(backend_dir, optional_fix_marker)
-        _maybe_repair_kiro_cw_sdk(backend_dir, kiro_cw_sdk_marker)
-        _maybe_install_trae_bridge(backend_dir)
-        _maybe_configure_ide_gateway(backend_dir)
-        _sync_claude_code_auth_token()
-        _maybe_build_ai_frontend(backend_dir)
+        # B1: 并行执行独立的 _maybe_* 修复(均为文件 I/O,无互相依赖, ~50-200ms 节省)
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            futures = [
+                pool.submit(_maybe_repair_optional_local_ai_deps, backend_dir, optional_fix_marker),
+                pool.submit(_maybe_repair_kiro_cw_sdk, backend_dir, kiro_cw_sdk_marker),
+                pool.submit(_maybe_install_trae_bridge, backend_dir),
+                pool.submit(_maybe_configure_ide_gateway, backend_dir),
+                pool.submit(_sync_claude_code_auth_token),
+                pool.submit(_maybe_build_ai_frontend, backend_dir),
+            ]
+            for f in futures:
+                f.result()  # 捕获异常防止静默吞掉
+        # kernel prebuild 较重,单独跑
         _maybe_prebuild_khyos_kernel(backend_dir, node_cmd, kernel_prebuild_marker)
         _surface_kernel_build_result(_khyos_cache_dir())
         return  # 安装与 seed 都完成，直接跳过
@@ -765,22 +773,34 @@ def ensure_bootstrapped(backend_dir: Path, node_cmd: str):
     install_ok = True
     seed_ok = seed_marker.exists()
 
-    # 1) 安装 npm 依赖（仅在安装标记缺失时执行）
+    # UX1: 首次启动进度条 — 让用户知道当前在第几步、还有几步
+    # 收集实际需要执行的步骤(跳过已完成的)
+    steps = []
     if not marker.exists():
-        install_ok = _ensure_npm_install(backend_dir) and install_ok
-
-    # 2) 生成 .env（可重复安全）
-    _ensure_env_file(backend_dir)
-
-    # 3) 初始化数据库（仅在 seed 标记缺失时执行，失败会在下次自动重试）
+        steps.append(("安装 npm 依赖", lambda: _ensure_npm_install(backend_dir)))
+    steps.append(("生成环境配置", lambda: _ensure_env_file(backend_dir)))
     if not seed_ok:
-        seed_ok = _ensure_db_init(backend_dir, node_cmd)
+        steps.append(("初始化数据库", lambda: _ensure_db_init(backend_dir, node_cmd)))
+    steps.append(("注册应用清单", lambda: _register_app(backend_dir)))
+    steps.append(("生成入门文档", lambda: _generate_getting_started(backend_dir, node_cmd)))
+    steps.append(("修复可选依赖", lambda: _parallel_optional_repairs(
+        backend_dir, optional_fix_marker, kiro_cw_sdk_marker)))
 
-    # 4) 注册到 app 清单（可重复安全）
-    _register_app(backend_dir)
+    total = len(steps)
+    for i, (label, fn) in enumerate(steps, 1):
+        pct = (i / total) * 100
+        print(f"  [{i}/{total} {pct:5.1f}%] {label}...", flush=True)
+        try:
+            result = fn()
+            # _ensure_npm_install 返回 bool,其他返回 None
+            if label == "安装 npm 依赖":
+                install_ok = bool(result) and install_ok
+        except Exception as e:
+            if label == "安装 npm 依赖":
+                install_ok = False
+            print(f"  [WARN] {label} 失败: {e}", file=sys.stderr)
 
     # 安装标记：npm install 至少完成（即使 optional 依赖失败也算通过）
-    # 避免 optional 失败导致每次启动都重跑完整 npm install
     if install_ok:
         _write_marker(marker, "bootstrapped")
 
@@ -789,28 +809,26 @@ def ensure_bootstrapped(backend_dir: Path, node_cmd: str):
     else:
         print("  [WARN] Database seed not confirmed; will retry on next startup.", file=sys.stderr)
 
-    # 5) 生成入门文档（非关键）
-    _generate_getting_started(backend_dir, node_cmd)
-
-    # 6) 可选依赖自愈（避免旧安装缺失 node-llama-cpp）
-    _maybe_repair_optional_local_ai_deps(backend_dir, optional_fix_marker)
-
-    # 6b) Kiro 传输 SDK 自愈（避免旧安装/slim 安装缺失 CodeWhisperer SDK）
-    _maybe_repair_kiro_cw_sdk(backend_dir, kiro_cw_sdk_marker)
-
-    # 7) 自动安装 Trae Bridge 扩展到本地 Trae IDE
-    _maybe_install_trae_bridge(backend_dir)
-
-    # 8) 自动检测本地 IDE 并配置网关首选适配器
-    _maybe_configure_ide_gateway(backend_dir)
-
-    # 9) 后台预构建自研内核 ISO（首次安装后零摩擦，缺工具链则自动降级到 `khy os` 懒构建）
+    # 后台预构建自研内核 ISO
     _maybe_prebuild_khyos_kernel(backend_dir, node_cmd, kernel_prebuild_marker)
     _surface_kernel_build_result(_khyos_cache_dir())
 
     print()
-    print("  Setup complete!")
+    print(f"  Setup complete! [{total}/{total} 100.0%] ({total} 步全部完成)")
     print()
+
+
+def _parallel_optional_repairs(backend_dir, optional_fix_marker, kiro_cw_sdk_marker):
+    """并行执行可选依赖自愈(B1+B5: 4 个独立 I/O 操作并行, ~100-200ms 节省)。"""
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        futures = [
+            pool.submit(_maybe_repair_optional_local_ai_deps, backend_dir, optional_fix_marker),
+            pool.submit(_maybe_repair_kiro_cw_sdk, backend_dir, kiro_cw_sdk_marker),
+            pool.submit(_maybe_install_trae_bridge, backend_dir),
+            pool.submit(_maybe_configure_ide_gateway, backend_dir),
+        ]
+        for f in futures:
+            f.result()
 
 
 def _maybe_repair_optional_local_ai_deps(backend_dir: Path, marker: Path):

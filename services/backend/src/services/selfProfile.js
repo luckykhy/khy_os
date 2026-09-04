@@ -20,7 +20,7 @@ const path = require('path');
 let _skillsModule = null;
 function getSkillsModule() {
   if (!_skillsModule) {
-    _skillsModule = require('../skills/index');
+    _skillsModule = require('./skills/index');
   }
   return _skillsModule;
 }
@@ -113,7 +113,7 @@ let _commandCatalog = null;
 function getCommandCatalog() {
   if (!_commandCatalog) {
     try {
-      _commandCatalog = require('./commandCatalog/commandCatalog');
+      _commandCatalog = require('./domain/catalog/commandCatalog/commandCatalog');
     } catch {
       _commandCatalog = null;
     }

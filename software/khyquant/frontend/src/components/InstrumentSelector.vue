@@ -84,7 +84,7 @@ const loadAllInstruments = async () => {
   try {
     loading.value = true
     
-    console.log('🔍 加载标的列表...')
+    if (import.meta.env.DEV) { console.log('🔍 加载标的列表...') }
     
     const response = await request.get('/market/symbols', {
       params: {
@@ -99,7 +99,7 @@ const loadAllInstruments = async () => {
       totalCount.value = allInstruments.value.length
       dataSource.value = allInstruments.value[0]?.source || 'AData'
       
-      console.log(`✅ 加载 ${totalCount.value} 个标的`)
+      if (import.meta.env.DEV) { console.log(`✅ 加载 ${totalCount.value} 个标的`) }
       
       // 保存到本地存储
       localStorage.setItem('instruments_cache', JSON.stringify({
@@ -123,7 +123,7 @@ const loadAllInstruments = async () => {
           totalCount.value = data.length
           dataSource.value = '本地缓存'
           
-          console.log(`✅ 从本地缓存加载 ${totalCount.value} 个标的`)
+          if (import.meta.env.DEV) { console.log(`✅ 从本地缓存加载 ${totalCount.value} 个标的`) }
           ElMessage.warning('使用本地缓存数据')
           return
         }
@@ -159,7 +159,7 @@ const useMockData = () => {
   totalCount.value = mockData.length
   dataSource.value = '模拟数据'
   
-  console.log('⚠️ 使用模拟数据')
+  if (import.meta.env.DEV) { console.log('⚠️ 使用模拟数据') }
   ElMessage.warning('API不可用,使用模拟数据')
 }
 
@@ -186,7 +186,7 @@ const handleSelect = (code) => {
   if (instrument) {
     emit('update:modelValue', code)
     emit('select', instrument)
-    console.log('✅ 选择标的:', instrument)
+    if (import.meta.env.DEV) { console.log('✅ 选择标的:', instrument) }
   }
 }
 

@@ -13,7 +13,7 @@
  * 用户仍可用 `config set language.preference`)。
  */
 
-const leaf = require('../../services/config/langPreference');
+const leaf = require('../../services/domain/config/config/langPreference.js');
 const { printInfo, printError } = require('../formatters');
 
 const _FALSY = new Set(['0', 'false', 'off', 'no']);

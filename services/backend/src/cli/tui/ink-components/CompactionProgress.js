@@ -96,57 +96,36 @@ function CompactionProgress({ compaction }) {
   const { Box, Text } = inkRuntime.get();
   const h = React.createElement;
 
+  // Honest: use only the backend-reported percentage. No easing, no invented movement.
   const floor = Math.max(0, Math.min(100, Number(compaction && compaction.pct) || 0));
   const stage = (compaction && compaction.stage) || 'starting';
   const tokensBefore = Number(compaction && compaction.tokensBefore) || 0;
   const startedAt = Number(compaction && compaction.startedAt) || Date.now();
   const done = stage === 'done';
 
-  const [pct, setPct] = React.useState(floor);
   const [now, setNow] = React.useState(Date.now());
 
-  // Never display below the latest milestone floor reported by the backend.
-  React.useEffect(() => {
-    setPct((p) => (floor > p ? floor : p));
-  }, [floor]);
-
+  // Keep the scanning cursor moving even when percentage stalls — this is the
+  // honest activity indicator (it doesn't claim progress, just shows liveness).
   React.useEffect(() => {
     if (REDUCED_MOTION) {
       return undefined;
     }
-    const id = setInterval(() => {
-      setNow(Date.now());
-      setPct((p) => {
-        if (done) {
-          return Math.min(100, p + (100 - p) * 0.4 + 1);
-        }
-        const ceiling = 95; // asymptote toward 95% until the backend reports done
-        if (p >= ceiling) {
-          return ceiling;
-        }
-        // Cubic ease-out feel: the square root curve gives a snappier initial ramp
-        // (50% in ~25 frames / 3s) that decelerates naturally toward the asymptote.
-        const progress = p / ceiling; // 0..1
-        const next = ceiling * (1 - Math.pow(1 - progress, 1.5));
-        return Math.max(p + 0.3, Math.min(ceiling, next + 0.5));
-      });
-    }, 120);
+    const id = setInterval(() => setNow(Date.now()), 120);
     return () => clearInterval(id);
-  }, [done]);
+  }, []);
 
-  // 视觉动画相位:由 now(每 120ms 刷新)派生,保证进度条在百分比未变时也明显在动。
-  // ① 标题尾随的循环点号(「正在压缩对话···」);② 未完成段内往返游走的「扫描光标」。
-  const anim = Math.floor(now / 260) % 4; // 0..3 循环点号帧
+  // Animation phase: cycling dots + scanning cursor (activity, not progress).
+  const anim = Math.floor(now / 260) % 4;
   const dots = '.'.repeat(anim);
-  const sweep = Math.floor(now / 220) % Math.max(1, BAR_WIDTH); // 0..BAR_WIDTH-1 光标位
+  const sweep = Math.floor(now / 220) % Math.max(1, BAR_WIDTH);
 
-  const shown = done ? 100 : Math.max(floor, Math.round(pct));
+  // Honest percentage: backend-reported floor, or 100% only when done.
+  const shown = done ? 100 : floor;
   const filled = Math.round((shown / 100) * BAR_WIDTH);
   const remaining = Math.max(0, BAR_WIDTH - filled);
   let tail = '░'.repeat(remaining);
   if (!done && remaining > 0) {
-    // 扫描光标在未完成段内游走:把该位置换成高亮 ▒,其余 ░ —— 即使 pct 停顿,
-    // 用户也能看到光标在剩余区间来回扫过,明确感知「压缩仍在进行」。
     const pos = sweep % remaining;
     tail = tail.slice(0, pos) + '▒' + tail.slice(pos + 1);
   }

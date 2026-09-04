@@ -18,8 +18,8 @@
             mode="horizontal"
             router
             background-color="transparent"
-            text-color="#fff"
-            active-text-color="#409eff"
+            text-color="var(--khy-white)"
+            active-text-color="var(--khy-primary)"
             class="top-menu"
           >
             <el-menu-item
@@ -206,7 +206,7 @@ onUnmounted(() => {
 
 .top-header {
   background: linear-gradient(135deg, #304156 0%, #1f2d3d 100%);
-  border-bottom: 2px solid #409eff;
+  border-bottom: 2px solid var(--khy-primary);
   padding: 0;
   height: 42px;
   position: fixed;
@@ -230,7 +230,7 @@ onUnmounted(() => {
   width: 50px;
   height: 20px;
   background: linear-gradient(135deg, #304156 0%, #1f2d3d 100%);
-  border: 1px solid #409eff;
+  border: 1px solid var(--khy-primary);
   border-top: none;
   border-radius: 0 0 10px 10px;
   display: flex;
@@ -248,18 +248,18 @@ onUnmounted(() => {
 }
 
 .header-toggle-btn:hover {
-  background: linear-gradient(135deg, #409eff 0%, #2d7dd2 100%);
+  background: linear-gradient(135deg, var(--khy-primary) 0%, #2d7dd2 100%);
   height: 24px;
 }
 
 .header-toggle-btn .el-icon {
-  color: #fff;
+  color: var(--khy-white);
   font-size: 14px;
   transition: color 0.3s;
 }
 
 .header-toggle-btn:hover .el-icon {
-  color: #fff;
+  color: var(--khy-white);
 }
 
 .header-content {
@@ -319,13 +319,13 @@ onUnmounted(() => {
 
 .top-menu .el-menu-item:hover {
   background-color: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  color: var(--khy-white);
 }
 
 .top-menu .el-menu-item.is-active {
   background-color: rgba(64, 158, 255, 0.2);
-  color: #409eff;
-  border-bottom-color: #409eff;
+  color: var(--khy-primary);
+  border-bottom-color: var(--khy-primary);
 }
 
 .top-menu .el-menu-item .el-icon {
@@ -380,7 +380,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  color: #fff;
+  color: var(--khy-white);
   padding: 8px 12px;
   border-radius: 4px;
   transition: all 0.3s;

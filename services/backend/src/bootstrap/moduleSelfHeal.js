@@ -129,23 +129,35 @@ function _tryHeal(requiredModule, parentFilename) {
       return candidates[0];
     }
 
-    // Multiple matches — try to find the best match by partial path overlap
-    const failedParts = requiredModule.split(path.sep).filter(Boolean);
-    // Remove the basename itself; what's left are the directory parts
+    // Multiple matches — use improved scoring strategy.
+    // Normalize: require paths always use '/' even on Windows.
+    const normalizedRequest = requiredModule.replace(/\\/g, '/');
+    const failedParts = normalizedRequest.split('/').filter(Boolean);
     const failedDirs = failedParts.slice(0, -1);
+
+    // Resolve the expected absolute path from the caller's directory
+    let expectedAbs = null;
+    if (parentFilename) {
+      const parentDir = path.dirname(parentFilename);
+      try { expectedAbs = require('module')._resolveFilename(requiredModule, { filename: parentFilename }, false); } catch { /* expected — it failed */ }
+      // Even if resolution fails, compute the naive absolute path for comparison
+      if (!expectedAbs) {
+        expectedAbs = path.resolve(parentDir, requiredModule);
+        if (!expectedAbs.endsWith('.js')) expectedAbs += '.js';
+      }
+    }
 
     let bestMatch = null;
     let bestScore = -1;
 
     for (const candidate of candidates) {
-      // Score: how many trailing directory components overlap with the failed path
       const candidateRel = path.relative(_indexDir, candidate);
-      const candidateParts = candidateRel.split(path.sep);
-      // Remove basename
+      const candidateParts = candidateRel.replace(/\\/g, '/').split('/').filter(Boolean);
       const candidateDirs = candidateParts.slice(0, -1);
 
-      // Check overlap from the end (trailing dirs matter more)
       let score = 0;
+
+      // Strategy 1: Trailing directory overlap (original logic, now cross-platform)
       const minLen = Math.min(failedDirs.length, candidateDirs.length);
       for (let i = 1; i <= minLen; i++) {
         if (failedDirs[failedDirs.length - i] === candidateDirs[candidateDirs.length - i]) {
@@ -155,8 +167,49 @@ function _tryHeal(requiredModule, parentFilename) {
         }
       }
 
-      if (score > bestScore) {
-        bestScore = score;
+      // Strategy 2: Check if candidate is a child of a "domain/" restructure.
+      // When parent is in services/X and request is ./Y/Z, prefer
+      // services/domain/*/Y/Z over other candidates.
+      if (parentFilename && failedDirs.length > 0) {
+        const parentRel = path.relative(_indexDir, parentFilename).replace(/\\/g, '/');
+        const parentParts = parentRel.split('/').filter(Boolean);
+        // Check if candidate shares domain/ ancestor with parent's domain
+        const parentDomainIdx = parentParts.indexOf('domain');
+        const candDomainIdx = candidateDirs.indexOf('domain');
+        if (parentDomainIdx >= 0 && candDomainIdx >= 0) {
+          // Both in domain — prefer same top-level domain category
+          if (parentDomainIdx + 1 < parentParts.length && candDomainIdx + 1 < candidateDirs.length) {
+            if (parentParts[parentDomainIdx + 1] === candidateDirs[candDomainIdx + 1]) {
+              score += 3; // strong bonus for same domain category
+            }
+          }
+        }
+        // Also handle the common pattern: parent in services/, request ./X/Y,
+        // candidate in services/domain/*/X/Y — the failedDirs match candidateDirs
+        // after stripping the domain/ prefix.
+        if (failedDirs.length > 0) {
+          const domainPrefix = candidateDirs.indexOf('domain');
+          if (domainPrefix >= 0) {
+            const afterDomain = candidateDirs.slice(domainPrefix + 1);
+            // Check if failedDirs is a suffix of afterDomain
+            let suffixMatch = 0;
+            for (let i = 1; i <= Math.min(failedDirs.length, afterDomain.length); i++) {
+              if (failedDirs[failedDirs.length - i] === afterDomain[afterDomain.length - i]) {
+                suffixMatch++;
+              } else break;
+            }
+            if (suffixMatch > 0) score += suffixMatch + 1; // bonus for domain restructure pattern
+          }
+        }
+      }
+
+      // Strategy 3: Prefer shorter candidate paths (closer to the expected location)
+      // This helps disambiguate when multiple candidates have the same overlap score.
+      const depthPenalty = candidateDirs.length * 0.01;
+      const finalScore = score - depthPenalty;
+
+      if (finalScore > bestScore) {
+        bestScore = finalScore;
         bestMatch = candidate;
       }
     }

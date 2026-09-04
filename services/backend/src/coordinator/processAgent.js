@@ -83,7 +83,7 @@ class ProcessAgent extends EventEmitter {
     // Lifecycle FSM (observation-first): mirrors state.status transitions.
     // A missing/broken FSM module must never affect agent behavior.
     try {
-      this._fsm = require('../services/stateMachine/agentLifecycle').createAgentLifecycleFsm({
+      this._fsm = require('../services/domain/state/stateMachine/agentLifecycle.js').createAgentLifecycleFsm({
         name: this.id,
       });
     } catch {

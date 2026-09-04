@@ -156,10 +156,10 @@ INTENT CONTRACT: on save you may attach contract — an array of post-condition 
   /* ── Action handlers ─────────────────────────────────────────────── */
 
   _registry() {
-    return require('../../services/workflow/flowRegistry');
+    return require('../../services/domain/project/workflow/flowRegistry.js');
   }
   _flowStats() {
-    return require('../../services/workflow/flowStats');
+    return require('../../services/domain/project/workflow/flowStats.js');
   }
 
   _find(p) {
@@ -233,8 +233,8 @@ INTENT CONTRACT: on save you may attach contract — an array of post-condition 
     const {
       buildRetryPrimitives,
       buildProgressLogger,
-    } = require('../../services/workflow/retryPrimitives');
-    const executor = require('../../services/workflow/workflowExecutor');
+    } = require('../../services/domain/project/workflow/retryPrimitives.js');
+    const executor = require('../../services/domain/project/workflow/workflowExecutor.js');
     const stats = this._flowStats();
 
     const progress = [];
@@ -307,7 +307,7 @@ INTENT CONTRACT: on save you may attach contract — an array of post-condition 
     let contractCheckError = null;
     if (succeeded && Array.isArray(meta.contract) && meta.contract.length) {
       try {
-        const { checkContract } = require('../../services/workflow/contractChecker');
+        const { checkContract } = require('../../services/domain/project/workflow/contractChecker.js');
         // Same permission funnel as flow steps: reuse the run's executeTool
         // primitive. Wrap throws (retry exhaustion / denied) into an
         // error-shaped result so windowTitle degrades to skipped, not failed.

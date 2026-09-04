@@ -911,7 +911,7 @@ onMounted(() => {
 <style scoped>
 .trades-page {
   padding: 20px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e8f5e9 100%);
+  background: linear-gradient(135deg, #f5f7fa 0%, var(--khy-success-50) 100%);
   min-height: 100vh;
   position: relative;
 }
@@ -945,7 +945,7 @@ onMounted(() => {
 }
 
 .overview-card {
-  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+  background: linear-gradient(135deg, var(--khy-white) 0%, #f9fafb 100%);
   border-radius: var(--radius-md);
   padding: 20px;
   display: flex;
@@ -980,11 +980,11 @@ onMounted(() => {
 }
 
 .card-icon.total-assets {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, var(--khy-success) 0%, #059669 100%);
 }
 
 .card-icon.available-funds {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(135deg, var(--khy-primary) 0%, #2563eb 100%);
 }
 
 .card-icon.total-profit {
@@ -992,7 +992,7 @@ onMounted(() => {
 }
 
 .card-icon.today-profit {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  background: linear-gradient(135deg, var(--khy-warning) 0%, #d97706 100%);
 }
 
 .card-content {
@@ -1015,16 +1015,16 @@ onMounted(() => {
 }
 
 .profit-positive {
-  color: #ef4444 !important;
+  color: var(--khy-danger) !important;
 }
 
 .profit-negative {
-  color: #10b981 !important;
+  color: var(--khy-success) !important;
 }
 
 /* 交易记录卡片 - 现代设计 */
 .trades-card-modern {
-  background: #ffffff;
+  background: var(--khy-white);
   border-radius: var(--radius-md);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   overflow: hidden;
@@ -1038,7 +1038,7 @@ onMounted(() => {
   align-items: center;
   padding: 16px 20px;
   border-bottom: 1px solid #e5e7eb;
-  background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+  background: linear-gradient(135deg, #f9fafb 0%, var(--khy-white) 100%);
 }
 
 .header-left {
@@ -1049,7 +1049,7 @@ onMounted(() => {
 
 .title-icon {
   font-size: 18px;
-  color: #10b981;
+  color: var(--khy-success);
 }
 
 .title {
@@ -1174,11 +1174,11 @@ onMounted(() => {
 }
 
 .price-change.price-up {
-  color: #ef4444;
+  color: var(--khy-danger);
 }
 
 .price-change.price-down {
-  color: #10b981;
+  color: var(--khy-success);
 }
 
 .strategy-name {
@@ -1214,11 +1214,11 @@ onMounted(() => {
 }
 
 .profit-positive {
-  color: #ef4444;
+  color: var(--khy-danger);
 }
 
 .profit-negative {
-  color: #10b981;
+  color: var(--khy-success);
 }
 
 .profit-neutral {
@@ -1240,7 +1240,7 @@ onMounted(() => {
 
 /* 对话框样式 */
 :deep(.el-dialog__header) {
-  background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+  background: linear-gradient(135deg, #f9fafb 0%, var(--khy-white) 100%);
   border-bottom: 1px solid #e5e7eb;
 }
 

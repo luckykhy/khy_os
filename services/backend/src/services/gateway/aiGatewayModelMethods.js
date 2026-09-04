@@ -171,7 +171,7 @@ const AIGatewayModelMethods = {
 
     // 3. Capability-based matching via registry
     try {
-      const { TASK_REQUIREMENTS } = require('./capabilityRegistry');
+      const { TASK_REQUIREMENTS } = require('../capabilityRegistry');
       const reqs = TASK_REQUIREMENTS[taskType];
       if (reqs && this._capabilityRegistry) {
         const ranked = this._capabilityRegistry.bestAdaptersFor(reqs, {

@@ -133,7 +133,7 @@
                 <a
                   :href="tls.download.goDownloadUrl"
                   target="_blank"
-                  rel="noopener"
+                  rel="noopener noreferrer"
                   class="dl-url"
                   >{{ tls.download.goDownloadUrl }}</a
                 >

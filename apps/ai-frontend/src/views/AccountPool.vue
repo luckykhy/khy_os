@@ -729,7 +729,7 @@ onActivated(() => {
   padding: 16px 18px;
   border: 1px solid var(--khy-border-light);
   border-radius: 12px;
-  background: linear-gradient(180deg, #ffffff, #f8fbff);
+  background: linear-gradient(180deg, var(--khy-white), #f8fbff);
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
   transition:
     transform 0.2s ease,
@@ -742,13 +742,13 @@ onActivated(() => {
 }
 
 .pool-stat--blue {
-  border-left: 3px solid #3b82f6;
+  border-left: 3px solid var(--khy-primary);
 }
 .pool-stat--green {
-  border-left: 3px solid #10b981;
+  border-left: 3px solid var(--khy-success);
 }
 .pool-stat--amber {
-  border-left: 3px solid #f59e0b;
+  border-left: 3px solid var(--khy-warning);
 }
 .pool-stat--rose {
   border-left: 3px solid #f43f5e;

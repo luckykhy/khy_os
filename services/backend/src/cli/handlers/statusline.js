@@ -75,7 +75,7 @@ function _buildSnapshot() {
   // 缺失/无 live 会话 → 叶子回退空串(不臆造)。
   let _sessionId = '';
   try {
-    _sessionId = require('../../services/session/sessionForestService').getCurrentSessionId() || '';
+    _sessionId = require('../../services/domain/session/session/sessionForestService.js').getCurrentSessionId() || '';
     snap.sessionId = _sessionId;
   } catch {
     /* 缺失/无会话 → 叶子回退 session_id:'' */

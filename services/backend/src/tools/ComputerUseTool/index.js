@@ -12,7 +12,7 @@
  *   - 单会话操作数受 safetyGate 熔断预算约束
  */
 
-const { ComputerUseAgent } = require('../../services/computerUse/computerUseAgent');
+const { ComputerUseAgent } = require('../../services/domain/desktop/computerUse/computerUseAgent');
 const { BaseTool } = require('../_baseTool');
 
 class ComputerUseTool extends BaseTool {

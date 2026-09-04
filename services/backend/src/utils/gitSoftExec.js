@@ -14,7 +14,7 @@
  *   成功→{ ok:true, out: trim };异常→{ ok:false, out:'', err: e.message }·**绝不抛**。
  *
  * 契约:非纯(spawn git 子进程)·fail-soft 绝不抛·不 mutate 入参。
- *   各消费方保留同名本地 `const _gitSoft = require('.../gitSoftExec')` → 调用点逐字节不变。
+ *   各消费方保留同名本地 `const _gitSoft = require('gitSoftExec.js')` → 调用点逐字节不变。
  */
 
 const { execFileSync } = require('child_process');

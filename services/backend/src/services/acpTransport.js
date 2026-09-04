@@ -76,35 +76,102 @@ const ACP_ERRORS = Object.freeze({
   CHANNEL_CLOSED: -40004,
 });
 
+// ── Protocol Version ──────────────────────────────────────────────────
+const ACP_PROTOCOL_VERSION = '1.0';
+
 // ── Message Builders ───────────────────────────────────────────────────
 
-function createRequest(method, params, id) {
-  return {
+/**
+ * Create an ACP request message.
+ * @param {string} method - ACP method name
+ * @param {object} [params] - Method parameters
+ * @param {string} [id] - Request ID (auto-generated if omitted)
+ * @param {object} [meta] - Optional metadata (trace, deadline, version)
+ * @returns {object} JSON-RPC 2.0 request with meta
+ */
+function createRequest(method, params, id, meta) {
+  const msg = {
     jsonrpc: '2.0',
     id: id || crypto.randomBytes(6).toString('hex'),
     method,
     params: params || {},
   };
+  // Add meta field for trace/deadline/version (v1.0 protocol extension)
+  if (meta && typeof meta === 'object') {
+    msg.meta = { ...meta };
+  }
+  return msg;
 }
 
-function createNotification(method, params) {
-  return {
+/**
+ * Create an ACP notification (fire-and-forget).
+ * @param {string} method - ACP method name
+ * @param {object} [params] - Method parameters
+ * @param {object} [meta] - Optional metadata
+ * @returns {object} JSON-RPC 2.0 notification with meta
+ */
+function createNotification(method, params, meta) {
+  const msg = {
     jsonrpc: '2.0',
     method,
     params: params || {},
   };
+  if (meta && typeof meta === 'object') {
+    msg.meta = { ...meta };
+  }
+  return msg;
 }
 
-function createResponse(id, result) {
-  return { jsonrpc: '2.0', id, result };
+/**
+ * Create an ACP response.
+ * @param {string} id - Request ID
+ * @param {object} result - Response result
+ * @param {object} [meta] - Optional metadata
+ * @returns {object} JSON-RPC 2.0 response with meta
+ */
+function createResponse(id, result, meta) {
+  const msg = { jsonrpc: '2.0', id, result };
+  if (meta && typeof meta === 'object') {
+    msg.meta = { ...meta };
+  }
+  return msg;
 }
 
-function createErrorResponse(id, code, message, data) {
+/**
+ * Create an ACP error response.
+ * @param {string} id - Request ID
+ * @param {number} code - Error code
+ * @param {string} message - Error message
+ * @param {object} [data] - Additional error data
+ * @param {object} [meta] - Optional metadata
+ * @returns {object} JSON-RPC 2.0 error response with meta
+ */
+function createErrorResponse(id, code, message, data, meta) {
   const resp = { jsonrpc: '2.0', id, error: { code, message } };
   if (data !== undefined) {
     resp.error.data = data;
   }
+  if (meta && typeof meta === 'object') {
+    resp.meta = { ...meta };
+  }
   return resp;
+}
+
+/**
+ * Generate a trace ID for distributed tracing.
+ * @returns {string} Hex trace ID
+ */
+function generateTraceId() {
+  return crypto.randomBytes(8).toString('hex');
+}
+
+/**
+ * Create a deadline timestamp.
+ * @param {number} [timeoutMs=30000] - Timeout in milliseconds
+ * @returns {string} ISO 8601 deadline timestamp
+ */
+function createDeadline(timeoutMs = 30000) {
+  return new Date(Date.now() + timeoutMs).toISOString();
 }
 
 /**
@@ -174,14 +241,23 @@ class ACPTransport extends EventEmitter {
    * @param {string} method - ACP method
    * @param {object} [params]
    * @param {number} [timeout]
+   * @param {object} [meta] - Optional metadata (trace, deadline, version)
    * @returns {Promise<*>} Result payload
    */
-  request(method, params, timeout) {
+  request(method, params, timeout, meta) {
     if (this._destroyed) {
       return Promise.reject(new Error('Transport destroyed'));
     }
 
-    const msg = createRequest(method, params);
+    // Auto-generate trace ID if not provided
+    const finalMeta = {
+      version: ACP_PROTOCOL_VERSION,
+      trace: meta?.trace || generateTraceId(),
+      deadline: meta?.deadline || createDeadline(timeout || this.timeoutMs),
+      ...meta,
+    };
+
+    const msg = createRequest(method, params, undefined, finalMeta);
     return new Promise((resolve, reject) => {
       const ms = timeout || this.timeoutMs;
       const timer = setTimeout(() => {
@@ -364,10 +440,13 @@ function _ipcToAcp(ipcMsg) {
 module.exports = {
   ACP_METHODS,
   ACP_ERRORS,
+  ACP_PROTOCOL_VERSION,
   ACPTransport,
   createRequest,
   createNotification,
   createResponse,
   createErrorResponse,
   validateMessage,
+  generateTraceId,
+  createDeadline,
 };

@@ -15,7 +15,7 @@
  *   allowEmpty=false 用于「必须有 token」场景(空返 null 便于上游拒绝)。
  *
  * 契约:纯函数、确定性、不 mutate 入参。正则皆函数内字面量(无 g 标志·无 lastIndex 复用)。
- *   各消费方保留同名 `const normalizeAuthToken = require('.../normalizeAuthToken')`→ 调用点逐字节不变。
+ *   各消费方保留同名 `const normalizeAuthToken = require('normalizeAuthToken.js')`→ 调用点逐字节不变。
  */
 
 function normalizeAuthToken(raw, { allowEmpty = true } = {}) {

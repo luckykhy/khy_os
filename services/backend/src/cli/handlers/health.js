@@ -15,6 +15,9 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const _chalkModule = require('chalk');
+const chalk = _chalkModule.default || _chalkModule;
+const ui = require('../ui');
 
 function fmt() {
   return require('../formatters');
@@ -412,19 +415,6 @@ async function collectHealth() {
 
 // ── 渲染 ────────────────────────────────────────────────────────────
 
-function _printByStatus(status, line, f) {
-  if (status === 'green') {
-    return f.printSuccess(line);
-  }
-  if (status === 'yellow') {
-    return f.printWarn(line);
-  }
-  if (status === 'red') {
-    return f.printError(line);
-  }
-  return f.printInfo(line);
-}
-
 function _levelLabel(level) {
   switch (level) {
     case 'green':
@@ -436,6 +426,11 @@ function _levelLabel(level) {
     default:
       return '未知';
   }
+}
+
+function _statusIcon(status) {
+  const map = { green: 'ok', yellow: 'warning', red: 'error', info: 'info' };
+  return ui.STATUS_ICONS[map[status]] || ui.STATUS_ICONS.unknown;
 }
 
 async function handleHealth(parsed = {}) {
@@ -456,21 +451,30 @@ async function handleHealth(parsed = {}) {
     return true;
   }
 
-  const { printInfo } = f;
-  printInfo('Khy 健康体检');
-  printInfo('─'.repeat(48));
-  for (const c of report.checks) {
-    _printByStatus(c.status, `${c.label}：${c.detail}`, f);
-    if (c.hint) {
-      printInfo(`    → ${c.hint}`);
-    }
-  }
-  printInfo('─'.repeat(48));
+  const { printTable } = f;
   const s = report.summary;
-  _printByStatus(
-    report.level,
-    `总体：${_levelLabel(report.level)}（✓${s.green} ⚠${s.yellow} ✗${s.red}）`,
-    f
+  const overall = _statusIcon(report.level);
+
+  console.log('');
+  console.log(chalk.bold('  Khy 健康体检'));
+  console.log(
+    `  总体: ${overall.icon} ${_levelLabel(report.level)} ` +
+      `(${chalk.green('✓')} ${s.green} ${chalk.yellow('⚠')} ${s.yellow} ${chalk.red('✗')} ${s.red})`
+  );
+  console.log('');
+
+  printTable(
+    ['检查项', '状态', '详情', '提示'],
+    report.checks.map((c) => {
+      const st = _statusIcon(c.status);
+      const colorFn = chalk[st.color] || chalk.white;
+      return [
+        c.label,
+        `${colorFn(st.icon)} ${st.color}`,
+        c.detail,
+        c.hint || '─',
+      ];
+    })
   );
 
   // red → 非零退出（可作健康门禁）。

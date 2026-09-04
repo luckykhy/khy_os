@@ -36,7 +36,7 @@ const {
   collectNirvanaCandidatesFromRecord,
   collectGenericCandidateFromRecord,
   importGenericCandidatesFromPath,
-} = require('./accountPool/candidateDetect');
+} = require('./domain/account/accountPool/candidateDetect');
 const {
   normalizePoolType,
   safeJsonParse,
@@ -55,7 +55,7 @@ const {
   firstNonEmpty,
   parseBoolean,
   dedupePaths,
-} = require('./accountPool/credentialHelpers');
+} = require('./domain/account/accountPool/credentialHelpers');
 
 const LEASE_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
 const DEFAULT_COOLDOWN_MS = 60 * 60 * 1000; // 60 minutes
@@ -1411,14 +1411,14 @@ async function cooldownAccount(poolType, durationMs = 60000) {
 
 function _ensureSubModules() {
   if (!_scheduler) {
-    _scheduler = require('./accountPool/poolScheduler')({
+    _scheduler = require('./domain/account/accountPool/poolScheduler')({
       getDb: () => _db,
       HEARTBEAT_TIMEOUT_MS,
       GC_INTERVAL_MS,
     });
   }
   if (!_importer) {
-    _importer = require('./accountPool/poolImporter')({
+    _importer = require('./domain/account/accountPool/poolImporter')({
       ensureReady,
       upsertTokenRecord,
       getActiveAccount,
@@ -1429,7 +1429,7 @@ function _ensureSubModules() {
     });
   }
   if (!_sync) {
-    _sync = require('./accountPool/poolSync')({
+    _sync = require('./domain/account/accountPool/poolSync')({
       ensureReady,
       getActiveAccount,
       WINDSURF_STORAGE_PATHS,

@@ -27,7 +27,7 @@ const { defineTool } = require('../_baseTool');
 
 let _importer = null;
 try {
-  _importer = require('../../services/externalApps/appModelImporter');
+  _importer = require('../../services/domain/network/externalApps/appModelImporter.js');
 } catch {
   /* importer absent → degrade */
 }

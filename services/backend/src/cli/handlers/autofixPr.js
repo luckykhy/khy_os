@@ -17,7 +17,7 @@
  * 关 → 命令不接管(字节回退)。
  */
 
-const leaf = require('../../services/autofixPr/autofixPrPlan');
+const leaf = require('../../services/domain/maintenance/autofixPr/autofixPrPlan.js');
 
 // try/catch combinator 单一真源 utils/tryOr:执行 fn,任何异常 → dflt。
 const _safe = require('../../utils/tryOr');

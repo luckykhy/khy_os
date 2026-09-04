@@ -5,14 +5,14 @@
 /* 全局CSS变量 - 统一设计系统 */
 :root {
   /* 主色调 - 专业金融蓝 */
-  --primary-color: #1890ff;
+  --primary-color: var(--khy-primary);
   --primary-light: #40a9ff;
   --primary-lighter: #69c0ff;
   --primary-dark: #096dd9;
   --primary-darker: #0050b3;
   
   /* 成功色 - 涨 */
-  --success-color: #52c41a;
+  --success-color: var(--khy-success);
   --success-light: #73d13d;
   --success-lighter: #95de64;
   --success-dark: #389e0d;
@@ -30,7 +30,7 @@
   --warning-dark: #d48806;
   
   /* 信息色 */
-  --info-color: #1890ff;
+  --info-color: var(--khy-primary);
   --info-light: #40a9ff;
   --info-lighter: #69c0ff;
   --info-dark: #096dd9;
@@ -42,9 +42,9 @@
   --text-quaternary: #bfbfbf;
   
   /* 背景色 */
-  --bg-primary: #ffffff;
-  --bg-secondary: #fafafa;
-  --bg-tertiary: #f5f5f5;
+  --bg-primary: var(--khy-white);
+  --bg-secondary: var(--khy-gray-50);
+  --bg-tertiary: var(--khy-gray-50);
   --bg-quaternary: #f0f0f0;
   
   /* 边框色 */
@@ -381,7 +381,7 @@ body {
     --bg-quaternary: #2d2d2d;
     
     --border-color: #404040;
-    --border-light: #333333;
+    --border-light: var(--khy-gray-700);
     --border-lighter: #2d2d2d;
   }
 }

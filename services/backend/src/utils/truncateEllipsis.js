@@ -16,7 +16,7 @@
  *
  * 契约:确定性、不 mutate、绝不抛。'…' 为单字符 U+2026。
  *
- * 各消费方保留同名本地 `const _truncate = require('.../truncateEllipsis')` → 调用点逐字节不变。
+ * 各消费方保留同名本地 `const _truncate = require('truncateEllipsis.js')` → 调用点逐字节不变。
  */
 
 const { toStr } = require('./toStr');

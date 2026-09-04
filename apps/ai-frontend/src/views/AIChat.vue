@@ -70,16 +70,41 @@
         <div class="chat-config">
           <div class="model-selector">
             <el-select
+              ref="modelSelectRef"
               v-model="selectedModel"
-              placeholder="选择模型"
+              placeholder="选择模型（F2 切换最近）"
               size="default"
+              filterable
+              :filter-method="filterModels"
               :loading="modelsLoading"
               @focus="loadModels"
               @change="onModelChange"
+              @keydown.f2.prevent="cycleRecentModel"
             >
               <el-option label="自动选择" value="" />
               <el-option-group
-                v-for="group in modelGroups"
+                v-if="recentModels.length"
+                label="最近使用"
+              >
+                <el-option
+                  v-for="m in recentModels"
+                  :key="`recent-${m.adapter}/${m.id}`"
+                  :label="m.name || m.id"
+                  :value="`${m.adapter}/${m.id}`"
+                >
+                  <span>{{ m.name || m.id }}</span>
+                  <el-tag size="small" type="info" class="model-recent-tag">最近</el-tag>
+                  <el-tag
+                    v-if="m.kind"
+                    size="small"
+                    :type="kindTagType(m.kind)"
+                    class="model-kind-tag"
+                    >{{ kindLabel(m.kind) }}</el-tag
+                  >
+                </el-option>
+              </el-option-group>
+              <el-option-group
+                v-for="group in filteredModelGroups"
                 :key="group.adapter"
                 :label="group.source ? `${group.name} · ${group.source}` : group.name"
               >
@@ -425,7 +450,7 @@
                     class="chat-attachment-chip"
                     :href="resolveApiUrl(att.url)"
                     target="_blank"
-                    rel="noopener"
+                    rel="noopener noreferrer"
                     :title="att.name"
                   >
                     <el-icon><component :is="attachmentIcon(att.kind)" /></el-icon>
@@ -1008,6 +1033,10 @@ function newConversation() {
 // accidentally send text intended for a different model.
 function onModelChange() {
   chatInputBarRef.value?.clear();
+  if (selectedModel.value) {
+    const [adapter, ...rest] = selectedModel.value.split('/');
+    pushRecentModel(adapter, rest.join('/'));
+  }
 }
 
 // Switch the active coding-project filter: re-fetch the sidebar scoped to the
@@ -1220,8 +1249,110 @@ const modelGroups = ref([]);
 const modelsLoading = ref(false);
 const modelLoadPercent = ref(0);
 const transportMode = ref('stream');
+const modelSelectRef = ref(null);
+const searchQuery = ref('');
+const recentModels = ref([]);
 let modelsLoaded = false;
 let currentStreamAbortController = null;
+
+const RECENT_LIMIT = 5;
+const RECENT_STORAGE_KEY = 'khy-recent-models';
+
+function loadRecentModels() {
+  try {
+    const raw = localStorage.getItem(RECENT_STORAGE_KEY);
+    if (raw) recentModels.value = JSON.parse(raw);
+  } catch {
+    recentModels.value = [];
+  }
+}
+
+function saveRecentModels() {
+  try {
+    localStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(recentModels.value));
+  } catch {
+    /* storage full or unavailable */
+  }
+}
+
+function findModelInGroups(adapter, modelId) {
+  for (const g of modelGroups.value) {
+    if (g.adapter !== adapter) continue;
+    const m = g.models.find((x) => x.id === modelId);
+    if (m) return { ...m, adapter: g.adapter, kind: g.kind, name: m.name || m.id };
+  }
+  return null;
+}
+
+function pushRecentModel(adapter, modelId) {
+  const model = findModelInGroups(adapter, modelId);
+  if (!model) return;
+  const key = `${adapter}/${modelId}`;
+  recentModels.value = [
+    model,
+    ...recentModels.value.filter((m) => `${m.adapter}/${m.id}` !== key),
+  ].slice(0, RECENT_LIMIT);
+  saveRecentModels();
+}
+
+function scoreMatch(query, text) {
+  if (!text) return 0;
+  const lower = text.toLowerCase();
+  const q = query.toLowerCase();
+  if (lower === q) return 100;
+  if (lower.startsWith(q)) return 80;
+  if (lower.includes(q)) return 60;
+  let ti = 0;
+  let score = 0;
+  let streak = 0;
+  for (const c of q) {
+    const idx = lower.indexOf(c, ti);
+    if (idx === -1) return 0;
+    streak = idx === ti ? streak + 1 : 1;
+    score += streak * 2;
+    ti = idx + 1;
+  }
+  return Math.max(1, score);
+}
+
+function filterModels(query) {
+  searchQuery.value = query;
+}
+
+const filteredModelGroups = computed(() => {
+  const q = searchQuery.value.trim();
+  if (!q) return modelGroups.value;
+  return modelGroups.value
+    .map((g) => {
+      const filtered = g.models.filter((m) => {
+        const name = (m.name || m.id || '').toLowerCase();
+        const id = (m.id || '').toLowerCase();
+        const group = g.name.toLowerCase();
+        const qq = q.toLowerCase();
+        return (
+          scoreMatch(q, m.name || m.id) > 0 ||
+          scoreMatch(q, m.id) > 0 ||
+          scoreMatch(q, g.name) > 0 ||
+          name.includes(qq) ||
+          id.includes(qq) ||
+          group.includes(qq)
+        );
+      });
+      if (!filtered.length) return null;
+      return { ...g, models: filtered };
+    })
+    .filter(Boolean);
+});
+
+function cycleRecentModel() {
+  if (recentModels.value.length < 2) return;
+  const current = selectedModel.value;
+  const recentKeys = recentModels.value.map((m) => `${m.adapter}/${m.id}`);
+  const currentIdx = recentKeys.indexOf(current);
+  const nextIdx = currentIdx === -1 ? 0 : (currentIdx + 1) % recentKeys.length;
+  selectedModel.value = recentKeys[nextIdx];
+  onModelChange();
+}
 let currentChatSocket = null;
 let manualAbortRequested = false;
 const userStore = useUserStore();
@@ -2843,6 +2974,8 @@ onMounted(async () => {
   loadModels();
   loadPersonaCard();
   loadPromptTemplates();
+  loadRecentModels();
+  window.addEventListener('keydown', handleGlobalKeyDown);
   // Restore location sharing without prompting: only refresh coordinates
   // silently when the browser permission is already granted.
   if (locationEnabled.value) {
@@ -2869,7 +3002,18 @@ onMounted(async () => {
   }
 });
 
+function handleGlobalKeyDown(e) {
+  if (e.key === 'F2' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    const tag = document.activeElement?.tagName;
+    if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
+      e.preventDefault();
+      cycleRecentModel();
+    }
+  }
+}
+
 onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleGlobalKeyDown);
   if (_scrollRafId) {
     cancelAnimationFrame(_scrollRafId);
     _scrollRafId = 0;
@@ -3120,13 +3264,13 @@ onBeforeUnmount(() => {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #67c23a;
+  background: var(--khy-success);
 }
 .ctx-usage-chip.ctx-warning .ctx-usage-dot {
   background: #e6a23c;
 }
 .ctx-usage-chip.ctx-critical .ctx-usage-dot {
-  background: #f56c6c;
+  background: var(--khy-danger);
 }
 .ctx-usage-pct {
   font-variant-numeric: tabular-nums;
@@ -3158,14 +3302,14 @@ onBeforeUnmount(() => {
 .ctx-usage-fill {
   height: 100%;
   border-radius: 3px;
-  background: #67c23a;
+  background: var(--khy-success);
   transition: width 0.3s ease;
 }
 .ctx-usage-fill.ctx-warning {
   background: #e6a23c;
 }
 .ctx-usage-fill.ctx-critical {
-  background: #f56c6c;
+  background: var(--khy-danger);
 }
 .ctx-usage-cats {
   list-style: none;
@@ -3229,6 +3373,11 @@ onBeforeUnmount(() => {
 }
 
 .model-verify-tag {
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.model-recent-tag {
   margin-left: 6px;
   vertical-align: middle;
 }
@@ -3527,7 +3676,7 @@ onBeforeUnmount(() => {
 .chat-bubble-user {
   background: linear-gradient(135deg, var(--khy-primary), var(--khy-primary-strong));
   border-color: transparent;
-  color: #fff;
+  color: var(--khy-white);
   border-bottom-right-radius: 4px;
   box-shadow: 0 6px 18px rgba(47, 126, 247, 0.26);
 }

@@ -14,7 +14,7 @@
  * 契约:纯函数、确定性、不 mutate 入参(返回新字符串)。正则由 key 现构(每次新实例·无 lastIndex 复用)。
  *   注:key 内含正则元字符会被当模式(pre-existing 行为·逐字节保留不改)。
  *
- * 各消费方保留同名本地 `const NAME = require('.../patchEnvContent')`→ 调用点逐字节不变。
+ * 各消费方保留同名本地 `const NAME = require('patchEnvContent.js')`→ 调用点逐字节不变。
  */
 
 function patchEnvContent(content, envMap = {}, unsetKeys = []) {

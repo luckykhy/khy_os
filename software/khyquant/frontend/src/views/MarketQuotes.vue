@@ -241,11 +241,11 @@ onUnmounted(() => {
 }
 
 .price-up {
-  color: #f56c6c;
+  color: var(--khy-danger);
 }
 
 .price-down {
-  color: #67c23a;
+  color: var(--khy-success);
 }
 
 .price-neutral {

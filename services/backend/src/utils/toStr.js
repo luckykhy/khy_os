@@ -15,7 +15,7 @@
  *
  * 契约:确定性、不 mutate。区别于:utils/cleanText(trim)· utils/normLower(trim+lowercase)。
  *
- * 各消费方保留同名本地 `const _str = require('.../toStr').toStr|toStrSafe` → 调用点逐字节不变。
+ * 各消费方保留同名本地 `const _str = require('toStr.js').toStr|toStrSafe` → 调用点逐字节不变。
  */
 
 function toStr(v) {

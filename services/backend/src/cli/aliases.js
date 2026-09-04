@@ -71,6 +71,17 @@ const ALIAS_MAP = {
   分析: { command: 'analyze' },
   analyze: { command: 'analyze' },
 
+  // ── 项目分析 (分层渐进式大项目分析) ──
+  project: { command: 'project' },
+  proj: { command: 'project' },
+  项目: { command: 'project' },
+  项目分析: { command: 'project', subCommand: 'analyze' },
+  项目地图: { command: 'project', subCommand: 'map' },
+  项目结构: { command: 'project', subCommand: 'structure' },
+  pjm: { command: 'project', subCommand: 'map' },
+  pja: { command: 'project', subCommand: 'analyze' },
+  pjs: { command: 'project', subCommand: 'structure' },
+
   // ── 图转网页 ──
   image2web: { command: 'image2web' },
   i2w: { command: 'image2web' },
@@ -118,10 +129,18 @@ const ALIAS_MAP = {
   runtimeverify: { command: 'runtime', subCommand: 'verify' },
 
   // ── 轨迹溯源查看 (DESIGN-ARCH-047) ──
-  轨迹: { command: 'trace', subCommand: 'show' },
-  gj: { command: 'trace', subCommand: 'show' },
+   轨迹: { command: 'trace', subCommand: 'show' },
+   gj: { command: 'trace', subCommand: 'show' },
 
-  // ── 轨迹回放 / 确定性复现 (DESIGN-ARCH-048) ──
+   // ── 流量监控 (AI 网关流量记录) ──
+   流量: { command: 'traffic', subCommand: 'status' },
+   traffic: { command: 'traffic', subCommand: 'status' },
+   抓包: { command: 'traffic', subCommand: 'watch' },
+   流量列表: { command: 'traffic', subCommand: 'list' },
+   流量详情: { command: 'traffic', subCommand: 'detail' },
+   导出流量: { command: 'traffic', subCommand: 'export' },
+
+   // ── 轨迹回放 / 确定性复现 (DESIGN-ARCH-048) ──
   回放: { command: 'replay', subCommand: 'run' },
   hf: { command: 'replay', subCommand: 'run' },
 
@@ -346,6 +365,10 @@ const ALIAS_MAP = {
   fixclaude: { command: 'doctor', defaultArgs: { 'fix-claude-conflict': true } },
   claude冲突修复: { command: 'doctor', defaultArgs: { 'fix-claude-conflict': true } },
   修复claude冲突: { command: 'doctor', defaultArgs: { 'fix-claude-conflict': true } },
+  selfheal: { command: 'selfHeal' },
+  自愈: { command: 'selfHeal' },
+  修复路径: { command: 'selfHeal' },
+  fixpaths: { command: 'selfHeal' },
 
   // ── 发布 ──
   fabu: { command: 'publish' },
@@ -645,6 +668,15 @@ const ALIAS_MAP = {
   xietiao: { command: 'coordinator', subCommand: 'status' },
   协调器: { command: 'coordinator', subCommand: 'status' },
   协调面板: { command: 'coordinator', subCommand: 'board' },
+  协调树: { command: 'coordinator', subCommand: 'board' },
+  协调泳道: { command: 'coordinator', subCommand: 'board', extraArgs: ['pipeline'] },
+  开协调: { command: 'coordinator', subCommand: 'on' },
+  关协调: { command: 'coordinator', subCommand: 'off' },
+  工人列表: { command: 'coordinator', subCommand: 'workers' },
+  工人状态: { command: 'coordinator', subCommand: 'workers' },
+  派任务: { command: 'coordinator', subCommand: 'spawn' },
+  杀工人: { command: 'coordinator', subCommand: 'kill' },
+  工人日志: { command: 'coordinator', subCommand: 'log' },
 
   // ── 远程 SSH ──
   远程: { command: 'remote', subCommand: 'hosts' },

@@ -168,11 +168,11 @@ defineExpose({
 }
 
 .notification-loading .notification-icon {
-  color: #409eff;
+  color: var(--khy-primary);
 }
 
 .notification-success .notification-icon {
-  color: #67c23a;
+  color: var(--khy-success);
 }
 
 .notification-warning .notification-icon {
@@ -180,7 +180,7 @@ defineExpose({
 }
 
 .notification-error .notification-icon {
-  color: #f56c6c;
+  color: var(--khy-danger);
 }
 
 .notification-info .notification-icon {

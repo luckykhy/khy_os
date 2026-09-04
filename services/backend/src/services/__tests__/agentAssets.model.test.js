@@ -11,8 +11,8 @@
  * 零磁盘依赖:全部对纯叶子直接断言,不碰任何外部工具目录。
  */
 
-const M = require('../agentAssets/assetModel');
-const registry = require('../agentAssets/registry');
+const M = require('../domain/agents/agentAssets/assetModel');
+const registry = require('../domain/agents/agentAssets/registry');
 
 const baseMemory = {
   id: 'project-conventions',

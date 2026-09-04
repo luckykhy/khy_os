@@ -249,7 +249,7 @@ async function runOnboarding(opts = {}) {
   // ── 首次安全须知(CC Onboarding.tsx securityStep 对齐;门控 KHY_ONBOARDING_SAFETY_NOTICE)──
   // 纯叶子只产未着色行;门控关 → 空数组 → 零输出 → 逐字节回退。fail-soft:绝不阻塞引导。
   try {
-    const safety = require('../services/onboarding/safetyNotice');
+    const safety = require('../services/domain/onboarding/onboarding/safetyNotice.js');
     const lines = safety.buildSafetyNoticeLines(process.env);
     if (lines.length) {
       log('');

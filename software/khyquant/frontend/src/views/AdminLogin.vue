@@ -146,7 +146,7 @@ const handleLogin = async () => {
 }
 
 .register-link a {
-  color: #409eff;
+  color: var(--khy-primary);
   text-decoration: none;
 }
 

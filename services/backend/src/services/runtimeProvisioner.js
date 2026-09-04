@@ -333,7 +333,7 @@ function resolveDownloadUrl(manifest, plat) {
  */
 function _recordRuntimeLedger(name, targetDir) {
   try {
-    require('./uninstall/ledgerWriter').appendSideEffect({
+    require('./domain/maintenance/uninstall/ledgerWriter').appendSideEffect({
       kind: 'runtime',
       target: targetDir,
       action: 'remove-runtime',
@@ -346,7 +346,7 @@ function _recordRuntimeLedger(name, targetDir) {
 
 async function _ensureRuntimeFromResourceStore(name, opts) {
   try {
-    const { createResourceManager } = require('./resources/resourceManager');
+    const { createResourceManager } = require('./domain/data/resources/resourceManager');
     const manager = createResourceManager();
     const resource = manager.manifest.resources.find(
       item => item.id === name && item.kind === 'runtime'
@@ -355,7 +355,7 @@ async function _ensureRuntimeFromResourceStore(name, opts) {
     if (!resource || !resource.platforms[platform]) {
       return null;
     }
-    const { createResourceTaskAdapter } = require('./resources/resourceTask');
+    const { createResourceTaskAdapter } = require('./domain/data/resources/resourceTask');
     const fetched = await createResourceTaskAdapter({ manager }).fetch(name, opts);
     const result = fetched.result;
     const statusMap = {

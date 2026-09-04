@@ -22,7 +22,7 @@ let _checkpointService = null;
 
 function _getService() {
   if (!_checkpointService) {
-    _checkpointService = require('../../services/workspace/checkpointService');
+    _checkpointService = require('../../services/domain/workspace/workspace/checkpointService.js');
   }
   return _checkpointService;
 }

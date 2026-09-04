@@ -536,7 +536,7 @@ function _annotateTruncation(reply, stopReason = '', continuations = 0) {
   }
   let notice;
   try {
-    notice = require('../services/query/maxTokensRecovery').buildTruncationNotice(continuations);
+    notice = require('../services/query').maxTokensRecovery.buildTruncationNotice(continuations);
   } catch {
     notice =
       '\n\n[⚠️ 输出已达长度上限被截断。可调大 KHY 网关 maxTokens（本地模型对应 num_predict），或说「继续」补全剩余内容。]';

@@ -394,19 +394,19 @@ const passwordRules = {
 
 // 刷新用户信息
 const refreshUserInfo = async () => {
-  console.log('=== 开始刷新用户信息 ===')
+  if (import.meta.env.DEV) { console.log('=== 开始刷新用户信息 ===') }
   loading.value = true
   try {
-    console.log('调用 userStore.fetchUserInfo()...')
+    if (import.meta.env.DEV) { console.log('调用 userStore.fetchUserInfo()...') }
     await userStore.fetchUserInfo()
-    console.log('用户信息获取成功:', userStore.user)
+    if (import.meta.env.DEV) { console.log('用户信息获取成功:', userStore.user) }
     ElMessage.success('用户信息刷新成功')
   } catch (error) {
     console.error('刷新用户信息失败:', error)
     ElMessage.error('刷新用户信息失败: ' + (error.message || '未知错误'))
   } finally {
     loading.value = false
-    console.log('=== 刷新用户信息完成 ===')
+    if (import.meta.env.DEV) { console.log('=== 刷新用户信息完成 ===') }
   }
 }
 
@@ -820,7 +820,7 @@ function uint8ToB64(u8) {
 
 .header-icon {
   font-size: 20px;
-  color: #409eff;
+  color: var(--khy-primary);
 }
 
 /* 信息网格 */
@@ -869,7 +869,7 @@ function uint8ToB64(u8) {
 .loading-container .el-icon {
   font-size: 48px;
   margin-bottom: 16px;
-  color: #409eff;
+  color: var(--khy-primary);
 }
 
 .loading-container p {
@@ -882,7 +882,7 @@ function uint8ToB64(u8) {
   padding: 16px;
   background: linear-gradient(135deg, #e8f4fd 0%, #dbeeff 100%);
   border-radius: var(--radius-md);
-  border-left: 4px solid #409eff;
+  border-left: 4px solid var(--khy-primary);
 }
 
 .bio-header {
@@ -1088,7 +1088,7 @@ function uint8ToB64(u8) {
 }
 
 .transfer-tab.active {
-  background: #409eff;
+  background: var(--khy-primary);
   color: white;
 }
 
@@ -1132,7 +1132,7 @@ function uint8ToB64(u8) {
 }
 
 .history-item.deposit {
-  border-left: 3px solid #67c23a;
+  border-left: 3px solid var(--khy-success);
 }
 
 .history-item.withdraw {
@@ -1159,7 +1159,7 @@ function uint8ToB64(u8) {
 }
 
 .amount-in {
-  color: #67c23a;
+  color: var(--khy-success);
 }
 
 .amount-out {

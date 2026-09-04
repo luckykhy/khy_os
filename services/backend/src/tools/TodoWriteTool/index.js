@@ -30,7 +30,7 @@ function _resolveTodoFile() {
     }
     let sessionId = null;
     try {
-      const { getCurrentSessionId } = require('../../services/session/sessionForestService');
+      const { getCurrentSessionId } = require('../../services/domain/session/session/sessionForestService.js');
       sessionId = getCurrentSessionId();
     } catch {
       sessionId = null;

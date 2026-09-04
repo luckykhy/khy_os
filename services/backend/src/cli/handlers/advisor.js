@@ -16,7 +16,7 @@
  * 关 → 命令不接管(字节回退)。
  */
 
-const leaf = require('../../services/advisor/advisorPlan');
+const leaf = require('../../services/domain/agents/advisor/advisorPlan.js');
 
 // try/catch combinator 单一真源 utils/tryOr:执行 fn,任何异常 → dflt。
 const _safe = require('../../utils/tryOr');

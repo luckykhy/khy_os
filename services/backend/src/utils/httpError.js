@@ -19,7 +19,7 @@
  *
  * 契约:纯函数、确定性、不 mutate 入参(仅新建并返回 Error)。
  *
- * 各消费方保留同名本地 `const httpError = require('.../httpError')`→ 调用点逐字节不变。
+ * 各消费方保留同名本地 `const httpError = require('httpError.js')`→ 调用点逐字节不变。
  */
 
 function httpError(statusCode, message) {

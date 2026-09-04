@@ -16,7 +16,7 @@
  * 契约:纯函数、确定性、不 mutate 入参。每次返回**新** Set。正则为函数内字面量
  *   (无 g 标志、无 lastIndex 状态)。
  *
- * 各消费方保留同名本地 `const NAME = require('.../parseListToSet')`→ 调用点逐字节不变。
+ * 各消费方保留同名本地 `const NAME = require('parseListToSet.js')`→ 调用点逐字节不变。
  */
 
 function parseListToSet(raw) {

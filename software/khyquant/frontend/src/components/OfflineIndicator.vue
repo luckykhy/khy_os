@@ -28,7 +28,7 @@ const { isOnline } = useOnlineStatus()
   gap: 8px;
   padding: 8px 16px;
   background: #e6a23c;
-  color: #fff;
+  color: var(--khy-white);
   font-size: 13px;
   font-weight: 500;
   text-align: center;

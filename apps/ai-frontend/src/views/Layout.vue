@@ -397,7 +397,7 @@ function handleLogout() {
 
 .aside-avatar {
   background: linear-gradient(135deg, var(--khy-primary), var(--khy-primary-strong));
-  color: #fff;
+  color: var(--khy-white);
   font-weight: 700;
   flex-shrink: 0;
 }

@@ -302,7 +302,7 @@ const handleResetPassword = async () => {
 
 .security-question .el-icon {
   font-size: 20px;
-  color: #409eff;
+  color: var(--khy-primary);
 }
 
 .login-link {
@@ -313,7 +313,7 @@ const handleResetPassword = async () => {
 }
 
 .login-link a {
-  color: #409eff;
+  color: var(--khy-primary);
   text-decoration: none;
   font-weight: 500;
 }
@@ -337,7 +337,7 @@ const handleResetPassword = async () => {
   font-size: 16px;
   font-weight: 500;
   height: 44px;
-  background: linear-gradient(135deg, #409eff 0%, #1890ff 100%);
+  background: linear-gradient(135deg, var(--khy-primary) 0%, var(--khy-primary) 100%);
   border: none;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }

@@ -16,7 +16,7 @@
  *
  * 契约:纯函数、确定性、不 mutate。默认参 `defaultValue = true`——各消费方均以此调用。
  *
- * 各消费方保留同名本地 `const NAME = require('.../envFlagEnabled')`→ 调用点逐字节不变
+ * 各消费方保留同名本地 `const NAME = require('envFlagEnabled.js')`→ 调用点逐字节不变
  *   (predicates.js 经 `module.exports = { envFlagEnabled, ... }` shorthand 再导出,委托保绑定)。
  */
 

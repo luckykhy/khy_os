@@ -114,13 +114,16 @@ async function startInkApp(options = {}) {
       // 第三层(全屏帧整段转录重发抑制)的校验源:ink 实例的 fullStaticOutput。
       // render() 的同步首帧不可能命中 fullscreen 分支(lastOutputHeight 从 0 起步),
       // 而 inkRuntime.setApp/setRenderStdout 紧跟 render() 之后注册 —— 真正能触发
-      // fullscreen 分支的帧到来时实例必已注册。fail-soft:null → 该帧逐字节回退今日行为。
+      // fullscreen 分支的帧到来时实例必已注册。
+      // 关键修复:实例未注册/fullStaticOutput 不可用时返回 '' 而非 null —— 空串是合法快照
+      // (会话尚无 static),校验平凡成立,第四层尾切照常生效;若返回 null 则整层跳过,
+      // win32 ED2 清屏会把旧视口滚进 scrollback 形成重复帧(用户报「启动时重复两次」)。
       getStaticSnapshot: () => {
         try {
           const inst = inkRuntime.getInkInstance();
-          return inst && typeof inst.fullStaticOutput === 'string' ? inst.fullStaticOutput : null;
+          return inst && typeof inst.fullStaticOutput === 'string' ? inst.fullStaticOutput : '';
         } catch {
-          return null;
+          return '';
         }
       },
       // 第四层(全屏帧活区尾切)的视口几何源:live 区高度 ≥ rows 时,ED0 就地擦除后

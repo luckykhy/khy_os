@@ -24,7 +24,7 @@
  * 契约:纯函数、确定性、不 mutate。`|| ''` 令 falsy(''/0/false/null/undefined)→ ''。
  *   `/…/g` 的 g 是 replace 全替所需,无 lastIndex 隐患。
  *
- * 各消费方保留同名本地 `const _localName = require('.../normalizeAlnumKey')` → 调用点逐字节不变。
+ * 各消费方保留同名本地 `const _localName = require('normalizeAlnumKey.js')` → 调用点逐字节不变。
  */
 
 function normalizeAlnumKey(name) {

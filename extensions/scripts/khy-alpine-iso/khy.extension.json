@@ -2,11 +2,26 @@
   "id": "khy-alpine-iso",
   "name": "Khy Alpine ISO",
   "version": "1.0.0",
+  "schemaVersion": "2.0",
   "description": "Alpine 定制 ISO 构建（Docker / Windows 两条路径）与随 ISO 分发的 openrc 服务定义",
   "kind": "toolchain",
   "capabilities": [
-    "commands"
+    "commands",
+    "iso-build"
   ],
-  "commands": [],
-  "_note": "2026-08-19 由 scripts/alpine/ + 顶层 alpine/ 迁入。顶层 alpine/ 是**随 ISO 分发的 rootfs 片段**（openrc init 脚本 / logrotate 配置），它与构建脚本是同一交付物的两半，分居两处只会让「改一处忘另一处」。构建入口是 shell / PowerShell 而非 node，故 commands 为空。"
+  "commands": [
+    {
+      "name": "build-iso-docker",
+      "description": "使用 Docker 构建 Alpine ISO",
+      "type": "shell",
+      "entry": "build-iso-docker.sh"
+    },
+    {
+      "name": "build-iso-windows",
+      "description": "使用 Windows PowerShell 构建 Alpine ISO",
+      "type": "shell",
+      "entry": "build-iso-windows.ps1"
+    }
+  ],
+  "_note": "2026-08-19 由 scripts/alpine/ + 顶层 alpine/ 迁入。顶层 alpine/ 是**随 ISO 分发的 rootfs 片段**（openrc init 脚本 / logrotate 配置），它与构建脚本是同一交付物的两半，分居两处只会让「改一处忘另一处」。构建入口是 shell / PowerShell 而非 node，commands 字段列出这些入口脚本。"
 }

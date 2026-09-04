@@ -21,8 +21,8 @@ const { execFile } = require('child_process');
 
 const platformUtils = require('../tools/platformUtils');
 
-const registry = require('./dependency/registry');
-const resolver = require('./dependency/resolver');
+const registry = require('./domain/network/dependency/registry');
+const resolver = require('./domain/network/dependency/resolver');
 
 const VERSION_TIMEOUT_MS = parseInt(process.env.KHY_DEP_VERSION_TIMEOUT_MS || '5000', 10);
 

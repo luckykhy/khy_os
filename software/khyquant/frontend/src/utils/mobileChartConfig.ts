@@ -19,7 +19,7 @@ export function getMobileChartOptions(width: number, height: number) {
     width,
     height,
     layout: {
-      background: { color: '#0a0a0a' },
+      background: { color: 'var(--khy-gray-900)' },
       textColor: '#e0e0e0',
       fontSize: 12 // 移动端增大字体
     },
@@ -121,15 +121,15 @@ export function getMobileChartOptions(width: number, height: number) {
 export function getMobileCandlestickOptions() {
   return {
     upColor: '#26a69a',
-    downColor: '#ef5350',
+    downColor: 'var(--khy-danger)',
     borderVisible: true,
     wickVisible: true,
     borderColor: '#26a69a',
     wickColor: '#26a69a',
     borderUpColor: '#26a69a',
-    borderDownColor: '#ef5350',
+    borderDownColor: 'var(--khy-danger)',
     wickUpColor: '#26a69a',
-    wickDownColor: '#ef5350',
+    wickDownColor: 'var(--khy-danger)',
     priceFormat: {
       type: 'price',
       precision: 2,
@@ -196,7 +196,7 @@ export function getDesktopChartOptions(width: number, height: number) {
     width,
     height,
     layout: {
-      background: { color: '#0a0a0a' },
+      background: { color: 'var(--khy-gray-900)' },
       textColor: '#d1d4dc',
       fontSize: 11
     },

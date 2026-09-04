@@ -132,7 +132,7 @@ function _audit(tool, params, result, elapsed) {
     return;
   }
   try {
-    require('./auditLog').logToolExecution({
+    require('../middleware/auditLog').logToolExecution({
       tool,
       params,
       result,
@@ -620,7 +620,7 @@ async function compress(messages, opts) {
 
   // Hook: PreCompact — notify before compression starts
   try {
-    const hookSys = require('./hooks/hookSystem');
+    const hookSys = require('../cli/hooks/hookSystem');
     const preHr = await hookSys.trigger('PreCompact', {
       messageCount: messages.length,
       totalTokens,
@@ -913,7 +913,7 @@ async function compress(messages, opts) {
 
   // Hook: PostCompact — notify after compression completes
   try {
-    const hookSys = require('./hooks/hookSystem');
+    const hookSys = require('../cli/hooks/hookSystem');
     await hookSys.trigger('PostCompact', {
       freedTokens,
       splitIndex,

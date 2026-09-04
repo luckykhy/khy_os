@@ -84,7 +84,7 @@ Usage notes:
   let writingThePromptSection;
   try {
     writingThePromptSection =
-      require('../services/agents/delegationPromptPolicy').resolveWritingThePromptSection();
+      require('../services/domain/agents/agents/delegationPromptPolicy.js').resolveWritingThePromptSection();
   } catch {
     writingThePromptSection = `
 

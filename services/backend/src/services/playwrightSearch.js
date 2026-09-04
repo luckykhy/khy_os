@@ -31,7 +31,7 @@
 // Playwright acquisition (loader / remote-or-local launch / proxy) lives in the
 // shared browser/engine.js single source of truth, consumed by both this search
 // fallback and the interactive WebBrowser tool.
-const engine = require('./browser/engine');
+const engine = require('./domain/desktop/browser/engine');
 const { UA } = engine;
 
 // Markers that a "200 OK" page is actually a bot wall rather than real results.

@@ -47,7 +47,7 @@
 
             <!-- 🔥 如果是自选标的,显示星标 -->
 
-            <el-icon v-if="isFavoriteSymbol(symbol.code)" style="color: #f7ba2a; margin-left: 8px;">
+            <el-icon v-if="isFavoriteSymbol(symbol.code)" style="color: var(--khy-warning); margin-left: 8px;">
 
               <StarFilled />
 
@@ -379,9 +379,9 @@
 
                 {{ replayCurrentDate }} | {{ replayProgress }}% |
 
-                <span style="color:#67c23a;">买入: {{ replayBuyCount }}</span> /
+                <span style="color:var(--khy-success);">买入: {{ replayBuyCount }}</span> /
 
-                <span style="color:#f56c6c;">卖出: {{ replaySellCount }}</span>
+                <span style="color:var(--khy-danger);">卖出: {{ replaySellCount }}</span>
 
               </span>
 
@@ -393,13 +393,13 @@
 
             <div v-if="replaySessionId" class="replay-account">
 
-              <span>现金: <b style="color:#409eff;">{{ replayCash.toLocaleString() }}</b></span>
+              <span>现金: <b style="color:var(--khy-primary);">{{ replayCash.toLocaleString() }}</b></span>
 
               <span style="margin-left:12px;">
 
                 收益率:
 
-                <b :style="{color: replayReturn >= 0 ? '#67c23a' : '#f56c6c'}">
+                <b :style="{color: replayReturn >= 0 ? 'var(--khy-success)' : 'var(--khy-danger)'}">
 
                   {{ replayReturn >= 0 ? '+' : '' }}{{ replayReturn.toFixed(2) }}%
 
@@ -685,7 +685,7 @@
 
                 <div class="drawer-positions-placeholder">
 
-                  <span style="color: #888; font-size: 13px;">暂无持仓</span>
+                  <span style="color: var(--khy-gray-400); font-size: 13px;">暂无持仓</span>
 
                 </div>
 
@@ -975,7 +975,7 @@ const fetchAccountInfo = async () => {
 
       accountInfo.value = response.data
 
-      console.log('✅ 账户信息已更新:', accountInfo.value)
+      if (import.meta.env.DEV) { console.log('✅ 账户信息已更新:', accountInfo.value) }
 
     }
 
@@ -1145,7 +1145,7 @@ const toggleLeftPanel = () => {
 
   
 
-  console.log('📊 左侧面板折叠状态改变:', isLeftPanelCollapsed.value ? '已折叠' : '已展开')
+  if (import.meta.env.DEV) { console.log('📊 左侧面板折叠状态改变:', isLeftPanelCollapsed.value ? '已折叠' : '已展开') }
 
   
 
@@ -1452,7 +1452,7 @@ function isFavoriteSymbol(code) {
 // ---------------------------------------------------------------------------
 async function onSymbolChange(symbol) {
 
-  console.log('🔄 切换股票:', symbol)
+  if (import.meta.env.DEV) { console.log('🔄 切换股票:', symbol) }
 
   selectedSymbol.value = symbol
 
@@ -1468,7 +1468,7 @@ async function onSymbolChange(symbol) {
 
     currentStock.value.name = symbolInfo.name
 
-    console.log('✅ 从symbolList找到股票名称:', symbolInfo.name)
+    if (import.meta.env.DEV) { console.log('✅ 从symbolList找到股票名称:', symbolInfo.name) }
 
   } else {
 
@@ -1490,7 +1490,7 @@ async function onSymbolChange(symbol) {
 
   // 这样可以确保所有地方显示的价格都来自同一个数据源
 
-  console.log('📊 等待SimpleTradingInterface加载数据并更新价格...')
+  if (import.meta.env.DEV) { console.log('📊 等待SimpleTradingInterface加载数据并更新价格...') }
 
   
 
@@ -1624,7 +1624,7 @@ function getInstrumentNameFallback(code) {
 
 watch(selectedSymbol, (newSymbol) => {
 
-  console.log('👀 监听到 selectedSymbol 变化:', newSymbol)
+  if (import.meta.env.DEV) { console.log('👀 监听到 selectedSymbol 变化:', newSymbol) }
 
   const symbolInfo = symbolList.value.find(s => s.code === newSymbol)
 
@@ -1634,7 +1634,7 @@ watch(selectedSymbol, (newSymbol) => {
 
     currentStock.value.code = newSymbol
 
-    console.log('✅ watch更新股票名称:', symbolInfo.name)
+    if (import.meta.env.DEV) { console.log('✅ watch更新股票名称:', symbolInfo.name) }
 
   } else if (symbolList.value.length > 0) {
 
@@ -1644,7 +1644,7 @@ watch(selectedSymbol, (newSymbol) => {
 
     currentStock.value.code = newSymbol
 
-    console.log('⚠️ watch使用备用名称:', currentStock.value.name)
+    if (import.meta.env.DEV) { console.log('⚠️ watch使用备用名称:', currentStock.value.name) }
 
   }
 
@@ -1710,7 +1710,7 @@ async function loadStrategyToTrading(strategy) {
 
     
 
-    console.log('🔄 加载策略到交易界面:', strategy.name)
+    if (import.meta.env.DEV) { console.log('🔄 加载策略到交易界面:', strategy.name) }
 
     
 
@@ -1764,7 +1764,7 @@ async function loadStrategySignals(strategy, symbol) {
 
   try {
 
-    console.log('🔄 获取策略信号:', strategy.name, symbol)
+    if (import.meta.env.DEV) { console.log('🔄 获取策略信号:', strategy.name, symbol) }
 
     
 
@@ -1826,7 +1826,7 @@ async function loadStrategySignals(strategy, symbol) {
 
       
 
-      console.log('✅ 策略信号加载成功:', {
+      if (import.meta.env.DEV) { console.log('✅ 策略信号加载成功:', { }
 
         signals: strategySignals.value.length,
 
@@ -1848,7 +1848,7 @@ async function loadStrategySignals(strategy, symbol) {
 
     // API call failed — always fall back to local strategy execution
 
-    console.log('🔄 API 调用失败，尝试本地执行策略代码...')
+    if (import.meta.env.DEV) { console.log('🔄 API 调用失败，尝试本地执行策略代码...') }
 
     try {
 
@@ -1882,7 +1882,7 @@ async function executeStrategyLocally(strategy, symbol) {
 
   try {
 
-    console.log('🔄 本地执行策略代码:', strategy.name)
+    if (import.meta.env.DEV) { console.log('🔄 本地执行策略代码:', strategy.name) }
 
 
 
@@ -1912,15 +1912,15 @@ async function executeStrategyLocally(strategy, symbol) {
 
 
 
-    console.log('✅ 策略执行完成')
+    if (import.meta.env.DEV) { console.log('✅ 策略执行完成') }
 
     // executeSandbox always returns { signals, auxiliaryData }
     strategySignals.value = Array.isArray(result.signals) ? result.signals : []
     strategyAuxiliaryData.value = result.auxiliaryData || {}
 
-    console.log('📊 信号数量:', strategySignals.value.length, '辅助线数量:', Object.keys(strategyAuxiliaryData.value).length)
+    if (import.meta.env.DEV) { console.log('📊 信号数量:', strategySignals.value.length, '辅助线数量:', Object.keys(strategyAuxiliaryData.value).length) }
 
-    console.log('✅ 本地策略执行成功:', {
+    if (import.meta.env.DEV) { console.log('✅ 本地策略执行成功:', { }
 
       signals: strategySignals.value.length,
 
@@ -1994,7 +1994,7 @@ function toggleStrategySignals() {
 
 function forceShowSignals() {
 
-  console.log('🚀 强制显示信号被触发')
+  if (import.meta.env.DEV) { console.log('🚀 强制显示信号被触发') }
 
   
 
@@ -2008,7 +2008,7 @@ function forceShowSignals() {
 
     ElMessage.warning('⚠️ 请先在左侧面板选择一个策略')
 
-    console.log('⚠️ 没有选择或加载的策略，无法显示信号')
+    if (import.meta.env.DEV) { console.log('⚠️ 没有选择或加载的策略，无法显示信号') }
 
     return
 
@@ -2016,11 +2016,11 @@ function forceShowSignals() {
 
   
 
-  console.log('📊 使用策略:', targetStrategy.name)
+  if (import.meta.env.DEV) { console.log('📊 使用策略:', targetStrategy.name) }
 
-  console.log('📊 策略来源:', loadedStrategy.value ? '已加载策略' : '选中策略')
+  if (import.meta.env.DEV) { console.log('📊 策略来源:', loadedStrategy.value ? '已加载策略' : '选中策略') }
 
-  console.log('📊 当前选择的标的:', selectedSymbol.value)
+  if (import.meta.env.DEV) { console.log('📊 当前选择的标的:', selectedSymbol.value) }
 
   
 
@@ -2028,7 +2028,7 @@ function forceShowSignals() {
 
   if (!loadedStrategy.value && strategyStore.selectedStrategy) {
 
-    console.log('🔄 自动加载选中的策略...')
+    if (import.meta.env.DEV) { console.log('🔄 自动加载选中的策略...') }
 
     loadStrategyToTrading(strategyStore.selectedStrategy)
 
@@ -2082,7 +2082,7 @@ function forceShowSignalsInternal(strategy) {
 
     .then(() => {
 
-      console.log('✅ 策略信号重新加载成功')
+      if (import.meta.env.DEV) { console.log('✅ 策略信号重新加载成功') }
 
       
 
@@ -2090,7 +2090,7 @@ function forceShowSignalsInternal(strategy) {
 
       if (strategySignals.value && strategySignals.value.length > 0) {
 
-        console.log('📊 策略信号数据:', {
+        if (import.meta.env.DEV) { console.log('📊 策略信号数据:', { }
 
           count: strategySignals.value.length,
 
@@ -2110,7 +2110,7 @@ function forceShowSignalsInternal(strategy) {
 
       } else {
 
-        console.log('⚠️ 策略没有生成信号，使用备用测试信号')
+        if (import.meta.env.DEV) { console.log('⚠️ 策略没有生成信号，使用备用测试信号') }
 
         
 
@@ -2182,7 +2182,7 @@ function generateTestSignalsForStrategyChart(strategyName, count = 6) {
 
   
 
-  console.log('📊 生成测试信号，策略:', strategyName, '数量:', count)
+  if (import.meta.env.DEV) { console.log('📊 生成测试信号，策略:', strategyName, '数量:', count) }
 
   
 
@@ -2236,7 +2236,7 @@ function generateTestSignalsForStrategyChart(strategyName, count = 6) {
 
     
 
-    console.log(`📍 生成信号 ${i + 1}:`, {
+    if (import.meta.env.DEV) { console.log(`📍 生成信号 ${i + 1}:`, { }
 
       type: signal.type,
 
@@ -2252,7 +2252,7 @@ function generateTestSignalsForStrategyChart(strategyName, count = 6) {
 
   
 
-  console.log('✅ 测试信号生成完成:', signals.length, '个信号')
+  if (import.meta.env.DEV) { console.log('✅ 测试信号生成完成:', signals.length, '个信号') }
 
   return signals
 
@@ -2568,7 +2568,7 @@ function startStrategyStatusUpdate() {
 
 function handleContractChange(contract) {
 
-  console.log('统一界面 - 合约切换:', contract)
+  if (import.meta.env.DEV) { console.log('统一界面 - 合约切换:', contract) }
 
   selectedSymbol.value = contract
 
@@ -2580,7 +2580,7 @@ function handleContractChange(contract) {
 
 function handlePeriodChange(period) {
 
-  console.log('统一界面 - 周期切换:', period)
+  if (import.meta.env.DEV) { console.log('统一界面 - 周期切换:', period) }
 
   currentPeriod.value = period
 
@@ -2590,7 +2590,7 @@ function handlePeriodChange(period) {
 
 function handleSignalLoaded(signals) {
 
-  console.log('统一界面 - 信号加载:', signals)
+  if (import.meta.env.DEV) { console.log('统一界面 - 信号加载:', signals) }
 
   strategySignals.value = signals
 
@@ -2602,7 +2602,7 @@ function handleSignalLoaded(signals) {
 
 function handleOrderPlaced(order) {
 
-  console.log('统一界面 - 订单提交:', order)
+  if (import.meta.env.DEV) { console.log('统一界面 - 订单提交:', order) }
 
   ElMessage.success(`订单已提交: ${order.type} ${order.volume}手 @ ${order.price}`)
 
@@ -2626,7 +2626,7 @@ function handleOrderPlaced(order) {
 
 function handleNavigateToBacktestAnalysis() {
 
-  console.log('导航到回测分析页面')
+  if (import.meta.env.DEV) { console.log('导航到回测分析页面') }
 
   
 
@@ -2634,7 +2634,7 @@ function handleNavigateToBacktestAnalysis() {
 
     router.push('/backtest')
 
-    console.log('✅ 成功导航到回测分析页面')
+    if (import.meta.env.DEV) { console.log('✅ 成功导航到回测分析页面') }
 
   } catch (error) {
 
@@ -2698,7 +2698,7 @@ function getProfitClass(value) {
 
 function handleStrategySelected(strategy) {
 
-  console.log('🎯 智能策略选择:', strategy?.name)
+  if (import.meta.env.DEV) { console.log('🎯 智能策略选择:', strategy?.name) }
 
   
 
@@ -2788,7 +2788,7 @@ function handleStrategySelected(strategy) {
 
 function handleStrategyApplied(strategy) {
 
-  console.log('🚀 智能策略应用:', strategy?.name)
+  if (import.meta.env.DEV) { console.log('🚀 智能策略应用:', strategy?.name) }
 
   
 
@@ -2874,7 +2874,7 @@ function updateStrategyStatsLocal() {
 
 function handleSignalsGenerated(data) {
 
-  console.log('📊 Trading.vue 接收到策略信号:', data)
+  if (import.meta.env.DEV) { console.log('📊 Trading.vue 接收到策略信号:', data) }
 
   
 
@@ -2900,7 +2900,7 @@ function handleSignalsGenerated(data) {
 
         strategyAuxiliaryData.value = data.auxiliaryData
 
-        console.log('✅ 辅助线数据已更新:', {
+        if (import.meta.env.DEV) { console.log('✅ 辅助线数据已更新:', { }
 
           auxiliaryLines: Object.keys(data.auxiliaryData).length,
 
@@ -2912,7 +2912,7 @@ function handleSignalsGenerated(data) {
 
         strategyAuxiliaryData.value = {}
 
-        console.log('⚠️ 没有辅助线数据')
+        if (import.meta.env.DEV) { console.log('⚠️ 没有辅助线数据') }
 
       }
 
@@ -2930,7 +2930,7 @@ function handleSignalsGenerated(data) {
 
       
 
-      console.log('✅ 策略信号已更新:', {
+      if (import.meta.env.DEV) { console.log('✅ 策略信号已更新:', { }
 
         strategy: data.strategy.name,
 
@@ -2946,7 +2946,7 @@ function handleSignalsGenerated(data) {
 
       // 立即尝试显示信号
 
-      console.log('🔄 立即尝试显示信号到SimpleTradingInterface')
+      if (import.meta.env.DEV) { console.log('🔄 立即尝试显示信号到SimpleTradingInterface') }
 
       
 
@@ -2960,7 +2960,7 @@ function handleSignalsGenerated(data) {
 
           setTimeout(() => {
 
-            console.log('🎯 强制触发信号显示检查')
+            if (import.meta.env.DEV) { console.log('🎯 强制触发信号显示检查') }
 
             
 
@@ -2970,7 +2970,7 @@ function handleSignalsGenerated(data) {
 
             if (simpleTradingInterface) {
 
-              console.log('✅ 找到SimpleTradingInterface组件')
+              if (import.meta.env.DEV) { console.log('✅ 找到SimpleTradingInterface组件') }
 
               
 
@@ -3100,7 +3100,7 @@ async function loadFavoriteStocks() {
 
   try {
 
-    console.log('📂 从数据库加载自选标的...')
+    if (import.meta.env.DEV) { console.log('📂 从数据库加载自选标的...') }
 
     
 
@@ -3116,7 +3116,7 @@ async function loadFavoriteStocks() {
 
       favoriteStocks.value = new Set(favorites)
 
-      console.log(`✅ 从数据库加载 ${favorites.length} 个自选标的`)
+      if (import.meta.env.DEV) { console.log(`✅ 从数据库加载 ${favorites.length} 个自选标的`) }
 
       
 
@@ -3146,11 +3146,11 @@ async function loadFavoriteStocks() {
 
         favoriteStocks.value = new Set(favorites)
 
-        console.log(`⚠️ 从localStorage加载 ${favorites.length} 个自选标的`)
+        if (import.meta.env.DEV) { console.log(`⚠️ 从localStorage加载 ${favorites.length} 个自选标的`) }
 
       } else {
 
-        console.log('⚠️ 没有自选标的数据')
+        if (import.meta.env.DEV) { console.log('⚠️ 没有自选标的数据') }
 
       }
 
@@ -3220,7 +3220,7 @@ async function loadSymbolList(forceRefresh = false) {
 
     symbolListLoading.value = true // 🔥 设置加载状态
 
-    console.log('📋 加载标的列表...')
+    if (import.meta.env.DEV) { console.log('📋 加载标的列表...') }
 
     
 
@@ -3228,7 +3228,7 @@ async function loadSymbolList(forceRefresh = false) {
 
     if (!forceRefresh && symbolList.value.length > 0) {
 
-      console.log(`✅ 使用内存缓存 (${symbolList.value.length}个标的)`)
+      if (import.meta.env.DEV) { console.log(`✅ 使用内存缓存 (${symbolList.value.length}个标的)`) }
 
       return
 
@@ -3260,13 +3260,13 @@ async function loadSymbolList(forceRefresh = false) {
 
           symbolList.value = Array.isArray(data) ? data : []
 
-          console.log(`✅ 使用localStorage缓存 (${symbolList.value.length}个标的, ${ageMinutes}分钟前)`)
+          if (import.meta.env.DEV) { console.log(`✅ 使用localStorage缓存 (${symbolList.value.length}个标的, ${ageMinutes}分钟前)`) }
 
           return
 
         } else {
 
-          console.log(`⚠️ localStorage缓存已过期 (${ageMinutes}分钟前)`)
+          if (import.meta.env.DEV) { console.log(`⚠️ localStorage缓存已过期 (${ageMinutes}分钟前)`) }
 
         }
 
@@ -3280,7 +3280,7 @@ async function loadSymbolList(forceRefresh = false) {
 
     
 
-    console.log('🔍 从API加载标的列表...')
+    if (import.meta.env.DEV) { console.log('🔍 从API加载标的列表...') }
 
     
 
@@ -3338,7 +3338,7 @@ async function loadSymbolList(forceRefresh = false) {
 
       
 
-      console.log(`✅ 成功加载 ${symbolList.value.length} 个标的`)
+      if (import.meta.env.DEV) { console.log(`✅ 成功加载 ${symbolList.value.length} 个标的`) }
 
       return
 
@@ -3376,7 +3376,7 @@ async function loadSymbolList(forceRefresh = false) {
 
         symbolList.value = Array.isArray(data) ? data : []
 
-        console.log(`✅ 使用过期缓存 (${symbolList.value.length}个标的, ${ageHours}小时前)`)
+        if (import.meta.env.DEV) { console.log(`✅ 使用过期缓存 (${symbolList.value.length}个标的, ${ageHours}小时前)`) }
 
         ElMessage.warning(`使用缓存数据 (${ageHours}小时前)`)
 
@@ -3394,7 +3394,7 @@ async function loadSymbolList(forceRefresh = false) {
 
     // 🔥 最终降级: 使用默认标的列表
 
-    console.log('⚠️ 使用默认标的列表')
+    if (import.meta.env.DEV) { console.log('⚠️ 使用默认标的列表') }
 
     symbolList.value = [
 
@@ -3500,7 +3500,7 @@ async function generateKLineData(symbol) {
 
   try {
 
-    console.log(`📊 从后端获取K线数据: ${symbol}`)
+    if (import.meta.env.DEV) { console.log(`📊 从后端获取K线数据: ${symbol}`) }
 
     
 
@@ -3526,11 +3526,11 @@ async function generateKLineData(symbol) {
 
     
 
-    console.log(`✅ 获取到${data.kline.length}条K线数据`)
+    if (import.meta.env.DEV) { console.log(`✅ 获取到${data.kline.length}条K线数据`) }
 
-    console.log(`   数据源: ${data.source}`)
+    if (import.meta.env.DEV) { console.log(`   数据源: ${data.source}`) }
 
-    console.log(`   日期范围: ${data.kline[0].time} 到 ${data.kline[data.kline.length - 1].time}`)
+    if (import.meta.env.DEV) { console.log(`   日期范围: ${data.kline[0].time} 到 ${data.kline[data.kline.length - 1].time}`) }
 
     
 
@@ -3656,7 +3656,7 @@ function generateLocalKLineData(symbol) {
 
   
 
-  console.log('📊 生成本地模拟K线数据:', klineData.length, '条')
+  if (import.meta.env.DEV) { console.log('📊 生成本地模拟K线数据:', klineData.length, '条') }
 
   return klineData
 
@@ -3728,7 +3728,7 @@ async function loadMarketData(symbol) {
 
   try {
 
-    console.log(`🔄 加载 ${symbol} 的K线数据...`)
+    if (import.meta.env.DEV) { console.log(`🔄 加载 ${symbol} 的K线数据...`) }
 
     
 
@@ -3838,11 +3838,11 @@ async function loadMarketData(symbol) {
 
       
 
-      console.log(`✅ ${symbol} K线数据加载成功，共 ${klineData.length} 根K线`)
+      if (import.meta.env.DEV) { console.log(`✅ ${symbol} K线数据加载成功，共 ${klineData.length} 根K线`) }
 
-      console.log(`📊 数据来源: ${apiData.source || '未知'}`)
+      if (import.meta.env.DEV) { console.log(`📊 数据来源: ${apiData.source || '未知'}`) }
 
-      console.log(`📊 是否真实数据: ${isRealData}`)
+      if (import.meta.env.DEV) { console.log(`📊 是否真实数据: ${isRealData}`) }
 
       
 
@@ -3852,7 +3852,7 @@ async function loadMarketData(symbol) {
 
       console.warn('⚠️ API返回数据格式错误，使用增强模拟数据')
 
-      console.log('API返回数据:', apiData)
+      if (import.meta.env.DEV) { console.log('API返回数据:', apiData) }
 
       const klineData = await generateKLineData(symbol)
 
@@ -3906,7 +3906,7 @@ async function loadMarketData(symbol) {
 
 async function loadRealTimeQuote(symbol) {
 
-  console.log(`📊 loadRealTimeQuote: 等待SimpleTradingInterface发送价格更新...`)
+  if (import.meta.env.DEV) { console.log(`📊 loadRealTimeQuote: 等待SimpleTradingInterface发送价格更新...`) }
 
   // 不做任何操作，价格由SimpleTradingInterface通过handlePriceUpdate事件更新
 
@@ -3974,7 +3974,7 @@ async function loadRealTimeQuote(symbol) {
 
 const handlePriceUpdate = (priceData) => {
 
-  console.log('📊 收到SimpleTradingInterface价格更新:', priceData)
+  if (import.meta.env.DEV) { console.log('📊 收到SimpleTradingInterface价格更新:', priceData) }
 
   
 
@@ -4012,7 +4012,7 @@ const handlePriceUpdate = (priceData) => {
 
   
 
-  console.log('✅ 顶部价格已更新:', currentStock.value.price, currentStock.value.change, currentStock.value.changePercent + '%')
+  if (import.meta.env.DEV) { console.log('✅ 顶部价格已更新:', currentStock.value.price, currentStock.value.change, currentStock.value.changePercent + '%') }
 
 }
 
@@ -4022,7 +4022,7 @@ const handlePriceUpdate = (priceData) => {
 
 const handleDataLoaded = (loadInfo) => {
 
-  console.log('K线数据加载完成:', loadInfo)
+  if (import.meta.env.DEV) { console.log('K线数据加载完成:', loadInfo) }
 
   lastUpdateTime.value = new Date().toLocaleTimeString()
 
@@ -4048,7 +4048,7 @@ const updateData = () => {
 
 onMounted(async () => {
 
-  console.log('Professional Trading 页面加载...')
+  if (import.meta.env.DEV) { console.log('Professional Trading 页面加载...') }
 
   // Load kline period settings from backend
   try {
@@ -4076,7 +4076,7 @@ onMounted(async () => {
 
       if (Array.isArray(periods) && periods.length > 0) {
         enabledPeriods.value = periods
-        console.log('✅ K线周期设置加载:', periods)
+        if (import.meta.env.DEV) { console.log('✅ K线周期设置加载:', periods) }
       }
     }
   } catch (err) {
@@ -4085,21 +4085,21 @@ onMounted(async () => {
 
   // 🔥 步骤0: 加载账户信息
 
-  console.log('💰 步骤0: 加载账户信息...')
+  if (import.meta.env.DEV) { console.log('💰 步骤0: 加载账户信息...') }
 
   await fetchAccountInfo()
 
-  console.log(`✅ 账户信息加载完成: 可用资金 ¥${accountInfo.value.availableFunds}`)
+  if (import.meta.env.DEV) { console.log(`✅ 账户信息加载完成: 可用资金 ¥${accountInfo.value.availableFunds}`) }
 
   
 
   // 🔥 重要:先加载股票列表,再加载自选标的
 
-  console.log('📋 步骤1: 加载股票列表...')
+  if (import.meta.env.DEV) { console.log('📋 步骤1: 加载股票列表...') }
 
   await loadSymbolList()
 
-  console.log(`✅ 股票列表加载完成: ${symbolList.value.length} 个标的`)
+  if (import.meta.env.DEV) { console.log(`✅ 股票列表加载完成: ${symbolList.value.length} 个标的`) }
 
   
 
@@ -4111,13 +4111,13 @@ onMounted(async () => {
 
     currentStock.value.name = currentSymbolInfo.name
 
-    console.log('✅ 初始化当前股票名称:', currentSymbolInfo.name)
+    if (import.meta.env.DEV) { console.log('✅ 初始化当前股票名称:', currentSymbolInfo.name) }
 
   } else {
 
     currentStock.value.name = getInstrumentNameFallback(selectedSymbol.value)
 
-    console.log('⚠️ 使用备用名称:', currentStock.value.name)
+    if (import.meta.env.DEV) { console.log('⚠️ 使用备用名称:', currentStock.value.name) }
 
   }
 
@@ -4125,31 +4125,31 @@ onMounted(async () => {
 
   // 加载自选标的列表
 
-  console.log('📂 步骤2: 加载自选标的...')
+  if (import.meta.env.DEV) { console.log('📂 步骤2: 加载自选标的...') }
 
   await loadFavoriteStocks()
 
-  console.log(`✅ 自选标的加载完成: ${favoriteStocks.value.size} 个`)
+  if (import.meta.env.DEV) { console.log(`✅ 自选标的加载完成: ${favoriteStocks.value.size} 个`) }
 
   
 
   // 🔥 强制触发favoriteList计算
 
-  console.log('🔄 步骤3: 触发favoriteList计算...')
+  if (import.meta.env.DEV) { console.log('🔄 步骤3: 触发favoriteList计算...') }
 
   const favList = favoriteList.value
 
-  console.log(`📊 favoriteList结果: ${favList.length} 个自选标的`)
+  if (import.meta.env.DEV) { console.log(`📊 favoriteList结果: ${favList.length} 个自选标的`) }
 
   
 
   if (favList.length > 0) {
 
-    console.log('✅ 自选标的列表:')
+    if (import.meta.env.DEV) { console.log('✅ 自选标的列表:') }
 
     favList.forEach(item => {
 
-      console.log(`  - ${item.code} ${item.name}`)
+      if (import.meta.env.DEV) { console.log(`  - ${item.code} ${item.name}`) }
 
     })
 
@@ -4157,15 +4157,15 @@ onMounted(async () => {
 
     console.warn('⚠️ favoriteList为空!')
 
-    console.log('调试信息:')
+    if (import.meta.env.DEV) { console.log('调试信息:') }
 
-    console.log('  - symbolList.length:', symbolList.value.length)
+    if (import.meta.env.DEV) { console.log('  - symbolList.length:', symbolList.value.length) }
 
-    console.log('  - favoriteStocks.size:', favoriteStocks.value.size)
+    if (import.meta.env.DEV) { console.log('  - favoriteStocks.size:', favoriteStocks.value.size) }
 
-    console.log('  - favoriteStocks内容:', Array.from(favoriteStocks.value))
+    if (import.meta.env.DEV) { console.log('  - favoriteStocks内容:', Array.from(favoriteStocks.value)) }
 
-    console.log('  - symbolList前3个:', symbolList.value.slice(0, 3).map(s => s.code))
+    if (import.meta.env.DEV) { console.log('  - symbolList前3个:', symbolList.value.slice(0, 3).map(s => s.code)) }
 
   }
 
@@ -4177,19 +4177,19 @@ onMounted(async () => {
 
   const symbolFromUrl = urlParams.get('symbol')
 
-  console.log('🔍 URL参数检查:')
+  if (import.meta.env.DEV) { console.log('🔍 URL参数检查:') }
 
-  console.log('   完整URL:', window.location.href)
+  if (import.meta.env.DEV) { console.log('   完整URL:', window.location.href) }
 
-  console.log('   search部分:', window.location.search)
+  if (import.meta.env.DEV) { console.log('   search部分:', window.location.search) }
 
-  console.log('   解析的symbol:', symbolFromUrl)
+  if (import.meta.env.DEV) { console.log('   解析的symbol:', symbolFromUrl) }
 
   
 
   if (symbolFromUrl) {
 
-    console.log('从URL参数加载股票:', symbolFromUrl)
+    if (import.meta.env.DEV) { console.log('从URL参数加载股票:', symbolFromUrl) }
 
     selectedSymbol.value = symbolFromUrl
 
@@ -4201,19 +4201,19 @@ onMounted(async () => {
 
       currentStock.value.name = urlSymbolInfo.name
 
-      console.log('✅ URL参数股票名称:', urlSymbolInfo.name)
+      if (import.meta.env.DEV) { console.log('✅ URL参数股票名称:', urlSymbolInfo.name) }
 
     } else {
 
       currentStock.value.name = getInstrumentNameFallback(symbolFromUrl)
 
-      console.log('⚠️ URL参数使用备用名称:', currentStock.value.name)
+      if (import.meta.env.DEV) { console.log('⚠️ URL参数使用备用名称:', currentStock.value.name) }
 
     }
 
   } else {
 
-    console.log('⚠️ 没有URL参数,使用默认值:', selectedSymbol.value)
+    if (import.meta.env.DEV) { console.log('⚠️ 没有URL参数,使用默认值:', selectedSymbol.value) }
 
   }
 
@@ -4225,7 +4225,7 @@ onMounted(async () => {
 
   // 这样可以确保所有地方显示的价格都来自同一个数据源
 
-  console.log('📊 等待SimpleTradingInterface加载数据并更新价格...')
+  if (import.meta.env.DEV) { console.log('📊 等待SimpleTradingInterface加载数据并更新价格...') }
 
 
 
@@ -4501,7 +4501,7 @@ const loadReplayStrategyList = async () => {
 
     replayStrategyList.value = Array.isArray(list) ? list : []
 
-    console.log('Loaded replay strategies:', replayStrategyList.value.length)
+    if (import.meta.env.DEV) { console.log('Loaded replay strategies:', replayStrategyList.value.length) }
 
 
 

@@ -16,8 +16,8 @@
  * 门控 KHY_SUBSCRIBE_PR 默认开;关 → 命令不接管(字节回退)。
  */
 
-const leaf = require('../../services/subscribePr/subscribePrPlan');
-const store = require('../../services/subscribePr/subscribePrStore');
+const leaf = require('../../services/domain/deploy/subscribePr/subscribePrPlan.js');
+const store = require('../../services/domain/deploy/subscribePr/subscribePrStore.js');
 
 // try/catch combinator 单一真源 utils/tryOr:执行 fn,任何异常 → dflt。
 const _safe = require('../../utils/tryOr');

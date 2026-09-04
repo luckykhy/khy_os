@@ -21,7 +21,7 @@
  * 缺失,本命令如实告知「已写 KHY_OS_SANDBOX=true 但当前平台后端不可用,沙箱仍不生效」,绝不假装。
  */
 
-const leaf = require('../../services/config/sandboxToggleState');
+const leaf = require('../../services/domain/config/config/sandboxToggleState.js');
 const envFile = require('../../services/gatewayEnvFile');
 const toolSandbox = require('../../services/toolSandbox');
 const { printInfo, printSuccess, printWarn } = require('../formatters');

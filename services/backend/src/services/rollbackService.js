@@ -45,7 +45,7 @@ function _canonicalState() {
 }
 
 function _checkpoints() {
-  return require('./workspace/checkpointService');
+  return require('./domain/workspace/workspace/checkpointService');
 }
 
 function _fail(error) {
