@@ -764,7 +764,7 @@ async function chat(userMessage, opts = {}) {
     if (kinds.length > 0) {
       onStatus({
         phase: 'init',
-        message: `多模态输入检测: ${kinds.join('+')}（media ${Math.max(0, nonImageCount)}/image ${Math.max(0, (multimodalInput.images || []).length)}）`,
+        message: `多模态输入：${kinds.join('+')}（${Math.max(0, nonImageCount)} media / ${Math.max(0, (multimodalInput.images || []).length)} 图片）`,
         elapsed: Date.now() - startTime,
       });
     }
@@ -813,7 +813,7 @@ async function chat(userMessage, opts = {}) {
       _multimodalIntentDirective = _mmDecision.directive;
       onStatus({
         phase: 'init',
-        message: `多模态意图识别: ${_mmDecision.inventory.map((c) => c.channel).join('+')}(提示词不清,已启用分路消歧·不混淆)`,
+        message: `多模态意图：${_mmDecision.inventory.map((c) => c.channel).join('+')}（分路消歧）`,
         elapsed: Date.now() - startTime,
       });
     }
@@ -838,7 +838,7 @@ async function chat(userMessage, opts = {}) {
       _clarificationDirective = _clar.directive;
       onStatus({
         phase: 'init',
-        message: '提示词不清晰:已启用「选项卡澄清」(多张卡可左右切换·每张可多选·含「可讨论」出口)',
+        message: '提示词不清晰：启用选项卡澄清',
         elapsed: Date.now() - startTime,
       });
     }
@@ -899,7 +899,7 @@ async function chat(userMessage, opts = {}) {
       _referenceDisambiguationDirective = _ref.directive;
       onStatus({
         phase: 'init',
-        message: `指代消歧: ${_ref.type}${_ref.need ? '(需澄清·让用户选)' : '(已可解析·直接推进)'}`,
+        message: `指代消歧：${_ref.type}${_ref.need ? '（需用户选择）' : '（已解析）'}`,
         elapsed: Date.now() - startTime,
       });
     }
@@ -1015,7 +1015,7 @@ async function chat(userMessage, opts = {}) {
       _groundTruthDirective = _gt.directive;
       onStatus({
         phase: 'init',
-        message: `地面真值:已用确定性代码精确算出 ${_gt.facts.length} 处算式的真值,注入供模型直接采用(不信任心算/浮点)`,
+        message: `地面真值：注入 ${_gt.facts.length} 处精确计算结果`,
         elapsed: Date.now() - startTime,
       });
     }
@@ -1256,7 +1256,7 @@ async function chat(userMessage, opts = {}) {
       _deliverySummaryFormatDirective = _ds.directive;
       onStatus({
         phase: 'init',
-        message: '识别到工程任务:收尾将按「根因 / 改动 / 验证」三段式结构化总结',
+        message: '工程任务：收尾按「根因/改动/验证」总结',
         elapsed: Date.now() - startTime,
       });
     }
@@ -1277,8 +1277,7 @@ async function chat(userMessage, opts = {}) {
       _installConfigGuardDirective = _icg.directive;
       onStatus({
         phase: 'init',
-        message:
-          '识别到「安装文档 + 配置意图」歧义:将把连接参数映射到 khy 自身配置,而非安装第三方工具',
+        message: '安装+配置歧义：映射到 khy 自身配置',
         elapsed: Date.now() - startTime,
       });
     }
@@ -1420,7 +1419,7 @@ async function chat(userMessage, opts = {}) {
         }
         onStatus({
           phase: 'request',
-          message: `AI 生成空闲超时 | 阶段: 等待模型响应 | 目标: AI 网关 | 进度: 已 ${idleSec}s 未收到任何数据，已中止本次生成`,
+          message: `空闲超时：已 ${idleSec}s 未收到数据，中止生成`,
           elapsed: Date.now() - startTime,
         });
         resolve({
@@ -1428,9 +1427,9 @@ async function chat(userMessage, opts = {}) {
             success: false,
             errorType: 'timeout',
             content: [
-              `AI 生成空闲超时：已等待 ${idleSec}s 未收到任何数据，已中止本次生成。`,
-              '可能原因：端点无响应 / 网络中断 / API key 无效或缺失。',
-              '建议：检查 api_keys.json 中对应通道的 key，运行 `khy gateway status` 查看通道健康，或切换其他通道。',
+              `空闲超时：已等待 ${idleSec}s 未收到数据，已中止。`,
+              '可能原因：端点无响应 / 网络中断 / API key 无效。',
+              '建议：运行 `khy gateway status` 检查通道健康，或切换其他通道。',
               `（阈值可用 KHY_CHAT_IDLE_TIMEOUT_MS 调整，当前 ${Math.round(_chatIdleTimeoutMs / 1000)}s）`,
             ].join('\n'),
           },
@@ -1700,7 +1699,7 @@ async function chat(userMessage, opts = {}) {
       if (codeIntent.isCodebase) {
         onStatus({
           phase: 'init',
-          message: `代码库预取: 正在搜索相关文件 (${codeIntent.type})...`,
+          message: `代码库预取：搜索相关文件 (${codeIntent.type})`,
           elapsed: Date.now() - startTime,
         });
         const exploreTool = require('../tools/exploreTool');
@@ -1721,7 +1720,7 @@ async function chat(userMessage, opts = {}) {
         if (prefetchResult === prefetchTimeoutToken) {
           onStatus({
             phase: 'init',
-            message: `代码库预取: 超过 ${Math.round(prefetchSoftTimeoutMs / 1000)}s 未返回首批结果，先继续主请求`,
+            message: `代码库预取：超时（>${Math.round(prefetchSoftTimeoutMs / 1000)}s），跳过`,
             elapsed: Date.now() - startTime,
           });
         } else if (prefetchResult?.success && prefetchResult?.data) {
@@ -1741,7 +1740,7 @@ async function chat(userMessage, opts = {}) {
           _prefetchFiles = d.files_found || [];
           onStatus({
             phase: 'init',
-            message: `代码库预取: 找到 ${d.files_found?.length || 0} 个相关文件`,
+            message: `代码库预取：找到 ${d.files_found?.length || 0} 个相关文件`,
             elapsed: Date.now() - startTime,
           });
         }
