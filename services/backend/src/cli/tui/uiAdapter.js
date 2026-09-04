@@ -6,20 +6,13 @@
  * Renders response objects using Ink/React components.
  */
 
-const { showHint } = require('./tui/app'); // Assuming hint system exists
-
 /**
  * Show info message in TUI.
  * @param {object} response
  */
 function showInfo(response) {
-  // Use TUI's hint/notification system
-  if (showHint && typeof showHint === 'function') {
-    showHint(response.message);
-  } else {
-    // Fallback: log to stderr (visible in TUI's log area)
-    process.stderr.write(`[INFO] ${response.title ? response.title + ': ' : ''}${response.message}\n`);
-  }
+  // In TUI mode, use stderr for notifications (visible in TUI's log area)
+  process.stderr.write(`[INFO] ${response.title ? response.title + ': ' : ''}${response.message}\n`);
 }
 
 /**
