@@ -78,9 +78,32 @@ function _classifyKind(msg) {
     if (/abort|cancell?ed/.test(m)) {
       return 'cancelled';
     }
+    // JSON parse errors: "Unexpected token '}'", "Unexpected token < in JSON", etc.
+    if (/unexpected token.*in json|json\s+at\s+position|is not valid json/.test(m)) {
+      return 'parse_error';
+    }
     return 'unexpected_error';
   } catch {
     return 'unexpected_error';
+  }
+}
+
+/**
+ * Check if the error is a SyntaxError from JSON parsing (self-healable).
+ * These errors are often transient — a retry with the same request usually succeeds.
+ * @param {*} err
+ * @returns {boolean}
+ */
+function isParseError(err) {
+  try {
+    if (!err) return false;
+    // Check constructor name for SyntaxError
+    if (err.constructor && err.constructor.name === 'SyntaxError') return true;
+    // Fallback: check message pattern
+    const msg = String(err.message || '').toLowerCase();
+    return /unexpected token.*in json|json\s+at\s+position|is not valid json/.test(msg);
+  } catch {
+    return false;
   }
 }
 
@@ -96,17 +119,37 @@ function buildUnexpectedChatErrorResult(err, opts = {}) {
   try {
     const msg = _messageOf(err);
     const kind = _classifyKind(msg);
+    // Diagnostic: log full stack trace to identify the exact source of the error
+    try {
+      const logPath = require('path').join(
+        process.env.KHY_LOG_HOME || require('path').join(process.env.KHY_DATA_HOME || require('os').homedir(), '.khy', 'logs'),
+        'chat-error-guard.log'
+      );
+      const fs = require('fs');
+      const timestamp = new Date().toISOString();
+      const stack = err && err.stack ? err.stack : 'no stack';
+      const logEntry = `[${timestamp}] UNEXPECTED_CHAT_ERROR\nMessage: ${msg}\nStack:\n${stack}\n---\n`;
+      fs.appendFileSync(logPath, logEntry);
+    } catch {
+      /* logging must never throw */
+    }
     const detail = msg ? `具体错误:${msg}` : '未获取到具体错误信息。';
     const finalResponse =
       '抱歉,本轮模型调用遇到意外异常,已安全结束这一轮(会话未中断,可继续下一步)。\n\n' +
       detail +
       '\n\n提示:回复「继续」即可重试或推进;若反复出现,请检查模型通道 / 网络配置。';
+    // Self-heal: parse errors are transient — signal retryability to the caller
+    const retryable = kind === 'parse_error';
+    const finalResponseText = retryable
+      ? '检测到响应解析异常,正在自动重试...'
+      : finalResponse;
     return {
-      finalResponse,
+      finalResponse: finalResponseText,
       errorType: kind,
       errorCode: 'E01',
       continueHint: '回复「继续」以重试或推进。',
       message: msg,
+      retryable,
     };
   } catch {
     // Absolute fail-soft: even the shaping must never throw on this degraded path.
@@ -117,6 +160,7 @@ function buildUnexpectedChatErrorResult(err, opts = {}) {
       errorCode: 'E01',
       continueHint: '回复「继续」以重试或推进。',
       message: '',
+      retryable: false,
     };
   }
 }
@@ -125,6 +169,7 @@ module.exports = {
   ON_FALSY,
   isEnabled,
   buildUnexpectedChatErrorResult,
+  isParseError,
   _messageOf,
   _classifyKind,
 };
