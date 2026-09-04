@@ -6,10 +6,16 @@
  * Both modes need the same data (version, model, adapter, auth, gateway status,
  * working directory) for their startup banners. This module provides a single
  * source of truth so both modes stay in sync.
+ *
+ * Usage:
+ *   const { getBannerData, renderBanner } = require('./bannerDataService');
+ *   const data = getBannerData();
+ *   renderBanner(data); // Renders appropriately for current mode
  */
 
 const path = require('path');
 const os = require('os');
+const { isTuiActive } = require('./uiResponse');
 
 /**
  * Gather banner data from various sources.
@@ -188,4 +194,103 @@ function getBannerData(opts = {}) {
   };
 }
 
-module.exports = { getBannerData };
+/**
+ * Render the banner in the appropriate mode.
+ * @param {object} [data] - Banner data (from getBannerData). If omitted, fetches fresh data.
+ * @returns {void|React.Element} - Nothing for Classic, React element for TUI
+ */
+function renderBanner(data) {
+  const bannerData = data || getBannerData();
+
+  if (isTuiActive()) {
+    // TUI mode: return React element for <Static> rendering
+    // The actual component is in tui/ink-components/WelcomeBanner.js
+    return null; // TUI handles banner via WelcomeBanner component
+  } else {
+    // Classic mode: render to console
+    renderClassicBanner(bannerData);
+  }
+}
+
+/**
+ * Render banner in classic mode (plain text + ASCII art).
+ * @param {object} data - Banner data
+ */
+function renderClassicBanner(data) {
+  const chalk = require('chalk');
+  const {
+    version, modelName, adapterName, billingType,
+    gatewayStatus, contextWindow, authMethod,
+    greetingName, cwd, buddyLines, updateLine,
+  } = data;
+
+  const d = chalk.dim;
+  const orange = chalk.hex('#D77757');
+  const green = chalk.green;
+  const yellow = chalk.yellow;
+
+  const buddy = buddyLines && buddyLines.length > 0
+    ? buddyLines
+    : getClassicMonsterPetLines(orange);
+
+  console.log('');
+
+  // Side-by-side layout: buddy left, info right
+  const infoLines = [
+    `── khy OS v${version} ──`,
+    '',
+    `欢迎你，${green.bold(greetingName)}`,
+    '',
+    yellow('系统'),
+    d(`认证：${authMethod}${contextWindow ? ` · 上下文：${contextWindow}` : ''}`),
+    '',
+    yellow('状态'),
+    d(`网关：${gatewayStatus}`),
+    updateLine ? d(`更新：${updateLine}`) : null,
+    '',
+    d(`${modelName}::${adapterName} · 工作目录：${cwd}`),
+  ].filter(Boolean);
+
+  // Print side by side if terminal is wide enough
+  const maxBuddyWidth = Math.max(...buddy.map((l) => l.length));
+  const maxInfoWidth = Math.max(...infoLines.map((l) => {
+    // Strip ANSI for width calculation
+    return l.replace(/\u001b\[[0-9;]*m/g, '').length;
+  }));
+  const sideBySide = process.stdout.columns > maxBuddyWidth + maxInfoWidth + 4;
+
+  if (sideBySide) {
+    const maxLines = Math.max(buddy.length, infoLines.length);
+    for (let i = 0; i < maxLines; i++) {
+      const buddyLine = buddy[i] || '';
+      const infoLine = infoLines[i] || '';
+      console.log(`${buddyLine.padEnd(maxBuddyWidth + 4)}${infoLine}`);
+    }
+  } else {
+    // Stacked: buddy on top, info below
+    buddy.forEach((line) => console.log(line));
+    console.log('');
+    infoLines.forEach((line) => console.log(line));
+  }
+
+  console.log('');
+}
+
+/**
+ * Classic monster pet sprite (fallback).
+ * @param {object} color - Chalk color function
+ * @returns {string[]}
+ */
+function getClassicMonsterPetLines(color) {
+  return [
+    `       ${color('▄█▄')}`,
+    `     ${color('▄█▀█▀█▄')}`,
+    `     ${color('█▌░▀░▐█')}`,
+    `      ${color('▜███▛')}`,
+    `  ${color('▗▟████████▙▖')}`,
+    `   ${color('▝▀▀▄██▄▀▀▘')}`,
+    `       ${color('▐▌')}`,
+  ];
+}
+
+module.exports = { getBannerData, renderBanner };
