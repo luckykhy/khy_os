@@ -112,8 +112,68 @@ function _withEscHint(content) {
     const hint = _rewindControl.buildEscRewindHint(content, { rewindEnabled, interactive });
     return hint ? `${content}\n${hint}` : content;
   } catch {
+    /* fail-soft */
     return content;
   }
+}
+
+// Classify raw stream error text into specific, actionable Chinese messages.
+// The upstream often returns opaque strings like "API Error" or base64 garbage.
+// We map known patterns to specific diagnoses + recovery suggestions.
+function _classifyStreamError(rawMsg, chunk) {
+  const msg = String(rawMsg || '').toLowerCase();
+  const status = chunk && chunk.statusCode ? Number(chunk.statusCode) : 0;
+
+  // Rate limiting (429)
+  if (status === 429 || /rate ?limit|too many requests|429/.test(msg)) {
+    return 'API 限流 (429)：请求过于频繁。请稍后重试，或切换其他模型通道 (khy gateway config)。';
+  }
+  // Auth failure (401/403)
+  if (status === 401 || /unauthorized|invalid ?api ?key|401/.test(msg)) {
+    return '认证失败 (401)：API key 无效或已过期。请运行 khy gateway config 更新对应通道的密钥。';
+  }
+  if (status === 403 || /forbidden|403/.test(msg)) {
+    return '权限不足 (403)：当前 API key 无权访问该模型。请检查订阅计划或更换密钥。';
+  }
+  // Model not found (404)
+  if (status === 404 || /model.*not ?found|does not exist|no such model|404/.test(msg)) {
+    return `模型不存在 (${status || 404})：当前配置的模型标识无效。请用 /model 查看可用模型，或运行 khy gateway models 刷新列表。`;
+  }
+  // Context too long (413 or specific message)
+  if (status === 413 || /context ?(length|too ?long)|too ?many ?tokens|prompt_too_long|reduce the length|max ?context/.test(msg)) {
+    return '上下文超出模型上限：对话过长或输入过大。系统已自动压缩上下文重试；若仍失败请 /compact 手动压缩，或新建会话。';
+  }
+  // Billing / quota exhausted
+  if (/billing|insufficient_quota|quota ?exhausted|402|credit/.test(msg)) {
+    return '额度已用完：当前 API key 的余额或配额已耗尽。请充值或更换其他模型通道。';
+  }
+  // Server error (500, 502, 503)
+  if (status >= 500 || /internal ?server ?error|502|503|500/.test(msg)) {
+    return `上游服务异常 (${status || '5xx'})：模型服务暂时不可用。请稍后重试，或切换其他模型通道。`;
+  }
+  // Timeout
+  if (/timeout|timed ?out|deadline ?exceeded|etimedout/.test(msg)) {
+    return '请求超时：模型服务响应过慢或网络不稳定。请稍后重试，或切换响应更快的通道。';
+  }
+  // Connection / network
+  if (/econn(refused|reset)|fetch ?failed|socket|network|getaddrinfo|dns/.test(msg)) {
+    return '网络连接失败：无法连接到模型服务。请检查网络代理设置，或切换其他模型通道。';
+  }
+  // Overloaded
+  if (/overloaded|529|busy/.test(msg)) {
+    return '模型服务过载：当前通道请求过多。请稍后重试，或切换其他模型通道。';
+  }
+  // Content filter / refusal
+  if (/content ?filter|refusal|safety|policy|harmful/.test(msg)) {
+    return '内容安全拦截：模型因安全策略拒绝生成。请调整请求措辞后重试。';
+  }
+  // Truncated by max_tokens
+  if (/max.?tokens?|truncat|finish.?reason.*length/.test(msg)) {
+    return '输出被截断：模型在生成完成前达到 max_tokens 上限。请说「继续」从断点续写，或调大 KHY 网关 maxTokens。';
+  }
+  // Fallback: show original but truncated
+  const truncated = rawMsg.length > 200 ? rawMsg.slice(0, 200) + '...' : rawMsg;
+  return `请求失败：${truncated}`;
 }
 
 // 回合统计行(对齐 CC 回合收尾摘要)的单一真源:门控 + 确定性格式化。finalize 时用
@@ -2125,11 +2185,16 @@ ${history}
           }
           safeSetStatus('thinking');
         } else if (chunk.type === 'error') {
+          // Classify the error for a specific, actionable message instead of
+          // showing raw chunk.text (which is often a generic "API Error" or
+          // base64 garbage from the upstream).
+          const rawMsg = chunk.text || chunk.message || '错误';
+          const classified = _classifyStreamError(rawMsg, chunk);
           setMessages((m) => [
             ...m,
             {
               role: 'error',
-              content: _withEscHint(chunk.text || chunk.message || '错误'),
+              content: _withEscHint(classified),
               timestamp: Date.now(),
             },
           ]);
@@ -3535,15 +3600,21 @@ ${history}
         setStatus('idle');
         _lastCompletionMsRef.current = Date.now(); // 久别重返：出错/取消也算回合收尾（缓存同样凉）
         if (!aborted) {
+          // Classify the error for a specific message instead of showing
+          // raw err.message (which is often a generic "API Error" or
+          // technical detail the user can't act on).
+          const errorMsg = err && err.errorType
+            ? _classifyStreamError(err.message || '错误', { statusCode: err.statusCode, errorType: err.errorType })
+            : _classifyStreamError(err && err.message ? err.message : '错误', {});
           setMessages((m) => [
             ...m,
-            { role: 'error', content: _withEscHint(err.message), timestamp: Date.now() },
+            { role: 'error', content: _withEscHint(errorMsg), timestamp: Date.now() },
           ]);
-          bcast({ type: 'chunk_status', content: `错误: ${err.message}` });
+          bcast({ type: 'chunk_status', content: errorMsg });
           _emitTurnCompleteNotification(startTime, {
             ok: false,
             level: 'error',
-            summary: err.message,
+            summary: errorMsg,
           });
         } else {
           // 刀105:把中断记进模型可见历史(ai._messages),对齐 CC [Request interrupted by user]——
