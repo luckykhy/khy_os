@@ -246,8 +246,11 @@ function _matchesPattern(pattern, paramStr) {
   }
 
   try {
-    const re = new RegExp(pattern, 'i');
-    return re.test(paramStr);
+    // Cap pattern length to prevent ReDoS from user-supplied rules
+    const safePattern = String(pattern).slice(0, 200);
+    const re = new RegExp(safePattern, 'i');
+    // Cap test string length to bound backtracking
+    return re.test(paramStr.slice(0, 10000));
   } catch {
     // Invalid regex — treat as literal substring match
     return paramStr.includes(pattern);

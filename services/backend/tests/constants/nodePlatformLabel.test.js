@@ -1,72 +1,127 @@
 'use strict';
 
-// 「平台自适应」回归:nodePlatformLabel 把 Node 原始 process.platform id 映射为
-// 诚实的人类可读标签——已知平台正确命名,未知平台如实报告(绝不谎称 Linux),
-// 门 KHY_PLATFORM_LABEL_ADAPTIVE 默认开·关则逐字节回退历史三元(未知→Linux)。
-
-const { test } = require('node:test');
-const assert = require('node:assert/strict');
-
 const {
   nodePlatformLabel,
   legacyPlatformLabel,
   resolvePlatformLabel,
+  _PLATFORM_LABELS,
 } = require('../../src/constants/nodePlatformLabel');
 
-test('adaptive: known Node platforms map to proper display names', () => {
-  assert.equal(nodePlatformLabel('darwin'), 'macOS');
-  assert.equal(nodePlatformLabel('win32'), 'Windows');
-  assert.equal(nodePlatformLabel('linux'), 'Linux');
-  assert.equal(nodePlatformLabel('freebsd'), 'FreeBSD');
-  assert.equal(nodePlatformLabel('openbsd'), 'OpenBSD');
-  assert.equal(nodePlatformLabel('sunos'), 'SunOS');
-  assert.equal(nodePlatformLabel('aix'), 'AIX');
-  assert.equal(nodePlatformLabel('android'), 'Android');
-});
+describe('nodePlatformLabel', () => {
+  describe('nodePlatformLabel', () => {
+    test('returns macOS for darwin', () => {
+      expect(nodePlatformLabel('darwin')).toBe('macOS');
+    });
 
-test('adaptive: unknown platform is reported honestly, never "Linux"', () => {
-  assert.equal(nodePlatformLabel('fuchsia'), 'Fuchsia');
-  assert.notEqual(nodePlatformLabel('freebsd'), 'Linux');
-  assert.notEqual(nodePlatformLabel('sunos'), 'Linux');
-});
+    test('returns Windows for win32', () => {
+      expect(nodePlatformLabel('win32')).toBe('Windows');
+    });
 
-test('adaptive: empty / null / whitespace → "Unknown"', () => {
-  assert.equal(nodePlatformLabel(''), 'Unknown');
-  assert.equal(nodePlatformLabel(null), 'Unknown');
-  assert.equal(nodePlatformLabel(undefined), 'Unknown');
-  assert.equal(nodePlatformLabel('   '), 'Unknown');
-});
+    test('returns Linux for linux', () => {
+      expect(nodePlatformLabel('linux')).toBe('Linux');
+    });
 
-test('adaptive: case-insensitive on the raw id', () => {
-  assert.equal(nodePlatformLabel('DARWIN'), 'macOS');
-  assert.equal(nodePlatformLabel('Win32'), 'Windows');
-});
+    test('returns FreeBSD for freebsd', () => {
+      expect(nodePlatformLabel('freebsd')).toBe('FreeBSD');
+    });
 
-test('legacy: preserves the historical ternary (unknown → Linux)', () => {
-  assert.equal(legacyPlatformLabel('darwin'), 'macOS');
-  assert.equal(legacyPlatformLabel('win32'), 'Windows');
-  assert.equal(legacyPlatformLabel('linux'), 'Linux');
-  assert.equal(legacyPlatformLabel('freebsd'), 'Linux'); // the old lie, kept for byte-revert
-  assert.equal(legacyPlatformLabel('sunos'), 'Linux');
-  assert.equal(legacyPlatformLabel(''), 'Linux');
-});
+    test('returns OpenBSD for openbsd', () => {
+      expect(nodePlatformLabel('openbsd')).toBe('OpenBSD');
+    });
 
-test('resolve: default-on uses adaptive labels', () => {
-  assert.equal(resolvePlatformLabel('freebsd', {}), 'FreeBSD');
-  assert.equal(resolvePlatformLabel('freebsd', { KHY_PLATFORM_LABEL_ADAPTIVE: '' }), 'FreeBSD');
-  assert.equal(resolvePlatformLabel('freebsd', { KHY_PLATFORM_LABEL_ADAPTIVE: '1' }), 'FreeBSD');
-});
+    test('returns NetBSD for netbsd', () => {
+      expect(nodePlatformLabel('netbsd')).toBe('NetBSD');
+    });
 
-test('resolve: gate off → byte-reverts to legacy (unknown → Linux)', () => {
-  for (const off of ['0', 'false', 'off', 'no', 'OFF', 'False']) {
-    assert.equal(
-      resolvePlatformLabel('freebsd', { KHY_PLATFORM_LABEL_ADAPTIVE: off }),
-      'Linux',
-      `gate value ${off} must byte-revert`
-    );
-  }
-  // Known platforms are byte-identical whether the gate is on or off.
-  assert.equal(resolvePlatformLabel('darwin', { KHY_PLATFORM_LABEL_ADAPTIVE: 'off' }), 'macOS');
-  assert.equal(resolvePlatformLabel('win32', { KHY_PLATFORM_LABEL_ADAPTIVE: 'off' }), 'Windows');
-  assert.equal(resolvePlatformLabel('linux', { KHY_PLATFORM_LABEL_ADAPTIVE: 'off' }), 'Linux');
+    test('returns SunOS for sunos', () => {
+      expect(nodePlatformLabel('sunos')).toBe('SunOS');
+    });
+
+    test('returns AIX for aix', () => {
+      expect(nodePlatformLabel('aix')).toBe('AIX');
+    });
+
+    test('returns Android for android', () => {
+      expect(nodePlatformLabel('android')).toBe('Android');
+    });
+
+    test('returns Haiku for haiku', () => {
+      expect(nodePlatformLabel('haiku')).toBe('Haiku');
+    });
+
+    test('returns Cygwin for cygwin', () => {
+      expect(nodePlatformLabel('cygwin')).toBe('Cygwin');
+    });
+
+    test('returns capitalized raw for unknown', () => {
+      expect(nodePlatformLabel('unknownos')).toBe('Unknownos');
+    });
+
+    test('returns Unknown for empty', () => {
+      expect(nodePlatformLabel('')).toBe('Unknown');
+      expect(nodePlatformLabel(null)).toBe('Unknown');
+      expect(nodePlatformLabel(undefined)).toBe('Unknown');
+    });
+
+    test('is case-insensitive', () => {
+      expect(nodePlatformLabel('DARWIN')).toBe('macOS');
+      expect(nodePlatformLabel('Win32')).toBe('Windows');
+      expect(nodePlatformLabel('LINUX')).toBe('Linux');
+    });
+
+    test('trims whitespace', () => {
+      expect(nodePlatformLabel('  darwin  ')).toBe('macOS');
+    });
+  });
+
+  describe('legacyPlatformLabel', () => {
+    test('returns macOS for darwin', () => {
+      expect(legacyPlatformLabel('darwin')).toBe('macOS');
+    });
+
+    test('returns Windows for win32', () => {
+      expect(legacyPlatformLabel('win32')).toBe('Windows');
+    });
+
+    test('returns Linux for everything else', () => {
+      expect(legacyPlatformLabel('linux')).toBe('Linux');
+      expect(legacyPlatformLabel('freebsd')).toBe('Linux');
+      expect(legacyPlatformLabel('unknown')).toBe('Linux');
+    });
+
+    test('is case-insensitive', () => {
+      expect(legacyPlatformLabel('DARWIN')).toBe('macOS');
+      expect(legacyPlatformLabel('WIN32')).toBe('Windows');
+    });
+  });
+
+  describe('resolvePlatformLabel', () => {
+    test('returns adaptive label by default', () => {
+      expect(resolvePlatformLabel('freebsd')).toBe('FreeBSD');
+    });
+
+    test('returns legacy label when disabled', () => {
+      expect(resolvePlatformLabel('freebsd', { KHY_PLATFORM_LABEL_ADAPTIVE: '0' })).toBe('Linux');
+    });
+
+    test('returns adaptive label when enabled', () => {
+      expect(resolvePlatformLabel('android', { KHY_PLATFORM_LABEL_ADAPTIVE: '1' })).toBe('Android');
+    });
+  });
+
+  describe('_PLATFORM_LABELS', () => {
+    test('contains all expected platforms', () => {
+      expect(_PLATFORM_LABELS.darwin).toBe('macOS');
+      expect(_PLATFORM_LABELS.win32).toBe('Windows');
+      expect(_PLATFORM_LABELS.linux).toBe('Linux');
+      expect(_PLATFORM_LABELS.freebsd).toBe('FreeBSD');
+      expect(_PLATFORM_LABELS.openbsd).toBe('OpenBSD');
+      expect(_PLATFORM_LABELS.netbsd).toBe('NetBSD');
+      expect(_PLATFORM_LABELS.sunos).toBe('SunOS');
+      expect(_PLATFORM_LABELS.aix).toBe('AIX');
+      expect(_PLATFORM_LABELS.android).toBe('Android');
+      expect(_PLATFORM_LABELS.haiku).toBe('Haiku');
+      expect(_PLATFORM_LABELS.cygwin).toBe('Cygwin');
+    });
+  });
 });

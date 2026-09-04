@@ -1539,10 +1539,14 @@ const AIGatewayRoutingMethods = {
           const models = await entry.adapter.listModels();
           // Collect context window metadata from adapters that report it
           if (Array.isArray(models)) {
-            for (const m of models) {
-              const cw = m.contextWindow || m.context_length || m.context_window;
-              if (cw && cw > 0 && m.id) {
-                this._contextWindowCache.set(m.id, cw);
+           for (const m of models) {
+             const cw = m.contextWindow || m.context_length || m.context_window;
+             if (cw && cw > 0 && m.id) {
+               if (this._contextWindowCache.size >= (this._contextWindowCache._MAX || 500)) {
+                 const oldest = this._contextWindowCache.keys().next().value;
+                 this._contextWindowCache.delete(oldest);
+               }
+               this._contextWindowCache.set(m.id, cw);
               }
               // Cache the model output token limit alongside the context window
               // (same refresh path; consumed by the maxTokens preflight policy).

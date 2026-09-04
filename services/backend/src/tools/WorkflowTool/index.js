@@ -81,7 +81,7 @@ Use dry_run to preview a graph's structure (node/edge counts) without running it
     // ── Canonical graph { nodes, connections }: execute natively. ──────────────
     const isGraph = Array.isArray(workflowDef.nodes) && Array.isArray(workflowDef.connections);
     if (isGraph) {
-      const core = require('../../services/workflow/workflowCliCore');
+      const core = require('../../services/domain/project/workflow/workflowCliCore.js');
       if (params.dry_run) {
         const summary = core.summarizeGraph(workflowDef);
         return {
@@ -93,7 +93,7 @@ Use dry_run to preview a graph's structure (node/edge counts) without running it
           ...summary,
         };
       }
-      const executor = require('../../services/workflow/workflowExecutor');
+      const executor = require('../../services/domain/project/workflow/workflowExecutor.js');
       const userId = ctx && ctx.userId != null ? ctx.userId : null;
       try {
         const outcome = await executor.runGraph(

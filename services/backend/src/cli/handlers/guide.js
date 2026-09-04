@@ -17,12 +17,12 @@
 const chalk = require('chalk').default || require('chalk');
 const { PRIMARY: MODELS } = require('../../constants/models');
 const sessionPersistence = require('../../services/sessionPersistence');
-const trajectoryGuideConfig = require('../../services/trajectoryGuide/config');
-const mapAuthor = require('../../services/trajectoryGuide/mapAuthor');
-const mapExport = require('../../services/trajectoryGuide/mapExport');
-const mapStore = require('../../services/trajectoryGuide/mapStore');
-const replayBundle = require('../../services/trajectoryReplay/replayBundle');
-const replayLedger = require('../../services/trajectoryReplay/replayLedger');
+const trajectoryGuideConfig = require('config.js');
+const mapAuthor = require('../../services/domain/trajectory/trajectoryGuide/mapAuthor.js');
+const mapExport = require('../../services/domain/trajectory/trajectoryGuide/mapExport.js');
+const mapStore = require('../../services/domain/trajectory/trajectoryGuide/mapStore.js');
+const replayBundle = require('../../services/domain/trajectory/trajectoryReplay/replayBundle.js');
+const replayLedger = require('../../services/domain/trajectory/trajectoryReplay/replayLedger.js');
 const { printError, printWarn, printInfo, printSuccess, printTable } = require('../formatters');
 
 // Model-name SSOT: strongest-known model fallback flows from constants/models.js.

@@ -93,7 +93,7 @@ class DeviceAppsTool extends BaseTool {
     try {
       const action = (params && params.action) || 'list';
       const env = process.env;
-      const { getManager } = require('../../services/deviceApps/deviceAppManager');
+      const { getManager } = require('../../services/domain/desktop/deviceApps/deviceAppManager.js');
       const mgr = getManager(env);
 
       if (action === 'download') {
@@ -175,9 +175,9 @@ class DeviceAppsTool extends BaseTool {
     if (!appId) {
       return { success: false, error: 'uninstall 需要 appId' };
     }
-    const { decideUninstallRoute } = require('../../services/deviceApps/uninstallRoute');
-    const policy = require('../../services/deviceApps/deviceAppsPolicy');
-    const { getNativeUninstaller } = require('../../services/deviceApps/nativeUninstaller');
+    const { decideUninstallRoute } = require('../../services/domain/desktop/deviceApps/uninstallRoute.js');
+    const policy = require('../../services/domain/desktop/deviceApps/deviceAppsPolicy.js');
+    const { getNativeUninstaller } = require('../../services/domain/desktop/deviceApps/nativeUninstaller.js');
 
     const native = getNativeUninstaller(env);
     let matches = [];
@@ -282,7 +282,7 @@ class DeviceAppsTool extends BaseTool {
     const {
       downloadWithProgress,
       formatBytes,
-    } = require('../../services/deviceApps/deviceAppsDownloader');
+    } = require('../../services/domain/desktop/deviceApps/deviceAppsDownloader.js');
     try {
       const res = await downloadWithProgress(url, dest, null, {});
       return {

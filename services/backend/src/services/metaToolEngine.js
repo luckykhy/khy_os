@@ -564,12 +564,28 @@ async function forgeTool(spec, deps = {}) {
 /**
  * 程序化触发建议（设计 §2 次级触发，预留）。
  * 当前**不接入**调度循环，以遵守「不碰核心业务逻辑」。
+ *
+ * 功能标记控制：
+ *   - KHY_ENABLE_META_TOOL=0 (默认): 系统完全禁用，所有调用短路返回 false
+ *   - KHY_ENABLE_META_TOOL=1: 启用锻造，但不接入调度循环（当前阶段）
+ *   - KHY_ENABLE_META_TOOL=2: 预留，未来接入调度循环
+ *
  * # TODO: [MetaTool-Trigger-Unresolved] 未来由「未知工具名」路径调用以建议铸造。
+ * 设计文档：docs/03_DESIGN_设计/[DESIGN-META-001] 元工具锻造系统设计.md
+ *
  * @param {string} unknownToolName
  * @returns {boolean}
  */
 function shouldForge(unknownToolName) {
-  return isEnabled() && typeof unknownToolName === 'string' && unknownToolName.length > 0;
+  // 功能标记检查：仅当显式启用时才返回 true
+  if (!isEnabled()) {
+    return false;
+  }
+  // 预留调度循环接入点（未来 KHY_ENABLE_META_TOOL=2 时启用）
+  // if (process.env.KHY_ENABLE_META_TOOL === '2') {
+  //   // TODO: 接入工具调度循环
+  // }
+  return typeof unknownToolName === 'string' && unknownToolName.length > 0;
 }
 
 /** 测试缝：复位会话计数。 */

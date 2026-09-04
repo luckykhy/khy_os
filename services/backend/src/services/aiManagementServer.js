@@ -39,7 +39,7 @@ const _PROTOCOL_LABELS = {
 
 function _resolveProtocolLabel(adapterType) {
   try {
-    const { getProtocolForAdapter } = require('../gateway/adapters/_protocolRegistry');
+    const { getProtocolForAdapter } = require('./gateway/adapters/_protocolRegistry');
     const protocol = getProtocolForAdapter(String(adapterType || '').toLowerCase(), null, {});
     return _PROTOCOL_LABELS[protocol] || protocol || null;
   } catch {
@@ -1046,7 +1046,7 @@ async function authenticate(bearerToken, apiKey, opts = {}) {
   if (process.env.JWT_SECRET) {
     try {
       const jwt = require('jsonwebtoken');
-      const { User, ApiKey: ApiKeyModel } = require('../models');
+      const { User, ApiKey: ApiKeyModel } = require('../constants/models');
       const { QueryTypes } = require('sequelize');
 
       async function findApiKeyUser(rawApiKey) {
@@ -1070,7 +1070,7 @@ async function authenticate(bearerToken, apiKey, opts = {}) {
 
         // Raw SQL compatibility for mixed/legacy table schemas.
         try {
-          const { sequelize } = require('../models');
+          const { sequelize } = require('../constants/models');
           const queryInterface = sequelize.getQueryInterface();
           const schema = await queryInterface.describeTable('api_keys');
           const whereParts = [];
@@ -1345,7 +1345,7 @@ async function handleAuthLogin(req, res) {
     const cliAuth = require('./cliAuthService');
     const builtinResult = await cliAuth.login(username, password);
     if (builtinResult.success && builtinResult.source === 'builtin') {
-      const builtinToken = `builtin-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const builtinToken = `builtin-${Date.now()}-${require('../utils/cryptoRandom').randomHex(8)}`;
       return sendJson(res, 200, {
         success: true,
         message: 'Login successful',
@@ -1373,7 +1373,7 @@ async function handleAuthLogin(req, res) {
 
   try {
     const { Op } = require('sequelize');
-    const { User } = require('../models');
+    const { User } = require('../constants/models');
     const user = await User.findOne({
       where: {
         [Op.or]: [{ username }, { email: username }],
@@ -2717,6 +2717,9 @@ function handleWsConnection(ws, req) {
         case 'khyos_tasks_get':
           handleKhyosTasksGet(session, msg);
           break;
+        case 'khyos_mcp_get':
+          handleKhyosMcpGet(session, msg);
+          break;
         default: {
           // 文件级实时同步事件族(subscribe_files / unsubscribe_files / file_*)。
           // 纯增量挂载在 default 之前:只有总线认领的类型会被拦下,其余照旧回
@@ -3044,6 +3047,7 @@ const {
   handleKhyosTrayStart,
   handleKhyosMdOpen,
   handleKhyosTasksGet,
+  handleKhyosMcpGet,
 } = require('./aiManagementKhyosWs');
 const { parseApiKeyEntries } = require('./apiKeyFormat');
 const _gatewayCache = require('./cacheService');
@@ -3181,6 +3185,19 @@ function start(port) {
           return await handleAuthLogin(req, res);
         } catch (err) {
           return sendJson(res, 500, { success: false, message: err.message || 'Login failed' });
+        }
+      }
+
+      // Default-admin username prefill — public read-only route. The login page
+      // fetches it before any session exists (same reason /api/auth/login above
+      // is public); it must sit BEFORE the global auth gate, otherwise the gate
+      // 401s it and the prefill button can never work. handleAuthDefaultAdmin
+      // returns ONLY the username — the password never leaves the credentials file.
+      if (req.method === 'GET' && pathname === '/api/auth/default-admin') {
+        try {
+          return await handleAuthDefaultAdmin(req, res);
+        } catch (err) {
+          return sendJson(res, 500, { success: false, message: err.message || 'Lookup failed' });
         }
       }
 
@@ -3355,9 +3372,21 @@ async function _deferredInit() {
   // server (port 9090) never did, so mcp.callTool silently failed on every
   // image-without-vision-model request.
   try {
-    const mcpAutoConnect = require('./mcp/autoConnect');
+    const mcpAutoConnect = require('./domain/messaging/mcp/autoConnect');
     if (mcpAutoConnect.autoConnectEnabled(process.env)) {
-      const mcpResult = await mcpAutoConnect.ensureMcpConnected();
+      // UX: MCP 连接进度反馈(每台服务器 + 百分比)
+      const mcpResult = await mcpAutoConnect.ensureMcpConnected({
+        onProgress: (event) => {
+          const pct = (event.done / event.total) * 100;
+          if (event.type === 'connecting') {
+            console.log(`[MCP] [${event.done}/${event.total} ${pct.toFixed(1).padStart(5)}%] 连接 ${event.name}...`);
+          } else if (event.type === 'connected') {
+            console.log(`[MCP] [${event.done}/${event.total} ${pct.toFixed(1).padStart(5)}%] ✓ ${event.name}`);
+          } else if (event.type === 'failed') {
+            console.warn(`[MCP] [${event.done}/${event.total} ${pct.toFixed(1).padStart(5)}%] ✗ ${event.name}: ${event.error}`);
+          }
+        },
+      });
       if (mcpResult && mcpResult.connected && mcpResult.connected.length) {
         console.log(`[MCP] auto-connected: ${mcpResult.connected.join(', ')}`);
       }

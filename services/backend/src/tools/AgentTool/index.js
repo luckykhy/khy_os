@@ -13,13 +13,13 @@ const path = require('path');
 const { classifyAgentTool } = require('../../cli/agentTreeView');
 // Model-name SSOT: lightweight cloud agent model ids flow from constants/models.js.
 const { LIGHTWEIGHT_AGENT_MODELS } = require('../../constants/models');
-const { normalizeAgentRole } = require('../../services/claudeCompat');
+const { normalizeAgentRole } = require('../../services/domain/state/orchestrator/roleToolScope');
 // Role→tool-scope leaf (OPS-MAN-094): a read-only orchestration role (explore/
 // verify/…) must lose the write tools (Edit/Write/NotebookEdit) even when no
 // built-in agentDef supplies that denylist (e.g. SDK mode with built-in agents
 // disabled → agentDef is null → the role's read-only intent would otherwise be
 // silently lost). Gate KHY_ROLE_TOOL_SCOPE (default-on) inside the leaf.
-const { mergeRoleScopeInto } = require('../../services/orchestrator/roleToolScope');
+const { mergeRoleScopeInto } = require('../../services/domain/state/orchestrator/roleToolScope.js');
 const { BaseTool } = require('../_baseTool');
 
 /**
@@ -137,7 +137,7 @@ function getBackgroundAgent(id) {
  * @returns {Array<{ taskId: string, status: string, command: string, summary: string }>}
  */
 function collectBackgroundResults() {
-  const { drainCompletedBackgroundAgents } = require('../../services/query/taskNotification');
+  const { drainCompletedBackgroundAgents } = require('../../services/query');
   return drainCompletedBackgroundAgents(_backgroundAgents);
 }
 

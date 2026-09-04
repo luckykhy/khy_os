@@ -235,6 +235,8 @@ function updateTodos(todos) {
 
 /**
  * Refresh git info (cached for 30s).
+ * Note: git 子进程保持 sequential(execSync),因调用方 _renderBottomStatusBar 是同步的。
+ * 30s TTL 缓存已避免频繁 spawn,首次调用代价可接受。
  */
 function refreshGit() {
   const now = Date.now();

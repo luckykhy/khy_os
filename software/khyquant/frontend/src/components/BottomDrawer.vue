@@ -385,7 +385,7 @@ defineExpose({
   bottom: 0;
   left: 0;
   right: 0;
-  background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%);
+  background: linear-gradient(180deg, var(--khy-gray-900) 0%, #0f0f0f 100%);
   border-top-left-radius: 20px;
   border-top-right-radius: 20px;
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
@@ -431,13 +431,13 @@ defineExpose({
 .handle-bar {
   width: 48px;
   height: 5px;
-  background: #666;
+  background: var(--khy-gray-500);
   border-radius: 3px;
   transition: background 0.2s ease;
 }
 
 .drawer-handle:hover .handle-bar {
-  background: #888;
+  background: var(--khy-gray-400);
 }
 
 .drawer-content {

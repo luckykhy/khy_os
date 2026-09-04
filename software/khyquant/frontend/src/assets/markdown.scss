@@ -86,7 +86,7 @@
 .markdown-body .copy-btn.copied {
   background: #238636;
   border-color: #238636;
-  color: #ffffff;
+  color: var(--khy-white);
 }
 
 .markdown-body pre.code-block code {

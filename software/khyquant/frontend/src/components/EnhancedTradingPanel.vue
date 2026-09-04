@@ -272,7 +272,7 @@ watch(() => props.instrumentCode, (newCode) => {
   }
   
   instrumentInfo.value.code = newCode
-  console.log('🔍 代码识别:', newCode, '->', cleanCode, '模式:', tradeMode.value)
+  if (import.meta.env.DEV) { console.log('🔍 代码识别:', newCode, '->', cleanCode, '模式:', tradeMode.value) }
 }, { immediate: true })
 
 // 预算计算
@@ -431,7 +431,7 @@ const submitOrder = async (direction, offset) => {
       takeProfit: orderForm.value.enableTakeProfit ? orderForm.value.takeProfitPrice : null
     }
 
-    console.log('📝 提交订单:', tradeData)
+    if (import.meta.env.DEV) { console.log('📝 提交订单:', tradeData) }
 
     const response = await request.post('/trades', tradeData)
 
@@ -494,7 +494,7 @@ watch(() => props.currentPrice, (newPrice) => {
 
 <style scoped>
 .enhanced-trading-panel {
-  background: #1a1a1a;
+  background: var(--khy-gray-900);
   border-radius: 8px;
   padding: 16px;
   color: #e0e0e0;
@@ -503,13 +503,13 @@ watch(() => props.currentPrice, (newPrice) => {
 .section-label {
   font-size: 14px;
   font-weight: 600;
-  color: #ccc;
+  color: var(--khy-gray-200);
   margin-bottom: 8px;
 }
 
 .unit {
   font-size: 12px;
-  color: #888;
+  color: var(--khy-gray-400);
   font-weight: normal;
 }
 
@@ -593,11 +593,11 @@ watch(() => props.currentPrice, (newPrice) => {
 }
 
 .budget-item .label {
-  color: #888;
+  color: var(--khy-gray-400);
 }
 
 .budget-item .value {
-  color: #fff;
+  color: var(--khy-white);
   font-weight: 600;
 }
 
@@ -612,7 +612,7 @@ watch(() => props.currentPrice, (newPrice) => {
 }
 
 .budget-item.total {
-  border-top: 1px solid #444;
+  border-top: 1px solid var(--khy-gray-600);
   margin-top: 6px;
   padding-top: 12px;
   font-size: 15px;
@@ -632,7 +632,7 @@ watch(() => props.currentPrice, (newPrice) => {
 
 .setting-label {
   font-size: 13px;
-  color: #ccc;
+  color: var(--khy-gray-200);
   margin-bottom: 6px;
 }
 
@@ -642,14 +642,14 @@ watch(() => props.currentPrice, (newPrice) => {
 
 :deep(.el-radio-button__inner) {
   background: #2a2a2a;
-  border-color: #444;
-  color: #ccc;
+  border-color: var(--khy-gray-600);
+  color: var(--khy-gray-200);
 }
 
 :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
-  background: #409eff;
-  border-color: #409eff;
-  color: #fff;
+  background: var(--khy-primary);
+  border-color: var(--khy-primary);
+  color: var(--khy-white);
 }
 
 :deep(.el-input-number) {
@@ -658,29 +658,29 @@ watch(() => props.currentPrice, (newPrice) => {
 
 :deep(.el-input-number .el-input__inner) {
   background: #2a2a2a;
-  border-color: #444;
-  color: #fff;
+  border-color: var(--khy-gray-600);
+  color: var(--khy-white);
 }
 
 :deep(.el-select .el-input__inner) {
   background: #2a2a2a;
-  border-color: #444;
-  color: #fff;
+  border-color: var(--khy-gray-600);
+  color: var(--khy-white);
 }
 
 :deep(.el-collapse) {
-  border-color: #444;
+  border-color: var(--khy-gray-600);
   background: transparent;
 }
 
 :deep(.el-collapse-item__header) {
   background: #2a2a2a;
-  border-color: #444;
-  color: #ccc;
+  border-color: var(--khy-gray-600);
+  color: var(--khy-gray-200);
 }
 
 :deep(.el-collapse-item__content) {
   background: #1f1f1f;
-  color: #ccc;
+  color: var(--khy-gray-200);
 }
 </style>

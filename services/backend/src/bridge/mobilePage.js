@@ -661,7 +661,7 @@ body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);
     sessionStorage.removeItem('khy_jwt');
     token = null;
     authenticated = false;
-    if(ws) try{ws.close();}catch(e){}
+    if(ws) try{ws.close();}catch(e){ /* WebSocket close can fail if already closed */ }
     showLogin();
   });
 
@@ -681,9 +681,9 @@ body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);
       inputEl.disabled = true; sendBtn.disabled = true; attachBtn.disabled = true;
       if(authenticated) scheduleReconnect();
     };
-    ws.onerror = function(){ try{ws.close();}catch(e){} };
+    ws.onerror = function(){ try{ws.close();}catch(e){ /* WebSocket close can fail if already closed */ } };
     ws.onmessage = function(evt){
-      try{ handleMsg(JSON.parse(evt.data)); }catch(e){}
+      try{ handleMsg(JSON.parse(evt.data)); }catch(e){ /* Invalid JSON message, ignore */ }
     };
   }
   function scheduleReconnect(){
@@ -770,7 +770,7 @@ body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);
         try{
           if(deviceName) localStorage.setItem('khy_device_name', deviceName);
           if(deviceType) localStorage.setItem('khy_device_type', deviceType);
-        }catch(e){}
+        }catch(e){ /* localStorage may be unavailable in private mode */ }
         if(devOkBtn){ devOkBtn.disabled = false; }
         if(devAutoBtn){ devAutoBtn.disabled = false; }
         closeDeviceOverlay();
@@ -1068,7 +1068,7 @@ body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);
     ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0';
     document.body.appendChild(ta);
     ta.select();
-    try{ document.execCommand('copy'); flashCopied(btn); }catch(e){}
+    try{ document.execCommand('copy'); flashCopied(btn); }catch(e){ /* Copy command not supported, fallback to clipboard API */ }
     document.body.removeChild(ta);
   }
   function flashCopied(btn){
@@ -1172,7 +1172,7 @@ body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);
       osc.connect(gain); gain.connect(_audioCtx.destination);
       osc.frequency.value = 660; gain.gain.value = 0.08;
       osc.start(); osc.stop(_audioCtx.currentTime + 0.12);
-    }catch(e){}
+    }catch(e){ /* Audio context may not be available */ }
   }
 
   /* ── Heartbeat + Latency ── */
@@ -1229,7 +1229,7 @@ body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);
       var t = localStorage.getItem('khy_device_type');
       if(n) deviceName = n;
       if(t) deviceType = t;
-    }catch(e){}
+    }catch(e){ /* localStorage may be unavailable */ }
   })();
 
   /* Compact local three-way classification (mirrors shared deviceIdentity). */
@@ -1318,7 +1318,7 @@ body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);
     devInput.value = pre;
     updateDevPreview();
     devOverlay.classList.add('show');
-    setTimeout(function(){ try{ devInput.focus(); }catch(e){} }, 50);
+    setTimeout(function(){ try{ devInput.focus(); }catch(e){ /* Input element may not be focusable */ } }, 50);
     // Ask the host for a best-effort real-name suggestion (non-committal).
     collectHints().then(function(h){
       deviceHints = h;

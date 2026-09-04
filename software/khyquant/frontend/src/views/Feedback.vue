@@ -28,15 +28,15 @@
               <el-form-item label="反馈类型" prop="type">
                 <el-select v-model="feedbackForm.type" placeholder="请选择" style="width: 100%">
                   <el-option label="功能建议" value="suggestion">
-                    <el-icon class="opt-icon" style="color:#67c23a"><Star /></el-icon>
+                    <el-icon class="opt-icon" style="color:var(--khy-success)"><Star /></el-icon>
                     <span>功能建议</span>
                   </el-option>
                   <el-option label="问题反馈" value="bug">
-                    <el-icon class="opt-icon" style="color:#f56c6c"><WarningFilled /></el-icon>
+                    <el-icon class="opt-icon" style="color:var(--khy-danger)"><WarningFilled /></el-icon>
                     <span>问题反馈</span>
                   </el-option>
                   <el-option label="使用咨询" value="question">
-                    <el-icon class="opt-icon" style="color:#409eff"><QuestionFilled /></el-icon>
+                    <el-icon class="opt-icon" style="color:var(--khy-primary)"><QuestionFilled /></el-icon>
                     <span>使用咨询</span>
                   </el-option>
                   <el-option label="其他" value="other">
@@ -221,7 +221,7 @@ onMounted(() => loadFeedbackHistory())
 
 .page-hero {
   background: linear-gradient(135deg, #304156 0%, #1f2d3d 100%);
-  color: #fff;
+  color: var(--khy-white);
   text-align: center;
   padding: 48px 20px 40px;
 }
@@ -301,7 +301,7 @@ onMounted(() => loadFeedbackHistory())
   margin-top: 10px;
   padding: 10px 14px;
   background: #ecf5ff;
-  border-left: 3px solid #409eff;
+  border-left: 3px solid var(--khy-primary);
   border-radius: 6px;
   font-size: 13px;
   color: #303133;

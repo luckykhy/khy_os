@@ -1286,7 +1286,7 @@ onActivated(() => {
   padding: 14px 16px;
   border: 1px solid #e5ebf5;
   border-radius: 10px;
-  background: linear-gradient(180deg, #ffffff, #f8fbff);
+  background: linear-gradient(180deg, var(--khy-white), #f8fbff);
   box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
   transition: transform 0.2s ease;
 }
@@ -1296,16 +1296,16 @@ onActivated(() => {
 }
 
 .asset-stat--blue {
-  border-left: 3px solid #3b82f6;
+  border-left: 3px solid var(--khy-primary);
 }
 .asset-stat--cyan {
   border-left: 3px solid #06b6d4;
 }
 .asset-stat--amber {
-  border-left: 3px solid #f59e0b;
+  border-left: 3px solid var(--khy-warning);
 }
 .asset-stat--green {
-  border-left: 3px solid #10b981;
+  border-left: 3px solid var(--khy-success);
 }
 .asset-stat--purple {
   border-left: 3px solid #8b5cf6;

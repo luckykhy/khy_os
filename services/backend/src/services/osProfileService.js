@@ -27,7 +27,7 @@
 const fs = require('fs');
 const os = require('os');
 
-const { PLATFORM, KERNEL_SIGNATURES } = require('./envSymbiosis/platformIds');
+const { PLATFORM, KERNEL_SIGNATURES } = require('./domain/state/envSymbiosis/platformIds');
 
 let _cachedProfile = null;
 

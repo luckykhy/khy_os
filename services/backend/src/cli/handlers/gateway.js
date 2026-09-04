@@ -2555,33 +2555,46 @@ async function handleGatewayTrace(args = [], options = {}) {
     return;
   }
 
-  printInfo(`Request Trace: requestId=${summary.requestId} · session=${summary.sessionId}`);
-  printInfo(`链路摘要: ${summary.summary}`);
-  if (summary.delivery?.brokenStage) {
-    printInfo(`交付断点: ${summary.delivery.brokenStage}`);
-  }
+  printInfo('');
+  console.log(chalk.bold('  Request Trace'));
+  printTable(
+    ['属性', '值'],
+    [
+      ['Request ID', summary.requestId || '─'],
+      ['Session ID', summary.sessionId || '─'],
+      ['链路摘要', summary.summary || '─'],
+      ['交付断点', summary.delivery?.brokenStage || '─'],
+      ['起始事件', summary.firstEvent ? `${summary.firstEvent.type} @ ${summary.firstEvent.timestamp}` : '─'],
+      ['最后事件', summary.lastEvent ? `${summary.lastEvent.type} @ ${summary.lastEvent.timestamp}` : '─'],
+    ].filter(([, v]) => v !== '─')
+  );
+
   if (summary.language?.status === 'mismatch') {
-    printInfo(
-      `语言偏航: 检测=${summary.language.detectedLanguage}，期望=${summary.language.expectedLanguage}，sample=${summary.language.textSample || '-'}`
+    printInfo('');
+    printTable(
+      ['语言', '值'],
+      [
+        ['检测', summary.language.detectedLanguage || '─'],
+        ['期望', summary.language.expectedLanguage || '─'],
+        ['样本', summary.language.textSample || '─'],
+      ]
     );
-  }
-  if (summary.firstEvent) {
-    printInfo(`起始事件: ${summary.firstEvent.type} @ ${summary.firstEvent.timestamp}`);
-  }
-  if (summary.lastEvent) {
-    printInfo(`最后事件: ${summary.lastEvent.type} @ ${summary.lastEvent.timestamp}`);
   }
 
-  console.log('');
-  printInfo('最近事件时间线:');
-  for (const item of summary.timeline || []) {
-    console.log(
-      chalk.dim(
-        `  ${item.timestamp || '-'} · ${item.stage || 'unknown'} · ${item.type || 'unknown'} · ${item.source || 'unknown'}`
-      )
+  if (summary.timeline?.length) {
+    printInfo('');
+    console.log(chalk.bold('  事件时间线'));
+    printTable(
+      ['时间', '阶段', '类型', '来源'],
+      summary.timeline.map((item) => [
+        item.timestamp || '─',
+        item.stage || '─',
+        item.type || '─',
+        item.source || '─',
+      ])
     );
   }
-  console.log('');
+  printInfo('');
 }
 
 /**

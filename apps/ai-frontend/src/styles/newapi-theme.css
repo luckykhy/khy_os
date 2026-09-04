@@ -14,9 +14,9 @@
 :root {
   /* Surfaces */
   --khy-bg-main: #f4f7fc;
-  --khy-bg-elevated: #ffffff;
-  --khy-bg-card: #ffffff;
-  --khy-bg-card-grad: linear-gradient(180deg, #ffffff, #fcfdff);
+  --khy-bg-elevated: var(--khy-white);
+  --khy-bg-card: var(--khy-white);
+  --khy-bg-card-grad: linear-gradient(180deg, var(--khy-white), #fcfdff);
   --khy-bg-soft: #eff4ff;
   --khy-bg-hover: #f5f8ff;
 
@@ -300,12 +300,12 @@ html.dark {
 }
 
 /* ── Metric card gradient variants ── */
-.metric-card--blue  { border-left: 3px solid #3b82f6; background: linear-gradient(135deg, #eff6ff 0%, #ffffff 60%); }
-.metric-card--green { border-left: 3px solid #10b981; background: linear-gradient(135deg, #ecfdf5 0%, #ffffff 60%); }
-.metric-card--amber { border-left: 3px solid #f59e0b; background: linear-gradient(135deg, #fffbeb 0%, #ffffff 60%); }
-.metric-card--purple { border-left: 3px solid #8b5cf6; background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 60%); }
-.metric-card--rose  { border-left: 3px solid #f43f5e; background: linear-gradient(135deg, #fff1f2 0%, #ffffff 60%); }
-.metric-card--cyan  { border-left: 3px solid #06b6d4; background: linear-gradient(135deg, #ecfeff 0%, #ffffff 60%); }
+.metric-card--blue  { border-left: 3px solid var(--khy-primary); background: linear-gradient(135deg, var(--khy-primary-50) 0%, var(--khy-white) 60%); }
+.metric-card--green { border-left: 3px solid var(--khy-success); background: linear-gradient(135deg, #ecfdf5 0%, var(--khy-white) 60%); }
+.metric-card--amber { border-left: 3px solid var(--khy-warning); background: linear-gradient(135deg, #fffbeb 0%, var(--khy-white) 60%); }
+.metric-card--purple { border-left: 3px solid #8b5cf6; background: linear-gradient(135deg, #f5f3ff 0%, var(--khy-white) 60%); }
+.metric-card--rose  { border-left: 3px solid #f43f5e; background: linear-gradient(135deg, #fff1f2 0%, var(--khy-white) 60%); }
+.metric-card--cyan  { border-left: 3px solid #06b6d4; background: linear-gradient(135deg, #ecfeff 0%, var(--khy-white) 60%); }
 
 /* Dark variants: tint the left border, keep card surface from token */
 html.dark .metric-card--blue   { background: linear-gradient(135deg, rgba(59,130,246,0.12) 0%, var(--khy-bg-card) 60%); }
@@ -350,9 +350,9 @@ html.dark .metric-icon--cyan   { background: rgba(8,145,178,0.22);  color: #56d3
   margin-right: 6px;
   vertical-align: middle;
 }
-.status-dot--green  { background: #10b981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.45); }
-.status-dot--yellow { background: #f59e0b; box-shadow: 0 0 6px rgba(245, 158, 11, 0.45); }
-.status-dot--red    { background: #ef4444; box-shadow: 0 0 6px rgba(239, 68, 68, 0.45); }
+.status-dot--green  { background: var(--khy-success); box-shadow: 0 0 6px rgba(16, 185, 129, 0.45); }
+.status-dot--yellow { background: var(--khy-warning); box-shadow: 0 0 6px rgba(245, 158, 11, 0.45); }
+.status-dot--red    { background: var(--khy-danger); box-shadow: 0 0 6px rgba(239, 68, 68, 0.45); }
 .status-dot--gray   { background: #9ca3af; }
 
 /* ── Tag improvements ── */
@@ -369,7 +369,7 @@ html.dark .metric-icon--cyan   { background: rgba(8,145,178,0.22);  color: #56d3
   justify-content: center;
   border-radius: 9px;
   background: linear-gradient(135deg, var(--khy-primary), var(--khy-primary-strong));
-  color: #fff;
+  color: var(--khy-white);
   font-weight: 800;
   line-height: 1;
   flex-shrink: 0;

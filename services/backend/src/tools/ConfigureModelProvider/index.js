@@ -19,7 +19,7 @@
  */
 'use strict';
 
-const { maskToken } = require('../../services/accountPool/credentialHelpers');
+const { maskToken } = require('../../services/domain/account/accountPool/credentialHelpers.js');
 const {
   registerCustomProvider,
   unregisterCustomProvider,

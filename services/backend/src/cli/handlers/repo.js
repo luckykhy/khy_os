@@ -357,7 +357,7 @@ function handleBranch(args = [], options = {}) {
 function handleWorkspaceOverview() {
   let ctx;
   try {
-    const { collectWorkspaceContext } = require('../../services/workspace/workspaceContext');
+    const { collectWorkspaceContext } = require('../../services/domain/workspace/workspace/workspaceContext.js');
     ctx = collectWorkspaceContext(_cwd(), { force: true });
   } catch (err) {
     printError(`读取工作区信息失败: ${err.message || String(err)}`);

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-03T00:26:04.375Z",
+  "generatedAt": "2026-09-04T09:03:47.513Z",
   "dimensions": {
     "D1": {
       "name": "Agent Harness",
@@ -44,10 +44,10 @@
         {
           "file": "cli/hooks/hookRunner.js",
           "export": "getHookMetrics",
-          "ok": true
+          "ok": false
         }
       ],
-      "healthy": true
+      "healthy": false
     },
     "D4": {
       "name": "Team/Parallel Mode",

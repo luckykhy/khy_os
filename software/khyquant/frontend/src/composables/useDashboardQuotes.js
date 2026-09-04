@@ -54,46 +54,46 @@ export function useDashboardQuotes(options = {}) {
   const displayedQuotes = computed(() => {
     let allData = []
 
-    console.log('🔍 displayedQuotes 计算中...')
-    console.log('  - currentCategory:', currentCategory.value)
-    console.log('  - stockList.length:', stockList.value.length)
-    console.log('  - indexList.length:', indexList.value.length)
-    console.log('  - etfList.length:', etfList.value.length)
-    console.log('  - bondList.length:', bondList.value.length)
-    console.log('  - favoriteQuotesList.length:', favoriteQuotesList.value.length)
+    if (import.meta.env.DEV) { console.log('🔍 displayedQuotes 计算中...') }
+    if (import.meta.env.DEV) { console.log('  - currentCategory:', currentCategory.value) }
+    if (import.meta.env.DEV) { console.log('  - stockList.length:', stockList.value.length) }
+    if (import.meta.env.DEV) { console.log('  - indexList.length:', indexList.value.length) }
+    if (import.meta.env.DEV) { console.log('  - etfList.length:', etfList.value.length) }
+    if (import.meta.env.DEV) { console.log('  - bondList.length:', bondList.value.length) }
+    if (import.meta.env.DEV) { console.log('  - favoriteQuotesList.length:', favoriteQuotesList.value.length) }
 
     if (currentCategory.value === 'favorite') {
       allData = favoriteQuotesList.value
-      console.log('  ✅ 使用 favoriteQuotesList:', allData.length)
+      if (import.meta.env.DEV) { console.log('  ✅ 使用 favoriteQuotesList:', allData.length) }
     } else if (currentCategory.value === 'all') {
       allData = [...stockList.value, ...indexList.value, ...etfList.value, ...bondList.value, ...futuresList.value]
-      console.log('  ✅ 使用 all (合并所有列表):', allData.length)
+      if (import.meta.env.DEV) { console.log('  ✅ 使用 all (合并所有列表):', allData.length) }
     } else if (currentCategory.value === 'stock') {
       allData = stockList.value
-      console.log('  ✅ 使用 stockList:', allData.length)
+      if (import.meta.env.DEV) { console.log('  ✅ 使用 stockList:', allData.length) }
     } else if (currentCategory.value === 'index') {
       allData = indexList.value
-      console.log('  ✅ 使用 indexList:', allData.length)
+      if (import.meta.env.DEV) { console.log('  ✅ 使用 indexList:', allData.length) }
     } else if (currentCategory.value === 'etf') {
       allData = etfList.value
-      console.log('  ✅ 使用 etfList:', allData.length)
+      if (import.meta.env.DEV) { console.log('  ✅ 使用 etfList:', allData.length) }
     } else if (currentCategory.value === 'bond') {
       allData = bondList.value
-      console.log('  ✅ 使用 bondList:', allData.length)
+      if (import.meta.env.DEV) { console.log('  ✅ 使用 bondList:', allData.length) }
     } else if (currentCategory.value === 'futures') {
       allData = futuresList.value
-      console.log('  ✅ 使用 futuresList:', allData.length)
+      if (import.meta.env.DEV) { console.log('  ✅ 使用 futuresList:', allData.length) }
     }
 
     totalItems.value = allData.length
-    console.log('  - totalItems:', totalItems.value)
+    if (import.meta.env.DEV) { console.log('  - totalItems:', totalItems.value) }
 
     const start = (currentPage.value - 1) * pageSize.value
     const end = start + pageSize.value
-    console.log('  - 分页: start=', start, ', end=', end)
+    if (import.meta.env.DEV) { console.log('  - 分页: start=', start, ', end=', end) }
 
     const result = allData.slice(start, end)
-    console.log('  ✅ 最终返回:', result.length, '个标的')
+    if (import.meta.env.DEV) { console.log('  ✅ 最终返回:', result.length, '个标的') }
 
     return result
   })
@@ -157,8 +157,8 @@ export function useDashboardQuotes(options = {}) {
 
       if (validResults.length > 0) {
         marketQuotes.value = validResults
-        console.log(`✅ 使用真实数据源加载行情，共 ${validResults.length} 个标的`)
-        console.log(`📊 数据源: ${validResults[0].dataSource}`)
+        if (import.meta.env.DEV) { console.log(`✅ 使用真实数据源加载行情，共 ${validResults.length} 个标的`) }
+        if (import.meta.env.DEV) { console.log(`📊 数据源: ${validResults[0].dataSource}`) }
         return
       }
 
@@ -179,7 +179,7 @@ export function useDashboardQuotes(options = {}) {
         { symbol: 'sz002594', name: '比亚迪', basePrice: 245.8, type: 'stock' }
       ]
 
-      console.log('⚠️ 使用模拟数据')
+      if (import.meta.env.DEV) { console.log('⚠️ 使用模拟数据') }
       marketQuotes.value = mockQuotes.map((item) => {
         const changePercent = (Math.random() - 0.5) * 6
         const price = item.basePrice * (1 + changePercent / 100)
@@ -209,14 +209,14 @@ export function useDashboardQuotes(options = {}) {
 
   const handlePageChange = (page) => {
     currentPage.value = page
-    console.log('📄 切换到第', page, '页')
+    if (import.meta.env.DEV) { console.log('📄 切换到第', page, '页') }
   }
 
   const loadDataWithFallback = async (type, mockDataFn) => {
-    console.log(`📊 开始加载${type}数据,使用降级策略...`)
+    if (import.meta.env.DEV) { console.log(`📊 开始加载${type}数据,使用降级策略...`) }
 
     try {
-      console.log(`💾 第一级:尝试从数据库获取${type}数据...`)
+      if (import.meta.env.DEV) { console.log(`💾 第一级:尝试从数据库获取${type}数据...`) }
       const response = await axios.get(`${getApiBaseUrl()}/instruments`, {
         params: {
           type: type,
@@ -226,7 +226,7 @@ export function useDashboardQuotes(options = {}) {
       })
 
       if (response.data.success && response.data.data && response.data.data.instruments && response.data.data.instruments.length > 0) {
-        console.log(`✅ 成功从数据库获取${type}数据:`, response.data.data.instruments.length, '条')
+        if (import.meta.env.DEV) { console.log(`✅ 成功从数据库获取${type}数据:`, response.data.data.instruments.length, '条') }
 
         const dataWithPrices = response.data.data.instruments.map((item) => {
           const basePrice = type === 'etf' ? Math.random() * 3 + 0.5 : Math.random() * 150 + 80
@@ -261,9 +261,9 @@ export function useDashboardQuotes(options = {}) {
       console.warn(`⚠️ 数据库获取${type}数据失败:`, error.message)
     }
 
-    console.log(`🎭 第二级:使用模拟${type}数据...`)
+    if (import.meta.env.DEV) { console.log(`🎭 第二级:使用模拟${type}数据...`) }
     const mockData = mockDataFn()
-    console.log(`✅ 生成模拟${type}数据:`, mockData.length, '条')
+    if (import.meta.env.DEV) { console.log(`✅ 生成模拟${type}数据:`, mockData.length, '条') }
 
     return {
       success: true,
@@ -291,7 +291,7 @@ export function useDashboardQuotes(options = {}) {
   const loadIndexList = async () => {
     try {
       indexLoading.value = true
-      console.log('📊 开始从数据库加载指数列表...')
+      if (import.meta.env.DEV) { console.log('📊 开始从数据库加载指数列表...') }
 
       try {
         const response = await axios.get(`${getApiBaseUrl()}/instruments`, {
@@ -303,7 +303,7 @@ export function useDashboardQuotes(options = {}) {
         })
 
         if (response.data.success && response.data.data && response.data.data.instruments && response.data.data.instruments.length > 0) {
-          console.log(`✅ 从数据库获取 ${response.data.data.instruments.length} 个指数`)
+          if (import.meta.env.DEV) { console.log(`✅ 从数据库获取 ${response.data.data.instruments.length} 个指数`) }
 
           indexList.value = response.data.data.instruments.map((item) => {
             const basePrice = item.symbol === '000300' ? 4660 :
@@ -373,12 +373,12 @@ export function useDashboardQuotes(options = {}) {
   const loadStockList = async () => {
     try {
       stockLoading.value = true
-      console.log('📊 开始从数据库加载股票列表...')
+      if (import.meta.env.DEV) { console.log('📊 开始从数据库加载股票列表...') }
 
       try {
         const apiUrl = `${getApiBaseUrl()}/instruments`
-        console.log('🔍 API URL:', apiUrl)
-        console.log('🔍 请求参数:', { type: 'stock', limit: 10000 })
+        if (import.meta.env.DEV) { console.log('🔍 API URL:', apiUrl) }
+        if (import.meta.env.DEV) { console.log('🔍 请求参数:', { type: 'stock', limit: 10000 }) }
 
         const response = await axios.get(apiUrl, {
           params: {
@@ -388,10 +388,10 @@ export function useDashboardQuotes(options = {}) {
           timeout: 10000
         })
 
-        console.log('🔍 API响应:', response.data)
+        if (import.meta.env.DEV) { console.log('🔍 API响应:', response.data) }
 
         if (response.data.success && response.data.data && response.data.data.instruments && response.data.data.instruments.length > 0) {
-          console.log(`✅ 从数据库获取 ${response.data.data.instruments.length} 个股票`)
+          if (import.meta.env.DEV) { console.log(`✅ 从数据库获取 ${response.data.data.instruments.length} 个股票`) }
 
           stockList.value = response.data.data.instruments.map((item) => {
             const basePrice = Math.random() * 200 + 10
@@ -458,7 +458,7 @@ export function useDashboardQuotes(options = {}) {
   const loadETFList = async () => {
     try {
       etfLoading.value = true
-      console.log('📊 开始加载ETF列表...')
+      if (import.meta.env.DEV) { console.log('📊 开始加载ETF列表...') }
 
       const generateMockETFData = () => {
         const etfSymbols = [
@@ -504,7 +504,7 @@ export function useDashboardQuotes(options = {}) {
 
       const result = await loadDataWithFallback('etf', generateMockETFData)
       etfList.value = result.data
-      console.log(`✅ 成功加载 ${etfList.value.length} 个ETF [${result.source}]`)
+      if (import.meta.env.DEV) { console.log(`✅ 成功加载 ${etfList.value.length} 个ETF [${result.source}]`) }
       ElMessage.success(`已加载 ${etfList.value.length} 个ETF (${result.message})`)
     } catch (error) {
       console.error('加载ETF列表失败:', error)
@@ -517,7 +517,7 @@ export function useDashboardQuotes(options = {}) {
   const loadBondList = async () => {
     try {
       bondLoading.value = true
-      console.log('📊 开始加载可转债列表...')
+      if (import.meta.env.DEV) { console.log('📊 开始加载可转债列表...') }
 
       const generateMockBondData = () => {
         const bondSymbols = [
@@ -564,7 +564,7 @@ export function useDashboardQuotes(options = {}) {
       const result = await loadDataWithFallback('bond', generateMockBondData)
 
       bondList.value = result.data
-      console.log(`✅ 成功加载 ${bondList.value.length} 个可转债 [${result.source}]`)
+      if (import.meta.env.DEV) { console.log(`✅ 成功加载 ${bondList.value.length} 个可转债 [${result.source}]`) }
       ElMessage.success(`已加载 ${bondList.value.length} 个可转债 (${result.message})`)
     } catch (error) {
       console.error('加载可转债列表失败:', error)
@@ -617,38 +617,38 @@ export function useDashboardQuotes(options = {}) {
         isDemo: true
       }
     })
-    console.log(`✅ 已加载 ${futuresList.value.length} 个期货合约`)
+    if (import.meta.env.DEV) { console.log(`✅ 已加载 ${futuresList.value.length} 个期货合约`) }
   }
 
   const switchCategory = async (category) => {
-    console.log('🔍 切换分类:', category)
+    if (import.meta.env.DEV) { console.log('🔍 切换分类:', category) }
     currentCategory.value = category
     currentPage.value = 1
 
     if (category === 'favorite') {
-      console.log(`📊 显示自选标的: ${favoriteQuotesList.value.length} 个`)
+      if (import.meta.env.DEV) { console.log(`📊 显示自选标的: ${favoriteQuotesList.value.length} 个`) }
       if (favoriteStocks.value.size > 0) {
         await loadFavoriteQuotesData()
       }
     } else if (category === 'all') {
-      console.log('📊 加载所有分类数据...')
+      if (import.meta.env.DEV) { console.log('📊 加载所有分类数据...') }
       await loadAllCategories()
     } else if (category === 'stock') {
-      console.log('📊 加载股票数据...')
+      if (import.meta.env.DEV) { console.log('📊 加载股票数据...') }
       await loadStockList()
-      console.log(`✅ 股票数据加载完成: ${stockList.value.length} 个`)
-      console.log(`📊 displayedQuotes 应该显示: ${displayedQuotes.value.length} 个`)
+      if (import.meta.env.DEV) { console.log(`✅ 股票数据加载完成: ${stockList.value.length} 个`) }
+      if (import.meta.env.DEV) { console.log(`📊 displayedQuotes 应该显示: ${displayedQuotes.value.length} 个`) }
     } else if (category === 'index') {
-      console.log('📊 加载指数数据...')
+      if (import.meta.env.DEV) { console.log('📊 加载指数数据...') }
       await loadIndexList()
     } else if (category === 'etf') {
-      console.log('📊 加载ETF数据...')
+      if (import.meta.env.DEV) { console.log('📊 加载ETF数据...') }
       await loadETFList()
     } else if (category === 'bond') {
-      console.log('📊 加载可转债数据...')
+      if (import.meta.env.DEV) { console.log('📊 加载可转债数据...') }
       await loadBondList()
     } else if (category === 'futures') {
-      console.log('📊 加载期货数据...')
+      if (import.meta.env.DEV) { console.log('📊 加载期货数据...') }
       await loadFuturesList()
     }
   }
@@ -659,7 +659,7 @@ export function useDashboardQuotes(options = {}) {
     localStorage.setItem('favoriteStocks', JSON.stringify(favorites))
 
     if (favorites.length === 0) {
-      console.log('⚠️ 没有自选标的,跳过保存')
+      if (import.meta.env.DEV) { console.log('⚠️ 没有自选标的,跳过保存') }
       return
     }
 
@@ -698,7 +698,7 @@ export function useDashboardQuotes(options = {}) {
         return
       }
 
-      console.log('📤 准备发送到后端的数据:', {
+      if (import.meta.env.DEV) { console.log('📤 准备发送到后端的数据:', { }
         favorites: favoritesData,
         count: favoritesData.length
       })
@@ -712,7 +712,7 @@ export function useDashboardQuotes(options = {}) {
       })
 
       if (response.data.success) {
-        console.log('✅ 自选标的已保存到数据库:', response.data)
+        if (import.meta.env.DEV) { console.log('✅ 自选标的已保存到数据库:', response.data) }
       }
     } catch (error) {
       console.error('保存自选标的到数据库失败:', error)
@@ -756,7 +756,7 @@ export function useDashboardQuotes(options = {}) {
           if (response.data.success && response.data.data) {
             const favorites = response.data.data.map((f) => f.symbol)
             favoriteStocks.value = new Set(favorites)
-            console.log(`✅ 从数据库加载 ${favorites.length} 个自选标的`)
+            if (import.meta.env.DEV) { console.log(`✅ 从数据库加载 ${favorites.length} 个自选标的`) }
 
             localStorage.setItem('favoriteStocks', JSON.stringify(favorites))
             return
@@ -770,7 +770,7 @@ export function useDashboardQuotes(options = {}) {
       if (saved) {
         const favorites = JSON.parse(saved)
         favoriteStocks.value = new Set(favorites)
-        console.log(`⚠️ 从localStorage加载 ${favorites.length} 个自选标的`)
+        if (import.meta.env.DEV) { console.log(`⚠️ 从localStorage加载 ${favorites.length} 个自选标的`) }
       }
     } catch (error) {
       console.error('加载自选标的失败:', error)
@@ -779,11 +779,11 @@ export function useDashboardQuotes(options = {}) {
 
   const loadFavoriteQuotesData = async () => {
     if (favoriteStocks.value.size === 0) {
-      console.log('⚠️ 没有自选标的,跳过加载行情')
+      if (import.meta.env.DEV) { console.log('⚠️ 没有自选标的,跳过加载行情') }
       return
     }
 
-    console.log(`📊 开始加载 ${favoriteStocks.value.size} 个自选标的的行情数据...`)
+    if (import.meta.env.DEV) { console.log(`📊 开始加载 ${favoriteStocks.value.size} 个自选标的的行情数据...`) }
     quotesLoading.value = true
 
     try {
@@ -835,7 +835,7 @@ export function useDashboardQuotes(options = {}) {
           console.warn(`获取 ${fullSymbol} 真实数据失败:`, error.message)
         }
 
-        console.log(`⚠️ ${fullSymbol} 使用模拟数据`)
+        if (import.meta.env.DEV) { console.log(`⚠️ ${fullSymbol} 使用模拟数据`) }
         const dashPriceMap = {
           'sh000300': 4660, '000300': 4660, 'sh000001': 3350, '000001': 3350,
           'sz399001': 10800, '399001': 10800, 'sz399006': 2100, '399006': 2100,
@@ -890,10 +890,10 @@ export function useDashboardQuotes(options = {}) {
         }
       })
 
-      console.log(`✅ 成功加载 ${validResults.length} 个自选标的行情`)
+      if (import.meta.env.DEV) { console.log(`✅ 成功加载 ${validResults.length} 个自选标的行情`) }
       const realDataCount = validResults.filter((r) => r.dataSource !== '增强模拟数据' && r.dataSource !== '模拟数据' && r.dataSource !== 'Mock').length
       const mockDataCount = validResults.filter((r) => r.dataSource === '增强模拟数据' || r.dataSource === '模拟数据' || r.dataSource === 'Mock').length
-      console.log(`📊 数据来源: 真实数据 ${realDataCount} 个, 增强模拟数据 ${mockDataCount} 个`)
+      if (import.meta.env.DEV) { console.log(`📊 数据来源: 真实数据 ${realDataCount} 个, 增强模拟数据 ${mockDataCount} 个`) }
     } catch (error) {
       console.error('加载自选标的行情失败:', error)
       ElMessage.error('加载自选标的行情失败')
@@ -929,7 +929,7 @@ export function useDashboardQuotes(options = {}) {
         return nameMatch || symbolMatch || codeMatch
       }).slice(0, 20)
 
-      console.log(`🔍 搜索 "${keyword}" 找到 ${searchResults.value.length} 个结果`)
+      if (import.meta.env.DEV) { console.log(`🔍 搜索 "${keyword}" 找到 ${searchResults.value.length} 个结果`) }
     } catch (error) {
       console.error('搜索失败:', error)
       ElMessage.error('搜索失败')
@@ -954,7 +954,7 @@ export function useDashboardQuotes(options = {}) {
   }
 
   const handleSelectSearchResult = (item) => {
-    console.log('选择搜索结果:', item)
+    if (import.meta.env.DEV) { console.log('选择搜索结果:', item) }
 
     showSearchDialog.value = false
     if (onSearchSelect) {

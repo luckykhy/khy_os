@@ -153,7 +153,7 @@ app.provide('websocketService', websocketService)
 // 延迟5秒启动,避免应用初始化时的误报
 // setTimeout(() => {
 //   networkMonitor.startMonitoring()
-//   console.log('✅ 网络监控已启动')
+if (import.meta.env.DEV) { //   console.log('✅ 网络监控已启动') }
 // }, 5000)
 
 // 路由后置守卫：登录后自动连接 WebSocket
@@ -163,7 +163,7 @@ router.afterEach((to, from) => {
   // 检查用户是否已登录
   const userStore = pinia._s.get('user')
   if (userStore && userStore.token && !websocketService.isConnected) {
-    console.log('用户已登录，连接WebSocket...')
+    if (import.meta.env.DEV) { console.log('用户已登录，连接WebSocket...') }
     websocketService.connect().catch(error => {
       console.error('WebSocket连接失败:', error)
     })

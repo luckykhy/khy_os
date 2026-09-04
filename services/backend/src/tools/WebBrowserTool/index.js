@@ -250,7 +250,7 @@ class WebBrowserTool extends BaseTool {
         }
       }
 
-      const session = deps.session || require('../../services/browser/session');
+      const session = deps.session || require('../../cli/handlers/session.js');
       try {
         const result = await this._dispatchHeadless(session, action, params);
         return { action, ...result };

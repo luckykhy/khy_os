@@ -29,7 +29,7 @@ const { safeKill } = require('./platformUtils');
 const fs = require('fs');
 const path = require('path');
 
-const { detectFile } = require('../services/formatInspect/fileFormatDetector');
+const { detectFile } = require('../services/domain/structured/formatInspect/fileFormatDetector.js');
 
 const DOC_INSPECT = path.join(__dirname, '../services/docInspect.py');
 const IDLE_TIMEOUT_MS = 60000;

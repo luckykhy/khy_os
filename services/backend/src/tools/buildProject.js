@@ -6,7 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const { parseDiagnostics } = require('../services/compile/diagnostics');
+const { parseDiagnostics } = require('../services/domain/build/compile/diagnostics.js');
 const { spawnWithIdleTimeout } = require('../utils/spawnWithIdleTimeout');
 
 const { defineTool } = require('./_baseTool');

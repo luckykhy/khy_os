@@ -190,6 +190,7 @@ async function dispatchSlashCommand(command, _ctx) {
     // ── Session recap (/recap — aligns with Claude Code /recap; deterministic recap of the current session via existing sessionRecapService) ──
     case 'recap': {
       const { handleRecap } = require('./handlers/recap');
+      printInfo('  正在生成会话摘要...');
       await handleRecap(subCommand, args, options);
       return true;
     }
@@ -225,6 +226,7 @@ async function dispatchSlashCommand(command, _ctx) {
     // ── V8 heap snapshot (/heapdump — aligns with Claude Code /heapdump; writes a .heapsnapshot for Chrome DevTools plus a memory-diagnostics JSON) ──
     case 'heapdump': {
       const { handleHeapdump } = require('./handlers/heapdump');
+      printInfo('  正在生成堆快照(可能需要数秒)...');
       await handleHeapdump(subCommand, args, options);
       return true;
     }
@@ -328,9 +330,11 @@ async function dispatchSlashCommand(command, _ctx) {
       } catch (_) {
         /* fail-soft:回退硬编码 auto */
       }
+      // UX3: compact 阶段提示 — AI 摘要可能需要 10-30s
+      printInfo('正在压缩会话,请稍候...');
       const compactResult =
         typeof ai.compactConversation === 'function'
-          ? ai.compactConversation(compactOptions)
+          ? await ai.compactConversation(compactOptions)
           : null;
       if (!compactResult || compactResult.success === false) {
         printError('会话压缩失败');
@@ -392,7 +396,7 @@ async function dispatchSlashCommand(command, _ctx) {
       const hud = require('./hudRenderer');
       const state = hud.getState();
       // 占用率/余量/健康分级计算收敛到纯叶子 SSOT(与 CtxInspectTool 同源,不再各处自写 round 公式)。
-      const { computeContextStats } = require('../services/context/ctxWindowStats');
+      const { computeContextStats } = require('../services/domain/session/context/ctxWindowStats.js');
       const stats = computeContextStats(
         {
           used: state?.contextWindow?.used,
@@ -466,6 +470,7 @@ async function dispatchSlashCommand(command, _ctx) {
 
     case 'diff': {
       try {
+        printInfo('  收集工作区改动...');
         const { execFileSync } = require('child_process');
         // --no-index 在有差异时退出码为 1(execFileSync 抛),diff 文本在 e.stdout,须捕获。
         const runGit = (args) => {
@@ -541,6 +546,7 @@ async function dispatchSlashCommand(command, _ctx) {
     }
 
     case 'export': {
+      printInfo('  导出会话...');
       const fs = require('fs');
       const ai = require('./ai');
       const conversation = typeof ai.getConversation === 'function' ? ai.getConversation() : [];
@@ -559,6 +565,7 @@ async function dispatchSlashCommand(command, _ctx) {
 
     case 'files': {
       try {
+        printInfo('  列举仓库文件...');
         const { execSync } = require('child_process');
         const limitRaw = Number.parseInt(String(args[0] || '30'), 10);
         const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(200, limitRaw)) : 30;
@@ -616,6 +623,9 @@ async function dispatchSlashCommand(command, _ctx) {
         subCommand === 'presets' ||
         subCommand === 'preset' ||
         subCommand === 'serve' ||
+        subCommand === 'export' ||
+        subCommand === 'doctor' ||
+        subCommand === 'diag' ||
         subCommand === 'show' ||
         subCommand === 'test' ||
         subCommand === 'enable' ||
@@ -629,7 +639,7 @@ async function dispatchSlashCommand(command, _ctx) {
       }
       try {
         const mcp = require('../services/mcp');
-        const gov = require('../services/mcp/mcpGovernance');
+        const gov = require('../services/domain/messaging/mcp/mcpGovernance.js');
         const config =
           typeof mcp.loadConfig === 'function' ? mcp.loadConfig(process.cwd()) : { mcpServers: {} };
         const mcpServers = (config && config.mcpServers) || {};
@@ -680,7 +690,7 @@ async function dispatchSlashCommand(command, _ctx) {
         let _mcpDetailed = false;
         let _resolveMcpServerState = null;
         try {
-          const _m = require('../services/mcp/mcpServerStatus');
+          const _m = require('../services/domain/messaging/mcp/mcpServerStatus.js');
           _mcpDetailed = _m.mcpServerStatusEnabled(process.env);
           _resolveMcpServerState = _m.resolveMcpServerState;
         } catch {
@@ -770,6 +780,7 @@ async function dispatchSlashCommand(command, _ctx) {
     }
 
     case 'share': {
+      printInfo('  生成分享文档...');
       const fs = require('fs');
       const ai = require('./ai');
       const conversation = typeof ai.getConversation === 'function' ? ai.getConversation() : [];

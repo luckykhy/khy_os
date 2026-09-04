@@ -603,7 +603,7 @@
           <span v-if="akshareStatus.isUpdating" style="color: #e6a23c;">
             正在升级中...
           </span>
-          <span v-if="akshareStatus.currentVersion && akshareStatus.currentVersion === akshareStatus.latestVersion" style="color: #67c23a;">
+          <span v-if="akshareStatus.currentVersion && akshareStatus.currentVersion === akshareStatus.latestVersion" style="color: var(--khy-success);">
             已是最新版本
           </span>
         </div>
@@ -774,7 +774,7 @@
           </el-table-column>
           <el-table-column label="累计盈亏" width="120">
             <template #default="{ row }">
-              <span :style="{ color: Number(row.totalProfit) >= 0 ? '#67c23a' : '#f56c6c' }">
+              <span :style="{ color: Number(row.totalProfit) >= 0 ? 'var(--khy-success)' : 'var(--khy-danger)' }">
                 {{ Number(row.totalProfit) >= 0 ? '+' : '' }}¥{{ Number(row.totalProfit).toLocaleString() }}
               </span>
             </template>
@@ -886,7 +886,7 @@
           </el-table-column>
           <el-table-column label="盈亏" width="100">
             <template #default="{ row }">
-              <span v-if="row.profit !== null && row.profit !== undefined" :style="{ color: Number(row.profit) >= 0 ? '#67c23a' : '#f56c6c' }">
+              <span v-if="row.profit !== null && row.profit !== undefined" :style="{ color: Number(row.profit) >= 0 ? 'var(--khy-success)' : 'var(--khy-danger)' }">
                 {{ Number(row.profit) >= 0 ? '+' : '' }}¥{{ Number(row.profit).toFixed(2) }}
               </span>
               <span v-else style="color:#909399">—</span>
@@ -2030,7 +2030,7 @@ watch(activeTab, (tab) => {
   justify-content: space-between;
   align-items: center;
   padding: 10px 12px;
-  background: #fafafa;
+  background: var(--khy-gray-50);
   border-radius: 6px;
 }
 
@@ -2043,7 +2043,7 @@ watch(activeTab, (tab) => {
   display: flex;
   gap: 10px;
   padding: 8px 0;
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid var(--khy-gray-50);
 }
 .activity-item:last-child {
   border-bottom: none;
@@ -2052,7 +2052,7 @@ watch(activeTab, (tab) => {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #409eff;
+  background: var(--khy-primary);
   margin-top: 6px;
   flex-shrink: 0;
 }
@@ -2115,7 +2115,7 @@ watch(activeTab, (tab) => {
   line-height: 1.6;
   color: #606266;
   font-size: 13px;
-  background: #fafafa;
+  background: var(--khy-gray-50);
   border: 1px solid #ebeef5;
   border-radius: 6px;
   padding: 8px 10px;
@@ -2167,7 +2167,7 @@ watch(activeTab, (tab) => {
   background: #f8f9fa;
   padding: 12px;
   border-radius: 6px;
-  border-left: 3px solid #409eff;
+  border-left: 3px solid var(--khy-primary);
   line-height: 1.6;
   color: #606266;
   margin: 8px 0;
@@ -2194,7 +2194,7 @@ watch(activeTab, (tab) => {
   color: #1976d2;
 }
 .reply-pre {
-  border-left-color: #67c23a;
+  border-left-color: var(--khy-success);
 }
 .reply-meta {
   color: #909399;

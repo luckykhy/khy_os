@@ -18,7 +18,7 @@
 
 const flagRegistry = require('../flagRegistry');
 // 复用 toolUseLoopHelpers 已导出的拒绝启发式:套话拒绝识别 + 「已陈述具体原因」护栏。
-const _responseDebounce = require('../query/responseDebounce');
+const _responseDebounce = require('../domain/query/query/responseDebounce');
 const { _looksLikeCannedRefusal, _refusalStatesConcreteReason } = require('../toolUseLoopHelpers');
 
 // 复用网关健壮 JSON 解析器(与 _llmDecomposer 同源)。

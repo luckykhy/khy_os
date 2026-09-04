@@ -188,7 +188,7 @@ async function probeGithub(context, opts = {}) {
   let artifact = null;
   let packageArtifacts = null;
   if (context.installation.type === 'portable') {
-    artifact = require('./updateAdapters/portableAdapter')._selectArtifact(index, context.installation);
+    artifact = require('./domain/network/updateAdapters/portableAdapter')._selectArtifact(index, context.installation);
   } else if (context.installation.type === 'package') {
     packageArtifacts = selectGithubPackageArtifacts(index, context.installation);
     if (!packageArtifacts) {

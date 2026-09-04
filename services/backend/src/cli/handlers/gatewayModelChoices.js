@@ -150,23 +150,29 @@ const _modelDeepProbeInFlight = new Map();
  * the exact same probing, reliability filtering and adapter-hiding logic.
  *
  * Side-effecting progress/diagnostic output is delegated to the caller via
- * `onNotice` / `onError` callbacks (the classic CLI passes printInfo/printError;
- * the TUI pushes transcript messages). This keeps the function presentation-free
- * while preserving streaming feedback during the (multi-second) probe.
+ * `onNotice` / `onError` / `onProgress` callbacks (the classic CLI passes
+ * printInfo/printError; the TUI pushes transcript messages and renders a
+ * progress bar). `onProgress` receives `{ phase, current, total, label }`
+ * where current/total are 0-100 percentages. This keeps the function
+ * presentation-free while preserving streaming feedback during the probe.
  *
  * Returns { modelChoices, preferredIssueAfterProbe, empty }. `empty` is true
  * when there is nothing selectable (no enabled adapters, or all filtered out);
  * the relevant explanatory notices have already been emitted in that case.
  */
-async function buildGatewayModelChoices({ onNotice = () => {}, onError = () => {} } = {}) {
+async function buildGatewayModelChoices({ onNotice = () => {}, onError = () => {}, onProgress = () => {} } = {}) {
   try {
     // Quick fail mode: skip expensive initialization if explicitly disabled
     const quickFailMode = String(process.env.KHY_MODEL_QUICK_FAIL || 'false').toLowerCase() === 'true';
 
+    // Phase-start markers: use 'stage' kind for multi-phase init sequence.
+    // These show as ●●●○○ Step N/5 — honest about which phase we're in.
+    onProgress({ kind: 'stage', current: 1, total: 5, label: '初始化网关' });
     onNotice('正在初始化网关...');
     const gateway = require('../../services/gateway/aiGateway');
 
     if (!quickFailMode) {
+      onProgress({ kind: 'stage', current: 2, total: 5, label: '同步 switch-center' });
       onNotice('正在同步 switch-center...');
       const autoSync = await withTimeout(
         maybeAutoSyncSwitchCenterForGateway('gateway-model'),
@@ -175,6 +181,7 @@ async function buildGatewayModelChoices({ onNotice = () => {}, onError = () => {
       ).catch(() => null);
 
       if (!gateway.isInitialized()) {
+        onProgress({ kind: 'stage', current: 3, total: 5, label: '初始化网关适配器' });
         onNotice('正在初始化网关适配器...');
         await withTimeout(gateway.init(), 15000, 'gateway-init').catch((err) => {
           onNotice(`网关初始化失败: ${err?.message || 'unknown'}`);
@@ -183,6 +190,7 @@ async function buildGatewayModelChoices({ onNotice = () => {}, onError = () => {
 
       if (autoSync && autoSync.synced && (autoSync.changed || autoSync.activeChanged)) {
         try {
+          onProgress({ kind: 'stage', current: 4, total: 5, label: '刷新适配器' });
           onNotice('正在刷新适配器...');
           await withTimeout(gateway.refreshAdapters(), 15000, 'refresh-adapters');
         } catch {
@@ -193,6 +201,7 @@ async function buildGatewayModelChoices({ onNotice = () => {}, onError = () => {
         );
       }
     } else {
+      onProgress({ kind: 'stage', current: 3, total: 5, label: '快速初始化' });
       onNotice('快速失败模式：跳过耗时初始化');
       // Ensure gateway is at least minimally initialized
       if (!gateway.isInitialized()) {
@@ -207,6 +216,7 @@ async function buildGatewayModelChoices({ onNotice = () => {}, onError = () => {
       }
     }
 
+    onProgress({ kind: 'stage', current: 5, total: 5, label: '获取适配器状态' });
     onNotice('正在获取适配器状态...');
     const statuses = gateway.getStatus();
     const enabledAdapters = statuses.filter((s) => s.enabled);
@@ -267,7 +277,10 @@ async function buildGatewayModelChoices({ onNotice = () => {}, onError = () => {
     parseInt(process.env.KHY_MODEL_OVERALL_TIMEOUT_MS || '30000', 10) || 30000
   );
 
-  onNotice(`检测各通道连通性（快速模式，单通道超时 ${Math.round(probeTimeoutMs / 1000)}s，总超时 ${Math.round(overallTimeoutMs / 1000)}s）...`);
+  // UX2: 通道探测百分比进度 — 每完成一个通道就更新进度
+  const totalAdapters = enabledAdapters.length;
+  let probedCount = 0;
+  onNotice(`检测各通道连通性（${totalAdapters} 通道，总超时 ${Math.round(overallTimeoutMs / 1000)}s）...`);
   const testResults = {};
   const strictCandidates = [];
   const testPromises = enabledAdapters.map(async (s) => {
@@ -299,6 +312,15 @@ async function buildGatewayModelChoices({ onNotice = () => {}, onError = () => {
           error: err && err.message ? err.message : 'probe failed',
         },
       };
+    } finally {
+      probedCount++;
+      const pct = totalAdapters > 0 ? (probedCount / totalAdapters) * 100 : 100;
+      const latency = testResults[s.type]?.connectivity?.latencyMs;
+      const ok = testResults[s.type]?.connectivity?.success;
+      const statusIcon = ok ? '✓' : '✗';
+      onNotice(`  [${probedCount}/${totalAdapters} ${pct.toFixed(1).padStart(5)}%] ${statusIcon} ${s.type}${latency ? ` (${latency}ms)` : ''}`);
+      // Real count: probedCount / totalAdapters
+      onProgress({ kind: 'count', current: probedCount, total: totalAdapters, label: `探测 ${s.type}` });
     }
   });
 
@@ -447,12 +469,14 @@ async function buildGatewayModelChoices({ onNotice = () => {}, onError = () => {
   }
 
   // Collect models from all available adapters with indicators
+  onProgress({ kind: 'count', current: 0, total: enabledAdapters.length, label: '获取模型列表' });
   const modelChoices = [];
   let skippedUnavailableAdapters = 0;
   const hiddenAdapters = [];
   let generationWarnCount = 0;
   let filteredModelCount = 0;
   const filteredModelReasonCount = {};
+  let listedCount = 0;
   for (const s of enabledAdapters) {
     const test = testResults[s.type];
     const adapterOk = isAdapterOperational(s, test);
@@ -516,7 +540,11 @@ async function buildGatewayModelChoices({ onNotice = () => {}, onError = () => {
           disabled: false,
         });
       }
+      listedCount++;
     } catch (err) {
+      listedCount++;
+    } finally {
+      onProgress({ kind: 'count', current: listedCount, total: enabledAdapters.length, label: '获取模型列表' });
       const reasonText = err && err.message ? err.message : 'listModels failed';
       if (String(s.type || '').toLowerCase() === 'kiro' && _isTimeoutLikeReason(reasonText)) {
         // Keep Kiro selectable when model listing is slow; selection still works
@@ -682,6 +710,7 @@ async function buildGatewayModelChoices({ onNotice = () => {}, onError = () => {
     /* fail-soft: no Auto entry, picker unchanged */
   }
 
+    onProgress({ kind: 'count', current: 100, total: 100, label: '完成' });
     return { modelChoices, preferredIssueAfterProbe, empty: false };
   } catch (err) {
     onError(`构建模型列表失败: ${(err && err.message) || 'unknown'}`);
@@ -939,8 +968,9 @@ async function buildVendorModelChoices({
   modelHint = '',
   onNotice = () => {},
   onError = () => {},
+  onProgress = () => {},
 } = {}) {
-  const built = await buildGatewayModelChoices({ onNotice, onError });
+  const built = await buildGatewayModelChoices({ onNotice, onError, onProgress });
   if (!built || built.empty) {
     return { modelChoices: [], directPick: null, empty: true, vendor };
   }

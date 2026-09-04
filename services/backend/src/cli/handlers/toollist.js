@@ -58,7 +58,7 @@ async function handleToolList(subCommand, args = [], options = {}) {
   const {
     buildToolCatalog,
     toolCatalogEnabled,
-  } = require('../../services/toolCatalog/toolCatalog');
+  } = require('../../services/domain/catalog/toolCatalog/toolCatalog.js');
 
   if (!toolCatalogEnabled(env)) {
     printWarn('工具清单已被 KHY_TOOL_CATALOG 禁用（当前为关闭状态）。');

@@ -316,7 +316,7 @@ function checkLayerRegistry(findings) {
 // 「任何层 → L5/L6」的禁止边，scripts/ 只许按路径操作，不许 import L2 的实现。
 // 代价是两处各有一份字段名，收益是守卫不会因为被守卫的代码坏掉而一起坏掉。
 const EXTENSION_MANIFEST = 'khy.extension.json';
-const EXTENSION_KINDS = new Set(['runtime', 'ide-bridge', 'asset', 'toolchain']);
+const EXTENSION_KINDS = new Set(['runtime', 'ide-bridge', 'asset', 'toolchain', 'reference']);
 
 // 仓库自己的分类名白名单（真源 [DESIGN-ARCH-069] §2.3 的表；来自用户原话枚举的六类：
 // tool / plugin / scripts / mcp / software / 协议）。
@@ -397,6 +397,32 @@ function collectExtensionDirs(extRoot) {
   return { extensions, structural };
 }
 
+/**
+ * v2.0 扩展契约严格校验。
+ * 新增校验项：
+ *   - kind 不能是 'asset'（应改为 'toolchain' 或 'reference'）
+ *   - commands 不能为空数组（应列出所有可执行入口）
+ *   - provides 必须存在且非空
+ */
+function _checkV2ExtensionViolations(manifest, rel, violations) {
+  // kind 校验：v2.0 不允许 'asset'（只读资源应使用 'reference' 或 'toolchain'）
+  if (manifest.kind === 'asset') {
+    violations.push(`${rel} —— v2.0 契约不允许 kind=asset，应改为 toolchain 或 reference`);
+  }
+
+  // commands 校验：v2.0 要求列出所有可执行入口（reference 类型豁免）
+  if (Array.isArray(manifest.commands) && manifest.commands.length === 0 && 
+      manifest.kind !== 'asset' && manifest.kind !== 'reference') {
+    violations.push(`${rel} —— v2.0 契约要求 commands 列出所有可执行入口（空数组仅允许 kind=asset 或 kind=reference）`);
+  }
+
+  // provides 校验：v2.0 要求声明提供的能力（reference 类型豁免）
+  if ((!Array.isArray(manifest.provides) || manifest.provides.length === 0) && 
+      manifest.kind !== 'reference') {
+    violations.push(`${rel} —— v2.0 契约要求 provides 声明提供的能力（非空数组，reference 类型豁免）`);
+  }
+}
+
 function checkExtensionContract(findings, counts) {
   const extRoot = path.join(repoRoot, 'extensions');
   if (!fs.existsSync(extRoot)) {
@@ -421,6 +447,14 @@ function checkExtensionContract(findings, counts) {
       violations.push(`${rel} —— ${EXTENSION_MANIFEST} 顶层不是对象`);
       continue;
     }
+
+    // schemaVersion 校验（v2.0 契约版本化）
+    const schemaVersion = manifest.schemaVersion || '1.0';
+    if (schemaVersion === '2.0') {
+      // v2.0 严格校验
+      _checkV2ExtensionViolations(manifest, rel, violations);
+    }
+    // v1.0 宽松校验（保持向后兼容）
     // id 必须等于**叶子**目录名：否则「删目录即消失」的键就藏在文件内容里，孤儿检测
     // 无从核对。分类名刻意不进 id（§2.3）—— 移进分类目录不得改变拓展身份。
     if (manifest.id !== name) {

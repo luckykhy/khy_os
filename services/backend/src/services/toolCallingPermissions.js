@@ -67,6 +67,7 @@ const PERMISSION_MODES = Object.freeze([
   'auto',
   'dontAsk',
   'bypass',
+  'RedPass',
 ]);
 function _normalizePermissionMode(m) {
   const v = String(m || '').trim();
@@ -83,6 +84,9 @@ function _normalizePermissionMode(m) {
   }
   if (lc === 'auto') {
     return 'auto';
+  }
+  if (lc === 'redpass' || lc === 'red-pass' || lc === 'red_pass') {
+    return 'RedPass';
   }
   return PERMISSION_MODES.includes(v) ? v : 'default';
 }
@@ -103,6 +107,7 @@ const _MODE_TO_PROFILE = Object.freeze({
   auto: 'auto',
   dontAsk: 'dontAsk',
   bypass: 'yolo',
+  RedPass: 'redpass',
 });
 
 /**
@@ -223,6 +228,23 @@ function acknowledgeDangerousMode() {
 
 function isDangerousMode() {
   return _permissionMode === 'bypass';
+}
+
+/**
+ * RedPass mode: adversarial testing mode where the system prompt is replaced
+ * to allow probing model safety boundaries.
+ * @returns {boolean}
+ */
+function isRedPassMode() {
+  return _permissionMode === 'RedPass';
+}
+
+/** Leave RedPass mode (back to 'default'). */
+function disableRedPassMode() {
+  if (_permissionMode === 'RedPass') {
+    _permissionMode = 'default';
+    _syncPermissionProfile('default');
+  }
 }
 
 /** Leave bypass mode (back to 'default'); other modes are left untouched. */
@@ -459,7 +481,7 @@ async function requestPermission(toolName, params, onControlRequest = null) {
     // hook 崩溃/超时/坏返回 → 回落基线,等价于未注册 hook。门控关 → 短路,逐字节回退。
     let _decision = verdict && typeof verdict.decision === 'string' ? verdict.decision : '';
     try {
-      const seams = require('./hooks/hookContribSeams');
+      const seams = require('./domain/extensions/hooks/hookContribSeams');
       _decision = await seams.applyToolPermissionHooks(_decision, {
         toolName,
         permissionKey,
@@ -622,7 +644,7 @@ async function requestPermission(toolName, params, onControlRequest = null) {
     let _ctrlInput = params;
     try {
       const beh = _resolveToolBehavior(permissionKey, params);
-      const { buildIntent } = require('./syscallGateway/intentSchema');
+      const { buildIntent } = require('./domain/system/syscallGateway/intentSchema');
       const intent = buildIntent({
         tool: toolName,
         params,
@@ -630,7 +652,7 @@ async function requestPermission(toolName, params, onControlRequest = null) {
         isDestructive: beh.isDestructive,
         risk: beh.risk,
       });
-      const explanation = require('./syscallGateway/preExecutionExplainer').explain(intent, {});
+      const explanation = require('./domain/system/syscallGateway/preExecutionExplainer').explain(intent, {});
       if (explanation) {
         _ctrlInput = { ...params, explanation };
       }
@@ -924,6 +946,9 @@ module.exports = {
   acknowledgeDangerousMode,
   isDangerousMode,
   disableDangerousMode,
+  // RedPass mode (adversarial testing)
+  isRedPassMode,
+  disableRedPassMode,
   // Approval persistence
   isApproved,
   approveTool,

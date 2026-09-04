@@ -16,7 +16,7 @@
  * 契约:纯函数、确定性、不 mutate。正则**无 g 标志**(无 lastIndex 状态·可安全复用单例)。
  *   `|| ''` 令 falsy → 判 'en'(空文本默认英文)。
  *
- * 各消费方保留同名本地 `const pickLocale = require('.../pickLocale')`(shorthand 导出续存)→ 调用点逐字节不变。
+ * 各消费方保留同名本地 `const pickLocale = require('pickLocale.js')`(shorthand 导出续存)→ 调用点逐字节不变。
  */
 
 function pickLocale(text) {

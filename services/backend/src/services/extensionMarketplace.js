@@ -25,7 +25,7 @@ const {
   setEnabled,
   loadExtension,
   EXTENSIONS_DIR,
-} = require('./extensions/extensionManager');
+} = require('../cli/extensions/extensionManager');
 
 // ── Registry Config ──
 

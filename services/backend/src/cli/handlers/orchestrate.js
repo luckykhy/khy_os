@@ -165,7 +165,7 @@ function _help(fmt) {
 async function handleOrchestrate(subCommand, args = [], options = {}) {
   const fmt = _fmt();
   const { printError, printSuccess } = fmt;
-  const svc = require('../../services/orchestrator/orchestrationService');
+  const svc = require('../../services/domain/state/orchestrator/orchestrationService.js');
 
   if (!svc.orchestrateEnabled(process.env)) {
     fmt.printWarn('orchestrate is disabled (KHY_ORCHESTRATE=0). Unset it to enable.');
@@ -200,7 +200,7 @@ async function handleOrchestrate(subCommand, args = [], options = {}) {
       }
       case 'schedule':
       case 'plan': {
-        const sched = require('../../services/orchestrator/criticalPathSchedule');
+        const sched = require('../../services/domain/state/orchestrator/criticalPathSchedule.js');
         if (!sched.scheduleEnabled(process.env)) {
           fmt.printWarn(
             'orchestrate schedule is disabled (KHY_ORCHESTRATE_SCHEDULE=0). Unset it to enable.'
@@ -221,7 +221,7 @@ async function handleOrchestrate(subCommand, args = [], options = {}) {
           stepCount = spec.tasks.length;
         } else {
           const builtPlan =
-            require('../../services/orchestrator/orchestrationPlan').buildOrchestrationPlan(spec);
+            require('../../services/domain/state/orchestrator/orchestrationPlan.js').buildOrchestrationPlan(spec);
           mode = builtPlan.mode;
           label = builtPlan.label;
           stepCount = builtPlan.stepCount;

@@ -11,7 +11,7 @@
  * 契约:纯函数、确定性、不 mutate、绝不抛(内建 try/catch,防御 toString 抛错的对象)。
  * 区别于:utils/cleanText(仅 trim 不小写)。
  *
- * 各消费方保留同名本地 `const _norm = require('.../normLower')` → 调用点逐字节不变。
+ * 各消费方保留同名本地 `const _norm = require('normLower.js')` → 调用点逐字节不变。
  */
 
 function normLower(v) {

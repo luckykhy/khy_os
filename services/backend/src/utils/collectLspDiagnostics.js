@@ -12,7 +12,7 @@
  *   `{line,character,severity,message,source}`(行列 +1 转 1-based)。任何异常 → null。
  *
  * 契约:非纯(经 serviceRegistry 取 lspClient)·fail-soft·绝不抛。各消费方保留同名
- *   本地 `const _collectLspDiagnostics = require('../../utils/collectLspDiagnostics')`
+ *   本地 `const _collectLspDiagnostics = require('collectLspDiagnostics.js')`
  *   → 调用点逐字节不变。
  */
 

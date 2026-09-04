@@ -103,7 +103,7 @@ curl -X POST {{ baseUrl }}/api/external/signal \
 
           <p class="hint">
             绑定您的
-            <a href="https://sct.ftqq.com" target="_blank" rel="noopener">Server酱</a>
+            <a href="https://sct.ftqq.com" target="_blank" rel="noopener noreferrer">Server酱</a>
             SendKey，实时接收微信交易信号推送。
           </p>
 
@@ -134,7 +134,7 @@ curl -X POST {{ baseUrl }}/api/external/signal \
 
           <el-divider content-position="left">使用说明</el-divider>
           <ol class="steps-list">
-            <li>前往 <a href="https://sct.ftqq.com" target="_blank">sct.ftqq.com</a> 注册并获取您的 SendKey。</li>
+            <li>前往 <a href="https://sct.ftqq.com" target="_blank" rel="noopener noreferrer">sct.ftqq.com</a> 注册并获取您的 SendKey。</li>
             <li>将 SendKey 粘贴到上方输入框，点击"绑定"。</li>
             <li>当交易信号产生时，系统将自动推送通知到您的微信。</li>
           </ol>
@@ -400,7 +400,7 @@ onMounted(() => {
   margin: 0;
 }
 .hint a {
-  color: #409eff;
+  color: var(--khy-primary);
 }
 .steps-list {
   color: #606266;
@@ -410,6 +410,6 @@ onMounted(() => {
   margin: 0;
 }
 .steps-list a {
-  color: #409eff;
+  color: var(--khy-primary);
 }
 </style>

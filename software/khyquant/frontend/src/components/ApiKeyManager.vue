@@ -195,7 +195,7 @@ onMounted(() => {
   margin-bottom: 24px;
 }
 .key-card, .usage-card {
-  background: #fafafa;
+  background: var(--khy-gray-50);
   border: 1px solid #ebeef5;
   border-radius: 8px;
   padding: 20px;
@@ -219,7 +219,7 @@ onMounted(() => {
   gap: 12px;
   margin-top: 12px;
   padding: 12px;
-  background: #fff;
+  background: var(--khy-white);
   border: 1px dashed #e6a23c;
   border-radius: 4px;
 }

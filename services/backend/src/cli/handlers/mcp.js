@@ -22,15 +22,15 @@
 const { printInfo, printError, printSuccess } = require('../formatters');
 
 function _spec() {
-  return require('../../services/mcp/mcpAddSpec');
+  return require('../../services/domain/messaging/mcp/mcpAddSpec.js');
 }
 
 function _store() {
-  return require('../../services/mcp/mcpConfigStore');
+  return require('../../services/domain/messaging/mcp/mcpConfigStore.js');
 }
 
 function _presets() {
-  return require('../../services/mcp/mcpServerPresets');
+  return require('../../services/domain/messaging/mcp/mcpServerPresets.js');
 }
 
 /**
@@ -47,7 +47,7 @@ function _handleEco() {
   const os = require('os');
   let reg;
   try {
-    reg = require('../../services/mcp/mcpEcosystemRegistry');
+    reg = require('../../services/domain/messaging/mcp/mcpEcosystemRegistry.js');
   } catch (e) {
     printError(`生态注册表不可用:${(e && e.message) || e}`);
     return 1;
@@ -238,7 +238,7 @@ function _handlePresets() {
  * @returns {number}
  */
 function _handleServe(args, options) {
-  const protocol = require('../../services/mcp/mcpServerProtocol');
+  const protocol = require('../../services/domain/messaging/mcp/mcpServerProtocol.js');
   if (!protocol.isServeEnabled(process.env)) {
     printError(
       '`khy mcp serve` 未启用(KHY_MCP_SERVE 已关闭)。开启后 khy 可作为 MCP server 对外暴露工具。'
@@ -261,7 +261,7 @@ function _handleServe(args, options) {
   }
 
   if (transport === 'http' || transport === 'sse') {
-    const httpServer = require('../../services/mcp/mcpHttpServer');
+    const httpServer = require('../../services/domain/messaging/mcp/mcpHttpServer.js');
     const res = httpServer.startHttpServer({
       version,
       host: opts.host,
@@ -278,7 +278,7 @@ function _handleServe(args, options) {
   }
 
   // 缺省 stdio:进入常驻循环,stdout 专供 JSON-RPC,诊断全走 stderr。
-  const stdioServer = require('../../services/mcp/mcpStdioServer');
+  const stdioServer = require('../../services/domain/messaging/mcp/mcpStdioServer.js');
   stdioServer.startStdioServer({ version });
   return 0;
 }
@@ -323,7 +323,7 @@ function _handleShow(name) {
   let mcp, gov;
   try {
     mcp = require('../../services/mcp');
-    gov = require('../../services/mcp/mcpGovernance');
+    gov = require('../../services/domain/messaging/mcp/mcpGovernance.js');
   } catch (e) {
     printError(`MCP 服务读取失败:${(e && e.message) || e}`);
     return 1;
@@ -456,7 +456,138 @@ function _handleSetEnabled(args, options, enabled) {
 }
 
 /**
- * @param {string} subCommand - 'add' | 'remove' | 'rm' | 'presets' | 'serve' | 'show' | 'test' | 'enable' | 'disable'
+ * `khy mcp export [--agent <type>] [--write]` — 生成各 agent 的 MCP 配置。
+ * @param {string[]} args
+ * @param {object} options
+ * @returns {number}
+ */
+function _handleExport(args, options) {
+  const exp = require('./mcpExport');
+  const opts = options || {};
+  const agent = opts.agent ? String(opts.agent).toLowerCase() : 'auto';
+  const write = opts.write === true || opts.write === 'true' || opts.write === '1';
+
+  // 列出已安装的 agent
+  const installed = exp.detectInstalledAgents();
+  const installedIds = installed.filter((a) => a.installed).map((a) => a.id);
+
+  if (agent === 'auto') {
+    // 检测所有已安装的 agent,逐个输出
+    if (installedIds.length === 0) {
+      printInfo('未检测到已安装的 agent。可用 --agent 指定类型(commandcode / claude / cursor / vscode / claudeDesktop)。');
+      return 0;
+    }
+    printInfo(`已检测到 ${installedIds.length} 个 agent:${installedIds.join(', ')}`);
+    printInfo('');
+    let anyWritten = false;
+    for (const id of installedIds) {
+      const result = exp.generateAgentConfig(id);
+      if (!result.ok) {
+        printError(result.reason);
+        continue;
+      }
+      printInfo(`── ${result.target.label} ──`);
+      printInfo(JSON.stringify(result.config, null, 2));
+      if (write) {
+        const wr = exp.writeAgentConfig(id, result.config, result.target);
+        if (wr.ok) {
+          printSuccess(`  ✅ 已写入 ${wr.path}`);
+          anyWritten = true;
+        } else {
+          printError(`  ❌ 写入失败: ${wr.reason}`);
+        }
+      }
+      printInfo('');
+    }
+    if (!write) {
+      printInfo('提示: 加 --write 可自动写入上述配置文件。');
+    }
+    return 0;
+  }
+
+  // 指定了特定 agent
+  const validIds = Object.keys(exp.AGENT_TARGETS);
+  if (!validIds.includes(agent)) {
+    printError(`未知 agent 类型:${agent}。可用: ${validIds.join(', ')}`);
+    return 1;
+  }
+
+  const result = exp.generateAgentConfig(agent);
+  if (!result.ok) {
+    printError(result.reason);
+    return 1;
+  }
+
+  printInfo(JSON.stringify(result.config, null, 2));
+
+  if (write) {
+    const wr = exp.writeAgentConfig(agent, result.config, result.target);
+    if (wr.ok) {
+      printSuccess(`✅ 已写入 ${wr.path}`);
+    } else {
+      printError(`写入失败: ${wr.reason}`);
+      return 1;
+    }
+  } else {
+    printInfo('');
+    printInfo(`提示: 加 --write 可写入 ${result.target.configFile}`);
+  }
+  return 0;
+}
+
+/**
+ * `khy mcp doctor` — 诊断 khyos MCP server 健康状态。
+ * @param {string[]} args
+ * @param {object} options
+ * @returns {number}
+ */
+function _handleDoctor(args, options) {
+  const exp = require('./mcpExport');
+  printInfo('── khyos MCP Server 诊断 ──');
+  printInfo('');
+
+  // 1. serve 可用性
+  const serve = exp.checkServeAvailability();
+  if (serve.ok) {
+    printSuccess(`✅ MCP serve 可用: ${serve.command}`);
+  } else {
+    printError(`❌ MCP serve 不可用: ${serve.reason}`);
+  }
+  printInfo('');
+
+  // 2. 暴露工具
+  const tools = exp.listExposedTools();
+  if (tools.ok) {
+    printInfo(`暴露工具数: ${tools.tools.length}`);
+    const byRisk = {};
+    for (const t of tools.tools) {
+      byRisk[t.risk] = (byRisk[t.risk] || 0) + 1;
+    }
+    printInfo(`  风险分布: ${Object.entries(byRisk).map(([k, v]) => `${k}=${v}`).join(', ')}`);
+    const readOnly = tools.tools.filter((t) => t.readOnly).length;
+    printInfo(`  只读工具: ${readOnly}/${tools.tools.length}`);
+  } else {
+    printError(`❌ 枚举工具失败: ${tools.reason}`);
+  }
+  printInfo('');
+
+  // 3. agent 连接状态
+  printInfo('── Agent 连接状态 ──');
+  const connections = exp.checkAgentConnections();
+  for (const c of connections) {
+    if (c.hasKhyos) {
+      printSuccess(`✅ ${c.agent}: 已连接(${c.serverName})`);
+    } else {
+      printInfo(`  ${c.agent}: 未配置`);
+    }
+  }
+  printInfo('');
+  printInfo('修复: 运行 `khy mcp export --agent auto --write` 一键配置所有 agent。');
+  return 0;
+}
+
+/**
+ * @param {string} subCommand - 'add' | 'remove' | 'rm' | 'presets' | 'serve' | 'export' | 'doctor' | 'show' | 'test' | 'enable' | 'disable'
  * @param {string[]} args
  * @param {object} options
  * @returns {number} exit-ish code (0 ok)
@@ -470,6 +601,14 @@ async function handleMcp(subCommand, args = [], options = {}) {
   // `serve` 让 khy 作为 MCP server,门控在 KHY_MCP_SERVE(不受 KHY_MCP_ADD 约束)。
   if (sub === 'serve') {
     return _handleServe(args, options);
+  }
+  // `export` 生成各 agent 的 MCP 配置,不受 KHY_MCP_ADD 约束。
+  if (sub === 'export') {
+    return _handleExport(args, options);
+  }
+  // `doctor` 诊断 khyos MCP server 健康状态,不受 KHY_MCP_ADD 约束。
+  if (sub === 'doctor' || sub === 'diag') {
+    return _handleDoctor(args, options);
   }
   // `show` 只读详情,`test` 连接验证——均不写配置,不受 KHY_MCP_ADD 约束。
   if (sub === 'show') {
@@ -502,7 +641,7 @@ async function handleMcp(subCommand, args = [], options = {}) {
     return _handleSetEnabled(args, options, false);
   }
   printError(
-    `未知 mcp 子命令:${subCommand}。可用:add / remove / presets / serve / list / show / test / enable / disable / eco。`
+    `未知 mcp 子命令:${subCommand}。可用:add / remove / presets / serve / export / doctor / show / test / enable / disable / eco。`
   );
   return 1;
 }

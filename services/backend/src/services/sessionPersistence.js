@@ -368,7 +368,7 @@ function appendMessage(sessionId, msg, parentUuid = null, projectDir = null) {
   // 显式传入则原样保留；否则据 role + 可选 provenance 提示盖戳。缺省 fail-safe 到
   // khy-local / verified，绝不把本地内容误标为外部。
   try {
-    const khyTrace = require('./trajectoryProvenance/khyTrace');
+    const khyTrace = require('./domain/trajectory/trajectoryProvenance/khyTrace');
     if (msg._khyTrace && typeof msg._khyTrace === 'object') {
       entry._khyTrace = msg._khyTrace;
     } else {
@@ -405,7 +405,7 @@ function appendMessage(sessionId, msg, parentUuid = null, projectDir = null) {
   // 把本条 turn 绑定进 prevHash→hash 链，事后改 transcript 会被 verify 当场抓出。
   // best-effort：链失败绝不让消息写入失败（防呆②：fail-soft，断/缺链告警不 brick）。
   try {
-    const traceChain = require('./trajectoryProvenance/traceChain');
+    const traceChain = require('./domain/trajectory/trajectoryProvenance/traceChain');
     const tr = entry._khyTrace || {};
     traceChain.append(traceChain.chainPathFor(jsonlFile), {
       uuid: entry.uuid,
@@ -495,7 +495,7 @@ function verifyTraceChain(sessionId) {
         reason: 'transcript 不存在',
       };
     }
-    const traceChain = require('./trajectoryProvenance/traceChain');
+    const traceChain = require('./domain/trajectory/trajectoryProvenance/traceChain');
     const chainFile = traceChain.chainPathFor(jsonlFile);
     const entries = buildConversationChain(sessionId);
     return traceChain.verifyAgainstEntries(chainFile, entries);

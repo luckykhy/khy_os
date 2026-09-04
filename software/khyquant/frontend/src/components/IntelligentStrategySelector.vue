@@ -877,7 +877,7 @@ async function applyStrategy() {
 
   applying.value = true
   try {
-    console.log('🚀 应用策略:', adaptedStrategy.value.name)
+    if (import.meta.env.DEV) { console.log('🚀 应用策略:', adaptedStrategy.value.name) }
 
     // 应用策略到交易界面
     emit('strategy-applied', adaptedStrategy.value)
@@ -897,7 +897,7 @@ async function applyStrategy() {
 /** applyRecommendedStrategy —— 一键选择并应用推荐策略（选择 + 应用的快捷操作）*/
 async function applyRecommendedStrategy(strategy) {
   try {
-    console.log('🚀 应用推荐策略:', strategy.name)
+    if (import.meta.env.DEV) { console.log('🚀 应用推荐策略:', strategy.name) }
     
     // 先选择策略
     selectRecommendedStrategy(strategy)
@@ -919,7 +919,7 @@ async function applyRecommendedStrategy(strategy) {
  */
 async function generateAndEmitSignals(strategy) {
   try {
-    console.log('🔄 生成策略信号:', strategy.name)
+    if (import.meta.env.DEV) { console.log('🔄 生成策略信号:', strategy.name) }
     
     // 🔥 修改：executeStrategyForSignals 现在返回 { signals, auxiliaryData }
     const result = await executeStrategyForSignals(strategy)
@@ -933,7 +933,7 @@ async function generateAndEmitSignals(strategy) {
       
       // 即使没有信号，也要发送辅助线数据
       if (Object.keys(auxiliaryData).length > 0) {
-        console.log('📊 虽然没有信号，但有辅助线数据，仍然发送')
+        if (import.meta.env.DEV) { console.log('📊 虽然没有信号，但有辅助线数据，仍然发送') }
         emit('signals-generated', {
           strategy: strategy,
           signals: [],
@@ -950,7 +950,7 @@ async function generateAndEmitSignals(strategy) {
       auxiliaryData: auxiliaryData  // 🔥 新增：传递辅助线数据
     })
     
-    console.log('✅ 策略信号已生成并发送:', {
+    if (import.meta.env.DEV) { console.log('✅ 策略信号已生成并发送:', { }
       signals: signals.length,
       auxiliaryLines: Object.keys(auxiliaryData).length
     })
@@ -986,7 +986,7 @@ async function generateAndEmitSignals(strategy) {
  */
 async function executeStrategyForSignals(strategy) {
   try {
-    console.log('🔄 执行策略获取信号:', strategy.name)
+    if (import.meta.env.DEV) { console.log('🔄 执行策略获取信号:', strategy.name) }
     
     // 生成模拟K线数据
     const mockKlineData = generateMockKlineData()
@@ -998,7 +998,7 @@ async function executeStrategyForSignals(strategy) {
     // 如果策略有代码，尝试执行实际的策略代码
     if (strategy.code) {
       try {
-        console.log('📊 执行实际策略代码:', strategy.name)
+        if (import.meta.env.DEV) { console.log('📊 执行实际策略代码:', strategy.name) }
 
         // 执行策略 - 使用策略的参数或默认参数
         const params = strategy.parameters || {
@@ -1016,12 +1016,12 @@ async function executeStrategyForSignals(strategy) {
           language: strategy.language || 'javascript'
         })
         
-        console.log('📊 策略执行结果类型:', typeof strategyResults, Array.isArray(strategyResults) ? '数组' : '对象')
+        if (import.meta.env.DEV) { console.log('📊 策略执行结果类型:', typeof strategyResults, Array.isArray(strategyResults) ? '数组' : '对象') }
         
         // 🔥 关键修复:处理新旧两种返回格式
         if (strategyResults && typeof strategyResults === 'object' && !Array.isArray(strategyResults)) {
           // 新格式：{ signals, auxiliaryData }
-          console.log('✅ 检测到新格式（对象）')
+          if (import.meta.env.DEV) { console.log('✅ 检测到新格式（对象）') }
           
           // 🔥 确保 signals 是数组
           const rawSignals = Array.isArray(strategyResults.signals) ? strategyResults.signals : []
@@ -1041,7 +1041,7 @@ async function executeStrategyForSignals(strategy) {
           // 🔥 提取辅助线数据
           auxiliaryData = strategyResults.auxiliaryData || {}
           
-          console.log('✅ 新格式解析成功:', {
+          if (import.meta.env.DEV) { console.log('✅ 新格式解析成功:', { }
             signals: signals.length,
             auxiliaryLines: Object.keys(auxiliaryData).length,
             auxiliaryLineNames: Object.keys(auxiliaryData)
@@ -1051,7 +1051,7 @@ async function executeStrategyForSignals(strategy) {
           if (Object.keys(auxiliaryData).length > 0) {
             Object.keys(auxiliaryData).forEach(lineName => {
               const lineData = auxiliaryData[lineName]
-              console.log(`📊 辅助线 "${lineName}":`, {
+              if (import.meta.env.DEV) { console.log(`📊 辅助线 "${lineName}":`, { }
                 dataPoints: lineData.data?.length || 0,
                 firstPoint: lineData.data?.[0],
                 lastPoint: lineData.data?.[lineData.data.length - 1]
@@ -1060,7 +1060,7 @@ async function executeStrategyForSignals(strategy) {
           }
         } else if (Array.isArray(strategyResults)) {
           // 旧格式：直接返回信号数组
-          console.log('⚠️ 检测到旧格式（数组）')
+          if (import.meta.env.DEV) { console.log('⚠️ 检测到旧格式（数组）') }
           signals = strategyResults
             .filter(s => s && (s.type === 'buy' || s.type === 'sell'))
             .map((signal, index) => ({
@@ -1074,7 +1074,7 @@ async function executeStrategyForSignals(strategy) {
             }))
           
           auxiliaryData = {}
-          console.log('⚠️ 旧格式不包含辅助线数据')
+          if (import.meta.env.DEV) { console.log('⚠️ 旧格式不包含辅助线数据') }
         } else {
           // 🔥 未知格式，使用空数组
           console.warn('⚠️ 策略返回了未知格式，使用空信号数组')
@@ -1082,7 +1082,7 @@ async function executeStrategyForSignals(strategy) {
           auxiliaryData = {}
         }
         
-        console.log('✅ 策略代码执行成功，生成信号:', signals.length, '个，辅助线:', Object.keys(auxiliaryData).length, '条')
+        if (import.meta.env.DEV) { console.log('✅ 策略代码执行成功，生成信号:', signals.length, '个，辅助线:', Object.keys(auxiliaryData).length, '条') }
         
         // 🔥 新增：详细检查辅助线数据
         if (Object.keys(auxiliaryData).length > 0) {
@@ -1118,8 +1118,8 @@ async function executeStrategyForSignals(strategy) {
       auxiliaryData = {}
     }
     
-    console.log('✅ 策略信号生成成功:', signals.length, '个信号，', Object.keys(auxiliaryData).length, '条辅助线')
-    console.log('📍 信号详情:', Array.isArray(signals) ? signals.slice(0, 3).map(s => ({
+    if (import.meta.env.DEV) { console.log('✅ 策略信号生成成功:', signals.length, '个信号，', Object.keys(auxiliaryData).length, '条辅助线') }
+    if (import.meta.env.DEV) { console.log('📍 信号详情:', Array.isArray(signals) ? signals.slice(0, 3).map(s => ({ }
       type: s.type,
       index: s.index,
       time: new Date(s.time).toLocaleDateString(),
@@ -1127,7 +1127,7 @@ async function executeStrategyForSignals(strategy) {
     })) : [])
     
     if (Object.keys(auxiliaryData).length > 0) {
-      console.log('📍 辅助线详情:', Object.keys(auxiliaryData).map(key => ({
+      if (import.meta.env.DEV) { console.log('📍 辅助线详情:', Object.keys(auxiliaryData).map(key => ({ }
         name: key,
         dataPoints: auxiliaryData[key]?.data?.length || 0
       })))
@@ -1233,9 +1233,9 @@ function generateMockKlineData() {
     basePrice = close
   }
   
-  console.log('📊 生成K线数据:', data.length, '条，时间范围:', new Date(data[0].time * 1000).toLocaleDateString(), '到', new Date(data[data.length-1].time * 1000).toLocaleDateString())
-  console.log('📊 价格范围:', Math.min(...data.map(d => d.low)).toFixed(2), '-', Math.max(...data.map(d => d.high)).toFixed(2))
-  console.log('📊 时间格式: 秒级时间戳 (与 lightweight-charts 兼容)')
+  if (import.meta.env.DEV) { console.log('📊 生成K线数据:', data.length, '条，时间范围:', new Date(data[0].time * 1000).toLocaleDateString(), '到', new Date(data[data.length-1].time * 1000).toLocaleDateString()) }
+  if (import.meta.env.DEV) { console.log('📊 价格范围:', Math.min(...data.map(d => d.low)).toFixed(2), '-', Math.max(...data.map(d => d.high)).toFixed(2)) }
+  if (import.meta.env.DEV) { console.log('📊 时间格式: 秒级时间戳 (与 lightweight-charts 兼容)') }
   return data
 }
 
@@ -1370,7 +1370,7 @@ async function createIntelligentStrategy() {
  */
 async function loadStrategyTemplates() {
   try {
-    console.log('📋 加载用户策略作为模板...')
+    if (import.meta.env.DEV) { console.log('📋 加载用户策略作为模板...') }
     
     // 从 strategyStore 加载用户创建的策略
     if (strategyStore.strategies.length === 0) {
@@ -1389,7 +1389,7 @@ async function loadStrategyTemplates() {
       parameters: strategy.parameters || {}
     }))
     
-    console.log('✅ 已加载用户策略作为模板:', strategyTemplates.value.length, '个')
+    if (import.meta.env.DEV) { console.log('✅ 已加载用户策略作为模板:', strategyTemplates.value.length, '个') }
   } catch (error) {
     console.error('❌ 加载策略模板失败:', error)
     ElMessage.error('加载策略失败: ' + error.message)
@@ -1481,7 +1481,7 @@ function mergeStrategySources(...sources) {
 async function loadExistingStrategies() {
   loadingExistingStrategies.value = true
   try {
-    console.log('📋 加载已有策略列表...')
+    if (import.meta.env.DEV) { console.log('📋 加载已有策略列表...') }
     
     // 从 strategyStore 加载用户创建的策略
     if (strategyStore.strategies.length === 0) {
@@ -1500,7 +1500,7 @@ async function loadExistingStrategies() {
       }
     }
     
-    console.log('✅ 已加载已有策略:', existingStrategies.value.length, '个')
+    if (import.meta.env.DEV) { console.log('✅ 已加载已有策略:', existingStrategies.value.length, '个') }
   } catch (error) {
     console.error('❌ 加载已有策略失败:', error)
     ElMessage.error('加载策略列表失败: ' + error.message)
@@ -1534,7 +1534,7 @@ async function handleExistingStrategySelect(strategyId) {
       return
     }
     
-    console.log('⚡ 选择已有策略:', strategy.name)
+    if (import.meta.env.DEV) { console.log('⚡ 选择已有策略:', strategy.name) }
     
     // 设置为当前适配策略
     adaptedStrategy.value = {
@@ -1587,7 +1587,7 @@ function editCurrentStrategy() {
     return
   }
   
-  console.log('编辑策略:', adaptedStrategy.value)
+  if (import.meta.env.DEV) { console.log('编辑策略:', adaptedStrategy.value) }
   
   // 设置编辑模式
   editingStrategy.value = { ...adaptedStrategy.value }
@@ -1612,7 +1612,7 @@ function editCurrentStrategy() {
 
 /** editRecommendedStrategy —— 编辑推荐列表中的某个策略 */
 function editRecommendedStrategy(strategy) {
-  console.log('编辑推荐策略:', strategy)
+  if (import.meta.env.DEV) { console.log('编辑推荐策略:', strategy) }
   
   // 设置编辑模式
   editingStrategy.value = { ...strategy }
@@ -1901,7 +1901,7 @@ function showParametersDialog() {
   
   showParametersEditor.value = true
   
-  console.log('📝 打开参数编辑器，当前参数:', parametersForm.value)
+  if (import.meta.env.DEV) { console.log('📝 打开参数编辑器，当前参数:', parametersForm.value) }
 }
 
 /**
@@ -1928,7 +1928,7 @@ async function saveParameters() {
     // 更新策略参数
     adaptedStrategy.value.parameters = newParams
     
-    console.log('✅ 参数已更新:', newParams)
+    if (import.meta.env.DEV) { console.log('✅ 参数已更新:', newParams) }
     
     // 关闭对话框
     showParametersEditor.value = false
@@ -1992,8 +1992,8 @@ watch(parametersJsonStr, (newValue) => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #111;
-  color: #fff;
+  background: var(--khy-gray-900);
+  color: var(--khy-white);
 }
 
 .selector-header {
@@ -2001,8 +2001,8 @@ watch(parametersJsonStr, (newValue) => {
   justify-content: space-between;
   align-items: center;
   padding: 12px 15px;
-  border-bottom: 1px solid #333;
-  background: linear-gradient(to bottom, #2a2a2a, #1a1a1a);
+  border-bottom: 1px solid var(--khy-gray-700);
+  background: linear-gradient(to bottom, #2a2a2a, var(--khy-gray-900));
 }
 
 .header-left {
@@ -2112,7 +2112,7 @@ watch(parametersJsonStr, (newValue) => {
 .strategy-name {
   font-size: 14px;
   font-weight: bold;
-  color: #10b981;
+  color: var(--khy-success);
   margin-bottom: 8px;
   text-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
 }
@@ -2126,12 +2126,12 @@ watch(parametersJsonStr, (newValue) => {
 
 .confidence {
   font-size: 12px;
-  color: #888;
+  color: var(--khy-gray-400);
 }
 
 .strategy-description {
   font-size: 12px;
-  color: #ccc;
+  color: var(--khy-gray-200);
   line-height: 1.4;
 }
 
@@ -2153,10 +2153,10 @@ watch(parametersJsonStr, (newValue) => {
   justify-content: space-between;
   align-items: center;
   padding: 12px 15px;
-  border-bottom: 1px solid #333;
-  background: #1a1a1a;
+  border-bottom: 1px solid var(--khy-gray-700);
+  background: var(--khy-gray-900);
   font-size: 13px;
-  color: #ccc;
+  color: var(--khy-gray-200);
 }
 
 .loading-state {
@@ -2172,12 +2172,12 @@ watch(parametersJsonStr, (newValue) => {
 .view-all-btn {
   text-align: center;
   padding: 8px 0 4px;
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--khy-gray-700);
 }
 
 .recommendation-item {
-  background: #1a1a1a;
-  border: 1px solid #333;
+  background: var(--khy-gray-900);
+  border: 1px solid var(--khy-gray-700);
   border-radius: 6px;
   padding: 12px;
   margin-bottom: 8px;
@@ -2188,8 +2188,8 @@ watch(parametersJsonStr, (newValue) => {
 }
 
 .recommendation-item:hover {
-  border-color: #555;
-  background: #222;
+  border-color: var(--khy-gray-600);
+  background: var(--khy-gray-800);
 }
 
 .recommendation-content {
@@ -2206,7 +2206,7 @@ watch(parametersJsonStr, (newValue) => {
 .recommendation-name {
   font-size: 13px;
   font-weight: bold;
-  color: #fff;
+  color: var(--khy-white);
   margin-bottom: 4px;
 }
 
@@ -2225,7 +2225,7 @@ watch(parametersJsonStr, (newValue) => {
 
 .recommendation-reason {
   font-size: 11px;
-  color: #888;
+  color: var(--khy-gray-400);
   line-height: 1.3;
 }
 
@@ -2241,7 +2241,7 @@ watch(parametersJsonStr, (newValue) => {
   justify-content: flex-end;
   gap: 6px;
   padding-top: 4px;
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--khy-gray-700);
 }
 
 .recommendation-actions .el-button {
@@ -2261,11 +2261,11 @@ watch(parametersJsonStr, (newValue) => {
 }
 
 .stat-item .label {
-  color: #888;
+  color: var(--khy-gray-400);
 }
 
 .stat-item .value {
-  color: #ccc;
+  color: var(--khy-gray-200);
   font-weight: 600;
 }
 
@@ -2350,12 +2350,12 @@ watch(parametersJsonStr, (newValue) => {
 }
 
 .detail-row .label {
-  color: #ccc;
+  color: var(--khy-gray-200);
   min-width: 80px;
 }
 
 .confidence-text {
-  color: #888;
+  color: var(--khy-gray-400);
   font-size: 12px;
 }
 
@@ -2384,12 +2384,12 @@ watch(parametersJsonStr, (newValue) => {
 }
 
 .config-label {
-  color: #888;
+  color: var(--khy-gray-400);
   min-width: 80px;
 }
 
 .config-value {
-  color: #ccc;
+  color: var(--khy-gray-200);
   flex: 1;
 }
 
@@ -2416,7 +2416,7 @@ watch(parametersJsonStr, (newValue) => {
 
 .recommendation.warning {
   background: rgba(255, 193, 7, 0.1);
-  color: #ffc107;
+  color: var(--khy-warning);
 }
 
 .recommendation.success {
@@ -2431,7 +2431,7 @@ watch(parametersJsonStr, (newValue) => {
 
 /* 手动配置 */
 .manual-config {
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--khy-gray-700);
   padding-top: 15px;
 }
 
@@ -2444,7 +2444,7 @@ watch(parametersJsonStr, (newValue) => {
 
 .config-title {
   font-weight: bold;
-  color: #ccc;
+  color: var(--khy-gray-200);
 }
 
 /* 模板列表 */
@@ -2457,8 +2457,8 @@ watch(parametersJsonStr, (newValue) => {
 }
 
 .template-item {
-  background: #1a1a1a;
-  border: 1px solid #333;
+  background: var(--khy-gray-900);
+  border: 1px solid var(--khy-gray-700);
   border-radius: 6px;
   padding: 15px;
   cursor: pointer;
@@ -2466,20 +2466,20 @@ watch(parametersJsonStr, (newValue) => {
 }
 
 .template-item:hover {
-  border-color: #555;
-  background: #222;
+  border-color: var(--khy-gray-600);
+  background: var(--khy-gray-800);
 }
 
 .template-name {
   font-size: 14px;
   font-weight: bold;
-  color: #fff;
+  color: var(--khy-white);
   margin-bottom: 8px;
 }
 
 .template-description {
   font-size: 12px;
-  color: #888;
+  color: var(--khy-gray-400);
   line-height: 1.4;
   margin-bottom: 8px;
 }
@@ -2491,57 +2491,57 @@ watch(parametersJsonStr, (newValue) => {
 
 /* Element Plus 样式覆盖 */
 :deep(.el-dialog) {
-  background: #1a1a1a;
-  border: 1px solid #333;
+  background: var(--khy-gray-900);
+  border: 1px solid var(--khy-gray-700);
 }
 
 :deep(.el-dialog__header) {
-  background: #222;
-  border-bottom: 1px solid #333;
+  background: var(--khy-gray-800);
+  border-bottom: 1px solid var(--khy-gray-700);
 }
 
 :deep(.el-dialog__title) {
-  color: #fff;
+  color: var(--khy-white);
 }
 
 :deep(.el-dialog__body) {
-  background: #1a1a1a;
-  color: #fff;
+  background: var(--khy-gray-900);
+  color: var(--khy-white);
 }
 
 :deep(.el-form-item__label) {
-  color: #ccc;
+  color: var(--khy-gray-200);
 }
 
 :deep(.el-input__wrapper) {
-  background: #222;
-  border-color: #444;
+  background: var(--khy-gray-800);
+  border-color: var(--khy-gray-600);
 }
 
 :deep(.el-input__inner) {
-  color: #fff;
+  color: var(--khy-white);
 }
 
 :deep(.el-textarea__inner) {
-  background: #222;
-  border-color: #444;
-  color: #fff;
+  background: var(--khy-gray-800);
+  border-color: var(--khy-gray-600);
+  color: var(--khy-white);
 }
 
 :deep(.el-select .el-input__wrapper) {
-  background: #222;
-  border-color: #444;
+  background: var(--khy-gray-800);
+  border-color: var(--khy-gray-600);
 }
 
 :deep(.el-button) {
-  background: #333;
-  border-color: #555;
-  color: #ccc;
+  background: var(--khy-gray-700);
+  border-color: var(--khy-gray-600);
+  color: var(--khy-gray-200);
 }
 
 :deep(.el-button:hover) {
-  background: #555;
-  border-color: #777;
+  background: var(--khy-gray-600);
+  border-color: var(--khy-gray-500);
 }
 
 :deep(.el-button--primary) {
@@ -2561,7 +2561,7 @@ watch(parametersJsonStr, (newValue) => {
 }
 
 :deep(.el-empty) {
-  color: #888;
+  color: var(--khy-gray-400);
 }
 
 /* 滚动条样式 */
@@ -2570,28 +2570,28 @@ watch(parametersJsonStr, (newValue) => {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1a1a1a;
+  background: var(--khy-gray-900);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #555;
+  background: var(--khy-gray-600);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #777;
+  background: var(--khy-gray-500);
 }
 
 /* 🔥 新增：参数显示样式 */
 .strategy-parameters {
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--khy-gray-700);
 }
 
 .parameters-title {
   font-size: 11px;
-  color: #888;
+  color: var(--khy-gray-400);
   margin-bottom: 5px;
 }
 
@@ -2617,7 +2617,7 @@ watch(parametersJsonStr, (newValue) => {
 
 .param-hint {
   font-size: 11px;
-  color: #888;
+  color: var(--khy-gray-400);
   margin-top: 4px;
   line-height: 1.3;
 }
@@ -2625,12 +2625,12 @@ watch(parametersJsonStr, (newValue) => {
 .parameters-json {
   margin-top: 20px;
   padding-top: 15px;
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--khy-gray-700);
 }
 
 .json-title {
   font-size: 12px;
-  color: #ccc;
+  color: var(--khy-gray-200);
   margin-bottom: 8px;
   font-weight: 600;
 }

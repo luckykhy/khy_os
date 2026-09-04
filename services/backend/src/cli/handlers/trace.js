@@ -20,8 +20,8 @@ const chalk = require('chalk').default || require('chalk');
 
 const sessionPersistence = require('../../services/sessionPersistence');
 const { generateTitle } = require('../../services/sessionTitleService');
-const { TRUST } = require('../../services/trajectoryProvenance/khyTrace');
-const projection = require('../../services/trajectoryProvenance/traceProjection');
+const { TRUST } = require('../../services/domain/trajectory/trajectoryProvenance/khyTrace.js');
+const projection = require('../../services/domain/trajectory/trajectoryProvenance/traceProjection.js');
 const { printError, printWarn, printInfo, printTable } = require('../formatters');
 
 /** 绝对时间戳 → 本地「MM-DD HH:mm」短格式；无时间回退 '—'。 */

@@ -27,6 +27,7 @@ const KhyOsView = require('./KhyOsView');
 const PlanApproval = require('./PlanApproval');
 const Spinner = require('./Spinner');
 const CompactionProgress = require('./CompactionProgress');
+const ProgressBar = require('./ProgressBar');
 const CompletionMenu = require('./CompletionMenu');
 const HelpMenu = require('./HelpMenu');
 const ShellView = require('./ShellView');
@@ -95,7 +96,7 @@ try {
 // to falling through to the text input. See services/keybindings/historyReverseSearch.js.
 let _revSearch = null;
 try {
-  _revSearch = require('../../../services/keybindings/historyReverseSearch');
+  _revSearch = require('../../../services/keybindings').historyReverseSearch;
 } catch {
   _revSearch = null;
 }
@@ -609,6 +610,13 @@ function App({ options = {} }) {
     } catch {
       /* default is fine */
     }
+    // Load recent models for the picker
+    try {
+      const store = require('../../../services/gateway/recentModelsStore');
+      setRecentModels(store.readRecentModels());
+    } catch {
+      /* store unavailable */
+    }
   }, []);
   const [selectedIndex, setSelectedIndex] = React.useState(0);
   const [showHelp, setShowHelp] = React.useState(false);
@@ -644,9 +652,19 @@ function App({ options = {} }) {
   // an interactive command handler (e.g. inquirer-driven `/model`) can own the
   // terminal. Restored to true once the handler resolves.
   const [inputActive, setInputActive] = React.useState(true);
+  // Pass through gateway progress events — they already use the correct
+  // differentiated format (kind: stage | count | pulse).
+  const progressFromGateway = React.useCallback((p) => p, []);
+
+  // Gateway progress bar state — shown while buildGatewayModelChoices /
+  // buildVendorModelChoices is probing adapters, cleared once the picker mounts.
+  const [gatewayProgress, setGatewayProgress] = React.useState(null);
+
   // Native model selection overlay (replaces inquirer-driven `/model`). When set
   // to { choices, defaultValue } the ModelPicker is mounted and owns input.
   const [modelPicker, setModelPicker] = React.useState(null);
+  // Recent models for the picker (persisted via recentModelsStore).
+  const [recentModels, setRecentModels] = React.useState([]);
   // Deferred gateway probe notice for /model. Pushing static (transcript) output
   // right before mounting the picker made ink write static lines AND grow the
   // live region in the same frame; past the terminal height this desyncs
@@ -691,6 +709,9 @@ function App({ options = {} }) {
   // time. fastSavedRef holds the pre-fast settings so the toggle is reversible.
   const [fastMode, setFastMode] = React.useState(false);
   const fastSavedRef = React.useRef(null);
+  // Auto-RedPass toggle. When on, if the model refuses a request, automatically
+  // switch to RedPass mode and retry with adversarial prompts.
+  const [autoRedPass, setAutoRedPass] = React.useState(false);
   // Voice mode toggle (/voice). Mirrors the persisted voiceService flag; when on
   // the query bridge speaks each assistant reply via TTS. State here only drives
   // the footer badge — the persisted setting is the single source of truth.
@@ -1008,10 +1029,11 @@ function App({ options = {} }) {
 
   // G-B: 1s heartbeat while a turn is busy so the spinner can show elapsed time
   // and detect a stall. Stops when the turn settles (idle/done) to avoid an
-  // always-on timer.
+  // always-on timer. Also runs during cooldown to update the countdown display.
   React.useEffect(() => {
+    const cooldownActive = query.cooldownUntilMs && query.cooldownUntilMs > Date.now();
     const active = query.status && query.status !== 'idle' && query.status !== 'done';
-    if (!active) {
+    if (!active && !cooldownActive) {
       return undefined;
     }
     setNowTick(Date.now());
@@ -1025,7 +1047,7 @@ function App({ options = {} }) {
     }
     const id = setInterval(() => setNowTick(Date.now()), _hbMs);
     return () => clearInterval(id);
-  }, [query.status]);
+  }, [query.status, query.cooldownUntilMs]);
 
   // Notification port wiring: register the renderer once on mount, seed from
   // the buffered entries (emits that happened before mount), unregister on
@@ -1213,11 +1235,13 @@ function App({ options = {} }) {
       // Buffer gateway status notices so they collapse into a single block
       // instead of flooding the transcript with 5-8 individual lines.
       const gwNotices = [];
+      setGatewayProgress({ kind: 'pulse', label: '准备探测' });
       built = await gw.buildGatewayModelChoices({
         onNotice: (msg) => {
           gwNotices.push(msg);
         },
         onError: (msg) => push('error', tuiErrorOf(msg, { action: '探测模型', target: '网关' })),
+        onProgress: (p) => setGatewayProgress(progressFromGateway(p)),
       });
       if (gwNotices.length > 0) {
         const summary = gwNotices[0];
@@ -1237,6 +1261,7 @@ function App({ options = {} }) {
       if (flushOnError) {
         flushOnError();
       }
+      setGatewayProgress(null);
       push('error', tuiErrorOf(err, { action: '探测模型', target: '网关' }));
       return;
     }
@@ -1252,22 +1277,26 @@ function App({ options = {} }) {
       if (flushNow) {
         flushNow();
       }
+      setGatewayProgress(null);
       return;
     }
+    setGatewayProgress(null);
     setModelPicker({
       choices: built.modelChoices,
       defaultValue: {
         adapter: process.env.GATEWAY_PREFERRED_ADAPTER || undefined,
         model: process.env.GATEWAY_PREFERRED_MODEL || undefined,
       },
+      recent: recentModels,
     });
-  }, [query]);
+  }, [query, recentModels]);
 
   // Resolve the model picker: apply the selection (persist + sync + refresh) and
   // mirror the new model/adapter into the footer, or report cancellation.
   const resolveModelPicker = React.useCallback(
     async (value) => {
       setModelPicker(null);
+      setGatewayProgress(null);
       // Flush the gateway probe notice deferred by openModelPicker now that the
       // picker is gone and the live region has shrunk back to a safe height.
       const flushDeferredNotice = pendingGatewayNoticeRef.current;
@@ -1281,6 +1310,14 @@ function App({ options = {} }) {
           { role: 'notice', content: '已取消模型选择', timestamp: Date.now() },
         ]);
         return;
+      }
+      // Record selection to recent models store
+      try {
+        const store = require('../../services/gateway/recentModelsStore');
+        store.pushRecentModel({ adapter: value.adapter, model: value.model });
+        setRecentModels(store.readRecentModels());
+      } catch {
+        /* store unavailable */
       }
       let gw;
       try {
@@ -1356,6 +1393,7 @@ function App({ options = {} }) {
       };
       let built;
       try {
+        setGatewayProgress({ kind: 'pulse', label: '准备切换模型' });
         built = await gw.buildVendorModelChoices({
           vendor,
           modelHint,
@@ -1363,10 +1401,12 @@ function App({ options = {} }) {
             gwNotices.push(msg);
           },
           onError: (msg) => push('error', tuiErrorOf(msg, { action: '探测模型', target: '网关' })),
+          onProgress: (p) => setGatewayProgress(progressFromGateway(p)),
         });
       } catch (err) {
         // No picker mounts on this path, so flushing immediately is safe.
         flushNotices();
+        setGatewayProgress(null);
         push('error', tuiErrorOf(err, { action: '探测模型', target: '网关' }));
         return;
       }
@@ -1379,6 +1419,7 @@ function App({ options = {} }) {
         built.modelChoices.length === 0
       ) {
         flushNotices();
+        setGatewayProgress(null);
         return;
       }
       // Defer the probe notice: resolveModelPicker drains pendingGatewayNoticeRef
@@ -1393,15 +1434,17 @@ function App({ options = {} }) {
         await resolveModelPicker(built.directPick);
         return;
       }
+      setGatewayProgress(null);
       setModelPicker({
         choices: built.modelChoices,
         defaultValue: {
           adapter: process.env.GATEWAY_PREFERRED_ADAPTER || undefined,
           model: process.env.GATEWAY_PREFERRED_MODEL || undefined,
         },
+        recent: recentModels,
       });
     },
-    [query, resolveModelPicker]
+    [query, resolveModelPicker, recentModels]
   );
 
   // Open a FormFlow overlay and resolve with the collected answers (or null on
@@ -2002,9 +2045,17 @@ function App({ options = {} }) {
                 `语音模式已开启 — TTS: ${caps.tts || 'none'} | STT: ${caps.stt || 'none'}`
               );
             }
-          } catch (err) {
-            bufferedNotice(`语音服务异常：${err.message}`);
+            return true;
+          } catch {
+            return false;
           }
+        }
+        case 'autoRedPass': {
+          setAutoRedPass((v) => {
+            const next = !v;
+            bufferedNotice(next ? '自动破甲已开启 — 模型拒绝时自动切换 RedPass' : '自动破甲已关闭');
+            return next;
+          });
           return true;
         }
         default:
@@ -2358,7 +2409,23 @@ function App({ options = {} }) {
       // route() declined (unknown command / explicit AI forward) → send to AI.
       if (result === false || (result && result.aiForward)) {
         const aiInput = result && result.aiForward ? result.aiForward : text;
-        query.submit(aiInput, { permissionMode, forceLocal: localMode });
+        const submitOpts = { permissionMode, forceLocal: localMode, autoRedPass };
+        // RedPass 模式 + 有检查点 → 自动恢复破甲
+        if (permissionMode === 'RedPass') {
+          try {
+            const redpassCheckpoint = require('../../../services/redpass/redpassCheckpoint');
+            if (redpassCheckpoint.hasCheckpoint()) {
+              submitOpts.redpassResume = true;
+            }
+          } catch {
+            /* ignore */
+          }
+        }
+        // bypass 模式 + autoRedPass → 传递标记
+        if (permissionMode === 'bypass') {
+          submitOpts.autoRedPass = autoRedPass;
+        }
+        query.submit(aiInput, submitOpts);
       }
     },
     [
@@ -4072,8 +4139,37 @@ function App({ options = {} }) {
         setPermissionMode((m) => {
           const next =
             PERMISSION_MODES[(PERMISSION_MODES.indexOf(m) + 1) % PERMISSION_MODES.length];
+          // RedPass 首次进入时显示警告提示
+          if (next === 'RedPass') {
+            try {
+              const redpassCheckpoint = require('../../../services/redpass/redpassCheckpoint');
+              if (redpassCheckpoint.hasCheckpoint()) {
+                const cp = redpassCheckpoint.loadCheckpoint();
+                showHint(`🔴 RedPass 发现未完成破击（第${cp.retryCount}次），输入任意内容继续`);
+              } else {
+                showHint('🔴 RedPass 模式已激活：安全过滤器已禁用，所有对话将被审计记录');
+              }
+            } catch {
+              showHint('🔴 RedPass 模式已激活：安全过滤器已禁用，所有对话将被审计记录');
+            }
+            try {
+              const redpassEngine = require('../../../services/redpass/redpassEngine');
+              redpassEngine.logModeSwitch(m, 'RedPass');
+            } catch {
+              /* audit non-fatal */
+            }
+          } else if (m === 'RedPass') {
+            showHint(`已退出 RedPass，回到 ${next} 模式`);
+            try {
+              const redpassEngine = require('../../../services/redpass/redpassEngine');
+              redpassEngine.logModeSwitch('RedPass', next);
+            } catch {
+              /* audit non-fatal */
+            }
+          } else {
+            showHint(`权限模式：${next}`);
+          }
           applyPermissionMode(next);
-          showHint(`权限模式：${next}`);
           return next;
         });
         return;
@@ -4114,6 +4210,24 @@ function App({ options = {} }) {
           });
           return;
         }
+      }
+
+      // F2: cycle through recent models (same as frontend). Only when no overlay
+      // is mounted and not busy; Meta+P still opens the full picker.
+      if (key.name === 'f2' && !key.ctrl && !key.meta && !key.shift && !busy) {
+        if (recentModels.length >= 2) {
+          const fa = (footer.adapter || '').toLowerCase();
+          const fm = (footer.model || '').toLowerCase();
+          const recentKeys = recentModels.map((m) => `${m.adapter}/${m.model}`);
+          const currentIdx = recentKeys.findIndex((k) => {
+            const [a, m] = k.split('/');
+            return a.toLowerCase() === fa && (m || '').toLowerCase() === fm;
+          });
+          const nextIdx = currentIdx === -1 ? 0 : (currentIdx + 1) % recentKeys.length;
+          const [adapter, model] = recentKeys[nextIdx].split('/');
+          resolveModelPicker({ adapter, model });
+        }
+        return;
       }
 
       // Alt+M: 语音输入 — 触发/关闭 Windows Win+H 语音听写(与麦克风按钮同源,
@@ -4653,21 +4767,15 @@ function App({ options = {} }) {
   // 启动横幅「画一次即冻结」:首帧把整个 React 元素快照进 ref,之后所有 re-render 都
   // 吐回**同一引用**。Ink 看到子元素 identity 不变就不会 emit,live 区的兄弟面板
   // (footer / task list / prompt)再怎么落值、横幅都不再被重发——根除 win32 上
-  // fullscreen clearTerminal 分支触发的「banner 重复六份」症状。快照在横幅应当退场
-  // (`query.messages.length > 0` 时 _showStartupBanner=false)后清空,让下次冷启动可重
-  // 新生成元素。Ink fullscreen 分支的成片复制副作用详见 scrollbackPreserve.js 头注。
+  // fullscreen clearTerminal 分支触发的「banner 重复六份」症状。
+  // banner 在每次 khy 启动时显示一次（首次渲染），之后作为静态元素保留在顶部。
   const _bannerElementRef = React.useRef(null);
   if (_bannerElementRef.current === null) {
-    if (_showStartupBanner) {
-      _bannerElementRef.current = h(MemoWelcomeBanner, {
-        key: 'live-banner',
-        ...bannerProps,
-        showArt: _bannerShowArt,
-      });
-    }
-  } else if (!_showStartupBanner) {
-    // Banner 已退场(首条消息已落),下次冷启动可重新生成元素。
-    _bannerElementRef.current = null;
+    _bannerElementRef.current = h(MemoWelcomeBanner, {
+      key: 'live-banner',
+      ...bannerProps,
+      showArt: _bannerShowArt,
+    });
   }
   const _liveBannerElement = _bannerElementRef.current;
   // Rows the banner renders above its version line — SSOT exported by
@@ -4914,7 +5022,11 @@ function App({ options = {} }) {
     //   调整区域,先改 regionLayout 再改这里。
     // Committed transcript output via <Static>. Always mounted so
     // that suspending the live UI does not reprint scrollback.
+    // Banner 作为第一个 item 渲染在顶部,对话消息在它下方。
     h(Static, { items: query.staticItems }, (item) => {
+      if (item.kind === 'banner') {
+        return _liveBannerElement;
+      }
       return h(Transcript.MessageBlock, { key: item.key, msg: item.msg, expanded });
     }),
 
@@ -4955,11 +5067,8 @@ function App({ options = {} }) {
               //   节点下,但物理上是四个独立子区域。下方标注**仅指代 StreamingBlock 整体**,
               //   不要再在 StreamingBlock 内部追加区域注释。
 
-              // [区域① BANNER 副本] Startup-only banner (task #23): lives here so the version
-              // line tops the left column exactly where the sidebar tops the right column.
-              // 元素身份由 _bannerElementRef 锁定(见上),Ink 看到同一引用就跳过 emit →
-              // win32 fullscreen clearTerminal 分支不再把整份横幅反复刷进 scrollback。
-              _liveBannerElement,
+              // Banner 已移至 <Static> 区域①,不再在 live region 中渲染
+              // (避免重复显示)
 
               // [区域②.6 MAIN_SUBVIEW · Ctrl+O 详情] Removable detail for the latest committed
               // <Static> turn. MessageBlock already force-expands role:'expansion'; keeping this
@@ -5258,9 +5367,11 @@ function App({ options = {} }) {
                 localMode,
                 fastMode,
                 voiceMode,
+                autoRedPass,
                 topic: topicBarOn ? null : topic,
                 bridge: bridgeStatus,
                 goalActive,
+                cooldownUntilMs: query.cooldownUntilMs || 0,
               }),
 
           // ── 区域⑧ STATUS_AREA(状态区,页尾 5 行空行,FOOTER 之下)────────────
@@ -5302,7 +5413,14 @@ function App({ options = {} }) {
                 choices: modelPicker.choices,
                 defaultValue: modelPicker.defaultValue,
                 onResolve: resolveModelPicker,
+                recent: modelPicker.recent,
               })
+            : null,
+
+          // Progress bar for /model probe — shown while gatewayProgress is set
+          // (during buildGatewayModelChoices), hidden once the picker mounts.
+          gatewayProgress && !modelPicker
+            ? h(ProgressBar, { ...gatewayProgress })
             : null,
 
           // [regionLayout.OWNING_OVERLAYS.rewindPicker — 双击 Esc 触发的回溯选择,hideChrome=false]

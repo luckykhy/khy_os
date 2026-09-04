@@ -979,7 +979,7 @@ async function fetchModelsFromApi(tokenData, options = {}) {
 function buildTraeMessages(prompt, options = {}) {
   let _flattenContent;
   try {
-    _flattenContent = require('../../../services/contentBlockUtils').flattenContent;
+    _flattenContent = require('../../contentBlockUtils').flattenContent;
   } catch {
     _flattenContent = (c) => String(c || '');
   }
@@ -2060,7 +2060,7 @@ function callTraeByHttp(tokenData, prompt, model, options = {}) {
   // Trae-specific: flatten content arrays in simple messages (Trae doesn't support content arrays)
   let _flattenContent;
   try {
-    _flattenContent = require('../../../services/contentBlockUtils').flattenContent;
+    _flattenContent = require('../../contentBlockUtils').flattenContent;
   } catch {
     _flattenContent = (c) => String(c || '');
   }

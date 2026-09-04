@@ -11,8 +11,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const { parseDiagnostics } = require('../services/compile/diagnostics');
-const compileRegistry = require('../services/compile/registry');
+const { parseDiagnostics } = require('../services/domain/build/compile/diagnostics.js');
+const compileRegistry = require('../cli/commands/registry.js');
 const { createEphemeralDir } = require('../utils/ephemeralTmp');
 const { spawnWithIdleTimeout } = require('../utils/spawnWithIdleTimeout');
 

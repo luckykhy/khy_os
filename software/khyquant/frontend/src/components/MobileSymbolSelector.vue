@@ -46,7 +46,7 @@
                 <span class="code">{{ symbol.code }}</span>
                 <span class="name">{{ symbol.name }}</span>
               </div>
-              <el-icon v-if="symbol.code === currentSymbol" class="check-icon" color="#409eff">
+              <el-icon v-if="symbol.code === currentSymbol" class="check-icon" color="var(--khy-primary)">
                 <Check />
               </el-icon>
             </div>

@@ -13,8 +13,8 @@
  * 用法:`/btw <提示内容>`。门控 KHY_BTW 默认开;关 → 命令不接管(字节回退)。
  */
 
-const leaf = require('../../services/conversation/btwNote');
-const queue = require('../../services/conversation/btwNoteQueue');
+const leaf = require('../../services/domain/session/conversation/btwNote.js');
+const queue = require('../../services/domain/session/conversation/btwNoteQueue.js');
 const { printInfo } = require('../formatters');
 
 /**

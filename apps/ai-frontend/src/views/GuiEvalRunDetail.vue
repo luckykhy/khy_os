@@ -89,7 +89,7 @@
             style="margin-top: 16px"
             v-if="run.error_message"
           >
-            <template #header><span style="color: #f56c6c">错误</span></template>
+            <template #header><span style="color: var(--khy-danger)">错误</span></template>
             <pre class="error-block"
               >{{ run.error_message }}{{ run.error_stack ? '\n\n' + run.error_stack : '' }}</pre>
           </el-card>
@@ -357,7 +357,7 @@ onMounted(() => {
   padding: 12px;
   border-radius: 4px;
   font-size: 12px;
-  color: #f56c6c;
+  color: var(--khy-danger);
   white-space: pre-wrap;
 }
 .step-item {

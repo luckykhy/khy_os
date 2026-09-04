@@ -688,7 +688,7 @@ async function handleDocsFreshness(args, options = {}) {
   const repoRoot = getRepoRoot();
   let runner;
   try {
-    runner = require('../../services/docsFreshness/docsFreshnessRunner');
+    runner = require('../../services/domain/docs/docsFreshness/docsFreshnessRunner.js');
   } catch (e) {
     printInfo('文档新鲜度模块不可用(源码树可能不完整): ' + ((e && e.message) || e));
     return;
@@ -768,7 +768,7 @@ async function handleDocsFreshness(args, options = {}) {
   // --ai:AI 改稿建议(门控默认关,绝不自动落地)。
   if (has('ai')) {
     try {
-      const draft = require('../../services/docsFreshness/docSuggestDraft');
+      const draft = require('../../services/domain/docs/docsFreshness/docSuggestDraft.js');
       if (!draft.docSuggestEnabled(process.env)) {
         printInfo('AI 建议未启用(设 KHY_DOCS_AI_SUGGEST=1 开启;仅出草稿,绝不自动改文档)。');
       } else {
@@ -808,7 +808,7 @@ async function handleDocsBrowse(args, options) {
   // [DESIGN-ARCH-069] §1.3 第四条），与 `khy md` 共用同一条解析路径。
   let workbench;
   try {
-    workbench = require('../../services/extensions/markdownWorkbench').loadBridge();
+    workbench = require('../../services/domain/extensions/extensions/markdownWorkbench.js').loadBridge();
   } catch (e) {
     printInfo('加载 Markdown 工作台失败: ' + e.message);
     return;

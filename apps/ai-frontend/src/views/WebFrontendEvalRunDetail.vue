@@ -91,7 +91,7 @@
             style="margin-top: 16px"
             v-if="run.rejection_reason"
           >
-            <template #header><span style="color: #f56c6c">驳回原因</span></template>
+            <template #header><span style="color: var(--khy-danger)">驳回原因</span></template>
             <div class="rejection-text">{{ run.rejection_reason }}</div>
           </el-card>
         </el-col>
@@ -131,7 +131,7 @@
             <template #header><span>自检清单</span></template>
             <div v-if="run.self_check.items?.length">
               <div v-for="(item, i) in run.self_check.items" :key="i" class="self-check-item">
-                <el-icon :color="item.passed ? '#67c23a' : '#f56c6c'">
+                <el-icon :color="item.passed ? 'var(--khy-success)' : 'var(--khy-danger)'">
                   <Check v-if="item.passed" /><Close v-else />
                 </el-icon>
                 <span class="sc-text">{{ item.key }}</span>
@@ -376,7 +376,7 @@ onMounted(() => {
   margin-left: 4px;
 }
 .rejection-text {
-  color: #f56c6c;
+  color: var(--khy-danger);
   padding: 8px;
 }
 .notes-text {

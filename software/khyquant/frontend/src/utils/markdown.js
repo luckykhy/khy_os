@@ -96,6 +96,10 @@ const PURIFY_CONFIG = {
 /**
  * Render a Markdown string to sanitized HTML with syntax-highlighted code blocks.
  *
+ * SECURITY: This function uses DOMPurify to sanitize the HTML output from marked.
+ * All user-generated content (AI responses, markdown) is sanitized before rendering.
+ * This prevents XSS attacks from malicious markdown content.
+ *
  * @param {string} text  Raw markdown text
  * @returns {string}     Safe HTML string
  */

@@ -403,7 +403,7 @@
               </el-button>
             </div>
             <div class="token-hint">用于GPT-4、GPT-3.5等模型</div>
-            <div class="token-link"><a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">前往 OpenAI 管理 API Key →</a></div>
+            <div class="token-link"><a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">前往 OpenAI 管理 API Key →</a></div>
           </el-form-item>
 
           <el-form-item label="Anthropic Claude">
@@ -430,7 +430,7 @@
               </el-button>
             </div>
             <div class="token-hint">用于Claude 3系列模型</div>
-            <div class="token-link"><a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">前往 Anthropic 管理 API Key →</a></div>
+            <div class="token-link"><a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer">前往 Anthropic 管理 API Key →</a></div>
           </el-form-item>
 
           <el-form-item label="Google Gemini">
@@ -457,7 +457,7 @@
               </el-button>
             </div>
             <div class="token-hint">用于Gemini Pro等模型</div>
-            <div class="token-link"><a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">前往 Google AI Studio 管理 API Key →</a></div>
+            <div class="token-link"><a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">前往 Google AI Studio 管理 API Key →</a></div>
           </el-form-item>
 
           <el-form-item label="Hugging Face">
@@ -484,7 +484,7 @@
               </el-button>
             </div>
             <div class="token-hint">用于Hugging Face推理API和模型</div>
-            <div class="token-link"><a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener">前往 Hugging Face 管理 Token →</a></div>
+            <div class="token-link"><a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener noreferrer">前往 Hugging Face 管理 Token →</a></div>
           </el-form-item>
 
           <el-form-item label="Finlight 新闻">
@@ -511,7 +511,7 @@
               </el-button>
             </div>
             <div class="token-hint">用于新闻分析师获取实时金融新闻语料</div>
-            <div class="token-link"><a href="https://app.finlight.me/api-keys" target="_blank" rel="noopener">前往 Finlight.me 管理 API Key →</a></div>
+            <div class="token-link"><a href="https://app.finlight.me/api-keys" target="_blank" rel="noopener noreferrer">前往 Finlight.me 管理 API Key →</a></div>
           </el-form-item>
 
           <el-form-item label="百度文心一言">
@@ -538,7 +538,7 @@
               </el-button>
             </div>
             <div class="token-hint">用于文心一言系列模型</div>
-            <div class="token-link"><a href="https://console.bce.baidu.com/qianfan/ais/console/applicationConsole/application" target="_blank" rel="noopener">前往百度千帆平台管理 API Key →</a></div>
+            <div class="token-link"><a href="https://console.bce.baidu.com/qianfan/ais/console/applicationConsole/application" target="_blank" rel="noopener noreferrer">前往百度千帆平台管理 API Key →</a></div>
           </el-form-item>
 
           <el-form-item label="阿里通义千问">
@@ -565,7 +565,7 @@
               </el-button>
             </div>
             <div class="token-hint">用于通义千问系列模型</div>
-            <div class="token-link"><a href="https://dashscope.console.aliyun.com/apiKey" target="_blank" rel="noopener">前往阿里云百炼平台管理 API Key →</a></div>
+            <div class="token-link"><a href="https://dashscope.console.aliyun.com/apiKey" target="_blank" rel="noopener noreferrer">前往阿里云百炼平台管理 API Key →</a></div>
           </el-form-item>
 
           <el-form-item label="讯飞星火">
@@ -592,7 +592,7 @@
               </el-button>
             </div>
             <div class="token-hint">用于星火认知大模型</div>
-            <div class="token-link"><a href="https://console.xfyun.cn/services/bm35" target="_blank" rel="noopener">前往讯飞开放平台管理 API Key →</a></div>
+            <div class="token-link"><a href="https://console.xfyun.cn/services/bm35" target="_blank" rel="noopener noreferrer">前往讯飞开放平台管理 API Key →</a></div>
           </el-form-item>
 
           <el-form-item label="智谱AI">
@@ -619,7 +619,7 @@
               </el-button>
             </div>
             <div class="token-hint">用于ChatGLM系列模型</div>
-            <div class="token-link"><a href="https://open.bigmodel.cn/usercenter/apikeys" target="_blank" rel="noopener">前往智谱AI开放平台管理 API Key →</a></div>
+            <div class="token-link"><a href="https://open.bigmodel.cn/usercenter/apikeys" target="_blank" rel="noopener noreferrer">前往智谱AI开放平台管理 API Key →</a></div>
           </el-form-item>
         </el-form>
 
@@ -666,10 +666,10 @@
              style="margin-top: 8px; max-height: 80px; overflow-y: auto; background: #1a1a2e; color: #16c784; padding: 6px 8px; border-radius: 4px; font-size: 11px; font-family: monospace; line-height: 1.4;">
           <div v-for="(log, i) in retrainStatus.logs.slice(-5)" :key="i">{{ log }}</div>
         </div>
-        <div v-if="retrainStatus.status === 'completed'" style="margin-top: 6px; font-size: 12px; color: #67c23a;">
+        <div v-if="retrainStatus.status === 'completed'" style="margin-top: 6px; font-size: 12px; color: var(--khy-success);">
           Training completed at {{ retrainStatus.finishedAt }}
         </div>
-        <div v-if="retrainStatus.status === 'failed'" style="margin-top: 6px; font-size: 12px; color: #f56c6c;">
+        <div v-if="retrainStatus.status === 'failed'" style="margin-top: 6px; font-size: 12px; color: var(--khy-danger);">
           Training failed. Check logs for details.
         </div>
       </div>
@@ -1406,7 +1406,7 @@ const updateAnalysisProgress = (progress, message) => {
     }
   })
   
-  console.log(`分析进度: ${progress}% - ${message}`)
+  if (import.meta.env.DEV) { console.log(`分析进度: ${progress}% - ${message}`) }
 }
 
 // 降级模拟分析 —— 当后端API不可用时的本地兜底方案
@@ -2226,7 +2226,7 @@ onUnmounted(() => {
 .bot-avatar {
   width: 80px;
   height: 80px;
-  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  background: linear-gradient(135deg, var(--khy-gray-900) 0%, #2d2d2d 100%);
   border: 4px solid #FFD700;
   border-radius: 50%;
   display: flex;
@@ -2255,7 +2255,7 @@ onUnmounted(() => {
 }
 
 .bot-avatar.expanded {
-  background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+  background: linear-gradient(135deg, #2d2d2d 0%, var(--khy-gray-900) 100%);
   border-color: #FFD700;
 }
 
@@ -2459,7 +2459,7 @@ onUnmounted(() => {
 
 .quick-label {
   font-size: 12px;
-  color: #666;
+  color: var(--khy-gray-500);
   white-space: nowrap;
 }
 
@@ -2490,7 +2490,7 @@ onUnmounted(() => {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: #333;
+  color: var(--khy-gray-700);
 }
 
 .overall-progress {
@@ -2631,7 +2631,7 @@ onUnmounted(() => {
 .agent-name {
   font-size: 13px;
   font-weight: 600;
-  color: #333;
+  color: var(--khy-gray-700);
 }
 
 .algorithm-badge {
@@ -2647,14 +2647,14 @@ onUnmounted(() => {
 
 .agent-description {
   font-size: 11px;
-  color: #666;
+  color: var(--khy-gray-500);
   line-height: 1.3;
   margin-bottom: 4px;
 }
 
 .algorithm-description {
   font-size: 10px;
-  color: #666;
+  color: var(--khy-gray-500);
   margin-top: 4px;
   padding: 4px 6px;
   background: rgba(102, 126, 234, 0.08);
@@ -2678,7 +2678,7 @@ onUnmounted(() => {
 .result-summary {
   margin-bottom: 20px;
   padding: 16px;
-  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+  background: linear-gradient(135deg, var(--khy-primary-100) 0%, #f3e5f5 100%);
   border-radius: var(--radius-md);
   border: 1px solid #e1f5fe;
 }
@@ -2699,7 +2699,7 @@ onUnmounted(() => {
 
 .confidence {
   font-size: 12px;
-  color: #666;
+  color: var(--khy-gray-500);
 }
 
 .ai-provider-info {
@@ -2711,7 +2711,7 @@ onUnmounted(() => {
 
 .model-info {
   font-size: 11px;
-  color: #666;
+  color: var(--khy-gray-500);
   font-family: 'Consolas', 'Monaco', monospace;
 }
 
@@ -2720,7 +2720,7 @@ onUnmounted(() => {
   padding: 8px 12px;
   background: rgba(255, 255, 255, 0.7);
   border-radius: 6px;
-  border: 1px solid #e3f2fd;
+  border: 1px solid var(--khy-primary-100);
   display: flex;
   gap: 16px;
   flex-wrap: wrap;
@@ -2734,12 +2734,12 @@ onUnmounted(() => {
 }
 
 .ai-detail-item .label {
-  color: #666;
+  color: var(--khy-gray-500);
   font-weight: 500;
 }
 
 .ai-detail-item .value {
-  color: #333;
+  color: var(--khy-gray-700);
   font-family: 'Consolas', 'Monaco', monospace;
   background: rgba(102, 126, 234, 0.1);
   padding: 2px 6px;
@@ -2785,7 +2785,7 @@ onUnmounted(() => {
 .chat-section {
   padding: 20px;
   border-bottom: 1px solid #f0f0f0;
-  background: #fafafa;
+  background: var(--khy-gray-50);
 }
 
 .chat-header {
@@ -2837,7 +2837,7 @@ onUnmounted(() => {
 
 .chat-message.user .message-content {
   background: #95ec69;  /* 微信绿色 */
-  color: #000000;  /* 黑色文字 */
+  color: var(--khy-black);  /* 黑色文字 */
 }
 
 .chat-message.assistant .message-content {
@@ -2935,7 +2935,7 @@ onUnmounted(() => {
 }
 
 .message-content a {
-  color: #409eff;
+  color: var(--khy-primary);
   text-decoration: underline;
   word-break: break-all;
 }
@@ -2982,13 +2982,13 @@ onUnmounted(() => {
 
 .stock-code {
   font-weight: 600;
-  color: #333;
+  color: var(--khy-gray-700);
   font-size: 14px;
 }
 
 .analysis-time {
   font-size: 11px;
-  color: #666;
+  color: var(--khy-gray-500);
 }
 
 /* 面板底部 */
@@ -3125,7 +3125,7 @@ onUnmounted(() => {
 }
 
 .token-link a {
-  color: #409eff;
+  color: var(--khy-primary);
   text-decoration: none;
 }
 

@@ -1,0 +1,158 @@
+'use strict';
+
+/**
+ * mcpConfigStore.js — 薄 IO 层:往 khy 的 MCP 配置文件(mcp.json)写入/删除一台 server。
+ *
+ * 定位(GOAL「khy 无生态,需连外部;如 mcp 安装」):services/mcp/index.js 的 saveConfig 只写 user 文件
+ * 且把整个内存 config(含 CC-bridge、project 来源)一股脑写回 user 文件——不适合「只增删一台 server」的
+ * 精细操作(会把别处来源的 server 复制进 user 文件)。故本模块提供**按 scope 定点读改写**:
+ *   - user  → getDataHome()/mcp.json(与 index.js CONFIG_PATHS.user 同路径,loadConfig 会读到)
+ *   - project → <cwd>/.khy/mcp.json(与 loadConfig 的 project 源同路径)
+ * 只触碰目标文件的 mcpServers[name] 一个键,其余 server 与顶层字段原样保留。
+ *
+ * homedir/cwd 可注入便于单测重定向到临时目录。显式 homedir 仍使用旧的
+ * <home>/.khy 语义；正常运行时复用 getDataHome(),以兼容 KHY_DATA_HOME 与便携部署。
+ */
+
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
+const atomicWriteJson = require('../../../../utils/atomicWriteJson');
+
+/**
+ * 解析某 scope 的 mcp.json 绝对路径。
+ * @param {'user'|'project'} scope
+ * @param {{homedir?:string, cwd?:string}} [io]
+ * @returns {string}
+ */
+function scopePath(scope, io = {}) {
+  const cwd = io.cwd || process.cwd();
+  if (scope === 'project') {
+    return path.join(cwd, '.khy', 'mcp.json');
+  }
+  if (io.dataHome) {
+    return path.join(io.dataHome, 'mcp.json');
+  }
+  if (io.homedir) {
+    return path.join(io.homedir, '.khy', 'mcp.json');
+  }
+  try {
+    const { getDataHome } = require('../../../../utils/dataHome');
+    return path.join(getDataHome(), 'mcp.json');
+  } catch {
+    return path.join(os.homedir(), '.khy', 'mcp.json');
+  }
+}
+
+/**
+ * 读取某文件的配置(缺失/损坏 → 空壳 {mcpServers:{}})。保留未知顶层字段。
+ * @param {string} filePath
+ * @returns {{mcpServers:object, [k:string]:any}}
+ */
+function readConfigFile(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) {
+      return { mcpServers: {} };
+    }
+    const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    if (!raw || typeof raw !== 'object') {
+      return { mcpServers: {} };
+    }
+    if (!raw.mcpServers || typeof raw.mcpServers !== 'object') {
+      raw.mcpServers = {};
+    }
+    return raw;
+  } catch {
+    // 损坏文件不覆盖:抛给调用方决定(避免静默吃掉用户已有配置)。
+    throw new Error(`无法解析已存在的 MCP 配置文件(可能损坏):${filePath}`);
+  }
+}
+
+function _writeConfigFile(filePath, config) {
+  const dir = path.dirname(filePath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  // 原子写:临时文件 + rename。trailingNewline 保持与旧的 `${JSON.stringify(…)}\n` 字节一致
+  // (project 作用域的 .khy/mcp.json 常被提交进仓库,少一个换行就是一条 diff)。
+  // mode 0o666 = writeFileSync 的默认值,由 umask 决定实际权限——本次迁移只换写入原语,不改权限。
+  if (!atomicWriteJson(filePath, config, { mode: 0o666, trailingNewline: true })) {
+    // atomicWriteJson 不抛;此处调用方(addServer/removeServer)一直靠异常报错,必须自己抛回去。
+    throw new Error(`无法写入 MCP 配置文件:${filePath}`);
+  }
+}
+
+/**
+ * 增/改一台 server(同名覆盖)。
+ * @param {string} name
+ * @param {object} serverConfig
+ * @param {{scope?:'user'|'project', homedir?:string, cwd?:string}} [opts]
+ * @returns {{path:string, replaced:boolean}}
+ */
+function addServer(name, serverConfig, opts = {}) {
+  const scope = opts.scope === 'project' ? 'project' : 'user';
+  const filePath = scopePath(scope, opts);
+  const config = readConfigFile(filePath);
+  const replaced = Object.prototype.hasOwnProperty.call(config.mcpServers, name);
+  config.mcpServers[name] = serverConfig;
+  _writeConfigFile(filePath, config);
+  return { path: filePath, replaced };
+}
+
+/**
+ * 删除一台 server。不存在 → {removed:false}。
+ * @param {string} name
+ * @param {{scope?:'user'|'project', homedir?:string, cwd?:string}} [opts]
+ * @returns {{path:string, removed:boolean}}
+ */
+function removeServer(name, opts = {}) {
+  const scope = opts.scope === 'project' ? 'project' : 'user';
+  const filePath = scopePath(scope, opts);
+  if (!fs.existsSync(filePath)) {
+    return { path: filePath, removed: false };
+  }
+  const config = readConfigFile(filePath);
+  if (!Object.prototype.hasOwnProperty.call(config.mcpServers, name)) {
+    return { path: filePath, removed: false };
+  }
+  delete config.mcpServers[name];
+  _writeConfigFile(filePath, config);
+  return { path: filePath, removed: true };
+}
+
+/**
+ * 启用/禁用一台 server(不改动其余字段)。禁用 = 在该 server 配置上写 `disabled: true`(loadConfig
+ * 会把它映射成 _disabled → connectAll 跳过);启用 = 删掉 `disabled` 字段。不存在 → {found:false}。
+ * @param {string} name
+ * @param {boolean} enabled
+ * @param {{scope?:'user'|'project', homedir?:string, cwd?:string}} [opts]
+ * @returns {{path:string, found:boolean, enabled:boolean}}
+ */
+function setServerEnabled(name, enabled, opts = {}) {
+  const scope = opts.scope === 'project' ? 'project' : 'user';
+  const filePath = scopePath(scope, opts);
+  if (!fs.existsSync(filePath)) {
+    return { path: filePath, found: false, enabled };
+  }
+  const config = readConfigFile(filePath);
+  if (!Object.prototype.hasOwnProperty.call(config.mcpServers, name)) {
+    return { path: filePath, found: false, enabled };
+  }
+  const entry = config.mcpServers[name];
+  if (enabled) {
+    delete entry.disabled;
+  } else {
+    entry.disabled = true;
+  }
+  _writeConfigFile(filePath, config);
+  return { path: filePath, found: true, enabled };
+}
+
+module.exports = {
+  scopePath,
+  readConfigFile,
+  addServer,
+  removeServer,
+  setServerEnabled,
+};

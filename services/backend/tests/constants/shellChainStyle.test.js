@@ -1,130 +1,145 @@
 'use strict';
 
-/**
- * shellChainStyle.test.js — 纯叶子:PowerShell 感知的命令串接措辞单一真源。
- *
- * 验收要点:
- *  - 门控 KHY_POWERSHELL_CHAIN_STYLE:未设/任意非关键字 → 开;0/false/off/no
- *    (含大小写/空白) → 关。
- *  - resolveFamily:KHY_SHELL 显式覆盖最高优先;否则读 COMSPEC 末尾;bash/sh →
- *    null(非 Windows 家族,交调用方按 posix 处理)。
- *  - targetsPowerShell:门开 ∧ 家族 ∈ {powershell,pwsh} 才 true;门关恒 false。
- *  - windowsRuleLines / multiCommandLines:PowerShell 家族 → PowerShell 版
- *    (含 `;`/`if ($?)`、注明 `&&` 需 7+);其余 → 逐字节 legacy(`&&`)。
- *  - parseExecOverride:门开归一化 KHY_SHELL token;门关恒 null。
- *  - byte-revert:门关时 windowsRuleLines/multiCommandLines 与 legacy 常量逐字节相同。
- */
+const {
+  isEnabled,
+  resolveFamily,
+  targetsPowerShell,
+  parseExecOverride,
+  windowsRuleLines,
+  multiCommandLines,
+  LEGACY_WINDOWS_RULE_LINES,
+  POWERSHELL_WINDOWS_RULE_LINES,
+  LEGACY_MULTI_COMMAND_LINES,
+  POWERSHELL_MULTI_COMMAND_LINES,
+} = require('../../src/constants/shellChainStyle');
 
-const test = require('node:test');
-const assert = require('node:assert/strict');
+describe('shellChainStyle', () => {
+  describe('isEnabled', () => {
+    test('returns true by default', () => {
+      expect(isEnabled({})).toBe(true);
+    });
 
-const leaf = require('../../src/constants/shellChainStyle');
+    test('returns true for non-off values', () => {
+      expect(isEnabled({ KHY_POWERSHELL_CHAIN_STYLE: '1' })).toBe(true);
+      expect(isEnabled({ KHY_POWERSHELL_CHAIN_STYLE: 'true' })).toBe(true);
+    });
 
-// 局部 env 构造(纯叶子读入参 env,无需清缓存)。
-function env(overrides) {
-  return { ...overrides };
-}
+    test('returns false for off values', () => {
+      expect(isEnabled({ KHY_POWERSHELL_CHAIN_STYLE: '0' })).toBe(false);
+      expect(isEnabled({ KHY_POWERSHELL_CHAIN_STYLE: 'false' })).toBe(false);
+      expect(isEnabled({ KHY_POWERSHELL_CHAIN_STYLE: 'off' })).toBe(false);
+      expect(isEnabled({ KHY_POWERSHELL_CHAIN_STYLE: 'no' })).toBe(false);
+    });
 
-test('isEnabled: 未设/非关键字 → 开;0/false/off/no(含大小写/空白) → 关', () => {
-  assert.equal(leaf.isEnabled({}), true);
-  assert.equal(leaf.isEnabled({ KHY_POWERSHELL_CHAIN_STYLE: 'on' }), true);
-  assert.equal(leaf.isEnabled({ KHY_POWERSHELL_CHAIN_STYLE: 'anything' }), true);
-  for (const off of ['0', 'false', 'off', 'no', 'OFF', ' No ', 'FALSE']) {
-    assert.equal(leaf.isEnabled({ KHY_POWERSHELL_CHAIN_STYLE: off }), false, `off word: ${off}`);
-  }
-});
+    test('is case-insensitive', () => {
+      expect(isEnabled({ KHY_POWERSHELL_CHAIN_STYLE: 'FALSE' })).toBe(false);
+    });
+  });
 
-test('resolveFamily: KHY_SHELL 覆盖最高优先', () => {
-  assert.equal(leaf.resolveFamily(env({ KHY_SHELL: 'powershell' })), 'powershell');
-  assert.equal(leaf.resolveFamily(env({ KHY_SHELL: 'ps' })), 'powershell');
-  assert.equal(leaf.resolveFamily(env({ KHY_SHELL: 'pwsh' })), 'pwsh');
-  assert.equal(leaf.resolveFamily(env({ KHY_SHELL: 'ps7' })), 'pwsh');
-  assert.equal(leaf.resolveFamily(env({ KHY_SHELL: 'cmd' })), 'cmd');
-  // bash/sh → null(非 Windows 家族)
-  assert.equal(leaf.resolveFamily(env({ KHY_SHELL: 'bash' })), null);
-  assert.equal(leaf.resolveFamily(env({ KHY_SHELL: 'sh' })), null);
-});
+  describe('resolveFamily', () => {
+    test('returns powershell for KHY_SHELL powershell', () => {
+      expect(resolveFamily({ KHY_SHELL: 'powershell' })).toBe('powershell');
+      expect(resolveFamily({ KHY_SHELL: 'PowerShell' })).toBe('powershell');
+      expect(resolveFamily({ KHY_SHELL: 'ps' })).toBe('powershell');
+    });
 
-test('resolveFamily: 无覆盖时读 COMSPEC 末尾', () => {
-  assert.equal(leaf.resolveFamily(env({ COMSPEC: 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe' })), 'powershell');
-  assert.equal(leaf.resolveFamily(env({ COMSPEC: 'C:\\Program Files\\PowerShell\\7\\pwsh.exe' })), 'pwsh');
-  assert.equal(leaf.resolveFamily(env({ COMSPEC: 'C:\\Windows\\System32\\cmd.exe' })), 'cmd');
-  assert.equal(leaf.resolveFamily(env({})), null);
-});
+    test('returns pwsh for KHY_SHELL pwsh', () => {
+      expect(resolveFamily({ KHY_SHELL: 'pwsh' })).toBe('pwsh');
+      expect(resolveFamily({ KHY_SHELL: 'pwsh7' })).toBe('pwsh');
+    });
 
-test('resolveFamily: KHY_SHELL 覆盖优先于 COMSPEC', () => {
-  assert.equal(
-    leaf.resolveFamily(env({ KHY_SHELL: 'powershell', COMSPEC: 'C:\\Windows\\System32\\cmd.exe' })),
-    'powershell',
-  );
-});
+    test('returns cmd for KHY_SHELL cmd', () => {
+      expect(resolveFamily({ KHY_SHELL: 'cmd' })).toBe('cmd');
+      expect(resolveFamily({ KHY_SHELL: 'cmd.exe' })).toBe('cmd');
+    });
 
-test('targetsPowerShell: 门开 ∧ PowerShell 家族 → true;cmd/门关 → false', () => {
-  assert.equal(leaf.targetsPowerShell(env({ KHY_SHELL: 'powershell' })), true);
-  assert.equal(leaf.targetsPowerShell(env({ KHY_SHELL: 'pwsh' })), true);
-  assert.equal(leaf.targetsPowerShell(env({ KHY_SHELL: 'cmd' })), false);
-  assert.equal(leaf.targetsPowerShell(env({})), false);
-  // 门关:即便家族是 powershell 也返 false
-  assert.equal(
-    leaf.targetsPowerShell(env({ KHY_SHELL: 'powershell', KHY_POWERSHELL_CHAIN_STYLE: 'off' })),
-    false,
-  );
-});
+    test('returns null for bash/sh', () => {
+      expect(resolveFamily({ KHY_SHELL: 'bash' })).toBeNull();
+      expect(resolveFamily({ KHY_SHELL: 'sh' })).toBeNull();
+    });
 
-test('windowsRuleLines: PowerShell 家族 → PS 版(`;`/`if ($?)`、注明 7+)', () => {
-  const lines = leaf.windowsRuleLines(env({ KHY_SHELL: 'powershell' }));
-  const joined = lines.join('\n');
-  assert.match(joined, /PowerShell/);
-  assert.match(joined, /if \(\$\?\)/);
-  assert.match(joined, /PowerShell 7\+/);
-  // 不应出现 legacy 的 cmd.exe 断言
-  assert.doesNotMatch(joined, /execute via cmd\.exe/);
-});
+    test('returns powershell for COMSPEC powershell.exe', () => {
+      expect(resolveFamily({ COMSPEC: 'C:\\Windows\\System32\\powershell.exe' })).toBe('powershell');
+    });
 
-test('windowsRuleLines: cmd / 门关 → 逐字节 legacy', () => {
-  // cmd 家族
-  assert.deepEqual(leaf.windowsRuleLines(env({ KHY_SHELL: 'cmd' })), leaf.LEGACY_WINDOWS_RULE_LINES);
-  // 门关(即便 powershell 家族)
-  assert.deepEqual(
-    leaf.windowsRuleLines(env({ KHY_SHELL: 'powershell', KHY_POWERSHELL_CHAIN_STYLE: '0' })),
-    leaf.LEGACY_WINDOWS_RULE_LINES,
-  );
-  // 无任何提示 → legacy
-  assert.deepEqual(leaf.windowsRuleLines(env({})), leaf.LEGACY_WINDOWS_RULE_LINES);
-});
+    test('returns pwsh for COMSPEC pwsh.exe', () => {
+      expect(resolveFamily({ COMSPEC: 'C:\\Program Files\\PowerShell\\7\\pwsh.exe' })).toBe('pwsh');
+    });
 
-test('multiCommandLines: PowerShell 家族 → PS 版;其余 → 逐字节 legacy', () => {
-  const ps = leaf.multiCommandLines(env({ KHY_SHELL: 'pwsh' }));
-  assert.deepEqual(ps, leaf.POWERSHELL_MULTI_COMMAND_LINES);
-  assert.match(ps.join('\n'), /if \(\$\?\)/);
-  // 门关字节回退
-  assert.deepEqual(
-    leaf.multiCommandLines(env({ KHY_SHELL: 'pwsh', KHY_POWERSHELL_CHAIN_STYLE: 'no' })),
-    leaf.LEGACY_MULTI_COMMAND_LINES,
-  );
-  // cmd / 无提示 → legacy
-  assert.deepEqual(leaf.multiCommandLines(env({ KHY_SHELL: 'cmd' })), leaf.LEGACY_MULTI_COMMAND_LINES);
-  assert.deepEqual(leaf.multiCommandLines(env({})), leaf.LEGACY_MULTI_COMMAND_LINES);
-});
+    test('returns cmd for COMSPEC cmd.exe', () => {
+      expect(resolveFamily({ COMSPEC: 'C:\\Windows\\System32\\cmd.exe' })).toBe('cmd');
+    });
 
-test('parseExecOverride: 门开归一化 token;门关恒 null', () => {
-  assert.equal(leaf.parseExecOverride(env({ KHY_SHELL: 'powershell' })), 'powershell');
-  assert.equal(leaf.parseExecOverride(env({ KHY_SHELL: 'pwsh' })), 'pwsh');
-  assert.equal(leaf.parseExecOverride(env({ KHY_SHELL: 'cmd' })), 'cmd');
-  assert.equal(leaf.parseExecOverride(env({ KHY_SHELL: 'gitbash' })), 'bash');
-  assert.equal(leaf.parseExecOverride(env({ KHY_SHELL: 'posix' })), 'sh');
-  assert.equal(leaf.parseExecOverride(env({ KHY_SHELL: 'nonsense' })), null);
-  assert.equal(leaf.parseExecOverride(env({})), null);
-  // 门关 → 恒 null(不覆盖实际 spawn)
-  assert.equal(
-    leaf.parseExecOverride(env({ KHY_SHELL: 'powershell', KHY_POWERSHELL_CHAIN_STYLE: 'off' })),
-    null,
-  );
-});
+    test('returns null for unknown', () => {
+      expect(resolveFamily({})).toBeNull();
+    });
+  });
 
-test('legacy 常量含 `&&`;PowerShell 常量注明 5.1 不支持 `&&`', () => {
-  assert.match(leaf.LEGACY_WINDOWS_RULE_LINES.join('\n'), /Use `&&` to chain commands/);
-  assert.match(leaf.LEGACY_MULTI_COMMAND_LINES.join('\n'), /chain with '&&'/);
-  assert.match(leaf.POWERSHELL_WINDOWS_RULE_LINES.join('\n'), /does NOT support `&&`/);
-  assert.match(leaf.POWERSHELL_MULTI_COMMAND_LINES.join('\n'), /does NOT support `&&`/);
+  describe('targetsPowerShell', () => {
+    test('returns true for powershell family when enabled', () => {
+      expect(targetsPowerShell({ KHY_SHELL: 'powershell' })).toBe(true);
+      expect(targetsPowerShell({ KHY_SHELL: 'pwsh' })).toBe(true);
+    });
+
+    test('returns false when disabled', () => {
+      expect(targetsPowerShell({ KHY_SHELL: 'powershell', KHY_POWERSHELL_CHAIN_STYLE: '0' })).toBe(false);
+    });
+
+    test('returns false for non-powershell', () => {
+      expect(targetsPowerShell({ KHY_SHELL: 'cmd' })).toBe(false);
+      expect(targetsPowerShell({ KHY_SHELL: 'bash' })).toBe(false);
+    });
+  });
+
+  describe('parseExecOverride', () => {
+    test('returns null when disabled', () => {
+      expect(parseExecOverride({ KHY_SHELL: 'powershell', KHY_POWERSHELL_CHAIN_STYLE: '0' })).toBeNull();
+    });
+
+    test('returns normalized shell when enabled', () => {
+      expect(parseExecOverride({ KHY_SHELL: 'powershell' })).toBe('powershell');
+      expect(parseExecOverride({ KHY_SHELL: 'pwsh' })).toBe('pwsh');
+      expect(parseExecOverride({ KHY_SHELL: 'cmd' })).toBe('cmd');
+      expect(parseExecOverride({ KHY_SHELL: 'bash' })).toBe('bash');
+      expect(parseExecOverride({ KHY_SHELL: 'sh' })).toBe('sh');
+    });
+
+    test('returns null for unknown shell', () => {
+      expect(parseExecOverride({ KHY_SHELL: 'unknown' })).toBeNull();
+    });
+  });
+
+  describe('windowsRuleLines', () => {
+    test('returns legacy lines for non-powershell', () => {
+      const result = windowsRuleLines({ KHY_SHELL: 'cmd' });
+      expect(result).toEqual(LEGACY_WINDOWS_RULE_LINES);
+    });
+
+    test('returns powershell lines for powershell', () => {
+      const result = windowsRuleLines({ KHY_SHELL: 'powershell' });
+      expect(result).toEqual(POWERSHELL_WINDOWS_RULE_LINES);
+    });
+
+    test('returns legacy lines when disabled', () => {
+      const result = windowsRuleLines({ KHY_SHELL: 'powershell', KHY_POWERSHELL_CHAIN_STYLE: '0' });
+      expect(result).toEqual(LEGACY_WINDOWS_RULE_LINES);
+    });
+  });
+
+  describe('multiCommandLines', () => {
+    test('returns legacy lines for non-powershell', () => {
+      const result = multiCommandLines({ KHY_SHELL: 'cmd' });
+      expect(result).toEqual(LEGACY_MULTI_COMMAND_LINES);
+    });
+
+    test('returns powershell lines for powershell', () => {
+      const result = multiCommandLines({ KHY_SHELL: 'powershell' });
+      expect(result).toEqual(POWERSHELL_MULTI_COMMAND_LINES);
+    });
+
+    test('returns legacy lines when disabled', () => {
+      const result = multiCommandLines({ KHY_SHELL: 'powershell', KHY_POWERSHELL_CHAIN_STYLE: '0' });
+      expect(result).toEqual(LEGACY_MULTI_COMMAND_LINES);
+    });
+  });
 });

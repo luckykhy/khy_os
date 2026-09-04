@@ -17,7 +17,7 @@
  *
  * **刻意不收敛**:带 mode / 非 recursive / try-catch fail-soft / 返回创建路径的变体。
  *
- * 各消费方保留同名本地 `const ensureDir = require('.../mkdirpSync')`→ 调用点逐字节不变。
+ * 各消费方保留同名本地 `const ensureDir = require('mkdirpSync.js')`→ 调用点逐字节不变。
  */
 
 const fs = require('fs');

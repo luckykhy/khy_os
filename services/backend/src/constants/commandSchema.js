@@ -252,6 +252,8 @@ const ROUTER_COMMANDS = [
   'where',
   'sync',
   'portable',
+  'project',
+  'proj',
 ];
 
 const ROUTER_SUB_COMMANDS = {
@@ -259,6 +261,7 @@ const ROUTER_SUB_COMMANDS = {
   cache: ['clear'],
   md: ['open', 'register', 'unregister'],
   tools: ['list', 'ls', 'status', 'install', 'add', 'update', 'upgrade', 'path', 'where', 'help'],
+  project: ['map', 'analyze', 'structure', 'index', 'scan', 'help'],
   backtest: ['list'],
   strategy: ['list'],
   server: ['start', 'status'],
@@ -781,7 +784,7 @@ const ROUTER_SUB_COMMANDS = {
   remotedev: ['connect', 'attach', 'status', 'logs', 'stop', 'help'],
   rdev: ['connect', 'attach', 'status', 'logs', 'stop', 'help'],
   config: ['set', 'get', 'list', 'show', 'layers', 'openclaw', 'opencode'],
-  coordinator: ['on', 'off', 'status', 'board'],
+  coordinator: ['on', 'off', 'status', 'workers', 'spawn', 'kill', 'log', 'board'],
   orchestrate: ['run', 'status', 'list', 'pause', 'resume', 'replay', 'cancel', 'help'],
   orch: ['run', 'status', 'list', 'pause', 'resume', 'replay', 'cancel', 'help'],
   learn: [
@@ -839,6 +842,9 @@ const ROUTER_SUB_COMMANDS = {
     'presets',
     'preset',
     'serve',
+    'export',
+    'doctor',
+    'diag',
     'list',
     'show',
     'test',
@@ -911,6 +917,8 @@ const CATEGORY_BY_COMMAND = {
   wx: 'system',
   feishu: 'system',
   memory: 'workflow',
+  project: 'analysis',
+  proj: 'analysis',
   proxy: 'workflow',
   subscribe: 'workflow',
 
@@ -1084,6 +1092,12 @@ const BUILTIN_SLASH_COMMANDS = [
     label: '使用回顾',
     desc: '对本地使用数据做周期回顾(token/请求/成本/活跃天/会话/常用模型/高频话题，--days N 默认30，确定性离线，对齐 Claude Code /thinkback；khy 不复刻其云端/动画层，数据不足如实提示)',
     route: 'thinkback',
+  },
+  {
+    cmd: '/project',
+    label: '项目分析',
+    desc: '分析大项目结构：map 查看地图、analyze AI 分析、structure 详细结构、index 紧凑索引、scan 文件扫描',
+    route: 'project',
   },
   {
     cmd: '/copy',
@@ -1307,7 +1321,7 @@ const BUILTIN_SLASH_COMMANDS = [
   {
     cmd: '/coordinator',
     label: '协调者模式',
-    desc: '多代理协调者模式(on/off/status/board),对齐 Claude Code /coordinator',
+    desc: '多代理协调者模式(on/off/status/workers/spawn/kill/log/board),对齐 Claude Code /coordinator',
     route: 'coordinator status',
     category: 'workflow',
   },

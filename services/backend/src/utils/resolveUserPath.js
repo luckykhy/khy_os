@@ -12,7 +12,7 @@
  *   `path.resolve(cwd, p)` 返回绝对路径。**绝不抛**·不 mutate 入参。
  *
  * 契约:非纯(env/os·委托 _userDirs)·fail-soft·各消费方保留同名本地
- *   `const _resolvePath = require('../../utils/resolveUserPath')` → 调用点逐字节不变。
+ *   `const _resolvePath = require('resolveUserPath.js')` → 调用点逐字节不变。
  */
 
 const path = require('path');

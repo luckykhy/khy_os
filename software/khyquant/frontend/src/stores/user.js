@@ -173,8 +173,8 @@ export const useUserStore = defineStore('user', () => {
   const fetchUserInfo = async () => {
     try {
       if (import.meta.env.DEV) {
-        console.log('开始获取用户信息...')
-        console.log('当前token:', token.value ? '[REDACTED]' : '无token')
+        if (import.meta.env.DEV) { console.log('开始获取用户信息...') }
+        if (import.meta.env.DEV) { console.log('当前token:', token.value ? '[REDACTED]' : '无token') }
       }
 
       let response

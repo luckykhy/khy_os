@@ -51,6 +51,7 @@ let _defaultModelForApiPoolProvider = null;
 let _extractResultErrorMessage = null;
 let _injectKhyChineseRecoveryPrompt = null;
 let _injectKhyChineseRecoverySystem = null;
+let _normalizeLanguageAdapterKey = null;
 let _isDeadEndpointErrorType = null;
 let _isHttpRelayAdapter = null;
 let _isProcessSensitiveAdapter = null;
@@ -114,6 +115,7 @@ const DEP_GROUPS = {
     '_createKhyLanguageConsistencyTracker',
     '_injectKhyChineseRecoveryPrompt',
     '_injectKhyChineseRecoverySystem',
+    '_normalizeLanguageAdapterKey',
     '_resolveCodexChineseRecoveryRetryBudget',
     '_shouldAutoRecoverCodexChineseMismatch',
   ],
@@ -183,6 +185,9 @@ function setAiGatewayGenerateMethodDeps(deps = {}) {
     },
     _normalizeApiPoolProvider: (v) => {
       _normalizeApiPoolProvider = v;
+    },
+    _normalizeLanguageAdapterKey: (v) => {
+      _normalizeLanguageAdapterKey = v;
     },
     _parseMs: (v) => {
       _parseMs = v;
@@ -270,6 +275,7 @@ function setAiGatewayGenerateMethodDeps(deps = {}) {
     _isTransientGatewayTransportMessage,
     _mapApiPoolProviderToServiceProvider,
     _normalizeApiPoolProvider,
+    _normalizeLanguageAdapterKey,
     _parseMs,
     _parsePositiveInt,
     _prependFailureReason,
@@ -552,7 +558,7 @@ async function _callMcpVisionTool(mcpServerName, images) {
     _xcode && typeof _xcode._resolveFfmpeg === 'function' ? _xcode._resolveFfmpeg() : null;
 
   try {
-    const mcp = require('../mcp');
+    const mcp = require('../../cli/handlers/mcp');
     for (let i = 0; i < images.length; i++) {
       const img = images[i];
       if (!img || !img.base64) {
@@ -650,7 +656,7 @@ const AIGatewayGenerateMethod = {
     // which keeps the receiving node on its local gateway and prevents loops.
     if (!Number(options._meshHop || 0)) {
       try {
-        const remote = await require('../modelMesh').getModelMesh().forward(prompt, options);
+        const remote = await require('../../routes/modelMesh').getModelMesh().forward(prompt, options);
         if (remote) {
           return remote;
         }
@@ -1087,7 +1093,7 @@ const AIGatewayGenerateMethod = {
       if (_forwardedVisibleTextLen > 0) {
         try {
           forwardGatewayChunk(
-            require('../query/responseDebounce').buildResetChunk('adapter-fallback-retry'),
+            require('../domain/query/query/responseDebounce').buildResetChunk('adapter-fallback-retry'),
             false
           );
         } catch {
@@ -1291,7 +1297,7 @@ const AIGatewayGenerateMethod = {
             requestId: options.requestId,
             requestedModel: options.model || 'auto',
             preferredAdapter: options.preferredAdapter || options.adapter || 'auto',
-            prompt,
+            promptPreview: String(prompt || '').slice(0, 200),
             hasTools: Array.isArray(options.tools) && options.tools.length > 0,
             messagesCount: Array.isArray(options.messages) ? options.messages.length : 0,
             strictPreferred: options.strictPreferred !== false,
@@ -1404,7 +1410,7 @@ const AIGatewayGenerateMethod = {
             ? () => {
                 try {
                   forwardGatewayChunk(
-                    require('../query/responseDebounce').buildResetChunk('refusal-recovery'),
+                    require('../domain/query/query/responseDebounce').buildResetChunk('refusal-recovery'),
                     false
                   );
                 } catch {
@@ -4937,7 +4943,7 @@ const AIGatewayGenerateMethod = {
           if (_forwardedVisibleTextLen > 0) {
             try {
               forwardGatewayChunk(
-                require('../query/responseDebounce').buildResetChunk('language-recovery-retry'),
+                require('../domain/query/query/responseDebounce').buildResetChunk('language-recovery-retry'),
                 false
               );
             } catch {

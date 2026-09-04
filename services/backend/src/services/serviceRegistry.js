@@ -230,7 +230,7 @@ function _autoRegister() {
     ],
     [
       'auditLog',
-      () => require('./auditLog'),
+      () => require('../middleware/auditLog'),
       { category: 'security', description: 'Tool execution audit trail' },
     ],
     [

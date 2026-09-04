@@ -46,7 +46,7 @@
               <code class="cmd">{{ row.installHint }}</code>
               <el-button size="small" text type="primary" @click="copyCmd(row.installHint)">复制命令</el-button>
             </template>
-            <el-link v-if="row.docsUrl" :href="row.docsUrl" target="_blank" type="primary" :underline="false" style="margin-left: 8px">文档</el-link>
+            <el-link v-if="row.docsUrl" :href="row.docsUrl" target="_blank" rel="noopener noreferrer" type="primary" :underline="false" style="margin-left: 8px">文档</el-link>
           </template>
         </el-table-column>
       </el-table>
@@ -95,7 +95,7 @@
               <code class="cmd">{{ row.installHint }}</code>
               <el-button size="small" text type="primary" @click="copyCmd(row.installHint)">复制命令</el-button>
             </template>
-            <el-link v-if="row.docsUrl" :href="row.docsUrl" target="_blank" type="primary" :underline="false" style="margin-left: 8px">文档</el-link>
+            <el-link v-if="row.docsUrl" :href="row.docsUrl" target="_blank" rel="noopener noreferrer" type="primary" :underline="false" style="margin-left: 8px">文档</el-link>
           </template>
         </el-table-column>
       </el-table>

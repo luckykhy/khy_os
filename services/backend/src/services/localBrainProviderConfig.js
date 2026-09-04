@@ -23,7 +23,7 @@
 
 // 模型供应商配置「意图解析」纯叶子（零 IO）：把「用 NL 增/删/列 API Key·endpoint·URL·模型」
 // 解析成结构化意图；真正落地由本服务薄壳经 customProviderRegistrar/Registry/apiKeyPool SSOT 执行。
-const nlProviderResolver = require('./config/nlProviderResolver');
+const nlProviderResolver = require('./domain/config/config/nlProviderResolver');
 // API Key 失效→无模型也能更新的纯叶子(裸 key 识别 + 厂商推断 + 邀请文案)；写入仍走 _execProviderAdd。
 const keyUpdateFlow = require('./keyUpdateFlow');
 // 外部软件模型配置「意图解析」纯叶子(零 IO):把「给 opencode/openclaw/reasonix/deepseek-tui/
@@ -31,7 +31,7 @@ const keyUpdateFlow = require('./keyUpdateFlow');
 // externalApps/*Adapter 落地(fail-soft·merge-write·原子写·删除带确认闸门)。lazy-require 接线。
 let nlExternalAppResolver = null;
 try {
-  nlExternalAppResolver = require('./config/nlExternalAppResolver');
+  nlExternalAppResolver = require('./domain/config/config/nlExternalAppResolver');
 } catch {
   /* leaf absent → degrade */
 }
@@ -40,13 +40,13 @@ try {
 // externalApps/appModelImporter(discover/importApp/unimport,fail-soft,输出全脱敏)。lazy-require。
 let nlExternalAppImportResolver = null;
 try {
-  nlExternalAppImportResolver = require('./config/nlExternalAppImportResolver');
+  nlExternalAppImportResolver = require('./domain/config/config/nlExternalAppImportResolver');
 } catch {
   /* leaf absent → degrade */
 }
 let _appModelImporter = null;
 try {
-  _appModelImporter = require('./externalApps/appModelImporter');
+  _appModelImporter = require('./domain/network/externalApps/appModelImporter');
 } catch {
   /* importer absent → degrade */
 }
@@ -135,7 +135,7 @@ function _detectProviderCfg(text) {
 
 function _maskKeyText(key) {
   try {
-    const { maskToken } = require('./accountPool/credentialHelpers');
+    const { maskToken } = require('./domain/account/accountPool/credentialHelpers');
     return maskToken(key);
   } catch {
     return '***';

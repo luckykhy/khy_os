@@ -87,13 +87,22 @@
         <div
           v-else-if="tasksStatus === 'error'"
           class="khy-fb__tasks-hint is-error"
-          @click="startTaskSync"
+          @click="startPanelSync"
         >
           同步失败,点此重试
         </div>
         <div v-else-if="!tasks.length" class="khy-fb__tasks-hint">暂无任务记录</div>
 
         <ul v-else class="khy-fb__tasks-list">
+          <!-- 任务进度汇总: completed/total + 百分比 -->
+          <li class="khy-fb__task-progress" v-if="tasks.length">
+            <span class="khy-fb__task-progress-text">
+              任务进度: {{ completedTasks }}/{{ tasks.length }} ({{ tasksPercent.toFixed(1) }}%)
+            </span>
+            <span class="khy-fb__task-progress-bar">
+              <span class="khy-fb__task-progress-fill" :style="{ width: tasksPercent + '%' }" />
+            </span>
+          </li>
           <li v-for="t in tasks" :key="t.id" class="khy-fb__task" :class="`is-${t.status}`">
             <span class="khy-fb__task-ico" aria-hidden="true">{{ statusIcon(t.status) }}</span>
             <span class="khy-fb__task-body">
@@ -107,6 +116,37 @@
             </span>
           </li>
         </ul>
+
+        <div class="khy-fb__mcp" v-if="mcpStatus === 'ok' && mcpServers.length">
+          <div class="khy-fb__mcp-head">
+            <span class="khy-fb__mcp-title">MCP 工具</span>
+            <span class="khy-fb__mcp-count">{{ connectedMcpServers }}/{{ mcpServers.length }} ({{ mcpConnectedPercent.toFixed(1) }}%)</span>
+          </div>
+          <ul class="khy-fb__mcp-list">
+            <li
+              v-for="tool in mcpTools"
+              :key="tool.name"
+              class="khy-fb__mcp-item"
+              :title="tool.description"
+            >
+              <span class="khy-fb__mcp-status" :class="`is-${serverState(tool.server)}`" />
+              <span class="khy-fb__mcp-name">{{ tool.name }}</span>
+              <span class="khy-fb__mcp-server">{{ tool.server }}</span>
+            </li>
+          </ul>
+        </div>
+        <div class="khy-fb__mcp" v-else-if="mcpStatus === 'connecting'">
+          <div class="khy-fb__mcp-hint">加载 MCP 状态…</div>
+        </div>
+        <div class="khy-fb__mcp" v-else-if="mcpStatus === 'disabled'">
+          <div class="khy-fb__mcp-hint">本机动作已关闭(KHY_WEB_LOCAL_ACTIONS)</div>
+        </div>
+        <div class="khy-fb__mcp" v-else-if="mcpStatus === 'ok' && !mcpServers.length">
+          <div class="khy-fb__mcp-hint">暂无激活的 MCP 服务</div>
+        </div>
+        <div class="khy-fb__mcp" v-else-if="mcpStatus === 'error'">
+          <div class="khy-fb__mcp-hint is-error" @click="startPanelSync">MCP 同步失败,点此重试</div>
+        </div>
       </div>
     </transition>
 
@@ -230,6 +270,14 @@ let magnetEvt = null;
 const magnetStyle = computed(() => ({
   transform: `translate3d(${tilt.value.x}px, ${tilt.value.y}px, 0)`,
 }));
+
+// 任务进度计算: completed/total + 百分比
+const completedTasks = computed(() => tasks.value.filter(t => t.status === 'completed').length);
+const tasksPercent = computed(() => tasks.value.length ? (completedTasks.value / tasks.value.length) * 100 : 0);
+
+// MCP 连接进度: connected/total + 百分比
+const connectedMcpServers = computed(() => mcpServers.value.filter(s => s.state === 'connected').length);
+const mcpConnectedPercent = computed(() => mcpServers.value.length ? (connectedMcpServers.value / mcpServers.value.length) * 100 : 0);
 
 function onBallEnter(e) {
   onBallHoverMove(e);
@@ -481,17 +529,48 @@ async function openKhyMd() {
   }
 }
 
-// ── TUI 任务记录 → 网页实时同步(持久鉴权 /ws + 定时拉取)──────────────────
-// 后端 khyos_tasks_get 直读同进程 _taskStore(与 TUI 同源磁盘持久任务),回 khyos_tasks 帧。
-// 面板开启时持一条已鉴权 ws,每 ~2.2s 拉一次 → 近实时反映 TUI 任务增删与状态流转;
-// 面板关闭 / 组件卸载即关连接与定时器,零泄漏。
+// ── 面板数据同步: 单一 WS 连接, multiplexed (W6) ──────────────────────────
+// tasks + MCP 共享一条已鉴权的 /ws 连接,按消息类型(khyos_tasks / khyos_mcp)路由。
+// 两个独立定时器分别轮询(任务 2.2s 近实时、MCP 5s 省流量)。
+// 面板关闭 / 组件卸载即关连接与全部定时器,零泄漏。
 const tasksOpen = ref(false);
 const tasks = ref([]);
 const tasksStatus = ref('idle'); // idle | connecting | ok | disabled | error
 const TASK_POLL_MS = 2200;
-let taskWs = null;
 let taskTimer = null;
-let taskAuthed = false;
+
+const mcpServers = ref([]);
+const mcpTools = ref([]);
+const mcpStatus = ref('idle'); // idle | connecting | ok | disabled | error
+const MCP_POLL_MS = 5000;
+let mcpTimer = null;
+
+// 共享 WS 连接状态
+let panelWs = null;
+let panelAuthed = false;
+
+function serverState(serverName) {
+  const srv = mcpServers.value.find((s) => s.name === serverName);
+  return srv ? srv.state : 'unknown';
+}
+function requestTasks() {
+  if (panelWs && panelWs.readyState === 1 && panelAuthed) {
+    try {
+      panelWs.send(JSON.stringify({ type: 'khyos_tasks_get' }));
+    } catch {
+      /* ignore */
+    }
+  }
+}
+function requestMcpStatus() {
+  if (panelWs && panelWs.readyState === 1 && panelAuthed) {
+    try {
+      panelWs.send(JSON.stringify({ type: 'khyos_mcp_get' }));
+    } catch {
+      /* ignore */
+    }
+  }
+}
 
 const _STATUS_ICON = { completed: '✓', in_progress: '→', error: '✗', pending: '○' };
 function statusIcon(status) {
@@ -502,28 +581,20 @@ function taskLabel(t) {
   return t.subject || '(未命名任务)';
 }
 
-function requestTasks() {
-  if (taskWs && taskWs.readyState === 1 && taskAuthed) {
-    try {
-      taskWs.send(JSON.stringify({ type: 'khyos_tasks_get' }));
-    } catch {
-      /* ignore */
-    }
-  }
-}
-
-function startTaskSync() {
-  stopTaskSync(); // 先清旧连接,避免重连叠加。
+function startPanelSync() {
+  stopPanelSync(); // 先清旧连接,避免重连叠加。
   tasksStatus.value = 'connecting';
-  taskAuthed = false;
+  mcpStatus.value = 'connecting';
+  panelAuthed = false;
   let ws;
   try {
     ws = new WebSocket(resolveWsUrl('/ws'));
   } catch {
     tasksStatus.value = 'error';
+    mcpStatus.value = 'error';
     return;
   }
-  taskWs = ws;
+  panelWs = ws;
   ws.onopen = () => {
     try {
       ws.send(JSON.stringify({ type: 'auth', token: userStore.token || '' }));
@@ -540,58 +611,81 @@ function startTaskSync() {
     }
     const type = String(msg?.type || '');
     if (type === 'auth_ok') {
-      taskAuthed = true;
+      panelAuthed = true;
+      // 鉴权通过后立即请求一次,再开启定时器轮询。
       requestTasks();
+      requestMcpStatus();
       if (taskTimer == null) taskTimer = setInterval(requestTasks, TASK_POLL_MS);
+      if (mcpTimer == null) mcpTimer = setInterval(requestMcpStatus, MCP_POLL_MS);
       return;
     }
     if (type === 'auth_error') {
       tasksStatus.value = 'error';
-      stopTaskSync();
+      mcpStatus.value = 'error';
+      stopPanelSync();
       return;
     }
     if (type === 'khyos_tasks') {
       tasksStatus.value = msg.status === 'ok' ? 'ok' : String(msg.status || 'error');
       tasks.value = Array.isArray(msg.tasks) ? msg.tasks : [];
     }
+    if (type === 'khyos_mcp') {
+      mcpStatus.value = msg.status === 'ok' ? 'ok' : String(msg.status || 'error');
+      mcpServers.value = Array.isArray(msg.servers) ? msg.servers : [];
+      mcpTools.value = Array.isArray(msg.tools) ? msg.tools : [];
+    }
   };
   ws.onerror = () => {
     if (tasksStatus.value !== 'ok') tasksStatus.value = 'error';
+    if (mcpStatus.value !== 'ok') mcpStatus.value = 'error';
   };
   ws.onclose = () => {
     if (taskTimer) {
       clearInterval(taskTimer);
       taskTimer = null;
     }
-    taskAuthed = false;
-    if (tasksOpen.value && tasksStatus.value === 'connecting') tasksStatus.value = 'error';
+    if (mcpTimer) {
+      clearInterval(mcpTimer);
+      mcpTimer = null;
+    }
+    // 无论是否已鉴权,只要面板仍开着就标记 error(R2: 防止永久 connecting)。
+    if (tasksOpen.value) {
+      tasksStatus.value = 'error';
+      mcpStatus.value = 'error';
+    }
+    panelAuthed = false;
+    panelWs = null; // R1: 释放闭包引用,允许 GC。
   };
 }
 
-function stopTaskSync() {
+function stopPanelSync() {
   if (taskTimer) {
     clearInterval(taskTimer);
     taskTimer = null;
   }
-  if (taskWs) {
+  if (mcpTimer) {
+    clearInterval(mcpTimer);
+    mcpTimer = null;
+  }
+  if (panelWs) {
     try {
-      taskWs.close();
+      panelWs.close();
     } catch {
       /* ignore */
     }
-    taskWs = null;
+    panelWs = null;
   }
-  taskAuthed = false;
+  panelAuthed = false;
 }
 
 function openTasks() {
   menuOpen.value = false;
   tasksOpen.value = true;
-  startTaskSync();
+  startPanelSync();
 }
 function closeTasks() {
   tasksOpen.value = false;
-  stopTaskSync();
+  stopPanelSync();
 }
 
 onMounted(() => {
@@ -614,7 +708,7 @@ onBeforeUnmount(() => {
     cancelAnimationFrame(magnetRaf);
     magnetRaf = null;
   }
-  stopTaskSync();
+  stopPanelSync();
 });
 </script>
 
@@ -651,7 +745,7 @@ onBeforeUnmount(() => {
   box-shadow:
     0 6px 18px rgba(109, 94, 252, 0.42),
     inset 0 1px 1px rgba(255, 255, 255, 0.35);
-  color: #fff;
+  color: var(--khy-white);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -754,7 +848,7 @@ onBeforeUnmount(() => {
   height: 22px;
   border-radius: 50%;
   border: 2.5px solid rgba(255, 255, 255, 0.35);
-  border-top-color: #fff;
+  border-top-color: var(--khy-white);
   animation: khy-fb-spin 0.8s linear infinite;
   pointer-events: none;
 }
@@ -993,7 +1087,7 @@ onBeforeUnmount(() => {
   animation: khy-fb-pulse 1s ease-in-out infinite;
 }
 .khy-fb__live-dot.is-error {
-  background: #ef4444;
+  background: var(--khy-danger);
 }
 .khy-fb__live-dot.is-disabled {
   background: #8b93a3;
@@ -1059,6 +1153,34 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 2px;
 }
+.khy-fb__task-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  background: var(--el-fill-color, rgba(255, 255, 255, 0.04));
+}
+.khy-fb__task-progress-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--el-text-color-secondary, #9aa2b1);
+  white-space: nowrap;
+}
+.khy-fb__task-progress-bar {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--el-border-color, rgba(255, 255, 255, 0.1));
+  overflow: hidden;
+}
+.khy-fb__task-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #6d5efc, #22c55e);
+  transition: width 0.3s ease;
+}
 .khy-fb__task {
   display: flex;
   align-items: flex-start;
@@ -1085,7 +1207,7 @@ onBeforeUnmount(() => {
   color: #a78bfa;
 }
 .khy-fb__task.is-error .khy-fb__task-ico {
-  color: #ef4444;
+  color: var(--khy-danger);
 }
 .khy-fb__task-body {
   display: flex;
@@ -1116,6 +1238,102 @@ onBeforeUnmount(() => {
   border-radius: 6px;
   color: var(--el-text-color-secondary, #8b93a3);
   background: var(--el-fill-color-light, rgba(255, 255, 255, 0.06));
+}
+
+.khy-fb__mcp {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--el-border-color-lighter, rgba(255, 255, 255, 0.08));
+}
+.khy-fb__mcp-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px 8px;
+}
+.khy-fb__mcp-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--el-text-color-primary, #e7e9ee);
+}
+.khy-fb__mcp-count {
+  margin-left: auto;
+  min-width: 20px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  color: #a5f3fc;
+  background: rgba(34, 211, 238, 0.18);
+}
+.khy-fb__mcp-hint {
+  padding: 10px 8px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--el-text-color-secondary, #8b93a3);
+}
+.khy-fb__mcp-hint.is-error {
+  color: #f87171;
+  cursor: pointer;
+}
+.khy-fb__mcp-hint.is-error:hover {
+  text-decoration: underline;
+}
+.khy-fb__mcp-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 2px;
+  overflow-y: auto;
+  max-height: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.khy-fb__mcp-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  transition: background 0.14s ease;
+}
+.khy-fb__mcp-item:hover {
+  background: var(--el-fill-color, rgba(255, 255, 255, 0.06));
+}
+.khy-fb__mcp-status {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  background: #8b93a3;
+}
+.khy-fb__mcp-status.is-connected {
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.7);
+}
+.khy-fb__mcp-status.is-connecting,
+.khy-fb__mcp-status.is-pending {
+  background: #eab308;
+}
+.khy-fb__mcp-status.is-failed {
+  background: var(--khy-danger);
+}
+.khy-fb__mcp-status.is-disabled {
+  background: #6b7280;
+}
+.khy-fb__mcp-name {
+  font-size: 12px;
+  color: var(--el-text-color-primary, #e7e9ee);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.khy-fb__mcp-server {
+  font-size: 10.5px;
+  color: var(--el-text-color-secondary, #8b93a3);
+  flex: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

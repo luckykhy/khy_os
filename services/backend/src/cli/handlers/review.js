@@ -568,9 +568,10 @@ async function handleReview(options = {}) {
     let openIssues = [];
 
     if (round === 1) {
-      // First round: full review
-      const issues = await withSpinner('AI 审查中', async () =>
-        runReviewRound(ai, diffData.diff, diffData.stats)
+      // First round: full review. withSpinner auto-updates elapsed time.
+      const issues = await withSpinner(
+        `AI 审查 ${diffData.stats?.files || '?'} 个文件`,
+        async () => runReviewRound(ai, diffData.diff, diffData.stats)
       );
 
       if (issues.length === 0) {
@@ -586,8 +587,9 @@ async function handleReview(options = {}) {
       openIssues = issues;
     } else {
       // Subsequent rounds: verify previous fixes + detect regressions
-      const verifyResult = await withSpinner('AI 验证修复', async () =>
-        runVerifyRound(ai, previousFixed, diffData.diff)
+      const verifyResult = await withSpinner(
+        `AI 验证 ${previousFixed.length} 个修复`,
+        async () => runVerifyRound(ai, previousFixed, diffData.diff)
       );
 
       // Mark verified issues

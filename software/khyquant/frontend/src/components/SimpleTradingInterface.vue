@@ -1006,7 +1006,7 @@
 
           >
 
-            <el-icon style="font-size: 36px; color: #409eff"><TrendCharts /></el-icon>
+            <el-icon style="font-size: 36px; color: var(--khy-primary)"><TrendCharts /></el-icon>
 
             <div style="font-size: 12px; margin-top: 4px">拖拽或点击上传</div>
 
@@ -1060,7 +1060,7 @@
 
       </div>
 
-      <div v-if="folderUploadProgress" style="margin-top: 8px; color: #409eff; font-size: 12px;">
+      <div v-if="folderUploadProgress" style="margin-top: 8px; color: var(--khy-primary); font-size: 12px;">
 
         {{ folderUploadProgress }}
 

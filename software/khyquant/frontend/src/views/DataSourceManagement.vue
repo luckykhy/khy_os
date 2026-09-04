@@ -184,7 +184,7 @@ const testAData = async () => {
     const responseTime = Date.now() - startTime
     
     addLog(`收到响应，耗时 ${responseTime}ms`, 'info')
-    console.log('AData测试响应:', response)
+    if (import.meta.env.DEV) { console.log('AData测试响应:', response) }
     
     if (response.success) {
       // 使用返回的samples数组
@@ -362,7 +362,7 @@ const testAData = async () => {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #999;
+  background: var(--khy-gray-400);
   animation: breathe-classic 2s ease-in-out infinite;
 }
 

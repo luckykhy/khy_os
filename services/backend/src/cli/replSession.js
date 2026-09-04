@@ -708,8 +708,23 @@ async function startRepl(options = {}) {
       } catch {
         /* self-heal is optional; never blocks the fallback */
       }
+      // 2b) Runtime ReferenceError auto-repair: if the crash is a missing useState
+      //     declaration (setter used without `const [x, setX]`), inject it.
+      let runtimeHealed = false;
+      try {
+        const tuiSelfHeal = require('../services/tuiSelfHeal');
+        const rh = tuiSelfHeal.tryHealTuiError(err);
+        if (rh.healed) {
+          runtimeHealed = true;
+          process.stderr.write(
+            `  TUI 自愈(runtime): ${rh.detail}\n`
+          );
+        }
+      } catch {
+        /* optional, never blocks fallback */
+      }
       // 3) Retry once only when the heal actually changed files on disk.
-      if (healedCount > 0) {
+      if (healedCount > 0 || runtimeHealed) {
         try {
           process.stderr.write(
             `  TUI 自愈: 已修复 ${healedCount} 个文件，重试 Ink TUI (1/1)...\n`
@@ -1072,14 +1087,14 @@ async function startRepl(options = {}) {
   // fire() calls inserted next to their assignments; never replaces them.
   let _replFsm = null;
   try {
-    _replFsm = require('../services/stateMachine/replPhases').createReplFsm({ name: 'repl' });
+    _replFsm = require('../services/domain/state/stateMachine/replPhases.js').createReplFsm({ name: 'repl' });
   } catch {
     /* fsm is optional */
   }
   _replFsmInstance = _replFsm;
   // Optional stderr transition logger (KHY_STATE_DEBUG=1 only); fail-soft.
   try {
-    require('../services/stateMachine/debugLog').attachDebugLog(_replFsm, 'repl');
+    require('../services/domain/state/stateMachine/debugLog.js').attachDebugLog(_replFsm, 'repl');
   } catch {
     /* debug log optional */
   }
@@ -1249,7 +1264,7 @@ async function startRepl(options = {}) {
           // AI 下一轮:btw 注记。
           try {
             if (adv.aiNote) {
-              require('../services/conversation/btwNoteQueue').enqueue(adv.aiNote);
+              require('../services/conversation').btwNoteQueue.enqueue(adv.aiNote);
             }
           } catch {
             /* best-effort */
@@ -3414,8 +3429,8 @@ async function startRepl(options = {}) {
   // /btw hint queue — non-interrupting hints queued while AI is working.
   // 收敛到进程级共享 store(conversation/btwNoteQueue),让 router `/btw` 与 ink TUI 看见同一队列;
   // 纯文本逻辑(规范化 / 并入下一回合的拼接格式)归纯叶子 conversation/btwNote(单一真源)。
-  const _btwQueue = require('../services/conversation/btwNoteQueue');
-  const _btwNote = require('../services/conversation/btwNote');
+  const _btwQueue = require('../services/conversation').btwNoteQueue;
+  const _btwNote = require('../services/conversation').btwNote;
   // Queued user inputs submitted while AI is busy.
   const _queuedInputs = [];
   // Steer 队列 — 方向修正消息，注入到当前工具循环的下一轮迭代
@@ -3766,7 +3781,7 @@ async function startRepl(options = {}) {
       const memdir = require('../memdir/memdir');
       let enrich = null;
       try {
-        enrich = require('../services/memoryEngine/memoryRecallTokens');
+        enrich = require('../services/domain/memory/memoryEngine/memoryRecallTokens.js');
       } catch {
         /* 富化不可用则退回裸 token */
       }
@@ -4504,7 +4519,7 @@ async function startRepl(options = {}) {
         const imageService = require('../services/imageService');
         if (imageService.isClipboardImageAvailable()) {
           const renderer = require('./aiRenderer');
-          console.log(c.cyan('  ℹ 检测到剪贴板中有图片数据'));
+          console.log(c.cyan('  i 检测到剪贴板中有图片数据'));
           console.log(c.dim('    输入分析提示后回车，或直接回车使用默认提示'));
           console.log(c.dim('    示例: 分析这张图片 / describe this image'));
           rl.setPrompt(c.cyan('  图片提示❯ '));
@@ -5532,7 +5547,7 @@ async function startRepl(options = {}) {
                   let _opts = { mode: 'auto' };
                   try {
                     _opts = require('./compactInstructions').buildCompactOptions({}, process.env);
-                  } catch (_) {}
+                  } catch (_) { /* 压缩选项构建失败时使用默认值 */ }
                   const _res = ai().compactConversation ? ai().compactConversation(_opts) : null;
                   if (!_res || _res.success === false) {
                     printError('会话压缩失败');
@@ -5542,7 +5557,7 @@ async function startRepl(options = {}) {
                     let _line = `会话已压缩：${_res.previousCount} -> ${_res.nextCount}`;
                     try {
                       _line = _crAlign.buildCompactSuccessLine(_res, process.env);
-                    } catch (_) {}
+                    } catch (_) { /* 成功消息构建失败时使用默认消息 */ }
                     printSuccess(_line);
                   }
                 } catch (e) {
@@ -5573,7 +5588,7 @@ async function startRepl(options = {}) {
                 const hud = require('./hudRenderer');
                 const state = hud.getState();
                 // 占用率/余量/健康分级收敛到纯叶子 SSOT(与 CtxInspectTool / router 同源,不再自写 round 公式)。
-                const { computeContextStats } = require('../services/context/ctxWindowStats');
+                const { computeContextStats } = require('../services/domain/session/context/ctxWindowStats.js');
                 const stats = computeContextStats(
                   {
                     used: state.contextWindow.used,
@@ -5622,7 +5637,7 @@ async function startRepl(options = {}) {
                   const {
                     analyzeContextBreakdown,
                     renderContextBreakdownLines,
-                  } = require('../services/context/contextBreakdown');
+                  } = require('../services/domain/session/context/contextBreakdown.js');
                   const { estimateTokens } = require('../services/textHeuristics');
                   const _sections = [];
                   try {
@@ -5654,12 +5669,12 @@ async function startRepl(options = {}) {
                       const {
                         analyzeContextSuggestions,
                         renderContextSuggestionLines,
-                      } = require('../services/context/contextSuggestions');
+                      } = require('../services/domain/session/context/contextSuggestions.js');
                       let _tct = null;
                       try {
                         const {
                           analyzeMessageBreakdown,
-                        } = require('../services/context/messageBreakdown');
+                        } = require('../services/domain/session/context/messageBreakdown.js');
                         const _mb = analyzeMessageBreakdown(
                           {
                             messages: ai().getConversation ? ai().getConversation() : [],
@@ -6050,7 +6065,7 @@ async function startRepl(options = {}) {
                   let _sid = null;
                   try {
                     _sid =
-                      require('../services/session/sessionForestService').getCurrentSessionId();
+                      require('../services/domain/session/session/sessionForestService.js').getCurrentSessionId();
                   } catch {
                     /* best-effort */
                   }
@@ -6097,7 +6112,7 @@ async function startRepl(options = {}) {
             } else if (selected.flag === 'checkpoint') {
               try {
                 const cwd = process.env.KHYQUANT_CWD || process.cwd();
-                const ckptSvc = require('../services/workspace/checkpointService');
+                const ckptSvc = require('../services/domain/workspace/workspace/checkpointService.js');
                 const ckResult = ckptSvc.saveCheckpoint(cwd, {
                   message: '手动检查点',
                   mode: 'auto',
@@ -6111,7 +6126,7 @@ async function startRepl(options = {}) {
             } else if (selected.flag === 'rollback') {
               try {
                 const cwd = process.env.KHYQUANT_CWD || process.cwd();
-                const ckptSvc = require('../services/workspace/checkpointService');
+                const ckptSvc = require('../services/domain/workspace/workspace/checkpointService.js');
                 const ckList = ckptSvc.listCheckpoints(cwd);
                 if (!ckList || ckList.length === 0) {
                   printWarn(
@@ -6576,7 +6591,7 @@ async function startRepl(options = {}) {
                 { args: _instr ? [_instr] : [] },
                 process.env
               );
-            } catch (_) {}
+            } catch (_) { /* 压缩选项构建失败时使用默认值 */ }
             const _res = ai().compactConversation ? ai().compactConversation(_opts) : null;
             if (!_res || _res.success === false) {
               printError('会话压缩失败');
@@ -6586,7 +6601,7 @@ async function startRepl(options = {}) {
               let _line = `会话已压缩：${_res.previousCount} -> ${_res.nextCount}`;
               try {
                 _line = _crAlign.buildCompactSuccessLine(_res, process.env);
-              } catch (_) {}
+              } catch (_) { /* 成功消息构建失败时使用默认消息 */ }
               printSuccess(_line);
             }
           } catch (e) {
@@ -6626,7 +6641,7 @@ async function startRepl(options = {}) {
         // 门控 KHY_CONTEXT_PANEL_DETAIL 关 → _stats=null → 逐字节回退刀102前两行。
         let _stats = null;
         try {
-          const { computeContextStats } = require('../services/context/ctxWindowStats');
+          const { computeContextStats } = require('../services/domain/session/context/ctxWindowStats.js');
           const { contextPanelDetailEnabled } = require('./contextPanelDetail');
           if (contextPanelDetailEnabled(process.env)) {
             _stats = computeContextStats(
@@ -6687,7 +6702,7 @@ async function startRepl(options = {}) {
           const {
             analyzeContextBreakdown,
             renderContextBreakdownLines,
-          } = require('../services/context/contextBreakdown');
+          } = require('../services/domain/session/context/contextBreakdown.js');
           const { estimateTokens } = require('../services/textHeuristics');
           const _sections = [];
           try {
@@ -6719,10 +6734,10 @@ async function startRepl(options = {}) {
               const {
                 analyzeContextSuggestions,
                 renderContextSuggestionLines,
-              } = require('../services/context/contextSuggestions');
+              } = require('../services/domain/session/context/contextSuggestions.js');
               let _tct = null;
               try {
-                const { analyzeMessageBreakdown } = require('../services/context/messageBreakdown');
+                const { analyzeMessageBreakdown } = require('../services/domain/session/context/messageBreakdown.js');
                 const _mb = analyzeMessageBreakdown(
                   { messages: ai().getConversation ? ai().getConversation() : [], estimateTokens },
                   process.env
@@ -9731,7 +9746,7 @@ async function startRepl(options = {}) {
             let _turnCheckpointId;
             try {
               const _ckCwd = process.env.KHYQUANT_CWD || process.cwd();
-              const _ckSvc = require('../services/workspace/checkpointService');
+              const _ckSvc = require('../services/domain/workspace/workspace/checkpointService.js');
               if (!_lastCheckpointAt || Date.now() - _lastCheckpointAt > 30000) {
                 const _ck = _ckSvc.saveCheckpoint(_ckCwd, {
                   message: 'auto: AI 对话前',
@@ -11292,7 +11307,7 @@ async function startRepl(options = {}) {
                   if (String(e.KHY_PLAN_ANNOUNCE || '').trim() === '0') {
                     return;
                   }
-                  const voice = require('../toolPrefaceVoice');
+                  const voice = require('toolPrefaceVoice.js');
                   const text =
                     typeof voice.composePlanAnnouncement === 'function'
                       ? voice.composePlanAnnouncement(plan)
@@ -11311,7 +11326,7 @@ async function startRepl(options = {}) {
                   if (!finding) {
                     return;
                   }
-                  const kf = require('../keyFindings');
+                  const kf = require('keyFindings.js');
                   const text =
                     finding.kind === 'test'
                       ? kf.composeFindingReport(finding)
@@ -11455,7 +11470,7 @@ async function startRepl(options = {}) {
                   // 一串同类工具只在首个开口。叶子不可用 / 门控关 → suppress 返 false 逐字节回退。
                   let _suppressPreface = false;
                   try {
-                    const _voiceMod = require('../toolPrefaceVoice');
+                    const _voiceMod = require('toolPrefaceVoice.js');
                     if (_voiceMod && typeof _voiceMod.suppressConsecutivePreface === 'function') {
                       _suppressPreface = _voiceMod.suppressConsecutivePreface(
                         toolName,
@@ -12628,7 +12643,7 @@ async function startRepl(options = {}) {
           // 提示就如实展示，并告知可说「继续」推进（单一真源 continuation 策略）。
           let _emptyLine = 'AI 未返回有效回复 — 请重试或检查连接';
           try {
-            const _cont = require('../services/query/continuation');
+            const _cont = require('../services/query').continuation;
             const _et = aiResult && aiResult.errorType;
             if (_et && _et !== 'unknown' && _et !== 'empty_reply') {
               _emptyLine = `AI 未返回内容（原因类型: ${_et}）`;

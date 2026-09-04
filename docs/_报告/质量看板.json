@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-03T00:26:03.704Z",
+  "generatedAt": "2026-09-04T09:03:47.225Z",
   "dimensions": {
     "D1": {
       "score": 3,
@@ -22,7 +22,7 @@
       ]
     },
     "D3": {
-      "score": 3,
+      "score": 1,
       "name": "MCP & Tooling",
       "evidence": [
         "6 ToolGuards",
@@ -42,7 +42,7 @@
       ]
     },
     "D5": {
-      "score": 3,
+      "score": 1,
       "name": "Governance & Quality",
       "evidence": [
         "quality dashboard",
@@ -71,8 +71,8 @@
     }
   },
   "exitCriteria": {
-    "allAtLeast2": true,
+    "allAtLeast2": false,
     "twoAt3": true,
-    "met": true
+    "met": false
   }
 }

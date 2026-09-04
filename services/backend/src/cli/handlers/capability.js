@@ -18,7 +18,7 @@
  */
 const chalk = require('chalk').default || require('chalk');
 const cap = require('../../services/capabilityRegistry');
-const nlConfig = require('../../services/config/nlConfigResolver');
+const nlConfig = require('../../services/domain/config/config/nlConfigResolver.js');
 const { printInfo, printError, printTable, printSuccess, printWarn } = require('../formatters');
 
 function _handleList() {

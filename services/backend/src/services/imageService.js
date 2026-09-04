@@ -552,7 +552,7 @@ function saveBase64ToTemp(base64OrDataUrl, mimeType = 'image/png') {
     fs.mkdirSync(tmpDir, { recursive: true });
     const tmpFile = path.join(
       tmpDir,
-      `img_${Date.now()}_${Math.random().toString(36).slice(2, 6)}${ext}`
+      `img_${Date.now()}_${crypto.randomBytes(4).toString('hex')}${ext}`
     );
     fs.writeFileSync(tmpFile, Buffer.from(base64, 'base64'));
     return tmpFile;

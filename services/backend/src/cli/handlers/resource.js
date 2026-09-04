@@ -1,6 +1,6 @@
 'use strict';
 
-const { createResourceManager } = require('../../services/resources/resourceManager');
+const { createResourceManager } = require('../../services/domain/data/resources/resourceManager.js');
 const { printSuccess, printError, printInfo, printWarn, printTable } = require('../formatters');
 
 function manager(options = {}) {
@@ -26,7 +26,7 @@ async function handleResource(subCommand, args = [], options = {}) {
       const targets = id ? [id] : resources.list().filter(row => row.policy === 'prefetch').map(row => row.id);
       if (!targets.length) { printInfo('没有匹配的预取资源。'); return; }
       const results = [];
-      const { createResourceTaskAdapter } = require('../../services/resources/resourceTask');
+      const { createResourceTaskAdapter } = require('../../services/domain/data/resources/resourceTask.js');
       const taskAdapter = createResourceTaskAdapter({ manager: resources });
       for (const target of targets) {
         const fetched = await taskAdapter.fetch(target);

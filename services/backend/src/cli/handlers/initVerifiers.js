@@ -17,7 +17,7 @@
  * 用法:`/init-verifiers`。门控 KHY_INIT_VERIFIERS 默认开;关 → 命令不接管(字节回退)。
  */
 
-const leaf = require('../../services/skills/verifierScaffoldPlan');
+const leaf = require('../../services/domain/skills/skills/verifierScaffoldPlan.js');
 const { printInfo } = require('../formatters');
 const { formatStatusMessage } = require('../statusMessageFormatter');
 

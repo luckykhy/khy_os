@@ -461,7 +461,7 @@ async function handleChatStreamHttp(req, res) {
         process.env.KHY_STRUCTURED_OUTPUT !== 'false'
       ) {
         try {
-          structured = require('./structuredResults/turnEnvelope').buildTurnEnvelope(result || {}, {
+          structured = require('./domain/structured/structuredResults/turnEnvelope').buildTurnEnvelope(result || {}, {
             summary: reply,
           });
         } catch {

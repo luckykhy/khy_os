@@ -48,7 +48,7 @@ const handleLogout = () => {
 }
 
 .admin-header {
-  background-color: #fff;
+  background-color: var(--khy-white);
   border-bottom: 1px solid #e4e7ed;
   padding: 0;
   box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);

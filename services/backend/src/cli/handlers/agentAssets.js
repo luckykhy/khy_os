@@ -23,9 +23,9 @@
  */
 const chalk = require('chalk').default || require('chalk');
 
-const M = require('../../services/agentAssets/assetModel');
-const registry = require('../../services/agentAssets/registry');
-const sync = require('../../services/agentAssets/sync');
+const M = require('../../services/domain/agents/agentAssets/assetModel.js');
+const registry = require('../commands/registry.js');
+const sync = require('../../services/domain/agents/agentAssets/sync.js');
 const { printInfo, printError, printTable, printSuccess, printWarn } = require('../formatters');
 
 /** khy-os 自己也是注册表里的一家,故 import/export 共用同一段搬运代码。 */

@@ -622,7 +622,7 @@ async function runOnce(options = {}) {
     options.forcePluginDoctor === true || _shouldRunPeriodic(runSeq, PLUGIN_DOCTOR_EVERY);
 
   const result = {
-    id: `sc_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+    id: `sc_${Date.now().toString(36)}_${crypto.randomBytes(4).toString('hex')}`,
     timestamp: new Date(startedAt).toISOString(),
     trigger,
     runSeq,

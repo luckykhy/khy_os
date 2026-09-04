@@ -29,6 +29,7 @@ export const viewLoaders = {
   '/usage': () => import('@/views/UsageLogs.vue'),
   '/pricing': () => import('@/views/Pricing.vue'),
   '/monitor': () => import('@/views/AIMonitor.vue'),
+  '/traffic': () => import('@/views/TrafficMonitor/index.vue'),
   '/settings': () => import('@/views/Settings.vue'),
   '/agents': () => import('@/views/AgentDashboard.vue'),
   '/chat': () => import('@/views/AIChat.vue'),

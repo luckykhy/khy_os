@@ -130,7 +130,7 @@ const getSourceClass = (source) => {
 // 获取真实股票数据（使用免费API）
 const fetchRealStockData = async () => {
   try {
-    console.log(`获取${props.symbol}的实时数据...`)
+    if (import.meta.env.DEV) { console.log(`获取${props.symbol}的实时数据...`) }
     
     const response = await fetch(`/api/stock/${props.symbol}`)
     const result = await response.json()
@@ -290,8 +290,8 @@ const initChart = async () => {
     width: chartContainer.value.clientWidth,
     height: props.height,
     layout: {
-      background: { type: ColorType.Solid, color: '#ffffff' },
-      textColor: '#333333',
+      background: { type: ColorType.Solid, color: 'var(--khy-white)' },
+      textColor: 'var(--khy-gray-700)',
     },
     grid: {
       vertLines: { color: '#f0f0f0' },
@@ -301,10 +301,10 @@ const initChart = async () => {
       mode: 1,
     },
     rightPriceScale: {
-      borderColor: '#cccccc',
+      borderColor: 'var(--khy-gray-200)',
     },
     timeScale: {
-      borderColor: '#cccccc',
+      borderColor: 'var(--khy-gray-200)',
       timeVisible: true,
       secondsVisible: false,
     },
@@ -321,11 +321,11 @@ const initChart = async () => {
 
   // 创建K线系列
   candlestickSeries.value = chart.value.addCandlestickSeries({
-    upColor: '#ef4444',
+    upColor: 'var(--khy-danger)',
     downColor: '#22c55e',
-    borderUpColor: '#ef4444',
+    borderUpColor: 'var(--khy-danger)',
     borderDownColor: '#22c55e',
-    wickUpColor: '#ef4444',
+    wickUpColor: 'var(--khy-danger)',
     wickDownColor: '#22c55e',
   })
 
@@ -347,7 +347,7 @@ const initChart = async () => {
   // 创建均线系列
   if (showMA.value) {
     maSeries.value = chart.value.addLineSeries({
-      color: '#3b82f6',
+      color: 'var(--khy-primary)',
       lineWidth: 2,
       priceLineVisible: false,
       lastValueVisible: false,
@@ -437,25 +437,25 @@ const updateChart = async () => {
 
 // 更新策略信号
 const updateStrategySignals = () => {
-  console.log('🔄 SimpleKLineChart: 开始更新策略信号')
-  console.log('   props.strategySignals:', props.strategySignals)
-  console.log('   chart.value:', !!chart.value)
-  console.log('   signalSeries.value:', !!signalSeries.value)
+  if (import.meta.env.DEV) { console.log('🔄 SimpleKLineChart: 开始更新策略信号') }
+  if (import.meta.env.DEV) { console.log('   props.strategySignals:', props.strategySignals) }
+  if (import.meta.env.DEV) { console.log('   chart.value:', !!chart.value) }
+  if (import.meta.env.DEV) { console.log('   signalSeries.value:', !!signalSeries.value) }
   
   if (!chart.value || !signalSeries.value) {
-    console.log('⚠️ SimpleKLineChart: 图表或信号系列未初始化')
+    if (import.meta.env.DEV) { console.log('⚠️ SimpleKLineChart: 图表或信号系列未初始化') }
     return
   }
 
   if (!props.strategySignals || props.strategySignals.length === 0) {
-    console.log('⚠️ SimpleKLineChart: 没有策略信号数据')
+    if (import.meta.env.DEV) { console.log('⚠️ SimpleKLineChart: 没有策略信号数据') }
     // 清除现有标记
     signalSeries.value.setMarkers([])
     return
   }
 
   try {
-    console.log('🔄 更新策略信号:', props.strategySignals.length, '个信号')
+    if (import.meta.env.DEV) { console.log('🔄 更新策略信号:', props.strategySignals.length, '个信号') }
     
     // 清除现有的标记
     clearStrategyMarkers()
@@ -463,7 +463,7 @@ const updateStrategySignals = () => {
     // 添加交易信号标记
     const markers = []
     props.strategySignals.forEach((signal, index) => {
-      console.log(`   处理信号 ${index + 1}:`, signal)
+      if (import.meta.env.DEV) { console.log(`   处理信号 ${index + 1}:`, signal) }
       
       // 🔑 关键修复：确保时间字段存在并格式正确
       let signalTime = signal.time || signal.date || signal.timestamp
@@ -537,34 +537,34 @@ const updateStrategySignals = () => {
       
       if (marker) {
         markers.push(marker)
-        console.log(`     添加标记:`, marker)
+        if (import.meta.env.DEV) { console.log(`     添加标记:`, marker) }
       } else {
         console.warn(`   ⚠️ 信号 ${index + 1} 类型未识别:`, signal.type)
       }
     })
     
-    console.log('📊 准备设置标记:', markers.length, '个')
+    if (import.meta.env.DEV) { console.log('📊 准备设置标记:', markers.length, '个') }
     
     if (markers.length > 0) {
       // 🔑 关键修复：确保在主线程中设置标记
       setTimeout(() => {
         try {
           signalSeries.value.setMarkers(markers)
-          console.log('✅ 策略信号标记已设置:', markers.length, '个')
+          if (import.meta.env.DEV) { console.log('✅ 策略信号标记已设置:', markers.length, '个') }
           
           // 强制刷新图表
           chart.value.timeScale().fitContent()
           
-          console.log('📋 标记详情:')
+          if (import.meta.env.DEV) { console.log('📋 标记详情:') }
           markers.slice(0, 5).forEach((marker, idx) => {
-            console.log(`   ${idx + 1}. ${marker.text} @ ${marker.time} (${marker.color})`)
+            if (import.meta.env.DEV) { console.log(`   ${idx + 1}. ${marker.text} @ ${marker.time} (${marker.color})`) }
           })
         } catch (setError) {
           console.error('❌ 设置标记失败:', setError)
         }
       }, 100)
     } else {
-      console.log('⚠️ 没有有效的交易信号标记')
+      if (import.meta.env.DEV) { console.log('⚠️ 没有有效的交易信号标记') }
       signalSeries.value.setMarkers([])
     }
     
@@ -595,17 +595,17 @@ const clearStrategyMarkers = () => {
 // 更新辅助数据（如MACD线、EMA线等）
 const updateAuxiliaryData = () => {
   if (!props.auxiliaryData || Object.keys(props.auxiliaryData).length === 0) {
-    console.log('⚠️ 没有辅助数据需要显示')
+    if (import.meta.env.DEV) { console.log('⚠️ 没有辅助数据需要显示') }
     return
   }
 
   try {
-    console.log('🔄 更新辅助数据:', Object.keys(props.auxiliaryData))
+    if (import.meta.env.DEV) { console.log('🔄 更新辅助数据:', Object.keys(props.auxiliaryData)) }
     
     // 处理MACD数据
     if (props.auxiliaryData.macd) {
       const macdData = props.auxiliaryData.macd
-      console.log('📊 处理MACD数据:', Object.keys(macdData))
+      if (import.meta.env.DEV) { console.log('📊 处理MACD数据:', Object.keys(macdData)) }
       
       // MACD主线
       if (macdData.macd && !auxiliarySeries.value.macdLine) {
@@ -625,7 +625,7 @@ const updateAuxiliaryData = () => {
         
         if (macdLineData.length > 0) {
           auxiliarySeries.value.macdLine.setData(macdLineData)
-          console.log('✅ MACD主线已添加:', macdLineData.length, '个数据点')
+          if (import.meta.env.DEV) { console.log('✅ MACD主线已添加:', macdLineData.length, '个数据点') }
         }
       }
       
@@ -647,7 +647,7 @@ const updateAuxiliaryData = () => {
         
         if (signalLineData.length > 0) {
           auxiliarySeries.value.signalLine.setData(signalLineData)
-          console.log('✅ MACD信号线已添加:', signalLineData.length, '个数据点')
+          if (import.meta.env.DEV) { console.log('✅ MACD信号线已添加:', signalLineData.length, '个数据点') }
         }
       }
       
@@ -674,7 +674,7 @@ const updateAuxiliaryData = () => {
         
         if (histogramData.length > 0) {
           auxiliarySeries.value.histogram.setData(histogramData)
-          console.log('✅ MACD柱状图已添加:', histogramData.length, '个数据点')
+          if (import.meta.env.DEV) { console.log('✅ MACD柱状图已添加:', histogramData.length, '个数据点') }
         }
       }
     }
@@ -682,7 +682,7 @@ const updateAuxiliaryData = () => {
     // 处理EMA数据
     if (props.auxiliaryData.ema) {
       const emaData = props.auxiliaryData.ema
-      console.log('📊 处理EMA数据:', Object.keys(emaData))
+      if (import.meta.env.DEV) { console.log('📊 处理EMA数据:', Object.keys(emaData)) }
       
       // EMA12线
       if (emaData.ema12 && !auxiliarySeries.value.ema12) {
@@ -701,7 +701,7 @@ const updateAuxiliaryData = () => {
         
         if (ema12Data.length > 0) {
           auxiliarySeries.value.ema12.setData(ema12Data)
-          console.log('✅ EMA12线已添加:', ema12Data.length, '个数据点')
+          if (import.meta.env.DEV) { console.log('✅ EMA12线已添加:', ema12Data.length, '个数据点') }
         }
       }
       
@@ -722,7 +722,7 @@ const updateAuxiliaryData = () => {
         
         if (ema26Data.length > 0) {
           auxiliarySeries.value.ema26.setData(ema26Data)
-          console.log('✅ EMA26线已添加:', ema26Data.length, '个数据点')
+          if (import.meta.env.DEV) { console.log('✅ EMA26线已添加:', ema26Data.length, '个数据点') }
         }
       }
     }
@@ -730,7 +730,7 @@ const updateAuxiliaryData = () => {
     // 处理移动平均线数据
     if (props.auxiliaryData.ma) {
       const maData = props.auxiliaryData.ma
-      console.log('📊 处理MA数据:', Object.keys(maData))
+      if (import.meta.env.DEV) { console.log('📊 处理MA数据:', Object.keys(maData)) }
       
       // MA5线
       if (maData.ma5 && !auxiliarySeries.value.ma5) {
@@ -749,14 +749,14 @@ const updateAuxiliaryData = () => {
         
         if (ma5Data.length > 0) {
           auxiliarySeries.value.ma5.setData(ma5Data)
-          console.log('✅ MA5线已添加:', ma5Data.length, '个数据点')
+          if (import.meta.env.DEV) { console.log('✅ MA5线已添加:', ma5Data.length, '个数据点') }
         }
       }
       
       // MA10线
       if (maData.ma10 && !auxiliarySeries.value.ma10) {
         auxiliarySeries.value.ma10 = chart.value.addLineSeries({
-          color: '#2196f3',
+          color: 'var(--khy-primary)',
           lineWidth: 1,
           priceLineVisible: false,
           lastValueVisible: true,
@@ -770,7 +770,7 @@ const updateAuxiliaryData = () => {
         
         if (ma10Data.length > 0) {
           auxiliarySeries.value.ma10.setData(ma10Data)
-          console.log('✅ MA10线已添加:', ma10Data.length, '个数据点')
+          if (import.meta.env.DEV) { console.log('✅ MA10线已添加:', ma10Data.length, '个数据点') }
         }
       }
     }
@@ -778,7 +778,7 @@ const updateAuxiliaryData = () => {
     // 处理突破策略的上下轨线
     if (props.auxiliaryData.breakout) {
       const breakoutData = props.auxiliaryData.breakout
-      console.log('📊 处理突破数据:', Object.keys(breakoutData))
+      if (import.meta.env.DEV) { console.log('📊 处理突破数据:', Object.keys(breakoutData)) }
       
       // 上轨线
       if (breakoutData.upperLine && !auxiliarySeries.value.upperLine) {
@@ -797,7 +797,7 @@ const updateAuxiliaryData = () => {
         
         if (upperLineData.length > 0) {
           auxiliarySeries.value.upperLine.setData(upperLineData)
-          console.log('✅ 上轨线已添加:', upperLineData.length, '个数据点')
+          if (import.meta.env.DEV) { console.log('✅ 上轨线已添加:', upperLineData.length, '个数据点') }
         }
       }
       
@@ -818,7 +818,7 @@ const updateAuxiliaryData = () => {
         
         if (lowerLineData.length > 0) {
           auxiliarySeries.value.lowerLine.setData(lowerLineData)
-          console.log('✅ 下轨线已添加:', lowerLineData.length, '个数据点')
+          if (import.meta.env.DEV) { console.log('✅ 下轨线已添加:', lowerLineData.length, '个数据点') }
         }
       }
     }
@@ -843,12 +843,12 @@ const updateAuxiliaryData = () => {
         
         if (rsiData.length > 0) {
           auxiliarySeries.value.rsi.setData(rsiData)
-          console.log('✅ RSI指标已添加:', rsiData.length, '个数据点')
+          if (import.meta.env.DEV) { console.log('✅ RSI指标已添加:', rsiData.length, '个数据点') }
         }
       }
     }
     
-    console.log('✅ 辅助数据更新完成')
+    if (import.meta.env.DEV) { console.log('✅ 辅助数据更新完成') }
     
   } catch (error) {
     console.error('❌ 更新辅助数据失败:', error)
@@ -860,7 +860,7 @@ const updateAuxiliaryData = () => {
 const toggleMA = () => {
   if (showMA.value && !maSeries.value) {
     maSeries.value = chart.value.addLineSeries({
-      color: '#3b82f6',
+      color: 'var(--khy-primary)',
       lineWidth: 2,
       priceLineVisible: false,
       lastValueVisible: false,
@@ -936,23 +936,23 @@ watch(() => props.symbol, async () => {
 
 // 监听策略信号变化
 watch(() => props.strategySignals, (newSignals, oldSignals) => {
-  console.log('🔄 SimpleKLineChart: 策略信号变化监听触发')
-  console.log('   新信号:', newSignals)
-  console.log('   旧信号:', oldSignals)
-  console.log('   图表状态:', !!chart.value)
+  if (import.meta.env.DEV) { console.log('🔄 SimpleKLineChart: 策略信号变化监听触发') }
+  if (import.meta.env.DEV) { console.log('   新信号:', newSignals) }
+  if (import.meta.env.DEV) { console.log('   旧信号:', oldSignals) }
+  if (import.meta.env.DEV) { console.log('   图表状态:', !!chart.value) }
   
   if (chart.value) {
     updateStrategySignals()
   } else {
-    console.log('⚠️ 图表未初始化，延迟更新信号')
+    if (import.meta.env.DEV) { console.log('⚠️ 图表未初始化，延迟更新信号') }
   }
 }, { deep: true })
 
 // 监听辅助数据变化
 watch(() => props.auxiliaryData, (newData, oldData) => {
-  console.log('🔄 SimpleKLineChart: 辅助数据变化监听触发')
-  console.log('   新数据:', newData)
-  console.log('   旧数据:', oldData)
+  if (import.meta.env.DEV) { console.log('🔄 SimpleKLineChart: 辅助数据变化监听触发') }
+  if (import.meta.env.DEV) { console.log('   新数据:', newData) }
+  if (import.meta.env.DEV) { console.log('   旧数据:', oldData) }
   
   if (chart.value) {
     updateAuxiliaryData()
@@ -982,7 +982,7 @@ onUnmounted(() => {
 .simple-kline-chart {
   width: 100%;
   height: 100%;
-  background: #ffffff;
+  background: var(--khy-white);
   border-radius: 8px;
   border: 1px solid #e5e7eb;
   overflow: hidden;
@@ -1027,7 +1027,7 @@ onUnmounted(() => {
 }
 
 .current-price.price-up {
-  color: #ef4444;
+  color: var(--khy-danger);
 }
 
 .current-price.price-down {
@@ -1061,11 +1061,11 @@ onUnmounted(() => {
 }
 
 .source-cache {
-  color: #f59e0b;
+  color: var(--khy-warning);
 }
 
 .source-mock {
-  color: #ef4444;
+  color: var(--khy-danger);
 }
 
 .update-time {

@@ -18,7 +18,7 @@ const crypto = require('crypto');
 const path = require('path');
 
 const { UNKNOWN_MODEL_CONTEXT_WINDOW } = require('../constants/contextWindowDefaults');
-const memdir = require('../memdir');
+const memdir = require('../memdir/memdir');
 const skills = require('../skills');
 
 const { AgentContext } = require('./agentContext');
@@ -784,7 +784,7 @@ function createAgenticHarness(options = {}) {
       );
       if (verifyEnabled && !loopResult?.stopped && !loopResult?.errorType) {
         try {
-          const { verify } = require('./verificationAgent');
+          const { verify } = require('../agents/built-in/verificationAgent');
           const editToolPattern =
             /^(editFile|edit_file|edit|write_file|writeFile|scaffoldFiles|apply_patch)$/i;
           const modifiedFiles = (
@@ -1347,7 +1347,7 @@ async function _tryAutoDecompose(userMessage, ctx) {
     // no deps / single wave → exactly one wave = today's flat fan-out (byte-revert).
     let wavePlan;
     try {
-      const { planWaves } = require('./orchestrator/dependencyWaveScheduler');
+      const { planWaves } = require('./domain/state/orchestrator/dependencyWaveScheduler');
       wavePlan = planWaves(plan.subtasks, { env: process.env });
     } catch {
       wavePlan = null;
@@ -1417,7 +1417,7 @@ async function _tryAutoDecompose(userMessage, ctx) {
         partitionWaveBySurvivors,
         buildPredecessorContext,
         injectPredecessorContext,
-      } = require('./orchestrator/dependencyWaveScheduler');
+      } = require('./domain/state/orchestrator/dependencyWaveScheduler');
       const _FAULT_FALSY = new Set(['0', 'false', 'off', 'no']);
       const _faultStopEnabled = (() => {
         const v = process.env.KHY_DEP_WAVE_FAULT_STOP;

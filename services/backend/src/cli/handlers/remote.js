@@ -70,7 +70,7 @@ async function _connect(c, hostArg, deps) {
   }
   // Route through the unified facade so the durable session pointer is written
   // and the same allowlist / credential / workspace gates apply everywhere.
-  const svc = require('../../services/remotedev/remoteDevService');
+  const svc = require('../../services/domain/network/remotedev/remoteDevService.js');
   const options = (deps && deps.options) || {};
   const res = await svc.connect(hostArg, { workspace: options.workspace || options.ws });
   if (!res.ok) {
@@ -94,7 +94,7 @@ async function _exec(c, command) {
   try {
     const remote = _remote();
     // Need an active connection: use the current durable session pointer.
-    const pointer = require('../../services/remotedev/remoteDevSessionStore').readPointer();
+    const pointer = require('../../services/domain/network/remotedev/remoteDevSessionStore.js').readPointer();
     if (!pointer || !pointer.connectionId) {
       console.log(
         c.yellow('无活动会话。先运行 /remote connect <host> 或 /remotedev connect <host>。')
@@ -160,7 +160,7 @@ async function _disconnect(c) {
     _remote().sshConnectionManager.clearAll();
     // Also drop the durable dev-session pointer so status reflects reality.
     try {
-      require('../../services/remotedev/remoteDevSessionStore').clearPointer();
+      require('../../services/domain/network/remotedev/remoteDevSessionStore.js').clearPointer();
     } catch {
       /* best-effort */
     }

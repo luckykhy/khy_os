@@ -49,7 +49,7 @@ try {
 // 输出排版强调层(单一真源):什么该加粗 / 标题层级 / 是否字面放大。两道门控关闭时逐字节回退。
 // KHY_TYPESET_EMPHASIS(默认开):所有标题加粗 + 清晰层级。KHY_TYPESET_BIG_HEADINGS(默认关·实验性):
 // 用 DEC 双宽序列把 H1/H2 字形真的放大两倍宽(终端相关、ink 内 best-effort)。
-const _emphasis = require('../services/typeset/textEmphasisPolicy');
+const _emphasis = require('../services/typeset').textEmphasisPolicy;
 
 // ── Markdown accent colors ──────────────────────────────────────────────
 // Theme-driven via THEME (themes/*.json colors) with centralized fallbacks so

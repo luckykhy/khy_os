@@ -272,7 +272,7 @@ async function handleForge(subCommand, args = [], options = {}, deps = {}) {
     return true;
   }
 
-  const client = require('../../services/forge/forgeClient');
+  const client = require('../../services/domain/build/forge/forgeClient.js');
   const searchRepos = deps.searchRepos || client.searchRepos;
   const cloneRepo = deps.cloneRepo || client.cloneRepo;
   const pullRepo = deps.pullRepo || client.pullRepo;

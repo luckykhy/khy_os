@@ -886,9 +886,12 @@ let _bootActivePort = null;
                   category: 'A股',
                 },
               ];
-              for (const inst of defaultInstruments) {
-                await Instrument.findOrCreate({ where: { symbol: inst.symbol }, defaults: inst });
-              }
+              // B3: 并行插入种子仪器(Promise.all 替代 sequential await, ~200-500ms 节省)
+              await Promise.all(
+                defaultInstruments.map((inst) =>
+                  Instrument.findOrCreate({ where: { symbol: inst.symbol }, defaults: inst }),
+                ),
+              );
               const adminUser = await User.findOne({ where: { username: 'admin' } });
               if (adminUser) {
                 const defaultWatchlist = [
@@ -935,12 +938,15 @@ let _bootActivePort = null;
                     basePrice: 38,
                   },
                 ];
-                for (const item of defaultWatchlist) {
-                  await Watchlist.findOrCreate({
-                    where: { userId: adminUser.id, symbol: item.symbol },
-                    defaults: { userId: adminUser.id, ...item },
-                  });
-                }
+                // B3: 并行插入种子自选(Promise.all 替代 sequential await)
+                await Promise.all(
+                  defaultWatchlist.map((item) =>
+                    Watchlist.findOrCreate({
+                      where: { userId: adminUser.id, symbol: item.symbol },
+                      defaults: { userId: adminUser.id, ...item },
+                    }),
+                  ),
+                );
                 console.log('Default instruments and watchlist seeded');
               }
             } catch (e) {
@@ -1032,7 +1038,7 @@ let _bootActivePort = null;
               logger?.warn?.('CredentialWatcher failed', { error: e.message });
             }
             try {
-              const workflowRunWorker = require('./src/services/workflow/workflowRunWorker');
+              const { workflowRunWorker } = require('./src/services/workflow');
               workflowRunWorker.start();
             } catch (e) {
               logger?.warn?.('WorkflowRunWorker failed', { error: e.message });

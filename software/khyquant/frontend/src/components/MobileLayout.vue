@@ -317,8 +317,8 @@ const getNotificationIcon = (type) => {
 }
 
 const getNotificationColor = (type) => {
-  const map = { success: '#67c23a', warning: '#e6a23c', error: '#f56c6c', info: '#409eff' }
-  return map[type] || '#409eff'
+  const map = { success: 'var(--khy-success)', warning: '#e6a23c', error: 'var(--khy-danger)', info: 'var(--khy-primary)' }
+  return map[type] || 'var(--khy-primary)'
 }
 
 const formatTime = (date) => {
@@ -405,7 +405,7 @@ onUnmounted(() => {
 }
 
 .drawer-username {
-  color: #fff;
+  color: var(--khy-white);
   font-size: 15px;
   font-weight: 500;
 }
@@ -432,9 +432,9 @@ onUnmounted(() => {
 }
 
 .drawer-nav-item.active {
-  color: #409eff;
+  color: var(--khy-primary);
   background: rgba(64, 158, 255, 0.15);
-  border-right: 3px solid #409eff;
+  border-right: 3px solid var(--khy-primary);
 }
 
 .drawer-nav-item.logout {
@@ -516,7 +516,7 @@ onUnmounted(() => {
   display: block;
   width: 22px;
   height: 2px;
-  background: #fff;
+  background: var(--khy-white);
   border-radius: 1px;
 }
 

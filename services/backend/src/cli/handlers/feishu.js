@@ -37,11 +37,11 @@ function _runtime() {
 }
 
 function _msgStore() {
-  return require('../../services/messaging/msgConfigStore');
+  return require('../../services/domain/messaging/messaging/msgConfigStore.js');
 }
 
 function _msgCore() {
-  return require('../../services/messaging/msgChannelCore');
+  return require('../../services/domain/messaging/messaging/msgChannelCore.js');
 }
 
 function _feishu() {
@@ -123,7 +123,7 @@ async function _handleStatus() {
 
   // 门控与守护进程:两句必须都说,沉默会被误读成「已接通」。
   try {
-    if (!require('../../services/messaging/msgChannelCore').isEnabled(process.env)) {
+    if (!require('../../services/domain/messaging/messaging/msgChannelCore.js').isEnabled(process.env)) {
       printWarn('消息能力当前已关闭(KHY_MSG=off),两条路都不会收发。开启:khy msg on。');
     }
   } catch {
@@ -287,7 +287,7 @@ async function _handleTest(args) {
   const wcfg = _msgStore().getPlatform(CHANNEL);
   if (wcfg) {
     // 群机器人 webhook:无会话概念,直接走既有 msgSender(与 khy msg test feishu 同一条路)。
-    const sender = require('../../services/messaging/msgSender');
+    const sender = require('../../services/domain/messaging/messaging/msgSender.js');
     const res = await sender.sendText({ platform: CHANNEL, webhook: wcfg.webhook, secret: wcfg.secret, text });
     if (res && res.ok) {
       printSuccess('✅ 群机器人模式发送成功(已发到配置的群 webhook)。');

@@ -1769,9 +1769,9 @@ async function handleDependencyList(req, res) {
 
 async function handleDependencyInstall(req, res, depId) {
   try {
-    const resolver = require('./dependency/resolver');
+    const resolver = require('./domain/network/dependency/resolver');
     const inventory = require('./dependencyInventory');
-    const { runInstall } = require('./dependency/installRunner');
+    const { runInstall } = require('./domain/network/dependency/installRunner');
 
     const env = resolver.defaultEnv();
     const plan = resolver.buildInstallPlan(depId, env);

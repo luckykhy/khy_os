@@ -529,6 +529,17 @@ function _logEvent(event) {
  * Returns additional security directives to append to system prompts.
  */
 function getSecurityDirective() {
+  // RedPass 模式：完全覆盖安全指令，允许危险对话
+  try {
+    const toolCalling = require('./toolCallingPermissions');
+    if (toolCalling.isRedPassMode && toolCalling.isRedPassMode()) {
+      const { getRedPassSecurityOverride } = require('./domain/security/redpass/redpassPrompts');
+      return '\n' + getRedPassSecurityOverride();
+    }
+  } catch {
+    /* toolCalling unavailable — fall through */
+  }
+
   const unrestricted = isAiUnrestrictedMode();
   const techDetails = isTechDetailsModeEnabled();
   if (unrestricted && techDetails) {

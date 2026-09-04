@@ -16,7 +16,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
-const { hotCopySqlite, restoreSqliteInPlace } = require('./backup/sqliteHotCopy');
+const { hotCopySqlite, restoreSqliteInPlace } = require('./domain/backup/backup/sqliteHotCopy');
 
 // ── Constants ──
 

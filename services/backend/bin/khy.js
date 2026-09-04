@@ -48,16 +48,25 @@ const os = require('os');
 // bytecode (CJS + ESM) into Node's default on-disk cache so every launch after
 // the first skips recompilation. No-op with a warning-free fallback on older
 // Node versions; opt out via NODE_DISABLE_COMPILE_CACHE=1 (Node's own switch).
-try {
-  const nodeModule = require('module');
-  if (typeof nodeModule.enableCompileCache === 'function') nodeModule.enableCompileCache();
-} catch { /* compile cache is a best-effort accelerator */ }
+// Disabled: compile cache causes stale bytecode issues during development
+// try {
+//   const nodeModule = require('module');
+//   if (typeof nodeModule.enableCompileCache === 'function') nodeModule.enableCompileCache();
+// } catch { /* compile cache is a best-effort accelerator */ }
+
+// UX5: Node.js 冷启动加载指示器 — 在重型 require 之前输出一行提示,
+// 让用户知道 Node.js 正在加载而非卡死。REPL 启动后会被清掉。
+if (process.stdout.isTTY && !process.env.KHY_QUIET_STARTUP) {
+  process.stdout.write('  正在加载 khy 运行时...\r');
+}
 
 // ── Windows 派生黑框闪烁 + 启动慢:在任何模块 require('child_process') 并解构派生函数之前,
 // 给 child_process 打一层薄包装,在 win32 上默认注入 windowsHide:true(集中修复,覆盖全部 600+
 // 派生调用点)。非 win32 完全不打补丁;门控 KHY_WINDOWS_SPAWN_HIDE 关时逐字节回退。必须置于此处
-// (os require 之后、其余 require 之前)以抢在被捕获引用前生效。绝不抛。
 try { require('../src/bootstrap/windowsSpawnHardening').installWindowsSpawnHardening(); } catch { /* best effort */ }
+
+// ── 自愈服务:拦截 MODULE_NOT_FOUND,自动修复路径迁移后的引用
+try { require('../src/services/selfHeal').install(); } catch { /* best effort */ }
 
 // ── Fast startup: single env var to disable all optional background tasks ──
 // Default-on (DESIGN-PERF-001 v1 §阶段 B): bridge server / source-heal SHA-256
@@ -95,10 +104,10 @@ checkpoint('entry');
 // break startup. Mounted on `process` so diagnostics can read it even
 // though the bin/ and src/ module graphs are not otherwise connected.
 let _startupFsm = null;
-try { _startupFsm = require('../src/services/stateMachine/startupPhases').createStartupFsm({ name: 'startup' }); } catch { /* fsm is optional */ }
+try { _startupFsm = require('../src/services/domain/state/stateMachine/startupPhases.js').createStartupFsm({ name: 'startup' }); } catch { /* fsm is optional */ }
 try { process.__khyStartupFsm = _startupFsm; } catch { /* best effort */ }
 // Optional stderr transition logger (KHY_STATE_DEBUG=1 only); fail-soft.
-try { require('../src/services/stateMachine/debugLog').attachDebugLog(_startupFsm, 'startup'); } catch { /* debug log optional */ }
+try { require('../src/services/domain/state/stateMachine/debugLog.js').attachDebugLog(_startupFsm, 'startup'); } catch { /* debug log optional */ }
 
 function _isTruthy(value) {
   return value === true || ['1', 'true', 'yes', 'on'].includes(String(value || '').trim().toLowerCase());
@@ -1193,6 +1202,11 @@ async function startWithServer() {
 
   console.log('');
 
+  // UX5: 清除冷启动加载提示(REPL 即将接管终端)
+  if (process.stdout.isTTY && !process.env.KHY_QUIET_STARTUP) {
+    process.stdout.write('\x1B[2K\x1B[0G'); // 清行 + 光标移到行首
+  }
+
   // Enter REPL
   const { startRepl } = require('../src/cli/repl');
   await startRepl();
@@ -2054,9 +2068,9 @@ async function main() {
       if (_startupFsm) _startupFsm.fire('skip_to_running', { step: 'mcp_serve' }); // resident server, skips repl
       try {
         const { handleMcp } = require('../src/cli/handlers/mcp');
-        const code = handleMcp('serve', parsed.args || [], parsed.options || {});
+        const code = await handleMcp('serve', parsed.args || [], parsed.options || {});
         // 门控关 / HTTP 拒启动 → handleMcp 返回非 0,此时无常驻循环,正常退出。
-        if (code && code !== 0) process.exit(code);
+        if (code && code !== 0) process.exit(Number(code));
       } catch (err) {
         process.stderr.write(`khy mcp serve 启动失败:${err && err.message ? err.message : err}\n`);
         process.exit(1);

@@ -51,7 +51,7 @@ export function getInstrumentList(market) {
 export async function getMarketQuotes(limit = 20) {
   // 1. 优先尝试从AData获取数据
   try {
-    console.log('🔍 尝试从AData获取行情数据...')
+    if (import.meta.env.DEV) { console.log('🔍 尝试从AData获取行情数据...') }
     const adataResponse = await request({
       url: '/comprehensive-data/test-source/adata',
       method: 'get',
@@ -60,7 +60,7 @@ export async function getMarketQuotes(limit = 20) {
     })
     
     if (adataResponse && adataResponse.samples && adataResponse.samples.length > 0) {
-      console.log(`✅ 使用AData实时数据: ${adataResponse.samples.length} 条`)
+      if (import.meta.env.DEV) { console.log(`✅ 使用AData实时数据: ${adataResponse.samples.length} 条`) }
       return adataResponse.samples.map(item => ({
         ...item,
         dataSource: 'AData实时数据'
@@ -72,7 +72,7 @@ export async function getMarketQuotes(limit = 20) {
   
   // 2. 降级到通用市场行情API
   try {
-    console.log('🔍 尝试从通用API获取行情数据...')
+    if (import.meta.env.DEV) { console.log('🔍 尝试从通用API获取行情数据...') }
     const response = await request({
       url: '/comprehensive-data/market-quotes',
       method: 'get',
@@ -81,7 +81,7 @@ export async function getMarketQuotes(limit = 20) {
     })
     
     if (response && response.length > 0) {
-      console.log(`✅ 使用通用API数据: ${response.length} 条`)
+      if (import.meta.env.DEV) { console.log(`✅ 使用通用API数据: ${response.length} 条`) }
       return response.map(item => ({
         ...item,
         dataSource: '实时数据'

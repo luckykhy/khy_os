@@ -25,11 +25,11 @@
 const chalk = require('chalk').default || require('chalk');
 
 const sessionPersistence = require('../../services/sessionPersistence');
-const trajectoryGuideConfig = require('../../services/trajectoryGuide/config');
-const replayBundle = require('../../services/trajectoryReplay/replayBundle');
-const replayEngine = require('../../services/trajectoryReplay/replayEngine');
-const replayLedger = require('../../services/trajectoryReplay/replayLedger');
-const tierRegistry = require('../../services/trajectoryReplay/tierRegistry');
+const trajectoryGuideConfig = require('config.js');
+const replayBundle = require('../../services/domain/trajectory/trajectoryReplay/replayBundle.js');
+const replayEngine = require('../../services/domain/trajectory/trajectoryReplay/replayEngine.js');
+const replayLedger = require('../../services/domain/trajectory/trajectoryReplay/replayLedger.js');
+const tierRegistry = require('../../services/domain/trajectory/trajectoryReplay/tierRegistry.js');
 const { printError, printWarn, printInfo, printSuccess, printTable } = require('../formatters');
 
 /** 解析目标 sessionId：显式参数优先，否则取最近一条会话。 */
@@ -247,7 +247,7 @@ async function replayRun(arg, options = {}) {
   const aiEnabled = !!options.ai || trajectoryGuideConfig.isAiReplayEnabled();
   let repair;
   if (aiEnabled) {
-    const { createRepairHook } = require('../../services/trajectoryGuide/aiBridge');
+    const { createRepairHook } = require('../../services/domain/trajectory/trajectoryGuide/aiBridge.js');
     repair = createRepairHook({});
   }
 

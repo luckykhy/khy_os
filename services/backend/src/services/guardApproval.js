@@ -60,7 +60,7 @@ async function requestGuardApproval({ toolName, params, reason, source, onContro
   let ctrlResp = null;
   try {
     ctrlResp = await onControlRequest({
-      requestId: `guard_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      requestId: `guard_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`,
       request: {
         subtype: 'can_use_tool',
         tool_name: toolName,

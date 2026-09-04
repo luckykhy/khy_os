@@ -28,7 +28,7 @@ function _seedOnce() {
   }
   _loaded = true; // 无论成败只播种一次
   try {
-    const sessionId = require('../services/session/sessionForestService').getCurrentSessionId();
+    const sessionId = require('../services/domain/session/session/sessionForestService.js').getCurrentSessionId();
     if (!sessionId) {
       return;
     }

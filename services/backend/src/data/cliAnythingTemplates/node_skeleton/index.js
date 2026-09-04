@@ -33,7 +33,7 @@ session
   .command('undo')
   .option('--json', 'JSON output')
   .action((opts) => {
-    const { SessionManager } = require('./core/session');
+    const { SessionManager } = require('../../../cli/handlers/session.js');
     const mgr = SessionManager.getCurrent();
     const result = mgr.undo();
     if (opts.json) {
@@ -47,7 +47,7 @@ session
   .command('redo')
   .option('--json', 'JSON output')
   .action((opts) => {
-    const { SessionManager } = require('./core/session');
+    const { SessionManager } = require('../../../cli/handlers/session.js');
     const mgr = SessionManager.getCurrent();
     const result = mgr.redo();
     if (opts.json) {

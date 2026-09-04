@@ -193,13 +193,13 @@ async function handleAiContextStats(req, res) {
         ? body.isAutoCompactEnabled
         : undefined;
 
-    const { analyzeWebContextStats } = require('./context/webContextStats');
-    const { estimateTokens } = require('../services/textHeuristics');
+    const { analyzeWebContextStats } = require('./domain/session/context/webContextStats');
+    const { estimateTokens } = require('./textHeuristics');
 
     // System tools schema JSON = the tool-definition overhead the model is sent.
     let toolDefsJson;
     try {
-      const { getToolDefinitions } = require('../services/toolCalling');
+      const { getToolDefinitions } = require('./toolCalling');
       const defs = getToolDefinitions();
       if (Array.isArray(defs) && defs.length > 0) {
         toolDefsJson = JSON.stringify(defs);

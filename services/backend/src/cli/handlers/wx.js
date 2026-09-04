@@ -34,15 +34,15 @@ const {
 const { formatStatusMessage } = require('../statusMessageFormatter');
 
 function _core() {
-  return require('../../services/messaging/ilinkCore');
+  return require('../../services/domain/messaging/messaging/ilinkCore.js');
 }
 
 function _store() {
-  return require('../../services/messaging/ilinkAccountStore');
+  return require('../../services/domain/messaging/messaging/ilinkAccountStore.js');
 }
 
 function _login() {
-  return require('../../services/messaging/ilinkLogin');
+  return require('../../services/domain/messaging/messaging/ilinkLogin.js');
 }
 
 function _daemon() {
@@ -54,7 +54,7 @@ function _defaults() {
 }
 
 function _binding() {
-  return require('../../services/messaging/ilinkBindingStore');
+  return require('../../services/domain/messaging/messaging/ilinkBindingStore.js');
 }
 
 // 会话隔离策略的中文说明(键与 serviceDefaults.ILINK_SESSION_SCOPES 对齐,单一真源在那边)。

@@ -731,7 +731,7 @@ async function detectAsync(forceRefresh = false) {
 function buildWindsurfMessages(prompt, options = {}) {
   let _flattenWS;
   try {
-    _flattenWS = require('../../../services/contentBlockUtils').flattenContent;
+    _flattenWS = require('../../contentBlockUtils').flattenContent;
   } catch {
     _flattenWS = (c) => String(c || '');
   }
@@ -1158,7 +1158,7 @@ function callWindsurfByHttp(tokenData, prompt, model, options = {}) {
   // Pre-flatten content blocks (Windsurf doesn't support content arrays)
   let _flattenWS;
   try {
-    _flattenWS = require('../../../services/contentBlockUtils').flattenContent;
+    _flattenWS = require('../../contentBlockUtils').flattenContent;
   } catch {
     _flattenWS = (c) => String(c || '');
   }

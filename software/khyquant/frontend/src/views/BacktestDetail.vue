@@ -580,10 +580,10 @@ function initKlineChart() {
   })
 
   klineSeries = klineChart.addCandlestickSeries({
-    upColor: '#ef5350',
+    upColor: 'var(--khy-danger)',
     downColor: '#26a69a',
     borderVisible: false,
-    wickUpColor: '#ef5350',
+    wickUpColor: 'var(--khy-danger)',
     wickDownColor: '#26a69a',
   })
 
@@ -613,7 +613,7 @@ function addTradeMarkers() {
     .map(t => ({
       time: t.timestamp,
       position: t.type === 'buy' ? 'belowBar' : 'aboveBar',
-      color: t.type === 'buy' ? '#26a69a' : '#ef5350',
+      color: t.type === 'buy' ? '#26a69a' : 'var(--khy-danger)',
       shape: t.type === 'buy' ? 'arrowUp' : 'arrowDown',
       text: t.type === 'buy' ? 'B' : 'S',
     }))
@@ -671,7 +671,7 @@ function initEquityChart() {
 
   // Add baseline (initial capital)
   equityChart.addLineSeries({
-    color: '#555',
+    color: 'var(--khy-gray-600)',
     lineWidth: 1,
     lineStyle: 2, // dashed
     lastValueVisible: false,
@@ -944,8 +944,8 @@ function formatDateTime(dateStr) {
   border-left: 3px solid #dcdfe6;
 }
 .stat-item.buy { border-left-color: #26a69a; }
-.stat-item.sell { border-left-color: #ef5350; }
-.stat-item.win { border-left-color: #ef5350; }
+.stat-item.sell { border-left-color: var(--khy-danger); }
+.stat-item.win { border-left-color: var(--khy-danger); }
 .stat-item.lose { border-left-color: #26a69a; }
 .stat-number { font-size: 20px; font-weight: 700; color: #303133; font-family: 'Consolas', monospace; }
 .stat-label { font-size: 12px; color: #909399; margin-top: 4px; }
@@ -967,15 +967,15 @@ function formatDateTime(dateStr) {
 
 /* ── Utility classes ── */
 .symbol-code {
-  font-family: 'Consolas', monospace; font-weight: 600; color: #409eff;
+  font-family: 'Consolas', monospace; font-weight: 600; color: var(--khy-primary);
   background: #f0f9ff; padding: 2px 6px; border-radius: 4px; font-size: 12px;
 }
-.profit-positive { color: #ef5350; font-weight: 600; }
+.profit-positive { color: var(--khy-danger); font-weight: 600; }
 .profit-negative { color: #26a69a; font-weight: 600; }
 .profit-neutral { color: #909399; }
 .drawdown-text { color: #26a69a; }
-.win-rate { color: #409eff; font-weight: 500; }
-.sharpe-excellent { color: #ef5350; font-weight: 600; }
+.win-rate { color: var(--khy-primary); font-weight: 500; }
+.sharpe-excellent { color: var(--khy-danger); font-weight: 600; }
 .sharpe-good { color: #ed8936; }
 .sharpe-fair { color: #38b2ac; }
 .sharpe-poor { color: #26a69a; }

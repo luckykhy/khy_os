@@ -426,11 +426,11 @@ onMounted(() => {
 }
 
 .user-icon {
-  color: #409eff;
+  color: var(--khy-primary);
 }
 
 .strategy-icon {
-  color: #67c23a;
+  color: var(--khy-success);
 }
 
 .announcement-icon {
@@ -438,7 +438,7 @@ onMounted(() => {
 }
 
 .online-icon {
-  color: #f56c6c;
+  color: var(--khy-danger);
 }
 
 .content-grid {
@@ -495,7 +495,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #409eff;
+  color: var(--khy-primary);
 }
 
 .activity-content {

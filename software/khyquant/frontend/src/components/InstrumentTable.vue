@@ -184,7 +184,7 @@ const displayIndicators = computed(() => {
 
 // 方法
 const handleRowClick = (row) => {
-  console.log('点击行:', row)
+  if (import.meta.env.DEV) { console.log('点击行:', row) }
 }
 
 const viewData = async (instrument) => {

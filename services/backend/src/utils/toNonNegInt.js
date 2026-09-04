@@ -16,7 +16,7 @@
  *
  * 契约:纯函数、确定性、不 mutate。`v <= 0 → 0` 令 0 与负数皆归 0(计数下界)。
  *
- * 各消费方保留同名本地 `const NAME = require('.../toNonNegInt')`→ 调用点逐字节不变。
+ * 各消费方保留同名本地 `const NAME = require('toNonNegInt.js')`→ 调用点逐字节不变。
  */
 
 function toNonNegInt(n) {

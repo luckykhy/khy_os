@@ -156,12 +156,10 @@ async function handleServerStatus() {
       res.on('end', () => {
         try {
           const data = JSON.parse(body);
-          printSuccess(`服务运行中 (端口 ${port})`);
+          printSuccess(`服务运行中 :${port}`);
           printTable(
-            ['项目', '状态'],
+            ['指标', '值'],
             [
-              ['状态', chalk.green(data.status || 'ok')],
-              ['端口', String(port)],
               ['数据库', data.database || data.db || '-'],
               ['运行时间', data.uptime ? Math.floor(data.uptime) + 's' : '-'],
             ]
@@ -238,7 +236,7 @@ async function handleDbStatus() {
 
   if (mode === 'sqlite') {
     const { getSQLitePath } = require('../../config/database');
-    printInfo(`SQLite 路径: ${getSQLitePath()}`);
+    printTable(['存储', '路径'], [['SQLite', getSQLitePath()]]);
   }
 }
 

@@ -111,7 +111,7 @@ class StructuredOutputTool extends BaseTool {
     const {
       validateAgainstSchema,
       formatSchemaErrors,
-    } = require('../../services/output/jsonSchemaValidate');
+    } = require('../../services/domain/structured/output/jsonSchemaValidate.js');
     const { valid, errors } = validateAgainstSchema(data, schema);
     if (!valid) {
       const detail = formatSchemaErrors(errors);

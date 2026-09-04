@@ -50,7 +50,7 @@ function close() {
   gap: 16px;
   padding: 12px 20px;
   background: #303133;
-  color: #fff;
+  color: var(--khy-white);
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
   font-size: 14px;
@@ -87,8 +87,8 @@ function close() {
 }
 
 .pwa-btn--update {
-  background: #409eff;
-  color: #fff;
+  background: var(--khy-primary);
+  color: var(--khy-white);
 }
 
 /* Transition */

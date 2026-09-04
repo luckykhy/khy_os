@@ -28,7 +28,7 @@ const { execSync, spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const issueReport = require('../../services/issue/issueReport');
+const issueReport = require('../../services/domain/project/issue/issueReport.js');
 const { printInfo, printError, printWarn, printSuccess } = require('../formatters');
 
 const MAX_TRANSCRIPT_LINES = 20000; // OOM 帽,与 perfIssue 同

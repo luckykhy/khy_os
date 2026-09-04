@@ -55,7 +55,7 @@ async function handleFeatures(subCommand, args = [], options = {}) {
   const {
     buildCommandCatalog,
     commandCatalogEnabled,
-  } = require('../../services/commandCatalog/commandCatalog');
+  } = require('../../services/domain/catalog/commandCatalog/commandCatalog.js');
 
   if (!commandCatalogEnabled(env)) {
     printWarn('功能索引已被 KHY_COMMAND_CATALOG 禁用（当前为关闭状态）。');

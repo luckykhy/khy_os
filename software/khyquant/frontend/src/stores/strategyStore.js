@@ -66,7 +66,7 @@ export const useStrategyStore = defineStore('strategy', () => {
         // 触发更新事件
         emit('strategiesLoaded', strategies.value)
         
-        console.log('✅ 策略列表加载成功:', strategies.value.length, '个策略')
+        if (import.meta.env.DEV) { console.log('✅ 策略列表加载成功:', strategies.value.length, '个策略') }
         return response.data
       } else {
         throw new Error(response.message)
@@ -93,7 +93,7 @@ export const useStrategyStore = defineStore('strategy', () => {
         emit('strategyCreated', newStrategy)
         
         ElMessage.success('策略创建成功')
-        console.log('✅ 策略创建成功:', newStrategy.name)
+        if (import.meta.env.DEV) { console.log('✅ 策略创建成功:', newStrategy.name) }
         return newStrategy
       } else {
         throw new Error(response.message)
@@ -127,7 +127,7 @@ export const useStrategyStore = defineStore('strategy', () => {
         emit('strategyUpdated', updatedStrategy)
         
         ElMessage.success('策略更新成功')
-        console.log('✅ 策略更新成功:', updatedStrategy.name)
+        if (import.meta.env.DEV) { console.log('✅ 策略更新成功:', updatedStrategy.name) }
         return updatedStrategy
       } else {
         throw new Error(response.message)
@@ -163,7 +163,7 @@ export const useStrategyStore = defineStore('strategy', () => {
         emit('strategyDeleted', deletedStrategy)
         
         ElMessage.success('策略删除成功')
-        console.log('✅ 策略删除成功:', deletedStrategy?.name)
+        if (import.meta.env.DEV) { console.log('✅ 策略删除成功:', deletedStrategy?.name) }
         return true
       } else {
         throw new Error(response.message)
@@ -195,7 +195,7 @@ export const useStrategyStore = defineStore('strategy', () => {
       emit('strategyStarted', strategy)
       
       ElMessage.success(`策略 "${strategy.name}" 已启动`)
-      console.log('✅ 策略启动成功:', strategy.name)
+      if (import.meta.env.DEV) { console.log('✅ 策略启动成功:', strategy.name) }
       return strategy
     } catch (error) {
       console.error('❌ 启动策略失败:', error)
@@ -222,7 +222,7 @@ export const useStrategyStore = defineStore('strategy', () => {
       emit('strategyStopped', strategy)
       
       ElMessage.success(`策略 "${strategy.name}" 已停止`)
-      console.log('✅ 策略停止成功:', strategy.name)
+      if (import.meta.env.DEV) { console.log('✅ 策略停止成功:', strategy.name) }
       return strategy
     } catch (error) {
       console.error('❌ 停止策略失败:', error)
@@ -239,7 +239,7 @@ export const useStrategyStore = defineStore('strategy', () => {
         throw new Error('策略不存在')
       }
 
-      console.log('🔄 开始回测策略:', strategy.name, backtestParams)
+      if (import.meta.env.DEV) { console.log('🔄 开始回测策略:', strategy.name, backtestParams) }
       
       const response = await backtestStrategyApi(strategyId, backtestParams)
       
@@ -285,7 +285,7 @@ export const useStrategyStore = defineStore('strategy', () => {
         emit('backtestCompleted', { strategy, result: enhancedResult, params: backtestParams })
         
         ElMessage.success(`策略 "${strategy.name}" 回测完成`)
-        console.log('✅ 回测完成:', strategy.name, enhancedResult)
+        if (import.meta.env.DEV) { console.log('✅ 回测完成:', strategy.name, enhancedResult) }
         return enhancedResult
       } else {
         throw new Error(response.message)
@@ -312,7 +312,7 @@ export const useStrategyStore = defineStore('strategy', () => {
       
       localStorage.setItem('backtestResults', JSON.stringify(stored))
       invalidateBacktestCache()
-      console.log('Backtest result saved to localStorage:', result.id)
+      if (import.meta.env.DEV) { console.log('Backtest result saved to localStorage:', result.id) }
     } catch (error) {
       console.error('❌ 保存回测结果到 localStorage 失败:', error)
     }
@@ -322,7 +322,7 @@ export const useStrategyStore = defineStore('strategy', () => {
   function loadBacktestFromLocalStorage() {
     try {
       const stored = JSON.parse(localStorage.getItem('backtestResults') || '[]')
-      console.log('📂 从 localStorage 加载回测结果:', stored.length, '条')
+      if (import.meta.env.DEV) { console.log('📂 从 localStorage 加载回测结果:', stored.length, '条') }
       
       stored.forEach(result => {
         if (result.strategyId) {
@@ -372,7 +372,7 @@ export const useStrategyStore = defineStore('strategy', () => {
       localStorage.setItem('backtestResults', JSON.stringify(filtered))
       invalidateBacktestCache()
 
-      console.log('Backtest result deleted:', resultId)
+      if (import.meta.env.DEV) { console.log('Backtest result deleted:', resultId) }
       emit('backtestDeleted', resultId)
       return true
     } catch (error) {
@@ -389,7 +389,7 @@ export const useStrategyStore = defineStore('strategy', () => {
       localStorage.setItem('backtestResults', JSON.stringify(filtered))
       invalidateBacktestCache()
       
-      console.log('🗑️ 批量删除回测结果:', resultIds.length, '条')
+      if (import.meta.env.DEV) { console.log('🗑️ 批量删除回测结果:', resultIds.length, '条') }
       emit('backtestBatchDeleted', resultIds)
       return true
     } catch (error) {
@@ -405,7 +405,7 @@ export const useStrategyStore = defineStore('strategy', () => {
       backtestResults.clear()
       backtestHistory.clear()
       
-      console.log('🗑️ 所有回测结果已清空')
+      if (import.meta.env.DEV) { console.log('🗑️ 所有回测结果已清空') }
       emit('backtestCleared')
       return true
     } catch (error) {
@@ -417,7 +417,7 @@ export const useStrategyStore = defineStore('strategy', () => {
   // 选择策略
   function selectStrategy(strategy) {
     selectedStrategy.value = strategy
-    console.log('📌 选择策略:', strategy?.name)
+    if (import.meta.env.DEV) { console.log('📌 选择策略:', strategy?.name) }
     emit('strategySelected', strategy)
   }
 

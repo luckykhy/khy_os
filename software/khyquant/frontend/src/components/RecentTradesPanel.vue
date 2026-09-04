@@ -74,7 +74,7 @@ const loadTrades = async () => {
     
     if (response.success) {
       trades.value = response.data.trades || response.data.list || []
-      console.log('✅ 最近交易加载成功:', trades.value.length, '条')
+      if (import.meta.env.DEV) { console.log('✅ 最近交易加载成功:', trades.value.length, '条') }
     }
   } catch (error) {
     console.error('❌ 加载交易记录失败:', error)
@@ -200,7 +200,7 @@ defineExpose({
     linear-gradient(to bottom, rgba(42, 42, 42, 0.8), rgba(26, 26, 26, 0.8));
   border-bottom: 2px solid rgba(16, 185, 129, 0.3);
   font-weight: 600;
-  color: #10b981;
+  color: var(--khy-success);
   font-size: 14px;
   position: relative;
   z-index: 1;
@@ -239,7 +239,7 @@ defineExpose({
 
 :deep(.el-table th) {
   background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
+  color: var(--khy-success);
   font-weight: 600;
   border-bottom: 2px solid rgba(16, 185, 129, 0.3);
   font-size: 12px;
@@ -275,7 +275,7 @@ defineExpose({
 }
 
 :deep(.el-button--primary) {
-  background: linear-gradient(135deg, #10b981, #059669);
+  background: linear-gradient(135deg, var(--khy-success), #059669);
   border: none;
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
 }
@@ -296,13 +296,13 @@ defineExpose({
 :deep(.el-tag--success) {
   background: rgba(16, 185, 129, 0.2);
   border-color: rgba(16, 185, 129, 0.4);
-  color: #10b981;
+  color: var(--khy-success);
 }
 
 :deep(.el-tag--danger) {
   background: rgba(239, 68, 68, 0.2);
   border-color: rgba(239, 68, 68, 0.4);
-  color: #ef4444;
+  color: var(--khy-danger);
 }
 
 /* 数字列样式 */
@@ -320,6 +320,6 @@ defineExpose({
 }
 
 :deep(.el-loading-spinner .circular) {
-  stroke: #10b981;
+  stroke: var(--khy-success);
 }
 </style>

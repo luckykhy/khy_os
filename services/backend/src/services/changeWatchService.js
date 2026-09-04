@@ -290,7 +290,7 @@ function create(deps = {}) {
     deps.validate ||
     ((files, plan) => {
       // 复用自修复子系统的真实校验原语,绝不另写语法/守卫闸。
-      const primitives = require('./selfRepair/primitives');
+      const primitives = require('./domain/maintenance/selfRepair/primitives');
       const inst = primitives.create({ projectDir });
       return inst.validateFiles(files, plan);
     });

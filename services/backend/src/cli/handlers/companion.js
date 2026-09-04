@@ -42,7 +42,7 @@ function _usage() {
 }
 
 async function handleCompanion(subCommand, args, options = {}) {
-  const svc = require('../../services/agentFs/agentFsService');
+  const svc = require('../../services/domain/agents/agentFs/agentFsService.js');
 
   switch (subCommand) {
     case 'create': {

@@ -24,7 +24,7 @@ exports.dbHealthService = require('./services/dbHealthService');
 exports.i18n = require('./i18n');
 
 // ── MCP ──
-exports.mcpOAuthTokenStore = require('./services/mcp/oauthTokenStore');
+exports.mcpOAuthTokenStore = require('services/domain/messaging/mcp/oauthTokenStore.js');
 
 // ── Utils ──
 exports.logger = require('./utils/logger');

@@ -14,7 +14,7 @@
  * 契约:确定性、不 mutate、以 `String(s)` 强转(与被收敛三簇一致:null→'null'、undefined→'undefined')。
  *   正则为函数体内联字面量(与原体逐字节一致);`.replace` 对 /g 正则无 lastIndex 泄漏。
  *
- * 各消费方保留同名本地 `const _escapeRe = require('.../escapeRegExp')` → 调用点逐字节不变。
+ * 各消费方保留同名本地 `const _escapeRe = require('escapeRegExp.js')` → 调用点逐字节不变。
  */
 
 function escapeRegExp(s) {

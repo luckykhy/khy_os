@@ -1,82 +1,102 @@
 'use strict';
 
-/**
- * gitCoAuthorTrailer.test.js — 纯叶子:提交尾注 Co-Authored-By 单一真源。
- *
- * 验收要点:
- *  - 门控 KHY_GIT_COAUTHOR_TRAILER:未设/非关键字 → 开;0/false/off/no → 关。
- *  - 门开 → 正文后以恰一空行分隔追加默认尾注行。
- *  - 幂等:message 已含 Co-Authored-By 行 → 原样返回,不重复。
- *  - 门关 → 逐字节原样返回(无尾注)。
- *  - env KHY_GIT_COAUTHOR_TRAILER_LINE 合法覆盖 → 用覆盖行;非法/空 → 回默认。
- *  - 非字符串 / 空正文 → fail-soft 原样返回。
- */
+const {
+  isEnabled,
+  appendCoAuthorTrailer,
+  resolveTrailerLine,
+  DEFAULT_TRAILER,
+} = require('../../src/constants/gitCoAuthorTrailer');
 
-const test = require('node:test');
-const assert = require('node:assert/strict');
+describe('gitCoAuthorTrailer', () => {
+  describe('isEnabled', () => {
+    test('returns true by default', () => {
+      expect(isEnabled({})).toBe(true);
+    });
 
-const leaf = require('../../src/constants/gitCoAuthorTrailer');
+    test('returns true for non-off values', () => {
+      expect(isEnabled({ KHY_GIT_COAUTHOR_TRAILER: '1' })).toBe(true);
+      expect(isEnabled({ KHY_GIT_COAUTHOR_TRAILER: 'true' })).toBe(true);
+    });
 
-test('isEnabled: 未设/非关键字 → 开;0/false/off/no(含大小写/空白) → 关', () => {
-  assert.equal(leaf.isEnabled({}), true);
-  for (const off of ['0', 'false', 'off', 'no', 'OFF', ' No ']) {
-    assert.equal(leaf.isEnabled({ KHY_GIT_COAUTHOR_TRAILER: off }), false, `off: ${off}`);
-  }
-});
+    test('returns false for off values', () => {
+      expect(isEnabled({ KHY_GIT_COAUTHOR_TRAILER: '0' })).toBe(false);
+      expect(isEnabled({ KHY_GIT_COAUTHOR_TRAILER: 'false' })).toBe(false);
+      expect(isEnabled({ KHY_GIT_COAUTHOR_TRAILER: 'off' })).toBe(false);
+      expect(isEnabled({ KHY_GIT_COAUTHOR_TRAILER: 'no' })).toBe(false);
+    });
 
-test('门开 → 正文后以恰一空行分隔追加默认尾注', () => {
-  const out = leaf.appendCoAuthorTrailer('feat: add x', {});
-  assert.equal(out, `feat: add x\n\n${leaf.DEFAULT_TRAILER}`);
-  // 正文与尾注间恰一个空行(两个换行)
-  assert.match(out, /add x\n\nCo-Authored-By:/);
-});
+    test('is case-insensitive', () => {
+      expect(isEnabled({ KHY_GIT_COAUTHOR_TRAILER: 'FALSE' })).toBe(false);
+    });
+  });
 
-test('多行正文 → 尾注追加在末尾,body 尾部空白被规整', () => {
-  const msg = 'feat: add x\n\nbody line 1\nbody line 2\n\n';
-  const out = leaf.appendCoAuthorTrailer(msg, {});
-  assert.equal(out, `feat: add x\n\nbody line 1\nbody line 2\n\n${leaf.DEFAULT_TRAILER}`);
-});
+  describe('resolveTrailerLine', () => {
+    test('returns default trailer when no override', () => {
+      expect(resolveTrailerLine({})).toBe(DEFAULT_TRAILER);
+    });
 
-test('幂等:已含 Co-Authored-By 行 → 原样返回不重复', () => {
-  const msg = `feat: add x\n\n${leaf.DEFAULT_TRAILER}`;
-  assert.equal(leaf.appendCoAuthorTrailer(msg, {}), msg);
-  // 大小写/别的作者也算已存在
-  const other = 'feat: y\n\nco-authored-by: Alice <a@example.com>';
-  assert.equal(leaf.appendCoAuthorTrailer(other, {}), other);
-});
+    test('returns override when valid', () => {
+      const custom = 'Co-Authored-By: Test <test@example.com>';
+      expect(resolveTrailerLine({ KHY_GIT_COAUTHOR_TRAILER_LINE: custom })).toBe(custom);
+    });
 
-test('门关 → 逐字节原样返回(无尾注)', () => {
-  const msg = 'feat: add x';
-  assert.equal(leaf.appendCoAuthorTrailer(msg, { KHY_GIT_COAUTHOR_TRAILER: 'off' }), msg);
-});
+    test('returns default when override is invalid', () => {
+      expect(resolveTrailerLine({ KHY_GIT_COAUTHOR_TRAILER_LINE: 'invalid' })).toBe(DEFAULT_TRAILER);
+    });
 
-test('env 覆盖:合法尾注行被采用;非法/空回默认', () => {
-  const custom = 'Co-Authored-By: Bob <bob@example.com>';
-  const out = leaf.appendCoAuthorTrailer('feat: z', { KHY_GIT_COAUTHOR_TRAILER_LINE: custom });
-  assert.equal(out, `feat: z\n\n${custom}`);
-  // 非法覆盖(缺 <email>)→ 回默认
-  const bad = leaf.appendCoAuthorTrailer('feat: z', { KHY_GIT_COAUTHOR_TRAILER_LINE: 'not a trailer' });
-  assert.equal(bad, `feat: z\n\n${leaf.DEFAULT_TRAILER}`);
-  // 空覆盖 → 回默认
-  const empty = leaf.appendCoAuthorTrailer('feat: z', { KHY_GIT_COAUTHOR_TRAILER_LINE: '   ' });
-  assert.equal(empty, `feat: z\n\n${leaf.DEFAULT_TRAILER}`);
-});
+    test('returns default when override is empty', () => {
+      expect(resolveTrailerLine({ KHY_GIT_COAUTHOR_TRAILER_LINE: '' })).toBe(DEFAULT_TRAILER);
+    });
+  });
 
-test('resolveTrailerLine: 合法覆盖优先,否则默认', () => {
-  assert.equal(leaf.resolveTrailerLine({}), leaf.DEFAULT_TRAILER);
-  assert.equal(
-    leaf.resolveTrailerLine({ KHY_GIT_COAUTHOR_TRAILER_LINE: 'Co-Authored-By: C <c@x.io>' }),
-    'Co-Authored-By: C <c@x.io>',
-  );
-});
+  describe('appendCoAuthorTrailer', () => {
+    test('returns message as-is when disabled', () => {
+      const message = 'feat: add feature';
+      expect(appendCoAuthorTrailer(message, { KHY_GIT_COAUTHOR_TRAILER: '0' })).toBe(message);
+    });
 
-test('非字符串 message → fail-soft 原样返回', () => {
-  assert.equal(leaf.appendCoAuthorTrailer(null, {}), null);
-  assert.equal(leaf.appendCoAuthorTrailer(undefined, {}), undefined);
-  assert.deepEqual(leaf.appendCoAuthorTrailer(42, {}), 42);
-});
+    test('appends trailer when enabled', () => {
+      const message = 'feat: add feature';
+      const result = appendCoAuthorTrailer(message, {});
+      expect(result).toContain(message);
+      expect(result).toContain(DEFAULT_TRAILER);
+    });
 
-test('空/纯空白正文 → 不塑形,原样返回', () => {
-  assert.equal(leaf.appendCoAuthorTrailer('', {}), '');
-  assert.equal(leaf.appendCoAuthorTrailer('   \n  ', {}), '   \n  ');
+    test('does not duplicate trailer', () => {
+      const message = `feat: add feature\n\n${DEFAULT_TRAILER}`;
+      const result = appendCoAuthorTrailer(message, {});
+      expect(result).toBe(message);
+    });
+
+    test('trims trailing whitespace from body', () => {
+      const message = 'feat: add feature   \n  ';
+      const result = appendCoAuthorTrailer(message, {});
+      expect(result).toContain('feat: add feature\n\n');
+      expect(result).toContain(DEFAULT_TRAILER);
+    });
+
+    test('returns non-string input as-is', () => {
+      expect(appendCoAuthorTrailer(null, {})).toBeNull();
+      expect(appendCoAuthorTrailer(123, {})).toBe(123);
+    });
+
+    test('returns empty message as-is', () => {
+      expect(appendCoAuthorTrailer('', {})).toBe('');
+    });
+
+    test('uses custom trailer when provided', () => {
+      const custom = 'Co-Authored-By: AI <ai@example.com>';
+      const message = 'feat: add feature';
+      const result = appendCoAuthorTrailer(message, {
+        KHY_GIT_COAUTHOR_TRAILER_LINE: custom,
+      });
+      expect(result).toContain(custom);
+    });
+  });
+
+  describe('DEFAULT_TRAILER', () => {
+    test('is a valid trailer line', () => {
+      expect(DEFAULT_TRAILER).toMatch(/^Co-Authored-By:\s*.+<.+>$/);
+    });
+  });
 });

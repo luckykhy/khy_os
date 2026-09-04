@@ -497,7 +497,7 @@ function save() {
     // 持久化失败静默丢弃 → 服务重启后所有 key 丢失！必须记录。
     try {
       process.stderr.write(`[apiKeyPool] 持久化失败: ${err.message}\n`);
-    } catch (_) {}
+    } catch (_) { /* stderr 写入失败，无法记录 */ }
   }
   // 注意：API key 以明文存储在 POOL_FILE 中。生产环境应确保该文件权限为 600。
 }

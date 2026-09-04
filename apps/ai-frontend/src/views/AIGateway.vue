@@ -3956,7 +3956,7 @@ onDeactivated(() => {
   padding: 14px 16px;
   text-align: center;
   border-right: 1px solid #e5ebf5;
-  background: linear-gradient(180deg, #f8faff, #ffffff);
+  background: linear-gradient(180deg, #f8faff, var(--khy-white));
 }
 .monitor-stat-item:last-child {
   border-right: none;
@@ -3973,7 +3973,7 @@ onDeactivated(() => {
   color: var(--el-text-color-primary);
 }
 .monitor-stat--success {
-  color: #10b981;
+  color: var(--khy-success);
 }
 .pool-section-list {
   display: flex;
@@ -3983,7 +3983,7 @@ onDeactivated(() => {
 .pool-section {
   border: 1px solid #e5ebf5;
   border-radius: 12px;
-  background: linear-gradient(180deg, #ffffff, #f8fbff);
+  background: linear-gradient(180deg, var(--khy-white), #f8fbff);
   padding: 12px;
 }
 .pool-section-head {
@@ -4011,7 +4011,7 @@ onDeactivated(() => {
   padding: 12px;
   border: 1px solid #e5ebf5;
   border-radius: 10px;
-  background: linear-gradient(180deg, #fafbff, #ffffff);
+  background: linear-gradient(180deg, #fafbff, var(--khy-white));
 }
 .pool-provider h4 {
   margin: 0 0 10px;

@@ -146,7 +146,7 @@ function buildToolResultMessage(toolResults) {
     // Build structured tool_result entry.
     const effectiveToolUseId =
       tr._toolUseId ||
-      `synth_${crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8)}`;
+      `synth_${crypto.randomUUID ? crypto.randomUUID() : require('../utils/cryptoRandom').generateId()}`;
     _structuredToolResults.push({
       tool_use_id: effectiveToolUseId,
       tool: tr.tool,

@@ -355,7 +355,7 @@ function gatherFreshInstallFacts(deps) {
     const describe =
       typeof d.describeCoreDownload === 'function'
         ? d.describeCoreDownload
-        : (p, a) => require('./proxy/proxyCoreInstaller').describeCoreDownload(p, a);
+        : (p, a) => require('./domain/network/proxy/proxyCoreInstaller').describeCoreDownload(p, a);
     try {
       const desc = describe(d.platform, d.arch);
       if (desc && typeof desc === 'object' && desc.dest) {

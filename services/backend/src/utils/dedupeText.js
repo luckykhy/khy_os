@@ -10,7 +10,7 @@
  *   => 去空白项、去重复项、保留首现顺序、统一 trim 后的字符串。
  *
  * 契约:纯函数、确定性、不 mutate 入参、返回新数组。
- *   各消费方保留同名本地 `const _dedupeText = require('.../dedupeText')`→ 调用点逐字节不变。
+ *   各消费方保留同名本地 `const _dedupeText = require('dedupeText.js')`→ 调用点逐字节不变。
  */
 
 function dedupeText(items = []) {

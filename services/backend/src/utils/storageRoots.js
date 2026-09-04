@@ -276,7 +276,7 @@ function noteIfOutsideSystemDrive(info = {}, deps = {}) {
   const say = (msg) => {
     try {
       const chalk = require('chalk');
-      console.log(chalk.blue('  ℹ ') + msg);
+      console.log(chalk.blue('  i ') + msg);
     } catch {
       console.log(msg);
     }

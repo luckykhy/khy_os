@@ -9,6 +9,6 @@
  *   - toolUseLoopHelpers.js : the tool-result / delivery / classification / recovery / scaffold / patch /
  *                             nudge / write-diff / complexity band the core calls.
  * The core wires the helpers together and owns the exports, so this entry simply re-exports the core
- * surface unchanged — every existing `require(".../toolUseLoop")` consumer sees the identical object.
+ * surface unchanged — every existing `require("./toolUseLoop")` consumer sees the identical object.
  */
 module.exports = require('./toolUseLoopCore');

@@ -132,7 +132,7 @@ export function useDashboardHandover() {
 
       handoverSnapshot.value = response.data.snapshot
       if (trigger === 'sse') {
-        console.log('🔄 已根据 SSE 事件刷新交接快照')
+        if (import.meta.env.DEV) { console.log('🔄 已根据 SSE 事件刷新交接快照') }
       }
       if (showSuccessMessage) {
         ElMessage.success('跨设备交接快照已刷新：任务、审批与保留策略状态已更新')

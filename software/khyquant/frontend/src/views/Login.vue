@@ -647,7 +647,7 @@ async function renderQrCode(content) {
     margin: 1,
     color: {
       dark: '#0f172a',
-      light: '#ffffff'
+      light: 'var(--khy-white)'
     }
   })
 }
@@ -789,7 +789,7 @@ onUnmounted(() => {
 .card-header h1 {
   margin: 0;
   font-size: 25px;
-  color: #ffffff;
+  color: var(--khy-white);
   letter-spacing: 1px;
 }
 
@@ -807,7 +807,7 @@ onUnmounted(() => {
 .welcome-text h2 {
   margin: 0;
   font-size: 21px;
-  color: #ffffff;
+  color: var(--khy-white);
 }
 
 .welcome-text span {
@@ -861,7 +861,7 @@ onUnmounted(() => {
 .right-panel h3 {
   margin: 0 0 12px;
   font-size: 18px;
-  color: #ffffff;
+  color: var(--khy-white);
 }
 
 .panel-divider {
@@ -929,7 +929,7 @@ onUnmounted(() => {
   border-radius: 10px;
   min-height: 43px;
   background: linear-gradient(135deg, #2f7efc 0%, #5b43ef 100%);
-  color: #ffffff;
+  color: var(--khy-white);
   font-size: 15px;
   font-weight: 700;
   letter-spacing: 2px;
@@ -959,7 +959,7 @@ onUnmounted(() => {
   height: 18px;
   border-radius: 50%;
   border: 2px solid rgba(255, 255, 255, 0.35);
-  border-top-color: #fff;
+  border-top-color: var(--khy-white);
   animation: spin 0.75s linear infinite;
 }
 
@@ -1010,7 +1010,7 @@ onUnmounted(() => {
   margin: 0 auto;
   border-radius: 12px;
   overflow: hidden;
-  background: #fff;
+  background: var(--khy-white);
   padding: 8px;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.33);
 }
@@ -1039,7 +1039,7 @@ onUnmounted(() => {
   position: absolute;
   inset: 0;
   background: rgba(12, 18, 35, 0.64);
-  color: #fff;
+  color: var(--khy-white);
   display: flex;
   align-items: center;
   justify-content: center;

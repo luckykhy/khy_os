@@ -60,6 +60,8 @@ const ON_DEMAND_PROMPT_SECTION_IDS = [
   'file_operations',
   'command_execution',
   'search_exploration',
+  'codebase_analysis',
+  'tool_discovery',
   'response_formatting',
   'feature_access_proxy_boundary',
   'git_operations',
@@ -83,6 +85,10 @@ const FILE_OPERATION_ACTION_RE =
 const FILE_OPERATION_OBJECT_RE = /文件|代码|函数|类|模块|配置|脚本|handler|router|service|test/i;
 const SEARCH_EXPLORATION_RE =
   /搜索|查找|定位|在哪|入口|目录|仓库|代码库|grep|glob|rg|find|where|explore|scan|readme|manifest|定义|引用|definition|reference|references|路由|\broute\b|\broutes\b/i;
+const CODEBASE_ANALYSIS_RE =
+  /分析|架构|结构|项目|代码库|codebase|overview|summary|map|entry|依赖|dependency|技术栈|tech\s*stack|模块|module|组织|organization|analyze|architecture|structure|project/i;
+const TOOL_DISCOVERY_RE =
+  /有什么工具|工具列表|能做什么|能力|功能列表|tool list|capabilities|what can|help me|how to|怎么用|如何使用|tools available|show tools|list tools/i;
 const SENSITIVE_DATA_RE =
   /(?:\.env\b|credentials?\b|secret(?:s)?\b|\btokens?\b|api[_\s-]?key|private key|access key|refresh token|session cookie|cookies?\b|connection string|password|passwd|密码|口令|密钥|凭证|私钥|证书|脱敏|redact|泄漏|泄露|敏感信息)/i;
 const SECURITY_PERMISSION_BOUNDARY_RE =
@@ -129,6 +135,8 @@ const PROMPT_INTENT_REASON_MATCHERS = [
   { id: 'file_keywords', test: (text) => _matchesFileOperations(text) },
   { id: 'command_keywords', test: (text) => _matchesCommandExecution(text) },
   { id: 'search_keywords', test: (text) => _matchesSearchExploration(text) },
+  { id: 'codebase_keywords', test: (text) => CODEBASE_ANALYSIS_RE.test(text) },
+  { id: 'tool_keywords', test: (text) => TOOL_DISCOVERY_RE.test(text) },
   { id: 'format_keywords', test: (text) => RESPONSE_FORMATTING_RE.test(text) },
   {
     id: 'feature_access_proxy_boundary_keywords',
@@ -149,6 +157,8 @@ const PROMPT_INTENT_REASON_KEY_BY_SECTION_ID = {
   file_operations: 'file_keywords',
   command_execution: 'command_keywords',
   search_exploration: 'search_keywords',
+  codebase_analysis: 'codebase_keywords',
+  tool_discovery: 'tool_keywords',
   response_formatting: 'format_keywords',
   feature_access_proxy_boundary: 'feature_access_proxy_boundary_keywords',
   git_operations: 'git_keywords',
@@ -188,6 +198,14 @@ const PROMPT_INTENT_SECTION_RULES = [
   },
   {
     id: 'search_exploration',
+    gates: [MEDIUM_TASK_GATE],
+  },
+  {
+    id: 'codebase_analysis',
+    gates: [MEDIUM_TASK_GATE],
+  },
+  {
+    id: 'tool_discovery',
     gates: [MEDIUM_TASK_GATE],
   },
   {
@@ -866,7 +884,8 @@ function getSearchAndExplorationSection() {
     'Use Glob to find files by name or path pattern, Grep to search text inside files, and Read when you already know the exact file you need.',
     'Do not route search work through Bash when dedicated tools can answer it. Avoid grep, rg, find, cat, head, and tail loops for normal code exploration when Glob, Grep, or Read already fit the task.',
     'Do not use Glob as a substitute for content search. To find functions, classes, routes, or identifiers inside files, use Grep first.',
-    'When a codebase is unfamiliar, start with README, package.json, pyproject.toml, or equivalent project manifests, then identify the main modules and entry points before diving into details.',
+    'When a codebase is unfamiliar, use CodebaseMap to get a compact structural overview (entry points, dependencies, directory tree) without reading file contents. This is the fastest way to understand a large project.',
+    'After CodebaseMap, use Read/Glob/Grep to explore specific files on demand. Start with README, package.json, pyproject.toml, or equivalent project manifests.',
     'For broad or uncertain exploration, start wide and then narrow. Add path filters, glob filters, or more specific patterns once you learn where the relevant code lives.',
     'If a search returns too many matches, narrow the scope. If it returns zero matches, broaden the pattern, check the path, or try a nearby naming variant before concluding nothing exists.',
     'Independent read-only searches and file reads may run in parallel when they do not depend on one another.',
@@ -874,6 +893,33 @@ function getSearchAndExplorationSection() {
   ];
 
   return ['# Search and exploration', ...items.map((i) => ` - ${i}`)].join('\n');
+}
+
+function getCodebaseAnalysisSection() {
+  const items = [
+    'When asked to analyze a codebase, project structure, architecture, or tech stack, use the CodebaseMap tool first.',
+    'CodebaseMap generates a compact structural map (~200-500 tokens) without reading file contents — directory tree, entry points, dependencies, git info, test dirs, config files.',
+    'Three modes: "mini" (~100 tokens, quick overview), "standard" (~300 tokens, default), "full" (~500 tokens, deepest detail).',
+    'After getting the map, use Read/Glob/Grep tools to explore specific files on demand. The map tells you WHERE to look.',
+    'For very large projects, start with "mini" mode first, then drill into specific subdirectories with targeted Read/Glob/Grep calls.',
+    'When summarizing a codebase, cover: project type/purpose, key entry points, main dependencies, directory organization, testing setup, and notable patterns.',
+  ];
+
+  return ['# Codebase analysis', ...items.map((i) => ` - ${i}`)].join('\n');
+}
+
+function getToolDiscoverySection() {
+  const items = [
+    'You have access to 100+ tools. When the task involves file operations, code analysis, project management, or data processing, proactively discover the right tools.',
+    'Use ToolRecommend to get a shortlist of the most relevant tools for any task. It returns tools ranked by relevance.',
+    'Use ToolSearch to find tools by keyword: pass a query like "file editing" or "database" to get matching tools with full descriptions.',
+    'Use ToolSearch with "select:ToolName1,ToolName2" to activate specific deferred tools before calling them.',
+    'Key tool categories: filesystem (Read/Write/Edit/ListDir), search (Glob/Grep/ToolSearch), analysis (CodebaseMap/ProjectBlueprint), execution (Shell/REPL), git (GitBlame/GitCommit/GitPush), and more.',
+    'When unsure which tool to use, call ToolRecommend or ToolSearch with a short keyword. They return the top matching tools with descriptions and schemas.',
+    'Deferred tools (marked "deferred: true") need to be revealed via ToolSearch before first use. After revelation, they remain available for the rest of the session.',
+  ];
+
+  return ['# Tool discovery', ...items.map((i) => ` - ${i}`)].join('\n');
 }
 
 function getResponseFormattingSection() {
@@ -961,6 +1007,10 @@ function _buildOptionalSectionText(id) {
       return getCommandExecutionSection();
     case 'search_exploration':
       return getSearchAndExplorationSection();
+    case 'codebase_analysis':
+      return getCodebaseAnalysisSection();
+    case 'tool_discovery':
+      return getToolDiscoverySection();
     case 'response_formatting':
       return getResponseFormattingSection();
     case 'feature_access_proxy_boundary':
@@ -1078,6 +1128,8 @@ function _buildUsingYourToolsSection(enabledTools) {
   const hasDiskAnalyze = toolSet.has('DiskAnalyze') || toolSet.has('analyze_disk');
   const hasUpstreamStudy =
     toolSet.has('UpstreamStudy') || toolSet.has('study_upstream') || toolSet.has('study_archive');
+  const hasToolSearch = toolSet.has('toolSearch') || toolSet.has('ToolSearch');
+  const hasCodebaseMap = toolSet.has('CodebaseMap') || toolSet.has('codebase_map');
 
   const providedToolSubitems = [];
   if (hasRead) {
@@ -1096,6 +1148,12 @@ function _buildUsingYourToolsSection(enabledTools) {
   }
   if (hasGrep) {
     providedToolSubitems.push('To search the content of files, use Grep instead of grep or rg');
+  }
+  if (hasCodebaseMap) {
+    providedToolSubitems.push('To understand project structure use CodebaseMap (generates a compact map without reading file contents)');
+  }
+  if (hasToolSearch) {
+    providedToolSubitems.push('To discover more tools use ToolSearch with a keyword query (e.g. "file editing", "database")');
   }
   if (hasDiskAnalyze) {
     providedToolSubitems.push(
@@ -1845,7 +1903,7 @@ ${active.block}`;
  */
 function getCompanionSection() {
   try {
-    return require('../services/agentFs/agentFsService').companionPromptSection({ level: 'L1' });
+    return require('../services/domain/agents/agentFs/agentFsService.js').companionPromptSection({ level: 'L1' });
   } catch {
     return null;
   }
@@ -2765,7 +2823,7 @@ async function getSystemPrompt(opts = {}) {
       () => getCompanionSection(),
       (() => {
         try {
-          return require('../services/agentFs/agentFsService').activeStamp('L1');
+          return require('../services/domain/agents/agentFs/agentFsService.js').activeStamp('L1');
         } catch {
           return 'none';
         }
@@ -2963,6 +3021,8 @@ module.exports = {
   getFileOperationsSection,
   getCommandExecutionSection,
   getSearchAndExplorationSection,
+  getCodebaseAnalysisSection,
+  getToolDiscoverySection,
   getResponseFormattingSection,
   getFeatureAccessProxyBoundarySection,
   getOnDemandPromptSections,

@@ -22,7 +22,7 @@
  * 持久化另受 KHY_WORKSPACE_TRUST 门控(关 → 只显状态、视为已信任、绝不弹窗)。
  */
 
-const leaf = require('../../services/onboarding/onboardingPlan');
+const leaf = require('../../services/domain/onboarding/onboarding/onboardingPlan.js');
 
 // try/catch combinator 单一真源 utils/tryOr:执行 fn,任何异常 → dflt。
 const _safe = require('../../utils/tryOr');
@@ -124,6 +124,8 @@ async function handleOnboarding(_subCommand, args = [], options = {}) {
         printError('引导向导不可用(cli/onboarding 缺失)。');
         return true;
       }
+      // UX: 完整引导包含 6 步(theme→trust→model→mcp→...),给用户进度预期
+      printInfo('  正在运行完整引导(6 步: 主题→信任→模型→MCP→文档→完成)...');
       const outcome = await _safeAsync(
         () => onboarding.runOnboarding({ deps: { needs: () => true } }),
         null

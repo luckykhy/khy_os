@@ -79,13 +79,13 @@ const emit = defineEmits(['source-change', 'manage'])
 
 // 🔥 添加调试日志
 watch(() => props.availableSources, (newVal) => {
-  console.log('📊 DataSourceIndicator - availableSources 更新:', newVal)
-  console.log('   数量:', newVal?.length || 0)
-  console.log('   内容:', JSON.stringify(newVal))
+  if (import.meta.env.DEV) { console.log('📊 DataSourceIndicator - availableSources 更新:', newVal) }
+  if (import.meta.env.DEV) { console.log('   数量:', newVal?.length || 0) }
+  if (import.meta.env.DEV) { console.log('   内容:', JSON.stringify(newVal)) }
 }, { immediate: true, deep: true })
 
 watch(() => props.currentSource, (newVal) => {
-  console.log('📊 DataSourceIndicator - currentSource 更新:', newVal)
+  if (import.meta.env.DEV) { console.log('📊 DataSourceIndicator - currentSource 更新:', newVal) }
 }, { immediate: true })
 
 const statusClass = computed(() => {
@@ -142,12 +142,12 @@ function getQualityText() {
 }
 
 function handleSourceChange(sourceKey) {
-  console.log('🔄 用户选择切换数据源:', sourceKey)
+  if (import.meta.env.DEV) { console.log('🔄 用户选择切换数据源:', sourceKey) }
   emit('source-change', sourceKey)
 }
 
 function handleManage() {
-  console.log('⚙️ 打开数据源管理')
+  if (import.meta.env.DEV) { console.log('⚙️ 打开数据源管理') }
   emit('manage')
 }
 </script>

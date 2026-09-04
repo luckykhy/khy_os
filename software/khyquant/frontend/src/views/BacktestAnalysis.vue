@@ -500,7 +500,7 @@ onMounted(async () => {
     setTimeout(() => {
       const result = displayResults.value.find(r => r.id == resultId)
       if (result) {
-        console.log('🎯 自动显示指定回测详情:', result.strategyName)
+        if (import.meta.env.DEV) { console.log('🎯 自动显示指定回测详情:', result.strategyName) }
         showDetailDialog(result)
       } else {
         console.warn('⚠️ 未找到指定的回测结果:', resultId)
@@ -512,7 +512,7 @@ onMounted(async () => {
     setTimeout(() => {
       if (displayResults.value.length > 0) {
         const latestResult = displayResults.value[0] // 已按时间排序，第一个是最新的
-        console.log('🎯 自动显示最新回测详情:', latestResult.strategyName)
+        if (import.meta.env.DEV) { console.log('🎯 自动显示最新回测详情:', latestResult.strategyName) }
         showDetailDialog(latestResult)
         
         // 清除URL参数，避免重复触发
@@ -530,7 +530,7 @@ onUnmounted(() => {
 
 // 🔥 处理新的回测完成
 function handleBacktestCompleted(data) {
-  console.log('🎉 收到新的回测完成事件:', data)
+  if (import.meta.env.DEV) { console.log('🎉 收到新的回测完成事件:', data) }
   
   // 重新加载回测结果
   loadBacktestResults()
@@ -590,7 +590,7 @@ function renderMiniChart(resultId) {
     pathData += index === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`
   })
 
-  const color = cumReturn >= 0 ? '#f56c6c' : '#67c23a'
+  const color = cumReturn >= 0 ? 'var(--khy-danger)' : 'var(--khy-success)'
   
   chartEl.innerHTML = `
     <svg width="${width}" height="${height}" style="display: block;">
@@ -628,7 +628,7 @@ async function loadBacktestResults() {
 
     results.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     displayResults.value = results
-    console.log('✅ 回测结果加载完成:', displayResults.value.length, '条')
+    if (import.meta.env.DEV) { console.log('✅ 回测结果加载完成:', displayResults.value.length, '条') }
 
     nextTick(() => {
       displayResults.value.forEach(result => renderMiniChart(result.id))
@@ -645,7 +645,7 @@ async function loadBacktestResults() {
 function showDetailDialog(result) {
   selectedResult.value = result
   detailDialogVisible.value = true
-  console.log('显示详细结果弹窗:', result.strategyName)
+  if (import.meta.env.DEV) { console.log('显示详细结果弹窗:', result.strategyName) }
 }
 
 // 导出详细报告
@@ -727,7 +727,7 @@ ${data.monthlyReturns?.map(month =>
   `.trim()
 }
 function viewBacktestDetail(row) {
-  console.log('🔍 查看回测详情:', row)
+  if (import.meta.env.DEV) { console.log('🔍 查看回测详情:', row) }
   
   // 🔥 严格验证ID - 确保ID存在且有效
   if (!row.id || row.id === 'undefined' || row.id === 'null' || row.id === '') {
@@ -740,7 +740,7 @@ function viewBacktestDetail(row) {
     return
   }
   
-  console.log('✅ ID验证通过:', row.id)
+  if (import.meta.env.DEV) { console.log('✅ ID验证通过:', row.id) }
   
   try {
     // 跳转到回测详情页面，使用正确的路由路径
@@ -752,13 +752,13 @@ function viewBacktestDetail(row) {
         symbol: row.symbol 
       }
     })
-    console.log('✅ 成功导航到回测详情页面，ID:', row.id)
+    if (import.meta.env.DEV) { console.log('✅ 成功导航到回测详情页面，ID:', row.id) }
   } catch (error) {
     console.error('❌ 导航失败:', error)
     // 备用方案：使用hash路由
     const detailUrl = `#/backtest-detail/${row.id}`
     window.location.href = detailUrl
-    console.log('🔄 使用备用导航方案:', detailUrl)
+    if (import.meta.env.DEV) { console.log('🔄 使用备用导航方案:', detailUrl) }
   }
 }
 
@@ -1150,7 +1150,7 @@ function getDisplayStrategyName(result) {
 .symbol-code {
   font-family: 'Consolas', 'Monaco', monospace;
   font-weight: 600;
-  color: #409eff;
+  color: var(--khy-primary);
   background: #f0f9ff;
   padding: 2px 6px;
   border-radius: 4px;
@@ -1191,7 +1191,7 @@ function getDisplayStrategyName(result) {
 
 /* 胜率样式 */
 .win-rate {
-  color: #409eff;
+  color: var(--khy-primary);
   font-weight: 500;
   font-family: 'Consolas', 'Monaco', monospace;
 }
@@ -1230,7 +1230,7 @@ function getDisplayStrategyName(result) {
 <style scoped>
 .backtest-analysis {
   padding: 20px;
-  background: #0a0a0a;
+  background: var(--khy-gray-900);
   min-height: 100vh;
 }
 
@@ -1241,22 +1241,22 @@ function getDisplayStrategyName(result) {
   align-items: center;
   margin-bottom: 24px;
   padding: 24px;
-  background: linear-gradient(to bottom, #1a1a1a, #0a0a0a);
-  border: 1px solid #333;
+  background: linear-gradient(to bottom, var(--khy-gray-900), var(--khy-gray-900));
+  border: 1px solid var(--khy-gray-700);
   border-radius: var(--radius-md);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 .header-content h2 {
   margin: 0 0 8px 0;
-  color: #ffffff;
+  color: var(--khy-white);
   font-size: 28px;
   font-weight: 600;
 }
 
 .header-content p {
   margin: 0;
-  color: #999;
+  color: var(--khy-gray-400);
   font-size: 16px;
 }
 
@@ -1273,8 +1273,8 @@ function getDisplayStrategyName(result) {
   align-items: center;
   margin-bottom: 20px;
   padding: 16px 20px;
-  background: #1a1a1a;
-  border: 1px solid #333;
+  background: var(--khy-gray-900);
+  border: 1px solid var(--khy-gray-700);
   border-radius: var(--radius-md);
   border-left: 4px solid #00aaff;
 }
@@ -1286,7 +1286,7 @@ function getDisplayStrategyName(result) {
 }
 
 .selected-count {
-  color: #ffffff;
+  color: var(--khy-white);
   font-size: 14px;
   font-weight: 500;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
@@ -1306,11 +1306,11 @@ function getDisplayStrategyName(result) {
 }
 
 .stat-card {
-  background: #1a1a1a;
+  background: var(--khy-gray-900);
   padding: 24px;
   border-radius: var(--radius-md);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  border: 1px solid #333;
+  border: 1px solid var(--khy-gray-700);
   text-align: center;
   transition: all 0.3s ease;
 }
@@ -1329,16 +1329,16 @@ function getDisplayStrategyName(result) {
 }
 
 .stat-value.success {
-  color: #10b981;
+  color: var(--khy-success);
 }
 
 .stat-value.danger {
-  color: #ef4444;
+  color: var(--khy-danger);
 }
 
 .stat-label {
   font-size: 14px;
-  color: #999;
+  color: var(--khy-gray-400);
   font-weight: 600;
 }
 
@@ -1350,14 +1350,14 @@ function getDisplayStrategyName(result) {
 
 /* 结果卡片 */
 .result-card {
-  background: #1a1a1a;
+  background: var(--khy-gray-900);
   border-radius: var(--radius-md);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   position: relative;
-  border: 1px solid #333;
+  border: 1px solid var(--khy-gray-700);
   transform: translateZ(0);
 }
 
@@ -1396,7 +1396,7 @@ function getDisplayStrategyName(result) {
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, #10b981 0%, #059669 50%, #10b981 100%);
+  background: linear-gradient(90deg, var(--khy-success) 0%, #059669 50%, var(--khy-success) 100%);
   opacity: 0;
   transition: opacity 0.3s ease;
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
@@ -1482,9 +1482,9 @@ function getDisplayStrategyName(result) {
   justify-content: space-between;
   align-items: flex-start;
   padding: 20px 24px 20px 60px;
-  background: linear-gradient(to bottom, #2a2a2a, #1a1a1a);
-  border-bottom: 1px solid #333;
-  color: #ffffff;
+  background: linear-gradient(to bottom, #2a2a2a, var(--khy-gray-900));
+  border-bottom: 1px solid var(--khy-gray-700);
+  color: var(--khy-white);
   position: relative;
   overflow: hidden;
 }
@@ -1537,7 +1537,7 @@ function getDisplayStrategyName(result) {
   font-size: 18px;
   font-weight: 600;
   line-height: 1.3;
-  color: #ffffff;
+  color: var(--khy-white);
 }
 
 .strategy-meta {
@@ -1560,7 +1560,7 @@ function getDisplayStrategyName(result) {
 
 .period-tag {
   background: rgba(255, 255, 255, 0.1);
-  color: #999;
+  color: var(--khy-gray-400);
   padding: 2px 6px;
   border-radius: var(--radius-md);
   font-size: 11px;
@@ -1577,7 +1577,7 @@ function getDisplayStrategyName(result) {
 /* 卡片内容 */
 .card-content {
   padding: 24px;
-  background: #1a1a1a;
+  background: var(--khy-gray-900);
 }
 /* 信息行 */
 .info-row {
@@ -1586,7 +1586,7 @@ function getDisplayStrategyName(result) {
   gap: 16px;
   margin-bottom: 24px;
   padding-bottom: 20px;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid var(--khy-gray-700);
 }
 
 .info-item {
@@ -1597,7 +1597,7 @@ function getDisplayStrategyName(result) {
 
 .info-item .label {
   font-size: 12px;
-  color: #999;
+  color: var(--khy-gray-400);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -1605,7 +1605,7 @@ function getDisplayStrategyName(result) {
 
 .info-item .value {
   font-size: 14px;
-  color: #ffffff;
+  color: var(--khy-white);
   font-weight: 500;
 }
 
@@ -1630,9 +1630,9 @@ function getDisplayStrategyName(result) {
 .metric-item {
   text-align: center;
   padding: 16px;
-  background: #0a0a0a;
+  background: var(--khy-gray-900);
   border-radius: 8px;
-  border: 1px solid #333;
+  border: 1px solid var(--khy-gray-700);
   transition: all 0.2s ease;
 }
 
@@ -1643,7 +1643,7 @@ function getDisplayStrategyName(result) {
 
 .metric-label {
   font-size: 12px;
-  color: #999;
+  color: var(--khy-gray-400);
   margin-bottom: 8px;
   font-weight: 600;
 }
@@ -1651,26 +1651,26 @@ function getDisplayStrategyName(result) {
 .metric-value {
   font-size: 18px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--khy-white);
   font-family: 'Consolas', 'Monaco', monospace;
 }
 
 /* 收益率颜色 */
 .profit-positive {
-  color: #10b981 !important;
+  color: var(--khy-success) !important;
 }
 
 .profit-negative {
-  color: #ef4444 !important;
+  color: var(--khy-danger) !important;
 }
 
 .profit-neutral {
-  color: #999 !important;
+  color: var(--khy-gray-400) !important;
 }
 
 /* 回撤颜色 */
 .drawdown {
-  color: #ef4444 !important;
+  color: var(--khy-danger) !important;
 }
 
 /* 胜率颜色 */
@@ -1680,52 +1680,52 @@ function getDisplayStrategyName(result) {
 
 /* 夏普比率颜色 */
 .sharpe-excellent {
-  color: #10b981 !important;
+  color: var(--khy-success) !important;
 }
 
 .sharpe-good {
-  color: #3b82f6 !important;
+  color: var(--khy-primary) !important;
 }
 
 .sharpe-fair {
-  color: #f59e0b !important;
+  color: var(--khy-warning) !important;
 }
 
 .sharpe-poor {
-  color: #ef4444 !important;
+  color: var(--khy-danger) !important;
 }
 
 /* 图表预览 */
 .chart-preview {
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--khy-gray-700);
   padding-top: 20px;
 }
 
 .chart-title {
   font-size: 14px;
-  color: #ffffff;
+  color: var(--khy-white);
   font-weight: 600;
   margin-bottom: 12px;
 }
 
 .mini-chart {
   height: 60px;
-  background: #0a0a0a;
+  background: var(--khy-gray-900);
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #333;
+  border: 1px solid var(--khy-gray-700);
 }
 
 /* 空状态 */
 .empty-state {
   text-align: center;
   padding: 80px 20px;
-  background: #1a1a1a;
+  background: var(--khy-gray-900);
   border-radius: var(--radius-md);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  border: 1px solid #333;
+  border: 1px solid var(--khy-gray-700);
 }
 
 .empty-icon {
@@ -1735,14 +1735,14 @@ function getDisplayStrategyName(result) {
 
 .empty-state h3 {
   margin: 0 0 12px 0;
-  color: #ffffff;
+  color: var(--khy-white);
   font-size: 20px;
   font-weight: 600;
 }
 
 .empty-state p {
   margin: 0 0 24px 0;
-  color: #999;
+  color: var(--khy-gray-400);
   font-size: 16px;
 }
 
@@ -1766,14 +1766,14 @@ function getDisplayStrategyName(result) {
 
 .empty-text {
   font-size: 20px;
-  color: #ffffff;
+  color: var(--khy-white);
   margin: 0 0 12px 0;
   font-weight: 600;
 }
 
 .empty-description {
   font-size: 16px;
-  color: #999;
+  color: var(--khy-gray-400);
   margin: 0 0 24px 0;
 }
 
@@ -1849,16 +1849,16 @@ function getDisplayStrategyName(result) {
 }
 
 .detail-dialog :deep(.el-dialog) {
-  background: #1a1a1a;
-  border: 1px solid #333;
+  background: var(--khy-gray-900);
+  border: 1px solid var(--khy-gray-700);
 }
 
 .detail-dialog :deep(.el-dialog__header) {
-  background: linear-gradient(to bottom, #2a2a2a, #1a1a1a);
+  background: linear-gradient(to bottom, #2a2a2a, var(--khy-gray-900));
   color: white;
   padding: 20px 24px;
   margin: 0;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid var(--khy-gray-700);
 }
 
 .detail-dialog :deep(.el-dialog__title) {
@@ -1876,7 +1876,7 @@ function getDisplayStrategyName(result) {
   padding: 0;
   max-height: 70vh;
   overflow-y: auto;
-  background: #1a1a1a;
+  background: var(--khy-gray-900);
 }
 
 .dialog-content {
@@ -1893,18 +1893,18 @@ function getDisplayStrategyName(result) {
 
 .section-title {
   margin: 0 0 16px 0;
-  color: #ffffff;
+  color: var(--khy-white);
   font-size: 16px;
   font-weight: 600;
   padding-bottom: 8px;
-  border-bottom: 2px solid #333;
+  border-bottom: 2px solid var(--khy-gray-700);
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
 .record-count {
-  color: #999;
+  color: var(--khy-gray-400);
   font-size: 12px;
   font-weight: normal;
 }
@@ -1920,14 +1920,14 @@ function getDisplayStrategyName(result) {
   flex-direction: column;
   gap: 6px;
   padding: 12px;
-  background: #0a0a0a;
+  background: var(--khy-gray-900);
   border-radius: 8px;
-  border: 1px solid #333;
+  border: 1px solid var(--khy-gray-700);
 }
 
 .detail-label {
   font-size: 12px;
-  color: #999;
+  color: var(--khy-gray-400);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -1935,7 +1935,7 @@ function getDisplayStrategyName(result) {
 
 .detail-value {
   font-size: 14px;
-  color: #ffffff;
+  color: var(--khy-white);
   font-weight: 500;
 }
 
@@ -1958,14 +1958,14 @@ function getDisplayStrategyName(result) {
 
 /* Element Plus 深色主题覆盖 */
 :deep(.el-button) {
-  background: #333;
-  border-color: #555;
-  color: #ccc;
+  background: var(--khy-gray-700);
+  border-color: var(--khy-gray-600);
+  color: var(--khy-gray-200);
 }
 
 :deep(.el-button:hover) {
-  background: #555;
-  border-color: #777;
+  background: var(--khy-gray-600);
+  border-color: var(--khy-gray-500);
   color: #00aaff;
 }
 
@@ -1981,8 +1981,8 @@ function getDisplayStrategyName(result) {
 }
 
 :deep(.el-button--danger) {
-  background: #ef4444;
-  border-color: #ef4444;
+  background: var(--khy-danger);
+  border-color: var(--khy-danger);
 }
 
 :deep(.el-button--danger:hover) {
@@ -1991,7 +1991,7 @@ function getDisplayStrategyName(result) {
 }
 
 :deep(.el-checkbox__label) {
-  color: #ffffff;
+  color: var(--khy-white);
 }
 
 :deep(.el-tag) {
@@ -2005,23 +2005,23 @@ function getDisplayStrategyName(result) {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1a1a1a;
+  background: var(--khy-gray-900);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #555;
+  background: var(--khy-gray-600);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #777;
+  background: var(--khy-gray-500);
 }
 
 .showcase-item {
   text-align: center;
   padding: 20px 16px;
-  background: #0a0a0a;
-  border: 1px solid #333;
+  background: var(--khy-gray-900);
+  border: 1px solid var(--khy-gray-700);
   border-radius: var(--radius-md);
   transition: all 0.3s ease;
 }
@@ -2030,12 +2030,12 @@ function getDisplayStrategyName(result) {
   border-color: #00aaff;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 170, 255, 0.3);
-  background: #1a1a1a;
+  background: var(--khy-gray-900);
 }
 
 .showcase-label {
   font-size: 12px;
-  color: #999;
+  color: var(--khy-gray-400);
   margin-bottom: 8px;
   font-weight: 500;
 }
@@ -2043,7 +2043,7 @@ function getDisplayStrategyName(result) {
 .showcase-value {
   font-size: 18px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--khy-white);
   font-family: 'Consolas', 'Monaco', monospace;
 }
 

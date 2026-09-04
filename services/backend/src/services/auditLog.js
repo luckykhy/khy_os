@@ -287,7 +287,7 @@ function getAuditFilePath() {
 
 // ── Internal helpers ────────────────────────────────────────────────
 
-const _sessionId = `s_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+const _sessionId = `s_${Date.now().toString(36)}_${crypto.randomBytes(4).toString('hex')}`;
 
 /** fingerprint → last-append epoch ms. Bounded by _dedupeMemory(). */
 const _recentFps = new Map();

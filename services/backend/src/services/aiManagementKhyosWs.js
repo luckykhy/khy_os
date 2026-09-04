@@ -477,7 +477,10 @@ function handleKhyosTrayStart(session, msg) {
   }
   try {
     // 与 CLI `khy tray --detach` 同 SSOT:后台 detached 拉起托盘,立即 unref 返回,不占 WS 会话。
-    const child = spawn('khy', ['tray', '--detach'], {
+    // 用绝对路径解析 khy 入口,避免 PATH 劫持 (W3)。
+    const path = require('path');
+    const khyBin = path.resolve(__dirname, '..', '..', '..', 'bin', 'khy.js');
+    const child = spawn(process.execPath, [khyBin, 'tray', '--detach'], {
       detached: true,
       stdio: 'ignore',
       windowsHide: true,
@@ -514,7 +517,7 @@ async function handleKhyosMdOpen(session, msg) {
   try {
     // 服务定位，不再 require 上去找 cli 层的 handler（那是层级倒置），
     // 也不点名具体拓展 —— [DESIGN-ARCH-069] §1.3 第四条。
-    toolsDir = require('./extensions/markdownWorkbench').resolveDir();
+    toolsDir = require('./domain/extensions/extensions/markdownWorkbench').resolveDir();
   } catch (err) {
     return wsSend(session, {
       type: 'khyos_md_status',
@@ -618,6 +621,55 @@ function handleKhyosTasksGet(session, msg) {
   return wsSend(session, { type: 'khyos_tasks', status: 'ok', tasks });
 }
 
+function handleKhyosMcpGet(session, msg) {
+  if (!_webLocalActionsEnabled()) {
+    return wsSend(session, {
+      type: 'khyos_mcp',
+      status: 'disabled',
+      servers: [],
+      tools: [],
+      message: '本机动作已关闭(KHY_WEB_LOCAL_ACTIONS)',
+    });
+  }
+  try {
+    const mcp = require('../cli/handlers/mcp');
+    const mcpState = mcp.getState();
+    const servers = (mcpState.clients || []).map((c) => ({
+      name: c.name,
+      state: c.type,
+      error: c.error || '',
+      toolCount: Array.isArray(c.tools) ? c.tools.length : 0,
+    }));
+    const tools = [];
+    for (const c of mcpState.clients || []) {
+      // 只暴露已连接服务器的工具(N1: 防止失败/重连服务器的陈旧工具泄漏)。
+      if (c.type === 'connected' && Array.isArray(c.tools)) {
+        for (const t of c.tools) {
+          tools.push({
+            name: t.originalToolName || t.name,
+            server: c.name,
+            description: (t.description || '').slice(0, 80),
+          });
+        }
+      }
+    }
+    return wsSend(session, {
+      type: 'khyos_mcp',
+      status: 'ok',
+      servers,
+      tools,
+    });
+  } catch (err) {
+    return wsSend(session, {
+      type: 'khyos_mcp',
+      status: 'error',
+      servers: [],
+      tools: [],
+      message: '读取 MCP 状态失败: ' + ((err && err.message) || String(err)),
+    });
+  }
+}
+
 module.exports = {
   handleKhyosStart,
   handleKhyosInput,
@@ -628,6 +680,7 @@ module.exports = {
   handleKhyosTrayStart,
   handleKhyosMdOpen,
   handleKhyosTasksGet,
+  handleKhyosMcpGet,
   stopKhyosDesktopStream,
   _khyosDesktopCaptureEnabled,
   _webDesktopInputEnabled,

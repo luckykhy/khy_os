@@ -16,7 +16,7 @@
  *   - utils/envNum (env-key → number|undefined)
  * 本家族只做「强转 + 单侧地板到 0」,不取整、不设上界。
  *
- * 各消费方保留同名本地 `const _num = require('.../finiteNumber').toXxxOr0` → 调用点逐字节不变。
+ * 各消费方保留同名本地 `const _num = require('finiteNumber.js').toXxxOr0` → 调用点逐字节不变。
  */
 
 function toFiniteOr0(v) {

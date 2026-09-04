@@ -195,7 +195,7 @@ async function appendFinding(input = {}, opts = {}) {
   // ② 可选路由到 evo 改进管线（默认开，=off 关；仍需调用方显式 route 双重把关）
   if (opts.route === true && _envBool('KHY_EVO_ENGINE', true)) {
     try {
-      const { observeFailure } = require('./evoEngine/frictionBridge');
+      const { observeFailure } = require('./domain/maintenance/evoEngine/frictionBridge');
       observeFailure({
         signal: 'interceptor-block',
         surface: `learn:${finding.layerId}:${finding.topicId}`,

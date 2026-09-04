@@ -20,7 +20,7 @@
 const { printInfo, printError, printSuccess, printTable, printWarn } = require('../formatters');
 
 function _forest() {
-  return require('../../services/session/sessionForestService');
+  return require('../../services/domain/session/session/sessionForestService.js');
 }
 
 function _topology() {

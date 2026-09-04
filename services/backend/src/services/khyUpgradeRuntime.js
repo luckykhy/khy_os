@@ -1518,18 +1518,18 @@ function extractNaturalToolCall(text) {
 }
 
 function safeEvalExpression(expr) {
-  const src = String(expr || '').trim();
-  if (!/^[0-9+\-*/().%^\s]+$/.test(src)) {
-    throw new Error('Expression contains unsupported characters');
-  }
-  // eslint-disable-next-line no-new-func
-  const fn = new Function(`return (${src});`);
-  const out = fn();
-  if (!Number.isFinite(Number(out))) {
-    throw new Error('Expression result is not finite');
-  }
-  return String(out);
-}
+   const src = String(expr || '').trim();
+   if (!/^[0-9+\-*/().%^\s]+$/.test(src)) {
+     throw new Error('Expression contains unsupported characters');
+   }
+   // 安全修复：使用 vm 模块替代 new Function()
+   const vm = require('vm');
+   const result = vm.runInContext(src, vm.createContext({}), { timeout: 1000 });
+   if (!Number.isFinite(Number(result))) {
+     throw new Error('Expression result is not finite');
+   }
+   return String(result);
+ }
 
 function parseKVArg(argText) {
   const out = {};

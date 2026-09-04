@@ -13,7 +13,7 @@
  *
  * 契约:确定性、不 mutate、绝不抛。仅用 path.join(纯字符串规范化,无文件系统访问)。
  *
- * 各消费方保留同名本地 `const _join = require('.../pathJoinSafe')` → 调用点逐字节不变。
+ * 各消费方保留同名本地 `const _join = require('pathJoinSafe.js')` → 调用点逐字节不变。
  */
 
 const path = require('path');

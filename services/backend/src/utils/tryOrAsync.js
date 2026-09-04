@@ -13,7 +13,7 @@
  *   - 同步抛出与 rejected Promise 均归入 dflt 分支。
  *   - 不改变 `dflt`,不 mutate 任何入参。
  *
- * 各消费方保留同名本地 `const _safeAsync = require('../../utils/tryOrAsync')` → 调用点逐字节不变。
+ * 各消费方保留同名本地 `const _safeAsync = require('tryOrAsync.js')` → 调用点逐字节不变。
  */
 
 async function tryOrAsync(fn, dflt) {

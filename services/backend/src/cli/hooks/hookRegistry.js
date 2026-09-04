@@ -11,4 +11,4 @@
  * is a normal downward dependency.
  */
 
-module.exports = require('../../services/hooks/hookRegistry');
+module.exports = require('hookRegistry.js');

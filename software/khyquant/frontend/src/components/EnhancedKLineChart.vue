@@ -145,7 +145,7 @@ function initChart() {
       width: chartContainer.value.clientWidth,
       height: parseInt(props.chartHeight),
       layout: {
-        background: { color: '#ffffff' },
+        background: { color: 'var(--khy-white)' },
         textColor: '#1f2937',
         fontSize: 12,
       },
@@ -194,11 +194,11 @@ function initChart() {
     // 创建K线系列 - v4 API
     candlestickSeries.value = chart.value.addCandlestickSeries({
       upColor: '#26a69a',
-      downColor: '#ef5350',
+      downColor: 'var(--khy-danger)',
       borderUpColor: '#26a69a',
-      borderDownColor: '#ef5350',
+      borderDownColor: 'var(--khy-danger)',
       wickUpColor: '#26a69a',
-      wickDownColor: '#ef5350',
+      wickDownColor: 'var(--khy-danger)',
       priceLineVisible: false,
       lastValueVisible: true,
     })
@@ -356,7 +356,7 @@ function updateAuxiliaryLines() {
   )
 
   if (customLines.length > 0) {
-    console.log('🎨 检测到自定义辅助线:', customLines)
+    if (import.meta.env.DEV) { console.log('🎨 检测到自定义辅助线:', customLines) }
     customLines.forEach(lineName => {
       addCustomAuxiliaryLine(lineName, props.auxiliaryData[lineName])
     })
@@ -415,7 +415,7 @@ function addCustomAuxiliaryLine(lineName, lineConfig) {
     // 创建线条系列
     const lineStyle = lineConfig.lineStyle !== undefined ? lineConfig.lineStyle : 0
     const lineWidth = lineConfig.lineWidth || 2
-    const color = lineConfig.color || '#ffa726'
+    const color = lineConfig.color || 'var(--khy-warning)'
     const title = lineConfig.name || lineName
 
     auxiliarySeries.value[lineName] = chart.value.addLineSeries({
@@ -428,7 +428,7 @@ function addCustomAuxiliaryLine(lineName, lineConfig) {
     })
 
     auxiliarySeries.value[lineName].setData(lineData)
-    console.log(`✅ 辅助线 "${title}" 已添加，数据点数:`, lineData.length)
+    if (import.meta.env.DEV) { console.log(`✅ 辅助线 "${title}" 已添加，数据点数:`, lineData.length) }
   } catch (error) {
     console.error(`❌ 添加辅助线 "${lineName}" 失败:`, error)
   }
@@ -615,7 +615,7 @@ function updateSignals() {
       return {
         time: itemToUnixSeconds(klineItem),
         position: signal.type === 'buy' ? 'belowBar' : 'aboveBar',
-        color: signal.type === 'buy' ? '#26a69a' : '#ef5350',
+        color: signal.type === 'buy' ? '#26a69a' : 'var(--khy-danger)',
         shape: 'circle',
         text: signal.type === 'buy' ? '👍' : '👎',
         size: 2.0
@@ -636,7 +636,7 @@ function getMAColor(indicator) {
     'MA30': '#96ceb4',
     'MA60': '#f9ca24'
   }
-  return colors[indicator] || '#ffffff'
+  return colors[indicator] || 'var(--khy-white)'
 }
 
 function handleResize() {
@@ -651,7 +651,7 @@ function handleResize() {
 <style scoped>
 .enhanced-kline-container {
   width: 100%;
-  background: #ffffff;
+  background: var(--khy-white);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -661,8 +661,8 @@ function handleResize() {
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  background: #1a1a1a;
-  border-bottom: 1px solid #333;
+  background: var(--khy-gray-900);
+  border-bottom: 1px solid var(--khy-gray-700);
 }
 
 .symbol-info {
@@ -674,12 +674,12 @@ function handleResize() {
 .symbol-name {
   font-size: 16px;
   font-weight: 600;
-  color: #fff;
+  color: var(--khy-white);
 }
 
 .symbol-code {
   font-size: 14px;
-  color: #888;
+  color: var(--khy-gray-400);
 }
 
 .current-price {
@@ -692,7 +692,7 @@ function handleResize() {
 }
 
 .price-down {
-  color: #ef5350;
+  color: var(--khy-danger);
 }
 
 .price-change {
@@ -715,8 +715,8 @@ function handleResize() {
   align-items: center;
   gap: 16px;
   padding: 8px 16px;
-  background: #1a1a1a;
-  border-top: 1px solid #333;
+  background: var(--khy-gray-900);
+  border-top: 1px solid var(--khy-gray-700);
   font-size: 12px;
 }
 
@@ -731,7 +731,7 @@ function handleResize() {
 }
 
 .indicator-value {
-  color: #fff;
+  color: var(--khy-white);
 }
 
 :deep(.el-checkbox-group) {

@@ -12,7 +12,7 @@
 const assert = require('node:assert');
 const { test } = require('node:test');
 
-const { StreamingToolExecutor } = require('../query/streamingToolExecutor');
+const { StreamingToolExecutor } = require('../domain/query/query/streamingToolExecutor');
 
 // ── Hash stability & no cross-pollution ─────────────────────────────────────
 

@@ -302,7 +302,7 @@ ${dirLine}
             buildBinaryReadRefusal,
           } = require('../readBinaryGuard');
           if (binaryReadGuardEnabled(process.env)) {
-            const { detectFile } = require('../../services/formatInspect/fileFormatDetector');
+            const { detectFile } = require('../../services/domain/structured/formatInspect/fileFormatDetector.js');
             const fmt = detectFile(filePath);
             if (isBinaryForRead(fmt)) {
               try {

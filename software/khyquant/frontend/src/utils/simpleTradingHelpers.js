@@ -53,7 +53,7 @@ export function disabledEndDate(time, startDate) {
 }
 
 export function parseTradingError(error) {
-  console.log('🔍 解析错误对象:', error)
+  if (import.meta.env.DEV) { console.log('🔍 解析错误对象:', error) }
 
   if (typeof error === 'string') {
     return error

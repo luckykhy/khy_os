@@ -86,7 +86,7 @@ h2 {
 .progress-fill {
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #38bdf8, #3b82f6 55%, #6366f1);
+  background: linear-gradient(90deg, #38bdf8, var(--khy-primary) 55%, #6366f1);
   transition: width 280ms ease;
 }
 

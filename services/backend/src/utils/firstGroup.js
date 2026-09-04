@@ -11,7 +11,7 @@
  *   任何异常(如 text 非字符串)→ `''`。正则由调用方传入(不依赖任何 module 常量)。
  *
  * 契约:纯叶子(无 IO/状态)·不 mutate 入参·绝不抛。各消费方保留同名本地
- *   `const _firstGroup = require('../../utils/firstGroup')` → 调用点逐字节不变。
+ *   `const _firstGroup = require('firstGroup.js')` → 调用点逐字节不变。
  */
 
 function _firstGroup(re, text) {

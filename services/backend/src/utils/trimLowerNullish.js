@@ -20,7 +20,7 @@
  *
  * 契约:纯函数、确定性、不 mutate、不吞异常(异形对象 String 强转抛出向上传递)。
  *
- * 各消费方保留同名本地 `const _localName = require('.../trimLowerNullish')` → 调用点逐字节不变。
+ * 各消费方保留同名本地 `const _localName = require('trimLowerNullish.js')` → 调用点逐字节不变。
  */
 
 function trimLowerNullish(s) {

@@ -48,7 +48,7 @@ function flagOn(name, env) {
  */
 function _recordMdRegistrationLedger(plat, env) {
   try {
-    require('./uninstall/ledgerWriter').appendSideEffect(
+    require('./domain/maintenance/uninstall/ledgerWriter').appendSideEffect(
       {
         kind: 'registration',
         target: `md-editor:${plat}`,
@@ -209,8 +209,8 @@ function ensureMdRegistered(env, deps) {
       // 具体拓展 —— [DESIGN-ARCH-069] §1.3 第四条。
       toolsDir = d.resolveToolsDir
         ? d.resolveToolsDir()
-        : require('./extensions/markdownWorkbench').resolveDir();
-    } catch (_) {}
+        : require('./domain/extensions/extensions/markdownWorkbench').resolveDir();
+    } catch (_) { /* 拓展未安装时跳过 */ }
     if (!toolsDir) {
       return 'skip-no-tools';
     }

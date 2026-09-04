@@ -1,41 +1,108 @@
 'use strict';
 
 /**
- * 后端 logger 门面 —— 在 @khy/shared 的 winston 实例上补一个「控制台音量」旋钮。
+ * logger.js — 轻量级统一日志工具
  *
- * shared 那边只按 `NODE_ENV !== 'production'` 决定挂不挂 Console transport。这条规则
- * 对 `npm run dev` 的服务器是对的(终端就是拿来看日志的),对 khy CLI 却是错的:交互式
- * CLI 的终端属于启动横幅和 TUI,内部审计日志插进去就是噪音 —— 启动时那几行
- * `2026-… [info] [DB Health] …` 正是这么来的,还会跟 `\r` 覆写的引导进度行抢同一行。
+ * 替代 console.log/info/warn/error 的直接调用
+ * 特性：
+ *   - 日志级别控制（silent/error/warn/info/debug）
+ *   - 时间戳
+ *   - 敏感信息自动脱敏
+ *   - 生产环境可关闭
  *
- * 这里不动 shared(它同时服务 ai-backend 与后端服务器),只在后端门面上暴露音量控制:
- * 两个 DailyRotateFile transport 一律不受影响,日志照旧全量落盘,改的只是终端可见性。
+ * 使用方式：
+ *   const logger = require('./logger');
+ *   logger.info('message');
+ *   logger.error('error', { details });
  */
 
-const logger = require('@khy/shared/utils/logger');
+const LEVELS = {
+  silent: 0,
+  error: 1,
+  warn: 2,
+  info: 3,
+  debug: 4,
+};
+
+const CURRENT_LEVEL = LEVELS[process.env.KHY_LOG_LEVEL] ?? LEVELS.info;
+
+// 敏感字段列表
+const SENSITIVE_FIELDS = [
+  'password', 'secret', 'token', 'apikey', 'api_key', 'key',
+  'authorization', 'auth', 'credential', 'private', 'sk-',
+];
 
 /**
- * 调整控制台 transport 的最低输出级别;文件 transport 不受影响。
- *
- * @param {string} level - winston 级别名。例如 'warn' 只放行 warn/error。
- * @param {object} [target] - 目标 logger(测试注入),默认共享实例。
- * @returns {boolean} 是否找到并调整了控制台 transport。
+ * 脱敏处理
  */
-function setConsoleLevel(level, target = logger) {
-  let changed = false;
-  try {
-    for (const transport of (target && target.transports) || []) {
-      if (transport && transport.name === 'console') {
-        transport.level = level;
-        changed = true;
-      }
+function sanitize(data) {
+  if (!data || typeof data !== 'object') return data;
+  const result = Array.isArray(data) ? [...data] : { ...data };
+  for (const key of Object.keys(result)) {
+    const lower = key.toLowerCase();
+    if (SENSITIVE_FIELDS.some(f => lower.includes(f))) {
+      const val = String(result[key]);
+      result[key] = val.length > 8 ? val.slice(0, 4) + '****' + val.slice(-4) : '****';
+    } else if (typeof result[key] === 'object' && result[key] !== null) {
+      result[key] = sanitize(result[key]);
     }
-  } catch {
-    // 音量调节是尽力而为:调不动最多是终端吵一点,绝不能因此拖垮启动。
   }
-  return changed;
+  return result;
 }
 
-logger.setConsoleLevel = setConsoleLevel;
+/**
+ * 格式化日志行
+ */
+function format(level, message, details) {
+  const timestamp = new Date().toISOString();
+  const levelTag = level.toUpperCase().padEnd(5);
+  const prefix = `[${timestamp}] ${levelTag}`;
+  
+  let line = `${prefix} ${message}`;
+  
+  if (details !== undefined) {
+    try {
+      const sanitized = sanitize(details);
+      const detailStr = typeof sanitized === 'string' ? sanitized : JSON.stringify(sanitized);
+      if (detailStr && detailStr !== '{}') {
+        line += ` ${detailStr}`;
+      }
+    } catch {
+      // ignore serialization errors
+    }
+  }
+  
+  return line;
+}
 
-module.exports = logger;
+function error(message, details) {
+  if (CURRENT_LEVEL >= LEVELS.error) {
+    console.error(format('error', message, details));
+  }
+}
+
+function warn(message, details) {
+  if (CURRENT_LEVEL >= LEVELS.warn) {
+    console.warn(format('warn', message, details));
+  }
+}
+
+function info(message, details) {
+  if (CURRENT_LEVEL >= LEVELS.info) {
+    console.info(format('info', message, details));
+  }
+}
+
+function debug(message, details) {
+  if (CURRENT_LEVEL >= LEVELS.debug) {
+    console.log(format('debug', message, details));
+  }
+}
+
+module.exports = {
+  error,
+  warn,
+  info,
+  debug,
+  LEVELS,
+};

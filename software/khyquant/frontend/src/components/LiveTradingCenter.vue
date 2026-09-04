@@ -509,7 +509,7 @@ defineExpose({
 .title {
   font-size: 16px;
   font-weight: 700;
-  color: #10b981;
+  color: var(--khy-success);
   text-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
 }
 
@@ -550,17 +550,17 @@ defineExpose({
   top: 0;
   left: 0;
   height: 3px;
-  background: linear-gradient(90deg, #10b981, #059669);
+  background: linear-gradient(90deg, var(--khy-success), #059669);
   transition: width 0.5s ease;
   box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
 }
 
 .order-card.status-filled .status-bar {
-  background: linear-gradient(90deg, #10b981, #34d399);
+  background: linear-gradient(90deg, var(--khy-success), #34d399);
 }
 
 .order-card.status-partial .status-bar {
-  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  background: linear-gradient(90deg, var(--khy-warning), #fbbf24);
 }
 
 /* 订单内容 */
@@ -618,7 +618,7 @@ defineExpose({
 }
 
 .detail-item .value.price {
-  color: #10b981;
+  color: var(--khy-success);
 }
 
 .detail-item .value.type {
@@ -627,13 +627,13 @@ defineExpose({
 }
 
 .detail-item .value.strategy {
-  color: #f59e0b;
+  color: var(--khy-warning);
   font-size: 11px;
   font-weight: 600;
 }
 
 .detail-item .value.amount {
-  color: #3b82f6;
+  color: var(--khy-primary);
 }
 
 /* 中间状态区 */
@@ -661,13 +661,13 @@ defineExpose({
 }
 
 .fill-progress .filled {
-  color: #10b981;
+  color: var(--khy-success);
   font-weight: 600;
 }
 
 .futures-info {
   font-size: 11px;
-  color: #f59e0b;
+  color: var(--khy-warning);
 }
 
 /* 右侧时间和操作 */
@@ -696,7 +696,7 @@ defineExpose({
 }
 
 .filled-time {
-  color: #10b981;
+  color: var(--khy-success);
 }
 
 .order-actions {

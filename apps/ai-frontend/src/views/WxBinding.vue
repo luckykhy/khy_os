@@ -60,7 +60,7 @@
           </div>
           <div v-else-if="item.qr.qrcodeUrl" class="scan-qr-fallback">
             <p>二维码图片不可用，请手动打开以下链接完成扫码：</p>
-            <el-link type="primary" :href="item.qr.qrcodeUrl" target="_blank" rel="noopener">{{
+            <el-link type="primary" :href="item.qr.qrcodeUrl" target="_blank" rel="noopener noreferrer">{{
               item.qr.qrcodeUrl
             }}</el-link>
           </div>

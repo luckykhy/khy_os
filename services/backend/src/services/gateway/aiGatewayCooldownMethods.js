@@ -297,8 +297,8 @@ const AIGatewayCooldownMethods = {
     const consecutiveFailures = await this._healthStore.getFailureCount(adapterKey);
     const failureCountAfterRecord = consecutiveFailures + 1;
 
-    // Circuit breaker: if adapter fails 5+ times consecutively, extend cooldown
-    // to 60s regardless of error type (prevents hammering a dead adapter)
+    // Circuit breaker: if adapter fails 3+ times consecutively, extend cooldown
+    // to 30s regardless of error type (prevents hammering a dead adapter)
     const CIRCUIT_BREAKER_THRESHOLD = _parsePositiveInt(
       process.env.GATEWAY_CIRCUIT_BREAKER_THRESHOLD,
       3,

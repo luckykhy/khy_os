@@ -1,0 +1,129 @@
+{
+  "_comment": "命令注册表 — 单一真源。由 registry.js 加载，供 router.js 查询 handler 元数据。",
+  "commands": {
+    "version": {
+      "description": "显示版本号",
+      "category": "meta",
+      "handler": "system/version",
+      "lazy": true
+    },
+    "help": {
+      "description": "显示帮助信息",
+      "category": "meta",
+      "handler": "system/help",
+      "lazy": true
+    },
+    "clear": {
+      "description": "清屏",
+      "category": "meta",
+      "handler": "system/clear",
+      "lazy": true
+    },
+    "exit": {
+      "description": "退出",
+      "category": "meta",
+      "handler": "system/exit",
+      "lazy": true
+    },
+    "menu": {
+      "description": "交互式菜单",
+      "category": "meta",
+      "handler": "system/menu",
+      "lazy": true
+    },
+    "ai": {
+      "description": "AI 聊天 REPL",
+      "category": "ai",
+      "handler": "ai/aiChat",
+      "lazy": true
+    },
+    "gateway": {
+      "description": "AI 网关管理",
+      "category": "gateway",
+      "handler": "gateway/gateway",
+      "lazy": true
+    },
+    "service": {
+      "description": "服务管理",
+      "category": "service",
+      "handler": "service/service",
+      "lazy": true
+    },
+    "config": {
+      "description": "配置管理",
+      "category": "config",
+      "handler": "config/config",
+      "lazy": true
+    },
+    "doctor": {
+      "description": "系统健康检查",
+      "category": "ops",
+      "handler": "ops/doctor",
+      "lazy": true
+    },
+    "storage": {
+      "description": "存储管理",
+      "category": "ops",
+      "handler": "ops/storage",
+      "lazy": true
+    },
+    "restore": {
+      "description": "自动修复",
+      "category": "ops",
+      "handler": "ops/restore",
+      "lazy": true
+    },
+    "test": {
+      "description": "测试命令",
+      "category": "dev",
+      "handler": "dev/test",
+      "lazy": true
+    },
+    "lint": {
+      "description": "代码风格检查",
+      "category": "dev",
+      "handler": "dev/lint",
+      "lazy": true
+    },
+    "docs": {
+      "description": "文档",
+      "category": "dev",
+      "handler": "dev/docs",
+      "lazy": true
+    },
+    "package": {
+      "description": "打包",
+      "category": "release",
+      "handler": "release/package",
+      "lazy": true
+    },
+    "release": {
+      "description": "发布",
+      "category": "release",
+      "handler": "release/release",
+      "lazy": true
+    },
+    "migrate": {
+      "description": "数据迁移",
+      "category": "ops",
+      "handler": "ops/migrate",
+      "lazy": true
+    },
+    "test-coverage": {
+      "description": "测试覆盖率报告",
+      "category": "dev",
+      "handler": "dev/testCoverage",
+      "lazy": true
+    }
+  },
+  "categories": {
+    "meta": { "label": "系统", "description": "基础系统命令" },
+    "ai": { "label": "AI", "description": "AI 聊天与智能体" },
+    "gateway": { "label": "网关", "description": "AI 网关管理" },
+    "service": { "label": "服务", "description": "后台服务管理" },
+    "config": { "label": "配置", "description": "系统配置" },
+    "ops": { "label": "运维", "description": "运维与诊断" },
+    "dev": { "label": "开发", "description": "开发工具" },
+    "release": { "label": "发布", "description": "打包与发布" }
+  }
+}

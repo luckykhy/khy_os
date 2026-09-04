@@ -18,7 +18,7 @@ const DEFAULT_PORT = 9222;
 // Bind to all interfaces by default so LAN collaboration (phone/other devices
 // controlling this CLI) works out of the box. Override with BRIDGE_BIND_HOST
 // (e.g. set BRIDGE_BIND_HOST=127.0.0.1 to force localhost-only access).
-const DEFAULT_BIND_HOST = '0.0.0.0';
+const DEFAULT_BIND_HOST = '127.0.0.1';
 const MAX_PORT_RETRIES = 3;
 const TOKEN_EXPIRY_MS = 30 * 60 * 1000; // 30 minutes
 const BRIDGE_TIMEOUT_MS = parseInt(process.env.KHY_STARTUP_BRIDGE_TIMEOUT_MS || '5000', 10);
@@ -871,8 +871,10 @@ function broadcastOutput(data) {
 // ── Token Management ───────────────────────────────────────────────
 
 function generateToken() {
-  _token = crypto.randomBytes(16).toString('hex');
-  _pin = process.env.BRIDGE_PIN || String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+  // 安全修复：使用 crypto.randomBytes 生成强 token
+  _token = crypto.randomBytes(32).toString('hex');
+  // PIN 从 6 位数字改为 8 位，增加暴力破解难度
+  _pin = process.env.BRIDGE_PIN || String(crypto.randomInt(0, 100000000)).padStart(8, '0');
   _tokenCreatedAt = Date.now();
   return _token;
 }

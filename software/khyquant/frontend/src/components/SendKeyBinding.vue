@@ -3,7 +3,7 @@
     <h2>WeChat Notification Binding</h2>
     <p class="subtitle">
       Bind your ServerChan SendKey to receive trading signals on WeChat.
-      <a href="https://sct.ftqq.com" target="_blank" rel="noopener">Get a SendKey</a>
+      <a href="https://sct.ftqq.com" target="_blank" rel="noopener noreferrer">Get a SendKey</a>
     </p>
 
     <!-- Status -->
@@ -37,7 +37,7 @@
     <el-collapse style="margin-top: 24px">
       <el-collapse-item title="How it works" name="help">
         <ol>
-          <li>Register at <a href="https://sct.ftqq.com" target="_blank">sct.ftqq.com</a> and get your SendKey.</li>
+          <li>Register at <a href="https://sct.ftqq.com" target="_blank" rel="noopener noreferrer">sct.ftqq.com</a> and get your SendKey.</li>
           <li>Paste the SendKey above and click Save.</li>
           <li>When a trading signal is created (via API or UI), a push notification is sent to your WeChat automatically.</li>
           <li>The push is non-blocking &mdash; it does not slow down signal processing.</li>
@@ -129,7 +129,7 @@ onMounted(() => {
   margin-bottom: 16px;
 }
 .subtitle a {
-  color: #409eff;
+  color: var(--khy-primary);
 }
 .status-row {
   display: flex;

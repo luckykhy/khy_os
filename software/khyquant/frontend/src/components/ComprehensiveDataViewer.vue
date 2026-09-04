@@ -440,7 +440,7 @@ onMounted(() => {
 
 .market-info h4 {
   margin: 0 0 8px 0;
-  color: #409eff;
+  color: var(--khy-primary);
 }
 
 .market-code {
@@ -485,7 +485,7 @@ onMounted(() => {
 
 .stage-info h6 {
   margin: 0 0 8px 0;
-  color: #409eff;
+  color: var(--khy-primary);
 }
 
 .stage-info p {

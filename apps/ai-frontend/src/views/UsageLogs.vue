@@ -256,21 +256,21 @@ onMounted(load);
   height: 42px;
   border-radius: 11px;
   font-size: 20px;
-  color: #fff;
+  color: var(--khy-white);
   flex-shrink: 0;
 }
 
 .metric-icon--blue {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  background: linear-gradient(135deg, var(--khy-primary), #2563eb);
 }
 .metric-icon--green {
-  background: linear-gradient(135deg, #10b981, #059669);
+  background: linear-gradient(135deg, var(--khy-success), #059669);
 }
 .metric-icon--orange {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
+  background: linear-gradient(135deg, var(--khy-warning), #d97706);
 }
 .metric-icon--red {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
+  background: linear-gradient(135deg, var(--khy-danger), #dc2626);
 }
 
 .metric-label {

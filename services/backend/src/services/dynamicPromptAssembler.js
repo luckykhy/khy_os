@@ -106,16 +106,27 @@ function _templatesPath(env) {
  * @returns {object}
  */
 function _evalTemplates(src, filePath) {
-  const shim = { exports: {} };
-  const forbidden = () => {
-    throw new Error('style_templates 里不允许 require:只写字面量');
-  };
-  const fn = new Function('module', 'exports', 'require', '__filename', `${src}\n`);
+   const shim = { exports: {} };
+   const forbidden = () => {
+     throw new Error('style_templates 里不允许 require:只写字面量');
+   };
+   
+   // 安全修复：使用 vm 模块替代 new Function()，防止代码注入
+   // 创建隔离的上下文，禁止访问 Node.js 内置模块
+   const vm = require('vm');
+   const context = vm.createContext({
+     module: shim,
+     exports: shim.exports,
+     require: forbidden,
+     __filename: filePath,
+     console: console, // 允许 console 用于调试
+     // 禁止访问其他全局对象
+   });
+   
+   vm.runInContext(src, context, { filename: filePath });
 
-  fn(shim, shim.exports, forbidden, filePath);
-
-  return shim.exports;
-}
+   return shim.exports;
+ }
 
 /**
  * 取当前生效的模板模块。文件变了就重新求值;读坏了沿用上一份好数据。

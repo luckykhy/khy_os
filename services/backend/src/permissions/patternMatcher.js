@@ -120,7 +120,7 @@ function _compilePattern(pattern) {
     return cached;
   }
 
-  const { globToRegExp } = require('../services/permissionPolicy/matchers');
+  const { globToRegExp } = require('../services/domain/security/permissionPolicy/matchers.js');
   const re = globToRegExp(pattern);
 
   const cap = _cacheCap();

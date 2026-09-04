@@ -173,20 +173,27 @@ async function handleList() {
     return;
   }
 
+  const rows = [];
   for (const app of apps) {
     const st = await registry().status(app.name);
     const statusIcon = st.running ? chalk.green('● 运行中') : chalk.dim('○ 未启动');
-    const portInfo = st.running ? chalk.dim(` :${st.port}`) : '';
-
-    console.log(`  ${statusIcon} ${chalk.white.bold(app.name)}${portInfo}`);
-    console.log(chalk.dim(`    ${app.description || '-'}`));
-    console.log(
-      chalk.dim(
-        `    版本: ${app.version} · 来源: ${app.source} · 运行时: ${app.runtime || 'node'} · 命令: ${(app.commands || []).join(', ')}`
-      )
-    );
-    console.log('');
+    const portStr = st.running ? `:${st.port}` : '─';
+    rows.push([
+      chalk.white.bold(app.name),
+      statusIcon,
+      portStr,
+      app.version || '─',
+      app.source || '─',
+      app.runtime || 'node',
+      (app.commands || []).join(', ') || '─',
+      app.description || '─',
+    ]);
   }
+
+  printTable(
+    ['应用', '状态', '端口', '版本', '来源', '运行时', '命令', '描述'],
+    rows
+  );
 
   // Discover pip-installed khy-* packages not yet registered
   try {
@@ -397,12 +404,18 @@ async function handleRegister(name, options = {}) {
     });
 
     printSuccess(`WASM 应用 "${name}" 注册成功`);
-    printInfo(`模块: ${wasmPath}`);
-    printInfo(`默认导出: ${resolvedExport}`);
-    printInfo(`ABI: ${abi}`);
-    printInfo(`Capabilities: ${capabilities.join(', ')}`);
-    printInfo(`khy_sys memory export: ${khyMemoryExport}`);
-    printInfo(`运行: /app run ${name}`);
+    console.log('');
+    printTable(
+      ['属性', '值'],
+      [
+        ['模块', wasmPath],
+        ['默认导出', resolvedExport],
+        ['ABI', abi],
+        ['Capabilities', capabilities.join(', ')],
+        ['khy_sys memory export', khyMemoryExport],
+        ['运行', `/app run ${name}`],
+      ]
+    );
     return;
   }
 
@@ -793,11 +806,14 @@ async function handleExports(name) {
     const exportsList = await wasmService.listFunctionExports(name);
     console.log('');
     console.log(chalk.cyan.bold(`  ${name} 可用导出函数`));
-    console.log(chalk.dim('  ─────────────────────────'));
+    console.log('');
     if (!exportsList.length) {
-      console.log(chalk.dim('  (none)'));
+      printInfo('无可用导出函数');
     } else {
-      exportsList.forEach((fn) => console.log(`  - ${fn}`));
+      printTable(
+        ['#', '导出函数'],
+        exportsList.map((fn, i) => [String(i + 1), fn])
+      );
     }
     console.log('');
   } catch (err) {

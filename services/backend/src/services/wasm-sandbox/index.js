@@ -1,15 +1,5 @@
-'use strict';
+// Auto-generated shim - re-exports from new domain location
+// Do not edit - move services/backend/src/services/domain/system/wasm-sandbox instead
 
-const codec = require('./ipcCodec');
-const khySysHost = require('./khySysHost');
-const loopback = require('./loopbackTransport');
-const constants = require('./m1Constants');
-const bridge = require('./moonbitHostBridge');
+module.exports = require('../domain/system/wasm-sandbox');
 
-module.exports = {
-  ...constants,
-  ...codec,
-  ...bridge,
-  ...loopback,
-  ...khySysHost,
-};

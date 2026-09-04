@@ -7,7 +7,7 @@ const express = require('express');
 
 const router = express.Router();
 // llmService-free was removed in S9 cleanup — reuse the stub LLMService
-const FreeLLMService = require('../services/llmService');
+const MultiFreeService = require('../services/multiFreeService');
 
 const freeLLMService = new FreeLLMService();
 

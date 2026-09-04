@@ -115,6 +115,7 @@ function _findClosestCommands(input, maxDist = 2) {
 // ════════════════════════════════════════════════════════════════
 
 let _fmt, _chalk, _aliases, _symbolResolver, _plugins;
+let _slashCommandInFlight = false; // S3: 斜杠命令并发锁,防止慢命令重入
 const fmt = () => (_fmt ??= require('./formatters'));
 const chk = () => {
   if (_chalk) {
@@ -911,22 +912,33 @@ async function route(parsed, context = {}) {
     // Slash-shortcut cluster is dispatched from routerDispatchSlash.js (see extraction note above);
     // non-slash commands return the sentinel and fall through to the main switch below.
     {
-      const __slash = await dispatchSlashCommand(command, {
-        subCommand,
-        args,
-        options,
-        rawCommandToken,
-        parsed,
-        context,
-        printError,
-        printHelp,
-        printInfo,
-        printTable,
-        printSuccess,
-        printWarn,
-        withSpinner,
-        chalk,
-      });
+      // S3: 斜杠命令并发锁 — 防止慢命令(如 /compact AI 阻塞)期间用户快速输入导致重入。
+      if (_slashCommandInFlight) {
+        printWarn('另一个命令正在执行中,请稍候...');
+        return true;
+      }
+      _slashCommandInFlight = true;
+      let __slash;
+      try {
+        __slash = await dispatchSlashCommand(command, {
+          subCommand,
+          args,
+          options,
+          rawCommandToken,
+          parsed,
+          context,
+          printError,
+          printHelp,
+          printInfo,
+          printTable,
+          printSuccess,
+          printWarn,
+          withSpinner,
+          chalk,
+        });
+      } finally {
+        _slashCommandInFlight = false;
+      }
       if (__slash !== SLASH_NOT_HANDLED) {
         return __slash;
       }
@@ -960,9 +972,11 @@ async function route(parsed, context = {}) {
       // ════════════════════════════════════════════════════════════════
 
       // ── Meta ──
-      case 'version':
-        console.log(process.env.KHYQUANT_PKG_VERSION || require('../../package.json').version);
+      case 'version': {
+        const v = process.env.KHYQUANT_PKG_VERSION || require('../../package.json').version;
+        printSuccess(`Khy-OS v${v}`);
         return true;
+      }
 
       case 'resume': {
         // `resume` is aliased to `history resume` (aliases.js), so in practice
@@ -1396,7 +1410,6 @@ async function route(parsed, context = {}) {
 
       // ── Account / Position / Order (production placeholders) ──
       case 'account': {
-        const service = require('./handlers/service');
         // Delegate to server API if running, otherwise show DB info
         await handleAccountInfo();
         return true;
@@ -1441,6 +1454,17 @@ async function route(parsed, context = {}) {
         const sym = await resolveArg0(args);
         // Forward to AI with a structured prompt
         return { aiForward: `分析一下 ${sym} 的走势和交易机会` };
+      }
+
+      // ── Project Analysis (分层渐进式大项目分析) ──
+      // 解决「全量读代码上下文爆炸，不读代码AI找不到文件」的矛盾。
+      // project map 生成轻量地图；project analyze 注入地图 + AI 按需工具探索。
+      // 详见 handlers/project.js + services/projectAnalysis/projectMapService.js
+      case 'project':
+      case 'proj':
+      case '项目': {
+        const { handleProjectCommand } = require('./handlers/project');
+        return await handleProjectCommand(subCommand, args, options);
       }
 
       // ════════════════════════════════════════════════════════════════
@@ -1711,6 +1735,18 @@ async function route(parsed, context = {}) {
       case 'trace': {
         const { handleTrace } = require('./handlers/trace');
         await handleTrace(subCommand, args, options);
+        return true;
+      }
+
+      case 'traffic': {
+        const { handleTraffic } = require('./handlers/traffic');
+        await handleTraffic(subCommand, args, options);
+        return true;
+      }
+
+      case 'credentials': {
+        const { handleCredentials } = require('./handlers/credentials');
+        await handleCredentials(subCommand, args, options);
         return true;
       }
 
@@ -2115,11 +2151,11 @@ async function route(parsed, context = {}) {
               // Open in editor if available
               const editor = process.env.EDITOR || process.env.VISUAL;
               if (editor && !options.noEdit) {
-                const { execSync } = require('child_process');
+                const { execFileSync } = require('child_process');
                 const pluginPath = require('path').join(gwPlugins.getPluginsDir(), `${name}.js`);
                 printInfo(`正在打开编辑器: ${editor}...`);
                 try {
-                  execSync(`${editor} "${pluginPath}"`, { stdio: 'inherit' });
+                  execFileSync(editor, [pluginPath], { stdio: 'inherit' });
                   gwPlugins.reload();
                   printSuccess('插件已重载');
                 } catch {
@@ -2158,8 +2194,8 @@ async function route(parsed, context = {}) {
               const editor = process.env.EDITOR || process.env.VISUAL || 'vi';
               const pluginPath = require('path').join(gwPlugins.getPluginsDir(), `${name}.js`);
               printInfo(`打开 ${editor}...`);
-              const { execSync } = require('child_process');
-              execSync(`${editor} "${pluginPath}"`, { stdio: 'inherit' });
+              const { execFileSync } = require('child_process');
+              execFileSync(editor, [pluginPath], { stdio: 'inherit' });
               gwPlugins.reload();
               printSuccess('插件已重载');
             } catch (e) {
@@ -2585,6 +2621,13 @@ async function route(parsed, context = {}) {
       case 'heal': {
         const { handleHeal } = require('./handlers/heal');
         await handleHeal(subCommand, args, options);
+        return true;
+      }
+
+      // ── Runtime self-heal (path auto-fix) ──
+      case 'selfheal': {
+        const { handleSelfHeal } = require('./handlers/selfHeal');
+        await handleSelfHeal(subCommand, args, options);
         return true;
       }
 

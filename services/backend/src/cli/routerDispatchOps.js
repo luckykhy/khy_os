@@ -26,6 +26,7 @@ const path = require('path');
 
 const ROUTER_NOT_HANDLED = Symbol('router_ops_not_handled');
 const { formatStatusMessage } = require('./statusMessageFormatter');
+const ui = require('./ui');
 
 // ── Host callbacks injected via DI (avoid a require cycle back into router.js) ──
 let handleLogCommand = null;
@@ -1897,33 +1898,56 @@ async function dispatchOpsCommand(command, _ctx) {
             return true;
           }
 
-          console.log(chalk.bold('\n  🔁 自检结果\n'));
-          console.log(`  严重级别: ${colorSeverity(report.severity)}`);
-          console.log(`  评分:     ${report.score}/100`);
-          console.log(`  耗时:     ${report.durationMs}ms`);
-          console.log(`  问题数:   ${report.issues.length}`);
           const repairCount = Array.isArray(report.repairs) ? report.repairs.length : 0;
-          console.log(`  修复数:   ${repairCount}`);
+          const sevIcon = selfCheck._statusIcon
+            ? selfCheck._statusIcon(report.severity)
+            : ui.STATUS_ICONS[report.severity === 'critical' ? 'error' : report.severity === 'degraded' ? 'warning' : 'ok'];
+
+          console.log('');
+          console.log(chalk.bold('  🔁 自检结果'));
+          console.log('');
+          printTable(
+            ['指标', '值'],
+            [
+              ['严重级别', colorSeverity(report.severity)],
+              ['评分', `${report.score}/100`],
+              ['耗时', `${report.durationMs}ms`],
+              ['问题数', String(report.issues.length)],
+              ['修复数', String(repairCount)],
+            ]
+          );
+
           if (report.issues.length > 0) {
-            console.log(chalk.bold('\n  Top Issues:'));
-            for (const issue of report.issues.slice(0, 8)) {
-              const icon =
-                issue.severity === 'critical'
-                  ? chalk.red('✗')
-                  : issue.severity === 'high'
-                    ? chalk.yellow('!')
-                    : chalk.dim('•');
-              console.log(`  ${icon} [${issue.source}] ${issue.message}`);
-            }
+            console.log('');
+            console.log(chalk.bold('  Top Issues'));
+            console.log('');
+            printTable(
+              ['级别', '来源', '描述'],
+              report.issues.slice(0, 8).map((issue) => {
+                const icon = ui.STATUS_ICONS[issue.severity === 'critical' ? 'error' : issue.severity === 'high' ? 'warning' : 'info'];
+                const colorFn = chalk[icon.color] || chalk.white;
+                return [
+                  `${colorFn(icon.icon)} ${issue.severity}`,
+                  issue.source,
+                  issue.message,
+                ];
+              })
+            );
           }
+
           if (repairCount > 0) {
-            console.log(chalk.bold('\n  Auto Repairs:'));
-            for (const repair of report.repairs.slice(0, 8)) {
-              const from = repair.from ? ` ${repair.from}` : '';
-              const to = repair.to ? ` -> ${repair.to}` : '';
-              const action = repair.action ? `[${repair.action}]` : '[repair]';
-              console.log(`  ${chalk.green('✓')} ${action}${from}${to}`);
-            }
+            console.log('');
+            console.log(chalk.bold('  Auto Repairs'));
+            console.log('');
+            printTable(
+              ['动作', '详情'],
+              report.repairs.slice(0, 8).map((repair) => {
+                const from = repair.from ? ` ${repair.from}` : '';
+                const to = repair.to ? ` -> ${repair.to}` : '';
+                const act = repair.action || 'repair';
+                return [`[${act}]`, `${from}${to}`];
+              })
+            );
           }
           console.log('');
           return true;
@@ -1936,45 +1960,75 @@ async function dispatchOpsCommand(command, _ctx) {
             printInfo('暂无自检日志');
             return true;
           }
-          console.log(chalk.bold(`\n  🔁 最近 ${logs.length} 条自检记录\n`));
-          for (const row of logs) {
-            const time = row.timestamp ? new Date(row.timestamp).toLocaleString('zh-CN') : '-';
-            const sev = colorSeverity(row.severity || 'unknown');
-            const score = Number.isFinite(row.score) ? row.score : '-';
-            const issueCount = Number.isFinite(row.issueCount) ? row.issueCount : 0;
-            const repairCount = Number.isFinite(row.repairCount) ? row.repairCount : 0;
-            const dur = Number.isFinite(row.durationMs) ? `${row.durationMs}ms` : '-';
-            console.log(
-              `  ${time}  ${sev}  score=${score}  issues=${issueCount}  repairs=${repairCount}  ${dur}`
-            );
-          }
+          console.log('');
+          console.log(chalk.bold(`  🔁 最近 ${logs.length} 条自检记录`));
+          console.log('');
+          printTable(
+            ['时间', '级别', '评分', '问题数', '修复数', '耗时'],
+            logs.map((row) => {
+              const time = row.timestamp ? new Date(row.timestamp).toLocaleString('zh-CN') : '-';
+              const icon = ui.STATUS_ICONS[
+                row.severity === 'critical' ? 'error'
+                : row.severity === 'degraded' ? 'warning'
+                : row.severity === 'healthy' ? 'ok' : 'unknown'
+              ];
+              const colorFn = chalk[icon.color] || chalk.white;
+              const sev = `${colorFn(icon.icon)} ${row.severity || 'unknown'}`;
+              const score = Number.isFinite(row.score) ? String(row.score) : '-';
+              const issueCount = Number.isFinite(row.issueCount) ? String(row.issueCount) : '0';
+              const repairCount = Number.isFinite(row.repairCount) ? String(row.repairCount) : '0';
+              const dur = Number.isFinite(row.durationMs) ? `${row.durationMs}ms` : '-';
+              return [time, sev, score, issueCount, repairCount, dur];
+            })
+          );
           console.log('');
           return true;
         }
 
         // status (default)
         const st = selfCheck.status();
-        console.log(chalk.bold('\n  🔁 底座循环自检\n'));
-        console.log(`  运行状态: ${st.running ? chalk.green('running') : chalk.yellow('stopped')}`);
-        console.log(`  间隔:     ${st.intervalMs}ms`);
-        console.log(`  运行次数: ${st.runCount}`);
-        if (st.startedAt) {
-          console.log(`  启动时间: ${new Date(st.startedAt).toLocaleString('zh-CN')}`);
-        }
+        const runIcon = ui.STATUS_ICONS[st.running ? 'running' : 'warning'];
+        const runColorFn = chalk[runIcon.color] || chalk.white;
+
+        console.log('');
+        console.log(chalk.bold('  🔁 底座循环自检'));
+        console.log('');
+        printTable(
+          ['指标', '值'],
+          [
+            ['运行状态', `${runColorFn(runIcon.icon)} ${st.running ? 'running' : 'stopped'}`],
+            ['间隔', `${st.intervalMs}ms`],
+            ['运行次数', String(st.runCount)],
+            ['启动时间', st.startedAt ? new Date(st.startedAt).toLocaleString('zh-CN') : '─'],
+          ]
+        );
+
         if (st.lastResult) {
-          console.log(
-            `  最近级别: ${colorSeverity(st.lastResult.severity)} · score ${st.lastResult.score}`
-          );
-          console.log(`  最近时间: ${new Date(st.lastResult.timestamp).toLocaleString('zh-CN')}`);
-          console.log(`  最近耗时: ${st.lastResult.durationMs}ms`);
-          console.log(`  问题数量: ${st.lastResult.issueCount}`);
-          console.log(
-            `  修复数量: ${Number.isFinite(st.lastResult.repairCount) ? st.lastResult.repairCount : 0}`
+          const lastIcon = ui.STATUS_ICONS[
+            st.lastResult.severity === 'critical' ? 'error'
+            : st.lastResult.severity === 'degraded' ? 'warning'
+            : st.lastResult.severity === 'healthy' ? 'ok' : 'unknown'
+          ];
+          const lastColorFn = chalk[lastIcon.color] || chalk.white;
+          console.log('');
+          printTable(
+            ['最近结果', '值'],
+            [
+              ['级别', `${lastColorFn(lastIcon.icon)} ${st.lastResult.severity}`],
+              ['评分', String(st.lastResult.score)],
+              ['时间', new Date(st.lastResult.timestamp).toLocaleString('zh-CN')],
+              ['耗时', `${st.lastResult.durationMs}ms`],
+              ['问题数量', String(st.lastResult.issueCount)],
+              ['修复数量', String(Number.isFinite(st.lastResult.repairCount) ? st.lastResult.repairCount : 0)],
+            ]
           );
         } else {
-          console.log(`  最近结果: ${chalk.dim('暂无')}`);
+          console.log('');
+          printTable([['最近结果', '─']], [['状态', `${chalk.dim('◌ 暂无')}`]]);
         }
-        console.log(`  日志文件: ${st.logFile}`);
+
+        console.log('');
+        printTable([['日志文件', '路径']], [['日志', st.logFile]]);
         console.log(
           chalk.dim(
             '\n  用法: monitor selfcheck start|stop|status|run|tail [--interval ms] [--n N] [--deep]\n'

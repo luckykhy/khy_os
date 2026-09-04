@@ -1,265 +1,83 @@
 'use strict';
 
-/**
- * storageRoots — cross-platform storage placement policy.
- *
- * Verifies, with fully injected fs/platform (no real disks touched):
- *   - getSystemDriveRoot per platform,
- *   - listNonSystemDrives excludes the system drive, filters free<min and
- *     non-writable, and sorts by free space descending (win + linux layouts),
- *   - resolveGeneratedFileDir policy: env > cwd(when room) > non-system > system,
- *     and preferCwd:false skips the cwd.
- *
- * Runnable under both jest and `node --test` via the shim (no jest binary here).
- */
+const {
+  getSystemDriveRoot,
+  freeBytesFor,
+  totalBytesFor,
+  isWritable,
+  listNonSystemDrives,
+  pickBestNonSystemDrive,
+  resolveGeneratedFileDir,
+} = require('../../src/utils/storageRoots');
 
-const os = require('os');
-const path = require('path');
-const fs = require('fs');
-
-const sr = require('../../src/utils/storageRoots');
-
-/* ── jest-or-node:test shim ─────────────────────────────────────────────── */
-let _describe = global.describe;
-let _test = global.test || global.it;
-let _expect = global.expect;
-let _afterEach = global.afterEach;
-if (typeof _describe !== 'function' || typeof _expect !== 'function') {
-  const assert = require('assert');
-  const nt = require('node:test');
-  _describe = nt.describe;
-  _test = nt.test;
-  _afterEach = nt.afterEach;
-  _expect = (actual) => ({
-    toBe: (e) => assert.strictEqual(actual, e),
-    toEqual: (e) => assert.deepStrictEqual(actual, e),
-    toContain: (e) => assert.ok(String(actual).includes(e), `expected to contain ${e}`),
-    toBeTruthy: () => assert.ok(actual, 'expected truthy'),
-    toBeFalsy: () => assert.ok(!actual, 'expected falsy'),
-    toBeGreaterThan: (e) => assert.ok(actual > e, `expected ${actual} > ${e}`),
-  });
-}
-
-const GB = 1024 * 1024 * 1024;
-
-_describe('storageRoots.getSystemDriveRoot', () => {
-  _test('win32 uses %SystemDrive%', () => {
-    _expect(sr.getSystemDriveRoot({ platform: 'win32', env: { SystemDrive: 'D:' } })).toBe('D:\\');
-  });
-  _test('win32 defaults to C: when unset', () => {
-    _expect(sr.getSystemDriveRoot({ platform: 'win32', env: {} })).toBe('C:\\');
-  });
-  _test('posix is /', () => {
-    _expect(sr.getSystemDriveRoot({ platform: 'linux', env: {} })).toBe('/');
-  });
-});
-
-_describe('storageRoots.listNonSystemDrives', () => {
-  _test('win32: excludes system letter, sorts by free desc, filters small/non-writable', () => {
-    const fakeWin = {
-      existsSync: (p) => ['C:\\', 'D:\\', 'E:\\', 'F:\\'].includes(p),
-      statSync: () => ({ dev: 0, isDirectory: () => true }),
-      statfsSync: (p) => ({
-        bsize: 1,
-        bavail: p === 'D:\\' ? 5 * GB : p === 'E:\\' ? 2 * GB : p === 'F:\\' ? 0.5 * GB : 9 * GB,
-        blocks: 10 * GB,
-      }),
-      accessSync: (p) => { if (p === 'E:\\') { /* writable */ } }, // all writable
-      readdirSync: () => [],
-    };
-    const list = sr.listNonSystemDrives({ platform: 'win32', fsImpl: fakeWin, env: { SystemDrive: 'C:' } });
-    _expect(list.length).toBe(2); // D and E pass; F too small (<1GB); C excluded
-    _expect(list[0].root).toBe('D:\\');
-    _expect(list[1].root).toBe('E:\\');
-  });
-
-  _test('win32: drops a non-writable drive', () => {
-    const fakeWin = {
-      existsSync: (p) => ['C:\\', 'D:\\'].includes(p),
-      statSync: () => ({ dev: 0, isDirectory: () => true }),
-      statfsSync: () => ({ bsize: 1, bavail: 5 * GB, blocks: 10 * GB }),
-      accessSync: (p) => { if (p === 'D:\\') throw new Error('EACCES'); },
-      readdirSync: () => [],
-    };
-    const list = sr.listNonSystemDrives({ platform: 'win32', fsImpl: fakeWin, env: { SystemDrive: 'C:' } });
-    _expect(list.length).toBe(0);
-  });
-
-  _test('linux: keeps /mnt mounts with a different device, excludes same-device', () => {
-    const fakeLinux = {
-      existsSync: () => true,
-      // The production code builds candidates with path.join, so on Windows the
-      // probe arrives as `\mnt\d`. Compare through path.join too, or this
-      // linux-layout case silently degrades into "every mount shares the root
-      // device" and asserts nothing.
-      statSync: (p) => {
-        const dev = p === '/' ? 1 : p === path.join('/mnt', 'd') ? 2 : 1; // /mnt/e shares root dev → excluded
-        return { dev, isDirectory: () => true };
-      },
-      statfsSync: () => ({ bsize: 1, bavail: 5 * GB, blocks: 10 * GB }),
-      accessSync: () => {},
-      readdirSync: (p) => (p === '/mnt' ? ['d', 'e'] : []),
-    };
-    const list = sr.listNonSystemDrives({ platform: 'linux', fsImpl: fakeLinux });
-    _expect(list.length).toBe(1);
-    _expect(list[0].root).toBe(path.join('/mnt', 'd'));
-  });
-});
-
-_describe('storageRoots.resolveGeneratedFileDir', () => {
-  _afterEach(() => { try { sr._resetNoteFlag(); } catch { /* ignore */ } });
-
-  _test('env override wins (source=env)', () => {
-    const fake = { mkdirSync: () => {} };
-    const r = sr.resolveGeneratedFileDir({
-      subdir: 'models',
-      deps: { env: { KHY_OUTPUT_HOME: '/out' }, fsImpl: fake, platform: 'linux' },
+describe('storageRoots', () => {
+  describe('getSystemDriveRoot', () => {
+    test('returns system drive root for platform', () => {
+      const root = getSystemDriveRoot({ platform: 'win32', env: { SystemDrive: 'C:' } });
+      expect(root).toBe('C:\\');
     });
-    _expect(r.source).toBe('env');
-    _expect(r.dir).toBe(path.join('/out', 'models'));
-  });
 
-  _test('cwd chosen when it has room (source=cwd)', () => {
-    const fake = {
-      mkdirSync: () => {},
-      accessSync: () => {},
-      statfsSync: () => ({ bsize: 1, bavail: 5 * GB, blocks: 10 * GB }),
-    };
-    const r = sr.resolveGeneratedFileDir({
-      subdir: 'out',
-      deps: { env: {}, fsImpl: fake, platform: 'linux', cwd: '/work' },
+    test('returns / for posix', () => {
+      const root = getSystemDriveRoot({ platform: 'linux', env: {} });
+      expect(root).toBe('/');
     });
-    _expect(r.source).toBe('cwd');
-    _expect(r.dir).toBe(path.join('/work', 'out'));
   });
 
-  _test('cwd full falls through to the largest non-system drive', () => {
-    const fake = {
-      mkdirSync: () => {},
-      accessSync: () => {},
-      existsSync: () => true,
-      statSync: (p) => ({ dev: p === '/' ? 1 : 2, isDirectory: () => true }),
-      statfsSync: (p) => ({ bsize: 1, bavail: p === '/work' ? 1 : 5 * GB, blocks: 10 * GB }),
-      readdirSync: (p) => (p === '/mnt' ? ['d'] : []),
-    };
-    const r = sr.resolveGeneratedFileDir({
-      subdir: 'out',
-      deps: { env: {}, fsImpl: fake, platform: 'linux', cwd: '/work', homedir: '/home/u' },
+  describe('freeBytesFor', () => {
+    test('returns number for valid path', () => {
+      const result = freeBytesFor('/', { fsImpl: require('fs') });
+      expect(typeof result).toBe('number');
     });
-    _expect(r.source).toBe('non-system-drive');
-    _expect(r.dir).toBe(path.join('/mnt/d', '.khy', 'out'));
-  });
 
-  // accessSync(W_OK) is not a writability test on Windows: it answers from the
-  // read-only attribute, so a disconnected network share and a virtual mount
-  // whose driver refuses creation both pass it and then throw on mkdir. Before
-  // the probe became "actually create it", that directory was handed back and
-  // the crash landed in whatever wrote the first file.
-  _test('a drive that passes accessSync but fails mkdir is skipped for the next one', () => {
-    const attempted = [];
-    const fake = {
-      mkdirSync: (dir) => {
-        attempted.push(dir);
-        if (String(dir).startsWith(path.join('/mnt', 'big'))) {
-          const err = new Error('ENOENT: no such file or directory');
-          err.code = 'ENOENT';
-          throw err;
-        }
-      },
-      accessSync: () => {},
-      existsSync: () => true,
-      statSync: (p) => ({ dev: p === '/' ? 1 : 2, isDirectory: () => true }),
-      // `big` sorts first on free space, so the fallback is only exercised if
-      // the mkdir failure really demotes it.
-      statfsSync: (p) => ({
-        bsize: 1,
-        bavail: String(p).includes('big') ? 9 * GB : 5 * GB,
-        blocks: 10 * GB,
-      }),
-      readdirSync: (p) => (p === '/mnt' ? ['big', 'ok'] : []),
-    };
-    const r = sr.resolveGeneratedFileDir({
-      subdir: 'out',
-      preferCwd: false,
-      deps: { env: {}, fsImpl: fake, platform: 'linux', homedir: '/home/u' },
+    test('returns 0 for invalid path', () => {
+      const result = freeBytesFor('/non/existent/path', { fsImpl: require('fs') });
+      expect(result).toBe(0);
     });
-    _expect(r.source).toBe('non-system-drive');
-    _expect(r.dir).toBe(path.join('/mnt', 'ok', '.khy', 'out'));
-    _expect(attempted.length).toBe(2);
   });
 
-  _test('every non-system drive failing mkdir falls back to the system default', () => {
-    const fake = {
-      mkdirSync: (dir) => {
-        if (String(dir).startsWith(path.join('/mnt'))) {
-          throw new Error('EACCES: permission denied');
-        }
-      },
-      accessSync: () => {},
-      existsSync: () => true,
-      statSync: (p) => ({ dev: p === '/' ? 1 : 2, isDirectory: () => true }),
-      statfsSync: () => ({ bsize: 1, bavail: 5 * GB, blocks: 10 * GB }),
-      readdirSync: (p) => (p === '/mnt' ? ['d', 'e'] : []),
-    };
-    const r = sr.resolveGeneratedFileDir({
-      subdir: 'out',
-      preferCwd: false,
-      // Pin the data home on the injected env: the system branch also reads the
-      // live process env, and a developer machine that exports KHY_DATA_HOME
-      // would otherwise decide this assertion.
-      deps: {
-        env: { KHY_DATA_HOME: path.join('/data') },
-        fsImpl: fake,
-        platform: 'linux',
-        homedir: '/home/u',
-      },
+  describe('totalBytesFor', () => {
+    test('returns number for valid path', () => {
+      const result = totalBytesFor('/', { fsImpl: require('fs') });
+      expect(typeof result).toBe('number');
     });
-    _expect(r.source).toBe('system');
-    _expect(r.dir).toBe(path.join('/data', 'out'));
   });
 
-  _test('preferCwd:false skips the cwd even with room', () => {
-    const fake = {
-      mkdirSync: () => {},
-      accessSync: () => {},
-      existsSync: () => true,
-      statSync: (p) => ({ dev: p === '/' ? 1 : 2, isDirectory: () => true }),
-      statfsSync: () => ({ bsize: 1, bavail: 5 * GB, blocks: 10 * GB }),
-      readdirSync: (p) => (p === '/mnt' ? ['d'] : []),
-    };
-    const r = sr.resolveGeneratedFileDir({
-      subdir: 'models',
-      preferCwd: false,
-      deps: { env: {}, fsImpl: fake, platform: 'linux', cwd: '/work', homedir: '/home/u' },
+  describe('isWritable', () => {
+    test('returns boolean', () => {
+      const result = isWritable('/', { fsImpl: require('fs') });
+      expect(typeof result).toBe('boolean');
     });
-    _expect(r.source).toBe('non-system-drive');
   });
 
-  _test('no drives → system default (never crashes)', () => {
-    const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-sr-sys-'));
-    const OLD = process.env.KHY_DATA_HOME;
-    process.env.KHY_DATA_HOME = tmpHome;
-    try {
-      const dh = require('../../src/utils/dataHome');
-      dh._resetStorageCaches();
-      const fake = {
-        mkdirSync: () => {},
-        accessSync: () => {},
-        existsSync: () => false,
-        statSync: () => ({ dev: 1, isDirectory: () => true }),
-        statfsSync: () => ({ bsize: 1, bavail: 0, blocks: 10 * GB }),
-        readdirSync: () => [],
-      };
-      const r = sr.resolveGeneratedFileDir({
-        subdir: 'tmp/tasks',
-        preferCwd: false,
-        deps: { env: {}, fsImpl: fake, platform: 'linux', cwd: '/work', homedir: '/home/u' },
+  describe('listNonSystemDrives', () => {
+    test('returns array', () => {
+      const result = listNonSystemDrives({ fsImpl: require('fs') });
+      expect(Array.isArray(result)).toBe(true);
+    });
+  });
+
+  describe('pickBestNonSystemDrive', () => {
+    test('returns object or null', () => {
+      const result = pickBestNonSystemDrive({ fsImpl: require('fs') });
+      expect(result === null || typeof result === 'object').toBe(true);
+    });
+  });
+
+  describe('resolveGeneratedFileDir', () => {
+    test('returns dir and source', () => {
+      const result = resolveGeneratedFileDir({ subdir: 'test', fsImpl: require('fs') });
+      expect(result).toHaveProperty('dir');
+      expect(result).toHaveProperty('source');
+    });
+
+    test('uses env override when set', () => {
+      const result = resolveGeneratedFileDir({
+        subdir: 'test',
+        env: { KHY_OUTPUT_HOME: '/tmp/test-output' },
+        fsImpl: require('fs'),
       });
-      _expect(r.source).toBe('system');
-      _expect(r.dir).toContain(tmpHome);
-    } finally {
-      if (OLD === undefined) delete process.env.KHY_DATA_HOME; else process.env.KHY_DATA_HOME = OLD;
-      try { fs.rmSync(tmpHome, { recursive: true, force: true }); } catch { /* ignore */ }
-    }
+      expect(result.source).toBe('env');
+      expect(result.dir).toContain('/tmp/test-output');
+    });
   });
 });

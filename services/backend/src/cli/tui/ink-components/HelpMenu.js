@@ -6,11 +6,11 @@
  */
 const React = require('react');
 
-const keybindingCatalog = require('../../../services/keybindings/keybindingCatalog');
+const keybindingCatalog = require('../../../services/keybindings');
 const inkRuntime = require('../inkRuntime');
 // 键位单一真源:精简浮层与 /keybindings 完整列举同源此叶子,绝不在此再内联一份。
 
-const SHORTCUTS = keybindingCatalog.getEssentialShortcuts();
+const SHORTCUTS = keybindingCatalog.keybindingCatalog.getEssentialShortcuts();
 
 function HelpMenu() {
   const { Box, Text } = inkRuntime.get();

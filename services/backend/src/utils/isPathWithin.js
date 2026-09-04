@@ -17,7 +17,7 @@ const path = require('path');
  *   fail-closed:异常一律返 false 而非 true——宁可漏报包含也不误判「在范围内」。
  *
  * 契约:纯函数、确定性、不 mutate 入参、无 fs IO(仅 path 纯计算)。
- *   各消费方保留同名本地 `const _isPathWithin = require('.../isPathWithin')`→ 调用点逐字节不变。
+ *   各消费方保留同名本地 `const _isPathWithin = require('isPathWithin.js')`→ 调用点逐字节不变。
  */
 
 function isPathWithin(parent = '', target = '') {

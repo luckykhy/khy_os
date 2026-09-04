@@ -443,17 +443,8 @@ function humanSize(bytes, env = process.env) {
   } catch {
     /* fall through to legacy */
   }
-  const n = Number(bytes) || 0;
-  if (n < 1024) {
-    return `${n} B`;
-  }
-  if (n < 1024 * 1024) {
-    return `${(n / 1024).toFixed(1)} KB`;
-  }
-  if (n < 1024 * 1024 * 1024) {
-    return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-  }
-  return `${(n / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+  // 安全修复：使用统一工具函数
+  return require('../utils/humanBytes').humanBytes(bytes);
 }
 
 /**

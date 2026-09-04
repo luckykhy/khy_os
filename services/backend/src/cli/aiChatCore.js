@@ -297,7 +297,7 @@ const {
   isContinuationCommand: _isContinuationCommand,
   isResumableError: _isResumableError,
   CONTINUE_HINT: _CONTINUE_HINT,
-} = require('../services/query/continuation');
+} = require('../services/query').continuation;
 
 function _shouldAdvanceActiveGoal(lightweightConversation) {
   return lightweightConversation !== true;
@@ -988,7 +988,7 @@ async function chat(userMessage, opts = {}) {
   // searchNecessity(时效零漏判复用 searchFreshness)。媒体输入不参与该判定。门控 KHY_SEARCH_NECESSITY 默认开。
   let _searchNecessityDirective = '';
   try {
-    const { routeSearchNecessity } = require('../services/search/searchNecessity');
+    const { routeSearchNecessity } = require('../services/domain/query/search/searchNecessity.js');
     const _need = routeSearchNecessity({
       text: userMessage,
       hasMedia: Array.isArray(multimodalInput.mediaKinds) && multimodalInput.mediaKinds.length > 0,
@@ -1169,7 +1169,7 @@ async function chat(userMessage, opts = {}) {
   // 门控 KHY_NL_CONFIG 默认开。
   let _nlConfigDirective = '';
   try {
-    const { routeConfigIntent } = require('../services/config/nlConfigResolver');
+    const { routeConfigIntent } = require('../services/domain/config/config/nlConfigResolver.js');
     const _cfg = routeConfigIntent({ text: userMessage });
     if (_cfg && _cfg.directive) {
       _nlConfigDirective = _cfg.directive;
@@ -1194,7 +1194,7 @@ async function chat(userMessage, opts = {}) {
   // 门控 KHY_NL_ACTION 默认开。
   let _nlActionDirective = '';
   try {
-    const { routeActionIntent } = require('../services/config/nlActionResolver');
+    const { routeActionIntent } = require('../services/domain/config/config/nlActionResolver.js');
     const _nlAct = routeActionIntent({ text: userMessage });
     if (_nlAct && _nlAct.directive) {
       _nlActionDirective = _nlAct.directive;
@@ -1215,7 +1215,7 @@ async function chat(userMessage, opts = {}) {
   // nlConfig/nlAction 正交。单一真源 philosophyDesignResolver。门控 KHY_PHILOSOPHY_DESIGN 默认开。
   let _philosophyDesignDirective = '';
   try {
-    const { routePhilosophyIntent } = require('../services/config/philosophyDesignResolver');
+    const { routePhilosophyIntent } = require('../services/domain/config/config/philosophyDesignResolver.js');
     const _phil = routePhilosophyIntent({ text: userMessage });
     if (_phil && _phil.directive) {
       _philosophyDesignDirective = _phil.directive;
@@ -1277,7 +1277,7 @@ async function chat(userMessage, opts = {}) {
   // KHY_INSTALL_CONFIG_GUARD 默认开。
   let _installConfigGuardDirective = '';
   try {
-    const { resolve: _routeInstallConfig } = require('../services/config/nlInstallVsConfigGuard');
+    const { resolve: _routeInstallConfig } = require('../services/domain/config/config/nlInstallVsConfigGuard.js');
     const _icg = _routeInstallConfig(userMessage);
     if (_icg && _icg.directive) {
       _installConfigGuardDirective = _icg.directive;
@@ -1982,9 +1982,9 @@ async function chat(userMessage, opts = {}) {
   // the injector re-checks model strength + map relevance. Best-effort.
   let trajectoryGuideBlock = null;
   try {
-    const guideConfig = require('../services/trajectoryGuide/config');
+    const guideConfig = require('handlers/config.js');
     if (guideConfig.isGuideInjectEnabled()) {
-      const { buildGuideBlock } = require('../services/trajectoryGuide/guideInjector');
+      const { buildGuideBlock } = require('../services/domain/trajectory/trajectoryGuide/guideInjector.js');
       trajectoryGuideBlock = await buildGuideBlock({ userMessage, modelId: _getModelInfo().model });
     }
   } catch {
@@ -2090,7 +2090,7 @@ async function chat(userMessage, opts = {}) {
         }
         let _candidates = [];
         try {
-          const _found = require('../services/workflow/flowRegistry').find(userMessage);
+          const _found = require('../services/domain/project/workflow/flowRegistry.js').find(userMessage);
           _candidates = Array.isArray(_found) ? _found.slice(0, 3) : [];
         } catch {
           _candidates = [];
@@ -2122,7 +2122,7 @@ async function chat(userMessage, opts = {}) {
     // 空串 → entries 不含该条 → 输出与接线前逐字节一致。
     let _pluginPromptSection = '';
     try {
-      const seams = require('../services/hooks/hookContribSeams');
+      const seams = require('../services/domain/extensions/hooks/hookContribSeams.js');
       _pluginPromptSection = await seams.collectPromptSections({
         model: _getModelInfo(),
         intent: intentAssurance && intentAssurance.mode,
@@ -2295,7 +2295,7 @@ async function chat(userMessage, opts = {}) {
         // Enrich current-message tokens with CJK bigrams for meaningful comparison.
         let curTokens = curRaw;
         try {
-          const recallTokens = require('../services/memoryEngine/memoryRecallTokens');
+          const recallTokens = require('../services/domain/memory/memoryEngine/memoryRecallTokens.js');
           curTokens = recallTokens.enrichTokens(curRaw, userMessage, process.env);
         } catch {
           /* enrichment optional — fall back to raw tokens */
@@ -2352,7 +2352,7 @@ async function chat(userMessage, opts = {}) {
     // 均 fail-soft、各走自己的门控(here-line=KHY_SESSION_TOPOLOGY,insight=KHY_SESSION_SLOTS)、
     // 空则 no-op(sp 字节不变)。memory 槽刻意**绝不**在此注入(对齐 Stello 的不对称:外向只读)。
     try {
-      const forest = require('../services/session/sessionForestService');
+      const forest = require('../services/domain/session/session/sessionForestService.js');
       const here = forest.buildHereLineForCurrent();
       if (here) {
         sp += '\n\n' + here;
@@ -2407,7 +2407,7 @@ async function chat(userMessage, opts = {}) {
     // ARCHIVING (reversible), never hard-delete. Auto-archive requires an
     // explicit opt-in (KHY_MEMORY_DISTILL_AUTO=archive). Fail-soft throughout.
     try {
-      const distiller = require('../services/memoryEngine/distiller');
+      const distiller = require('../services/domain/memory/memoryEngine/distiller.js');
       const distillRun = distiller.maybeDistill();
       if (
         distillRun &&
@@ -2709,7 +2709,7 @@ async function chat(userMessage, opts = {}) {
     // <persisted-output> marker instead of discarding real output. In-place on
     // _chatState.messages — persistence is one-way and idempotent (markers are skipped on
     // re-run), so a large result is offloaded once and never re-grows the cost.
-    const { persistOversizedToolResults } = require('../services/query/compactPipeline');
+    const { persistOversizedToolResults } = require('../services/query').compactPipeline;
     const _persisted = persistOversizedToolResults(_chatState.messages);
     if (_persisted.persistedCount > 0) {
       // Independent, transparent signal — not part of the compacting flow.
@@ -3333,7 +3333,7 @@ async function chat(userMessage, opts = {}) {
       const _autoContOn = !['0', 'false', 'off', 'no'].includes(_autoContGate);
       if (_autoContOn) {
         try {
-          const { buildContinuationPrompt } = require('../services/query/maxTokensRecovery');
+          const { buildContinuationPrompt } = require('../services/query').maxTokensRecovery;
           onStatus({
             phase: 'request',
             message: '检测到输出被 max_tokens 截断，正在自动续写（第 1/1 次）...',
@@ -3852,7 +3852,7 @@ async function chat(userMessage, opts = {}) {
       // 只留 <persisted-output> 标记 —— 与主路径(1957 行)对称,避免循环内压缩把
       // 真实数据硬截断丢弃。幂等:已含标记的跳过。
       try {
-        const { persistOversizedToolResults } = require('../services/query/compactPipeline');
+        const { persistOversizedToolResults } = require('../services/query').compactPipeline;
         persistOversizedToolResults(_chatState.messages);
       } catch {
         /* best effort — persistence must never break the loop */
@@ -4203,7 +4203,7 @@ async function chat(userMessage, opts = {}) {
   // memory 槽,供跨支综合/orchestrator 读取。刻意 **不 await**、`.catch(()=>{})`,绝不阻塞
   // 或翻红当轮(对齐 Stello consolidate)。门控 KHY_SESSION_SLOTS,节拍 KHY_CONSOLIDATE_EVERY。
   try {
-    const _forest = require('../services/session/sessionForestService');
+    const _forest = require('../services/domain/session/session/sessionForestService.js');
     Promise.resolve(
       _forest.consolidateCurrent({
         messages: _chatState.messages,

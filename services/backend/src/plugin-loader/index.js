@@ -35,7 +35,7 @@ const path = require('path');
 const { getDataHome } = require('../utils/dataHome');
 // 拓展根的单一真源（[DESIGN-ARCH-069]）。此前本加载器有自己的 5 个发现源，其中**没有
 // 一个**是仓库的 extensions/ —— 随包分发的内置拓展对它完全不可见。
-const extensionRoots = require('../services/extensions/extensionRoots');
+const extensionRoots = require('../services/domain/extensions/extensions/extensionRoots.js');
 
 // Optional SDK load: fall back to a built-in manifest validator when the
 // @khy/plugin-sdk package is missing (fail-soft, warn only once).

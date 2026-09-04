@@ -177,7 +177,7 @@ function ensureClaudeCodeEnv(env = process.env) {
   const e = env || process.env;
   const KEYS = ['ANTHROPIC_BASE_URL', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_API_KEY', 'ANTHROPIC_MODEL'];
   try {
-    const cc = require('../externalApps/claudeCodeAdapter');
+    const cc = require('../domain/network/externalApps/claudeCodeAdapter');
     const file = cc.configPath(e);
     const text = require('fs').readFileSync(file, 'utf8');
     const doc = JSON.parse(text);
@@ -207,7 +207,7 @@ function ensureClaudeCodeEnv(env = process.env) {
 function ensureOpenCodeEnv(env = process.env) {
   const e = env || process.env;
   try {
-    const oc = require('../externalApps/opencodeAdapter');
+    const oc = require('../domain/network/externalApps/opencodeAdapter');
     const cfgPath = oc.configPath(e);
     if (!cfgPath) {
       return { adopted: false, count: 0, reason: 'no-config-path' };

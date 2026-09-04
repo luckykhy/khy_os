@@ -215,11 +215,14 @@ class DynamicSpinner {
         : this._cachedElapsedStr;
     this._cachedElapsedSec = elapsedSecFloor;
 
-    // Determine label — rotate verbs for thinking/request phases;
-    // for tool phases, prefer tool-specific Chinese label (G7)
+    // Determine label — for thinking/request phases, show an honest
+    // "waiting" label. The old rotating verbs ("解析请求", "校验约束" etc.)
+    // were pure fabrication — they implied specific processing stages that
+    // didn't correspond to actual backend activity. Now we show the truth:
+    // we sent a request and we're waiting for the model to respond.
     let label;
     if (this._phase === 'thinking' || this._phase === 'request') {
-      label = this._getThinkingVerb();
+      label = '等待模型响应';
     } else if (
       this._detail &&
       PHASE_LABELS[`tool:${this._detail.toLowerCase().replace(/[\s_-]/g, '')}`]

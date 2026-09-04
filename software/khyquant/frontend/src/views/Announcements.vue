@@ -419,7 +419,7 @@ onMounted(() => {
   padding: 12px 24px;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(245, 108, 108, 0.3);
-  background: linear-gradient(135deg, #f56c6c 0%, #e6a23c 100%);
+  background: linear-gradient(135deg, var(--khy-danger) 0%, #e6a23c 100%);
   border: none;
   transition: all 0.3s ease;
 }
@@ -480,22 +480,22 @@ onMounted(() => {
 }
 
 .announcement-item:hover {
-  border-color: #409eff;
+  border-color: var(--khy-primary);
   box-shadow: 0 2px 12px rgba(64, 158, 255, 0.1);
 }
 
 .announcement-item.unread {
-  border-left: 4px solid #409eff;
+  border-left: 4px solid var(--khy-primary);
   background: linear-gradient(90deg, rgba(64, 158, 255, 0.05) 0%, white 10%);
 }
 
 .announcement-item.sticky {
-  border-color: #f56c6c;
+  border-color: var(--khy-danger);
   background: linear-gradient(135deg, rgba(245, 108, 108, 0.05) 0%, white 20%);
 }
 
 .announcement-item.urgent {
-  border-color: #f56c6c;
+  border-color: var(--khy-danger);
   box-shadow: 0 0 10px rgba(245, 108, 108, 0.2);
 }
 
@@ -650,7 +650,7 @@ onMounted(() => {
   background: #f8f9fa;
   padding: 20px;
   border-radius: 8px;
-  border-left: 4px solid #409eff;
+  border-left: 4px solid var(--khy-primary);
   line-height: 1.8;
   color: #606266;
   margin: 0;
@@ -670,7 +670,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 5px;
-  color: #67c23a;
+  color: var(--khy-success);
   font-size: 14px;
 }
 

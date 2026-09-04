@@ -538,7 +538,7 @@ defineExpose({
   font-size: 14px;
   line-height: 1.6;
   color: #303133;
-  background: #ffffff;
+  background: var(--khy-white);
   pointer-events: none;
   z-index: 1;
   white-space: pre;
@@ -571,12 +571,12 @@ defineExpose({
 }
 
 :deep(.hl-comment) {
-  color: #999999;
+  color: var(--khy-gray-400);
   font-style: italic;
 }
 
 :deep(.hl-operator) {
-  color: #666666;
+  color: var(--khy-gray-500);
   font-weight: 600;
 }
 

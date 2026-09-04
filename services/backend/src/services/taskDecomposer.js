@@ -420,7 +420,7 @@ function mergeResults(subtasks, aggregated) {
     const preview = subtask.prompt.split('\n')[0].slice(0, 100);
     // OPS-MAN-101: decorative role tag (e.g. 「（验证）」). Gate off / unknown
     // role → '' → header is byte-identical to today's `### 子任务 N: preview`.
-    const { formatRoleTag } = require('./orchestrator/mergeRoleAttribution');
+    const { formatRoleTag } = require('./domain/state/orchestrator/mergeRoleAttribution');
     const roleTag = formatRoleTag(subtask.role);
     const header = `### 子任务 ${idx}${roleTag}: ${preview}`;
 
@@ -454,7 +454,7 @@ function mergeResults(subtasks, aggregated) {
     // rendered as a distinct 「完成（无产出）」 so a silent no-op/empty-response
     // agent is not indistinguishable from real work. successCount is unchanged
     // (it truly did not fail) — this only adds a visible marker + footer count.
-    const { isEmptySuccess } = require('./orchestrator/mergeEmptySuccess');
+    const { isEmptySuccess } = require('./domain/state/orchestrator/mergeEmptySuccess');
     const emptySuccess = success && isEmptySuccess(result);
     if (emptySuccess) {
       emptyCount++;
@@ -514,7 +514,7 @@ function mergeResults(subtasks, aggregated) {
   const {
     detectFileConflicts,
     formatConflictWarning,
-  } = require('./orchestrator/mergeFileConflicts');
+  } = require('./domain/state/orchestrator/mergeFileConflicts');
   const conflictWarning = formatConflictWarning(detectFileConflicts(perSubtaskFiles));
   if (conflictWarning) {
     footer.push(`- ${conflictWarning}`);
@@ -522,7 +522,7 @@ function mergeResults(subtasks, aggregated) {
 
   // OPS-MAN-099: empty-success honesty. If any subtask succeeded with no output,
   // surface a footer count. Gate off → emptyCount stayed 0 → no line (byte-revert).
-  const { formatEmptySuccessWarning } = require('./orchestrator/mergeEmptySuccess');
+  const { formatEmptySuccessWarning } = require('./domain/state/orchestrator/mergeEmptySuccess');
   const emptyWarning = formatEmptySuccessWarning(emptyCount);
   if (emptyWarning) {
     footer.push(`- ${emptyWarning}`);
@@ -533,7 +533,7 @@ function mergeResults(subtasks, aggregated) {
   // hidden behind an anonymous 「失败」. Gate KHY_MERGE_ROLE_ATTRIBUTION off →
   // formatRoleFailureSummary returns '' → no line (byte-revert). The bucket
   // counts always sum to failCount (unknown roles fall back to 通用).
-  const { formatRoleFailureSummary } = require('./orchestrator/mergeRoleAttribution');
+  const { formatRoleFailureSummary } = require('./domain/state/orchestrator/mergeRoleAttribution');
   const roleFailureSummary = formatRoleFailureSummary(failedRoles);
   if (roleFailureSummary) {
     footer.push(`- ${roleFailureSummary}`);

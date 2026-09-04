@@ -17,7 +17,7 @@
  *
  * 契约:确定性 fail-soft;catch 吞一切读取/解析异常返 null;不 mutate;不缓存。
  *
- * 各消费方保留同名本地 `const _localName = require('.../readJsonFileSafe')` → 调用点逐字节不变。
+ * 各消费方保留同名本地 `const _localName = require('readJsonFileSafe.js')` → 调用点逐字节不变。
  */
 
 const fs = require('fs');

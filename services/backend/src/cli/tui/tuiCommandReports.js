@@ -129,7 +129,7 @@ function buildScanReport() {
 function saveCheckpointReport(cwd) {
   try {
     const dir = cwd || process.env.KHYQUANT_CWD || process.cwd();
-    const ckptSvc = require('../../services/workspace/checkpointService');
+    const ckptSvc = require('../../services/domain/workspace/workspace/checkpointService.js');
     const r = ckptSvc.saveCheckpoint(dir, { message: '手动检查点', mode: 'auto' });
     return [`检查点已保存: ${r.id} (${r.mode}, ${r.files || 0} 文件)`];
   } catch (e) {

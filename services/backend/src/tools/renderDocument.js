@@ -30,9 +30,9 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { validateDocument } = require('../services/typeset/contentSchema');
-const { markdownToAst } = require('../services/typeset/markdownToAst');
-const { resolveTemplate, listTemplates } = require('../services/typeset/styleTemplates');
+const { validateDocument } = require('../services/typeset');
+const { markdownToAst } = require('../services/typeset');
+const { resolveTemplate, listTemplates } = require('../services/typeset');
 
 const DOC_TYPESET = path.join(__dirname, '../services/docTypeset.py');
 const MAX_CONTENT_SIZE = 4 * 1024 * 1024; // 4 MB structured content cap

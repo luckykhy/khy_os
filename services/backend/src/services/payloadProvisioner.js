@@ -160,7 +160,7 @@ function _recordFile(file, checksum, id, recordFile) {
   };
   try {
     if (typeof recordFile === 'function') recordFile(entry);
-    else require('./uninstall/ledgerWriter').appendSideEffect(entry);
+    else require('./domain/maintenance/uninstall/ledgerWriter').appendSideEffect(entry);
   } catch {}
 }
 

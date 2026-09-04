@@ -165,7 +165,7 @@ function startReceipt(ctx = {}) {
   let companionId = ctx.companionId || null;
   if (!companionId) {
     try {
-      companionId = require('./agentFs/agentFsService').getActiveAgentId();
+      companionId = require('./domain/agents/agentFs/agentFsService').getActiveAgentId();
     } catch {
       companionId = null;
     }

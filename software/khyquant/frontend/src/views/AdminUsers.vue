@@ -108,7 +108,7 @@
       <div v-else class="mobile-user-cards" v-loading="loading">
         <!-- 空状态提示 -->
         <div v-if="!loading && filteredUsers.length === 0" class="empty-state">
-          <el-icon :size="48" color="#999"><User /></el-icon>
+          <el-icon :size="48" color="var(--khy-gray-400)"><User /></el-icon>
           <p class="empty-text">暂无用户数据</p>
           <p class="empty-hint">请检查网络连接或刷新页面</p>
           <el-button type="primary" @click="refreshUsers" style="margin-top: 16px;">
@@ -334,11 +334,11 @@ const currentUser = computed(() => userStore.user)
 const { isMobile, isTablet } = useResponsive()
 
 // 在组件加载时输出调试信息
-console.log('👥 AdminUsers组件加载')
-console.log('📱 isMobile:', isMobile.value)
-console.log('📱 isTablet:', isTablet.value)
-console.log('📱 屏幕宽度:', window.innerWidth)
-console.log('👤 当前用户:', currentUser.value)
+if (import.meta.env.DEV) { console.log('👥 AdminUsers组件加载') }
+if (import.meta.env.DEV) { console.log('📱 isMobile:', isMobile.value) }
+if (import.meta.env.DEV) { console.log('📱 isTablet:', isTablet.value) }
+if (import.meta.env.DEV) { console.log('📱 屏幕宽度:', window.innerWidth) }
+if (import.meta.env.DEV) { console.log('👤 当前用户:', currentUser.value) }
 
 // 数据状态
 const loading = ref(false)
@@ -480,18 +480,18 @@ const todayRegistered = computed(() => {
 const fetchUsers = async () => {
   try {
     loading.value = true
-    console.log('📋 开始加载用户列表...')
-    console.log('📱 isMobile:', isMobile.value)
-    console.log('📱 isTablet:', isTablet.value)
-    console.log('📱 屏幕宽度:', window.innerWidth)
+    if (import.meta.env.DEV) { console.log('📋 开始加载用户列表...') }
+    if (import.meta.env.DEV) { console.log('📱 isMobile:', isMobile.value) }
+    if (import.meta.env.DEV) { console.log('📱 isTablet:', isTablet.value) }
+    if (import.meta.env.DEV) { console.log('📱 屏幕宽度:', window.innerWidth) }
     
     const response = await adminAPI.getUsers()
-    console.log('✅ API响应:', response)
+    if (import.meta.env.DEV) { console.log('✅ API响应:', response) }
     
     if (response.success) {
       users.value = response.data
-      console.log(`✅ 成功加载 ${users.value.length} 个用户`)
-      console.log('📊 用户数据:', users.value.slice(0, 2)) // 显示前2个用户
+      if (import.meta.env.DEV) { console.log(`✅ 成功加载 ${users.value.length} 个用户`) }
+      if (import.meta.env.DEV) { console.log('📊 用户数据:', users.value.slice(0, 2)) // 显示前2个用户 }
     } else {
       console.error('❌ API返回失败:', response)
       ElMessage.error('获取用户列表失败: ' + (response.message || '未知错误'))
@@ -714,11 +714,11 @@ const formatDate = (dateString) => {
 
 // 生命周期
 onMounted(() => {
-  console.log('👥 AdminUsers onMounted')
-  console.log('📱 isMobile:', isMobile.value)
-  console.log('📱 屏幕宽度:', window.innerWidth)
-  console.log('👤 当前用户:', currentUser.value)
-  console.log('👤 用户角色:', currentUser.value?.role)
+  if (import.meta.env.DEV) { console.log('👥 AdminUsers onMounted') }
+  if (import.meta.env.DEV) { console.log('📱 isMobile:', isMobile.value) }
+  if (import.meta.env.DEV) { console.log('📱 屏幕宽度:', window.innerWidth) }
+  if (import.meta.env.DEV) { console.log('👤 当前用户:', currentUser.value) }
+  if (import.meta.env.DEV) { console.log('👤 用户角色:', currentUser.value?.role) }
   
   // 检查权限
   if (!currentUser.value) {
@@ -733,7 +733,7 @@ onMounted(() => {
     return
   }
   
-  console.log('✅ 权限检查通过,开始加载用户列表')
+  if (import.meta.env.DEV) { console.log('✅ 权限检查通过,开始加载用户列表') }
   fetchUsers()
 })
 </script>

@@ -20,7 +20,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const { parseChangelog, selectReleaseNotes } = require('../../services/changelog/changelogParse');
+const { parseChangelog, selectReleaseNotes } = require('../../services/domain/docs/changelog/changelogParse.js');
 const { printInfo, printError, printWarn } = require('../formatters');
 
 const _FALSY = new Set(['0', 'false', 'off', 'no']);

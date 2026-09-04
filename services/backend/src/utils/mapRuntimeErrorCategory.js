@@ -13,7 +13,7 @@
  *   type∈{network,process,cancelled} 或 text 命中传输层正则 → 'transport';否则 → ''。
  *
  * 契约:纯函数(仅 String/正则·正则无 g 标志无 lastIndex 隐患)·不 mutate 入参。
- *   各消费方保留同名本地 `const mapRuntimeCategory = require('../../../utils/mapRuntimeErrorCategory')`
+ *   各消费方保留同名本地 `const mapRuntimeCategory = require('mapRuntimeErrorCategory.js')`
  *   → 调用点逐字节不变。
  */
 

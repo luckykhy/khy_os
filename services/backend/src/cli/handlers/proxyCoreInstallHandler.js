@@ -23,7 +23,7 @@
  * runCore(). Keep formatters pure (no network/FS) so they stay node:test-safe.
  */
 
-const DEFAULT_INSTALLER = () => require('../../services/proxy/proxyCoreInstaller');
+const DEFAULT_INSTALLER = () => require('../../services/domain/network/proxy/proxyCoreInstaller.js');
 
 /**
  * Where-to-download tail lines (pure). Always yields the official URL (or the

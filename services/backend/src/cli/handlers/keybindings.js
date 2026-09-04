@@ -16,7 +16,7 @@
  * 门控 KHY_KEYBINDINGS 默认开;关 → 命令不接管(字节回退到「无此命令」的历史世界,提示按 ? 看浮层)。
  */
 
-const catalog = require('../../services/keybindings/keybindingCatalog');
+const catalog = require('../../services/keybindings').keybindingCatalog;
 const { printInfo } = require('../formatters');
 
 /**

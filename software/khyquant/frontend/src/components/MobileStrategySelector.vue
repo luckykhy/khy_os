@@ -273,7 +273,7 @@ const getStrategyTypeLabel = (type: string) => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: #0a0a0a;
+  background: var(--khy-gray-900);
   z-index: 2000;
   display: flex;
   flex-direction: column;
@@ -286,7 +286,7 @@ const getStrategyTypeLabel = (type: string) => {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%);
+  background: linear-gradient(180deg, var(--khy-gray-900) 0%, #0f0f0f 100%);
   border-bottom: 1px solid #2a2a2a;
   flex-shrink: 0;
   min-height: 56px;
@@ -299,7 +299,7 @@ const getStrategyTypeLabel = (type: string) => {
   padding: 8px 12px;
   background: transparent;
   border: none;
-  color: #409eff;
+  color: var(--khy-primary);
   font-size: 16px;
   cursor: pointer;
   border-radius: 8px;
@@ -315,7 +315,7 @@ const getStrategyTypeLabel = (type: string) => {
 .header-title {
   font-size: 18px;
   font-weight: 600;
-  color: #fff;
+  color: var(--khy-white);
   margin: 0;
 }
 
@@ -343,7 +343,7 @@ const getStrategyTypeLabel = (type: string) => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  color: #999;
+  color: var(--khy-gray-400);
   font-size: 14px;
   transition: opacity 0.3s;
 }
@@ -377,7 +377,7 @@ const getStrategyTypeLabel = (type: string) => {
 
 /* 策略卡片 */
 .strategy-card {
-  background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+  background: linear-gradient(135deg, var(--khy-gray-900) 0%, #0f0f0f 100%);
   border: 1px solid #2a2a2a;
   border-radius: var(--radius-md);
   padding: 16px;
@@ -389,8 +389,8 @@ const getStrategyTypeLabel = (type: string) => {
 
 .strategy-card:active {
   transform: scale(0.98);
-  background: linear-gradient(135deg, #252525 0%, #1a1a1a 100%);
-  border-color: #409eff;
+  background: linear-gradient(135deg, #252525 0%, var(--khy-gray-900) 100%);
+  border-color: var(--khy-primary);
 }
 
 .card-header {
@@ -404,7 +404,7 @@ const getStrategyTypeLabel = (type: string) => {
 .strategy-name {
   font-size: 16px;
   font-weight: 600;
-  color: #fff;
+  color: var(--khy-white);
   margin: 0;
   flex: 1;
 }
@@ -417,7 +417,7 @@ const getStrategyTypeLabel = (type: string) => {
 
 .strategy-description {
   font-size: 14px;
-  color: #999;
+  color: var(--khy-gray-400);
   line-height: 1.5;
   margin: 0 0 12px 0;
   display: -webkit-box;
@@ -427,7 +427,7 @@ const getStrategyTypeLabel = (type: string) => {
 }
 
 .strategy-description.empty {
-  color: #666;
+  color: var(--khy-gray-500);
   font-style: italic;
 }
 
@@ -436,7 +436,7 @@ const getStrategyTypeLabel = (type: string) => {
   align-items: center;
   gap: 16px;
   font-size: 12px;
-  color: #666;
+  color: var(--khy-gray-500);
 }
 
 .create-time,
@@ -459,13 +459,13 @@ const getStrategyTypeLabel = (type: string) => {
 
 .empty-icon {
   font-size: 64px;
-  color: #666;
+  color: var(--khy-gray-500);
   margin-bottom: 16px;
 }
 
 .empty-text {
   font-size: 16px;
-  color: #999;
+  color: var(--khy-gray-400);
   margin: 0 0 24px 0;
 }
 

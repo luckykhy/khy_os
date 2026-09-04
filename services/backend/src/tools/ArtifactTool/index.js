@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const leaf = require('../../services/artifact/artifactPlan');
+const leaf = require('../../services/domain/quality/artifact/artifactPlan.js');
 const { getDataDir } = require('../../utils/dataHome');
 const { BaseTool } = require('../_baseTool');
 

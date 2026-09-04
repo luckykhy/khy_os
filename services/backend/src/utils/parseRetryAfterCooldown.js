@@ -17,7 +17,7 @@
  *
  * 契约:纯函数(除读运行时 Date.now())、确定性给定时钟、不 mutate 入参。
  *   各消费方保留同名本地 wrapper `const parseRetryAfter = (value) =>
- *     require('.../parseRetryAfterCooldown')(value, BASE_COOLDOWN_MS, MAX_RETRY_AFTER_MS)`
+ *     require('parseRetryAfterCooldown.js')(value, BASE_COOLDOWN_MS, MAX_RETRY_AFTER_MS)`
  *   → 调用点 `parseRetryAfter(retryAfter)` 逐字节不变。
  */
 

@@ -24,7 +24,7 @@ const _simpleTokenEstimate = require('../utils/simpleTokenEstimate');
 const _appLaunchRecovery = require('./appLaunchRecovery');
 const _capabilityAssess = require('./capabilityAssessment');
 const { getCapabilityMatrix } = require('./capabilityMatrix');
-const { SEAMS: CAP_SEAMS } = require('./capabilityMatrix/seams');
+const { SEAMS: CAP_SEAMS } = require('./domain/catalog/capabilityMatrix/seams');
 const _deliveryFormatter = require('./deliveryFormatter');
 const { diagnostics, generateTraceId: genDiagTraceId } = require('./diagnosticEvents');
 const { analyzeCommand } = require('./shellSafetyValidator');
@@ -656,7 +656,7 @@ function _buildDeliverySummary(toolCallLog) {
 function _looksLikeDeliveryConclusion(text = '') {
   // 单一真源：委派 activeAssist.hasSynthesizedConclusion（判据与正则同源，消除两份拷贝）。
   try {
-    return require('./query/activeAssist').hasSynthesizedConclusion(text);
+    return require('./domain/query/query/activeAssist').hasSynthesizedConclusion(text);
   } catch {
     // fail-soft：回落到等价的本地判据，绝不因模块加载失败而误判。
     const normalized = String(text || '')

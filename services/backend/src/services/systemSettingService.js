@@ -1,6 +1,6 @@
 const { Op } = require('sequelize');
 
-const { SystemSetting } = require('../models');
+const { SystemSetting } = require('../constants/models');
 
 class SystemSettingService {
   // 获取所有设置
@@ -378,7 +378,7 @@ class SystemSettingService {
     const settings = await this.getAllSettings({ includePrivate: true });
 
     // 获取系统统计信息
-    const { User, Strategy, Backtest, Trade } = require('../models');
+    const { User, Strategy, Backtest, Trade } = require('../constants/models');
 
     const [userCount, strategyCount, backtestCount, tradeCount] = await Promise.all([
       User.count(),

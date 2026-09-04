@@ -206,12 +206,12 @@ let pendingPollTimer = null
 
 // 切换面板展开/收起
 const togglePanel = (event) => {
-  console.log('🔥🔥🔥 togglePanel 被调用 🔥🔥🔥')
-  console.log('🔥 事件类型:', event?.type)
-  console.log('🔥 事件目标:', event?.target)
-  console.log('🔥 当前状态 isExpanded:', isExpanded.value)
-  console.log('🔥 持仓数量:', props.positions.length)
-  console.log('🔥 DOM 元素存在:', document.querySelector('.position-panel') ? '是' : '否')
+  if (import.meta.env.DEV) { console.log('🔥🔥🔥 togglePanel 被调用 🔥🔥🔥') }
+  if (import.meta.env.DEV) { console.log('🔥 事件类型:', event?.type) }
+  if (import.meta.env.DEV) { console.log('🔥 事件目标:', event?.target) }
+  if (import.meta.env.DEV) { console.log('🔥 当前状态 isExpanded:', isExpanded.value) }
+  if (import.meta.env.DEV) { console.log('🔥 持仓数量:', props.positions.length) }
+  if (import.meta.env.DEV) { console.log('🔥 DOM 元素存在:', document.querySelector('.position-panel') ? '是' : '否') }
   
   // 阻止事件冒泡和默认行为
   if (event) {
@@ -221,8 +221,8 @@ const togglePanel = (event) => {
   
   isExpanded.value = !isExpanded.value
   
-  console.log('🔥 切换后状态 isExpanded:', isExpanded.value)
-  console.log('🔥🔥🔥 togglePanel 执行完毕 🔥🔥🔥')
+  if (import.meta.env.DEV) { console.log('🔥 切换后状态 isExpanded:', isExpanded.value) }
+  if (import.meta.env.DEV) { console.log('🔥🔥🔥 togglePanel 执行完毕 🔥🔥🔥') }
   
   // 移动端触觉反馈
   if (window.navigator && window.navigator.vibrate) {
@@ -439,7 +439,7 @@ watch(() => props.positions, (newPositions, oldPositions) => {
   transform: translateY(-50%);
   width: 20px;
   height: 80px;
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  background: linear-gradient(135deg, var(--khy-danger) 0%, #dc2626 100%);
   border: none;
   border-radius: 4px 0 0 4px;
   cursor: pointer;
@@ -482,7 +482,7 @@ watch(() => props.positions, (newPositions, oldPositions) => {
   height: 200px !important; /* 增加高度 */
   background: rgba(255, 255, 255, 0.98) !important;
   backdrop-filter: blur(10px);
-  border-top: 2px solid #ef4444 !important; /* 红色边框，方便调试 */
+  border-top: 2px solid var(--khy-danger) !important; /* 红色边框，方便调试 */
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3) !important;
   z-index: 999999 !important; /* 超高z-index */
   pointer-events: auto !important;
@@ -497,7 +497,7 @@ watch(() => props.positions, (newPositions, oldPositions) => {
   .position-panel {
     right: 0 !important;
     height: 250px !important; /* 增加高度 */
-    border-top: 3px solid #ef4444 !important; /* 加粗边框便于调试 */
+    border-top: 3px solid var(--khy-danger) !important; /* 加粗边框便于调试 */
   }
   
   .position-trigger-btn {
@@ -612,11 +612,11 @@ watch(() => props.positions, (newPositions, oldPositions) => {
 }
 
 .profit-positive {
-  color: #ef4444;
+  color: var(--khy-danger);
 }
 
 .profit-negative {
-  color: #10b981;
+  color: var(--khy-success);
 }
 
 .available-funds,
@@ -646,15 +646,15 @@ watch(() => props.positions, (newPositions, oldPositions) => {
 }
 
 .risk-low {
-  color: #10b981;
+  color: var(--khy-success);
 }
 
 .risk-medium {
-  color: #f59e0b;
+  color: var(--khy-warning);
 }
 
 .risk-high {
-  color: #ef4444;
+  color: var(--khy-danger);
 }
 
 /* 右侧持仓卡片流 */
@@ -688,13 +688,13 @@ watch(() => props.positions, (newPositions, oldPositions) => {
 }
 
 .position-card:hover {
-  border-color: #3b82f6;
+  border-color: var(--khy-primary);
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
   transform: translateY(-1px);
 }
 
 .position-card.selected {
-  border-color: #3b82f6;
+  border-color: var(--khy-primary);
   background: rgba(59, 130, 246, 0.05);
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
@@ -719,7 +719,7 @@ watch(() => props.positions, (newPositions, oldPositions) => {
   right: 4px;
   padding: 2px 6px;
   font-size: 10px;
-  background: #ef4444;
+  background: var(--khy-danger);
   color: white;
   border: none;
   border-radius: 3px;
@@ -775,17 +775,17 @@ watch(() => props.positions, (newPositions, oldPositions) => {
 
 .direction-long {
   background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
+  color: var(--khy-danger);
 }
 
 .direction-short {
   background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
+  color: var(--khy-success);
 }
 
 .direction-hold {
   background: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
+  color: var(--khy-primary);
 }
 
 /* 第二行：持仓成本 */
@@ -875,9 +875,9 @@ watch(() => props.positions, (newPositions, oldPositions) => {
 }
 
 .tab-btn.active {
-  background: #3b82f6;
+  background: var(--khy-primary);
   color: white;
-  border-color: #3b82f6;
+  border-color: var(--khy-primary);
 }
 
 .tab-btn:hover:not(.active) {
@@ -891,7 +891,7 @@ watch(() => props.positions, (newPositions, oldPositions) => {
   top: 4px;
   left: 50%;
   transform: translateX(-50%);
-  background: #f59e0b;
+  background: var(--khy-warning);
   color: white;
   font-size: 10px;
   font-weight: 700;
@@ -937,7 +937,7 @@ watch(() => props.positions, (newPositions, oldPositions) => {
   right: 4px;
   padding: 2px 8px;
   font-size: 10px;
-  background: #f59e0b;
+  background: var(--khy-warning);
   color: white;
   border: none;
   border-radius: 3px;
@@ -958,12 +958,12 @@ watch(() => props.positions, (newPositions, oldPositions) => {
 
 .tag-buy {
   background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
+  color: var(--khy-danger);
 }
 
 .tag-sell {
   background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
+  color: var(--khy-success);
 }
 
 .order-time {
@@ -975,7 +975,7 @@ watch(() => props.positions, (newPositions, oldPositions) => {
 .pending-status {
   font-size: 11px;
   font-weight: 600;
-  color: #f59e0b;
+  color: var(--khy-warning);
 }
 
 /* 滑动动画 */

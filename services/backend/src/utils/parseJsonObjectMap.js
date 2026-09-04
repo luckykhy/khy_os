@@ -11,7 +11,7 @@
  * 语义:raw → trim;空 → {};JSON.parse 成功且为**普通对象**(非数组/非 null)→ 原样返回;
  *   解析失败/非对象 → {}·**绝不抛**。
  *
- * 各消费方保留同名本地 `const parseJsonMap = require('.../parseJsonObjectMap')`
+ * 各消费方保留同名本地 `const parseJsonMap = require('parseJsonObjectMap.js')`
  *   → 调用点逐字节不变。
  */
 

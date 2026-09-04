@@ -26,7 +26,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const perfReport = require('../../services/perf/perfReport');
+const perfReport = require('../../services/domain/quality/perf/perfReport.js');
 const { printInfo, printError, printWarn } = require('../formatters');
 
 // transcript 读取上限,防超大 JSONL OOM;超过只取尾部(性能视图关注近况)。

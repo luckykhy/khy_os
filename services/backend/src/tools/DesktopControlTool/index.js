@@ -338,7 +338,7 @@ GRADED CONFIRMATION: each action carries a risk level (low/medium/high/critical)
           if (fs.existsSync(raced.path)) {
             const {
               convertScreenshot,
-            } = require('../../services/desktopControl/screenshotToContentBlocks');
+            } = require('../../services/domain/desktop/desktopControl/screenshotToContentBlocks.js');
             const blocks = await convertScreenshot(raced.path, { modelId: deps.modelId || null });
             if (blocks && blocks.length > 0) {
               raced._contentBlocks = blocks;
@@ -367,7 +367,7 @@ GRADED CONFIRMATION: each action carries a risk level (low/medium/high/critical)
    */
   static riskOf(action) {
     try {
-      const safetyGate = require('../../services/desktopControl/safetyGate');
+      const safetyGate = require('../../services/domain/desktop/desktopControl/safetyGate.js');
       return safetyGate.riskOf(action);
     } catch {
       return 'high';

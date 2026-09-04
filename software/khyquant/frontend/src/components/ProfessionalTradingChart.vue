@@ -364,11 +364,11 @@ function initCharts() {
   // 创建K线系列
   candlestickSeries.value = mainChart.value.addCandlestickSeries({
     upColor: '#26a69a',
-    downColor: '#ef5350',
+    downColor: 'var(--khy-danger)',
     borderUpColor: '#26a69a',
-    borderDownColor: '#ef5350',
+    borderDownColor: 'var(--khy-danger)',
     wickUpColor: '#26a69a',
-    wickDownColor: '#ef5350',
+    wickDownColor: 'var(--khy-danger)',
   })
 
   // 创建成交量系列
@@ -464,7 +464,7 @@ async function loadInitialData() {
       }).filter(item => item.time > 0)
 
       if (!isMock) {
-        console.log(`[Chart] Loaded ${klineData.length} real data points from ${source}`)
+        if (import.meta.env.DEV) { console.log(`[Chart] Loaded ${klineData.length} real data points from ${source}`) }
       }
     }
   } catch (error) {
@@ -655,21 +655,21 @@ function addMACDIndicator() {
   
   // MACD线
   macdSeries.value.macd = indicatorChart.value.addLineSeries({
-    color: '#2196F3',
+    color: 'var(--khy-primary)',
     lineWidth: 1,
   })
   macdSeries.value.macd.setData(macdData.macd)
   
   // 信号线
   macdSeries.value.signal = indicatorChart.value.addLineSeries({
-    color: '#FF9800',
+    color: 'var(--khy-warning)',
     lineWidth: 1,
   })
   macdSeries.value.signal.setData(macdData.signal)
   
   // 柱状图
   macdSeries.value.histogram = indicatorChart.value.addHistogramSeries({
-    color: '#4CAF50',
+    color: 'var(--khy-success)',
   })
   macdSeries.value.histogram.setData(macdData.histogram)
 }
@@ -694,7 +694,7 @@ function calculateMACD(data, fastPeriod = 12, slowPeriod = 26, signalPeriod = 9)
     histogram.push({
       time: macdLine[i].time,
       value: macdLine[i].value - signalLine[i].value,
-      color: macdLine[i].value >= signalLine[i].value ? '#4CAF50' : '#F44336'
+      color: macdLine[i].value >= signalLine[i].value ? 'var(--khy-success)' : 'var(--khy-danger)'
     })
   }
   
@@ -850,7 +850,7 @@ function displaySignals() {
       top: ${topPercent}%;
       width: 16px;
       height: 16px;
-      color: ${signal.type === 'buy' ? '#26a69a' : '#ef5350'};
+      color: ${signal.type === 'buy' ? '#26a69a' : 'var(--khy-danger)'};
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1006,7 +1006,7 @@ function handleResize() {
 }
 
 .price-down {
-  color: #ef5350;
+  color: var(--khy-danger);
 }
 
 .toolbar-right {
@@ -1066,7 +1066,7 @@ function handleResize() {
 }
 
 .sell-signal {
-  color: #ef5350 !important;
+  color: var(--khy-danger) !important;
 }
 
 /* Element Plus 样式覆盖 */
@@ -1120,7 +1120,7 @@ function handleResize() {
   font-size: 11px;
   margin-left: 8px;
   background: rgba(239, 83, 80, 0.15);
-  color: #ef5350;
+  color: var(--khy-danger);
   border: 1px solid rgba(239, 83, 80, 0.3);
 }
 .data-source-badge.real-data {

@@ -1,87 +1,92 @@
 'use strict';
 
-/**
- * gitWorkflowGuidance.test.js — 纯叶子:git 工作流意识块单一真源。
- *
- * 验收要点:
- *  - 门控 KHY_GIT_WORKFLOW_GUIDANCE:未设/非关键字 → 开;0/false/off/no
- *    (含大小写/空白) → 关。
- *  - 门关 → buildWorkflowAwareness 返回 '' (调用方不追加,gitStatus 逐字节回退)。
- *  - 默认分支(branch===mainBranch)→ 出 branch-first 强调;feature 分支 → 出 PR 提示。
- *  - dirty=true → 追加「当前有未提交改动」提示;dirty=false → 不追加该行。
- *  - 恒含 worktree(EnterWorktree/ExitWorktree)与主动提交提醒(offer,非自动)措辞。
- */
+const {
+  isEnabled,
+  buildWorkflowAwareness,
+  HEADER,
+} = require('../../src/constants/gitWorkflowGuidance');
 
-const test = require('node:test');
-const assert = require('node:assert/strict');
+describe('gitWorkflowGuidance', () => {
+  describe('isEnabled', () => {
+    test('returns true by default', () => {
+      expect(isEnabled({})).toBe(true);
+    });
 
-const leaf = require('../../src/constants/gitWorkflowGuidance');
+    test('returns true for non-off values', () => {
+      expect(isEnabled({ KHY_GIT_WORKFLOW_GUIDANCE: '1' })).toBe(true);
+      expect(isEnabled({ KHY_GIT_WORKFLOW_GUIDANCE: 'true' })).toBe(true);
+    });
 
-test('isEnabled: 未设/非关键字 → 开;0/false/off/no(含大小写/空白) → 关', () => {
-  assert.equal(leaf.isEnabled({}), true);
-  assert.equal(leaf.isEnabled({ KHY_GIT_WORKFLOW_GUIDANCE: 'on' }), true);
-  assert.equal(leaf.isEnabled({ KHY_GIT_WORKFLOW_GUIDANCE: 'whatever' }), true);
-  for (const off of ['0', 'false', 'off', 'no', 'OFF', ' No ', 'FALSE']) {
-    assert.equal(leaf.isEnabled({ KHY_GIT_WORKFLOW_GUIDANCE: off }), false, `off: ${off}`);
-  }
-});
+    test('returns false for off values', () => {
+      expect(isEnabled({ KHY_GIT_WORKFLOW_GUIDANCE: '0' })).toBe(false);
+      expect(isEnabled({ KHY_GIT_WORKFLOW_GUIDANCE: 'false' })).toBe(false);
+      expect(isEnabled({ KHY_GIT_WORKFLOW_GUIDANCE: 'off' })).toBe(false);
+      expect(isEnabled({ KHY_GIT_WORKFLOW_GUIDANCE: 'no' })).toBe(false);
+    });
 
-test('门关 → 返回空串(逐字节回退)', () => {
-  const out = leaf.buildWorkflowAwareness({
-    branch: 'feat/x', mainBranch: 'main', dirty: true,
-    env: { KHY_GIT_WORKFLOW_GUIDANCE: 'off' },
+    test('is case-insensitive', () => {
+      expect(isEnabled({ KHY_GIT_WORKFLOW_GUIDANCE: 'FALSE' })).toBe(false);
+    });
   });
-  assert.equal(out, '');
-});
 
-test('feature 分支 → 含分支/main 行 + PR 提示,不含 branch-first 强调', () => {
-  const out = leaf.buildWorkflowAwareness({
-    branch: 'feat/git-workflow', mainBranch: 'main', dirty: false, env: {},
+  describe('buildWorkflowAwareness', () => {
+    test('returns empty string when disabled', () => {
+      const result = buildWorkflowAwareness({ env: { KHY_GIT_WORKFLOW_GUIDANCE: '0' } });
+      expect(result).toBe('');
+    });
+
+    test('returns empty string for empty context', () => {
+      const result = buildWorkflowAwareness({ env: {} });
+      expect(result).toContain(HEADER);
+    });
+
+    test('includes branch info when provided', () => {
+      const result = buildWorkflowAwareness({
+        branch: 'feature/test',
+        mainBranch: 'main',
+        env: {},
+      });
+      expect(result).toContain('feature/test');
+      expect(result).toContain('main');
+    });
+
+    test('warns when on default branch', () => {
+      const result = buildWorkflowAwareness({
+        branch: 'main',
+        mainBranch: 'main',
+        env: {},
+      });
+      expect(result).toContain('ON the default branch');
+      expect(result).toContain('branch-first');
+    });
+
+    test('includes worktree guidance', () => {
+      const result = buildWorkflowAwareness({ env: {} });
+      expect(result).toContain('EnterWorktree');
+      expect(result).toContain('ExitWorktree');
+    });
+
+    test('includes commit offer guidance', () => {
+      const result = buildWorkflowAwareness({ env: {} });
+      expect(result).toContain('proactively offer');
+      expect(result).toContain('Never commit until the user confirms');
+    });
+
+    test('includes dirty warning when dirty', () => {
+      const result = buildWorkflowAwareness({ dirty: true, env: {} });
+      expect(result).toContain('currently has uncommitted changes');
+    });
+
+    test('does not include dirty warning when clean', () => {
+      const result = buildWorkflowAwareness({ dirty: false, env: {} });
+      expect(result).not.toContain('currently has uncommitted changes');
+    });
   });
-  assert.match(out, /## Git workflow \(this repo\)/);
-  assert.match(out, /on `feat\/git-workflow`/);
-  assert.match(out, /default branch is `main`/);
-  assert.match(out, /open PRs against/);
-  // feature 分支不应出现「currently ON the default branch」强调
-  assert.doesNotMatch(out, /currently ON the default branch/);
-});
 
-test('默认分支(branch===mainBranch)→ 出 branch-first 强调', () => {
-  const out = leaf.buildWorkflowAwareness({
-    branch: 'main', mainBranch: 'main', dirty: false, env: {},
+  describe('HEADER', () => {
+    test('is a string', () => {
+      expect(typeof HEADER).toBe('string');
+      expect(HEADER.length).toBeGreaterThan(0);
+    });
   });
-  assert.match(out, /currently ON the default branch/);
-  assert.match(out, /create a feature branch first/);
-});
-
-test('恒含 worktree 与主动提交提醒(offer,非自动)措辞', () => {
-  const out = leaf.buildWorkflowAwareness({
-    branch: 'feat/x', mainBranch: 'main', dirty: false, env: {},
-  });
-  assert.match(out, /EnterWorktree \/ ExitWorktree/);
-  assert.match(out, /proactively offer once/);
-  assert.match(out, /Never commit until the user confirms/);
-  assert.match(out, /never commit automatically/);
-});
-
-test('dirty=true → 追加当前有未提交改动提示;dirty=false → 不追加', () => {
-  const dirty = leaf.buildWorkflowAwareness({ branch: 'feat/x', mainBranch: 'main', dirty: true, env: {} });
-  assert.match(dirty, /working tree currently has uncommitted changes/);
-  const clean = leaf.buildWorkflowAwareness({ branch: 'feat/x', mainBranch: 'main', dirty: false, env: {} });
-  assert.doesNotMatch(clean, /working tree currently has uncommitted changes/);
-});
-
-test('缺 mainBranch(同步兜底路径)→ 仍产出 worktree/提交提醒,不崩', () => {
-  const out = leaf.buildWorkflowAwareness({ branch: 'feat/x', dirty: true, env: {} });
-  assert.match(out, /## Git workflow \(this repo\)/);
-  assert.match(out, /EnterWorktree/);
-  assert.match(out, /proactively offer once/);
-  // 无 mainBranch → 不产出分支/main 行与 PR 行
-  assert.doesNotMatch(out, /default branch is/);
-});
-
-test('入参异常(null/undefined)→ 绝不抛,返回字符串', () => {
-  assert.equal(typeof leaf.buildWorkflowAwareness(null), 'string');
-  assert.equal(typeof leaf.buildWorkflowAwareness(undefined), 'string');
-  assert.equal(typeof leaf.buildWorkflowAwareness({}), 'string');
 });

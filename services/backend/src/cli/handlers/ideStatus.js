@@ -17,7 +17,7 @@
  * 用法:`/ide [status|list|help]`(空参 = status)。门控 KHY_IDE_COMMAND 默认开;关 → 命令不接管(字节回退)。
  */
 
-const leaf = require('../../services/ide/idePlan');
+const leaf = require('../../services/domain/collab/ide/idePlan.js');
 
 // try/catch combinator 单一真源 utils/tryOr:执行 fn,任何异常 → dflt。
 const _safe = require('../../utils/tryOr');

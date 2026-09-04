@@ -126,7 +126,7 @@ const fatalModal = computed(() => notify.fatalModal);
   pointer-events: auto;
 }
 .error-modal {
-  background: #fff;
+  background: var(--khy-white);
   border-radius: 16px;
   padding: 24px;
   max-width: 360px;
@@ -151,7 +151,7 @@ const fatalModal = computed(() => notify.fatalModal);
   border: 0;
   border-radius: 10px;
   background: #6fa978;
-  color: #fff;
+  color: var(--khy-white);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
