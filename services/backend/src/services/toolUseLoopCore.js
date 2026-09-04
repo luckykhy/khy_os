@@ -2182,6 +2182,8 @@ async function runToolUseLoop(userMessage, options = {}) {
   // ── 持久目标 Stop-gate（goal 2026-07-03「让 khy 学会使用 CC 的 goal 模式」）───────
   let _goalStopRedrives = 0; // 本轮内 goal 感知再驱动次数（有界，跨轮由轮次预算兜底）
   let _lastGoalStopSig = null; // 上次 goal 再驱动时的回复签名 —— 同句原样重复即停，防死循环
+  // Self-heal: parse error (e.g. "Unexpected token '}'") retry guard — retry at most once per loop
+  let _parseErrorRetried = false;
   // ── 完成时审计→修复闭环 state（阶段性/大任务收尾自动审计并修复）─────────
   let _auditFixDone = false; // 本轮已跑过审计闭环（一次性，绝不重复 spawn）
   let _auditFixAnnotation = ''; // 透明标注（遗留问题）→ 追加到 finalText 末尾
@@ -3806,18 +3808,71 @@ async function runToolUseLoop(userMessage, options = {}) {
           /* breadcrumb best-effort */
         }
         const _honest = _chatGuard.buildUnexpectedChatErrorResult(chatErr, { iteration });
-        return {
-          finalResponse: _honest.finalResponse,
-          toolCallLog,
-          iterations: iteration,
-          provider: 'none',
-          tokenUsage: null,
-          errorType: _honest.errorType,
-          error_code: _honest.errorCode,
-          resumable: true,
-          continueHint: _honest.continueHint,
-          unexpectedChatError: true,
-        };
+        // Self-heal: parse errors are transient — retry once before giving up
+        if (_honest.retryable && !_parseErrorRetried) {
+          _parseErrorRetried = true;
+          try {
+            _loopBreadcrumb('chat-parse-error-retry', {
+              iteration,
+              message: _honest.message,
+            });
+          } catch {
+            /* breadcrumb best-effort */
+          }
+          // Retry the chat call once
+          try {
+            aiResult = await chat(currentMessage, {
+              ...effectiveChatOpts,
+              _intentToolChoice:
+                iteration === 1 && !_forceNoToolsNext ? effectiveChatOpts._intentToolChoice : undefined,
+              _isFollowUp: iteration > 1,
+              _forceNoTools: _forceNoToolsNext,
+              _streamingExecutor: _streamingExec,
+              _parseErrorRetry: true,
+            });
+            // Retry succeeded — continue normal flow
+            _forceNoToolsNext = false;
+            if (_streamingExec) {
+              try {
+                await _streamingExec.awaitAll();
+              } catch {
+                /* non-critical */
+              }
+            }
+            lastActivityTime = Date.now();
+            if (_loopFsm) {
+              _loopFsm.fire('ai_replied', { iteration, errorType: undefined });
+            }
+          } catch (retryErr) {
+            // Retry also failed — return the original error result
+            const _retryHonest = _chatGuard.buildUnexpectedChatErrorResult(retryErr, { iteration });
+            return {
+              finalResponse: _retryHonest.finalResponse,
+              toolCallLog,
+              iterations: iteration,
+              provider: 'none',
+              tokenUsage: null,
+              errorType: _retryHonest.errorType,
+              error_code: _retryHonest.errorCode,
+              resumable: true,
+              continueHint: _retryHonest.continueHint,
+              unexpectedChatError: true,
+            };
+          }
+        } else {
+          return {
+            finalResponse: _honest.finalResponse,
+            toolCallLog,
+            iterations: iteration,
+            provider: 'none',
+            tokenUsage: null,
+            errorType: _honest.errorType,
+            error_code: _honest.errorCode,
+            resumable: true,
+            continueHint: _honest.continueHint,
+            unexpectedChatError: true,
+          };
+        }
       }
       _forceNoToolsNext = false;
 

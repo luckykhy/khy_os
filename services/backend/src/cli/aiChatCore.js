@@ -925,8 +925,7 @@ async function chat(userMessage, opts = {}) {
       _promptIntentRepairDirective = _repair.directive;
       onStatus({
         phase: 'init',
-        message:
-          '提示词较「乱」:已启用「先结合语境理解·奔赴真实意图」(纠错→复述→推进,关键点才反问)',
+        message: '提示词模糊：启用语境理解（纠错→复述→推进）',
         elapsed: Date.now() - startTime,
       });
     }
@@ -946,7 +945,7 @@ async function chat(userMessage, opts = {}) {
       _diskCleanupClarifyDirective = _dc.directive;
       onStatus({
         phase: 'init',
-        message: '检测到清盘意图:已提示先让用户选「扫描深度 + 颗粒细度」再清',
+        message: '清理磁盘：等待用户选择扫描深度',
         elapsed: Date.now() - startTime,
       });
     }
@@ -970,7 +969,7 @@ async function chat(userMessage, opts = {}) {
       _errorEnumerationDirective = _ee.directive;
       onStatus({
         phase: 'init',
-        message: `检测到多错误诊断任务(${_ee.count} 条):先枚举完整错误清单,再逐个修复`,
+        message: `多错误诊断 (${_ee.count} 条)：枚举后逐个修复`,
         elapsed: Date.now() - startTime,
       });
     }
@@ -996,8 +995,8 @@ async function chat(userMessage, opts = {}) {
         phase: 'init',
         message:
           _kind === 'skip'
-            ? '搜索必要性:这题大概率知识库可答,已提示优先直接作答(确不确定再联网核实)'
-            : '搜索必要性:时效/实时问题,已提示先联网取最新数据再答(务必传 freshness)',
+            ? '无需联网：知识库可直接作答'
+            : '需要联网：时效性问题，先取最新数据',
         elapsed: Date.now() - startTime,
       });
     }
@@ -1040,7 +1039,7 @@ async function chat(userMessage, opts = {}) {
       _mathSolveDirective = _ms.directive;
       onStatus({
         phase: 'init',
-        message: `数学解题:识别到数学题(${_ms.kinds.join('+') || 'general'})${_hasImage ? '·含图片' : ''},已注入分步骤+自检+确定性代入复核协议`,
+        message: `数学题(${_ms.kinds.join('+') || 'general'})：分步骤求解+自检`,
         elapsed: Date.now() - startTime,
       });
     }
@@ -1061,7 +1060,7 @@ async function chat(userMessage, opts = {}) {
       _testWritingDirective = _tw.directive;
       onStatus({
         phase: 'init',
-        message: `测试编写:识别到写测试意图(${_tw.kinds.join('+') || 'general'}),已注入对齐框架+成体系覆盖+确定性+跑出证据协议`,
+        message: `写测试(${_tw.kinds.join('+') || 'general'})：对齐框架+成体系覆盖`,
         elapsed: Date.now() - startTime,
       });
     }
@@ -1091,8 +1090,7 @@ async function chat(userMessage, opts = {}) {
       _inlineImageOcrGuardDirective = _guard;
       onStatus({
         phase: 'init',
-        message:
-          '图片护栏:消息含图片路径但本轮未附图,已注入禁 DIY-OCR 指令(改用原生视觉/OCR 或如实告知)',
+        message: '图片路径未附图：禁用 DIY-OCR',
         elapsed: Date.now() - startTime,
       });
     }
@@ -1112,7 +1110,7 @@ async function chat(userMessage, opts = {}) {
       _deterministicFactsDirective = _dfres.directive;
       onStatus({
         phase: 'init',
-        message: `确定性真值:已取 ${_dfres.facts.length} 处权威真值(单位换算/常数/定理),注入供模型直接采用(不靠记忆猜测)`,
+        message: `确定性真值：注入 ${_dfres.facts.length} 处权威数据（单位/常数/定理）`,
         elapsed: Date.now() - startTime,
       });
     }
@@ -1148,7 +1146,7 @@ async function chat(userMessage, opts = {}) {
         _changeWatchDirective = String(_pending.directive);
         onStatus({
           phase: 'init',
-          message: `改动反馈:khyos 对最近一次 khy 改动判为「${_pending.verdict}」,主动反馈给模型`,
+          message: `khy 改动反馈：判定为「${_pending.verdict}」`,
           elapsed: Date.now() - startTime,
         });
       }
@@ -1173,7 +1171,7 @@ async function chat(userMessage, opts = {}) {
         const _act = _cfg.intent.action === 'off' ? '关闭' : '开启';
         onStatus({
           phase: 'init',
-          message: `自然语言配置:已识别意图「${_act} ${_cfg.intent.summary || _cfg.intent.envKey}」,将由 khyos 直接改并持久化(无需你改文件)`,
+          message: `自然语言配置：${_act} ${_cfg.intent.summary || _cfg.intent.envKey}`,
           elapsed: Date.now() - startTime,
         });
       }
@@ -1197,7 +1195,7 @@ async function chat(userMessage, opts = {}) {
       const _actSummary = (_nlAct.intent && (_nlAct.intent.summary || _nlAct.intent.id)) || '动作';
       onStatus({
         phase: 'init',
-        message: `自然语言驱动:已识别动作意图「${_actSummary}」,将用既有工具直接执行`,
+        message: `自然语言动作：${_actSummary}`,
         elapsed: Date.now() - startTime,
       });
     }
@@ -1217,7 +1215,7 @@ async function chat(userMessage, opts = {}) {
       _philosophyDesignDirective = _phil.directive;
       onStatus({
         phase: 'init',
-        message: '自然语言驱动:已识别「哲学 → 软件」意图,将建立类比映射并用软件实现',
+        message: '哲学→软件：建立类比映射并实现',
         elapsed: Date.now() - startTime,
       });
     }
@@ -1237,7 +1235,7 @@ async function chat(userMessage, opts = {}) {
       _lazinessDirective = _lz.directive;
       onStatus({
         phase: 'init',
-        message: `懒人方法论(${_lz.level}):已识别编码请求,将按「最小代码」阶梯实现`,
+        message: `编码任务(${_lz.level})：最小代码阶梯实现`,
         elapsed: Date.now() - startTime,
       });
     }

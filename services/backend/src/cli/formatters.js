@@ -90,83 +90,21 @@ function getClassicMonsterPetLines(color = chalk.hex('#D77757')) {
  * Buddy sprite renders to the left if terminal is wide enough.
  */
 function printBanner(version, aiProvider) {
+  // Use shared banner data service (single source of truth for TUI and Classic)
+  const data = require('./bannerDataService').getBannerData({ version, aiProvider });
+  const {
+    modelName, adapterName, effortLabel, billingType,
+    gatewayStatus, contextWindow, authMethod,
+    greetingName, cwd, buddyLines: fallbackBuddyLines,
+  } = data;
+
   const d = chalk.dim;
   const orange = chalk.hex('#D77757');
-
-  // Get active model info
-  let modelName = '';
-  let adapterName = '';
-  let effortLabel = 'high effort';
-  let billingType = 'API Usage Billing';
-  try {
-    const gateway = require('../services/gateway/aiGateway');
-    const active = gateway.getActiveAdapter();
-    if (active) {
-      adapterName = active.name || active.type || '';
-      modelName = active.activeModel || process.env.GATEWAY_PREFERRED_MODEL || '';
-    }
-  } catch {
-    /* best effort */
-  }
-
-  if (!modelName) {
-    modelName = process.env.GATEWAY_PREFERRED_MODEL || process.env.OLLAMA_MODEL || 'auto';
-  }
-  // CC 后端口径对齐:横幅显示友好模型名("Opus 4.8")而非裸 slug,与 TUI 页脚 /
-  // welcome 横幅走同一个 SSOT(cli/ccModelName)。门控关 / require 失败 → 裸 slug 原样。
-  try {
-    const fn = require('./ccModelName').formatModelLabel;
-    if (typeof fn === 'function') {
-      modelName = fn(modelName);
-    }
-  } catch {
-    /* keep raw slug */
-  }
-  if (!adapterName) {
-    adapterName = process.env.GATEWAY_PREFERRED_ADAPTER || aiProvider || 'auto';
-  }
-
-  // Determine billing type from adapter
-  if (/ollama|local|llama/i.test(adapterName)) {
-    billingType = 'Local Model';
-  } else if (/relay|web|clipboard/i.test(adapterName)) {
-    billingType = 'Relay';
-  }
-
-  // Effort level
-  try {
-    const ai = require('./ai');
-    const effort = ai.getEffort ? ai.getEffort() : 'high';
-    const labels = {
-      max: 'max effort',
-      high: 'high effort',
-      medium: 'medium effort',
-      low: 'low effort',
-    };
-    effortLabel = labels[effort] || 'high effort';
-  } catch {
-    /* best effort */
-  }
-
-  const cwd = process.cwd();
-  const home = os.homedir();
-  const cwdShort = cwd.startsWith(home) ? '~' + cwd.slice(home.length) : cwd;
   const ver = version || require('../../package.json').version;
   const cols = process.stdout.columns || 80;
 
-  // ── Buddy sprite (Claude Code style: companion renders left of text) ──
-  let buddyLines = [];
-  try {
-    const buddyModule = require('../buddy');
-    const companion = buddyModule.getActiveCompanion ? buddyModule.getActiveCompanion() : null;
-    if (companion && companion.sprite) {
-      buddyLines = companion.sprite;
-    }
-  } catch {
-    /* no buddy */
-  }
-
-  // Fallback pet sprite (classic little monster)
+  // ── Buddy sprite ──
+  let buddyLines = fallbackBuddyLines;
   if (!buddyLines || buddyLines.length === 0) {
     buddyLines = getClassicMonsterPetLines(orange);
   }

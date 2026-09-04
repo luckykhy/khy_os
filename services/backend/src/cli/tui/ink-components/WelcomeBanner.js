@@ -69,21 +69,14 @@ function WelcomeBanner({
   const { Box, Text } = inkRuntime.get();
   const h = React.createElement;
 
-  // 「欢迎你，XXX」中的 XXX：必须显示**当前 khy 登录账号**而不是 OS 用户名。
-  // 真源 = cliAuthService.checkSession()，读 ~/.khyquant/session.json 的 username 字段。
-  // 回退链：未登录 → OS 用户名(USER/USERNAME)→ 'user'，保证不出现"账号空"或抛错。
-  // 全部包 try/catch：cliAuthService 不可用/IO 异常时落到 OS 用户名，不炸 banner。
-  let _greetingName = process.env.USER || process.env.USERNAME || 'user';
+  // 使用共享 banner 数据服务（与经典模式同源）
+  let greetingName = process.env.USER || process.env.USERNAME || 'user';
   try {
-    const cliAuth = require('../../../services/cliAuthService');
-    if (cliAuth && typeof cliAuth.checkSession === 'function') {
-      const session = cliAuth.checkSession();
-      if (session && session.loggedIn && session.username) {
-        _greetingName = session.username;
-      }
-    }
+    const { getBannerData } = require('../../../bannerDataService');
+    const data = getBannerData({ version });
+    greetingName = data.greetingName || greetingName;
   } catch {
-    /* keep OS-user fallback */
+    /* fallback to OS username */
   }
 
   // 协作链接行——与 FooterBar 的 bridgeLine 同口径(SSOT:bridge.getStatusSnapshot)。
@@ -127,7 +120,7 @@ function WelcomeBanner({
       Box,
       null,
       h(Text, { bold: true }, '欢迎你，'),
-      h(Text, { bold: true, color: 'green' }, _greetingName)
+      h(Text, { bold: true, color: 'green' }, greetingName)
     ),
     h(Text, null, ''),
     h(
