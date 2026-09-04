@@ -54,7 +54,7 @@ function phaseActionLabel(phase = '') {
     return '汇总交付结果';
   }
   if (p === 'done') {
-    return '完成请求';
+    return '交付完成';
   }
   return '推进执行链路';
 }

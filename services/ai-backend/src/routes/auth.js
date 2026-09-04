@@ -14,8 +14,15 @@ const { User } = require('@khy/shared/models');
 const { authenticateToken } = require('../middleware/auth');
 const { resolveLoginKey, normalizeAliases, findAliasConflicts } = require('../services/loginKeyResolver');
 
+// SECURITY: JWT_SECRET must be set in production
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required in production');
+}
+
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-only-secret-do-not-use-in-production';
+
 const generateToken = (userId) => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET, {
+  return jwt.sign({ userId }, JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   });
 };
@@ -104,8 +111,13 @@ router.post('/register', async (req, res) => {
         .status(400)
         .json({ success: false, message: 'Username and password are required' });
     }
-    if (password.length < 6) {
-      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+    // Use same password policy as main backend
+    const PASSWORD_MIN_LENGTH = 6;
+    if (password.length < PASSWORD_MIN_LENGTH) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `密码长度至少${PASSWORD_MIN_LENGTH}个字符` 
+      });
     }
 
     // 规范化 alias（去重 / 字符集 / 长度）

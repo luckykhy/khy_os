@@ -222,12 +222,23 @@ class DynamicSpinner {
     // we sent a request and we're waiting for the model to respond.
     let label;
     if (this._phase === 'thinking' || this._phase === 'request') {
-      label = '等待模型响应';
+      // For thinking/request: show action + target + progress.
+      // "等待模型响应" is hollow — we need to show WHAT we're waiting for.
+      // If we have detail (tool name from backend), show it; otherwise show
+      // the phase label with elapsed time as progress.
+      if (this._detail) {
+        label = `等待 ${this._detail} 响应`;
+      } else {
+        label = '等待模型响应';
+      }
     } else if (
       this._detail &&
       PHASE_LABELS[`tool:${this._detail.toLowerCase().replace(/[\s_-]/g, '')}`]
     ) {
-      label = PHASE_LABELS[`tool:${this._detail.toLowerCase().replace(/[\s_-]/g, '')}`];
+      // Tool phase: show action + specific target (file path, command, etc.)
+      const toolLabel = PHASE_LABELS[`tool:${this._detail.toLowerCase().replace(/[\s_-]/g, '')}`];
+      // this._detail contains the actual tool name/path — use it as target
+      label = this._detail ? `${toolLabel}: ${this._detail}` : toolLabel;
     } else {
       label = PHASE_LABELS[this._phase] || this._phase;
     }

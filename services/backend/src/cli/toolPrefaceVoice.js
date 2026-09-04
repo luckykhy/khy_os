@@ -470,7 +470,7 @@ function toolRunningNarration(toolName, params = {}, options = {}) {
   }
   if (name === 'agent' || name === 'task') {
     const role = String(params.role || params.subagent_type || '子任务').trim();
-    return _live(`${role} 正在并行执行…`, [
+    return _live(`派发 ${role} 并行执行…`, [
       `${role} 还在跑，我先往下走…`,
       `${role} 这一路继续推进…`,
     ]);
@@ -479,8 +479,8 @@ function toolRunningNarration(toolName, params = {}, options = {}) {
   // 无目标的历史句(此时确实没有可说的目标)。
   const label = live ? String(toolName || '').trim() : '';
   return label
-    ? _voice(occ, `正在执行 ${label}…`, [`${label} 继续执行…`, `再调一次 ${label}…`])
-    : '正在执行…';
+    ? _voice(occ, `执行 ${label}…`, [`${label} 继续执行…`, `再调一次 ${label}…`])
+    : '推进执行中…';
 }
 
 // "结果 + 行动" completion narration — the third beat of the before→during→after

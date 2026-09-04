@@ -424,11 +424,7 @@ async function chat(userMessage, opts = {}) {
 
   onStatus({
     phase: 'init',
-    message: formatStatusMessage(
-      '初始化',
-      'AI 对话管线',
-      `${Math.max(0, Math.round((Date.now() - startTime) / 1000))}s`
-    ),
+    message: '步骤 1/5: 初始化 AI 对话管线',
     elapsed: Date.now() - startTime,
   });
 
@@ -478,7 +474,7 @@ async function chat(userMessage, opts = {}) {
     .catch(() => {});
   onStatus({
     phase: 'init',
-    message: `任务规模识别: ${requestTaskScale}${lightweightConversation ? '（轻量对话，优先首包速度）' : ''}`,
+    message: `步骤 2/5: 任务规模识别 — ${requestTaskScale}${lightweightConversation ? '（轻量对话，优先首包速度）' : ''}`,
     elapsed: Date.now() - startTime,
   });
 
@@ -498,7 +494,7 @@ async function chat(userMessage, opts = {}) {
     const traceCtx = _resolveAuditTraceContext(opts);
     onStatus({
       phase: 'init',
-      message: '识别到纯问候，启用极速回复（步骤 1/2）',
+      message: '识别到纯问候，启用极速回复（步骤 2/5 跳过 — 直接回复）',
       elapsed: Date.now() - startTime,
     });
     const reply = _buildGreetingQuickReply(greetingInput);
@@ -539,7 +535,7 @@ async function chat(userMessage, opts = {}) {
       message: '极速回复已完成（已跳过预检、RAG 与工具链）',
       elapsed,
     });
-    onStatus({ phase: 'done', message: '完成', elapsed });
+    onStatus({ phase: 'done', message: '极速回复已完成', elapsed });
     const tuneResult = _recordLatencySample({
       success: true,
       adapter: 'khy-fastpath',
@@ -605,11 +601,11 @@ async function chat(userMessage, opts = {}) {
       }
 
       const traceCtx = _resolveAuditTraceContext(opts);
-      onStatus({
-        phase: 'init',
-        message: `识别到教学意图（${label}），直接记入同伴资产，跳过工具链`,
-        elapsed: Date.now() - startTime,
-      });
+    onStatus({
+      phase: 'init',
+      message: `识别到教学意图（${label}），直接记入同伴资产（步骤 2/5 跳过工具链）`,
+      elapsed: Date.now() - startTime,
+    });
       _logStandaloneLlmRequest(traceCtx, String(userMessage || ''), opts, {
         source: 'ai-teachgate',
         requestedModel: 'khy-teachgate',
@@ -642,7 +638,7 @@ async function chat(userMessage, opts = {}) {
           localPath: 'teachingService.captureTeaching',
         }
       );
-      onStatus({ phase: 'done', message: '完成', elapsed });
+      onStatus({ phase: 'done', message: '极速回复已完成', elapsed });
       return {
         reply,
         thinking: null,
@@ -670,7 +666,7 @@ async function chat(userMessage, opts = {}) {
     });
     onStatus({
       phase: 'done',
-      message: '等待确认',
+      message: '已暂停自动执行，等待用户确认受限任务',
       elapsed: Date.now() - startTime,
       ok: false,
       errorType: 'capability_guard',
@@ -1525,7 +1521,7 @@ async function chat(userMessage, opts = {}) {
     if (nonBlockingPreflight) {
       onStatus({
         phase: 'init',
-        message: '预检后台进行中（不阻塞本次请求）',
+        message: '步骤 4/5: 预检 — 检查网关通道可用性',
         elapsed: Date.now() - startTime,
       });
       _preflightGatewayAvailability({
@@ -1533,31 +1529,22 @@ async function chat(userMessage, opts = {}) {
         onProgress: (text) =>
           onStatus({
             phase: 'init',
-            message: String(
-              text ||
-                formatStatusMessage(
-                  '预检',
-                  '网关通道可用性',
-                  `${Math.max(0, Math.round((Date.now() - startTime) / 1000))}s`
-                )
-            ),
+            message: String(text || '步骤 4/5: 预检中...'),
             elapsed: Date.now() - startTime,
           }),
       }).catch(() => {});
     } else {
+      onStatus({
+        phase: 'init',
+        message: '步骤 4/5: 预检 — 检查网关通道可用性',
+        elapsed: Date.now() - startTime,
+      });
       await _preflightGatewayAvailability({
         preferredAdapter: effectivePreferredAdapter,
         onProgress: (text) =>
           onStatus({
             phase: 'init',
-            message: String(
-              text ||
-                formatStatusMessage(
-                  '预检',
-                  '网关通道可用性',
-                  `${Math.max(0, Math.round((Date.now() - startTime) / 1000))}s`
-                )
-            ),
+            message: String(text || '步骤 4/5: 预检中...'),
             elapsed: Date.now() - startTime,
           }),
       });
@@ -1578,6 +1565,11 @@ async function chat(userMessage, opts = {}) {
     console.error('[ai] securityGuardService 不可用，跳过输入安全检查:', e?.message);
   }
   if (_securityGuard && typeof _securityGuard.analyzeInput === 'function') {
+    onStatus({
+      phase: 'init',
+      message: '步骤 5/5: 安全检查 — 输入安全审查',
+      elapsed: Date.now() - startTime,
+    });
     let _securityCheck = null;
     try {
       _securityCheck = _securityGuard.analyzeInput(userMessage);
@@ -1671,7 +1663,7 @@ async function chat(userMessage, opts = {}) {
       if (rag && typeof rag.isEnabled === 'function' && rag.isEnabled()) {
         onStatus({
           phase: 'init',
-          message: 'RAG 检索: 正在召回知识库与历史会话上下文（步骤 2/3）',
+          message: '步骤 3/5: RAG 检索 — 正在召回知识库与历史会话上下文',
           elapsed: Date.now() - startTime,
         });
         const retrieval =
@@ -1683,13 +1675,13 @@ async function chat(userMessage, opts = {}) {
           ragContext = String(retrieval.context || '').trim();
           onStatus({
             phase: 'init',
-            message: `RAG 检索: 已注入 ${ragMeta?.selectedCount || 0} 条上下文（步骤 3/3）`,
+            message: `步骤 3/5: RAG 检索完成 — 已注入 ${ragMeta?.selectedCount || 0} 条上下文`,
             elapsed: Date.now() - startTime,
           });
         } else {
           onStatus({
             phase: 'init',
-            message: 'RAG 检索: 未命中可用上下文（步骤 3/3）',
+            message: '步骤 3/5: RAG 检索 — 未命中可用上下文',
             elapsed: Date.now() - startTime,
           });
         }
@@ -2975,9 +2967,11 @@ async function chat(userMessage, opts = {}) {
     .trim()
     .toLowerCase();
   const localPreferred = preferredAdapter === 'localllm' || preferredAdapter === 'ollama';
+  // Build a specific request message with adapter name and context.
+  const adapterLabel = effectivePreferredAdapter || '自动选择';
   let requestMessage = localPreferred
-    ? '请求 AI 服务...（本地模型首轮可能需要 30-120 秒预热）'
-    : '请求 AI 服务...';
+    ? `请求 ${adapterLabel}（本地模型首轮可能需要 30-120 秒预热）`
+    : `请求 ${adapterLabel}`;
   try {
     const gw = getGateway();
     const preferredStatus = (gw.getStatus?.() || []).find(
@@ -2990,8 +2984,8 @@ async function chat(userMessage, opts = {}) {
     if (preferredStatus?.lastError?.coolingDown && remainingMs > 0) {
       const remainSec = Math.max(1, Math.ceil(remainingMs / 1000));
       requestMessage = localPreferred
-        ? `请求 AI 服务...（本地通道处于冷却期，约 ${remainSec}s 后恢复；本次可能快速返回）`
-        : `请求 AI 服务...（首选通道处于冷却期，约 ${remainSec}s 后恢复；本次可能快速返回）`;
+        ? `请求 ${adapterLabel}（本地通道处于冷却期，约 ${remainSec}s 后恢复）`
+        : `请求 ${adapterLabel}（首选通道处于冷却期，约 ${remainSec}s 后恢复）`;
     }
   } catch {
     /* best effort */
@@ -3000,13 +2994,13 @@ async function chat(userMessage, opts = {}) {
     try {
       const localSvc = require('../services/localLLMService');
       let hotAttached = false;
-      if (typeof localSvc.tryAdoptHotRunner === 'function') {
+      if (typeof localSvc.tryAdhotRunner === 'function') {
         const adopted = await localSvc.tryAdoptHotRunner();
         hotAttached = !!(adopted && adopted.adopted);
       }
       const status = localSvc.getStatus?.() || {};
       if (hotAttached || status.loaded) {
-        requestMessage = '请求 AI 服务...（检测到本地模型已热启动，预计更快返回）';
+        requestMessage = `请求 ${adapterLabel}（本地模型已热启动，预计更快返回）`;
       } else {
         const loopbackOk = await localSvc.canListenLoopback?.();
         if (loopbackOk === false) {
@@ -3015,8 +3009,8 @@ async function chat(userMessage, opts = {}) {
             .trim()
             .slice(0, 80);
           requestMessage = reason
-            ? `请求 AI 服务...（当前运行环境限制本地监听，可能快速失败：${reason}）`
-            : '请求 AI 服务...（当前运行环境限制本地监听，可能快速失败）';
+            ? `请求 ${adapterLabel}（当前环境限制本地监听，可能快速失败：${reason}）`
+            : `请求 ${adapterLabel}（当前环境限制本地监听，可能快速失败）`;
         }
       }
     } catch {
@@ -3189,7 +3183,7 @@ async function chat(userMessage, opts = {}) {
     });
     onStatus({
       phase: 'done',
-      message: '失败',
+      message: `请求失败: ${compactFailureReason || 'AI 服务没有返回回答'}`,
       elapsed,
       ok: false,
       errorType: (result && result.errorType) || 'unknown',
@@ -3611,17 +3605,19 @@ async function chat(userMessage, opts = {}) {
           onActivity: () => {
             onStatus({
               phase: 'tool_progress',
-              message: `[${loopCount}/${TOOL_LOOP_MAX}] ${call.action} 执行中...`,
+              message: `[${loopCount}/${TOOL_LOOP_MAX}] 执行 ${call.action}`,
               toolName: call.action,
               step: loopCount,
               elapsed: Date.now() - startTime,
             });
           },
           onProgress: (payload) => {
+            // Use the specific progress text from the tool if available;
+            // otherwise show action + target (file path, command, etc.)
             const msg =
               typeof payload === 'string' && payload.trim()
                 ? payload.trim().slice(0, 120)
-                : `${call.action} 执行中`;
+                : `执行 ${call.action}`;
             onStatus({
               phase: 'tool_progress',
               message: `[${loopCount}/${TOOL_LOOP_MAX}] ${msg}`,
