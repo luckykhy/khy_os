@@ -23,6 +23,9 @@
 /** @type {{ name: string, allowedTools: string[]|null }|null} */
 let _active = null;
 
+/** @type {string[]} */
+let _skillHistory = [];
+
 /**
  * Mark a skill as the active execution context.
  * @param {{ name: string, allowedTools?: string[]|null }} skill
@@ -41,6 +44,7 @@ function setActiveSkill(skill) {
         ? skill.allowedTools.slice()
         : null,
   };
+  _skillHistory.push(skill.name);
   return prev;
 }
 
@@ -59,8 +63,28 @@ function getActiveSkill() {
   return _active;
 }
 
+/**
+ * Get skill declaration for end-of-turn report.
+ * @returns {string} Comma-separated skill names used this turn
+ */
+function getSkillDeclaration() {
+  if (_skillHistory.length === 0) {
+    return '无';
+  }
+  return [...new Set(_skillHistory)].join('、');
+}
+
+/**
+ * Clear skill history (call at end of turn).
+ */
+function clearSkillHistory() {
+  _skillHistory = [];
+}
+
 module.exports = {
   setActiveSkill,
   clearActiveSkill,
   getActiveSkill,
+  getSkillDeclaration,
+  clearSkillHistory,
 };

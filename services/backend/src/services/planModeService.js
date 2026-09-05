@@ -1808,6 +1808,65 @@ function getState() {
 }
 
 /**
+ * Retry a failed plan step.
+ * Resets step status to pending and logs retry attempt.
+ * @param {number} stepId
+ * @param {object} opts { force?: boolean, reasonAnalysis?: string }
+ * @returns {boolean}
+ */
+function retryPlanStep(stepId, opts = {}) {
+  if (!_currentPlan || !_currentPlan.steps) {
+    return false;
+  }
+  const step = _currentPlan.steps.find((s) => s.id === stepId);
+  if (!step) {
+    return false;
+  }
+  // Only retry failed/blocked/cancelled steps
+  if (!['failed', 'blocked', 'cancelled', 'error'].includes(step.status)) {
+    return false;
+  }
+  // Force retry bypasses attempt limit check
+  if (!opts.force && step.retryCount >= 2) {
+    return false;
+  }
+  step.status = 'pending';
+  step.retryCount = (step.retryCount || 0) + 1;
+  step.lastError = null;
+  step.retriedAt = new Date().toISOString();
+  step.retryReason = opts.reasonAnalysis || 'unknown';
+  return true;
+}
+
+/**
+ * Analyze root cause of step failure.
+ * @param {object} step
+ * @returns {string} Root cause analysis
+ */
+function analyzeStepFailure(step) {
+  if (!step.lastError) {
+    return 'Unknown failure: no error recorded';
+  }
+  const err = step.lastError;
+  if (/permission|access|denied|unauthorized/i.test(err)) {
+    return 'Permission issue: check user permissions and access rights';
+  }
+  if (/timeout|timed out/i.test(err)) {
+    return 'Timeout: operation took too long, try with smaller scope or longer timeout';
+  }
+  if (/not found|missing|no such/i.test(err)) {
+    return 'Resource not found: check file paths, URLs, or resource identifiers';
+  }
+  if (/network|connection|ECONNREFUSED|ENOTFOUND/i.test(err)) {
+    return 'Network issue: check internet connection and endpoint availability';
+  }
+  if (/parse|syntax|invalid/i.test(err)) {
+    return 'Parsing error: check input format and data structure';
+  }
+  return `Failure: ${err.slice(0, 100)}`;
+}
+
+/**
  * Whether the agent is currently in the plan read-only window — i.e. a plan is
  * being generated or reviewed but the user has not yet approved it. During this
  * window toolCalling hard-denies non-read-only tools (CC-aligned plan sandbox).
@@ -1843,6 +1902,8 @@ module.exports = {
   updatePersistedPlan,
   loadPersistedPlan,
   listPersistedPlans,
+  retryPlanStep,
+  analyzeStepFailure,
   PLAN_PROMPT,
   // [P-verify] 富计划验证段落地:导出运行器与只读访问器(供 REPL/报告/测试使用)。
   _runPlanVerification,

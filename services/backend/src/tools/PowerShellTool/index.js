@@ -11,7 +11,7 @@ class PowerShellTool extends BaseTool {
   static searchHint = 'powershell windows command script';
   static shouldDefer = true;
   // Command output is bounded like other command-runner tools (30K chars).
-  static maxResultSizeChars = 30000;
+  static maxResultSizeChars = 20000;
 
   isEnabled() {
     return !!(searchExecutable('pwsh') || searchExecutable('powershell'));

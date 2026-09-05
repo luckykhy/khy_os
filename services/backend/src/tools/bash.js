@@ -36,7 +36,7 @@ For platform-default shell execution without bash requirement, use shellCommand 
   category: 'execution',
   risk: 'critical',
   searchHint: 'bash shell command linux unix sh 执行命令 命令行 bash命令 git bash msys',
-  maxResultSizeChars: 30000,
+  maxResultSizeChars: 20000,
   aliases: ['sh', 'shell'],
 
   isReadOnly: (input) => {

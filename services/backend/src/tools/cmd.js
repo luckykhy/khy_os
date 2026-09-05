@@ -28,7 +28,7 @@ Note: CMD does NOT support && chaining. Use & for sequential commands or && (onl
   category: 'execution',
   risk: 'critical',
   searchHint: 'cmd batch bat dos windows 批处理 cmd命令 command prompt',
-  maxResultSizeChars: 30000,
+  maxResultSizeChars: 20000,
 
   isReadOnly: (input) => {
     if (!input?.command) return false;

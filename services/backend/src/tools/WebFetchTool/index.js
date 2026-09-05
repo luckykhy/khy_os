@@ -80,7 +80,7 @@ class WebFetchTool extends BaseTool {
   static aliases = ['web_fetch', 'fetch_url'];
   static searchHint = 'fetch url web page content download read website';
   static shouldDefer = false;
-  static maxResultSizeChars = 40000;
+  static maxResultSizeChars = 20000;
 
   isReadOnly() {
     return true;

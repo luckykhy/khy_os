@@ -917,7 +917,7 @@ async function getToolPrompt(name) {
 
 // ── Result Size Management ─────────────────────────────────────────
 
-const DEFAULT_MAX_RESULT_CHARS = 30000; // 30K default
+const DEFAULT_MAX_RESULT_CHARS = 20000; // 20K default（从30K降低以保护上下文空间）
 
 // Lazily resolve the tool results dir (portable-aware); fallback to legacy.
 function _resultDir() {

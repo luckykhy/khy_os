@@ -45,7 +45,7 @@ module.exports = defineTool({
   risk: 'safe',
   isReadOnly: true,
   isConcurrencySafe: true,
-  maxResultSizeChars: 40000,
+  maxResultSizeChars: 20000,
 
   aliases: ['search_content', 'rg'],
   searchHint: 'search grep regex content files',
