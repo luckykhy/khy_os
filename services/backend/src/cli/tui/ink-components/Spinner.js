@@ -81,7 +81,7 @@ function buildSpinnerMeta(elapsedSec, tokens, env = process.env) {
 }
 
 function Spinner({
-  label = '思考中…',
+  label = '',
   color = 'yellow',
   elapsedSec = 0,
   tokens = 0,
@@ -117,33 +117,25 @@ function Spinner({
   }, [stalled]);
 
   const glyph = REDUCED_MOTION ? '●' : FRAMES[frame];
-  // Stall feedback: when no new output has arrived for a few seconds the glyph
-  // turns red and the row becomes a SINGLE "等待响应…" status line. It REPLACES
-  // the base label instead of appending a second tag after it — the label often
-  // already embeds the same gateway detail (via deriveLiveActivity), so the old
-  // append produced two near-duplicate statuses on one row ("思考中… · <detail>
-  // ⏳ 等待响应… · <detail>"). Single-status rule: at most one status message per
-  // row. Prefer the gateway detail (carries target + progress, e.g. "API 云端服务
-  // 正在生成响应 (已耗时 4s)"); fall back to the base label so the line still says
-  // WHAT it is stuck on.
   const glyphColor = stalled ? 'red' : color;
-  const stallDetail = String(detail || '')
-    .replace(/\s+/g, ' ')
-    .trim();
-  const stallBase =
-    stallDetail ||
-    String(label || '')
-      .replace(/\s+/g, ' ')
-      .trim();
-  const stallIndicator = `⏳ 等待响应…`;
-  const stallLine = stallBase ? `${stallIndicator} · ${stallBase}` : stallIndicator;
-  // Pulse the stall indicator: alternate between full brightness and dim so the
-  // user can see at a glance that the system is waiting (not frozen).
-  const stallTextColor = stalled && stallPulse ? 'yellow' : 'gray';
+
+  // Detail from gateway carries action+target+progress (e.g. "读取 src/index.js").
+  // Label is the fallback phase description (e.g. "分析约束与计划").
+  // Always prefer detail when available — it's more specific.
+  const detailText = String(detail || '').replace(/\s+/g, ' ').trim();
+  const labelText = String(label || '').replace(/\s+/g, ' ').trim();
+  const displayText = detailText || labelText;
+
+  // When stalled: show "⏳ 等待中 · <what we're waiting for>"
+  // The waiting indicator replaces the base to avoid duplication.
   const showStallIndicator = stalled;
-  // Progress metadata answers "how long has it run / how much has streamed?".
-  // Time + token NUMBER formatting routes through the ccFormat SSOT (see
-  // buildSpinnerMeta) so the live spinner matches CC's `formatDuration`/`formatNumber`.
+  const stallIndicator = '⏳ 等待中';
+  const stallLine = displayText ? `${stallIndicator} · ${displayText}` : stallIndicator;
+
+  // Pulse the stall indicator so user can see it's waiting, not frozen.
+  const stallTextColor = stalled && stallPulse ? 'yellow' : 'gray';
+
+  // Progress metadata: elapsed time + token count
   const metaStr = buildSpinnerMeta(elapsedSec, tokens);
 
   return h(
@@ -153,7 +145,7 @@ function Spinner({
     ' ',
     showStallIndicator
       ? h(Text, { color: stallTextColor }, stallLine)
-      : h(Text, { color: glyphColor }, label),
+      : h(Text, { color: glyphColor }, displayText),
     metaStr ? h(Text, { dimColor: true }, metaStr) : null
   );
 }

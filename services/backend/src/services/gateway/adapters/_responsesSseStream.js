@@ -363,7 +363,13 @@ function parseResponsesSseStream(stream, onChunk, options = {}) {
             try {
               input = JSON.parse(fc.arguments);
             } catch {
-              input = {};
+              // Self-heal: attempt JSON repair for malformed arguments
+              try {
+                const { safeJsonParse } = require('../safeJsonParse');
+                input = safeJsonParse(fc.arguments, {});
+              } catch {
+                input = {};
+              }
             }
             return { type: 'tool_use', id: fc.call_id, name: fc.name, input };
           });

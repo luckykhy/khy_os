@@ -707,7 +707,13 @@ function processStreamEvent(
     try {
       return JSON.parse(str);
     } catch {
-      return null;
+      // Self-heal: attempt JSON repair for truncated/malformed streaming fragments
+      try {
+        const { safeJsonParse } = require('../safeJsonParse');
+        return safeJsonParse(str, null);
+      } catch {
+        return null;
+      }
     }
   };
   const summarizeText = (value, maxLen = 220) => {
