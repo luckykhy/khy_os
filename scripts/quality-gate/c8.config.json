@@ -7,15 +7,7 @@
     "**/vendor/**",
     "**/generated/**",
     "**/coverage/**",
-    ".cache/quality-gate/**",
-    "services/backend/src/bridge/**",
-    "services/backend/src/bootstrap/**",
-    "services/backend/src/assistant/**",
-    "services/backend/src/buddy/**",
-    "services/backend/src/cli/tui/**",
-    "services/backend/src/cli/ui/**",
-    "services/backend/src/cli/handlers/**",
-    "services/backend/src/adapters/im/**"
+    ".cache/quality-gate/**"
   ],
   "check-coverage": true,
   "lines": 80,
