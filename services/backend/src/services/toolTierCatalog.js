@@ -73,7 +73,10 @@ const META_TOOLS = Object.freeze([
   'Glob', // 文件名/路径检索原语
   'Grep', // 内容检索原语
   'WebFetch', // 网络取用原语
-  'shellCommand', // 任意命令执行原语
+  'shellCommand', // 任意命令执行原语(平台默认 shell)
+  'bash', // bash shell 执行原语
+  'powershell', // PowerShell 执行原语
+  'cmd', // Windows CMD 执行原语
   'executeCode', // 任意代码执行原语
   'Agent', // 子代理委派原语(以委派组合能力)
   'Workflow', // 多代理编排原语(以编排组合能力)

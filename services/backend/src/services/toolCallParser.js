@@ -150,7 +150,7 @@ function canonicalizeToolCall(call) {
       rawName = fnLike[1];
       const inlineArg = String(fnLike[2] || '').trim();
       if (inlineArg && Object.keys(rawParams).length === 0) {
-        if (/^(shell_command|shellCommand|bash)$/i.test(rawName)) {
+        if (/^(shell_command|shellCommand|bash|powershell|cmd|pwsh|sh)$/i.test(rawName)) {
           rawParams = { command: inlineArg };
         } else if (/^(open_app|openApp)$/i.test(rawName)) {
           rawParams = { name: inlineArg };

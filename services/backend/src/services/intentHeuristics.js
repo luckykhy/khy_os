@@ -522,7 +522,7 @@ function patchEmptyShellCommand(toolCalls, userMessage) {
   if (!Array.isArray(toolCalls) || !userMessage) {
     return;
   }
-  const shellNames = new Set(['shell_command', 'shellCommand', 'bash']);
+  const shellNames = new Set(['shell_command', 'shellCommand', 'bash', 'powershell', 'cmd', 'pwsh', 'sh']);
   const isWin = process.platform === 'win32';
   for (const call of toolCalls) {
     if (!call || !shellNames.has(call.name)) {
