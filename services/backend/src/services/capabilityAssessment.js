@@ -47,7 +47,7 @@ const DEFAULT_CAPABILITY_POLICY = Object.freeze({
         'remove',
         'delete',
       ],
-      requiredTools: ['editFile', 'writeFile', 'shellCommand', 'file_edit', 'file_write'],
+      requiredTools: ['editFile', 'writeFile', 'shellCommand', 'bash', 'powershell', 'cmd', 'file_edit', 'file_write'],
       reason: '当前环境缺少文件编辑/写入能力（edit/write/shell 工具不可用）。',
     },
     {
@@ -73,7 +73,7 @@ const DEFAULT_CAPABILITY_POLICY = Object.freeze({
         'docker',
         'kubectl',
       ],
-      requiredTools: ['shellCommand', 'run_tests', 'build_project', 'lint_code', 'executeCode'],
+      requiredTools: ['shellCommand', 'bash', 'powershell', 'cmd', 'run_tests', 'build_project', 'lint_code', 'executeCode'],
       reason: '当前环境缺少命令执行能力（shell/build/test 工具不可用）。',
     },
     {
@@ -105,7 +105,7 @@ const DEFAULT_CAPABILITY_POLICY = Object.freeze({
         'start app',
         'open browser',
       ],
-      requiredTools: ['open_app', 'shellCommand'],
+      requiredTools: ['open_app', 'shellCommand', 'bash', 'powershell', 'cmd'],
       reason: '当前环境缺少应用启动能力（open_app/shell 工具不可用）。',
     },
   ],

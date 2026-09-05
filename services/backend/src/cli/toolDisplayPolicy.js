@@ -641,6 +641,9 @@ const ALIASES = {
   shellcommand: 'bash',
   command: 'bash',
   powershell: 'bash',
+  cmd: 'bash',
+  pwsh: 'bash',
+  sh: 'bash',
   // → codeexec / testrun / build / deps
   executecode: 'codeexec',
   repl: 'codeexec',

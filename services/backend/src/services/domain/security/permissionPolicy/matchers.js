@@ -59,7 +59,10 @@ _reg('shell', [
   'bash',
   'Bash',
   'sh',
+  'powershell',
   'PowerShell',
+  'pwsh',
+  'cmd',
   'PowerShellTool',
   'exec',
 ]);

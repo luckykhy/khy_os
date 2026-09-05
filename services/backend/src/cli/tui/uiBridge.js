@@ -102,8 +102,17 @@ function showFormNative(response) {
   });
 }
 
+/**
+ * Check if App refs are available (TUI mode with App mounted).
+ * @returns {boolean}
+ */
+function hasAppRefs() {
+  return _appRefs !== null && typeof _appRefs === 'object';
+}
+
 module.exports = {
   setAppRefs,
+  hasAppRefs,
   showConfirmNative,
   showListNative,
   showFormNative,

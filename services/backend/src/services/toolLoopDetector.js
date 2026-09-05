@@ -128,6 +128,10 @@ function _isReadLikeTool(name) {
 const SHELL_TOOLS = new Set([
   'shellcommand',
   'bash',
+  'powershell',
+  'cmd',
+  'pwsh',
+  'sh',
   'executecommand',
   'runcommand',
   'terminal',

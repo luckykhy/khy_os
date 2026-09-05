@@ -1268,7 +1268,7 @@ function mapToolToNaturalAction(name) {
   if (n === 'editFile' || n === 'Edit' || n === 'multiEdit' || n === 'MultiEdit') {
     return { action: '编辑文件', arg: 'file_path old_string new_string', desc: '精确修改文件内容' };
   }
-  if (n === 'shell_command' || n === 'shellCommand' || n === 'Bash') {
+  if (n === 'shell_command' || n === 'shellCommand' || n === 'Bash' || n === 'bash' || n === 'powershell' || n === 'cmd' || n === 'pwsh') {
     return { action: '命令', arg: '命令文本', desc: '执行shell命令' };
   }
   if (n === 'ls' || n === 'LS' || n === 'glob' || n === 'Glob') {
@@ -1611,9 +1611,12 @@ async function runNaturalToolCall(call, context = {}) {
       Grep: 'Grep',
       grep: 'Grep',
       Bash: 'shellCommand',
-      bash: 'shellCommand',
+      bash: 'bash',
       shell_command: 'shellCommand',
       shellCommand: 'shellCommand',
+      powershell: 'powershell',
+      cmd: 'cmd',
+      pwsh: 'powershell',
       webSearch: 'webSearch',
       WebSearch: 'webSearch',
       web_search: 'webSearch',
@@ -1761,6 +1764,9 @@ async function runNaturalToolCall(call, context = {}) {
             'editFile',
             'shellCommand',
             'shell_command',
+            'bash',
+            'powershell',
+            'cmd',
           ]) {
             tc.approveTool(related, false);
           }

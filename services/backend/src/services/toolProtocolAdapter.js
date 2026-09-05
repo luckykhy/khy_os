@@ -67,7 +67,10 @@ const DEFAULT_LOCAL_WRITE_TOOLS = [
   'editFile',
   'MultiEdit',
   'Bash',
+  'bash',
   'shellCommand',
+  'powershell',
+  'cmd',
 ];
 
 function _resolveAllowedToolNames() {

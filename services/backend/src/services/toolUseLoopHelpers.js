@@ -1043,7 +1043,7 @@ function _matchesShellDispatchName(name) {
   if (normalize) {
     return _isShellToolName(name);
   }
-  return name === 'shell_command' || name === 'shellCommand' || name === 'bash';
+  return /^(shell_command|shellCommand|bash|powershell|cmd|pwsh|sh)$/i.test(name);
 }
 
 function _looksLikeShellAppProbeCommand(command = '') {
@@ -2128,7 +2128,7 @@ function _buildSearchQueryCandidates(userMessage, maxCandidates = 3, mode = 'aut
 // 只读消费,不 mutate、不逃逸(补丁直接改传入的 toolCalls,不返回集合),逐字节等价。
 const _PATCH_SEARCH_NAMES = new Set(['web_search', 'webSearch', 'websearch', 'search_web']);
 const _PATCH_NORMALIZED_SEARCH_NAMES = new Set(['websearch', 'searchweb']);
-const _PATCH_SHELL_NAMES = new Set(['shell_command', 'shellCommand', 'bash']);
+const _PATCH_SHELL_NAMES = new Set(['shell_command', 'shellCommand', 'bash', 'powershell', 'cmd', 'pwsh', 'sh']);
 
 /**
  * Patch web_search / webSearch calls that have an empty or missing query.
