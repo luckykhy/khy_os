@@ -487,4 +487,11 @@ module.exports = {
   cosine,
   _resetCache,
   _internals: { _modelNameMatches, _probeEndpoint, _parseOpenAiVectors, _ollamaHost, _gatewayBase },
+  // Extended providers
+  listExtendedProviders: () => [
+    { id: 'openai', name: 'OpenAI Embedding' },
+    { id: 'voyage', name: 'Voyage AI' },
+    { id: 'jina', name: 'Jina AI' },
+    { id: 'cohere', name: 'Cohere' },
+  ],
 };
