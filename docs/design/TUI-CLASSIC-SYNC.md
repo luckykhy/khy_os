@@ -72,6 +72,54 @@ const values = await ui.form('Login', [
 | /plugin | `handlers/plugin-dev.js` | `askChoice()` 使用 `ui.list()` |
 | /ide | `handlers/ide.js` | `promptModelSelection()` 使用 `ui.list()` |
 
+### 新模式开发指南
+
+当添加新的交互式命令时，遵循以下模式：
+
+```js
+'use strict';
+const ui = require('../uiFacade');
+
+async function handleCommand(args) {
+  // 1. 显示信息
+  await ui.info('Starting operation...');
+
+  // 2. 询问确认（危险操作）
+  const ok = await ui.confirm('Delete this file?', { danger: true });
+  if (!ok) return;
+
+  // 3. 列表选择
+  const choice = await ui.list('Select an option:', [
+    { id: 'opt1', label: 'Option 1', description: 'First option' },
+    { id: 'opt2', label: 'Option 2', description: 'Second option' },
+  ]);
+
+  // 4. 表单输入
+  const values = await ui.form('Enter details', [
+    { name: 'name', label: 'Name', required: true },
+    { name: 'email', label: 'Email', type: 'email' },
+  ]);
+
+  // 5. 显示结果
+  await ui.success('Operation complete!');
+}
+```
+
+**关键点**：
+- 不需要检查 `isTuiActive()` - uiFacade 自动处理
+- 不需要 `if/else` 分支 - 两种模式自动适配
+- 命令处理器只负责业务逻辑，UI 渲染由适配器处理
+
+### 添加新的 UI 类型
+
+如果需要新的 UI 类型（如 `editor`、`progress`）：
+
+1. 在 `uiResponse.js` 添加新的响应类型
+2. 在 `tui/uiAdapter.js` 添加 TUI 渲染器
+3. 在 `classic/uiAdapter.js` 添加经典渲染器
+4. 在 `uiFacade.js` 添加入口函数
+5. 在 `uiAdapter.js` 的 `renderResponse()` 和 `renderClassic()` 中添加分发逻辑
+
 ```
 用户启动 khy
     │
