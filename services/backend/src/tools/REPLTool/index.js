@@ -10,7 +10,7 @@ class REPLTool extends BaseTool {
   static searchHint = 'evaluate javascript node repl execute code';
   static shouldDefer = true;
   // Evaluation output is bounded like other command-runner tools (30K chars).
-  static maxResultSizeChars = 30000;
+  static maxResultSizeChars = 20000;
 
   isConcurrencySafe() {
     return false;

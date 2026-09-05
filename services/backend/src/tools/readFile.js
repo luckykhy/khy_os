@@ -36,7 +36,7 @@ module.exports = defineTool({
   // Chapter 5 additions
   aliases: ['read_file', 'cat'],
   searchHint: 'read file contents from filesystem',
-  maxResultSizeChars: Infinity, // never persist to disk (prevents circular reads)
+  maxResultSizeChars: 20000, // 防止单文件吃满上下文（截断后完整内容存 disk）
 
   inputSchema: {
     path: {

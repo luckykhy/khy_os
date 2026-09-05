@@ -40,6 +40,9 @@ const adapterLabels = require('./gatewayAdapterLabels');
 const errorClassifier = require('./gatewayErrorClassifier');
 const gatewayConstants = require('./gatewayConstants');
 
+// ── Extracted pure helpers (Phase 1 refactoring) ─────────────────────
+const _helpers = require('./_aiGatewayHelpers');
+
 // ── Optional module loaders ────────────────────────────────────
 // Several subsystems are loaded conditionally so the gateway degrades
 // gracefully when a optional dependency is absent (e.g. a service not

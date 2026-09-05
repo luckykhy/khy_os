@@ -32,7 +32,7 @@ Note: Windows PowerShell 5.1 does NOT support && chaining. Use ; for sequential 
   category: 'execution',
   risk: 'critical',
   searchHint: 'powershell ps cmdlet invoke script 命令行 powershell命令 ps1 windows',
-  maxResultSizeChars: 30000,
+  maxResultSizeChars: 20000,
   aliases: ['ps', 'pwsh'],
 
   isReadOnly: (input) => {

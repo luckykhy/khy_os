@@ -529,6 +529,49 @@ async function getSkillsByCategory() {
   return grouped;
 }
 
+/**
+ * Auto-match task to skill on receipt.
+ * Triggered by tool-use loop before any tool call.
+ * Returns matched skill or null.
+ */
+async function autoMatch(taskDescription) {
+  if (!taskDescription || typeof taskDescription !== 'string') {
+    return null;
+  }
+  const all = await listSkills();
+  const task = taskDescription.toLowerCase();
+
+  // Keyword-based matching
+  const matchRules = [
+    { keywords: ['bug', '报错', '异常', 'fix', '修复', 'debug', 'crash'], skillId: 'analyze' },
+    { keywords: ['新功能', 'feature', '添加', '开发', 'implement'], skillId: 'recommend' },
+    { keywords: ['解释', 'explain', '概念', '原理', '是什么'], skillId: 'explain' },
+    { keywords: ['资讯', '新闻', 'news', '市场', '行情'], skillId: 'news' },
+    { keywords: ['对比', 'compare', '比较', 'versus', 'vs'], skillId: 'compare' },
+  ];
+
+  for (const rule of matchRules) {
+    if (rule.keywords.some((kw) => task.includes(kw))) {
+      const skill = all.find((s) => s.id === rule.skillId);
+      if (skill) {
+        return { ...skill, matchReason: 'keyword', matchedKeywords: rule.keywords.filter((kw) => task.includes(kw)) };
+      }
+    }
+  }
+
+  // Tag-based matching
+  for (const skill of all) {
+    if (skill.tags) {
+      const matchedTags = skill.tags.filter((tag) => task.includes(tag.toLowerCase()));
+      if (matchedTags.length > 0) {
+        return { ...skill, matchReason: 'tag', matchedTags };
+      }
+    }
+  }
+
+  return null;
+}
+
 module.exports = {
   BUILTIN_SKILLS,
   listSkills,
@@ -543,4 +586,5 @@ module.exports = {
   SKILL_LAYERS,
   searchSkills,
   getSkillsByCategory,
+  autoMatch,
 };

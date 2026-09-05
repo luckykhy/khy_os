@@ -77,7 +77,7 @@ ${_multiCommandBlock()}
     return isSearch || isRead || isList;
   },
 
-  maxResultSizeChars: 30000,
+  maxResultSizeChars: 20000,
 
   normalizeParams(params, env) {
     try {

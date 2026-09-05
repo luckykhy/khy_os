@@ -97,7 +97,7 @@ class FileReadTool extends BaseTool {
   static aliases = ['readFile', 'read_file', 'cat'];
   static searchHint = 'read file contents from filesystem';
   static alwaysLoad = true;
-  static maxResultSizeChars = Infinity; // never truncate reads
+  static maxResultSizeChars = 20000; // 防止单文件吃满上下文（Infinity 会导致上下文溢出截断）
 
   isReadOnly() {
     return true;

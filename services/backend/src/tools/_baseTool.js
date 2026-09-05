@@ -149,7 +149,7 @@ const EXTENDED_DEFAULTS = {
   searchHint: undefined, // keyword for deferred tool search
   shouldDefer: false, // tool can be deferred (not loaded into initial prompt)
   alwaysLoad: false, // tool is never deferred (overrides shouldDefer)
-  maxResultSizeChars: undefined, // per-tool result size limit (undefined = system default)
+  maxResultSizeChars: 20000, // per-tool result size limit（默认20K，保护上下文空间）
 };
 
 const VALID_INTERRUPT_BEHAVIORS = ['cancel', 'block'];

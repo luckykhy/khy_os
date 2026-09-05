@@ -327,7 +327,7 @@ module.exports = defineTool({
   isReadOnly: false,
   isConcurrencySafe: false,
   // Execution output is bounded like other command-runner tools (30K chars).
-  maxResultSizeChars: 30000,
+  maxResultSizeChars: 20000,
   inputSchema: {
     code: {
       type: 'string',

@@ -37,7 +37,7 @@ class GrepTool extends BaseTool {
   static searchHint = 'search grep regex content files';
   static alwaysLoad = true;
   // Grep output is bounded (40K chars) — large match sets are persisted with a preview.
-  static maxResultSizeChars = 40000;
+  static maxResultSizeChars = 20000; // 降低以保护上下文空间
 
   isReadOnly() {
     return true;

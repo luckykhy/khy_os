@@ -32,11 +32,12 @@ function createStartupVisuals(deps) {
     VERSION,
     getDisplayWidthChar,
     formatShortCwd,
-    printBanner,
     getClassicMonsterPetLines,
-    claudeUiEnabled,
     showGettingStarted,
   } = deps;
+
+  // Use shared banner data service (single source of truth for banner data)
+  const { getBannerData } = require('../../bannerDataService');
 
   function tryPrintMascotImagePreview() {
     if (!process.stdout.isTTY) {
@@ -112,22 +113,13 @@ function createStartupVisuals(deps) {
       return;
     }
 
-    let modelName = '';
-    let effortLabel = '高强度';
-    let billingType = '按量计费';
-    let adapterName = '';
-    let modelSource = '';
-    try {
-      const gateway = require('../../services/gateway/aiGateway');
-      const active = gateway.getActiveAdapter();
-      modelName = active?.activeModel || '';
-      adapterName = active?.name || active?.type || '';
-      // Where the startup model came from (env / lastVerified / adapterDefault),
-      // stamped by getActiveAdapter(); used below to disclose fallback selection.
-      modelSource = active?.modelSource || '';
-    } catch {
-      /* best effort */
-    }
+    // Use shared banner data (single source of truth)
+    const data = getBannerData({ version: VERSION, aiProvider });
+    let modelName = data.modelName;
+    let effortLabel = data.effortLabel;
+    let billingType = data.billingType;
+    let adapterName = data.adapterName;
+    const modelSource = data.modelSource || '';
 
     if (!modelName) {
       modelName = process.env.GATEWAY_PREFERRED_MODEL || 'auto';
