@@ -1,11 +1,76 @@
 # TUI 与经典模式同步指南
 
-**日期**：2026-09-04
+**日期**：2026-09-05（更新）
 **目的**：确保 TUI 模式和经典模式的修复同步，避免一个模式修复了另一个没修复。
 
 ---
 
-## 模式选择逻辑
+## 统一 UI 架构（2026-09-05 新增）
+
+### 核心原则
+**命令处理器返回结构化响应，UI 适配器根据模式渲染。**
+
+```
+命令处理器 → 返回 { type: 'info'|'confirm'|'list'|'form', data: {} }
+                    │
+                    ▼
+            uiFacade.renderResponse()
+                    │
+        ┌───────────┴───────────┐
+        ▼                       ▼
+   TUI 适配器              经典适配器
+   (Ink/React)            (inquirer)
+```
+
+### 新增模块
+
+| 模块 | 路径 | 职责 |
+|------|------|------|
+| **uiResponse** | `cli/uiResponse.js` | 统一响应协议 |
+| **uiFacade** | `cli/uiFacade.js` | 统一入口点 |
+| **uiAdapter** | `cli/uiAdapter.js` | 模式分发器 |
+| **tui/uiAdapter** | `cli/tui/uiAdapter.js` | TUI 渲染器 |
+| **classic/uiAdapter** | `classic/uiAdapter.js` | 经典渲染器 |
+| **tui/uiBridge** | `cli/tui/uiBridge.js` | TUI 原生组件桥接 |
+| **permissionService** | `cli/services/permissionService.js` | 权限逻辑 |
+| **modelSelectService** | `cli/services/modelSelectService.js` | 模型选择逻辑 |
+| **bannerDataService** | `cli/bannerDataService.js` | Banner 数据 |
+
+### 使用方式
+
+```js
+// 在命令处理器中
+const ui = require('../uiFacade');
+
+// 显示信息（两种模式自动适配）
+await ui.info('Operation complete');
+await ui.success('File saved');
+await ui.error('Failed to save', 'Error', 'E001');
+
+// 询问确认
+const ok = await ui.confirm('Delete this file?', { danger: true });
+if (!ok) return;
+
+// 列表选择
+const model = await ui.list('Choose a model', [
+  { id: 'claude', label: 'Claude Sonnet', description: 'Recommended' },
+  { id: 'gpt', label: 'GPT-4', description: 'Powerful' },
+]);
+
+// 表单输入
+const values = await ui.form('Login', [
+  { name: 'username', label: 'Username', required: true },
+  { name: 'password', label: 'Password', type: 'password' },
+]);
+```
+
+### 已集成的命令处理器
+
+| 处理器 | 文件 | 集成点 |
+|--------|------|--------|
+| /learn | `handlers/learn.js` | `_askChoice()` 使用 `ui.list()` |
+| /plugin | `handlers/plugin-dev.js` | `askChoice()` 使用 `ui.list()` |
+| /ide | `handlers/ide.js` | `promptModelSelection()` 使用 `ui.list()` |
 
 ```
 用户启动 khy
