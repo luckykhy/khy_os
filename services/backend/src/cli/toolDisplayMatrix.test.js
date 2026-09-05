@@ -80,7 +80,7 @@ test('分级抽样：读/搜索类 minor，shell/写/git 写/媒体生成 core',
   for (const n of ['read', 'grep', 'glob', 'websearch', 'webfetch', 'todowrite', 'coverage_report']) {
     assert.equal(policy.getToolTier(n), 'minor', n);
   }
-  for (const n of ['shellCommand', 'write_file', 'edit', 'open_app', 'agent', 'gitCommit', 'gitPush', 'image_generate', 'video_generate', 'deploy', 'DiskCleanup']) {
+  for (const n of ['shellCommand', 'bash', 'powershell', 'cmd', 'write_file', 'edit', 'open_app', 'agent', 'gitCommit', 'gitPush', 'image_generate', 'video_generate', 'deploy', 'DiskCleanup']) {
     assert.equal(policy.getToolTier(n), 'core', n);
   }
 });

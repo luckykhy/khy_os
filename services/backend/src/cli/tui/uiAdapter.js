@@ -47,7 +47,7 @@ async function showConfirm(response) {
   // Try native TUI component first (if App refs available)
   try {
     const bridge = require('./uiBridge');
-    if (bridge._appRefs) {
+    if (bridge.hasAppRefs()) {
       return bridge.showConfirmNative(response);
     }
   } catch {
@@ -103,7 +103,7 @@ async function showList(response) {
   // Try native TUI component first (if App refs available)
   try {
     const bridge = require('./uiBridge');
-    if (bridge._appRefs) {
+    if (bridge.hasAppRefs()) {
       return bridge.showListNative(response);
     }
   } catch {
@@ -171,7 +171,7 @@ async function showForm(response) {
   // Try native TUI component first (if App refs available)
   try {
     const bridge = require('./uiBridge');
-    if (bridge._appRefs) {
+    if (bridge.hasAppRefs()) {
       return bridge.showFormNative(response);
     }
   } catch {

@@ -230,7 +230,7 @@ const PROCEDURES = Object.freeze([
         '二进制',
         'binary',
       ]),
-      tools: Object.freeze(['shellCommand', 'ShellCommand', 'WebFetch']),
+      tools: Object.freeze(['shellCommand', 'bash', 'powershell', 'cmd', 'ShellCommand', 'WebFetch']),
     }),
     steps: Object.freeze([
       '先判定目标形态:是**预编译二进制/CLI**(Go/Rust 单文件最适合便携)、**需装的应用**(带 installer),还是**源码项目**(需自己 build)。拿不准先看它的 GitHub releases 页有没有对应你系统的产物。',

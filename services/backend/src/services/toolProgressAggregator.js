@@ -266,6 +266,9 @@ function _resolveCategory(rawCategory, toolName) {
     Glob: 'search',
     Grep: 'search',
     shellCommand: 'command',
+    bash: 'command',
+    powershell: 'command',
+    cmd: 'command',
     Write: 'mutation',
     Edit: 'mutation',
   };
@@ -347,6 +350,9 @@ function toolActionLabel(toolName) {
     Glob: '查找文件',
     Grep: '搜索代码',
     shellCommand: '执行命令',
+    bash: '执行 bash',
+    powershell: '执行 PowerShell',
+    cmd: '执行 CMD',
     List: '查看目录',
   };
   return map[toolName] || `使用 ${toolName}`;

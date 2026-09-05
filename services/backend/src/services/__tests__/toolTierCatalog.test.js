@@ -41,7 +41,7 @@ test('TIERS / META_TOOLS:冻结(纯叶子不可变)且元素冻结', () => {
 
 test('META_TOOLS:含 createTool 顶点原语与通用组合原语,规范名(非重复别名)', () => {
   const names = ttc.META_TOOLS;
-  for (const must of ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'shellCommand', 'createTool']) {
+  for (const must of ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'shellCommand', 'bash', 'powershell', 'cmd', 'createTool']) {
     assert.ok(names.includes(must), `META_TOOLS must include ${must}`);
   }
   // 不得出现被折叠的重复别名(单一规范名)

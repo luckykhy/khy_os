@@ -100,7 +100,7 @@ const READ_ONLY_TOOLS = new Set([
   'git_log',
 ]);
 
-const SHELL_TOOL_NAMES = new Set(['shell_command', 'shellCommand', 'bash', 'execute_command']);
+const SHELL_TOOL_NAMES = new Set(['shell_command', 'shellCommand', 'bash', 'powershell', 'cmd', 'pwsh', 'sh', 'execute_command']);
 
 function isObservationCall(call) {
   if (!call) return false;

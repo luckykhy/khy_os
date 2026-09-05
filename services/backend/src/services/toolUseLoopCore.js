@@ -734,6 +734,9 @@ function _computeKnownToolNames(allTools) {
     'shellCommand',
     'shell_command',
     'bash',
+    'powershell',
+    'cmd',
+    'pwsh',
     'writeFile',
     'write_file',
     'readFile',
@@ -783,7 +786,7 @@ function _canonicalizeToolCall(call) {
       rawName = fnLike[1];
       const inlineArg = String(fnLike[2] || '').trim();
       if (inlineArg && Object.keys(rawParams).length === 0) {
-        if (/^(shell_command|shellCommand|bash)$/i.test(rawName)) {
+        if (/^(shell_command|shellCommand|bash|powershell|cmd|pwsh|sh)$/i.test(rawName)) {
           rawParams = { command: inlineArg };
         } else if (/^(open_app|openApp)$/i.test(rawName)) {
           rawParams = { name: inlineArg };
@@ -8364,7 +8367,7 @@ async function runToolUseLoop(userMessage, options = {}) {
               if (
                 result &&
                 !result.success &&
-                /^(shell_command|shellcommand|shellCommand|bash|execute_command)$/i.test(call.name)
+                /^(shell_command|shellcommand|shellCommand|bash|powershell|cmd|pwsh|execute_command)$/i.test(call.name)
               ) {
                 const _cmdStr = String(call.params?.command || call.params?.cmd || '');
                 if (process.platform === 'win32') {
@@ -9265,7 +9268,7 @@ async function runToolUseLoop(userMessage, options = {}) {
             if (
               result &&
               !result.success &&
-              /^(shell_command|shellcommand|shellCommand|bash|execute_command)$/i.test(call.name)
+              /^(shell_command|shellcommand|shellCommand|bash|powershell|cmd|pwsh|execute_command)$/i.test(call.name)
             ) {
               const _cmdStr = String(call.params?.command || call.params?.cmd || '');
               if (process.platform === 'win32') {
@@ -10112,7 +10115,7 @@ async function runToolUseLoop(userMessage, options = {}) {
         // Inject platform reminder if any shell command failed (model may have used wrong-OS commands)
         const _hadShellFailure = toolResults.some(
           (tr) =>
-            /^(shell_command|shellcommand|shellCommand|bash)$/i.test(tr.tool) &&
+            /^(shell_command|shellcommand|shellCommand|bash|powershell|cmd|pwsh)$/i.test(tr.tool) &&
             tr.result &&
             !tr.result.success
         );
@@ -10474,7 +10477,7 @@ async function runToolUseLoop(userMessage, options = {}) {
         toolResults.length > 0 &&
         toolResults.every((tr) => {
           // For shell commands, check if the command is read-only (ls, cat, grep, find, etc.)
-          if (tr.tool === 'shell_command' || tr.tool === 'shellCommand') {
+          if (/^(shell_command|shellcommand|shellCommand|bash|powershell|cmd|pwsh)$/i.test(tr.tool)) {
             const cmd = (tr.params?.command || '').trim().split(/\s+/)[0];
             return READ_ONLY_SHELL_CMDS.has(cmd);
           }
