@@ -14,6 +14,9 @@
 const chalk = require('chalk').default || require('chalk');
 const readline = require('readline');
 
+// 统一 UI 门面：TUI 和经典模式共享同一份代码
+const ui = require('../uiFacade');
+
 const {
   buildIdeLaunchFeatureKey,
   buildIdeLaunchFeatureLabel,
@@ -150,33 +153,26 @@ function displayModelList(adapterName, models) {
 
 /**
  * Prompt user to select a model by number.
+ * Works in both TUI and Classic modes via unified facade.
  */
-function promptModelSelection(models, context) {
-  return new Promise((resolve) => {
-    const rl =
-      context.rl ||
-      readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-      });
-    const ownRl = !context.rl;
-
-    rl.question(chalk.cyan('选择模型编号 (输入数字，回车取消): '), (answer) => {
-      if (ownRl) {
-        rl.close();
+async function promptModelSelection(models, context) {
+  try {
+    const items = models.map((m, i) => ({
+      id: String(i),
+      label: m.name || m.id || `Model ${i + 1}`,
+      description: m.description || '',
+    }));
+    const selectedId = await ui.list('选择模型编号:', items);
+    if (selectedId !== null && selectedId !== undefined) {
+      const idx = parseInt(selectedId, 10);
+      if (idx >= 0 && idx < models.length) {
+        return models[idx];
       }
-
-      const num = parseInt(answer, 10);
-      if (isNaN(num) || num < 1 || num > models.length) {
-        if (answer.trim()) {
-          printError('无效选择');
-        }
-        resolve(null);
-        return;
-      }
-      resolve(models[num - 1]);
-    });
-  });
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 /**

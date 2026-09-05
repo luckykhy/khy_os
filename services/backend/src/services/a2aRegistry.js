@@ -71,11 +71,18 @@ class A2ARegistry extends EventEmitter {
       throw new Error('Agent name and type are required');
     }
 
-    const id = agentInfo.id || `agent-${crypto.randomBytes(8).toString('hex')}`;
+    const id = agentInfo.id || `${agentInfo.type}-${crypto.randomBytes(8).toString('hex')}`;
     
-    // Check if already registered
+    // Check if already registered (by id or by name+type combination)
     if (this._agents.has(id)) {
       throw new Error(`Agent ${id} is already registered`);
+    }
+    
+    // Check for duplicate name+type combination
+    for (const existing of this._agents.values()) {
+      if (existing.name === agentInfo.name && existing.type === agentInfo.type) {
+        throw new Error(`Agent with name "${agentInfo.name}" and type "${agentInfo.type}" is already registered`);
+      }
     }
 
     const record = {

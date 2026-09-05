@@ -743,6 +743,11 @@ async function handleLearn(subCommand, args) {
   // ── learn progress ──
   if (subCommand === 'progress') {
     const progress = curriculum.getProgress();
+    // --json: 非交互模式，输出纯 JSON 供 AI agent 调用
+    if (args && args.includes('--json')) {
+      console.log(JSON.stringify({ ...progress, source: 'cli-learning-curriculum' }));
+      return true;
+    }
     console.log('\n' + curriculum.formatProgressTable(progress) + '\n');
     return true;
   }
@@ -799,6 +804,17 @@ async function handleLearn(subCommand, args) {
     const next = curriculum.getNextTopic();
     if (!next) {
       printInfo('恭喜！全部课程已完成');
+      return true;
+    }
+    // --json: 非交互模式，输出纯 JSON 供 AI agent 调用，不进入交互/AI 流
+    if (args && args.includes('--json')) {
+      const result = {
+        layer: { id: next.layer.id, title: next.layer.title },
+        topic: { id: next.topic.id, title: next.topic.title, desc: next.topic.desc || '' },
+        progress: curriculum.getProgress(),
+        source: 'cli-learning-curriculum',
+      };
+      console.log(JSON.stringify(result));
       return true;
     }
     if (next.layer.id === 10 && next.topic._bugCase) {

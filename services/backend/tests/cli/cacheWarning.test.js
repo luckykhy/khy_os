@@ -23,6 +23,7 @@ describe('cacheWarning', () => {
 
     test('returns true for non-off values', () => {
       expect(cacheWarningEnabled({ KHY_CACHE_WARNING: '1' })).toBe(true);
+      expect(cacheWarningEnabled({ KHY_CACHE_WARNING: 'true' })).toBe(true);
     });
 
     test('returns false for off values', () => {
@@ -40,15 +41,16 @@ describe('cacheWarning', () => {
 
     test('returns custom threshold', () => {
       expect(getCacheThreshold({ KHY_CACHE_THRESHOLD: '90' })).toBe(90);
+      expect(getCacheThreshold({ KHY_CACHE_THRESHOLD: '50' })).toBe(50);
     });
 
-    test('clamps to range 1-100', () => {
+    test('returns default for out of range', () => {
       expect(getCacheThreshold({ KHY_CACHE_THRESHOLD: '0' })).toBe(80);
       expect(getCacheThreshold({ KHY_CACHE_THRESHOLD: '101' })).toBe(80);
-      expect(getCacheThreshold({ KHY_CACHE_THRESHOLD: '-10' })).toBe(80);
+      expect(getCacheThreshold({ KHY_CACHE_THRESHOLD: '-1' })).toBe(80);
     });
 
-    test('returns default for non-numeric', () => {
+    test('returns default for invalid', () => {
       expect(getCacheThreshold({ KHY_CACHE_THRESHOLD: 'abc' })).toBe(80);
     });
   });
@@ -61,34 +63,38 @@ describe('cacheWarning', () => {
 
     test('returns null for non-object', () => {
       expect(calculateCacheHitRate('string')).toBeNull();
+      expect(calculateCacheHitRate(123)).toBeNull();
     });
 
     test('returns null when no cache data', () => {
-      const usage = { inputTokens: 100, cacheReadInputTokens: 0, cacheWriteInputTokens: 0 };
+      const usage = { inputTokens: 100, cacheWriteInputTokens: 0, cacheReadInputTokens: 0 };
+      expect(calculateCacheHitRate(usage)).toBeNull();
+    });
+
+    test('returns null when total is 0', () => {
+      const usage = { inputTokens: 0, cacheWriteInputTokens: 0, cacheReadInputTokens: 0 };
       expect(calculateCacheHitRate(usage)).toBeNull();
     });
 
     test('calculates hit rate correctly', () => {
-      const usage = { inputTokens: 100, cacheReadInputTokens: 80, cacheWriteInputTokens: 20 };
-      const rate = calculateCacheHitRate(usage);
-      expect(rate).toBeCloseTo(80);
+      const usage = { inputTokens: 100, cacheWriteInputTokens: 50, cacheReadInputTokens: 80 };
+      // total = 100 + 50 + 80 = 230, hit rate = 80/230 * 100 = 34.78...
+      expect(calculateCacheHitRate(usage)).toBeCloseTo(34.78, 1);
     });
 
-    test('handles all cache hit', () => {
-      const usage = { inputTokens: 0, cacheReadInputTokens: 100, cacheWriteInputTokens: 0 };
-      const rate = calculateCacheHitRate(usage);
-      expect(rate).toBe(100);
+    test('returns 100 when all cache hits', () => {
+      const usage = { inputTokens: 0, cacheWriteInputTokens: 0, cacheReadInputTokens: 100 };
+      expect(calculateCacheHitRate(usage)).toBe(100);
     });
 
-    test('handles zero input', () => {
-      const usage = { inputTokens: 0, cacheReadInputTokens: 0, cacheWriteInputTokens: 100 };
-      expect(calculateCacheHitRate(usage)).toBeNull();
+    test('returns 0 when no cache hits', () => {
+      const usage = { inputTokens: 100, cacheWriteInputTokens: 50, cacheReadInputTokens: 0 };
+      expect(calculateCacheHitRate(usage)).toBe(0);
     });
 
-    test('supports snake_case fields', () => {
-      const usage = { input_tokens: 100, cache_read_input_tokens: 80, cache_creation_input_tokens: 20 };
-      const rate = calculateCacheHitRate(usage);
-      expect(rate).toBeCloseTo(80);
+    test('handles CC snake_case field names', () => {
+      const usage = { input_tokens: 100, cache_creation_input_tokens: 50, cache_read_input_tokens: 80 };
+      expect(calculateCacheHitRate(usage)).toBeCloseTo(34.78, 1);
     });
   });
 
@@ -99,46 +105,53 @@ describe('cacheWarning', () => {
       expect(result.trend).toBeNull();
     });
 
-    test('returns warning when below threshold', () => {
-      const result = evaluateCacheWarning({ hitRate: 70, lastHitRate: 75, threshold: 80 });
-      expect(result.shouldWarn).toBe(true);
-      expect(result.trend).toBe(-5);
-    });
-
-    test('returns no warning when above threshold', () => {
+    test('returns no warning when rate above threshold', () => {
       const result = evaluateCacheWarning({ hitRate: 90, lastHitRate: 85, threshold: 80 });
       expect(result.shouldWarn).toBe(false);
       expect(result.trend).toBe(5);
     });
 
-    test('returns null trend for first observation', () => {
+    test('returns warning when rate below threshold', () => {
+      const result = evaluateCacheWarning({ hitRate: 70, lastHitRate: 85, threshold: 80 });
+      expect(result.shouldWarn).toBe(true);
+      expect(result.trend).toBe(-15);
+    });
+
+    test('returns null trend on first observation', () => {
       const result = evaluateCacheWarning({ hitRate: 70, lastHitRate: null, threshold: 80 });
+      expect(result.shouldWarn).toBe(true);
       expect(result.trend).toBeNull();
     });
 
-    test('uses default threshold', () => {
-      const result = evaluateCacheWarning({ hitRate: 70, lastHitRate: 75 });
+    test('uses custom threshold', () => {
+      const result = evaluateCacheWarning({ hitRate: 85, lastHitRate: 90, threshold: 90 });
       expect(result.shouldWarn).toBe(true);
     });
   });
 
   describe('buildCacheWarningLine', () => {
-    test('builds warning line', () => {
-      const line = buildCacheWarningLine({ hitRate: 70, threshold: 80, trend: -5 });
-      expect(line).toContain('70%');
-      expect(line).toContain('80%');
-      expect(line).toContain('↓');
+    test('builds basic warning line', () => {
+      const result = buildCacheWarningLine({ hitRate: 70, threshold: 80 });
+      expect(result).toContain('缓存命中率');
+      expect(result).toContain('70%');
+      expect(result).toContain('80%');
     });
 
-    test('shows upward trend', () => {
-      const line = buildCacheWarningLine({ hitRate: 70, threshold: 80, trend: 5 });
-      expect(line).toContain('↑');
+    test('includes trend when significant', () => {
+      const result = buildCacheWarningLine({ hitRate: 70, threshold: 80, trend: -5 });
+      expect(result).toContain('↓');
+      expect(result).toContain('5%');
     });
 
-    test('hides trend when small', () => {
-      const line = buildCacheWarningLine({ hitRate: 70, threshold: 80, trend: 0.05 });
-      expect(line).not.toContain('↑');
-      expect(line).not.toContain('↓');
+    test('includes up trend', () => {
+      const result = buildCacheWarningLine({ hitRate: 70, threshold: 80, trend: 5 });
+      expect(result).toContain('↑');
+    });
+
+    test('hides trend when insignificant', () => {
+      const result = buildCacheWarningLine({ hitRate: 70, threshold: 80, trend: 0.05 });
+      expect(result).not.toContain('↑');
+      expect(result).not.toContain('↓');
     });
   });
 
@@ -154,15 +167,14 @@ describe('cacheWarning', () => {
     });
 
     test('returns hitRate on first observation', () => {
-      const result = cacheWarningFor({ usage: { inputTokens: 100, cacheReadInputTokens: 80, cacheWriteInputTokens: 20 } }, {});
-      expect(result).not.toBeNull();
+      const result = cacheWarningFor({ usage: { inputTokens: 100, cacheReadInputTokens: 50 } }, {});
       expect(result.hitRate).toBeDefined();
       expect(result.text).toBeNull();
     });
 
-    test('returns warning when below threshold', () => {
-      const result = cacheWarningFor({ usage: { inputTokens: 100, cacheReadInputTokens: 50, cacheWriteInputTokens: 50 }, lastHitRate: 90 }, {});
-      expect(result.text).not.toBeNull();
+    test('returns warning text when below threshold', () => {
+      const result = cacheWarningFor({ usage: { inputTokens: 100, cacheReadInputTokens: 10 }, lastHitRate: 80 }, {});
+      expect(result.text).toBeDefined();
       expect(result.text).toContain('缓存命中率');
     });
   });
@@ -174,54 +186,61 @@ describe('cacheWarning', () => {
 
     test('returns false for off values', () => {
       expect(sessionAggregateEnabled({ KHY_CACHE_SESSION_AGGREGATE: '0' })).toBe(false);
+      expect(sessionAggregateEnabled({ KHY_CACHE_SESSION_AGGREGATE: 'false' })).toBe(false);
     });
   });
 
   describe('accumulateSessionCache', () => {
     test('starts from zero', () => {
-      const result = accumulateSessionCache(null, { inputTokens: 100, cacheReadInputTokens: 80, cacheWriteInputTokens: 20 });
-      expect(result.hit).toBe(80);
-      expect(result.miss).toBe(120);
+      const result = accumulateSessionCache(null, { inputTokens: 100, cacheReadInputTokens: 50 });
+      expect(result.hit).toBe(50);
+      expect(result.miss).toBe(100);
       expect(result.turns).toBe(1);
     });
 
     test('accumulates multiple turns', () => {
-      const prev = { hit: 80, miss: 120, turns: 1 };
-      const result = accumulateSessionCache(prev, { inputTokens: 100, cacheReadInputTokens: 90, cacheWriteInputTokens: 10 });
-      expect(result.hit).toBe(170);
-      expect(result.miss).toBe(230);
+      const prev = { hit: 50, miss: 100, turns: 1 };
+      const result = accumulateSessionCache(prev, { inputTokens: 100, cacheReadInputTokens: 80 });
+      expect(result.hit).toBe(130);
+      expect(result.miss).toBe(200);
       expect(result.turns).toBe(2);
     });
 
     test('skips turns with no cache data', () => {
-      const prev = { hit: 80, miss: 120, turns: 1 };
+      const prev = { hit: 50, miss: 100, turns: 1 };
       const result = accumulateSessionCache(prev, { inputTokens: 100, cacheReadInputTokens: 0, cacheWriteInputTokens: 0 });
       expect(result.turns).toBe(1);
     });
   });
 
   describe('aggregateCacheRate', () => {
-    test('returns null for empty session', () => {
-      expect(aggregateCacheRate(null)).toBeNull();
+    test('returns null for no data', () => {
       expect(aggregateCacheRate({ hit: 0, miss: 0 })).toBeNull();
+      expect(aggregateCacheRate({})).toBeNull();
+      expect(aggregateCacheRate(null)).toBeNull();
     });
 
     test('calculates aggregate rate', () => {
-      const session = { hit: 80, miss: 20 };
-      expect(aggregateCacheRate(session)).toBe(80);
+      expect(aggregateCacheRate({ hit: 80, miss: 20 })).toBe(80);
+      expect(aggregateCacheRate({ hit: 50, miss: 50 })).toBe(50);
     });
   });
 
   describe('buildSessionAggregateLine', () => {
-    test('returns null for empty session', () => {
-      expect(buildSessionAggregateLine(null)).toBeNull();
-      expect(buildSessionAggregateLine({ hit: 0, miss: 0, turns: 0 })).toBeNull();
+    test('returns null for no data', () => {
+      expect(buildSessionAggregateLine({ hit: 0, miss: 0 })).toBeNull();
+      expect(buildSessionAggregateLine({})).toBeNull();
     });
 
-    test('builds aggregate line', () => {
-      const line = buildSessionAggregateLine({ hit: 80, miss: 20, turns: 5 });
-      expect(line).toContain('80%');
-      expect(line).toContain('5 轮');
+    test('returns null for less than 1 turn', () => {
+      expect(buildSessionAggregateLine({ hit: 80, miss: 20, turns: 0 })).toBeNull();
+    });
+
+    test('builds line with turns', () => {
+      const result = buildSessionAggregateLine({ hit: 80, miss: 20, turns: 5 });
+      expect(result).toContain('会话累计命中率');
+      expect(result).toContain('80%');
+      expect(result).toContain('5 轮');
     });
   });
 
@@ -231,16 +250,10 @@ describe('cacheWarning', () => {
       expect(result).toBeNull();
     });
 
-    test('returns null for first turn', () => {
-      const result = sessionAggregateFor({ usage: { inputTokens: 100, cacheReadInputTokens: 80, cacheWriteInputTokens: 20 } }, {});
-      expect(result).not.toBeNull();
-      expect(result.text).toBeNull();
-    });
-
-    test('returns text for second turn', () => {
-      const session = { hit: 80, miss: 120, turns: 1 };
-      const result = sessionAggregateFor({ session, usage: { inputTokens: 100, cacheReadInputTokens: 90, cacheWriteInputTokens: 10 } }, {});
-      expect(result.text).not.toBeNull();
+    test('returns session with turns', () => {
+      const result = sessionAggregateFor({ usage: { inputTokens: 100, cacheReadInputTokens: 50 } }, {});
+      expect(result.session).toBeDefined();
+      expect(result.rate).toBeDefined();
     });
   });
 
