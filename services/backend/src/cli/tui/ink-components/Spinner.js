@@ -62,7 +62,9 @@ function buildSpinnerMeta(elapsedSec, tokens, env = process.env) {
   if (ccMode) {
     try {
       const m = require('../../ccFormat');
-      fmtDur = m.ccFormatDuration;
+      // Use mostSignificantOnly: avoid redundant "1m 1s", "1h 1m 1s"
+      // Under 60s → "12s", 1-60min → "5m", over 1h → "1h"
+      fmtDur = (ms) => m.ccFormatDuration(ms, { mostSignificantOnly: true });
       fmtTok = m.ccFormatTokens;
     } catch {
       fmtDur = null;

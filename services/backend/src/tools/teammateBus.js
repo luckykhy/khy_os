@@ -24,9 +24,30 @@
  *     the full create -> work -> reply-to-lead cycle deterministically, and so
  *     the production default (a standalone Agent run) is not hardcoded into the
  *     tool layer. The bus drives status transitions; the runner only does work.
+ *
+ * A2A Integration:
+ *   All inter-teammate communication is routed through the A2A protocol
+ *   when A2A is available, with legacy inbox as fallback.
  */
 
 const LEAD_ID = 'lead';
+
+// A2A integration
+let _a2a = null;
+let _a2aEnabled = false;
+
+function _getA2A() {
+  if (_a2aEnabled === false) {
+    try {
+      const { getA2A } = require('../services/a2aFacade');
+      _a2a = getA2A();
+      _a2aEnabled = true;
+    } catch {
+      _a2aEnabled = false;
+    }
+  }
+  return _a2a;
+}
 
 // id -> { id, name, task, tools, status, createdAt, result?, error? }
 const _teammates = new Map();
@@ -165,6 +186,7 @@ function deleteTeammate(id) {
 
 /**
  * Send a message to a teammate's inbox (lead -> teammate, or peer -> teammate).
+ * Uses A2A protocol when available, with legacy inbox as fallback.
  * @param {string} id
  * @param {string} message
  * @param {string} [from='lead']
@@ -193,6 +215,20 @@ function sendToTeammate(
     metadata: metadata || null,
     ts: Date.now(),
   });
+  
+  // A2A: Route via A2A protocol
+  const a2a = _getA2A();
+  if (a2a && from !== id) {
+    a2a.sendMessage(id, {
+      type: type || 'message',
+      payload: { message, metadata },
+      source: from,
+      metadata: { fromName },
+    }).catch(() => {
+      // A2A routing failed, message still in legacy inbox
+    });
+  }
+  
   return true;
 }
 
@@ -207,6 +243,7 @@ function drainTeammateInbox(id) {
 
 /**
  * Send a message from a teammate to the lead inbox.
+ * Uses A2A protocol when available, with legacy inbox as fallback.
  * @param {string} from
  * @param {string} fromName
  * @param {string} message
@@ -224,6 +261,19 @@ function sendToLead(from, fromName, message, type = 'message', metadata = null) 
   });
   while (_leadInbox.length > maxLeadInbox()) {
     _leadInbox.shift();
+  }
+  
+  // A2A: Route via A2A protocol
+  const a2a = _getA2A();
+  if (a2a && from !== LEAD_ID) {
+    a2a.sendMessage(LEAD_ID, {
+      type: type || 'message',
+      payload: { message, metadata },
+      source: from,
+      metadata: { fromName },
+    }).catch(() => {
+      // A2A routing failed, message still in legacy inbox
+    });
   }
 }
 
@@ -573,5 +623,7 @@ module.exports = {
   listPendingRequests,
   // s17 autonomy
   autonomousPoll,
+  // A2A integration
+  getA2A: _getA2A,
   _resetForTest,
 };

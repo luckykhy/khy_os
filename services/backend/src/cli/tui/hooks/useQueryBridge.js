@@ -118,61 +118,48 @@ function _withEscHint(content) {
 }
 
 // Classify raw stream error text into specific, concise Chinese messages.
-// The upstream often returns opaque strings like "API Error" or base64 garbage.
-// We map known patterns to specific diagnoses + actionable recovery steps.
+// Maps errorType + statusCode + message to actionable diagnoses.
 function _classifyStreamError(rawMsg, chunk) {
   const msg = String(rawMsg || '').toLowerCase();
   const status = chunk && chunk.statusCode ? Number(chunk.statusCode) : 0;
+  const errorType = chunk && chunk.errorType ? String(chunk.errorType).toLowerCase() : '';
 
-  // Rate limiting (429)
-  if (status === 429 || /rate ?limit|too many requests|429/.test(msg)) {
-    return `限流 (429)：请求过多，请稍后重试或切换通道 (khy gateway config)`;
+  // Use errorType for fast, accurate classification
+  if (errorType === 'rate_limit' || status === 429 || /rate ?limit|too many requests|429/.test(msg)) {
+    return `限流 (429)：请求过多，稍后重试或运行 khy gateway config 切换通道`;
   }
-  // Auth failure (401/403)
-  if (status === 401 || /unauthorized|invalid ?api ?key|401/.test(msg)) {
-    return `认证失败 (401)：API key 无效或过期，请运行 khy gateway config 更新密钥`;
+  if (errorType === 'auth' || status === 401 || status === 403 || /unauthorized|invalid ?api ?key|forbidden|401|403/.test(msg)) {
+    return `认证失败 (${status || '401/403'})：API key 无效或过期，请运行 khy gateway config 更新密钥`;
   }
-  if (status === 403 || /forbidden|403/.test(msg)) {
-    return `权限不足 (403)：无权访问该模型，请检查订阅或更换密钥`;
-  }
-  // Model not found (404)
-  if (status === 404 || /model.*not ?found|does not exist|no such model|404/.test(msg)) {
+  if (errorType === 'model_not_found' || status === 404 || /model.*not ?found|does not exist|no such model|404/.test(msg)) {
     return `模型不存在 (${status || 404})：请用 /model 查看可用模型`;
   }
-  // Context too long (413 or specific message)
-  if (status === 413 || /context ?(length|too ?long)|too ?many ?tokens|prompt_too_long|reduce the length|max ?context/.test(msg)) {
+  if (errorType === 'context_length' || status === 413 || /context ?(length|too ?long)|too ?many ?tokens|prompt_too_long|max ?context/.test(msg)) {
     return `上下文超限：对话过长，请 /compact 压缩或新建会话`;
   }
-  // Billing / quota exhausted
-  if (/billing|insufficient_quota|quota ?exhausted|402|credit/.test(msg)) {
+  if (errorType === 'billing' || /billing|insufficient_quota|quota ?exhausted|402|credit/.test(msg)) {
     return `额度已用完：请充值或更换模型通道`;
   }
-  // Server error (500, 502, 503)
-  if (status >= 500 || /internal ?server ?error|502|503|500/.test(msg)) {
+  if (errorType === 'server_error' || status >= 500 || /internal ?server ?error|500|502|503/.test(msg)) {
     return `上游异常 (${status || '5xx'})：模型服务暂不可用，请稍后重试`;
   }
-  // Timeout
-  if (/timeout|timed ?out|deadline ?exceeded|etimedout/.test(msg)) {
+  if (errorType === 'timeout' || /timeout|timed ?out|deadline ?exceeded|etimedout/.test(msg)) {
     return `请求超时：网络或服务响应慢，请稍后重试`;
   }
-  // Connection / network
-  if (/econn(refused|reset)|fetch ?failed|socket|network|getaddrinfo|dns/.test(msg)) {
+  if (errorType === 'network' || /econn(refused|reset)|fetch ?failed|socket|network|getaddrinfo|dns/.test(msg)) {
     return `网络连接失败：请检查网络代理设置`;
   }
-  // Overloaded
-  if (/overloaded|529|busy/.test(msg)) {
+  if (errorType === 'overloaded' || /overloaded|529|busy/.test(msg)) {
     return `服务过载：通道请求过多，请稍后重试或切换通道`;
   }
-  // Content filter / refusal
-  if (/content ?filter|refusal|safety|policy|harmful/.test(msg)) {
+  if (errorType === 'refusal' || /content ?filter|refusal|safety|policy|harmful/.test(msg)) {
     return `内容安全拦截：模型拒绝生成，请调整措辞后重试`;
   }
-  // Truncated by max_tokens
-  if (/max.?tokens?|truncat|finish.?reason.*length/.test(msg)) {
+  if (errorType === 'context_length' || /max.?tokens?|truncat|finish.?reason.*length/.test(msg)) {
     return `输出被截断：请说「继续」续写，或调大 maxTokens`;
   }
   // Fallback: show original but truncated
-  const truncated = rawMsg.length > 100 ? rawMsg.slice(0, 97) + '...' : rawMsg;
+  const truncated = rawMsg.length > 80 ? rawMsg.slice(0, 77) + '...' : rawMsg;
   return `请求失败：${truncated}`;
 }
 
@@ -3600,12 +3587,11 @@ ${history}
         setStatus('idle');
         _lastCompletionMsRef.current = Date.now(); // 久别重返：出错/取消也算回合收尾（缓存同样凉）
         if (!aborted) {
-          // Classify the error for a specific message instead of showing
-          // raw err.message (which is often a generic "API Error" or
-          // technical detail the user can't act on).
-          const errorMsg = err && err.errorType
-            ? _classifyStreamError(err.message || '错误', { statusCode: err.statusCode, errorType: err.errorType })
-            : _classifyStreamError(err && err.message ? err.message : '错误', {});
+          // Classify the error for a specific, actionable message
+          const errorMsg = _classifyStreamError(
+            err && err.message ? err.message : '错误',
+            { statusCode: err && err.statusCode, errorType: err && err.errorType }
+          );
           setMessages((m) => [
             ...m,
             { role: 'error', content: _withEscHint(errorMsg), timestamp: Date.now() },

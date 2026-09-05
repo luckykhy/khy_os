@@ -13,6 +13,9 @@ const { execSync, execFileSync, spawn } = require('child_process');
 const fs = require('fs');
 const Module = require('module');
 const os = require('os');
+
+// 统一 UI 门面：TUI 和经典模式共享同一份代码
+const ui = require('../uiFacade');
 const path = require('path');
 const chalk = require('chalk').default || require('chalk');
 const readline = require('readline');
@@ -55,15 +58,24 @@ function ask(rl, question, defaultValue) {
   });
 }
 
-function askChoice(rl, question, choices) {
-  return new Promise((resolve) => {
-    console.log(chalk.cyan(`  ${question}`));
-    choices.forEach((c, i) => console.log(chalk.white(`    ${i + 1}) ${c}`)));
-    rl.question(chalk.cyan('  > '), (answer) => {
-      const idx = parseInt(answer, 10) - 1;
-      resolve(choices[idx] || choices[0]);
-    });
-  });
+/**
+ * List prompt — works in both TUI and Classic modes via unified facade.
+ * @param {string} question - Prompt message
+ * @param {string[]} choices - Array of choice labels
+ * @returns {Promise<string>} Selected choice value
+ */
+async function askChoice(question, choices) {
+  try {
+    const items = choices.map((label, i) => ({ id: String(i), label }));
+    const selectedId = await ui.list(question, items);
+    if (selectedId !== null && selectedId !== undefined) {
+      return choices[parseInt(selectedId, 10)] || choices[0];
+    }
+    return choices[0];
+  } catch {
+    // Fallback to first choice on error/cancellation
+    return choices[0];
+  }
 }
 
 // ── khy plugin init ──────────────────────────────────────────────────────────
@@ -89,7 +101,7 @@ async function handlePluginInit(args) {
     const description = await ask(rl, 'Description', `KHY ${displayName} plugin`);
     const author = await ask(rl, 'Author', os.userInfo().username);
 
-    const template = await askChoice(rl, 'Template:', [
+    const template = await askChoice('Template:', [
       'full (backend + frontend)',
       'backend-only (CLI commands & tools)',
       'frontend-only (Vue views & components)',
