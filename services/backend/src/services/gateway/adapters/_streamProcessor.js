@@ -102,13 +102,33 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
     }
   };
 
+  // Self-heal: consumer onChunk callback must not kill the stream pipeline
+  const _safeOnChunk = (chunk) => {
+    try {
+      if (typeof onChunk === 'function') {
+        onChunk(chunk);
+      }
+    } catch {
+      /* consumer error — swallow to protect stream integrity */
+    }
+  };
+  const _safeAppendContent = (text) => {
+    try {
+      if (typeof appendContent === 'function') {
+        appendContent(text);
+      }
+    } catch {
+      /* consumer error — swallow to protect stream integrity */
+    }
+  };
+
   // ── 顶层工具事件（cliTool 特有） ──────────────────────────────────
 
   if (handleTopLevelToolEvents) {
     if (event.type === 'tool_use' || event.type === 'tool_call') {
       const toolName = event.name || event.tool || event.tool_name || 'unknown';
       const inputSummary = summarizeInput(event.input || event.arguments || event.params || {});
-      onChunk({
+      _safeOnChunk({
         type: 'tool_use',
         tool: toolName,
         input: inputSummary,
@@ -122,7 +142,7 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
         typeof event.content === 'string'
           ? event.content
           : JSON.stringify(event.content || event.result || '');
-      onChunk({
+      _safeOnChunk({
         type: 'tool_result',
         id: event.tool_use_id || event.id || '',
         content: content.slice(0, 200),
@@ -135,7 +155,7 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
   // ── tool_progress 事件 ────────────────────────────────────────────
 
   if (event.type === 'tool_progress') {
-    onChunk({
+    _safeOnChunk({
       type: 'tool_progress',
       id: event.tool_use_id || event.id || '',
       tool: event.tool_name || event.tool || 'tool',
@@ -149,7 +169,7 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
   // ── auth_status 事件 ──────────────────────────────────────────────
 
   if (event.type === 'auth_status') {
-    onChunk({
+    _safeOnChunk({
       type: 'auth_status',
       isAuthenticating: !!event.isAuthenticating,
       output: summarizeText(event.output || ''),
@@ -167,7 +187,7 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
       event.subtype === 'task_progress' ||
       event.subtype === 'task_notification')
   ) {
-    onChunk({
+    _safeOnChunk({
       type: event.subtype,
       taskId: event.task_id || '',
       toolUseId: event.tool_use_id || '',
@@ -186,7 +206,7 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
     const ev = event.event;
 
     if (ev.type === 'tool_progress') {
-      onChunk({
+      _safeOnChunk({
         type: 'tool_progress',
         id: ev.tool_use_id || ev.id || '',
         tool: ev.tool_name || ev.tool || 'tool',
@@ -198,7 +218,7 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
     }
 
     if (ev.type === 'auth_status') {
-      onChunk({
+      _safeOnChunk({
         type: 'auth_status',
         isAuthenticating: !!ev.isAuthenticating,
         output: summarizeText(ev.output || ''),
@@ -214,7 +234,7 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
         ev.subtype === 'task_progress' ||
         ev.subtype === 'task_notification')
     ) {
-      onChunk({
+      _safeOnChunk({
         type: ev.subtype,
         taskId: ev.task_id || '',
         toolUseId: ev.tool_use_id || '',
@@ -229,7 +249,7 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
     if (ev.type === 'system' && ev.subtype === 'session_state_changed') {
       const stateText = ev.state || ev.session_state || '';
       if (stateText) {
-        onChunk({ type: 'status', text: `Session state: ${stateText}` });
+        _safeOnChunk({ type: 'status', text: `Session state: ${stateText}` });
       }
       return;
     }
@@ -249,13 +269,13 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
       state.blocks.set(idx, blockState);
 
       if (block.type === 'thinking' && block.thinking) {
-        onChunk({ type: 'thinking', text: block.thinking });
+        _safeOnChunk({ type: 'thinking', text: block.thinking });
       } else if (block.type === 'text' && block.text) {
-        onChunk({ type: 'text', text: block.text });
-        appendContent(block.text);
+        _safeOnChunk({ type: 'text', text: block.text });
+        _safeAppendContent(block.text);
         state.sawAssistantText = true;
       } else if (block.type === 'tool_use') {
-        onChunk({
+        _safeOnChunk({
           type: 'tool_use',
           tool: block.name || 'unknown',
           input: summarizeInput(block.input),
@@ -265,7 +285,7 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
       } else if (block.type === 'tool_result') {
         const content =
           typeof block.content === 'string' ? block.content : JSON.stringify(block.content || '');
-        onChunk({
+        _safeOnChunk({
           type: 'tool_result',
           id: block.tool_use_id || '',
           content: content.slice(0, 200),
@@ -278,10 +298,10 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
       const idx = Number(ev.index);
       const delta = ev.delta || {};
       if (delta.type === 'thinking_delta' && delta.thinking) {
-        onChunk({ type: 'thinking', text: delta.thinking });
+        _safeOnChunk({ type: 'thinking', text: delta.thinking });
       } else if (delta.type === 'text_delta' && delta.text) {
-        onChunk({ type: 'text', text: delta.text });
-        appendContent(delta.text);
+        _safeOnChunk({ type: 'text', text: delta.text });
+        _safeAppendContent(delta.text);
         state.sawAssistantText = true;
       } else if (delta.type === 'input_json_delta' && typeof delta.partial_json === 'string') {
         const blk = state.blocks.get(idx);
@@ -300,9 +320,9 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
         const summary = summarizeInput(parsed) || summarizeInput(blk.inputRaw);
         if (summary) {
           if (toolStopEventType === 'tool_result') {
-            onChunk({ type: 'tool_result', id: blk.id || '', content: `参数: ${summary}` });
+            _safeOnChunk({ type: 'tool_result', id: blk.id || '', content: `参数: ${summary}` });
           } else {
-            onChunk({
+            _safeOnChunk({
               type: 'tool_use',
               tool: blk.name || 'unknown',
               input: summary,
@@ -332,7 +352,7 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
     }
 
     if (ev.type === 'message_delta' && ev.usage && typeof ev.usage.output_tokens === 'number') {
-      onChunk({ type: 'cost', cost: ev.usage.output_tokens });
+      _safeOnChunk({ type: 'cost', cost: ev.usage.output_tokens });
       const g = genai();
       if (g) {
         try {
@@ -363,17 +383,17 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
       const attempt = event.attempt || '?';
       const max = event.max_retries || '?';
       const reason = event.error || 'unknown';
-      onChunk({ type: 'status', text: `Claude API retry ${attempt}/${max} (${reason})` });
+      _safeOnChunk({ type: 'status', text: `Claude API retry ${attempt}/${max} (${reason})` });
       return;
     }
     if (event.subtype === 'error') {
-      onChunk({ type: 'status', text: `Claude system error: ${event.error || 'unknown'}` });
+      _safeOnChunk({ type: 'status', text: `Claude system error: ${event.error || 'unknown'}` });
       return;
     }
     if (event.subtype === 'session_state_changed') {
       const stateText = event.state || event.session_state || '';
       if (stateText) {
-        onChunk({ type: 'status', text: `Session state: ${stateText}` });
+        _safeOnChunk({ type: 'status', text: `Session state: ${stateText}` });
       }
       return;
     }
@@ -384,13 +404,13 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
   if (event.type === 'assistant' && event.message?.content) {
     for (const block of event.message.content) {
       if (block.type === 'thinking' && block.thinking) {
-        onChunk({ type: 'thinking', text: block.thinking });
+        _safeOnChunk({ type: 'thinking', text: block.thinking });
       } else if (block.type === 'text' && block.text) {
-        onChunk({ type: 'text', text: block.text });
-        appendContent(block.text);
+        _safeOnChunk({ type: 'text', text: block.text });
+        _safeAppendContent(block.text);
         state.sawAssistantText = true;
       } else if (block.type === 'tool_use') {
-        onChunk({
+        _safeOnChunk({
           type: 'tool_use',
           tool: block.name || 'unknown',
           input: summarizeInput(block.input),
@@ -404,7 +424,7 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
       if (block.type === 'tool_result') {
         const content =
           typeof block.content === 'string' ? block.content : JSON.stringify(block.content || '');
-        onChunk({
+        _safeOnChunk({
           type: 'tool_result',
           id: block.tool_use_id,
           content: content.slice(0, 200),
@@ -414,11 +434,11 @@ function processStreamEvent(event, onChunk, appendContent, state, options = {}) 
     }
   } else if (event.type === 'result') {
     if (event.total_cost_usd) {
-      onChunk({ type: 'cost', cost: event.total_cost_usd });
+      _safeOnChunk({ type: 'cost', cost: event.total_cost_usd });
     }
     if (!state.sawAssistantText && typeof event.result === 'string' && event.result.trim()) {
-      onChunk({ type: 'text', text: event.result });
-      appendContent(event.result);
+      _safeOnChunk({ type: 'text', text: event.result });
+      _safeAppendContent(event.result);
       state.sawAssistantText = true;
     }
   }

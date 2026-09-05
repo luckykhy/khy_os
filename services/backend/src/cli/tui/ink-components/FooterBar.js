@@ -79,6 +79,7 @@ function FooterBar({
   goalActive,
   contextPlan,
   cooldownUntilMs,
+  modelStatus,
 }) {
   const { Box, Text } = inkRuntime.get();
   const h = React.createElement;
@@ -177,7 +178,10 @@ function FooterBar({
     /* fail-soft:不渲倒计时,页脚其余部分照常 */
   }
 
-  const leftParts = [formatModelLabel(model), effortStr].filter(Boolean).join(' · ');
+  // Model status: if backend reports the model is unavailable/error, show warning
+  const modelWarning = modelStatus && modelStatus.status === 'error' ? '⚠ ' : '';
+  const modelLabel = modelWarning + formatModelLabel(model);
+  const leftParts = [modelLabel, effortStr].filter(Boolean).join(' · ');
 
   // CC 对齐:页脚左侧常驻一段「进程内存(RSS)· pid」,按阈值上色(512MB→warning,1GB→error)。
   // 判定在纯叶子 footerMemory 里;这里只读 process.memoryUsage().rss/pid(IO)并把 level 映射成

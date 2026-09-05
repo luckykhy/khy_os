@@ -160,6 +160,17 @@ function parseOpenAISseStream(stream, onChunk, options = {}) {
       return blocks;
     };
 
+    // Self-heal: consumer onChunk callback must not kill the stream pipeline
+    const _safeOnChunk = (chunk) => {
+      try {
+        if (typeof onChunk === 'function') {
+          onChunk(chunk);
+        }
+      } catch {
+        /* consumer error — swallow to protect stream integrity */
+      }
+    };
+
     stream.on('data', (chunk) => {
       const raw = _textDecoder.write(chunk);
       if (staleDetector) {
@@ -213,7 +224,7 @@ function parseOpenAISseStream(stream, onChunk, options = {}) {
           if (obj.type === 'content_block_delta' && obj.delta?.text) {
             content += obj.delta.text;
             if (onChunk) {
-              onChunk({ type: 'text', text: obj.delta.text });
+              _safeOnChunk({ type: 'text', text: obj.delta.text });
             }
           }
           // OpenAI Responses API fallback: relay proxies may transparently
@@ -223,7 +234,7 @@ function parseOpenAISseStream(stream, onChunk, options = {}) {
           else if (obj.type === 'response.output_text.delta' && typeof obj.delta === 'string') {
             content += obj.delta;
             if (onChunk) {
-              onChunk({ type: 'text', text: obj.delta });
+              _safeOnChunk({ type: 'text', text: obj.delta });
             }
           } else if (
             obj.type === 'response.reasoning_summary_text.delta' &&
@@ -232,7 +243,7 @@ function parseOpenAISseStream(stream, onChunk, options = {}) {
             if (enableThinking) {
               thinking += obj.delta;
               if (onChunk) {
-                onChunk({ type: 'thinking', text: obj.delta });
+                _safeOnChunk({ type: 'thinking', text: obj.delta });
               }
             }
           } else if (obj.type === 'response.output_item.added' && obj.item) {
@@ -247,7 +258,7 @@ function parseOpenAISseStream(stream, onChunk, options = {}) {
                 });
               }
               if (onChunk && obj.item.name) {
-                onChunk({
+                _safeOnChunk({
                   type: 'tool_use',
                   name: obj.item.name,
                   id: obj.item.call_id || obj.item.id || '',
@@ -300,7 +311,7 @@ function parseOpenAISseStream(stream, onChunk, options = {}) {
         if (typeof textContent === 'string' && textContent) {
           content += textContent;
           if (onChunk) {
-            onChunk({ type: 'text', text: textContent });
+            _safeOnChunk({ type: 'text', text: textContent });
           }
         }
 
@@ -310,7 +321,7 @@ function parseOpenAISseStream(stream, onChunk, options = {}) {
           if (typeof thinkChunk === 'string' && thinkChunk) {
             thinking += thinkChunk;
             if (onChunk) {
-              onChunk({ type: 'thinking', text: thinkChunk });
+              _safeOnChunk({ type: 'thinking', text: thinkChunk });
             }
           }
         }
@@ -334,7 +345,7 @@ function parseOpenAISseStream(stream, onChunk, options = {}) {
             }
 
             if (onChunk && tc.function?.name) {
-              onChunk({ type: 'tool_use', name: tc.function.name, id: tc.id || accum.id });
+              _safeOnChunk({ type: 'tool_use', name: tc.function.name, id: tc.id || accum.id });
             }
           }
         }

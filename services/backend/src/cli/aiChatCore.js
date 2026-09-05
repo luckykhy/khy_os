@@ -1303,8 +1303,8 @@ async function chat(userMessage, opts = {}) {
       onStatus({
         phase: 'init',
         message: _terminal
-          ? '持久目标:已达轮次预算上限,本轮进入终止态(产出完成/现状报告后停止推进)'
-          : '持久目标:已加载当前项目目标,本轮将持续朝它推进',
+          ? '持久目标：已达轮次上限，本轮终止'
+          : '持久目标：已加载，本轮持续朝目标推进',
         elapsed: Date.now() - startTime,
       });
     }

@@ -264,6 +264,53 @@ function buildExternalAgentDirective(env) {
   }
 }
 
+// ─── A2A Integration ────────────────────────────────────────────────────────
+
+/**
+ * Send task to external agent via A2A protocol.
+ * @param {string} agentId - External agent ID
+ * @param {object} task - Task payload
+ * @returns {Promise<object|null>} A2A routing result or null if A2A unavailable
+ */
+async function sendToExternalAgentA2A(agentId, task) {
+  try {
+    const { getA2A } = require('./a2aFacade');
+    const a2a = getA2A();
+    
+    // Register external agent if not already registered
+    const existingAgent = a2a.getAgent(agentId);
+    if (!existingAgent) {
+      a2a.registerAgent({
+        id: agentId,
+        name: agentId,
+        type: 'external',
+        capabilities: ['external_execution'],
+      });
+    }
+    
+    // Send task via A2A
+    return await a2a.submitTask(agentId, task);
+  } catch (error) {
+    // A2A not available or routing failed
+    return null;
+  }
+}
+
+/**
+ * Find external agents by capability via A2A.
+ * @param {string} capability
+ * @returns {object[]}
+ */
+function findExternalAgentsByCapabilityA2A(capability) {
+  try {
+    const { getA2A } = require('./a2aFacade');
+    const a2a = getA2A();
+    return a2a.findAgentsByCapability(capability);
+  } catch {
+    return [];
+  }
+}
+
 module.exports = {
   isExternalAgentDirectiveEnabled,
   isExternalAgentNudgeEnabled,
@@ -271,4 +318,7 @@ module.exports = {
   buildExternalAgentNudge,
   buildExternalAgentDirective,
   EXTERNAL_AGENTS,
+  // A2A integration
+  sendToExternalAgentA2A,
+  findExternalAgentsByCapabilityA2A,
 };

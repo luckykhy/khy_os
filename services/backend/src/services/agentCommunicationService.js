@@ -2,14 +2,14 @@
  * Agent Communication Service — Multi-agent messaging, shared memory, and growth.
  *
  * Provides:
- * - Inter-agent message passing (ACP JSON-RPC 2.0 format internally)
+ * - Inter-agent message passing via A2A protocol
  * - Shared memory store (persisted in growth directory)
  * - Agent specialization tracking (accuracy/domains)
  * - Custom multi-agent task orchestration
  * - Multi-IDE model collaboration (when multiple AI tools are available)
  * - Online learning integration (agents absorb new patterns from internet AI)
  *
- * Internal wire format uses ACP (Agent Communication Protocol) envelopes.
+ * All inter-agent communication now uses the A2A protocol via a2aFacade.
  * Public API remains unchanged for backward compatibility.
  */
 
@@ -17,6 +17,7 @@ const crypto = require('crypto');
 const path = require('path');
 
 const { ACP_METHODS, createRequest, createNotification } = require('./acpTransport');
+const { getA2A } = require('./a2aFacade');
 
 let growthService = null;
 function getGrowthService() {
@@ -32,18 +33,84 @@ const AGENT_REGISTRY = {
   fundamental: {
     name: '基本面分析师',
     role: 'Analyze company financials, earnings, and valuation',
+    capabilities: ['fundamental_analysis', 'financial_analysis'],
   },
-  technical: { name: '技术面分析师', role: 'Analyze price patterns, indicators, and trends' },
+  technical: { 
+    name: '技术面分析师', 
+    role: 'Analyze price patterns, indicators, and trends',
+    capabilities: ['technical_analysis', 'chart_analysis'],
+  },
   sentiment: {
     name: '情绪面分析师',
     role: 'Gauge market sentiment from social media and news tone',
+    capabilities: ['sentiment_analysis', 'news_analysis'],
   },
-  news: { name: '新闻分析师', role: 'Parse and interpret market news and events' },
-  bullResearcher: { name: '多头研究员', role: 'Build bullish investment cases with evidence' },
-  bearResearcher: { name: '空头研究员', role: 'Build bearish investment cases with evidence' },
-  trader: { name: '交易决策师', role: 'Make final trading decisions based on all inputs' },
-  riskManager: { name: '风控经理', role: 'Evaluate risk and adjust position sizing' },
+  news: { 
+    name: '新闻分析师', 
+    role: 'Parse and interpret market news and events',
+    capabilities: ['news_analysis', 'event_analysis'],
+  },
+  bullResearcher: { 
+    name: '多头研究员', 
+    role: 'Build bullish investment cases with evidence',
+    capabilities: ['research', 'bullish_analysis'],
+  },
+  bearResearcher: { 
+    name: '空头研究员', 
+    role: 'Build bearish investment cases with evidence',
+    capabilities: ['research', 'bearish_analysis'],
+  },
+  trader: { 
+    name: '交易决策师', 
+    role: 'Make final trading decisions based on all inputs',
+    capabilities: ['trading', 'decision_making'],
+  },
+  riskManager: { 
+    name: '风控经理', 
+    role: 'Evaluate risk and adjust position sizing',
+    capabilities: ['risk_assessment', 'position_sizing'],
+  },
 };
+
+// ─── A2A Integration ────────────────────────────────────────────────────────
+
+let _a2aInitialized = false;
+let _a2a = null;
+
+/**
+ * Initialize A2A integration.
+ * Registers all built-in agents with the A2A registry.
+ */
+function _ensureA2A() {
+  if (_a2aInitialized) {
+    return _a2a;
+  }
+  
+  try {
+    _a2a = getA2A();
+    
+    // Register built-in agents with A2A
+    for (const [agentId, agentInfo] of Object.entries(AGENT_REGISTRY)) {
+      try {
+        _a2a.registerAgent({
+          id: agentId,
+          name: agentInfo.name,
+          type: 'analyst',
+          capabilities: agentInfo.capabilities || [],
+        });
+      } catch (error) {
+        // Agent may already be registered
+      }
+    }
+    
+    _a2aInitialized = true;
+  } catch (error) {
+    // A2A not available, fall back to legacy mode
+    console.warn('A2A initialization failed, using legacy mode:', error.message);
+  }
+  
+  return _a2a;
+}
 
 // ─── Message Queue (in-memory per session) ──────────────────────────────────
 
@@ -53,10 +120,11 @@ const MAX_HISTORY = 200;
 
 /**
  * Send a message from one agent to another.
- * Internally wraps in ACP JSON-RPC 2.0 envelope.
+ * Uses A2A protocol for inter-agent communication.
  */
 function sendMessage(from, to, type, payload) {
   const msgId = crypto.randomUUID();
+  
   // Build ACP-compatible envelope
   const acpMsg = createRequest(
     ACP_METHODS.MESSAGE_SEND,
@@ -86,19 +154,51 @@ function sendMessage(from, to, type, payload) {
   if (_messageHistory.length > MAX_HISTORY) {
     _messageHistory.shift();
   }
+  
+  // A2A: Route message via A2A protocol
+  const a2a = _ensureA2A();
+  if (a2a) {
+    a2a.sendMessage(to, {
+      type,
+      payload,
+      source: from,
+      metadata: { correlationId: payload.correlationId },
+    }).catch(() => {
+      // A2A routing failed, message still in legacy queue
+    });
+  }
+  
   return msg.id;
 }
 
 /**
  * Broadcast a message to all agents.
+ * Uses A2A protocol for broadcasting.
  */
 function broadcastMessage(from, type, payload) {
   const ids = [];
+  
+  // A2A: Use A2A broadcast
+  const a2a = _ensureA2A();
+  if (a2a) {
+    for (const capability of ['analysis', 'research', 'trading']) {
+      a2a.broadcast(capability, {
+        type,
+        payload,
+        source: from,
+      }).catch(() => {
+        // A2A broadcast failed
+      });
+    }
+  }
+  
+  // Legacy: Also send via legacy queue for backward compat
   for (const agentId of Object.keys(AGENT_REGISTRY)) {
     if (agentId !== from) {
       ids.push(sendMessage(from, agentId, type, payload));
     }
   }
+  
   return ids;
 }
 
@@ -114,6 +214,18 @@ function getMessages(agentId) {
     }
   }
   return msgs;
+}
+
+/**
+ * Get A2A system statistics.
+ * @returns {object|null}
+ */
+function getA2AStatistics() {
+  const a2a = _ensureA2A();
+  if (a2a) {
+    return a2a.getStatistics();
+  }
+  return null;
 }
 
 // ─── Shared Memory ──────────────────────────────────────────────────────────

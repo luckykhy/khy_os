@@ -161,6 +161,16 @@ function parseAnthropicSseStream(stream, onChunk, options = {}) {
      * Process a single parsed SSE event object.
      */
     function processEvent(ev) {
+      // Self-heal: consumer onChunk callback must not kill the stream pipeline
+      const _safeOnChunk = (chunk) => {
+        try {
+          if (typeof onChunk === 'function') {
+            onChunk(chunk);
+          }
+        } catch {
+          /* consumer error — swallow to protect stream integrity */
+        }
+      };
       const eventType = resolveEventType(ev);
 
       switch (eventType) {
@@ -218,13 +228,13 @@ function parseAnthropicSseStream(stream, onChunk, options = {}) {
             currentBlock.text = (currentBlock.text || '') + delta.text;
             content += delta.text;
             if (onChunk) {
-              onChunk({ type: 'text', text: delta.text });
+              _safeOnChunk({ type: 'text', text: delta.text });
             }
           } else if (delta.type === 'thinking_delta' && delta.thinking && enableThinking) {
             currentBlock.thinking = (currentBlock.thinking || '') + delta.thinking;
             thinkingContent += delta.thinking;
             if (onChunk) {
-              onChunk({ type: 'thinking', text: delta.thinking });
+              _safeOnChunk({ type: 'thinking', text: delta.thinking });
             }
           } else if (delta.type === 'signature_delta' && delta.signature && enableThinking) {
             // Signature for the preceding thinking block — required to echo it back.
@@ -265,7 +275,7 @@ function parseAnthropicSseStream(stream, onChunk, options = {}) {
             };
             toolUseBlocks.push(toolBlock);
             if (onChunk) {
-              onChunk({ type: 'tool_use', name: toolBlock.name, id: toolBlock.id, input });
+              _safeOnChunk({ type: 'tool_use', name: toolBlock.name, id: toolBlock.id, input });
             }
           } else if (currentBlock.type === 'server_tool_use') {
             let input = {};
@@ -284,7 +294,7 @@ function parseAnthropicSseStream(stream, onChunk, options = {}) {
             };
             toolUseBlocks.push(serverBlock);
             if (onChunk) {
-              onChunk({ type: 'server_tool_use', name: serverBlock.name, id: serverBlock.id });
+              _safeOnChunk({ type: 'server_tool_use', name: serverBlock.name, id: serverBlock.id });
             }
           } else if (currentBlock.type === 'thinking' && enableThinking) {
             // Preserve the structured thinking block + signature for echo-back.
