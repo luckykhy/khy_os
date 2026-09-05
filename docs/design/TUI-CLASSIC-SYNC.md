@@ -153,6 +153,27 @@ async function handleCommand(args) {
 
 **注意**：shim 文件必须排除 `*.test.js`，否则测试代码会在生产环境执行。
 
+### uiPrompt.js 兼容层（现有）
+
+`cli/uiPrompt.js` 是一个成熟的兼容性层，用于桥接 inquirer 和 TUI FormFlow：
+
+```js
+// 在命令处理器中
+const { isTuiActive, promptCompat } = require('../uiPrompt');
+
+// 当 TUI 激活时，使用 FormFlow 原生组件
+// 当经典模式时，使用 inquirer
+const answers = await promptCompat(questions);
+```
+
+**已使用 uiPrompt.js 的处理器**：
+- `handlers/gateway.js` - 模型选择、配置等
+- 其他需要复杂表单的处理器
+
+**选择指南**：
+- 简单确认/列表/表单 → 使用 `uiFacade.js`（更简洁）
+- 复杂表单（when/filter/transformer/editor/expand 等）→ 使用 `uiPrompt.js`（功能更完整）
+
 ---
 
 ### 第 2 层：入口代码（需手动同步）
