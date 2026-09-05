@@ -16,9 +16,9 @@
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { reconcile } = require('../../../src/services/trajectoryProvenance/claimReconciler');
-const projection = require('../../../src/services/trajectoryProvenance/traceProjection');
-const khyTrace = require('../../../src/services/trajectoryProvenance/khyTrace');
+const { reconcile } = require('../../../src/services/domain/trajectory/trajectoryProvenance/claimReconciler');
+const projection = require('../../../src/services/domain/trajectory/trajectoryProvenance/traceProjection');
+const khyTrace = require('../../../src/services/domain/trajectory/trajectoryProvenance/khyTrace');
 
 describe('claimReconciler delete 族', () => {
   test('「已删除 config.json」+空日志 → 1 矛盾', () => {
@@ -112,7 +112,7 @@ describe('与 traceProjection 串接', () => {
 
 // ── 否定守卫(KHY_CLAIM_NEGATION_GUARD)──────────────────────────────────────
 describe('claimReconciler 否定守卫', () => {
-  const { _isNegatedClaim, _isNegationGuardEnabled } = require('../../../src/services/trajectoryProvenance/claimReconciler');
+  const { _isNegatedClaim, _isNegationGuardEnabled } = require('../../../src/services/domain/trajectory/trajectoryProvenance/claimReconciler');
 
   test('回归:khyos 收尾样板「未修改任何文件。」不再误报编辑声称', () => {
     assert.equal(reconcile('未修改任何文件。', []).contradictions.length, 0);

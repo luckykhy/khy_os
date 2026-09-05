@@ -60,17 +60,17 @@ describe('vim textObjects', () => {
     describe('quote text objects', () => {
       test('selects inside double quotes', () => {
         const result = resolveTextObject('"', 'i', 'say "hello" world', 5);
-        expect(result).toEqual({ start: 5, end: 10 });
+        expect(result).toEqual({ start: 5, end: 9 });
       });
 
       test('selects around double quotes', () => {
         const result = resolveTextObject('"', 'a', 'say "hello" world', 5);
-        expect(result).toEqual({ start: 4, end: 11 });
+        expect(result).toEqual({ start: 4, end: 10 });
       });
 
       test('selects inside single quotes', () => {
         const result = resolveTextObject("'", 'i', "say 'hello' world", 5);
-        expect(result).toEqual({ start: 5, end: 10 });
+        expect(result).toEqual({ start: 5, end: 9 });
       });
 
       test('selects inside backticks', () => {
@@ -96,17 +96,17 @@ describe('vim textObjects', () => {
 
       test('selects inside square brackets', () => {
         const result = resolveTextObject('[', 'i', 'arr[0]', 4);
-        expect(result).toEqual({ start: 5, end: 5 });
+        expect(result).toEqual({ start: 4, end: 4 });
       });
 
       test('selects inside curly braces', () => {
         const result = resolveTextObject('{', 'i', 'obj{key}', 4);
-        expect(result).toEqual({ start: 5, end: 7 });
+        expect(result).toEqual({ start: 4, end: 6 });
       });
 
       test('selects inside angle brackets', () => {
         const result = resolveTextObject('<', 'i', 'List<T>', 5);
-        expect(result).toEqual({ start: 6, end: 6 });
+        expect(result).toEqual({ start: 5, end: 5 });
       });
 
       test('handles nested brackets', () => {

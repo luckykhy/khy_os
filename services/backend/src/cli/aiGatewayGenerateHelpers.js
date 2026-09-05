@@ -627,6 +627,40 @@ function _buildWorkSummary(collectedToolResults) {
   return summary;
 }
 
+// ── 工具点名诚实性校验(KHY_TOOL_MENTION_GUARD·默认开)────────────────────────
+// 2026-09 会话 2deaa521 的缺陷:弱模型在收尾汇总里点名从未调用过的工具并宣称其产出
+// (「通过 dataFetch 拉取到 30 条日线数据」,本轮工具日志里没有任何 dataFetch 调用)。
+// 这里用确定性的工具点名核对(claimReconciler.reconcileToolMentions,零模型、
+// 零假阳性优先)比对正文与真实调用记录,发现缺口就在回复末尾**追加**一条诚实纠错
+// 注释 —— 只追加,不改写模型正文(与 resultGuard/_appendDeliveryVerdictSummary
+// 同款契约);核对/拼接任一异常 → 空串,绝不阻断交付。
+function _buildToolMentionNotice(reply, collectedToolResults) {
+  try {
+    const text = String(reply || '');
+    if (!text.trim() || !Array.isArray(collectedToolResults) || collectedToolResults.length === 0) {
+      return '';
+    }
+    const { reconcileToolMentions } = require('../services/domain/trajectory/trajectoryProvenance/claimReconciler');
+    const executed = collectedToolResults
+      .map((t) => t && (t.action || t.tool))
+      .filter(Boolean);
+    const { contradictions } = reconcileToolMentions(text, executed);
+    if (!Array.isArray(contradictions) || contradictions.length === 0) {
+      return '';
+    }
+    const lines = [
+      '> ⚠️ 诚实性校验：上文把下列工具写成了已完成动作，但本轮工具调用记录里没有它们的调用 ——',
+    ];
+    for (const c of contradictions.slice(0, 3)) {
+      lines.push(`> - 「${c.claim}」（缺少 ${c.expectedTool} 的调用记录）`);
+    }
+    lines.push('> 该部分内容未经真实执行证实，请以实际执行结果为准；需要的话让我真正执行它。');
+    return '\n\n' + lines.join('\n');
+  } catch {
+    return '';
+  }
+}
+
 /**
  * Human-readable description for a tool action being executed.
  */
@@ -1010,6 +1044,7 @@ function _shouldInjectTaskSelfAwareness(userMessage = '', opts = {}) {
 
 module.exports = {
   _buildToolFallbackReply,
+  _buildToolMentionNotice,
   _buildWrapUpPrompt,
   _buildStepDriverPrompt,
   _buildStepRecoveryPrompt,
