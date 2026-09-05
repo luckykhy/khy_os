@@ -3648,10 +3648,11 @@ async function chat(userMessage, opts = {}) {
     // KHY_LENGTH_RECOVERY_MAX_ATTEMPTS)与收益递减约束,绝无固定时长 kill(规则 3)。
     let _truncAttempts = 0;
     let _truncNegligible = 0;
-    const _truncRecoveryOn =
-      String(process.env.KHY_REPLY_TRUNCATION_RECOVERY || 'true')
+    const _truncRecoveryOn = !['0', 'false', 'off', 'no'].includes(
+      String(process.env.KHY_REPLY_TRUNCATION_RECOVERY || '')
         .trim()
-        .toLowerCase() !== 'false';
+        .toLowerCase()
+    );
     const _runTruncationRecovery = async () => {
       if (!_truncRecoveryOn) {
         return false;
