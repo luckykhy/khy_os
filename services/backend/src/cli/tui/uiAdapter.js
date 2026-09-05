@@ -44,6 +44,16 @@ function showError(response) {
  * @returns {Promise<boolean>}
  */
 async function showConfirm(response) {
+  // Try native TUI component first (if App refs available)
+  try {
+    const bridge = require('./uiBridge');
+    if (bridge._appRefs) {
+      return bridge.showConfirmNative(response);
+    }
+  } catch {
+    // Fall through to simple fallback
+  }
+
   // TUI cannot use inquirer (conflicts with Ink). Use simple stderr prompt.
   // In production, this would integrate with PermissionsPrompt component.
   const prefix = response.danger ? '⚠ ' : '';
@@ -90,6 +100,16 @@ async function showConfirm(response) {
  * @returns {Promise<string>} Selected item id
  */
 async function showList(response) {
+  // Try native TUI component first (if App refs available)
+  try {
+    const bridge = require('./uiBridge');
+    if (bridge._appRefs) {
+      return bridge.showListNative(response);
+    }
+  } catch {
+    // Fall through to simple fallback
+  }
+
   // TUI cannot use inquirer. Use simple numbered list on stderr.
   process.stderr.write(`${response.message}\n`);
   response.items.forEach((item, i) => {
@@ -148,6 +168,17 @@ async function showList(response) {
  * @returns {Promise<object>} Form values
  */
 async function showForm(response) {
+  // Try native TUI component first (if App refs available)
+  try {
+    const bridge = require('./uiBridge');
+    if (bridge._appRefs) {
+      return bridge.showFormNative(response);
+    }
+  } catch {
+    // Fall through to simple fallback
+  }
+
+  // Simple fallback for non-TTY environments
   const result = {};
   for (const field of response.fields) {
     const value = await promptField(field);

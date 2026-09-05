@@ -17,7 +17,7 @@
 
 const assert = require('assert');
 
-const R = require('../src/services/query/maxTokensRecovery');
+const R = require('../src/services/domain/query/query/maxTokensRecovery');
 
 describe('s11 — maxTokensRecovery primitives', () => {
   describe('isTruncationStop', () => {
