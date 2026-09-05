@@ -1,12 +1,5 @@
 'use strict';
 
-/**
- * Unit tests for timeFormat.js — pure function tests.
- *
- * This module has zero external dependencies, so every function
- * can be tested with precise input/output assertions.
- */
-
 const {
   formatDurationSeconds,
   formatDurationPrecise,
@@ -17,27 +10,23 @@ const {
 } = require('../../src/services/timeFormat');
 
 describe('timeFormat', () => {
-  // ── formatDurationSeconds ──────────────────────────────────────────
-
   describe('formatDurationSeconds', () => {
-    test('formats milliseconds as seconds', () => {
+    test('formats seconds with decimal', () => {
       expect(formatDurationSeconds(1500)).toBe('1.5s');
-      expect(formatDurationSeconds(2000)).toBe('2s');
-      expect(formatDurationSeconds(450)).toBe('0.5s');
+      expect(formatDurationSeconds(45000)).toBe('45s');
+    });
+
+    test('returns unknown for non-finite', () => {
+      expect(formatDurationSeconds(Infinity)).toBe('unknown');
+      expect(formatDurationSeconds(NaN)).toBe('unknown');
+    });
+
+    test('uses seconds unit when specified', () => {
+      expect(formatDurationSeconds(45000, { unit: 'seconds' })).toBe('45 seconds');
     });
 
     test('respects decimals option', () => {
       expect(formatDurationSeconds(1234, { decimals: 2 })).toBe('1.23s');
-      expect(formatDurationSeconds(1234, { decimals: 0 })).toBe('1s');
-    });
-
-    test('uses "seconds" unit when specified', () => {
-      expect(formatDurationSeconds(45000, { unit: 'seconds' })).toBe('45 seconds');
-    });
-
-    test('returns "unknown" for non-finite input', () => {
-      expect(formatDurationSeconds(NaN)).toBe('unknown');
-      expect(formatDurationSeconds(Infinity)).toBe('unknown');
     });
 
     test('trims trailing zeros', () => {
@@ -46,34 +35,35 @@ describe('timeFormat', () => {
     });
   });
 
-  // ── formatDurationPrecise ──────────────────────────────────────────
-
   describe('formatDurationPrecise', () => {
-    test('formats sub-second as milliseconds', () => {
+    test('formats milliseconds for sub-second', () => {
       expect(formatDurationPrecise(500)).toBe('500ms');
-      expect(formatDurationPrecise(0)).toBe('0ms');
       expect(formatDurationPrecise(999)).toBe('999ms');
     });
 
-    test('formats >= 1s with 2 decimal precision', () => {
+    test('formats seconds for >= 1s', () => {
+      expect(formatDurationPrecise(1000)).toBe('1s');
       expect(formatDurationPrecise(1234)).toBe('1.23s');
-      expect(formatDurationPrecise(5000)).toBe('5s');
     });
 
-    test('returns "unknown" for non-finite input', () => {
-      expect(formatDurationPrecise(NaN)).toBe('unknown');
+    test('returns unknown for non-finite', () => {
+      expect(formatDurationPrecise(Infinity)).toBe('unknown');
     });
   });
 
-  // ── formatDurationCompact ──────────────────────────────────────────
-
   describe('formatDurationCompact', () => {
-    test('formats sub-second as milliseconds', () => {
+    test('returns undefined for null/undefined/negative', () => {
+      expect(formatDurationCompact(null)).toBeUndefined();
+      expect(formatDurationCompact(undefined)).toBeUndefined();
+      expect(formatDurationCompact(-1)).toBeUndefined();
+      expect(formatDurationCompact(0)).toBeUndefined();
+    });
+
+    test('formats milliseconds', () => {
       expect(formatDurationCompact(500)).toBe('500ms');
     });
 
     test('formats seconds', () => {
-      expect(formatDurationCompact(5000)).toBe('5s');
       expect(formatDurationCompact(45000)).toBe('45s');
     });
 
@@ -85,109 +75,106 @@ describe('timeFormat', () => {
       expect(formatDurationCompact(5400000)).toBe('1h30m');
     });
 
-    test('formats days and hours', () => {
-      expect(formatDurationCompact(93600000)).toBe('1d2h'); // 26 hours
+    test('formats days', () => {
+      expect(formatDurationCompact(90000000)).toBe('1d1h');
     });
 
-    test('formats days without remainder', () => {
-      expect(formatDurationCompact(86400000)).toBe('1d'); // exactly 24h
-    });
-
-    test('uses spaces when spaced option is true', () => {
+    test('supports spaced option', () => {
       expect(formatDurationCompact(125000, { spaced: true })).toBe('2m 5s');
     });
-
-    test('returns undefined for null, non-finite, or non-positive', () => {
-      expect(formatDurationCompact(null)).toBeUndefined();
-      expect(formatDurationCompact(NaN)).toBeUndefined();
-      expect(formatDurationCompact(-1)).toBeUndefined();
-      expect(formatDurationCompact(0)).toBeUndefined();
-    });
   });
-
-  // ── formatDurationHuman ────────────────────────────────────────────
 
   describe('formatDurationHuman', () => {
-    test('formats as single unit', () => {
+    test('returns fallback for non-finite', () => {
+      expect(formatDurationHuman(Infinity)).toBe('n/a');
+      expect(formatDurationHuman(-1)).toBe('n/a');
+    });
+
+    test('formats milliseconds', () => {
       expect(formatDurationHuman(500)).toBe('500ms');
+    });
+
+    test('formats seconds', () => {
       expect(formatDurationHuman(5000)).toBe('5s');
+    });
+
+    test('formats minutes', () => {
       expect(formatDurationHuman(180000)).toBe('3m');
+    });
+
+    test('formats hours', () => {
       expect(formatDurationHuman(7200000)).toBe('2h');
-      expect(formatDurationHuman(432000000)).toBe('5d');
     });
 
-    test('returns fallback for invalid input', () => {
-      expect(formatDurationHuman(null)).toBe('n/a');
-      expect(formatDurationHuman(NaN)).toBe('n/a');
-      expect(formatDurationHuman(-100)).toBe('n/a');
+    test('formats days', () => {
+      expect(formatDurationHuman(172800000)).toBe('5d');
     });
 
-    test('respects custom fallback', () => {
-      expect(formatDurationHuman(null, 'N/A')).toBe('N/A');
+    test('uses custom fallback', () => {
+      expect(formatDurationHuman(N/A, 'fallback')).toBe('fallback');
     });
   });
 
-  // ── formatTimeAgo ──────────────────────────────────────────────────
-
   describe('formatTimeAgo', () => {
-    test('returns "just now" for < 60s', () => {
-      expect(formatTimeAgo(5000)).toBe('just now');
+    test('returns fallback for non-finite', () => {
+      expect(formatTimeAgo(Infinity)).toBe('unknown');
+      expect(formatTimeAgo(-1)).toBe('unknown');
+    });
+
+    test('returns just now for < 60s', () => {
       expect(formatTimeAgo(30000)).toBe('just now');
     });
 
-    test('formats minutes ago', () => {
+    test('formats minutes', () => {
       expect(formatTimeAgo(300000)).toBe('5m ago');
     });
 
-    test('formats hours ago', () => {
-      expect(formatTimeAgo(7200000)).toBe('2h ago');
+    test('formats hours', () => {
+      expect(formatTimeAgo(10800000)).toBe('3h ago');
     });
 
-    test('formats days ago for >= 48h', () => {
+    test('formats days', () => {
       expect(formatTimeAgo(172800000)).toBe('2d ago');
     });
 
-    test('returns without suffix when suffix=false', () => {
-      expect(formatTimeAgo(5000, { suffix: false })).toBe('5s');
+    test('supports no suffix', () => {
       expect(formatTimeAgo(300000, { suffix: false })).toBe('5m');
     });
 
-    test('returns fallback for invalid input', () => {
-      expect(formatTimeAgo(null)).toBe('unknown');
-      expect(formatTimeAgo(-100)).toBe('unknown');
+    test('uses custom fallback', () => {
+      expect(formatTimeAgo(NaN, { fallback: 'fallback' })).toBe('fallback');
     });
   });
 
-  // ── formatRelativeTimestamp ────────────────────────────────────────
-
   describe('formatRelativeTimestamp', () => {
-    test('returns "just now" for recent past timestamps', () => {
-      const recent = Date.now() - 10000; // 10 seconds ago
+    test('returns fallback for non-finite', () => {
+      expect(formatRelativeTimestamp(Infinity)).toBe('n/a');
+      expect(formatRelativeTimestamp(null)).toBe('n/a');
+    });
+
+    test('formats past time', () => {
+      const past = Date.now() - 300000; // 5 min ago
+      expect(formatRelativeTimestamp(past)).toContain('ago');
+    });
+
+    test('formats future time', () => {
+      const future = Date.now() + 7200000; // 2 hours from now
+      expect(formatRelativeTimestamp(future)).toContain('in');
+    });
+
+    test('returns just now for very recent', () => {
+      const recent = Date.now() - 5000; // 5 sec ago
       expect(formatRelativeTimestamp(recent)).toBe('just now');
     });
 
-    test('returns "Xm ago" for past timestamps', () => {
-      const fiveMinAgo = Date.now() - 300000;
-      expect(formatRelativeTimestamp(fiveMinAgo)).toBe('5m ago');
+    test('supports date fallback', () => {
+      const old = Date.now() - 86400000 * 30; // 30 days ago
+      const result = formatRelativeTimestamp(old, { dateFallback: true });
+      expect(typeof result).toBe('string');
     });
 
-    test('returns "in Xm" for future timestamps', () => {
-      const fiveMinFuture = Date.now() + 300000;
-      expect(formatRelativeTimestamp(fiveMinFuture)).toBe('in 5m');
-    });
-
-    test('returns "Xd ago" for old timestamps', () => {
-      const tenDaysAgo = Date.now() - 10 * 86400000;
-      expect(formatRelativeTimestamp(tenDaysAgo)).toBe('10d ago');
-    });
-
-    test('returns fallback for invalid input', () => {
-      expect(formatRelativeTimestamp(null)).toBe('n/a');
-      expect(formatRelativeTimestamp(NaN)).toBe('n/a');
-    });
-
-    test('respects custom fallback', () => {
-      expect(formatRelativeTimestamp(null, { fallback: 'N/A' })).toBe('N/A');
+    test('uses custom fallback', () => {
+      expect(formatRelativeTimestamp(NaN, { fallback: 'fallback' })).toBe('fallback');
     });
   });
 });

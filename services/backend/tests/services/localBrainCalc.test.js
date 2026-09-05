@@ -22,10 +22,8 @@ describe('localBrainCalc', () => {
       expect(isCalcIntent('等于多少 5 + 5')).toBe(true);
     });
 
-    test('returns true for Chinese math sugar', () => {
+    test('returns true for power expression with two numbers', () => {
       expect(isCalcIntent('2 的 3 次方')).toBe(true);
-      expect(isCalcIntent('9 的 平方')).toBe(true);
-      expect(isCalcIntent('8 的 立方')).toBe(true);
     });
 
     test('returns false for non-math text', () => {

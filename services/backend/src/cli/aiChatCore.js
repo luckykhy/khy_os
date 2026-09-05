@@ -35,6 +35,7 @@ const {
 } = require('./aiContextFlow');
 const {
   _buildToolFallbackReply,
+  _buildToolMentionNotice,
   _buildWrapUpPrompt,
   _buildStepDriverPrompt,
   _buildStepRecoveryPrompt,
@@ -1997,6 +1998,27 @@ async function chat(userMessage, opts = {}) {
         'Do NOT mention calculation, financial analysis, stock trading, or any specific tool.',
       ].join(' ');
     }
+    // 轻量对话(招呼/笑话/故事/自我介绍)换精简系统提示词:完整提示词的编码智能体
+    // 人格(「把模糊指令当作软件工程任务理解」)会诱导弱模型把「讲个故事」执行成
+    // 「把改动写进文件」(2026-09 会话 2deaa521:模型把故事写向 Temp 下虚构路径)。
+    // 轻量轮只需要一次直接的自然语言回复;对话历史照常携带,多轮会话不受影响。
+    // 门控 KHY_LIGHT_SYSTEM_PROMPT(默认开);关 → 走完整提示词(逐字节回退)。
+    const _lightSystemPromptOn = !['0', 'false', 'off', 'no'].includes(
+      String(process.env.KHY_LIGHT_SYSTEM_PROMPT || '')
+        .trim()
+        .toLowerCase()
+    );
+    if (_lightSystemPromptOn && lightweightConversation && !_chatState.studyMode) {
+      return [
+        'You are khy OS, a friendly and helpful AI assistant.',
+        'Respond in the same language the user used.',
+        'The user sent a casual conversational request (a greeting, a joke, a story, or a question about you).',
+        'Respond directly in plain text in this turn.',
+        'Never write, edit, or save files, and never run commands for a casual request — tell stories and jokes inline.',
+        'Do not call any tool unless answering truly requires one.',
+        'Do NOT mention calculation, financial analysis, stock trading, or any specific tool.',
+      ].join(' ');
+    }
     let sp = await runtime.makeSystemPrompt(getSecurityDir(), _getModelInfo(), [], {
       userMessage,
       taskScale: taskScaleForPrompt,
@@ -2920,6 +2942,23 @@ async function chat(userMessage, opts = {}) {
             .trim()
             .toLowerCase() !== 'false',
       };
+      // T3 弱模型走紧凑规划模板(smallModelPromptTemplates._planningT3):更短指令 +
+      // 具体格式示例 + 小步/分段约束,弱模型遵循度更高。此前该分支从未被 REPL 路径
+      // 接上(未传 modelTier)。门控 KHY_T3_COMPACT_PLANNING 默认开;关 → 沿用标准
+      // 规划指令(逐字节回退)。
+      const _t3CompactPlanningOn =
+        String(process.env.KHY_T3_COMPACT_PLANNING || 'true')
+          .trim()
+          .toLowerCase() !== 'false';
+      if (_t3CompactPlanningOn) {
+        try {
+          planningOpts.modelTier = require('../services/modelTier').resolveTier(
+            String(_getModelInfo().model || '')
+          );
+        } catch {
+          /* tier resolution is best-effort — standard instruction applies */
+        }
+      }
       const injected = injectPlanningPrompt(lastText, planningOpts);
       if (injected && injected !== lastText) {
         promptMessages = compactMessages.map((msg, idx) =>
@@ -2935,6 +2974,45 @@ async function chat(userMessage, opts = {}) {
     }
   } catch {
     /* best effort — planning injection must never break the request */
+  }
+
+  // ── 长输出分段交付指令(KHY_LONG_OUTPUT_SPLIT·默认开)───────────────────────
+  // 确定性预检(零模型、零假阳性):仅当用户**显式**要求超长产出(「3000字」「1万字」
+  // 「长篇/中篇」)且明显超出本轮输出预算(preset.maxTokens)时,往最后一条用户消息
+  // 追加分段交付指令 —— 本轮只写第 1 段并在自然边界收尾,后续多轮逐段补全。
+  // 这是「按模型上下文与实际情况小步拆分多轮」的主动层:与其事后续写补救,
+  // 不如让第一轮就按预算规划节奏。small/轻量轮同样适用(长故事正是高发场景)。
+  try {
+    const _longSplitOn =
+      String(process.env.KHY_LONG_OUTPUT_SPLIT || 'true')
+        .trim()
+        .toLowerCase() !== 'false';
+    const _longDirective = _longSplitOn
+      ? require('../services/taskComplexity').buildLongOutputSegmentDirective(userMessage, {
+          maxTokens: preset.maxTokens,
+        })
+      : '';
+    if (_longDirective && promptMessages.length > 0) {
+      const _lastIdx = promptMessages.length - 1;
+      const _lastMsg = promptMessages[_lastIdx];
+      const _lastText = (() => {
+        try {
+          return require('../services/contentBlockUtils').contentToText(_lastMsg.content);
+        } catch {
+          return String(_lastMsg.content || '');
+        }
+      })();
+      promptMessages = promptMessages.map((msg, idx) =>
+        idx === _lastIdx ? { ...msg, content: `${_lastText}\n\n${_longDirective}` } : msg
+      );
+      onStatus({
+        phase: 'plan',
+        message: `长输出任务：单轮输出上限约 ${preset.maxTokens} tokens，已注入分段交付指令（多轮逐段完成）`,
+        elapsed: Date.now() - startTime,
+      });
+    }
+  } catch {
+    /* best effort — segment directive must never break the request */
   }
 
   const conversationPrompt = runtime.buildFlatConversation(fullSystemPrompt, promptMessages);
@@ -3561,9 +3639,140 @@ async function chat(userMessage, opts = {}) {
       /* cycle boundary best-effort — never break the loop */
     }
 
+    // ── 截断自动续跑(KHY_REPLY_TRUNCATION_RECOVERY·默认开)───────────────────
+    // 现象:自然循环的回复被 max_tokens 截断(长故事/长文/多步任务)时,旧逻辑对
+    // 非空截断只追加「说『继续』」提示,把续写甩给用户。这里把 toolUseLoopCore 已
+    // 验证的恢复范式搬进自然循环:shouldRecover 升级输出预算 → 尾锚续写
+    // (buildContinuationPrompt) → 收益递减守卫(isNegligible/isRepetitive) → 耗尽时
+    // 用单一真源文案诚实提示。每轮续跑都是独立网关调用,只受轮数上限(复用
+    // KHY_LENGTH_RECOVERY_MAX_ATTEMPTS)与收益递减约束,绝无固定时长 kill(规则 3)。
+    let _truncAttempts = 0;
+    let _truncNegligible = 0;
+    const _truncRecoveryOn =
+      String(process.env.KHY_REPLY_TRUNCATION_RECOVERY || 'true')
+        .trim()
+        .toLowerCase() !== 'false';
+    const _runTruncationRecovery = async () => {
+      if (!_truncRecoveryOn) {
+        return false;
+      }
+      let progressed = false;
+      try {
+        const mr = require('../services/query').maxTokensRecovery;
+        const maxAttempts = mr.resolveMaxRecoveryAttempts();
+        while (
+          _truncAttempts < maxAttempts &&
+          mr.isTruncationStop(_lastStopReason) &&
+          String(reply || '').trim()
+        ) {
+          // 动态上限:模型输出预算 / 上下文窗口 / 当前 prompt 估算(全部 best-effort,
+          // 任一未知 → shouldRecover 内部退回静态天花板)。
+          const _bounds = {};
+          try {
+            const _modelId = String(chatOpts.preferredModel || _getModelInfo().model || '');
+            const _gw = getGateway();
+            const _mo =
+              typeof _gw.getModelMaxOutputTokens === 'function'
+                ? Number(_gw.getModelMaxOutputTokens(_modelId))
+                : 0;
+            if (Number.isFinite(_mo) && _mo > 0) {
+              _bounds.maxOutputTokens = _mo;
+            }
+            const _cw = Number(_resolveModelContextLimit(_guessModelHint(chatOpts))) || 0;
+            if (_cw > 0) {
+              _bounds.contextWindow = _cw;
+            }
+            const _pe = Number(_estimateContextTokens(_chatState.messages, fullSystemPrompt, ''));
+            if (Number.isFinite(_pe) && _pe > 0) {
+              _bounds.promptEstimate = _pe;
+            }
+          } catch {
+            /* unknown bounds → static ceiling applies */
+          }
+          const _currentMax = Number(chatOpts.maxTokens) || preset.maxTokens;
+          const recovery = mr.shouldRecover(_lastStopReason, _truncAttempts, _currentMax, _bounds);
+          if (!recovery) {
+            break;
+          }
+          _truncAttempts += 1;
+          // 续写轮使用放宽后的输出预算(只作用于本轮,不污染 EFFORT_PRESETS 原表)
+          const _contPreset = recovery.shouldEscalate
+            ? Object.assign({}, preset, { maxTokens: recovery.nextMax })
+            : preset;
+          onStatus({
+            phase: 'request',
+            message: `回复被输出上限截断，正在自动续写（第 ${_truncAttempts}/${maxAttempts} 次）...`,
+            elapsed: Date.now() - startTime,
+          });
+          const contPrompt = mr.buildContinuationPrompt(reply);
+          // 结构化通道也要拿到续写指令:扁平 prompt 只是 fallback,消息数组里以
+          // user 角色追加(截断的助手正文尚未入史,尾部锚点已携带断点上下文)。
+          const contBase = [..._chatState.messages];
+          try {
+            const {
+              routeContextStrategy,
+              truncateToolResults,
+            } = require('../services/contextRouter');
+            const route = routeContextStrategy(contBase, fullSystemPrompt, '', contextBudget);
+            if (route.route === 'truncate_tool_results_only') {
+              truncateToolResults(contBase, route.overflow);
+            }
+            /* 其余 overflow 路由交由网关自身的溢出保护;续写轮不做重型压缩 */
+          } catch {
+            /* fail-soft */
+          }
+          contBase.push({ role: 'user', content: contPrompt });
+          const contPass = await _generateWithChatIdleGuard(
+            contPrompt,
+            fullSystemPrompt,
+            contBase,
+            userMessage,
+            chatOpts,
+            _contPreset
+          );
+          const contRes = contPass && contPass.result;
+          _markStopReason(contRes);
+          const chunk = String((contRes && contRes.content) || '');
+          if (!chunk.trim()) {
+            break; // 续写无产出 → 走下方耗尽提示,不再空转
+          }
+          // 收益递减守卫(与 toolUseLoopCore 同语义):连续「几乎没写什么/复读」的
+          // 续写轮达到上限 → 停止,交由下方诚实提示收尾,不烧完剩余轮数。
+          if (mr.isNegligibleContinuation(chunk) || mr.isRepetitiveContinuation(chunk)) {
+            _truncNegligible += 1;
+            reply += chunk;
+            if (_truncNegligible >= mr.MAX_NEGLIGIBLE_CONTINUATIONS) {
+              break;
+            }
+          } else {
+            _truncNegligible = 0;
+            reply += chunk;
+          }
+          progressed = true;
+        }
+        // 轮数/收益耗尽仍截断 → 单一真源诚实提示(与交付层 _annotateTruncation 幂等)
+        if (
+          mr.isTruncationStop(_lastStopReason) &&
+          String(reply || '').trim() &&
+          !/输出已达长度上限被截断/.test(String(reply))
+        ) {
+          reply += mr.buildTruncationNotice(_truncAttempts);
+        }
+      } catch {
+        /* fail-soft: 恢复异常 → 保留原回复,由交付层 _annotateTruncation 兜底 */
+      }
+      return progressed;
+    };
+
     while (loopCount < TOOL_LOOP_MAX) {
       const call = runtime.extractNaturalToolCall(reply);
       if (!call) {
+        // 截断续跑:上一轮生成确实被 max_tokens 截断且当前回复抽不出完整工具调用
+        // 时,先自动续写补全,再回循环顶部重试抽取(补出完整调用 → 继续执行)。
+        // 续写不消耗工具循环轮数(loopCount 不变),仅受续写轮数上限约束。
+        if (await _runTruncationRecovery()) {
+          continue;
+        }
         break;
       }
 
@@ -4013,6 +4222,10 @@ async function chat(userMessage, opts = {}) {
       }
     }
 
+    // 收尾兜底:wrap-up / 工具循环最后一段生成若仍被 max_tokens 截断,在预算内
+    // 同样自动续跑补全(与循环内共用同一份续写轮数预算)。
+    await _runTruncationRecovery();
+
     // Final safety: strip any remaining raw <tool_call> tags from the reply
     reply = reply.replace(/<tool_call>[\s\S]*?<\/tool_call>/g, '').trim();
     if (!reply && collectedToolResults.length > 0) {
@@ -4120,6 +4333,16 @@ async function chat(userMessage, opts = {}) {
         reply +=
           '\n\n> 提示：文件已读取，但修改尚未自动应用。你可以让我重试编辑，或根据上面的文件内容手动修改。';
       }
+    }
+
+    // ── 工具点名诚实性校验(KHY_TOOL_MENTION_GUARD·默认开)───────────────────
+    // 2026-09 会话 2deaa521 的缺陷:弱模型在收尾汇总里点名从未调用过的工具并宣称其
+    // 产出(「通过 dataFetch 拉取到 30 条日线数据」,本轮并无 dataFetch 调用)。
+    // 确定性核对正文点名 vs 本轮真实调用记录,发现缺口就在回复末尾追加一条诚实
+    // 纠错注释(只追加,不改写正文);核对/拼接任一异常 → 静默跳过,绝不阻断交付。
+    const _mentionNotice = _buildToolMentionNotice(reply, collectedToolResults);
+    if (_mentionNotice) {
+      reply += _mentionNotice;
     }
   } else if (_pureFirstTurnGreeting) {
     // 跳过工具回路也就跳过了回路末尾那次 <tool_call> 清理。模型偶尔会凭记忆吐出协议文本,

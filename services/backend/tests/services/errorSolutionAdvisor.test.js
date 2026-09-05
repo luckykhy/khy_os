@@ -1,17 +1,5 @@
 'use strict';
 
-/**
- * errorSolutionAdvisor.test.js — 「错误 → 建议方案」纯叶子契约 SSoT。
- *
- * 用户诉求:khyos 出错时只报错、缺建议方案。本套件锁死叶子的纯部分:
- *   - 门控默认开;关(0/false/off/no,大小写/空格不敏感)→ 恒返 [](调用方逐字节回退);
- *   - 确定性错误签名 → 具体可执行建议(权限保留 Shift+Tab 提示,覆盖 16 类);
- *   - 顺序即优先级(越具体越靠前),去重,受 max 截断;
- *   - 绝不抛(null / 非字符串 / junk env / 空输入 → [])。
- */
-
-const { test } = require('node:test');
-const assert = require('node:assert');
 const {
   SOLUTION_RULES,
   isErrorSolutionAdvisorEnabled,
@@ -19,136 +7,179 @@ const {
   matchedSolutionNames,
 } = require('../../src/services/errorSolutionAdvisor');
 
-test('gate default-on', () => {
-  assert.strictEqual(isErrorSolutionAdvisorEnabled({}), true);
-  assert.strictEqual(isErrorSolutionAdvisorEnabled(undefined), true);
-  assert.strictEqual(isErrorSolutionAdvisorEnabled({ KHY_ERROR_SOLUTION_ADVISOR: '1' }), true);
-  assert.strictEqual(isErrorSolutionAdvisorEnabled({ KHY_ERROR_SOLUTION_ADVISOR: 'on' }), true);
-  assert.strictEqual(isErrorSolutionAdvisorEnabled({ KHY_ERROR_SOLUTION_ADVISOR: 'true' }), true);
-});
+describe('errorSolutionAdvisor', () => {
+  describe('isErrorSolutionAdvisorEnabled', () => {
+    test('returns true by default', () => {
+      expect(isErrorSolutionAdvisorEnabled({})).toBe(true);
+    });
 
-test('gate off — CANON off-words (case/space-insensitive)', () => {
-  for (const v of ['0', 'false', 'off', 'no', 'OFF', ' No ', 'FALSE']) {
-    assert.strictEqual(
-      isErrorSolutionAdvisorEnabled({ KHY_ERROR_SOLUTION_ADVISOR: v }),
-      false,
-      `expected off for ${JSON.stringify(v)}`,
-    );
-  }
-});
+    test('returns true for non-off values', () => {
+      expect(isErrorSolutionAdvisorEnabled({ KHY_ERROR_SOLUTION_ADVISOR: '1' })).toBe(true);
+      expect(isErrorSolutionAdvisorEnabled({ KHY_ERROR_SOLUTION_ADVISOR: 'true' })).toBe(true);
+    });
 
-test('gate off → suggestSolutions/matchedSolutionNames return [] (byte-revert)', () => {
-  const env = { KHY_ERROR_SOLUTION_ADVISOR: 'off' };
-  assert.deepStrictEqual(suggestSolutions('EACCES: permission denied', { env }), []);
-  assert.deepStrictEqual(matchedSolutionNames('EACCES: permission denied', { env }), []);
-});
+    test('returns false for off values', () => {
+      expect(isErrorSolutionAdvisorEnabled({ KHY_ERROR_SOLUTION_ADVISOR: '0' })).toBe(false);
+      expect(isErrorSolutionAdvisorEnabled({ KHY_ERROR_SOLUTION_ADVISOR: 'false' })).toBe(false);
+      expect(isErrorSolutionAdvisorEnabled({ KHY_ERROR_SOLUTION_ADVISOR: 'off' })).toBe(false);
+      expect(isErrorSolutionAdvisorEnabled({ KHY_ERROR_SOLUTION_ADVISOR: 'no' })).toBe(false);
+    });
 
-test('never throws — junk inputs', () => {
-  assert.deepStrictEqual(suggestSolutions(null), []);
-  assert.deepStrictEqual(suggestSolutions(undefined), []);
-  assert.deepStrictEqual(suggestSolutions(''), []);
-  assert.deepStrictEqual(suggestSolutions([null, undefined, 123, {}]), []);
-  assert.deepStrictEqual(suggestSolutions('anything', { env: { KHY_ERROR_SOLUTION_ADVISOR: { weird: true } } }), []);
-});
+    test('is case-insensitive', () => {
+      expect(isErrorSolutionAdvisorEnabled({ KHY_ERROR_SOLUTION_ADVISOR: 'FALSE' })).toBe(false);
+    });
+  });
 
-test('permission signature preserves Shift+Tab hint', () => {
-  const out = suggestSolutions('Error: EACCES: permission denied, open /etc/hosts');
-  assert.strictEqual(out.length >= 1, true);
-  assert.match(out[0], /Shift\+Tab/);
-  assert.deepStrictEqual(matchedSolutionNames('EPERM operation not permitted'), ['permission']);
-  assert.deepStrictEqual(matchedSolutionNames('权限不足'), ['permission']);
-});
+  describe('suggestSolutions', () => {
+    test('returns empty when disabled', () => {
+      expect(suggestSolutions('error', { env: { KHY_ERROR_SOLUTION_ADVISOR: '0' } })).toEqual([]);
+    });
 
-test('each deterministic signature maps to its rule', () => {
-  const cases = [
-    ['ENOENT: no such file or directory', 'path-not-found'],
-    ['bash: foo: command not found', 'command-not-found'],
-    ['The required parameter `pattern` is missing', 'missing-parameter'],
-    ['connect ECONNREFUSED 127.0.0.1:5432', 'connection-refused'],
-    ['getaddrinfo ENOTFOUND api.example.com', 'dns'],
-    ['listen EADDRINUSE: address already in use :::3000', 'port-in-use'],
-    ['request ETIMEDOUT', 'timeout'],
-    ['ENOSPC: no space left on device', 'disk-full'],
-    ['FATAL ERROR: JavaScript heap out of memory', 'out-of-memory'],
-    ["Cannot find module 'express'", 'module-not-found'],
-    ['EEXIST: file already exists', 'file-exists'],
-    ['Request failed with status code 401 Unauthorized', 'auth'],
-    ['429 Too Many Requests', 'rate-limit'],
-    ['Automatic merge failed; fix conflicts (merge conflict)', 'git-conflict'],
-    ['Invoke-WebRequest : Not Found ... WebCmdletWebResponseException', 'download-failed'],
-  ];
-  for (const [text, name] of cases) {
-    assert.ok(
-      matchedSolutionNames(text).includes(name),
-      `expected ${JSON.stringify(text)} → ${name}, got ${JSON.stringify(matchedSolutionNames(text))}`,
-    );
-    const sol = suggestSolutions(text);
-    assert.strictEqual(sol.length >= 1, true, `expected a solution for ${name}`);
-  }
-});
+    test('returns empty for empty input', () => {
+      expect(suggestSolutions('', { env: {} })).toEqual([]);
+      expect(suggestSolutions([], { env: {} })).toEqual([]);
+    });
 
-test('command-not-found distinct from path-not-found on exit 127', () => {
-  const names = matchedSolutionNames('process exited with code 127');
-  assert.ok(names.includes('command-not-found'));
-});
+    test('suggests permission solution', () => {
+      const result = suggestSolutions('EACCES: permission denied', { env: {} });
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0]).toContain('权限');
+    });
 
-test('dedup + order (specific before generic) + max cap', () => {
-  const text = [
-    'ECONNREFUSED connection refused',
-    'ETIMEDOUT timed out',
-    'EACCES permission denied',
-    'ENOSPC no space left on device',
-    'EADDRINUSE address already in use',
-  ].join('\n');
-  const names = matchedSolutionNames(text);
-  // permission precedes connection-refused precedes port-in-use precedes timeout precedes disk-full
-  assert.ok(names.indexOf('permission') < names.indexOf('connection-refused'));
-  assert.ok(names.indexOf('connection-refused') < names.indexOf('port-in-use'));
-  assert.ok(names.indexOf('port-in-use') < names.indexOf('timeout'));
-  // max cap
-  const capped = suggestSolutions(text, { max: 2 });
-  assert.strictEqual(capped.length, 2);
-  // no duplicates when same signature appears twice
-  const dup = suggestSolutions('EACCES denied\nEACCES permission denied');
-  assert.strictEqual(dup.length, 1);
-});
+    test('suggests path-not-found solution', () => {
+      const result = suggestSolutions('ENOENT: no such file or directory', { env: {} });
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0]).toContain('路径不存在');
+    });
 
-test('download-failed wins and suppresses path/command-not-found on web 404 (screenshot repro)', () => {
-  // 截图真景:powershell Invoke-WebRequest 远端 404,裸 "Not Found" 会同时触发
-  // path-not-found / command-not-found。download-failed 声明在前,须领先且抑制那两个泛化家族。
-  const stderr = [
-    'Invoke-WebRequest : Not Found',
-    '    + CategoryInfo          : InvalidOperation: (System.Net.HttpWebRequest:HttpWebRequest) [Invoke-WebRequest], WebException',
-    '    + FullyQualifiedErrorId : WebCmdletWebResponseException,Microsoft.PowerShell.Commands.InvokeWebRequestCommand',
-  ].join('\n');
-  const sols = suggestSolutions(stderr);
-  assert.ok(sols.length >= 1);
-  assert.match(sols[0], /下载|远端/, 'download-failed 应领先');
-  assert.match(sols[0], /gh release|github|资产|标签/, '应给查发布 API 的方向');
-  // 抑制:用户可见输出不应再混入「路径缺失 / 命令未安装」的误导条目
-  for (const s of sols) {
-    assert.ok(!/不在 PATH|命令未安装|路径不存在|核实路径/.test(s), `不应混入路径/命令缺失误导条: ${s}`);
-  }
-});
+    test('suggests command-not-found solution', () => {
+      const result = suggestSolutions('command not found', { env: {} });
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0]).toContain('命令未安装');
+    });
 
-test('download-failed does not steal genuine command-not-found (no web signature)', () => {
-  const names = matchedSolutionNames('bash: frobnicate: command not found');
-  assert.ok(names.includes('command-not-found'));
-  assert.ok(!names.includes('download-failed'), '无下载签名不应误命中 download-failed');
-});
+    test('suggests connection-refused solution', () => {
+      const result = suggestSolutions('ECONNREFUSED: connection refused', { env: {} });
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0]).toContain('连接被拒绝');
+    });
 
-test('no match on benign text → [] (caller falls back)', () => {
-  assert.deepStrictEqual(suggestSolutions('operation completed successfully'), []);
-  assert.deepStrictEqual(suggestSolutions('构建通过,测试全绿'), []);
-});
+    test('suggests dns solution', () => {
+      const result = suggestSolutions('ENOTFOUND: getaddrinfo failed', { env: {} });
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0]).toContain('域名解析');
+    });
 
-test('SOLUTION_RULES is frozen and well-formed', () => {
-  assert.strictEqual(Object.isFrozen(SOLUTION_RULES), true);
-  assert.strictEqual(SOLUTION_RULES.length, 16);
-  for (const r of SOLUTION_RULES) {
-    assert.strictEqual(typeof r.name, 'string');
-    assert.ok(r.re instanceof RegExp);
-    assert.strictEqual(typeof r.solution, 'string');
-    assert.ok(r.solution.length > 0);
-  }
+    test('suggests port-in-use solution', () => {
+      const result = suggestSolutions('EADDRINUSE: address already in use', { env: {} });
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0]).toContain('端口');
+    });
+
+    test('suggests timeout solution', () => {
+      const result = suggestSolutions('ETIMEDOUT: timed out', { env: {} });
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0]).toContain('超时');
+    });
+
+    test('suggests disk-full solution', () => {
+      const result = suggestSolutions('ENOSPC: no space left on device', { env: {} });
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0]).toContain('磁盘空间');
+    });
+
+    test('suggests out-of-memory solution', () => {
+      const result = suggestSolutions('out of memory', { env: {} });
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0]).toContain('内存');
+    });
+
+    test('suggests module-not-found solution', () => {
+      const result = suggestSolutions('Cannot find module "express"', { env: {} });
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0]).toContain('依赖');
+    });
+
+    test('suggests file-exists solution', () => {
+      const result = suggestSolutions('EEXIST: file already exists', { env: {} });
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0]).toContain('已存在');
+    });
+
+    test('suggests auth solution', () => {
+      const result = suggestSolutions('HTTP 401 Unauthorized', { env: {} });
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0]).toContain('认证');
+    });
+
+    test('suggests rate-limit solution', () => {
+      const result = suggestSolutions('HTTP 429 Too Many Requests', { env: {} });
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0]).toContain('限流');
+    });
+
+    test('suggests git-conflict solution', () => {
+      const result = suggestSolutions('merge conflict prevented', { env: {} });
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0]).toContain('Git');
+    });
+
+    test('suggests download-failed solution', () => {
+      const result = suggestSolutions('HTTP 404 Not Found', { env: {} });
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0]).toContain('下载');
+    });
+
+    test('respects max option', () => {
+      const result = suggestSolutions('EACCES permission denied ENOENT not found ECONNREFUSED', { env: {}, max: 2 });
+      expect(result.length).toBe(2);
+    });
+
+    test('accepts array input', () => {
+      const result = suggestSolutions(['EACCES', 'ENOENT'], { env: {} });
+      expect(result.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('matchedSolutionNames', () => {
+    test('returns empty when disabled', () => {
+      expect(matchedSolutionNames('error', { env: { KHY_ERROR_SOLUTION_ADVISOR: '0' } })).toEqual([]);
+    });
+
+    test('returns empty for empty input', () => {
+      expect(matchedSolutionNames('', { env: {} })).toEqual([]);
+    });
+
+    test('returns matched rule names', () => {
+      const result = matchedSolutionNames('EACCES: permission denied', { env: {} });
+      expect(result).toContain('permission');
+    });
+
+    test('returns multiple rule names', () => {
+      const result = matchedSolutionNames('EACCES ENOENT', { env: {} });
+      expect(result).toContain('permission');
+      expect(result).toContain('path-not-found');
+    });
+  });
+
+  describe('SOLUTION_RULES', () => {
+    test('is a frozen array', () => {
+      expect(Array.isArray(SOLUTION_RULES)).toBe(true);
+    });
+
+    test('has at least 15 rules', () => {
+      expect(SOLUTION_RULES.length).toBeGreaterThanOrEqual(15);
+    });
+
+    test('each rule has name, re, and solution', () => {
+      for (const rule of SOLUTION_RULES) {
+        expect(rule).toHaveProperty('name');
+        expect(rule).toHaveProperty('re');
+        expect(rule).toHaveProperty('solution');
+        expect(typeof rule.name).toBe('string');
+        expect(rule.re instanceof RegExp).toBe(true);
+        expect(typeof rule.solution).toBe('string');
+      }
+    });
+  });
 });

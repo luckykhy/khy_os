@@ -86,6 +86,23 @@ function _isLightweightConversationTool(name) {
   return _isWeakCoreTool(n);
 }
 
+// ── 轻量对话禁用改状态工具(KHY_LIGHT_NO_MUTATING_TOOLS·默认开)──────────────
+// 轻量轮(招呼/笑话/故事/自我介绍)的正确形态是直接文本回复;核心集里的
+// Write/Edit/Bash 会诱导弱模型把「讲个故事」执行成「把故事写进文件」(2026-09
+// 会话 2deaa521:模型把故事写向 Temp 下虚构路径,被路径守卫拒绝后又连带写出
+// 无关文件并虚构任务清单)。轻量轮只保留只读/检索/搜索类工具。真正的写文件
+// 任务不会命中轻量判定(_isLightweightConversationInput 排除编码/执行类输入),
+// 不受影响;门关 → 回到今日核心集(逐字节等价)。
+const _MUTATING_TOOL_RE =
+  /^(write|writefile|write_file|edit|editfile|edit_file|multiedit|bash|shell|shellcommand|shell_command|powershell|cmd|terminal|open_app|openapp|computeruse|desktopcontrol)$/i;
+function _isNonMutatingLightTool(name) {
+  const n = String(name || '').trim();
+  if (!n) {
+    return false;
+  }
+  return !_MUTATING_TOOL_RE.test(n);
+}
+
 // ── Image save/open helpers ──────────────────────────────────────────
 /**
  * Save a base64 image to the project disk's tmp\khy-images\ (dedicated output
@@ -322,6 +339,18 @@ async function _gatewayGenerate(
   } catch {
     _lightCurate = false; /* fail-soft: 判定失败 → 全量注入(今日行为) */
   }
+  // 轻量轮额外剥离改状态工具(Write/Edit/Bash/ComputerUse…);只在轻量裁剪生效时
+  // 参与,门 KHY_LIGHT_NO_MUTATING_TOOLS 默认开,关 → 回到今日核心集。
+  const _lightNoMutatingOn = !['0', 'false', 'off', 'no'].includes(
+    String(process.env.KHY_LIGHT_NO_MUTATING_TOOLS || '')
+      .trim()
+      .toLowerCase()
+  );
+  const _lightNameFilter = _lightCurate
+    ? (name) =>
+        _isLightweightConversationTool(name) &&
+        (!_lightNoMutatingOn || _isNonMutatingLightTool(name))
+    : null;
   // 首轮纯问候:**一个工具都不注入**(判定在 aiChatCore 的 _pureFirstTurnGreeting 一处做完)。
   // 与上面的轻量裁剪不是一回事:那是省 token 的优化,核心集里仍留着 Bash/Read/Glob/Grep/
   // WebSearch/toolSearch,而模型拿到这些就会把一句「你好」当成「先了解一下仓库」的开场,
@@ -335,9 +364,7 @@ async function _gatewayGenerate(
       toolDefs = undefined;
     } else {
       const { getToolDefinitions } = require('../services/toolCalling');
-      toolDefs = getToolDefinitions(
-        _lightCurate ? { nameFilter: _isLightweightConversationTool } : {}
-      );
+      toolDefs = getToolDefinitions(_lightNameFilter ? { nameFilter: _lightNameFilter } : {});
       if (process.env.KHY_DEBUG_TOOLS === '1') {
         console.error(
           `[DEBUG-PROFILE] BEFORE filter: ${toolDefs.length} defs, CU=${toolDefs.some((t) => (t.name || t.function?.name) === 'ComputerUse')}, DC=${toolDefs.some((t) => (t.name || t.function?.name) === 'DesktopControl')}, toolFilter=${opts._agentContext?.toolFilter || '(none)'}`
@@ -412,9 +439,13 @@ async function _gatewayGenerate(
   // 判定已在构建前完成(_lightCurate)并下推给注册表;这里是兜底,正常情况下不再命中。
   try {
     if (_lightCurate && Array.isArray(toolDefs) && toolDefs.length > 0) {
-      toolDefs = toolDefs.filter((t) =>
-        _isLightweightConversationTool(t.name || (t.function && t.function.name))
-      );
+      toolDefs = toolDefs.filter((t) => {
+        const n = t.name || (t.function && t.function.name);
+        return (
+          _isLightweightConversationTool(n) &&
+          (!_lightNoMutatingOn || _isNonMutatingLightTool(n))
+        );
+      });
     }
   } catch {
     /* fail-soft: 裁剪失败 → 全量注入 */
@@ -443,6 +474,10 @@ async function _gatewayGenerate(
       modelId: opts.preferredModel,
       historyMessages: messages,
       taskType: _classifyTaskType(userMessage),
+      // 轮次上下文:轻量对话轮与 small 任务轮跳过 few-shot(演示任务会被弱模型
+      // 当成本轮待办;见 fewShotInjector 门 KHY_SMALL_MODEL_FEW_SHOT_SKIP_SMALL)。
+      taskScale: opts.taskScale,
+      lightweightConversation: opts._lightweightConversation === true,
       onLog: (line) => {
         if (typeof opts.onStatus === 'function') {
           opts.onStatus({ phase: 'request', message: line });
@@ -1068,5 +1103,7 @@ module.exports = {
   _buildStructuredMessages,
   _gatewayGenerate,
   _preflightGatewayAvailability,
+  _isLightweightConversationTool,
+  _isNonMutatingLightTool,
   setAiMessageBuilderDeps,
 };

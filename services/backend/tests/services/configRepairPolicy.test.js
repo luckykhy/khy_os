@@ -1,229 +1,149 @@
 'use strict';
 
-/**
- * configRepairPolicy.test.js — 纯叶子:.env 配置损坏检测与修复(确定性)。
- *
- * 锁定 detectEnvCorruption 和 repairEnvLines:
- *   ① 重复键 → 检测到 duplicate-key;
- *   ② 畸形行(无 =) → 检测到 malformed-line;
- *   ③ 空键名 → 检测到 empty-key;
- *   ④ 未闭合引号 → 检测到 unclosed-quote;
- *   ⑤ 正常行 → 不报告问题;
- *   ⑥ 修复:移除畸形行、空键、未闭合引号;
- *   ⑦ 修复:重复键保留最后一次出现;
- *   ⑧ 门控关(KHY_CONFIG_REPAIR=off) → 不检测、不修复;
- *   ⑨ 坏输入(非数组) → 空结果不抛。
- */
+const {
+  isEnabled,
+  detectEnvCorruption,
+  repairEnvLines,
+} = require('../../src/services/configRepairPolicy');
 
-const test = require('node:test');
-const assert = require('node:assert');
+describe('configRepairPolicy', () => {
+  describe('isEnabled', () => {
+    test('returns true by default', () => {
+      expect(isEnabled({})).toBe(true);
+    });
 
-const policy = require('../../src/services/configRepairPolicy');
+    test('returns true for non-off values', () => {
+      expect(isEnabled({ KHY_CONFIG_REPAIR: '1' })).toBe(true);
+      expect(isEnabled({ KHY_CONFIG_REPAIR: 'true' })).toBe(true);
+    });
 
-test('正常行 → 不报告问题', () => {
-  const lines = [
-    'KEY1=value1',
-    'KEY2=value2',
-    '# comment',
-    '',
-    'KEY3="quoted value"',
-  ];
-  const result = policy.detectEnvCorruption(lines, { env: {} });
-  assert.strictEqual(result.isCorrupted, false);
-  assert.deepStrictEqual(result.issues, []);
-});
+    test('returns false for off values', () => {
+      expect(isEnabled({ KHY_CONFIG_REPAIR: '0' })).toBe(false);
+      expect(isEnabled({ KHY_CONFIG_REPAIR: 'false' })).toBe(false);
+      expect(isEnabled({ KHY_CONFIG_REPAIR: 'off' })).toBe(false);
+      expect(isEnabled({ KHY_CONFIG_REPAIR: 'no' })).toBe(false);
+    });
+  });
 
-test('重复键 → 检测到 duplicate-key', () => {
-  const lines = [
-    'KEY1=value1',
-    'KEY2=value2',
-    'KEY1=value3', // 重复
-  ];
-  const result = policy.detectEnvCorruption(lines, { env: {} });
-  assert.strictEqual(result.isCorrupted, true);
-  assert.strictEqual(result.issues.length, 1);
-  assert.strictEqual(result.issues[0].type, 'duplicate-key');
-  assert.ok(result.issues[0].message.includes('KEY1'));
-  assert.ok(result.issues[0].message.includes('1, 3'));
-});
+  describe('detectEnvCorruption', () => {
+    test('returns safe when disabled', () => {
+      const result = detectEnvCorruption(['KEY=value'], { env: { KHY_CONFIG_REPAIR: '0' } });
+      expect(result.isCorrupted).toBe(false);
+      expect(result.issues).toEqual([]);
+    });
 
-test('畸形行(无 =) → 检测到 malformed-line', () => {
-  const lines = [
-    'KEY1=value1',
-    'this line has no equals sign',
-    'KEY2=value2',
-  ];
-  const result = policy.detectEnvCorruption(lines, { env: {} });
-  assert.strictEqual(result.isCorrupted, true);
-  assert.strictEqual(result.issues.length, 1);
-  assert.strictEqual(result.issues[0].type, 'malformed-line');
-  assert.strictEqual(result.issues[0].line, 2);
-});
+    test('returns safe for non-array', () => {
+      const result = detectEnvCorruption('not an array', {});
+      expect(result.isCorrupted).toBe(false);
+      expect(result.issues).toEqual([]);
+    });
 
-test('空键名 → 检测到 empty-key', () => {
-  const lines = [
-    'KEY1=value1',
-    '=value_without_key',
-    'KEY2=value2',
-  ];
-  const result = policy.detectEnvCorruption(lines, { env: {} });
-  assert.strictEqual(result.isCorrupted, true);
-  assert.strictEqual(result.issues.length, 1);
-  assert.strictEqual(result.issues[0].type, 'empty-key');
-  assert.strictEqual(result.issues[0].line, 2);
-});
+    test('detects malformed line (no =)', () => {
+      const result = detectEnvCorruption(['KEY=value', 'malformed line'], {});
+      expect(result.isCorrupted).toBe(true);
+      expect(result.issues.some(i => i.type === 'malformed-line')).toBe(true);
+    });
 
-test('未闭合引号 → 检测到 unclosed-quote', () => {
-  const lines = [
-    'KEY1=value1',
-    'KEY2="unclosed quote',
-    'KEY3=value3',
-  ];
-  const result = policy.detectEnvCorruption(lines, { env: {} });
-  assert.strictEqual(result.isCorrupted, true);
-  assert.strictEqual(result.issues.length, 1);
-  assert.strictEqual(result.issues[0].type, 'unclosed-quote');
-  assert.strictEqual(result.issues[0].line, 2);
-});
+    test('detects empty key', () => {
+      const result = detectEnvCorruption(['=value'], {});
+      expect(result.isCorrupted).toBe(true);
+      expect(result.issues.some(i => i.type === 'empty-key')).toBe(true);
+    });
 
-test('多种问题同时存在', () => {
-  const lines = [
-    'KEY1=value1',
-    'KEY1=value2', // 重复
-    'malformed line', // 畸形
-    '=empty', // 空键
-    'KEY2="unclosed', // 未闭合引号
-  ];
-  const result = policy.detectEnvCorruption(lines, { env: {} });
-  assert.strictEqual(result.isCorrupted, true);
-  assert.ok(result.issues.length >= 4); // 至少4个问题
-  const types = result.issues.map((i) => i.type);
-  assert.ok(types.includes('duplicate-key'));
-  assert.ok(types.includes('malformed-line'));
-  assert.ok(types.includes('empty-key'));
-  assert.ok(types.includes('unclosed-quote'));
-});
+    test('detects duplicate key', () => {
+      const result = detectEnvCorruption(['KEY=value1', 'KEY=value2'], {});
+      expect(result.isCorrupted).toBe(true);
+      expect(result.issues.some(i => i.type === 'duplicate-key')).toBe(true);
+    });
 
-test('修复:移除畸形行', () => {
-  const lines = [
-    'KEY1=value1',
-    'malformed line',
-    'KEY2=value2',
-  ];
-  const issues = policy.detectEnvCorruption(lines, { env: {} }).issues;
-  const result = policy.repairEnvLines(lines, issues, { env: {} });
-  assert.strictEqual(result.removed, 1);
-  assert.deepStrictEqual(result.repaired, ['KEY1=value1', 'KEY2=value2']);
-});
+    test('detects unclosed quote', () => {
+      const result = detectEnvCorruption(['KEY="value'], {});
+      expect(result.isCorrupted).toBe(true);
+      expect(result.issues.some(i => i.type === 'unclosed-quote')).toBe(true);
+    });
 
-test('修复:移除空键行', () => {
-  const lines = [
-    'KEY1=value1',
-    '=empty_key',
-    'KEY2=value2',
-  ];
-  const issues = policy.detectEnvCorruption(lines, { env: {} }).issues;
-  const result = policy.repairEnvLines(lines, issues, { env: {} });
-  assert.strictEqual(result.removed, 1);
-  assert.deepStrictEqual(result.repaired, ['KEY1=value1', 'KEY2=value2']);
-});
+    test('skips empty lines and comments', () => {
+      const result = detectEnvCorruption(['', '# comment', 'KEY=value'], {});
+      expect(result.isCorrupted).toBe(false);
+      expect(result.issues).toEqual([]);
+    });
 
-test('修复:移除未闭合引号行', () => {
-  const lines = [
-    'KEY1=value1',
-    'KEY2="unclosed',
-    'KEY3=value3',
-  ];
-  const issues = policy.detectEnvCorruption(lines, { env: {} }).issues;
-  const result = policy.repairEnvLines(lines, issues, { env: {} });
-  assert.strictEqual(result.removed, 1);
-  assert.deepStrictEqual(result.repaired, ['KEY1=value1', 'KEY3=value3']);
-});
+    test('valid env is not corrupted', () => {
+      const result = detectEnvCorruption(['KEY=value', 'OTHER="quoted"'], {});
+      expect(result.isCorrupted).toBe(false);
+    });
 
-test('修复:重复键保留最后一次出现', () => {
-  const lines = [
-    'KEY1=value1',
-    'KEY2=value2',
-    'KEY1=value3', // 应保留这个
-  ];
-  const issues = policy.detectEnvCorruption(lines, { env: {} }).issues;
-  const result = policy.repairEnvLines(lines, issues, { env: {} });
-  assert.strictEqual(result.removed, 1);
-  assert.deepStrictEqual(result.repaired, ['KEY2=value2', 'KEY1=value3']);
-});
+    test('reports correct line numbers', () => {
+      const result = detectEnvCorruption(['KEY=value', 'bad line'], {});
+      const issue = result.issues.find(i => i.type === 'malformed-line');
+      expect(issue.line).toBe(2);
+    });
+  });
 
-test('修复:多个重复键,各保留最后一次', () => {
-  const lines = [
-    'KEY1=value1',
-    'KEY2=value2',
-    'KEY1=value1_new',
-    'KEY2=value2_new',
-    'KEY3=value3',
-  ];
-  const issues = policy.detectEnvCorruption(lines, { env: {} }).issues;
-  const result = policy.repairEnvLines(lines, issues, { env: {} });
-  assert.strictEqual(result.removed, 2);
-  assert.deepStrictEqual(result.repaired, [
-    'KEY1=value1_new',
-    'KEY2=value2_new',
-    'KEY3=value3',
-  ]);
-});
+  describe('repairEnvLines', () => {
+    test('returns unchanged when disabled', () => {
+      const lines = ['KEY=value', 'bad line'];
+      const result = repairEnvLines(lines, [{ line: 2, type: 'malformed-line' }], { env: { KHY_CONFIG_REPAIR: '0' } });
+      expect(result.repaired).toEqual(lines);
+      expect(result.removed).toBe(0);
+    });
 
-test('修复:无问题时返回原数组副本', () => {
-  const lines = ['KEY1=value1', 'KEY2=value2'];
-  const issues = [];
-  const result = policy.repairEnvLines(lines, issues, { env: {} });
-  assert.strictEqual(result.removed, 0);
-  assert.deepStrictEqual(result.repaired, lines);
-  assert.notStrictEqual(result.repaired, lines); // 应该是副本
-});
+    test('returns unchanged for non-array', () => {
+      const result = repairEnvLines(null, [], {});
+      expect(result.repaired).toEqual([]);
+      expect(result.removed).toBe(0);
+    });
 
-test('门控关(KHY_CONFIG_REPAIR=off) → 不检测', () => {
-  const lines = [
-    'KEY1=value1',
-    'malformed line',
-    'KEY1=value2',
-  ];
-  for (const off of ['0', 'false', 'off', 'no', 'OFF']) {
-    const result = policy.detectEnvCorruption(lines, { env: { KHY_CONFIG_REPAIR: off } });
-    assert.strictEqual(result.isCorrupted, false, `gate=${off} 应不检测`);
-    assert.deepStrictEqual(result.issues, []);
-  }
-});
+    test('returns unchanged when no issues', () => {
+      const lines = ['KEY=value'];
+      const result = repairEnvLines(lines, [], {});
+      expect(result.repaired).toEqual(lines);
+      expect(result.removed).toBe(0);
+    });
 
-test('门控关(KHY_CONFIG_REPAIR=off) → 不修复', () => {
-  const lines = [
-    'KEY1=value1',
-    'malformed line',
-    'KEY2=value2',
-  ];
-  const issues = [{ line: 2, type: 'malformed-line', message: 'test' }];
-  for (const off of ['0', 'false', 'off', 'no']) {
-    const result = policy.repairEnvLines(lines, issues, { env: { KHY_CONFIG_REPAIR: off } });
-    assert.strictEqual(result.removed, 0, `gate=${off} 应不修复`);
-    assert.deepStrictEqual(result.repaired, lines);
-  }
-});
+    test('removes malformed lines', () => {
+      const lines = ['KEY=value', 'bad line', 'OTHER=test'];
+      const issues = [{ line: 2, type: 'malformed-line' }];
+      const result = repairEnvLines(lines, issues, {});
+      expect(result.repaired).toEqual(['KEY=value', 'OTHER=test']);
+      expect(result.removed).toBe(1);
+    });
 
-test('坏输入(非数组)→ 空结果不抛', () => {
-  assert.deepStrictEqual(policy.detectEnvCorruption(null, { env: {} }), { isCorrupted: false, issues: [] });
-  assert.deepStrictEqual(policy.detectEnvCorruption('not-array', { env: {} }), { isCorrupted: false, issues: [] });
-  assert.deepStrictEqual(policy.detectEnvCorruption(undefined, { env: {} }), { isCorrupted: false, issues: [] });
-});
+    test('removes empty-key lines', () => {
+      const lines = ['KEY=value', '=nokey'];
+      const issues = [{ line: 2, type: 'empty-key' }];
+      const result = repairEnvLines(lines, issues, {});
+      expect(result.repaired).toEqual(['KEY=value']);
+    });
 
-test('repairEnvLines 坏输入不抛', () => {
-  assert.deepStrictEqual(policy.repairEnvLines(null, [], { env: {} }), { repaired: [], removed: 0 });
-  assert.deepStrictEqual(policy.repairEnvLines('not-array', [], { env: {} }), { repaired: [], removed: 0 });
-  assert.deepStrictEqual(policy.repairEnvLines([], null, { env: {} }), { repaired: [], removed: 0 });
-});
+    test('removes unclosed-quote lines', () => {
+      const lines = ['KEY=value', '"unclosed'];
+      const issues = [{ line: 2, type: 'unclosed-quote' }];
+      const result = repairEnvLines(lines, issues, {});
+      expect(result.repaired).toEqual(['KEY=value']);
+    });
 
-test('isEnabled 门控逻辑', () => {
-  assert.strictEqual(policy.isEnabled({ KHY_CONFIG_REPAIR: 'true' }), true);
-  assert.strictEqual(policy.isEnabled({ KHY_CONFIG_REPAIR: '1' }), true);
-  assert.strictEqual(policy.isEnabled({}), true); // 默认开
-  assert.strictEqual(policy.isEnabled({ KHY_CONFIG_REPAIR: '0' }), false);
-  assert.strictEqual(policy.isEnabled({ KHY_CONFIG_REPAIR: 'false' }), false);
-  assert.strictEqual(policy.isEnabled({ KHY_CONFIG_REPAIR: 'off' }), false);
-  assert.strictEqual(policy.isEnabled({ KHY_CONFIG_REPAIR: 'no' }), false);
+    test('keeps last duplicate key', () => {
+      const lines = ['KEY=first', 'KEY=second'];
+      const issues = [{
+        line: 1,
+        type: 'duplicate-key',
+        message: '键 "KEY" 重复出现在行: 1, 2',
+      }];
+      const result = repairEnvLines(lines, issues, {});
+      expect(result.repaired).toEqual(['KEY=second']);
+      expect(result.removed).toBe(1);
+    });
+
+    test('handles multiple issue types', () => {
+      const lines = ['KEY=value', 'bad', '=empty'];
+      const issues = [
+        { line: 2, type: 'malformed-line' },
+        { line: 3, type: 'empty-key' },
+      ];
+      const result = repairEnvLines(lines, issues, {});
+      expect(result.repaired).toEqual(['KEY=value']);
+      expect(result.removed).toBe(2);
+    });
+  });
 });

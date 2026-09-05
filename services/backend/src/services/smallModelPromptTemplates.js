@@ -134,6 +134,9 @@ function _planningStandard(taskType) {
  */
 function _planningT3(taskType) {
   const hints = TASK_TYPE_TOOL_HINTS[taskType];
+  // 「小步执行」行:弱模型最容易在长输出/多步任务上一次吞太多 → 截断或跑偏
+  // (2026-09 会话 2deaa521)。明确要求每步小交付、长内容先骨架后逐段补全。
+  // T3 模板须保持 ≤ T3_TEMPLATE_MAX_CHARS。
   return [
     `[系统] 先输出执行计划再动手。可用工具：${hints}。格式示例：`,
     '<execution_plan>',
@@ -141,6 +144,7 @@ function _planningT3(taskType) {
     '2. [grep] 查找相关引用 ← parallel_group: A',
     '3. 完成修改并验证',
     '</execution_plan>',
+    '小步执行：每步只做一个可独立完成的小交付；长内容先写骨架，再逐段补全，不要一次输出全部。',
     '计划后立即执行第 1 步：只调用一个工具，等结果返回再继续。',
   ].join('\n');
 }
@@ -230,6 +234,7 @@ function _summaryStandard(planState) {
     '2）关键发现：执行过程中发现的重要事实或问题；',
     '3）未完成项：哪些步骤没有完成、原因是什么、建议下一步怎么做。',
     '汇总要基于真实执行结果，不要声称未验证过的效果。',
+    '禁止虚构：汇总中点名的每个工具/步骤必须在本轮真实执行过，没调用过的工具不得写成已完成。',
   ]
     .filter(Boolean)
     .join('');
@@ -240,12 +245,15 @@ function _summaryStandard(planState) {
  * @returns {string}
  */
 function _summaryT3() {
+  // 「分三条」曾被弱模型执行成「列出三个已完成任务」(2026-09 会话 2deaa521:为凑满
+  // 三条虚构了从未执行的 dataFetch 任务)。这里把「三」明确锚定为三段格式而非任务数,
+  // 并显式禁止虚构;T3 模板须保持 ≤ T3_TEMPLATE_MAX_CHARS。
   return [
-    '[系统] 请输出最终汇总，分三条：',
-    '1）完成了什么（带文件名等具体信息）；',
-    '2）关键发现；',
-    '3）未完成项及原因。',
-    '只写真实做过并验证过的内容。',
+    '[系统] 任务结束。汇总按固定三段输出（「三段」是格式，不是三个任务）：',
+    '① 完成了什么——只列本轮真实调用工具做过的事，带文件名等具体信息；',
+    '② 关键发现——执行中确认的事实；',
+    '③ 未完成项及原因——没做的如实写。',
+    '禁止虚构：没调用过的工具、没执行过的步骤一律不得写成已完成；示例与计划不算完成。',
   ].join('');
 }
 
@@ -341,13 +349,18 @@ const FEW_SHOT_EXAMPLES = Object.freeze({
       'glob 找到 2 个文件：README.md、kernel/README.md。',
       '定位成功，根目录 README.md 是目标文件。与计划一致，下一步用 readFile 读取它的开头部分再汇报第一段内容。'
     ),
+    // Neutral demo (cwd query, not a version probe): the previous "node
+    // --version → v22.11.0" demo seeded a Node-22 fixation in weak models
+    // (session 2deaa521, 2026-09: they invented a "Node.js 22 LTS release
+    // date" task out of it). Keep demos free of version numbers and nouns
+    // that read like a pending task.
     _example(
-      '看看当前环境的 Node 版本是多少',
-      '我用 shellCommand 执行版本查询命令。',
+      '看看当前工作目录的完整路径',
+      '我用 shellCommand 执行目录查询命令。',
       'shellCommand',
-      { command: 'node --version' },
-      'shellCommand 成功：输出 v22.11.0，退出码 0。',
-      '命令执行成功，退出码 0 无错误。本步结论：当前 Node 版本为 v22.11.0。任务目标已达成，可直接汇总，无需更多工具调用。'
+      { command: 'cd' },
+      'shellCommand 成功：输出 D:\\projects\\demo，退出码 0。',
+      '命令执行成功，退出码 0 无错误。本步结论：当前工作目录为 D:\\projects\\demo。任务目标已达成，可直接汇总，无需更多工具调用。'
     ),
   ],
 });

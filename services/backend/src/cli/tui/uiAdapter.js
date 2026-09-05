@@ -49,9 +49,16 @@ async function showConfirm(response) {
   const prefix = response.danger ? '⚠ ' : '';
   process.stderr.write(`${prefix}${response.message} [y/N]: `);
 
+  // Check if stdin is a TTY (setRawMode available)
+  const stdin = process.stdin;
+  if (typeof stdin.setRawMode !== 'function') {
+    // Non-TTY environment: return default value
+    process.stderr.write('\n');
+    return response.default === true;
+  }
+
   // Simple stdin read (non-blocking for Ink)
   return new Promise((resolve) => {
-    const stdin = process.stdin;
     const wasRaw = stdin.isRaw;
     stdin.setRawMode(true);
     stdin.resume();
@@ -91,8 +98,15 @@ async function showList(response) {
   });
   process.stderr.write('Enter number: ');
 
+  // Check if stdin is a TTY (setRawMode available)
+  const stdin = process.stdin;
+  if (typeof stdin.setRawMode !== 'function') {
+    // Non-TTY environment: return null (cancelled)
+    process.stderr.write('\n');
+    return null;
+  }
+
   return new Promise((resolve) => {
-    const stdin = process.stdin;
     const wasRaw = stdin.isRaw;
     stdin.setRawMode(true);
     stdin.resume();
@@ -152,7 +166,15 @@ function promptField(field) {
     const label = field.label + (field.required ? ' *' : '');
     process.stderr.write(`${label}: `);
 
+    // Check if stdin is a TTY (setRawMode available)
     const stdin = process.stdin;
+    if (typeof stdin.setRawMode !== 'function') {
+      // Non-TTY environment: return null
+      process.stderr.write('\n');
+      resolve(null);
+      return;
+    }
+
     const wasRaw = stdin.isRaw;
     stdin.setRawMode(field.type === 'password');
     stdin.resume();

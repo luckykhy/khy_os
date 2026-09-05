@@ -196,10 +196,15 @@ function injectPlanningPrompt(message, opts = {}) {
   // the AskUserQuestion tool), then drills into the chosen one as the plan —
   // instead of silently committing to a single approach. Fallbacks keep legacy
   // behavior when the gate is off or the tool is unavailable.
+  // segmentHint is appended in EVERY branch (it used to live only in the
+  // autoDecompose branch, which made it dead code on the default multiOption
+  // path — long-output tasks got no segmentation guidance at all).
+  const segmentHint =
+    '\n[System: If your final answer is expected to be long (multiple sections, code over ~300 lines, or a full document), deliver it in clearly separated segments across multiple turns — complete and present one section per turn, then continue with the next in a follow-up turn. Never try to dump the entire long output in a single response; that risks being cut off by the output limit.]';
   if (opts.multiOption) {
     const multiHint =
       '\n[System: Before finalizing your approach, present 2-3 distinct execution strategies for this task and let the user choose. Use the AskUserQuestion tool with a single question (header "执行方案" / "Approach") listing the strategies as options — each option\'s description states its trade-off (speed vs thoroughness vs risk). After the user picks, build the detailed plan around the chosen strategy. Only skip asking when one approach is clearly superior and conventional.]';
-    return `${planInst}${multiHint}\n\n${message}`;
+    return `${planInst}${multiHint}${segmentHint}\n\n${message}`;
   }
 
   // When auto-decompose is triggered, encourage Agent subtasks for parallel work
@@ -211,12 +216,10 @@ function injectPlanningPrompt(message, opts = {}) {
   if (opts.autoDecompose) {
     const decomposeHint =
       '\n[System: This task contains independent parts. If subtasks are independent and can benefit from parallel execution, use the Agent tool with a `subtasks` array to run them concurrently.]';
-    const segmentHint =
-      '\n[System: If your final answer is expected to be long (multiple sections, code over ~300 lines, or a full document), deliver it in clearly separated segments across multiple turns — complete and present one section per turn, then continue with the next in a follow-up turn. Never try to dump the entire long output in a single response; that risks being cut off by the output limit.]';
     return `${planInst}${decomposeHint}${segmentHint}\n\n${message}`;
   }
 
-  return `${planInst}\n\n${message}`;
+  return `${planInst}${segmentHint}\n\n${message}`;
 }
 
 // ── Execution plan parsing ───────────────────────────────────────────
@@ -289,6 +292,74 @@ function parseExecutionPlan(text) {
   }
 
   return steps.length > 0 ? { steps } : null;
+}
+
+// ── Long-output segment directive (deterministic pre-check) ──────────
+
+// Explicit length asks only (zero-false-positive stance): "写一篇3000字的故事",
+// "1万字以上", bare "万字/长篇/中篇". Generic "写个小说" without a number or a
+// long-form marker does NOT fire — the directive changes delivery pacing and
+// must not leak into ordinary short asks.
+const _NUM_CHARS_RE = /([0-9][0-9,，，.]{0,7})\s*(?:个\s*)?(?:汉字|字|词|tokens?)/;
+const _WAN_RE = /([0-9]+(?:\.[0-9]+)?)\s*万字|^万字/;
+const _LONG_FORM_RE = /长篇|中篇/;
+
+// Chinese text ≈ 0.6-1.0 token per char in modern tokenizers; 0.6 leaves headroom
+// for thinking, formatting and markdown so the segment actually completes.
+const _TOKENS_PER_CHAR = 0.6;
+const _MIN_SEGMENT_CHARS = 500;
+
+/**
+ * Build a "deliver long output in segments" directive when the user explicitly
+ * asks for output whose length cannot fit one turn's output budget.
+ *
+ * Deterministic, zero-model: fires ONLY on explicit length requests (numeric
+ * 字数 / 万字 / 长篇|中篇). Returns '' when nothing was requested, the request
+ * fits the budget, or the budget is unknown.
+ *
+ * @param {string} userMessage
+ * @param {object} [opts]
+ * @param {number} [opts.maxTokens] - This turn's output budget (effort preset)
+ * @returns {string} '' when no directive is needed
+ */
+function buildLongOutputSegmentDirective(userMessage, opts = {}) {
+  try {
+    const text = String(userMessage || '');
+    if (!text.trim()) {
+      return '';
+    }
+    const maxTokens = Number(opts.maxTokens) || 0;
+    if (maxTokens <= 0) {
+      return '';
+    }
+    const capChars = Math.max(_MIN_SEGMENT_CHARS, Math.floor(maxTokens * _TOKENS_PER_CHAR));
+
+    let needChars = 0;
+    const num = _NUM_CHARS_RE.exec(text);
+    if (num) {
+      needChars = parseInt(num[1].replace(/[,,，]/g, ''), 10);
+    } else if (/万字/.test(text)) {
+      const wan = _WAN_RE.exec(text);
+      needChars = wan && wan[1] ? Math.round(parseFloat(wan[1]) * 10000) : 10000;
+    } else if (/千字/.test(text)) {
+      needChars = 1000;
+    } else if (_LONG_FORM_RE.test(text)) {
+      needChars = 10000;
+    }
+    if (!Number.isFinite(needChars) || needChars <= 0 || needChars <= capChars) {
+      return '';
+    }
+    const parts = Math.min(10, Math.ceil(needChars / capChars));
+    return (
+      `[System: 本轮单次输出上限约 ${maxTokens} tokens（约合 ${capChars} 字）。` +
+      `本任务预期产出约 ${needChars} 字，超出单轮预算，必须分段交付：` +
+      `本轮只写第 1 段（${capChars} 字以内），写到自然的段落或小节边界即收尾，` +
+      `结尾标注「（第 1/${parts} 段 · 未完待续，回复「继续」看下一段）」。` +
+      `后续每轮按同样节奏续写下一段；不要试图一次性写完全部内容——那会被输出上限截断。]`
+    );
+  } catch {
+    return '';
+  }
 }
 
 /**
@@ -366,6 +437,7 @@ module.exports = {
   isComplexTask,
   shouldAutoDecompose,
   injectPlanningPrompt,
+  buildLongOutputSegmentDirective,
   parseExecutionPlan,
   matchToolCallToStep,
 };
