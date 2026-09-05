@@ -565,6 +565,28 @@ function App({ options = {} }) {
       const gateway = require('../../../services/gateway/aiGateway');
       const active = gateway.getActiveAdapter ? gateway.getActiveAdapter() : null;
       const activeModel = active?.activeModel || process.env.GATEWAY_PREFERRED_MODEL || 'auto';
+      // Get real model status from backend: check if the model is actually usable
+      let modelStatus = null;
+      try {
+        const adapterEntry = active?.key ? gateway.getAdapter?.(active.key) : null;
+        const adapterStatus = adapterEntry?.adapter?.getStatus?.() || active;
+        if (adapterStatus) {
+          const hasError = adapterStatus.lastError && adapterStatus.lastError.trim();
+          const isAvailable = adapterStatus.available !== false;
+          const isCoolingDown = adapterStatus.cooldownUntilMs && adapterStatus.cooldownUntilMs > Date.now();
+          if (hasError || !isAvailable || isCoolingDown) {
+            modelStatus = {
+              status: 'error',
+              reason: hasError ? adapterStatus.lastError : (!isAvailable ? '通道不可用' : '冷却中'),
+              cooldownMs: adapterStatus.cooldownUntilMs || 0,
+            };
+          } else {
+            modelStatus = { status: 'ok' };
+          }
+        }
+      } catch {
+        /* model status check is best-effort */
+      }
       setFooter((f) => {
         const next = {
           ...f,
@@ -581,6 +603,7 @@ function App({ options = {} }) {
             ? aiMod.getContextLimit(activeModel)
             : f.contextLimit || UNKNOWN_MODEL_CONTEXT_WINDOW,
           contextPct: f.contextPct || 0,
+          modelStatus,
         };
         // Equality guard: if every identity field is unchanged, return the SAME
         // ref so React skips the re-render (mirrors the contextPct guard at the
@@ -5372,6 +5395,7 @@ function App({ options = {} }) {
                 bridge: bridgeStatus,
                 goalActive,
                 cooldownUntilMs: query.cooldownUntilMs || 0,
+                modelStatus: footer.modelStatus,
               }),
 
           // ── 区域⑧ STATUS_AREA(状态区,页尾 5 行空行,FOOTER 之下)────────────

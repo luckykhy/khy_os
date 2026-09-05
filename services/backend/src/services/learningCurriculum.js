@@ -295,6 +295,7 @@ function _freshProgress() {
     lastVisit: null, // { layerId, topicId, at: ISO }
     streak: { count: 0, lastDate: null }, // 连续学习天数
     notes: {},
+    source: 'cli-learning-curriculum', // 标识真源，防与项目 PROGRESS.md 混淆
   };
 }
 
@@ -326,6 +327,10 @@ function _normalizeProgress(p) {
   }
   if (!p.notes || typeof p.notes !== 'object') {
     p.notes = {};
+  }
+  // source 字段缺失时自动补标，确保旧进度文件也能被识别为 CLI 学习进度
+  if (!p.source) {
+    p.source = 'cli-learning-curriculum';
   }
   return p;
 }

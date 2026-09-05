@@ -5,10 +5,10 @@
  */
 
 const { describe, it, expect, beforeEach, afterEach } = require('@jest/globals');
-const { getA2A, resetA2A, AGENT_STATUS, AGENT_LIFECYCLE_STATE, MESSAGE_STATUS } = require('./a2aFacade');
-const { getRegistry, resetRegistry } = require('./a2aRegistry');
-const { getLifecycle, resetLifecycle } = require('./a2aAgentLifecycle');
-const { getRouter, resetRouter } = require('./a2aMessageRouter');
+const { getA2A, resetA2A, AGENT_STATUS, AGENT_LIFECYCLE_STATE, MESSAGE_STATUS } = require('../src/services/a2aFacade');
+const { getRegistry, resetRegistry } = require('../src/services/a2aRegistry');
+const { getLifecycle, resetLifecycle } = require('../src/services/a2aAgentLifecycle');
+const { getRouter, resetRouter } = require('../src/services/a2aMessageRouter');
 
 describe('A2A Registry', () => {
   let registry;
@@ -126,18 +126,22 @@ describe('A2A Agent Lifecycle', () => {
   });
 
   it('should respect max depth', () => {
+    // parent at depth 1
     const parent = lifecycle.spawn({ name: 'parent', type: 'coordinator' });
+    expect(parent.depth).toBe(1);
     
-    // Should throw when exceeding max depth
-    let current = parent;
-    for (let i = 0; i < 3; i++) {
-      const child = lifecycle.spawn({ name: `child-${i}`, type: 'analyst', parentId: current.id });
-      current = child;
-    }
+    // child at depth 2
+    const child1 = lifecycle.spawn({ name: 'child-1', type: 'analyst', parentId: parent.id });
+    expect(child1.depth).toBe(2);
     
+    // grandchild at depth 3 (max)
+    const child2 = lifecycle.spawn({ name: 'child-2', type: 'analyst', parentId: child1.id });
+    expect(child2.depth).toBe(3);
+    
+    // Should throw when exceeding max depth (depth 4 > maxDepth 3)
     expect(() => {
-      lifecycle.spawn({ name: 'too-deep', type: 'analyst', parentId: current.id });
-    }).toThrow();
+      lifecycle.spawn({ name: 'too-deep', type: 'analyst', parentId: child2.id });
+    }).toThrow('Maximum depth exceeded');
   });
 
   it('should kill an agent', () => {
