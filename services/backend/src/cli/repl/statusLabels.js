@@ -316,7 +316,7 @@ function stripTrailingEllipsis(s) {
 }
 
 /** Last meaningful clause of a reasoning tail, whitespace-collapsed, ≤ max chars. */
-function thinkingClause(tail, max = 36) {
+function thinkingClause(tail, max = 60) {
   const raw = String(tail || '')
     .replace(/\s+/g, ' ')
     .trim();
@@ -325,11 +325,14 @@ function thinkingClause(tail, max = 36) {
   }
   // Take the last sentence-ish fragment so the label reflects the CURRENT thought,
   // not the opening of a long reasoning block.
+  // Split on Chinese and English sentence-ending punctuation.
   const parts = raw
     .split(/(?<=[。．.!?！？；;])\s*/)
     .map((s) => s.trim())
     .filter(Boolean);
-  const last = parts.length ? parts[parts.length - 1] : raw;
+  // Filter out very short fragments (like single punctuation or 1-2 chars)
+  const meaningful = parts.filter((p) => p.length > 2);
+  const last = meaningful.length ? meaningful[meaningful.length - 1] : (parts.length ? parts[parts.length - 1] : raw);
   return last.length > max ? `${last.slice(0, max - 1)}…` : last;
 }
 
@@ -358,18 +361,24 @@ function deriveLiveActivity({ status, runningTool, thinkingTail, statusDetail, e
 
   if (phase === 'tool' || phase === 'tool_progress') {
     const name = runningTool && (runningTool.name || runningTool.toolName);
+    const input = runningTool && (runningTool.input || runningTool.params || {});
     if (name) {
+      // Build a specific "action + target" description
+      const target = _extractToolTarget(name, input);
+      if (target) {
+        return `${_verbForTool(name)} ${target}`;
+      }
       const voice = _getVoice();
       if (voice && typeof voice.toolRunningNarration === 'function') {
         try {
           const narration = stripTrailingEllipsis(
-            voice.toolRunningNarration(name, runningTool.input || runningTool.params || {})
+            voice.toolRunningNarration(name, input)
           );
           if (narration) {
             return narration;
           }
         } catch {
-          /* fall through to name/detail */
+          /* fall through */
         }
       }
       return `运行 ${String(name).trim()}`;
@@ -377,7 +386,12 @@ function deriveLiveActivity({ status, runningTool, thinkingTail, statusDetail, e
     return detail;
   }
   if (phase === 'thinking') {
-    return thinkingClause(thinkingTail) || detail;
+    // Show what the AI is thinking about (the topic/context, not just the last sentence)
+    const clause = thinkingClause(thinkingTail, 60);
+    if (clause) {
+      return `分析: ${clause}`;
+    }
+    return detail || '分析用户意图';
   }
   // streaming/generating already shows visible text → keep the bare base label.
   if (phase === 'streaming' || phase === 'generating') {
@@ -385,6 +399,62 @@ function deriveLiveActivity({ status, runningTool, thinkingTail, statusDetail, e
   }
   // summary / done / compacting / request / init / local / unknown → gateway detail.
   return detail;
+}
+
+// Extract a human-readable target from tool input
+function _extractToolTarget(toolName, input) {
+  if (!input || typeof input !== 'object') return '';
+  const name = String(toolName || '').toLowerCase();
+  // For file-related tools, show the file path
+  if (/read|readfile/.test(name)) {
+    return input.file_path || input.path || '';
+  }
+  if (/write|writefile|createfile/.test(name)) {
+    return input.file_path || input.path || '';
+  }
+  if (/edit|multiedit/.test(name)) {
+    return input.file_path || input.path || '';
+  }
+  if (/bash|shell/.test(name)) {
+    const cmd = input.command || '';
+    return cmd.length > 40 ? cmd.slice(0, 37) + '...' : cmd;
+  }
+  if (/grep|search/.test(name)) {
+    return input.pattern || input.query || '';
+  }
+  if (/glob|find/.test(name)) {
+    return input.pattern || '';
+  }
+  if (/websearch/.test(name)) {
+    return input.query || '';
+  }
+  if (/webfetch/.test(name)) {
+    const url = input.url || '';
+    return url.length > 40 ? url.slice(0, 37) + '...' : url;
+  }
+  if (/agent|task/.test(name)) {
+    return input.prompt || input.description || input.role || '';
+  }
+  return '';
+}
+
+// Map tool name to a concise verb
+function _verbForTool(toolName) {
+  const name = String(toolName || '').toLowerCase();
+  if (/read|readfile/.test(name)) return '读取';
+  if (/write|writefile/.test(name)) return '写入';
+  if (/createfile/.test(name)) return '创建';
+  if (/edit|multiedit/.test(name)) return '编辑';
+  if (/bash|shell/.test(name)) return '执行';
+  if (/grep/.test(name)) return '搜索';
+  if (/glob|find/.test(name)) return '查找';
+  if (/websearch/.test(name)) return '联网搜索';
+  if (/webfetch/.test(name)) return '抓取';
+  if (/agent|task/.test(name)) return '派发';
+  if (/todowrite/.test(name)) return '更新';
+  if (/notebookedit/.test(name)) return '编辑';
+  if (/ls/.test(name)) return '列出';
+  return '运行';
 }
 
 module.exports = {

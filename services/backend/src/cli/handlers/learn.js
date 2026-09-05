@@ -18,6 +18,9 @@
 const chalkModule = require('chalk');
 
 const chalk = chalkModule.default || chalkModule;
+
+// 统一 UI 门面：TUI 和经典模式共享同一份代码
+const ui = require('../uiFacade');
 const dynamic = require('../../services/learningCurriculumDynamic');
 const profile = require('../../services/learningProfile');
 const retrieval = require('../../services/learningRetrieval');
@@ -350,22 +353,14 @@ function _showNudge(curriculum) {
 // 无 AI 模型时，通过 inquirer 选项菜单实现课程浏览、导航、自测
 
 /**
- * inquirer list prompt — Ctrl+C 安全
- * @returns {Promise<*|null>} 选中值, 取消时 null
+ * List prompt — works in both TUI and Classic modes via unified facade.
+ * @returns {Promise<*|null>} Selected value, or null if cancelled.
  */
 async function _askChoice(message, options) {
   try {
-    const inquirer = require('inquirer');
-    const { choice } = await inquirer.prompt([
-      {
-        type: 'list',
-        name: 'choice',
-        message,
-        choices: options.map((o) => ({ name: o.label, value: o.value })),
-        pageSize: 15,
-      },
-    ]);
-    return choice;
+    const items = options.map((o) => ({ id: o.value, label: o.label }));
+    const selected = await ui.list(message, items);
+    return selected;
   } catch {
     return null;
   }

@@ -60,7 +60,7 @@ async function renderTui(response) {
  * @returns {Promise<any>}
  */
 async function renderClassic(response) {
-  const classicAdapter = require('./classic/uiAdapter');
+  const classicAdapter = require('../classic/uiAdapter');
 
   switch (response.type) {
     case 'info':
