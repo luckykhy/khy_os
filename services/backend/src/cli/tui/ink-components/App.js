@@ -640,6 +640,17 @@ function App({ options = {} }) {
     } catch {
       /* store unavailable */
     }
+    // Connect unified UI bridge to App overlay setters
+    try {
+      const bridge = require('../uiBridge');
+      bridge.setAppRefs({
+        setPermissionRequest,
+        setModelPicker,
+        setFormFlow,
+      });
+    } catch {
+      /* bridge unavailable */
+    }
   }, []);
   const [selectedIndex, setSelectedIndex] = React.useState(0);
   const [showHelp, setShowHelp] = React.useState(false);
