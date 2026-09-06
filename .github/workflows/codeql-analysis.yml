@@ -32,11 +32,11 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # ── JavaScript / TypeScript ──────────────────────────────────────────────
       - name: Initialize CodeQL (JavaScript)
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         if: matrix.language == 'javascript'
         with:
           languages: ${{ matrix.language }}
@@ -44,7 +44,7 @@ jobs:
 
       # ── Python ───────────────────────────────────────────────────────────────
       - name: Initialize CodeQL (Python)
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         if: matrix.language == 'python'
         with:
           languages: ${{ matrix.language }}
@@ -55,10 +55,10 @@ jobs:
       # (setup.py / build) automatically. If autobuild fails, a manual step
       # below overrides it.
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+        uses: github/codeql-action/autobuild@v4
 
       # ── Perform Analysis ─────────────────────────────────────────────────────
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
