@@ -158,7 +158,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: 'Provider 预设',
             icon: Icons.cloud_rounded,
             color: cs.primary,
-            children: kProviderPresets.map((p) => _buildProviderTile(p, cs)).toList(),
+            children: ProviderPresets.presets.map((p) => _buildProviderTile(p, cs)).toList(),
           ),
           const SizedBox(height: 16),
           _buildSectionCard(
@@ -397,9 +397,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   List<Widget> _getAllModelChips(ColorScheme cs) {
     final chips = <Widget>[];
-    for (final provider in kProviderPresets) {
+    for (final provider in ProviderPresets.presets) {
       for (final model in provider.models) {
-        chips.add(_buildPresetChip(model.id, model.name, cs));
+        chips.add(_buildPresetChip(model, model, cs));
       }
     }
     return chips;
