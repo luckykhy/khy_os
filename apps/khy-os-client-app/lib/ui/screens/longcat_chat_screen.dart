@@ -13,6 +13,8 @@ import '../../data/models/models.dart';
 import '../screens/settings_screen.dart';
 import '../screens/log_viewer_screen.dart';
 import '../screens/network_diagnostic_screen.dart';
+import '../../core/tools/tool_engine.dart';
+import '../../core/tools/builtin_tools.dart';
 
 enum AppMode { remote, standalone }
 
@@ -37,6 +39,7 @@ class _KhyOsChatScreenState extends ConsumerState<KhyOsChatScreen>
   final _logger = AppLogger();
   final _autoFix = NetworkAutoFix();
   final _smartDns = SmartDns();
+  late final ToolEngine _toolEngine;
 
   @override
   void initState() {
@@ -47,6 +50,9 @@ class _KhyOsChatScreenState extends ConsumerState<KhyOsChatScreen>
     if (_api != null && _api!.isConnected) _mode = AppMode.remote;
     _logger.i(LogCategory.system, '应用启动', details: {'mode': _mode.name});
     _loadConfig();
+    // Initialize tool engine with built-in tools
+    _toolEngine = ToolEngine();
+    _toolEngine.registerAll(createBuiltinTools());
   }
 
   @override
@@ -159,23 +165,95 @@ class _KhyOsChatScreenState extends ConsumerState<KhyOsChatScreen>
     final startTime = DateTime.now();
     try {
       final h = _msgs.where((m) => m.content.isNotEmpty && m.id != id).map((m) => {'role': m.role == MessageRole.user ? 'user' : 'assistant', 'content': m.content}).toList();
+      final sysPrompt = _cfg!.systemPrompt.isNotEmpty
+          ? _cfg!.systemPrompt
+          : '你是 khy-os AI 助手，运行在用户的 Android 手机上。你可以帮用户打开应用、管理剪贴板、计算数学表达式等。使用工具完成用户请求。';
+      final tools = _toolEngine.toFunctionSchemas();
       final dio = Dio(BaseOptions(connectTimeout: const Duration(seconds: 30), receiveTimeout: const Duration(minutes: 5)));
-      final resp = await dio.post('${_cfg!.baseUrl}/chat/completions', data: {
-        'model': _cfg!.model, 'messages': [{'role': 'system', 'content': _cfg!.systemPrompt}, ...h],
-        'temperature': 0.7, 'max_tokens': 4096, 'stream': true,
-      }, options: Options(headers: {'Authorization': 'Bearer ${_cfg!.apiKey}', 'Content-Type': 'application/json'}, responseType: ResponseType.stream));
-      String full = '';
-      await for (final chunk in resp.data.stream) {
-        final t = utf8.decode(chunk);
-        for (final line in t.split('\n')) {
-          if (line.startsWith('data: ') && line != 'data: [DONE]') {
-            try { final j = jsonDecode(line.substring(6)); final d = j['choices']?[0]?['delta']?['content']; if (d != null) { full += d; _setContent(id, full); } } catch (_) {}
-          }
+
+      // Agent loop: keep calling until no more tool calls
+      final messages = <Map<String, dynamic>>[
+        {'role': 'system', 'content': sysPrompt},
+        ...h,
+      ];
+
+      for (var loop = 0; loop < 5; loop++) {
+        final requestData = {
+          'model': _cfg!.model,
+          'messages': messages,
+          'temperature': 0.7,
+          'max_tokens': 4096,
+        };
+        if (tools.isNotEmpty) requestData['tools'] = tools;
+
+        final resp = await dio.post('${_cfg!.baseUrl}/chat/completions',
+          data: requestData,
+          options: Options(
+            headers: {'Authorization': 'Bearer ${_cfg!.apiKey}', 'Content-Type': 'application/json'},
+          ),
+        );
+
+        final data = resp.data as Map<String, dynamic>;
+        final choice = data['choices']?[0];
+        final msg = choice?['message'];
+        final content = msg?['content'] ?? '';
+        final toolCalls = msg?['tool_calls'] as List?;
+
+        // Update display with text content
+        if (content.isNotEmpty) {
+          _setContent(id, content);
+        }
+
+        // No tool calls → done
+        if (toolCalls == null || toolCalls.isEmpty) {
+          if (content.isEmpty) _setError(id, '无响应内容');
+          final duration = DateTime.now().difference(startTime).inMilliseconds;
+          _logger.api(provider: _cfg!.baseUrl, model: _cfg!.model, action: 'chat', success: true, durationMs: duration, tokensOut: content.length);
+          return;
+        }
+
+        // Add assistant message with tool calls to history
+        messages.add({
+          'role': 'assistant',
+          'content': content,
+          'tool_calls': toolCalls,
+        });
+
+        // Show tool execution status
+        if (content.isEmpty) _setContent(id, '正在执行工具...');
+
+        // Execute each tool call
+        for (final tc in toolCalls) {
+          final fn = tc['function'] ?? {};
+          final toolName = fn['name'] ?? '';
+          final argsStr = fn['arguments'] ?? '{}';
+          Map<String, dynamic> args;
+          try { args = jsonDecode(argsStr) as Map<String, dynamic>; } catch (_) { args = {}; }
+
+          _logger.i(LogCategory.system, '执行工具: $toolName', details: {'args': args});
+
+          // Show tool execution in UI
+          final toolLabel = _getToolLabel(toolName, args);
+          _setContent(id, '$content\n\n⏳ $toolLabel');
+
+          final result = await _toolEngine.execute(toolName, args);
+
+          // Show result
+          final resultIcon = result.success ? '✅' : '❌';
+          _setContent(id, '$content\n\n$resultIcon $toolLabel: ${result.output}');
+
+          // Add tool result to messages
+          messages.add({
+            'tool_call_id': tc['id'] ?? '',
+            'role': 'tool',
+            'content': result.jsonOutput,
+          });
         }
       }
+
+      // Max loops reached
       final duration = DateTime.now().difference(startTime).inMilliseconds;
-      _logger.api(provider: _cfg!.baseUrl, model: _cfg!.model, action: 'chat', success: true, durationMs: duration, tokensOut: full.length);
-      if (full.isEmpty) _setError(id, '无响应内容');
+      _logger.api(provider: _cfg!.baseUrl, model: _cfg!.model, action: 'chat', success: true, durationMs: duration);
     } on DioException catch (e) {
       if (e.type == DioExceptionType.connectionError && e.message?.contains('Failed host lookup') == true) {
         _logger.i(LogCategory.dns, 'DNS 失败，尝试 IP 直连');
@@ -191,6 +269,19 @@ class _KhyOsChatScreenState extends ConsumerState<KhyOsChatScreen>
     }
   }
 
+  String _getToolLabel(String toolName, Map<String, dynamic> args) {
+    switch (toolName) {
+      case 'open_app': return '打开应用: ${args['query'] ?? ''}';
+      case 'open_url': return '打开网址: ${args['url'] ?? ''}';
+      case 'search_apps': return '搜索应用: ${args['query'] ?? ''}';
+      case 'read_clipboard': return '读取剪贴板';
+      case 'write_clipboard': return '写入剪贴板';
+      case 'calculator': return '计算: ${args['expression'] ?? ''}';
+      case 'device_info': return '获取设备信息';
+      default: return '执行: $toolName';
+    }
+  }
+
   Future<void> _sendWithIpDirect(String text, String id, DateTime startTime) async {
     try {
       final hostname = extractHostname(_cfg!.baseUrl);
@@ -202,34 +293,75 @@ class _KhyOsChatScreenState extends ConsumerState<KhyOsChatScreen>
       _logger.i(LogCategory.dns, '使用 IP 直连: $ip');
 
       final h = _msgs.where((m) => m.content.isNotEmpty && m.id != id).map((m) => {'role': m.role == MessageRole.user ? 'user' : 'assistant', 'content': m.content}).toList();
+      final sysPrompt = _cfg!.systemPrompt.isNotEmpty
+          ? _cfg!.systemPrompt
+          : '你是 khy-os AI 助手，运行在用户的 Android 手机上。你可以帮用户打开应用、管理剪贴板、计算数学表达式等。使用工具完成用户请求。';
+      final tools = _toolEngine.toFunctionSchemas();
       final dio = Dio(BaseOptions(connectTimeout: const Duration(seconds: 30), receiveTimeout: const Duration(minutes: 5)));
 
-      // 关键：配置 HttpClientAdapter 以支持 IP 直连 + 正确 SNI
       (dio.httpClientAdapter as dynamic).onHttpClientCreate = (client) {
         client.badCertificateCallback = (cert, host, port) => true;
       };
 
-      final resp = await dio.post('https://$ip/chat/completions', data: {
-        'model': _cfg!.model, 'messages': [{'role': 'system', 'content': _cfg!.systemPrompt}, ...h],
-        'temperature': 0.7, 'max_tokens': 4096, 'stream': true,
-      }, options: Options(headers: {
-        'Authorization': 'Bearer ${_cfg!.apiKey}',
-        'Content-Type': 'application/json',
-        'Host': hostname,
-      }, responseType: ResponseType.stream));
+      final messages = <Map<String, dynamic>>[
+        {'role': 'system', 'content': sysPrompt},
+        ...h,
+      ];
 
-      String full = '';
-      await for (final chunk in resp.data.stream) {
-        final t = utf8.decode(chunk);
-        for (final line in t.split('\n')) {
-          if (line.startsWith('data: ') && line != 'data: [DONE]') {
-            try { final j = jsonDecode(line.substring(6)); final d = j['choices']?[0]?['delta']?['content']; if (d != null) { full += d; _setContent(id, full); } } catch (_) {}
-          }
+      for (var loop = 0; loop < 5; loop++) {
+        final requestData = {
+          'model': _cfg!.model,
+          'messages': messages,
+          'temperature': 0.7,
+          'max_tokens': 4096,
+        };
+        if (tools.isNotEmpty) requestData['tools'] = tools;
+
+        final resp = await dio.post('https://$ip/chat/completions',
+          data: requestData,
+          options: Options(headers: {
+            'Authorization': 'Bearer ${_cfg!.apiKey}',
+            'Content-Type': 'application/json',
+            'Host': hostname,
+          }),
+        );
+
+        final data = resp.data as Map<String, dynamic>;
+        final choice = data['choices']?[0];
+        final msg = choice?['message'];
+        final content = msg?['content'] ?? '';
+        final toolCalls = msg?['tool_calls'] as List?;
+
+        if (content.isNotEmpty) _setContent(id, content);
+
+        if (toolCalls == null || toolCalls.isEmpty) {
+          if (content.isEmpty) _setError(id, '无响应内容');
+          final duration = DateTime.now().difference(startTime).inMilliseconds;
+          _logger.api(provider: '$ip ($hostname)', model: _cfg!.model, action: 'chat', success: true, durationMs: duration, tokensOut: content.length);
+          return;
+        }
+
+        messages.add({'role': 'assistant', 'content': content, 'tool_calls': toolCalls});
+
+        if (content.isEmpty) _setContent(id, '正在执行工具...');
+
+        for (final tc in toolCalls) {
+          final fn = tc['function'] ?? {};
+          final toolName = fn['name'] ?? '';
+          final argsStr = fn['arguments'] ?? '{}';
+          Map<String, dynamic> args;
+          try { args = jsonDecode(argsStr) as Map<String, dynamic>; } catch (_) { args = {}; }
+
+          final toolLabel = _getToolLabel(toolName, args);
+          _setContent(id, '$content\n\n⏳ $toolLabel');
+
+          final result = await _toolEngine.execute(toolName, args);
+          final resultIcon = result.success ? '✅' : '❌';
+          _setContent(id, '$content\n\n$resultIcon $toolLabel: ${result.output}');
+
+          messages.add({'tool_call_id': tc['id'] ?? '', 'role': 'tool', 'content': result.jsonOutput});
         }
       }
-      final duration = DateTime.now().difference(startTime).inMilliseconds;
-      _logger.api(provider: '$ip ($hostname)', model: _cfg!.model, action: 'chat', success: true, durationMs: duration, tokensOut: full.length);
-      if (full.isEmpty) _setError(id, '无响应内容');
     } catch (e) {
       _logger.e(LogCategory.api, 'IP 直连也失败', error: e);
       _setError(id, '网络连接失败，请检查网络设置');
