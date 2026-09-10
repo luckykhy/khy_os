@@ -1,0 +1,62 @@
+name: khy_os_client
+description: "khy-os Client - AI Super Client with Chat, Agent, Floating Window"
+publish_to: 'none'
+version: 1.1.16+1
+
+environment:
+  sdk: ^3.13.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # State Management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Routing
+  go_router: ^14.8.1
+
+  # Database
+  drift: ^2.22.1
+  sqlite3_flutter_libs: ^0.5.24
+  path_provider: ^2.1.5
+  path: ^1.9.0
+
+  # HTTP & WebSocket
+  dio: ^5.7.0
+  web_socket_channel: ^3.0.1
+
+  # Security
+  flutter_secure_storage: ^9.2.4
+  encrypt: ^5.0.3
+
+  # UI
+  flutter_markdown: ^0.7.5
+  flutter_highlight: ^0.7.0
+  markdown: ^7.2.2
+
+  # Media & File
+  cached_network_image: ^3.4.1
+
+  # Voice
+  speech_to_text: ^7.0.0
+  flutter_tts: ^4.2.0
+
+  # Utils
+  uuid: ^4.5.1
+  intl: ^0.19.0
+  logger: ^2.5.0
+  collection: ^1.18.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  riverpod_generator: ^2.6.3
+  build_runner: ^2.4.14
+  drift_dev: ^2.22.1
+
+flutter:
+  uses-material-design: true
