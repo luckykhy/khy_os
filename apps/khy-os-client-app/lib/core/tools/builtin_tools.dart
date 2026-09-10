@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'tool_engine.dart';
 import '../services/device_control.dart';
 import 'skills.dart';
+import 'retry_engine.dart';
 import '../config/app_config.dart';
 
 /// All built-in tools for the Flutter client
@@ -335,6 +336,128 @@ List<ToolDef> createBuiltinTools() => [
         return ToolResult.ok(result.stdout.isEmpty ? '(无输出)' : result.stdout);
       } else {
         return ToolResult.fail('命令失败 (exit=${result.exitCode}): ${result.stderr}');
+      }
+    },
+  ),
+
+  // ---- Web Search & Fetch ----
+  ToolDef(
+    name: 'web_search',
+    description: '搜索网络信息。使用 DuckDuckGo 或 Bing API 返回搜索结果。',
+    inputSchema: {
+      'type': 'object',
+      'properties': {
+        'query': {
+          'type': 'string',
+          'description': '搜索关键词',
+        },
+        'count': {
+          'type': 'integer',
+          'description': '返回结果数量（默认 5）',
+        },
+      },
+      'required': ['query'],
+    },
+    execute: (args) async {
+      final query = args['query'] ?? '';
+      if (query.isEmpty) return ToolResult.fail('请提供搜索关键词');
+
+      final dio = Dio(BaseOptions(
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 15),
+      ));
+
+      try {
+        // 使用 DuckDuckGo 即时 API（无需 key）
+        final resp = await dio.get(
+          'https://api.duckduckgo.com/?q=${Uri.encodeComponent(query)}&format=json&no_html=1&compact=true',
+        );
+        final data = resp.data as Map<String, dynamic>;
+
+        final results = <String>[];
+        final heading = data['Heading'] ?? '';
+        if (heading.isNotEmpty) {
+          results.add('摘要: $heading');
+        }
+
+        final abstract = data['Abstract'] ?? '';
+        if (abstract.isNotEmpty) {
+          results.add('说明: $abstract');
+        }
+
+        final related = data['RelatedTopics'] as List?;
+        if (related != null) {
+          for (final topic in related.take(5)) {
+            if (topic is Map) {
+              final text = topic['Text'] ?? '';
+              final url = topic['URL'] ?? '';
+              if (text.isNotEmpty) {
+                results.add(text);
+                if (url.isNotEmpty) results.add(url);
+              }
+            }
+          }
+        }
+
+        if (results.isEmpty) {
+          return ToolResult.ok('未找到关于 "$query" 的结果');
+        }
+
+        return ToolResult.ok('搜索结果 "$query":\n' + results.join('\n'));
+      } on DioException catch (e) {
+        return ToolResult.fail('搜索失败: ${e.message}');
+      }
+    },
+  ),
+
+  ToolDef(
+    name: 'web_fetch',
+    description:
+        '抓取网页内容并提取正文。支持任意 URL，自动去除 HTML 标签。',
+    inputSchema: {
+      'type': 'object',
+      'properties': {
+        'url': {
+          'type': 'string',
+          'description': '要抓取的网页 URL',
+        },
+      },
+      'required': ['url'],
+    },
+    execute: (args) async {
+      final url = args['url'] ?? '';
+      if (url.isEmpty) return ToolResult.fail('请提供 URL');
+
+      final dio = Dio(BaseOptions(
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 30),
+      ));
+
+      try {
+        final resp = await dio.get(url);
+        final html = resp.data as String;
+
+        // 简单 HTML → 文本转换
+        final text = html
+            .replaceAll(RegExp(r'<script[^>]*>.*?</script>',
+                caseSensitive: false, dotAll: true), '')
+            .replaceAll(RegExp(r'<style[^>]*>.*?</style>',
+                caseSensitive: false, dotAll: true), '')
+            .replaceAll(RegExp(r'<[^>]+>'), ' ')
+            .replaceAll(RegExp(r'\s+'), ' ')
+            .trim();
+
+        // 截取前 2000 字符
+        final result = text.length > 2000
+            ? text.substring(0, 2000) + '...'
+            : text;
+
+        return result.isEmpty
+            ? ToolResult.fail('页面内容为空')
+            : ToolResult.ok('网页内容:\n$result',
+                metadata: {'url': url, 'length': text.length});
+      } on DioException catch (e) {
+        return ToolResult.fail('抓取失败 (${e.response?.statusCode}): ${e.message}');
       }
     },
   ),

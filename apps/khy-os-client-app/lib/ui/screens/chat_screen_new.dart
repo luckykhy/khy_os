@@ -13,6 +13,7 @@ import '../../core/config/built_in_keys.dart';
 import '../../data/models/models.dart' hide Conversation;
 import '../../core/tools/tool_engine.dart';
 import '../../core/tools/builtin_tools.dart';
+import '../../core/tools/tool_protocol.dart';
 import '../../core/tools/skills.dart';
 import '../../core/services/conversation_db.dart';
 import '../../core/services/device_control.dart';
@@ -143,7 +144,8 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
       final basePrompt = _cfg!.systemPrompt.isNotEmpty
           ? _cfg!.systemPrompt
           : '你是 khy-os AI 助手，运行在用户的 Android 手机上。你可以帮用户打开应用、管理剪贴板、计算数学表达式、执行无障碍操作等。使用工具完成用户请求。';
-      final sysPrompt = '$basePrompt\n\n${_buildSkillsSummary()}';
+      final sysPrompt = '$basePrompt\n\n${_buildSkillsSummary()}\n\n'
+          '${ToolProtocol.textProtocolInstructions}';
       final tools = _toolEngine.toFunctionSchemas();
       final dio = Dio(BaseOptions(
         connectTimeout: const Duration(seconds: 30),
@@ -179,11 +181,42 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
         final choice = data['choices']?[0];
         final msg = choice?['message'];
         final content = msg?['content'] ?? '';
-        final toolCalls = msg?['tool_calls'] as List?;
+        final nativeToolCalls = msg?['tool_calls'] as List?;
 
-        if (content.isNotEmpty) _setContent(id, content);
+        // 检测是否需要文本协议（模型不支持原生 function calling）
+        final useTextProtocol = ToolProtocol.needsTextProtocol(_cfg!.model);
 
-        if (toolCalls == null || toolCalls.isEmpty) {
+        List<ParsedToolCall> toolCalls;
+        if (nativeToolCalls != null && nativeToolCalls.isNotEmpty) {
+          // 原生 function calling
+          toolCalls = nativeToolCalls.map((tc) {
+            final fn = tc['function'] ?? {};
+            final argsStr = fn['arguments'] ?? '{}';
+            Map<String, dynamic> args;
+            try {
+              args = jsonDecode(argsStr) as Map<String, dynamic>;
+            } catch (_) {
+              args = {};
+            }
+            return ParsedToolCall(name: fn['name'] ?? '', args: args);
+          }).toList();
+
+          messages.add({
+            'role': 'assistant',
+            'content': content,
+            'tool_calls': nativeToolCalls,
+          });
+        } else if (useTextProtocol && ToolProtocol.hasToolCall(content)) {
+          // 文本协议：解析 [TOOL_CALL:...] 标记
+          toolCalls = ToolProtocol.parse(content);
+          final cleanContent = ToolProtocol.stripToolCalls(content);
+          messages.add({'role': 'assistant', 'content': cleanContent});
+          _setContent(id, cleanContent);
+        } else {
+          // 无工具调用 → 结束
+          if (content.isNotEmpty) {
+            _setContent(id, ToolProtocol.stripToolCalls(content));
+          }
           if (content.isEmpty) _setError(id, '无响应内容');
           execLog.finish(content);
           _logExecution(execLog);
@@ -191,24 +224,13 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
           return;
         }
 
-        messages.add({
-          'role': 'assistant',
-          'content': content,
-          'tool_calls': toolCalls,
-        });
-
-        if (content.isEmpty) _setContent(id, '正在执行工具...');
+        if (content.isEmpty && toolCalls.isNotEmpty) {
+          _setContent(id, '正在执行工具...');
+        }
 
         for (final tc in toolCalls) {
-          final fn = tc['function'] ?? {};
-          final toolName = fn['name'] ?? '';
-          final argsStr = fn['arguments'] ?? '{}';
-          Map<String, dynamic> args;
-          try {
-            args = jsonDecode(argsStr) as Map<String, dynamic>;
-          } catch (_) {
-            args = <String, dynamic>{};
-          }
+          final toolName = tc.name;
+          final args = tc.args;
 
           // ── 记录执行步骤 ──
           final stepIdx = execLog.addStep(toolName, args);
@@ -216,7 +238,8 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
           step.start();
 
           // 更新 UI 进度
-          final progress = '步骤 ${step.index}：${_getToolLabel(toolName, args)}';
+          final progress =
+              '步骤 ${step.index}：${_getToolLabel(toolName, args)}';
           _setContent(id, '$content\n\n$progress');
 
           // 执行工具
@@ -231,16 +254,26 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
 
           // 更新 UI
           final icon = result.success ? '成功' : '失败';
-          _setContent(id,
+          _setContent(
+              id,
               '$content\n\n步骤 ${step.index}：${_getToolLabel(toolName, args)}\n'
                   '$icon ${result.output}');
 
-          // 喂回 LLM（OpenAI 协议）
-          messages.add({
-            'tool_call_id': tc['id'] ?? '',
-            'role': 'tool',
-            'content': result.jsonOutput,
-          });
+          // 喂回 LLM
+          if (useTextProtocol) {
+            // 文本协议：用 [TOOL_RESULT:...] 格式回传
+            messages.add({
+              'role': 'user',
+              'content': ToolProtocol.formatToolResult(result),
+            });
+          } else {
+            // 原生协议：用 role:tool 回传
+            messages.add({
+              'tool_call_id': '${DateTime.now().millisecondsSinceEpoch}',
+              'role': 'tool',
+              'content': result.jsonOutput,
+            });
+          }
         }
       }
 
