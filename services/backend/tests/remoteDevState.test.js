@@ -10,7 +10,7 @@ const {
   buildUnifiedState,
   discoverabilityReport,
   summarizeConnection,
-} = require('../src/services/remotedev/remoteDevState');
+} = require('../src/services/domain/network/remotedev/remoteDevState.js');
 
 const NOW = '2026-06-29T00:00:00.000Z';
 

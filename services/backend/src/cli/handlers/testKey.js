@@ -17,6 +17,7 @@
  */
 
 const { printError, printInfo, printTable, printSuccess } = require('../formatters');
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 
 /**
  * @param {string[]} args 位置参数(args[0] = 子命令或厂商名)
@@ -167,4 +168,17 @@ function _printResults(results) {
   }
 }
 
-module.exports = { handleTestKey };
+module.exports = {
+  handleTestKey,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'test-keys',
+    aliases: ['test-key', 'testkey'],
+    description: '厂商连通性自检：输入 key 测试是否连通（key 不落盘）',
+    usage: 'test-keys <vendor> --key <k> | --all | list',
+    category: 'dev',
+    handler: async (parsed) => {
+      await handleTestKey(parsed.args, parsed.options);
+      return true;
+    },
+  },
+};

@@ -8,7 +8,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const runner = require('../../src/services/docsFreshness/docsFreshnessRunner');
+const runner = require('../../src/services/domain/docs/docsFreshness/docsFreshnessRunner.js');
 
 test('_isSourceRel:源码扩展命中,docs/.ai 排除', () => {
   assert.strictEqual(runner._isSourceRel('services/backend/src/x.js'), true);

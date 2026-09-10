@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * WebBrowserTool — navigate must open the user's default browser with NO
+ * WebBrowserTool �?navigate must open the user's default browser with NO
  * dependency; the headless-automation actions drive a persistent Playwright
  * session and gate on `playwright`.
  */
@@ -70,7 +70,7 @@ describe('WebBrowserTool', () => {
       selectOption: ok('selectOption'), newTab: ok('newTab'), listTabs: ok('listTabs'),
       switchTab: ok('switchTab'), closeSession: ok('closeSession'),
     };
-    // Dependency present (ensure returns null) → flows straight to the session.
+    // Dependency present (ensure returns null) �?flows straight to the session.
     const deps = { session, _dep: { ensure: () => null } };
     // Patch the dependency require by injecting via a session-only deps object is
     // not enough; instead stub require cache:
@@ -124,9 +124,9 @@ describe('WebBrowserTool', () => {
   });
 });
 
-describe('browser/session — atomic ops over an injected fake chromium', () => {
-  const engine = require('../src/services/browser/engine');
-  const session = require('../src/services/browser/session');
+describe('browser/session �?atomic ops over an injected fake chromium', () => {
+  const engine = require('../src/services/domain/desktop/browser/engine.js');
+  const session = require('../src/services/domain/desktop/browser/session.js');
 
   function fakeChromium(record) {
     const page = {
@@ -166,7 +166,7 @@ describe('browser/session — atomic ops over an injected fake chromium', () => 
     delete process.env.KHY_BROWSER_PERSIST_STATE;
   });
 
-  test('goto → getText(body) → screenshot(base64) → closeSession reuse one browser', async () => {
+  test('goto �?getText(body) �?screenshot(base64) �?closeSession reuse one browser', async () => {
     process.env.KHY_BROWSER_PERSIST_STATE = '0'; // no storageState writes in tests
     const record = [];
     const fake = fakeChromium(record);
@@ -181,7 +181,7 @@ describe('browser/session — atomic ops over an injected fake chromium', () => 
     expect(txt.text).toBe('EVAL_RESULT'); // body innerText goes through page.evaluate
 
     const tmp = require('path').join(require('os').tmpdir(), 'khytest-shot.png');
-    const shot = await session.screenshot({ path: tmp }); // explicit path → returns path
+    const shot = await session.screenshot({ path: tmp }); // explicit path �?returns path
     expect(shot.success).toBe(true);
     expect(shot.path).toBe(tmp);
 
@@ -195,17 +195,17 @@ describe('browser/session — atomic ops over an injected fake chromium', () => 
     expect(session.isActive()).toBe(false);
   });
 
-  test('unavailable Playwright → ops return { unavailable: true } and never throw', async () => {
-    engine.__setPlaywrightModuleForTests(null); // loadPlaywright() → null
+  test('unavailable Playwright �?ops return { unavailable: true } and never throw', async () => {
+    engine.__setPlaywrightModuleForTests(null); // loadPlaywright() �?null
     // Force the loader to re-resolve as missing by pointing at a module without chromium.
     const r = await session.click('#x');
     expect(r.unavailable || r.success === false).toBeTruthy();
   });
 });
 
-describe('browser/session — crawler ops (autoScroll / jumpToIndex) over a scripted fake', () => {
-  const engine = require('../src/services/browser/engine');
-  const session = require('../src/services/browser/session');
+describe('browser/session �?crawler ops (autoScroll / jumpToIndex) over a scripted fake', () => {
+  const engine = require('../src/services/domain/desktop/browser/engine.js');
+  const session = require('../src/services/domain/desktop/browser/session.js');
 
   // A fake whose page.evaluate yields scripted results from a queue, so we can
   // drive the autoScroll termination loop and jumpToIndex deterministically.
@@ -256,7 +256,7 @@ describe('browser/session — crawler ops (autoScroll / jumpToIndex) over a scri
 
   test('autoScroll respects maxPasses as a hard cap', async () => {
     process.env.KHY_BROWSER_PERSIST_STATE = '0';
-    // Height keeps growing forever → only the pass cap can stop it.
+    // Height keeps growing forever �?only the pass cap can stop it.
     const ever = Array.from({ length: 10 }, (_, i) => ({ height: (i + 1) * 1000, text: '', targetFound: false }));
     engine.__setPlaywrightModuleForTests(scriptedChromium(ever));
     const r = await session.autoScroll({ maxPasses: 3, settleMs: 0 });
@@ -275,7 +275,7 @@ describe('browser/session — crawler ops (autoScroll / jumpToIndex) over a scri
     expect(r.passes).toBe(2);
   });
 
-  test('autoScroll gate off → single scroll fallback (autoScroll:false)', async () => {
+  test('autoScroll gate off �?single scroll fallback (autoScroll:false)', async () => {
     process.env.KHY_BROWSER_PERSIST_STATE = '0';
     process.env.KHY_BROWSER_AUTOSCROLL = 'off';
     engine.__setPlaywrightModuleForTests(scriptedChromium([{}]));
@@ -297,7 +297,7 @@ describe('browser/session — crawler ops (autoScroll / jumpToIndex) over a scri
     expect(r.snippet).toBe('item-50');
   });
 
-  test('jumpToIndex with no target → structured error (never throws)', async () => {
+  test('jumpToIndex with no target �?structured error (never throws)', async () => {
     process.env.KHY_BROWSER_PERSIST_STATE = '0';
     engine.__setPlaywrightModuleForTests(scriptedChromium([{}]));
     const r = await session.jumpToIndex({});
@@ -305,16 +305,16 @@ describe('browser/session — crawler ops (autoScroll / jumpToIndex) over a scri
     expect(String(r.error)).toMatch(/anchor|index|text|selector/i);
   });
 
-  test('autoScroll unavailable Playwright → { unavailable: true }', async () => {
+  test('autoScroll unavailable Playwright �?{ unavailable: true }', async () => {
     engine.__setPlaywrightModuleForTests(null);
     const r = await session.autoScroll({});
     expect(r.unavailable || r.success === false).toBeTruthy();
   });
 });
 
-describe('browser/session — agent-first ops (snapshot / actByRef / locate) over a fake', () => {
-  const engine = require('../src/services/browser/engine');
-  const session = require('../src/services/browser/session');
+describe('browser/session �?agent-first ops (snapshot / actByRef / locate) over a fake', () => {
+  const engine = require('../src/services/domain/desktop/browser/engine.js');
+  const session = require('../src/services/domain/desktop/browser/session.js');
 
   // A fake page that yields scripted accessibility nodes from evaluate, and records
   // ref-based / locator-based actions so we can assert auto-wait + dispatch.
@@ -364,7 +364,7 @@ describe('browser/session — agent-first ops (snapshot / actByRef / locate) ove
     expect(r.snapshot).toBe('- heading "Todos" [level=1] [ref=e1]\n  - textbox "What needs to be done?" [ref=e2]');
   });
 
-  test('snapshotForAI gate off → plain-text degradation (aria:false), never throws', async () => {
+  test('snapshotForAI gate off �?plain-text degradation (aria:false), never throws', async () => {
     process.env.KHY_BROWSER_PERSIST_STATE = '0';
     process.env.KHY_BROWSER_ARIA = 'off';
     const fake = ariaChromium({ nodes: 'PLAIN BODY TEXT' });
@@ -388,7 +388,7 @@ describe('browser/session — agent-first ops (snapshot / actByRef / locate) ove
     expect(fake.record).toContainEqual(['waitForSelector', '[data-khy-ref="e2"]', 'visible']);
     expect(fake.record).toContainEqual(['fill', '[data-khy-ref="e2"]', 'milk']);
 
-    // Injection attempt → rejected by the leaf, no DOM touched.
+    // Injection attempt �?rejected by the leaf, no DOM touched.
     const bad = await session.actByRef({ ref: 'e2"], [onclick', action: 'click' });
     expect(bad.success).toBe(false);
     expect(String(bad.error)).toMatch(/invalid ref/);
@@ -418,14 +418,14 @@ describe('browser/session — agent-first ops (snapshot / actByRef / locate) ove
     expect(String(bad.error)).toMatch(/invalid locator/);
   });
 
-  test('unavailable Playwright → agent-first ops return { unavailable: true }', async () => {
+  test('unavailable Playwright �?agent-first ops return { unavailable: true }', async () => {
     engine.__setPlaywrightModuleForTests(null);
     const r = await session.snapshotForAI({});
     expect(r.unavailable || r.success === false).toBeTruthy();
   });
 });
 
-describe('WebBrowserTool — agent-first action dispatch', () => {
+describe('WebBrowserTool �?agent-first action dispatch', () => {
   test('snapshot / actByRef / locate map to session ops with mapped params', async () => {
     const seen = [];
     const ok = (name) => (...args) => { seen.push([name, ...args]); return { success: true, [name]: true }; };
@@ -459,7 +459,7 @@ describe('WebBrowserTool — agent-first action dispatch', () => {
   });
 });
 
-describe('WebBrowserTool — crawler action dispatch', () => {
+describe('WebBrowserTool �?crawler action dispatch', () => {
   test('autoScroll / jumpToIndex map to session ops with params', async () => {
     const seen = [];
     const ok = (name) => (...args) => { seen.push([name, ...args]); return { success: true, [name]: true }; };
@@ -490,3 +490,4 @@ describe('WebBrowserTool — crawler action dispatch', () => {
     jest.dontMock('../src/services/dependency');
   });
 });
+

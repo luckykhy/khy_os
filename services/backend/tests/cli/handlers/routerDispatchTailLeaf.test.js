@@ -1,5 +1,4 @@
 'use strict';
-
 /**
  * Leaf-contract test for routerDispatchTail.js (extracted from cli/router.js).
  *
@@ -14,42 +13,43 @@
  * the assertions below stay on the deterministic surface (export shape, sentinel fall-through, setter
  * guard) and never dispatch an actual tail command.
  */
-const test = require('node:test');
-const assert = require('node:assert');
-
 const LEAF = '../../../src/cli/routerDispatchTail';
 const HOST = '../../../src/cli/router';
 
-test('leaf exports dispatchTailCommand + setter + sentinel', () => {
-  const leaf = require(LEAF);
-  assert.strictEqual(typeof leaf.dispatchTailCommand, 'function');
-  assert.strictEqual(typeof leaf.setRouterDispatchTailDeps, 'function');
-  assert.strictEqual(typeof leaf.ROUTER_NOT_HANDLED, 'symbol');
-});
-
-test('host router keeps its public contract after extraction', () => {
-  const host = require(HOST);
-  assert.strictEqual(typeof host.parseInput, 'function');
-  assert.strictEqual(typeof host.route, 'function');
-  assert.strictEqual(typeof host.getCompletions, 'function');
-});
-
-test('dispatchTailCommand returns the sentinel for non-tail commands (fall-through)', async () => {
-  const { dispatchTailCommand, ROUTER_NOT_HANDLED } = require(LEAF);
-  const r = await dispatchTailCommand('definitely-not-a-tail-command', {
-    subCommand: undefined, args: [], options: {}, rawCommandToken: '', parsed: {}, context: {},
-    printError() {}, printHelp() {}, printInfo() {}, printTable() {}, printSuccess() {},
-    printWarn() {}, withSpinner() {}, chalk: {},
+describe('Router Dispatch Tail Leaf', () => {
+  test('leaf exports dispatchTailCommand + setter + sentinel', async () => {
+      const leaf = require(LEAF);
+      expect(typeof leaf.dispatchTailCommand).toBe('function');
+      expect(typeof leaf.setRouterDispatchTailDeps).toBe('function');
+      expect(typeof leaf.ROUTER_NOT_HANDLED).toBe('symbol');
   });
-  assert.strictEqual(r, ROUTER_NOT_HANDLED);
+
+  test('host router keeps its public contract after extraction', async () => {
+      const host = require(HOST);
+      expect(typeof host.parseInput).toBe('function');
+      expect(typeof host.route).toBe('function');
+      expect(typeof host.getCompletions).toBe('function');
+  });
+
+  test('dispatchTailCommand returns the sentinel for non-tail commands (fall-through)', async () => {
+      const { dispatchTailCommand, ROUTER_NOT_HANDLED } = require(LEAF);
+      const r = await dispatchTailCommand('definitely-not-a-tail-command', {
+        subCommand: undefined, args: [], options: {}, rawCommandToken: '', parsed: {}, context: {},
+        printError() {}, printHelp() {}, printInfo() {}, printTable() {}, printSuccess() {},
+        printWarn() {}, withSpinner() {}, chalk: {},
+      });
+      expect(r).toBe(ROUTER_NOT_HANDLED);
+  });
+
+  test('setRouterDispatchTailDeps is a guarded, idempotent, non-throwing DI setter', async () => {
+      const { setRouterDispatchTailDeps } = require(LEAF);
+      expect(() => setRouterDispatchTailDeps().not.toThrow());
+      expect(() => setRouterDispatchTailDeps({}).not.toThrow());
+      expect(() => setRouterDispatchTailDeps({ chk: 1 }).not.toThrow());
+      const fake = { chk: () => ({}) };
+      expect(() => setRouterDispatchTailDeps(fake).not.toThrow());
+      expect(() => setRouterDispatchTailDeps(fake).not.toThrow());
+  });
+
 });
 
-test('setRouterDispatchTailDeps is a guarded, idempotent, non-throwing DI setter', () => {
-  const { setRouterDispatchTailDeps } = require(LEAF);
-  assert.doesNotThrow(() => setRouterDispatchTailDeps());
-  assert.doesNotThrow(() => setRouterDispatchTailDeps({}));
-  assert.doesNotThrow(() => setRouterDispatchTailDeps({ chk: 1 }));
-  const fake = { chk: () => ({}) };
-  assert.doesNotThrow(() => setRouterDispatchTailDeps(fake));
-  assert.doesNotThrow(() => setRouterDispatchTailDeps(fake));
-});

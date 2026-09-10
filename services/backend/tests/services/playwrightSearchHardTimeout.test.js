@@ -18,7 +18,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
 const ps = require('../../src/services/playwrightSearch');
-const engine = require('../../src/services/browser/engine');
+const engine = require('../../src/services/domain/desktop/browser/engine.js');
 
 const never = () => new Promise(() => {});
 

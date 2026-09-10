@@ -15,6 +15,7 @@
  */
 
 const path = require('path');
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 
 function loadKhyos() {
   // Resolved via @khy/shared subpath export (exports map ./runtime/khyos).
@@ -1508,4 +1509,13 @@ module.exports = {
   _printBuildFailureReport,
   _windowsKernelBuild,
   _writeBuildBreadcrumb,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'khyos',
+    aliases: ['os', 'khy-os'],
+    description: 'Khy OS 裸机内核：构建/运行/配置/部署',
+    usage: 'khyos [run|build|build-kernel|rebuild|provision|doctor]',
+    subCommands: ['run', 'build', 'build-kernel', 'rebuild', 'provision', 'doctor'],
+    category: 'system',
+    handler: handleKhyos,
+  },
 };

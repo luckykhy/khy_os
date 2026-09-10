@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tests for serviceRegistry.js â€” lazy-loaded service discovery.
+ * Tests for serviceRegistry.js â€?lazy-loaded service discovery.
  *
  * Loads a fresh module each time to avoid cross-test pollution from
  * auto-registered services.
@@ -82,3 +82,4 @@ describe('serviceRegistry', () => {
     expect(gw.has('core1')).toBe(false);
   });
 });
+

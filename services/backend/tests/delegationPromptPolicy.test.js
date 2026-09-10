@@ -19,7 +19,7 @@ const {
   buildDelegationPromptGuide,
   resolveWritingThePromptSection,
   LEGACY_WRITING_SECTION,
-} = require('../src/services/agents/delegationPromptPolicy');
+} = require('../src/services/domain/agents/agents/delegationPromptPolicy.js');
 
 const ON = { KHY_DELEGATION_PROMPT: '1' };
 const OFF = { KHY_DELEGATION_PROMPT: 'off' };

@@ -1,7 +1,6 @@
 'use strict';
-
 /**
- * Tests for the prebuilt-ISO obtain path in ensureKhyosIso â€” the cheapest, most
+ * Tests for the prebuilt-ISO obtain path in ensureKhyosIso â€?the cheapest, most
  * stable way to get a bootable KHY OS on a bare host: download one verified ISO
  * instead of provisioning a toolchain and compiling.
  *
@@ -13,18 +12,12 @@
  * Hermetic: preferLocal:false skips the dev repo build; KHY_KHYOS_CACHE_DIR points
  * the cache at a throwaway dir; the downloader is injected (no network).
  */
-
-const { describe, test, beforeEach, afterEach } = require('node:test');
-const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
-
 const { ensureKhyosIso } = require('@khy/shared/runtime/khyos/isoProvisioner');
-
 const sha256 = (b) => crypto.createHash('sha256').update(b).digest('hex');
-
 let tmp;
 const ISOLATED = [
   'KHY_KERNEL_ISO', 'KHY_KERNEL_ISO_URL', 'KHY_KERNEL_ISO_SHA256',
@@ -44,55 +37,59 @@ afterEach(() => {
   }
   try { fs.rmSync(tmp, { recursive: true, force: true }); } catch { /* ignore */ }
 });
+describe('ensureKhyosIso â€?prebuilt obtain', () => {
+});
 
-describe('ensureKhyosIso â€” prebuilt obtain', () => {
+describe('Khyos Iso Obtain', () => {
   test('KHY_KERNEL_ISO_URL + SHA256 downloads and verifies the ISO', async () => {
-    const iso = Buffer.from('FAKE-ISO-BYTES');
-    process.env.KHY_KERNEL_ISO_URL = 'https://host.invalid/khy-os-kernel.iso';
-    process.env.KHY_KERNEL_ISO_SHA256 = sha256(iso);
-    let gotUrl = null;
-    const downloader = async (url, dest) => { gotUrl = url; fs.writeFileSync(dest, iso); };
-
-    const out = await ensureKhyosIso({ preferLocal: false, downloader });
-    assert.equal(gotUrl, 'https://host.invalid/khy-os-kernel.iso');
-    assert.deepEqual(fs.readFileSync(out), iso);
+        const iso = Buffer.from('FAKE-ISO-BYTES');
+        process.env.KHY_KERNEL_ISO_URL = 'https://host.invalid/khy-os-kernel.iso';
+        process.env.KHY_KERNEL_ISO_SHA256 = sha256(iso);
+        let gotUrl = null;
+        const downloader = async (url, dest) => { gotUrl = url; fs.writeFileSync(dest, iso); };
+    
+        const out = await ensureKhyosIso({ preferLocal: false, downloader });
+        expect(gotUrl).toBe('https://host.invalid/khy-os-kernel.iso');
+        assert.deepEqual(fs.readFileSync(out), iso);
   });
 
   test('KHY_KERNEL_ISO_URL without a sha256 is refused', async () => {
-    process.env.KHY_KERNEL_ISO_URL = 'https://host.invalid/khy-os-kernel.iso';
-    await assert.rejects(
-      ensureKhyosIso({ preferLocal: false, downloader: async () => {} }),
-      /KHY_KERNEL_ISO_SHA256 is missing/,
-    );
+        process.env.KHY_KERNEL_ISO_URL = 'https://host.invalid/khy-os-kernel.iso';
+        await assert.rejects(
+          ensureKhyosIso({ preferLocal: false, downloader: async () => {} }),
+          /KHY_KERNEL_ISO_SHA256 is missing/,
+        );
   });
 
   test('a corrupt env-URL download fails verification (no ISO returned)', async () => {
-    process.env.KHY_KERNEL_ISO_URL = 'https://host.invalid/khy-os-kernel.iso';
-    process.env.KHY_KERNEL_ISO_SHA256 = sha256(Buffer.from('expected'));
-    const downloader = async (url, dest) => fs.writeFileSync(dest, Buffer.from('tampered'));
-    await assert.rejects(
-      ensureKhyosIso({ preferLocal: false, downloader }),
-      /SHA256 mismatch/,
-    );
+        process.env.KHY_KERNEL_ISO_URL = 'https://host.invalid/khy-os-kernel.iso';
+        process.env.KHY_KERNEL_ISO_SHA256 = sha256(Buffer.from('expected'));
+        const downloader = async (url, dest) => fs.writeFileSync(dest, Buffer.from('tampered'));
+        await assert.rejects(
+          ensureKhyosIso({ preferLocal: false, downloader }),
+          /SHA256 mismatch/,
+        );
   });
 
   test('manifest ISO pin fails over across mirrors', async () => {
-    const iso = Buffer.from('MANIFEST-ISO');
-    const manifest = {
-      filename: 'khy-os-kernel.iso', version: '0.2.0',
-      url: 'https://primary.invalid/khy-os-kernel.iso',
-      mirrors: ['https://mirror.invalid/khy-os-kernel.iso'],
-      sha256: sha256(iso),
-    };
-    const mp = path.join(tmp, 'm.json');
-    fs.writeFileSync(mp, JSON.stringify(manifest));
-    process.env.KHY_KHYOS_MANIFEST = mp;
-
-    const downloader = async (url, dest) => {
-      if (url.includes('primary')) throw new Error('HTTP 404');
-      fs.writeFileSync(dest, iso);
-    };
-    const out = await ensureKhyosIso({ preferLocal: false, downloader });
-    assert.deepEqual(fs.readFileSync(out), iso);
+        const iso = Buffer.from('MANIFEST-ISO');
+        const manifest = {
+          filename: 'khy-os-kernel.iso', version: '0.2.0',
+          url: 'https://primary.invalid/khy-os-kernel.iso',
+          mirrors: ['https://mirror.invalid/khy-os-kernel.iso'],
+          sha256: sha256(iso),
+        };
+        const mp = path.join(tmp, 'm.json');
+        fs.writeFileSync(mp, JSON.stringify(manifest));
+        process.env.KHY_KHYOS_MANIFEST = mp;
+    
+        const downloader = async (url, dest) => {
+          if (url.includes('primary')) throw new Error('HTTP 404');
+          fs.writeFileSync(dest, iso);
+        };
+        const out = await ensureKhyosIso({ preferLocal: false, downloader });
+        assert.deepEqual(fs.readFileSync(out), iso);
   });
+
 });
+

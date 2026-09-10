@@ -15,6 +15,7 @@
  */
 
 const path = require('path');
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 
 function fmt() {
   return require('../formatters');
@@ -223,4 +224,23 @@ function _detectGuards(fs, pathMod, root) {
   return out;
 }
 
-module.exports = { handleMaintain };
+module.exports = {
+  handleMaintain,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'maintain',
+    aliases: ['mnt', '维护'],
+    description: '单人维护者健康驾驶舱：bare/status/health/doctor/audit（gen/refresh/check/show/link/hook 委托 metadata）',
+    usage: 'maintain [status|health|doctor|audit|bare|gen|refresh|check|show|link|hook]',
+    subCommands: ['status', 'health', 'doctor', 'audit', 'bare', 'gen', 'refresh', 'check', 'show', 'link', 'hook'],
+    category: 'system',
+    handler: async (parsed) => {
+      const { getRouterSubCommands } = require('../constants/commandSchema');
+      const METADATA_SUBS = new Set(getRouterSubCommands().metadata || []);
+      const sub = String(parsed.subCommand || ((Array.isArray(parsed.args) && parsed.args[0]) || '')).toLowerCase();
+      if (METADATA_SUBS.has(sub)) {
+        return await require('./metadata').handleMetadata(parsed);
+      }
+      return await handleMaintain(parsed);
+    },
+  },
+};

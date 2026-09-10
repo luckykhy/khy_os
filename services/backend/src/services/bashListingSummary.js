@@ -78,7 +78,7 @@ function extractListingSummary(command, fullOutput, env) {
       return null;
     }
 
-    return `[Directory Summary] 共解析出 ${parsed.entries.length} 个条目(格式:${parsed.format});下方是完整原始输出。\n${block}\n\n--- 原始输出 ---\n`;
+    return `[Directory Summary] 共解析出 ${parsed.entries.length} 个条目(格式:${parsed.format});下方是完整原始输出。\n${block}\n\n原始输出:\n`;
   } catch {
     return null;
   }

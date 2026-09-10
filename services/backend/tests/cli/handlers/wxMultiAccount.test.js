@@ -10,12 +10,12 @@ const path = require('node:path');
 
 const HANDLER = path.resolve(__dirname, '../../../src/cli/handlers/wx.js');
 const FORMATTERS = path.resolve(__dirname, '../../../src/cli/formatters.js');
-const STORE = path.resolve(__dirname, '../../../src/services/messaging/ilinkAccountStore.js');
-const CORE = path.resolve(__dirname, '../../../src/services/messaging/ilinkCore.js');
+const STORE = path.resolve(__dirname, '../../../src/services/domain/messaging/messaging/ilinkAccountStore.js');
+const CORE = path.resolve(__dirname, '../../../src/services/domain/messaging/messaging/ilinkCore.js');
 const DAEMON = path.resolve(__dirname, '../../../src/services/daemonManager.js');
 const DEFAULTS = path.resolve(__dirname, '../../../src/constants/serviceDefaults.js');
 const CONFIG = path.resolve(__dirname, '../../../src/cli/handlers/config.js');
-const BINDING = path.resolve(__dirname, '../../../src/services/messaging/ilinkBindingStore.js');
+const BINDING = path.resolve(__dirname, '../../../src/services/domain/messaging/messaging/ilinkBindingStore.js');
 
 let infoLog, errLog, warnLog, successLog, tableLog, state;
 

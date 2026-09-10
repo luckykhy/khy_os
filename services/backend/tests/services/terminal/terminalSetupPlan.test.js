@@ -14,7 +14,7 @@ const assert = require('node:assert/strict');
 const path = require('path');
 
 const { planTerminalSetup, isVSCodeRemoteSSH, isEnabled, NATIVE_CSIU_TERMINALS } =
-  require('../../../src/services/terminal/terminalSetupPlan');
+  require('../../../src/services/domain/desktop/terminal/terminalSetupPlan.js');
 
 const HOME = '/home/u';
 

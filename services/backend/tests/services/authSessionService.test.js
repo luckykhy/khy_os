@@ -225,7 +225,7 @@ describe('authSessionService', () => {
 
     expect(result.revokedCount).toBe(1);
     // The implementation revokes in a single bulk update() (TOCTOU-safe) whose
-    // WHERE excludes the preserved current session â€” no per-session loop.
+    // WHERE excludes the preserved current session â€?no per-session loop.
     expect(AuthSession.update).toHaveBeenCalledWith(
       expect.objectContaining({ status: 'revoked', revokedReason: 'password_change' }),
       expect.objectContaining({
@@ -238,3 +238,4 @@ describe('authSessionService', () => {
     expect(current.update).not.toHaveBeenCalled();
   });
 });
+

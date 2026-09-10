@@ -155,6 +155,7 @@ import { useTheme } from '@/composables/useTheme';
 import { useUserStore } from '@/stores/user';
 import { safeSet } from '@/utils/safeStorage';
 import request from '@/api/request';
+import { describeLoadError } from '@/api/loadError';
 
 defineOptions({ name: 'MarkdownBoard' });
 
@@ -540,6 +541,12 @@ const serverLoading = ref(false);
 const serverSaving = ref(false);
 
 function serverErr(e, fallback) {
+  // /api/md-workbench/* 在两个后端服务上都没有挂载，Express 的兜底会返回
+  // { message: '接口不存在' }。把它换成 2.2 口径的「问题 + 识别码 + 修复」，
+  // 否则「接口不存在」会被当成「服务器上没有文件」来读。
+  if (e?.response?.status === 404) {
+    return describeLoadError(e, '服务器文件', '服务端尚未提供 /api/md-workbench 接口');
+  }
   return (
     (e && e.response && e.response.data && e.response.data.message) || (e && e.message) || fallback
   );

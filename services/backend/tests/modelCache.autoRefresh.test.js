@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Model Cache Auto-Refresh Tests â€” verify TTL invalidation logic.
+ * Model Cache Auto-Refresh Tests â€?verify TTL invalidation logic.
  */
 
 describe('Model Cache TTL Logic', () => {
@@ -57,3 +57,4 @@ describe('Model Cache TTL Logic', () => {
     else delete process.env.KIRO_MODEL_CACHE_MS;
   });
 });
+

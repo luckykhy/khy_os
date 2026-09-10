@@ -437,8 +437,10 @@ function PromptFrame({
       return h(Box, { key: `r${idx}` }, h(Text, { dimColor: true }, label));
     }
 
+    // 对齐 layout-preview.html:输入框标记为绿色粗体 `>`,与预览图 prompt-marker 一致。
+    // 注意:MARKER_W=2,故用 "> " 保持 2 列宽,与续行 "  " 对齐。
     const marker = row.isFirstOfValue
-      ? h(Text, { bold: true, color: accent || 'cyan' }, '❯ ')
+      ? h(Text, { bold: true, color: 'green' }, '> ')
       : h(Text, { dimColor: true }, '  ');
 
     if (row.isPlaceholder) {

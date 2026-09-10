@@ -143,6 +143,8 @@ async function fetchUpstreamModels({ baseUrl, endpoint, apiKey, apiFormat, proxy
     return data
       .filter((m) => m && m.id)
       .map((m) => {
+        // API 返回的 context_window/context_length 优先；未返回则为 0（由探测层补全）。
+        // 不做模型名推断——上下文窗口必须来自实际 API 响应。
         const entry = {
           id: m.id,
           contextWindow: m.context_window || m.context_length || m.max_context_length || 0,
@@ -167,4 +169,119 @@ async function fetchUpstreamModels({ baseUrl, endpoint, apiKey, apiFormat, proxy
   }
 }
 
-module.exports = { fetchUpstreamModels, buildModelsUrl, buildProxyDispatcher, ANTHROPIC_VERSION };
+/**
+ * 实际探测模型上下文窗口：发送最小请求，从响应中提取真实值。
+ *
+ * 与 fetchUpstreamModels（/v1/models 列表）不同，此函数通过实际 API 调用探测：
+ * 1. 发送 1 token 请求（max_tokens=1）
+ * 2. 从响应 headers 中提取上下文窗口（x-ratelimit-* 等）
+ * 3. 从响应体中提取（部分 provider 在 usage/model 字段携带）
+ * 4. 若均无 → 触发一次超限探测（发送大 max_tokens）→ 从错误消息提取
+ *
+ * @param {object} opts
+ * @param {string} opts.endpoint  API 端点（如 https://apihub.agnes-ai.com/v1）
+ * @param {string} opts.apiKey    API key
+ * @param {string} opts.modelId   模型 ID（如 agnes-2.5-flash）
+ * @param {string} [opts.proxyUrl] 代理 URL
+ * @param {number} [opts.timeoutMs=5000] 超时
+ * @returns {Promise<number>} 上下文窗口 token 数（0 = 未探测到）
+ */
+async function probeContextWindow({ endpoint, apiKey, modelId, proxyUrl, timeoutMs = 5000 } = {}) {
+  if (!endpoint || !apiKey || !modelId) return 0;
+
+  const chatUrl = `${endpoint.replace(/\/+$/, '')}/chat/completions`;
+  const dispatcher = buildProxyDispatcher(proxyUrl, chatUrl);
+  const headers = {
+    ...buildHeaders(apiKey, 'openai'),
+    'Content-Type': 'application/json',
+  };
+
+  // ── Step 1: 最小请求，从 headers/body 提取 ─────────────────────
+  try {
+    const resp = await fetchWithTimeout(
+      (signal) =>
+        fetch(chatUrl, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            model: modelId,
+            messages: [{ role: 'user', content: 'hi' }],
+            max_tokens: 1,
+          }),
+          signal,
+          ...(dispatcher ? { dispatcher } : {}),
+        }),
+      { timeoutMs, operation: 'probeContextWindow' }
+    );
+
+    if (resp) {
+      // 从 headers 提取（部分 provider 在响应头中返回限制信息）
+      const headerChecks = [
+        'x-ratelimit-limit-tokens',
+        'x-ratelimit-limit-context',
+        'x-context-window',
+        'x-model-context-window',
+      ];
+      for (const h of headerChecks) {
+        const val = parseInt(resp.headers?.get?.(h) || resp.headers?.[h], 10);
+        if (Number.isFinite(val) && val > 0) return val;
+      }
+
+      // 从响应体提取
+      if (resp.ok) {
+        const body = await resp.json();
+        // 部分 provider 在响应中返回模型元数据
+        const bodyCtx =
+          body?.context_window ||
+          body?.model_info?.context_window ||
+          body?.usage?.context_window ||
+          0;
+        if (bodyCtx > 0) return bodyCtx;
+      }
+    }
+  } catch {
+    /* fail-soft: 继续到 Step 2 */
+  }
+
+  // ── Step 2: 超限探测（发送极大 max_tokens 触发错误） ────────────
+  // 从错误消息中提取真实上下文窗口（如 "maximum context length is 512000 tokens"）
+  try {
+    const resp = await fetchWithTimeout(
+      (signal) =>
+        fetch(chatUrl, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            model: modelId,
+            messages: [{ role: 'user', content: 'hi' }],
+            max_tokens: 999999999,
+          }),
+          signal,
+          ...(dispatcher ? { dispatcher } : {}),
+        }),
+      { timeoutMs, operation: 'probeContextWindow-overflow' }
+    );
+
+    if (resp && !resp.ok) {
+      const body = await resp.json().catch(() => ({}));
+      const errMsg = body?.error?.message || body?.message || '';
+      if (errMsg) {
+        const { parseContextOverflowTokens } = require('../errorClassifier');
+        const parsed = parseContextOverflowTokens(errMsg);
+        if (parsed && parsed.limitTokens > 0) return parsed.limitTokens;
+      }
+    }
+  } catch {
+    /* fail-soft: 探测失败返回 0 */
+  }
+
+  return 0;
+}
+
+module.exports = {
+  fetchUpstreamModels,
+  probeContextWindow,
+  buildModelsUrl,
+  buildProxyDispatcher,
+  ANTHROPIC_VERSION,
+};

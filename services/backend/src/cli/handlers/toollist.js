@@ -21,6 +21,7 @@
  *
  * @module handlers/toollist
  */
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const chalk = require('chalk').default || require('chalk');
 const { printInfo, printWarn } = require('../formatters');
 
@@ -107,4 +108,10 @@ async function handleToolList(subCommand, args = [], options = {}) {
 module.exports = {
   handleToolList,
   _filterToolCatalog,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'toollist',
+    description: 'toollist command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleToolList(parsed.subCommand, parsed.args, parsed.options),
+  },
 };

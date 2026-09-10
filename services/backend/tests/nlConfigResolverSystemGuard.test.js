@@ -19,7 +19,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const nl = require('../src/services/config/nlConfigResolver');
+const nl = require('../src/services/domain/config/config/nlConfigResolver.js');
 const kickoff = require('../src/services/goalKickoff');
 const gate = require('../src/services/goalStopGate');
 const core = require('../src/services/goalCore');

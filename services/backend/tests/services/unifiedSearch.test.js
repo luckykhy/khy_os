@@ -13,7 +13,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const { unifiedSearch, buildGrepPattern } = require('../../src/services/search/unifiedSearch');
+const { unifiedSearch, buildGrepPattern } = require('../../src/services/domain/query/search/unifiedSearch.js');
 
 // ── buildGrepPattern ──────────────────────────────────────────────────────────
 

@@ -8,7 +8,7 @@ const {
   renderContextSuggestionLines,
   contextSuggestionsEnabled,
   NEAR_CAPACITY_PERCENT,
-} = require('../../src/services/context/contextSuggestions');
+} = require('../../src/services/domain/session/context/contextSuggestions.js');
 
 const WIN = 100000;
 

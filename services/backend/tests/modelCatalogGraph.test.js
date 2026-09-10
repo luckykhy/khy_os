@@ -46,7 +46,7 @@ jest.mock('../src/services/imageGenService', () => ({
 
 jest.mock('../src/services/videoGenService', () => ({
   catalogModels: jest.fn(() => ([
-    { backend: 'agnes', model: 'agnes-video-v2.0', capability: 'video' },
+    { backend: 'agnes', model: 'agnes-video-2.5', capability: 'video' },
   ])),
 }));
 
@@ -73,7 +73,7 @@ describe('buildCatalogGraph — unified join', () => {
     expect(ids).toContain('agnes:agnes-image-2.0-flash');
 
     // video (NOT in the registry — only from videoGenService)
-    expect(ids).toContain('agnes:agnes-video-v2.0');
+    expect(ids).toContain('agnes:agnes-video-2.5');
 
     expect(sources.customProviders).toBe(2);
     expect(sources.poolOnlyProviders).toBe(1);
@@ -96,7 +96,7 @@ describe('buildCatalogGraph — unified join', () => {
     const byId = (id) => edges.find(e => `${e.provider}:${e.model}` === id);
     expect(byId('agnes:agnes-2.0-flash').capability).toBe('text');
     expect(byId('agnes:agnes-image-2.1-flash').capability).toBe('image');
-    expect(byId('agnes:agnes-video-v2.0').capability).toBe('video');
+    expect(byId('agnes:agnes-video-2.5').capability).toBe('video');
   });
 
   test('provider-declared tier wins over auto classification', async () => {

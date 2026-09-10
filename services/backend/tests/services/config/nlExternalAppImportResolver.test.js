@@ -10,8 +10,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const R = require('../../../src/services/config/nlExternalAppImportResolver');
-const FWD = require('../../../src/services/config/nlExternalAppResolver');
+const R = require('../../../src/services/domain/config/config/nlExternalAppImportResolver.js');
+const FWD = require('../../../src/services/domain/config/config/nlExternalAppResolver.js');
 
 const ON = { KHY_NL_EXTERNAL_APP_IMPORT: 'true' };
 

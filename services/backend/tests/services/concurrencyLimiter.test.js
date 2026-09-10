@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tests for concurrencyLimiter.js â€” runWithConcurrency,
+ * Tests for concurrencyLimiter.js â€?runWithConcurrency,
  * runWithConcurrencyAndTimeout, and mapWithConcurrency.
  */
 
@@ -144,3 +144,4 @@ describe('mapWithConcurrency', () => {
     ).rejects.toThrow('map fail');
   });
 });
+

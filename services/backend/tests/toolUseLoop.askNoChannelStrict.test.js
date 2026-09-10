@@ -1,5 +1,4 @@
 'use strict';
-
 /**
  * toolUseLoop.askNoChannelStrict.test.js — P3 of the KHY⇄CC mode-alignment work.
  *
@@ -11,22 +10,15 @@
  * state the assumption, flag anything that truly needs the user. Setting the env
  * flag off restores the legacy fire-and-continue behavior.
  */
-
 const os = require('os');
 const path = require('path');
 const fs = require('fs');
-
 const TMP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-ask-nochannel-'));
 process.env.HOME = TMP_HOME;
 process.env.USERPROFILE = TMP_HOME;
 process.env.KHY_TASK_CAPABILITY_GATE = 'false';
 process.env.KHY_EXEC_APPROVAL = 'off';
-
-const { describe, test, afterEach } = require('node:test');
-const assert = require('node:assert/strict');
-
 const toolUseLoop = require('../src/services/toolUseLoop');
-
 const QUESTION_INPUT = {
   questions: [{
     question: 'Which database should the service use?',
@@ -38,7 +30,6 @@ const QUESTION_INPUT = {
     multiSelect: false,
   }],
 };
-
 function makeChat(captured) {
   let calls = 0;
   return async (message) => {
@@ -56,40 +47,42 @@ function makeChat(captured) {
     return { reply: 'Proceeding with postgres as the reasonable default.', stopReason: 'stop', provider: 'mock' };
   };
 }
-
 describe('AskUserQuestion no-channel conservative pause (P3)', () => {
   afterEach(() => { delete process.env.KHY_ASK_NOCHANNEL_STRICT; });
+});
 
+describe('Tool Use Loop ask No Channel Strict', () => {
   test('default (strict on): re-injects a conservative instruction, not the queued stub', async () => {
-    delete process.env.KHY_ASK_NOCHANNEL_STRICT; // default = on
-    const captured = {};
-    await toolUseLoop.runToolUseLoop('Set up the database for the service', {
-      chat: makeChat(captured),
-      maxIterations: 3,
-      sessionId: 'sess-p3-a',
-      requestId: 'req-p3-a',
-      // No onControlRequest → no interactive channel.
-    });
-    assert.ok(captured.secondMessage, 'model should have been called a second time');
-    assert.match(captured.secondMessage, /No interactive user channel/);
-    assert.match(captured.secondMessage, /most reasonable default/);
-    // The question text is echoed so the model has the context.
-    assert.match(captured.secondMessage, /Which database should the service use\?/);
-    // The silent legacy stub must NOT be what the model sees.
-    assert.equal(/Question queued for user/.test(captured.secondMessage), false);
+        delete process.env.KHY_ASK_NOCHANNEL_STRICT; // default = on
+        const captured = {};
+        await toolUseLoop.runToolUseLoop('Set up the database for the service', {
+          chat: makeChat(captured),
+          maxIterations: 3,
+          sessionId: 'sess-p3-a',
+          requestId: 'req-p3-a',
+          // No onControlRequest → no interactive channel.
+        });
+        expect(captured.secondMessage).toBeTruthy();
+        expect(captured.secondMessage).toMatch(/No interactive user channel/);
+        expect(captured.secondMessage).toMatch(/most reasonable default/);
+        // The question text is echoed so the model has the context.
+        expect(captured.secondMessage).toMatch(/Which database should the service use\?/);
+        // The silent legacy stub must NOT be what the model sees.
+        expect(/Question queued for user/.test(captured.secondMessage)).toBe(false);
   });
 
   test('strict off: restores legacy fire-and-continue stub', async () => {
-    process.env.KHY_ASK_NOCHANNEL_STRICT = '0';
-    const captured = {};
-    await toolUseLoop.runToolUseLoop('Set up the database for the service', {
-      chat: makeChat(captured),
-      maxIterations: 3,
-      sessionId: 'sess-p3-b',
-      requestId: 'req-p3-b',
-    });
-    assert.ok(captured.secondMessage, 'model should have been called a second time');
-    assert.match(captured.secondMessage, /Question queued for user/);
-    assert.equal(/No interactive user channel/.test(captured.secondMessage), false);
+        process.env.KHY_ASK_NOCHANNEL_STRICT = '0';
+        const captured = {};
+        await toolUseLoop.runToolUseLoop('Set up the database for the service', {
+          chat: makeChat(captured),
+          maxIterations: 3,
+          sessionId: 'sess-p3-b',
+          requestId: 'req-p3-b',
+        });
+        expect(captured.secondMessage).toBeTruthy();
+        expect(captured.secondMessage).toMatch(/Question queued for user/);
+        expect(/No interactive user channel/.test(captured.secondMessage)).toBe(false);
   });
+
 });

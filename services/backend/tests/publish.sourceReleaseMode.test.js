@@ -49,7 +49,7 @@ describe('publish source release mode', () => {
     };
   }
 
-  test('git-push is no longer password-gated â€” full real release without any secret', async () => {
+  test('git-push is no longer password-gated â€?full real release without any secret', async () => {
     mockGitSpawnSync();
     const fmt = mockFormatters();
     const verifyOwnerSecret = jest.fn(() => ({ ok: false, error: 'bad' }));
@@ -96,3 +96,4 @@ describe('publish source release mode', () => {
     expect(fmt.printInfo).toHaveBeenCalledWith(expect.stringContaining('Dry run: git push'));
   });
 });
+

@@ -39,7 +39,7 @@ describe('gateway read-through cache', () => {
     const second = await cachedGatewayPayload(key, producer);
 
     expect(first).toEqual({ n: 1 });
-    expect(second).toEqual({ n: 1 }); // cached â€” producer not re-run
+    expect(second).toEqual({ n: 1 }); // cached â€?producer not re-run
     expect(calls).toBe(1);
   });
 
@@ -100,6 +100,7 @@ describe('gateway read-through cache', () => {
     process.env.KHY_GATEWAY_CACHE_TTL = '120';
     expect(gatewayCacheTtl()).toBe(120);
     process.env.KHY_GATEWAY_CACHE_TTL = 'garbage';
-    expect(gatewayCacheTtl()).toBe(60); // invalid â†’ default
+    expect(gatewayCacheTtl()).toBe(60); // invalid â†?default
   });
 });
+

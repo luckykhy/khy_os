@@ -15,6 +15,7 @@
  */
 const chalk = require('chalk').default || require('chalk');
 const { printSuccess, printError, printInfo, printTable } = require('../formatters');
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 
 function getPool() {
   return require('../../services/accountPool');
@@ -667,4 +668,31 @@ module.exports = {
   handlePoolUse,
   handlePoolApi,
   handlePoolAutoImport,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'pool',
+    aliases: ['账号池', 'keypool'],
+    description: '登录账号池管理：列表/添加/删除/启用/禁用/状态/调度/导入/使用/API/自动导入',
+    usage: 'pool <subcommand> [args]',
+    subCommands: ['list', 'add', 'delete', 'remove', 'enable', 'disable', 'import', 'use', 'api', 'status', 'scheduling', 'auto-import'],
+    category: 'system',
+    handler: async (parsed) => {
+      const sub = String(parsed.subCommand || '').toLowerCase();
+      const args = parsed.args || [];
+      switch (sub) {
+        case 'list': return await handlePoolList(args[0]);
+        case 'add': return await handlePoolAdd(args[0], args[1]);
+        case 'delete': case 'remove': case 'rm': case 'del':
+          return await handlePoolDelete(args[0]);
+        case 'enable': return await handlePoolEnable(args[0]);
+        case 'disable': return await handlePoolDisable(args[0]);
+        case 'import': return await handlePoolImport(args[0], args[1]);
+        case 'use': return await handlePoolUse(args[0], args[1]);
+        case 'api': return await handlePoolApi(args[0]);
+        case 'status': return await handlePoolStatus();
+        case 'scheduling': return await handlePoolScheduling(args[0]);
+        case 'auto-import': return await handlePoolAutoImport(args[0], args[1], args[2]);
+        default: return await handlePoolStatus();
+      }
+    },
+  },
 };

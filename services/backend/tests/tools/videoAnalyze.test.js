@@ -1,5 +1,5 @@
 /**
- * videoAnalyze.test.js â€” unit tests for video_analyze tool.
+ * videoAnalyze.test.js â€?unit tests for video_analyze tool.
  *
  * All external deps are mocked: child_process.spawn (intercepts ffprobe+ffmpeg),
  * searchExecutable/ensureSessionTmpDir (platformUtils), and aiGateway.generate.
@@ -52,10 +52,10 @@ const videoAnalyze = require('../../src/tools/videoAnalyze');
  * spawnWithIdleTimeout calls: child.stdout.setEncoding('utf8'), .on('data', fn);
  * child.stderr.setEncoding('utf8'), .on('data', fn); child.on('error'); child.on('close').
  * @param {object} opts
- * @param {string} [opts.stdoutData] â€” data to emit on stdout (before close)
+ * @param {string} [opts.stdoutData] â€?data to emit on stdout (before close)
  * @param {string} [opts.stderrData]
  * @param {number} [opts.exitCode=0]
- * @param {Function} [opts.onSpawn] â€” called after child is returned but before data emits, can write frame files to disk
+ * @param {Function} [opts.onSpawn] â€?called after child is returned but before data emits, can write frame files to disk
  */
 function fakeChild({ stdoutData = '', stderrData = '', exitCode = 0, onSpawn = null } = {}) {
   const child = new EventEmitter();
@@ -127,12 +127,12 @@ describe('video_analyze tool', () => {
   });
 
   test('ffprobe + ffmpeg + vision model pipeline works end to end', async () => {
-    // 1st mockSpawn â†’ ffprobe
+    // 1st mockSpawn â†?ffprobe
     mockSpawn.mockImplementationOnce(() => fakeChild({
       stdoutData: JSON.stringify({ format: { duration: '30.0' }, streams: [{ width: 1920, height: 1080 }] }),
     }));
 
-    // 2nd mockSpawn â†’ ffmpeg (writes frames to disk)
+    // 2nd mockSpawn â†?ffmpeg (writes frames to disk)
     mockSpawn.mockImplementationOnce(() => fakeChild({
       onSpawn: () => {
         // Write fake JPEG frames so _extractFrames can find them
@@ -248,3 +248,4 @@ describe('video_analyze tool', () => {
     expect(mockGenerate).not.toHaveBeenCalled();
   });
 });
+

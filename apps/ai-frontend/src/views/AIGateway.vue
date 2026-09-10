@@ -3083,7 +3083,7 @@ async function refreshModels() {
     });
     // Stream succeeded — populate catalog from stream result
     if (Array.isArray(streamData)) {
-      modelCatalog.value = streamData;
+      gw.modelCatalog.value = streamData;
     }
     // Also refresh catalog + overrides
     await Promise.all([gw.fetchCatalog(), gw.fetchModelOverrides()]);

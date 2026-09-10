@@ -48,3 +48,4 @@ describe('Instrument model', () => {
     expect(Instrument.rawAttributes.status).toBeDefined();
   });
 });
+

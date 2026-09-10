@@ -33,7 +33,12 @@ function applyEnvDefaults() {
     TRADING_AGENT_ANALYZE_TIMEOUT_MS: '30000',
     TRADING_AGENT_ML_TIMEOUT_MS: '20000',
     TRADING_AGENT_STOCK_TIMEOUT_MS: '15000',
-    DB_SYNC_ALTER: 'false'
+    DB_SYNC_ALTER: 'false',
+    ANTHROPIC_PROXY_ENABLED: 'false',
+    ANTHROPIC_PROXY_UPSTREAM: 'https://api.commandcode.ai/provider/v1/chat/completions',
+    ANTHROPIC_PROXY_API_KEY: '',
+    ANTHROPIC_PROXY_MODEL: 'meituan/LongCat-2.0:free',
+    ANTHROPIC_PROXY_DISPLAY_MODEL: 'claude-opus-4-8',
   };
 
   for (const [key, value] of Object.entries(defaults)) {

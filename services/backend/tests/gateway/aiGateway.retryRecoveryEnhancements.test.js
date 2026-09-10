@@ -113,12 +113,12 @@ describe('Gateway retry/recovery enhancements integration', () => {
     jest.restoreAllMocks();
   });
 
-  // ═══════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════�?
   // A. Context Overflow Auto-Adjust
-  // ═══════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════�?
 
   describe('A: Context Overflow Auto-Adjust', () => {
-    test('413/context_length with parseable tokens → adjusts maxTokens and retries successfully', async () => {
+    test('413/context_length with parseable tokens �?adjusts maxTokens and retries successfully', async () => {
       let attempt = 0;
       const entry = createAdapterEntry('api', async () => {
         attempt++;
@@ -255,12 +255,12 @@ describe('Gateway retry/recovery enhancements integration', () => {
     });
   });
 
-  // ═══════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════�?
   // B. requestSource Classification & Background Fast-Fail
-  // ═══════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════�?
 
   describe('B: requestSource classification & background fast-fail', () => {
-    test('background + overloaded thrown error → skips same-adapter retry', async () => {
+    test('background + overloaded thrown error �?skips same-adapter retry', async () => {
       // Use thrown errors since the thrown path (L3708-3717) has clear background fast-fail
       let attempt = 0;
       const entry = createAdapterEntry('api', async () => {
@@ -287,7 +287,7 @@ describe('Gateway retry/recovery enhancements integration', () => {
       expect(attempt).toBe(1);
     });
 
-    test('foreground + overloaded thrown error → retries same adapter (standard behavior)', async () => {
+    test('foreground + overloaded thrown error �?retries same adapter (standard behavior)', async () => {
       // Bypass cooldown so we can observe the retry path in isolation
       // (same pattern as aiGateway.stability.test.js).
       gateway._recordAdapterFailure = () => {};
@@ -318,7 +318,7 @@ describe('Gateway retry/recovery enhancements integration', () => {
       expect(attempt).toBe(2);
     });
 
-    test('env KHY_BG_FAST_FAIL=0 → background requests retry normally', async () => {
+    test('env KHY_BG_FAST_FAIL=0 �?background requests retry normally', async () => {
       process.env.KHY_BG_FAST_FAIL = '0';
       jest.resetModules();
       gateway = require('../../src/services/gateway/aiGateway');
@@ -365,12 +365,12 @@ describe('Gateway retry/recovery enhancements integration', () => {
     });
   });
 
-  // ═══════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════�?
   // C. 401 Credential Auto-Refresh
-  // ═══════════════════════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════════════�?
 
   describe('C: 401 credential auto-refresh', () => {
-    test('401 thrown + adapter with refreshCredential → refresh succeeds → retry succeeds', async () => {
+    test('401 thrown + adapter with refreshCredential �?refresh succeeds �?retry succeeds', async () => {
       // Bypass cooldown: auth errors trigger a 30s fast-fail window which
       // would block the post-refresh retry. The stability tests use the
       // same pattern (gateway._recordAdapterFailure = () => {}).
@@ -402,7 +402,7 @@ describe('Gateway retry/recovery enhancements integration', () => {
       expect(attempt).toBe(2);
     });
 
-    test('BUG-1 regression: refresh success clears the auth cooldown — retry works WITHOUT stubbing _recordAdapterFailure', async () => {
+    test('BUG-1 regression: refresh success clears the auth cooldown �?retry works WITHOUT stubbing _recordAdapterFailure', async () => {
       // Deliberately NO `gateway._recordAdapterFailure = () => {}` here: the
       // real failure recording populates the 30s auth fast-fail cache, and the
       // fix (_clearAdapterFailure on refresh success) must clear it so the
@@ -436,7 +436,7 @@ describe('Gateway retry/recovery enhancements integration', () => {
       expect(attempt).toBe(2);
     });
 
-    test('401 thrown + refresh fails → falls back to next adapter', async () => {
+    test('401 thrown + refresh fails �?falls back to next adapter', async () => {
       const entry1 = createAdapterEntry('trae', async () => {
         const err = new Error('Unauthorized');
         err.status = 401;
@@ -465,7 +465,7 @@ describe('Gateway retry/recovery enhancements integration', () => {
       expect(entry1.adapter.refreshCredential).toHaveBeenCalledTimes(1);
     });
 
-    test('401 thrown + adapter WITHOUT refreshCredential → cascades to next adapter', async () => {
+    test('401 thrown + adapter WITHOUT refreshCredential �?cascades to next adapter', async () => {
       const entry1 = createAdapterEntry('plain-api', async () => {
         const err = new Error('Unauthorized');
         err.status = 401;
@@ -490,7 +490,7 @@ describe('Gateway retry/recovery enhancements integration', () => {
       expect(result.adapter).toBe('fallback');
     });
 
-    test('env KHY_AUTO_CREDENTIAL_REFRESH=0 → no refresh attempted on 401', async () => {
+    test('env KHY_AUTO_CREDENTIAL_REFRESH=0 �?no refresh attempted on 401', async () => {
       process.env.KHY_AUTO_CREDENTIAL_REFRESH = '0';
       jest.resetModules();
       gateway = require('../../src/services/gateway/aiGateway');
@@ -531,3 +531,4 @@ describe('Gateway retry/recovery enhancements integration', () => {
     });
   });
 });
+

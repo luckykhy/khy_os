@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tests for deliveryValidator.js â€” cross-platform delivery readiness.
+ * Tests for deliveryValidator.js â€?cross-platform delivery readiness.
  */
 
 const fs = require('fs');
@@ -96,3 +96,4 @@ descFn('deliveryValidator', () => {
     await expect(validate('/nonexistent/path/xyz')).rejects.toThrow('Path not found');
   });
 });
+

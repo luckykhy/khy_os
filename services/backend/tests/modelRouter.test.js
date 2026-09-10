@@ -94,3 +94,4 @@ describe('modelRouter', () => {
     expect(mapped['claude-*']).toBe('kiro/claude-sonnet-4');
   });
 });
+

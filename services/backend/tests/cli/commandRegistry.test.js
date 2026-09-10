@@ -95,7 +95,7 @@ describe('commandRegistry', () => {
     });
 
     test('returns empty array for empty input', () => {
-      expect(registry.getCompletions('')).toEqual([]);
+      expect(registry.getCompletions('')).toBe([]);
     });
   });
 
@@ -145,3 +145,4 @@ describe('commandRegistry', () => {
     });
   });
 });
+

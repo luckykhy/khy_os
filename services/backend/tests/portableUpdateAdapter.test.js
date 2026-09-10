@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const adapter = require('../src/services/updateAdapters/portableAdapter');
+const adapter = require('../src/services/domain/network/updateAdapters/portableAdapter.js');
 const { writeArtifactManifest } = require('../../../extensions/scripts/khy-portable/artifact-manifest');
 
 const OLD_COMMIT = '1111111111111111111111111111111111111111';

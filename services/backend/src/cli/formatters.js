@@ -715,7 +715,7 @@ function printTable(headers, rows) {
         .join(gap)
         .replace(/\s+$/, '');
     const ruleWidth = colWidths.reduce((sum, w) => sum + w, 0) + padding.paddingRight * (colCount - 1);
-    const rule = '  ' + '─'.repeat(Math.max(1, ruleWidth));
+    const rule = '  ';
 
     console.log('  ' + renderRow(headers, (t) => chalk.cyan(t)));
     console.log(plainOutput ? rule : chalk.dim(rule));
@@ -725,11 +725,7 @@ function printTable(headers, rows) {
     return;
   }
 
-  const top = `  ╭${colWidths.map((w) => '─'.repeat(w + 2)).join('┬')}╮`;
-  const mid = `  ├${colWidths.map((w) => '─'.repeat(w + 2)).join('┼')}┤`;
-  const bot = `  ╰${colWidths.map((w) => '─'.repeat(w + 2)).join('┴')}╯`;
-
-  console.log(plainOutput ? top : chalk.dim(top));
+  console.log(plainOutput ? '  ' : chalk.dim('  '));
   const headerLine = headers
     .map((h, i) => {
       const text = padToWidth(String(h), colWidths[i]);
@@ -739,7 +735,7 @@ function printTable(headers, rows) {
   console.log(
     (plainOutput ? '  │' : chalk.dim('  │')) + headerLine + (plainOutput ? '│' : chalk.dim('│'))
   );
-  console.log(plainOutput ? mid : chalk.dim(mid));
+  console.log(plainOutput ? '  ' : chalk.dim('  '));
 
   for (const row of normalizedRows) {
     const rowLine = row
@@ -749,7 +745,7 @@ function printTable(headers, rows) {
       (plainOutput ? '  │' : chalk.dim('  │')) + rowLine + (plainOutput ? '│' : chalk.dim('│'))
     );
   }
-  console.log(plainOutput ? bot : chalk.dim(bot));
+  console.log(plainOutput ? '  ' : chalk.dim('  '));
 }
 
 // 无框表格的收尾:cli-table3 只负责算列宽和补齐,缩进与表头细线由这里加。
@@ -766,13 +762,7 @@ function _dressBorderlessTable(rendered) {
     return rendered;
   }
   const trimmed = lines.map((l) => l.replace(/\s+$/, ''));
-  const width = trimmed.reduce((max, l) => Math.max(max, displayWidth(stripAnsi(l))), 0);
-  const rule = chalk.dim('  ' + '─'.repeat(Math.max(1, width)));
   const out = trimmed.map((l) => '  ' + l);
-  // 只有存在数据行时才插线;单表头的空表插线只是又添一条孤零零的横杠。
-  if (out.length > 1) {
-    out.splice(1, 0, rule);
-  }
   return out.join('\n');
 }
 
@@ -781,11 +771,7 @@ function _dressBorderlessTable(rendered) {
 // 横杠),行长一变线就要么冒出去、要么缺一截 —— 让线跟着内容走,这类漂移就不存在了。
 // 下限 20 是防退化:数据全空时不要吐出一条一格长的短横。
 function _contentRule(rows) {
-  const width = (Array.isArray(rows) ? rows : []).reduce(
-    (max, r) => Math.max(max, displayWidth(stripAnsi(String(r)))),
-    0
-  );
-  return '  ' + '─'.repeat(Math.max(20, width));
+  return '';
 }
 
 function printQuote(quote) {
@@ -810,12 +796,12 @@ function printQuote(quote) {
 
   console.log('');
   console.log(`  ${icon} ${chalk.bold(quote.name)} ${chalk.dim('(' + quote.symbol + ')')}`);
-  console.log(chalk.dim(borderless ? _contentRule(rows) : '  ┌──────────────────────────────────────'));
+  console.log('');
   for (const row of rows) {
     console.log((borderless ? '  ' : '  │ ') + row);
   }
   if (!borderless) {
-    console.log(chalk.dim('  └──────────────────────────────────────'));
+    console.log(chalk.dim('  │'));
   }
   console.log('');
 }
@@ -853,19 +839,16 @@ function printBacktestResult(result) {
   // 视觉噪声比它分隔出来的信息还多。装订线 │ 同样去掉,留两空格缩进即可。
   const body = rows.map(([label, value]) => {
     if (!label && !value) {
-      return borderless ? '' : chalk.dim('  ├╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌');
+      return '';
     }
     const line = `${chalk.dim(padLabel(label))} ${value}`;
-    return borderless ? `  ${line}` : `  │ ${line}`;
+    return borderless ? `  ${line}` : `  ${line}`;
   });
 
   console.log('');
   console.log(`  ${ICON_CHART} ${chalk.bold('回测结果')} ${icon}`);
-  console.log(chalk.dim(borderless ? _contentRule(body) : '  ┌──────────────────────────────────────'));
+  console.log('');
   body.forEach((line) => console.log(line));
-  if (!borderless) {
-    console.log(chalk.dim('  └──────────────────────────────────────'));
-  }
   console.log('');
 }
 
@@ -953,6 +936,7 @@ function printHelp() {
         ['monitor selfcheck status|run', '底座自检'],
         ['proxy quickstart | proxy client add|list', '代理与令牌'],
         ['linux status|net|run', '系统排查'],
+        ['cleandisk [--dry-run] [--min-mb N]', 'C 盘大规模清理（自动清垃圾 + 大文件分组确认）'],
       ],
     },
     {
@@ -1265,10 +1249,9 @@ async function withSpinner(text, fn, { muteOutput = false, onProgress = null } =
 
 function printDivider(label) {
   if (label) {
-    const line = '─'.repeat(Math.max(0, 22 - stripAnsi(label).length));
-    console.log(chalk.dim(`  ── ${label} ${line}`));
+    console.log(chalk.dim(`  ${label}`));
   } else {
-    console.log(chalk.dim('  ' + '─'.repeat(40)));
+    console.log('');
   }
 }
 

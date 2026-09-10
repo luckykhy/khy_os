@@ -32,7 +32,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onBeforeUnmount, shallowRef } from 'vue';
 import { useRouter } from 'vue-router';
-import request from '@/api/request';
+import { resolveWsUrl } from '@/utils/ws';
 import { useUserStore } from '@/stores/user';
 import { Cpu, Monitor } from '@element-plus/icons-vue';
 import { Terminal } from '@xterm/xterm';
@@ -70,20 +70,6 @@ const statusTag = computed(() => {
       return { type: 'info', label: '未连接' };
   }
 });
-
-// Mirror AIChat.vue's resolveWsUrl so the terminal uses the same /ws endpoint.
-function resolveWsUrl(path) {
-  const normalizedPath = `/${String(path || '/ws').replace(/^\/+/, '')}`;
-  if (typeof window === 'undefined') return normalizedPath;
-  const origin = String(window.location.origin || '').trim();
-  const base = String(request.defaults.baseURL || '').trim();
-  const url = base ? new URL(base, origin) : new URL(origin);
-  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-  url.pathname = normalizedPath;
-  url.search = '';
-  url.hash = '';
-  return url.toString();
-}
 
 function b64encode(str) {
   // str is a binary string of bytes; encode to base64.

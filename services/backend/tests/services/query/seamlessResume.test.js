@@ -6,7 +6,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const sr = require('../../../src/services/query/seamlessResume');
+const sr = require('../../../src/services/domain/query/query/seamlessResume.js');
 
 const ON = {}; // 默认开
 const OFF = { KHY_SEAMLESS_RESUME: '0' };

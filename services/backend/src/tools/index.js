@@ -25,6 +25,51 @@ const path = require('path');
 
 const { defineTool, validateParams, BaseTool } = require('./_baseTool');
 const { filterToolsByProfile, getProfileTools, listProfiles } = require('./toolProfile');
+const { healFile } = require('./_toolSyntaxHealer');
+
+// ── Syntax self-healing integration ─────────────────────────────────
+
+/**
+ * Attempt to require a tool file. If it fails with a SyntaxError, attempt
+ * to heal the file and retry once. Fail-soft: returns undefined on failure.
+ * @param {string} indexPath - Absolute path to the tool's index.js
+ * @param {string} dirName - Tool directory name (for logging)
+ * @returns {*|undefined} The exported module, or undefined on failure
+ */
+function _requireWithHeal(indexPath, dirName) {
+  try {
+    return require(indexPath);
+  } catch (err) {
+    // Only attempt healing for SyntaxError — other errors (MODULE_NOT_FOUND, etc.)
+    // won't be fixed by syntax repair.
+    if (!(err instanceof SyntaxError)) {
+      throw err;
+    }
+
+    const healResult = healFile(indexPath);
+    if (healResult.healed) {
+      const changeSummary = healResult.changes
+        .map((c) => `L${c.line} ${c.pattern}`)
+        .join(', ');
+      console.warn(
+        `[ToolRegistry] Self-healed syntax in ${dir.name}/index.js: ${changeSummary}. Retrying...`
+      );
+      // Clear require cache so the healed file is re-loaded
+      delete require.cache[require.resolve(indexPath)];
+      try {
+        return require(indexPath);
+      } catch (retryErr) {
+        console.warn(
+          `[ToolRegistry] Failed to load ${dir.name}/index.js after healing: ${retryErr.message}`
+        );
+        return undefined;
+      }
+    }
+
+    // Healer didn't fire (disabled or no pattern matched) — re-throw original
+    throw err;
+  }
+}
 
 // ── Registry state ──────────────────────────────────────────────────
 
@@ -104,7 +149,7 @@ function loadTools() {
       }
 
       try {
-        const exported = require(indexPath);
+        const exported = _requireWithHeal(indexPath, dir.name);
 
         // Case 1: exported object is already a frozen defineTool() result
         if (
@@ -917,7 +962,38 @@ async function getToolPrompt(name) {
 
 // ── Result Size Management ─────────────────────────────────────────
 
-const DEFAULT_MAX_RESULT_CHARS = 20000; // 20K default（从30K降低以保护上下文空间）
+const DEFAULT_MAX_RESULT_CHARS = 20000; // 20K static fallback
+
+// 动态上下文预算：根据模型上下文窗口大小自适应计算工具结果限制。
+// 每次 toolUseLoop 启动时由 setDynamicContextBudget() 设置。
+// 策略：工具结果预算 = 上下文窗口的 5%，clamp [8K, 40K]。
+// 这样 32K 模型 → 8K/工具，200K 模型 → 10K/工具，1M 模型 → 40K/工具。
+let _dynamicResultLimit = null;
+
+/**
+ * 根据模型上下文窗口设置动态工具结果预算。
+ * @param {number} contextWindowTokens - 模型上下文窗口 token 数（0/未知 → 不设置）
+ */
+function setDynamicContextBudget(contextWindowTokens) {
+  if (!contextWindowTokens || contextWindowTokens <= 0) {
+    _dynamicResultLimit = null;
+    return;
+  }
+  // CHARS_PER_TOKEN ≈ 4（ASCII），CJK 更密，取保守值 3
+  const CHARS_PER_TOKEN = 3;
+  const contextChars = contextWindowTokens * CHARS_PER_TOKEN;
+  // 工具结果预算 = 上下文窗口的 5%，clamp [8K, 40K]
+  const budget = Math.round(contextChars * 0.05);
+  _dynamicResultLimit = Math.max(8000, Math.min(40000, budget));
+}
+
+/**
+ * 获取当前动态工具结果限制（用于测试/诊断）。
+ * @returns {number|null}
+ */
+function getDynamicResultLimit() {
+  return _dynamicResultLimit;
+}
 
 // Lazily resolve the tool results dir (portable-aware); fallback to legacy.
 function _resultDir() {
@@ -947,17 +1023,22 @@ function applyResultBudget(toolName, output, maxChars) {
     }
   }
 
-  // Determine limit
+  // Determine limit: explicit param > dynamic budget > per-tool static > static default
+  // 动态预算基于模型上下文窗口实时计算，比 per-tool 静态值更准确。
   let limit = maxChars;
   if (limit === undefined) {
-    if (!_loaded) {
-      loadTools();
-    }
-    const tool = _tools.get(toolName) || _mcpTools.get(toolName);
-    if (tool && tool.maxResultSizeChars !== undefined) {
-      limit = tool.maxResultSizeChars;
+    if (_dynamicResultLimit !== null) {
+      limit = _dynamicResultLimit;
     } else {
-      limit = DEFAULT_MAX_RESULT_CHARS;
+      if (!_loaded) {
+        loadTools();
+      }
+      const tool = _tools.get(toolName) || _mcpTools.get(toolName);
+      if (tool && tool.maxResultSizeChars !== undefined) {
+        limit = tool.maxResultSizeChars;
+      } else {
+        limit = DEFAULT_MAX_RESULT_CHARS;
+      }
     }
   }
 
@@ -1122,6 +1203,8 @@ module.exports = {
   getNonDeferredTools,
   getToolPrompt,
   applyResultBudget,
+  setDynamicContextBudget,
+  getDynamicResultLimit,
   getResultSizeExempt,
   // Deferred session management
   ensureTool,
@@ -1135,6 +1218,22 @@ module.exports = {
   listProfiles,
   getProfileTools,
   filterToolsByProfile,
+
+  // Self-healing (repair log access)
+  getCategoryRepairs: require('./_baseTool').getCategoryRepairs,
+  clearCategoryRepairs: require('./_baseTool').clearCategoryRepairs,
+  getRepairStats: require('./_baseTool').getRepairStats,
+  // Unified healer (E2/E3/E4/E5)
+  heal: require('./_toolHealer').heal,
+  healCategory: require('./_toolHealer').healCategory,
+  healRisk: require('./_toolHealer').healRisk,
+  healEnum: require('./_toolHealer').healEnum,
+  healType: require('./_toolHealer').healType,
+  learnPattern: require('./_toolHealer').learnPattern,
+  getLearnedPattern: require('./_toolHealer').getLearnedPattern,
+  hasLearnedPattern: require('./_toolHealer').hasLearnedPattern,
+  getAllLearnedPatterns: require('./_toolHealer').getAllLearnedPatterns,
+  clearLearnedPatterns: require('./_toolHealer').clearLearnedPatterns,
 
   // assembleToolPool memo (Ch2) — exported for unit testing. Not used in production paths.
   _buildToolPool,

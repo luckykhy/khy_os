@@ -91,3 +91,4 @@ describe('ProcessAgent depth limits', () => {
     expect(agent._children.size).toBe(0);
   });
 });
+

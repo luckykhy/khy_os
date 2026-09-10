@@ -2,6 +2,8 @@
 
 > 本文档定义 khy-os 项目前端组件库的设计标准、开发规范和发布流程。
 
+> ⚠️ **状态标注（2026-09-09）——目标态，非现状**：本文描述的 `KhyButton`/`KhyInput`/`KhyCard` 等独立组件库在当前代码中**不存在**。实测现状（[DESIGN-FE-001] §5）：基座是 Element Plus（不重新封装），共享组件仅 `KhyPageHeader`/`KhyEmpty`/`KhyIcon`/`LoadErrorBanner`/`GlobalProgressBar`/`KhyFloatBall` 六个，跨前端共享逻辑走 `@khy/ui-shared`（纯 JS 原语，无 UI 组件）。第 6 章「发布到 npm」流程亦不适用——`@khy/ui-shared` 是 `private: true` 的 workspace 包。**在组件库真正落地前，一切以 [DESIGN-FE-001] 为准**；本文仅在那时才转为生效规范。
+
 ---
 
 ## 1. 组件库概述

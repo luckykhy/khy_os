@@ -17,6 +17,7 @@
  */
 
 const { printInfo, printError, printTable, printSuccess } = require('../formatters');
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 
 function _core() {
   return require('../../services/pushNotifyCore');
@@ -196,4 +197,14 @@ function handleNotify(subCommand, args = [], options = {}, deps = {}) {
   return 1;
 }
 
-module.exports = { handleNotify };
+module.exports = {
+  handleNotify,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'notify',
+    aliases: ['push', '通知'],
+    description: '离线推送通知：状态/设置/测试/发送/清除/开关',
+    usage: 'notify <subcommand> [args]',
+    category: 'system',
+    handler: async (parsed) => handleNotify(parsed.subCommand, parsed.args, parsed.options),
+  },
+};

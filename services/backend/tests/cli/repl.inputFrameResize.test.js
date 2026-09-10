@@ -97,7 +97,7 @@ describe('repl input frame resize guards', () => {
     const writes = writeSpy.mock.calls.slice(baseline).map((call) => String(call[0] || ''));
 
     expect(rl.setPrompt.mock.calls.length).toBeGreaterThan(promptBaseline);
-    expect(rl.setPrompt.mock.calls[rl.setPrompt.mock.calls.length - 1][0]).toBe('❯ ');
+    expect(rl.setPrompt.mock.calls[rl.setPrompt.mock.calls.length - 1][0]).toBe('�?');
     expect(writes.some((text) => /─+/.test(text))).toBe(false);
   });
 
@@ -158,7 +158,8 @@ describe('repl input frame resize guards', () => {
     const writes = writeSpy.mock.calls.slice(baseline).map((call) => String(call[0] || ''));
 
     expect(rl.setPrompt.mock.calls.length).toBeGreaterThan(promptBaseline);
-    expect(rl.setPrompt.mock.calls[rl.setPrompt.mock.calls.length - 1][0]).toBe('❯ ');
+    expect(rl.setPrompt.mock.calls[rl.setPrompt.mock.calls.length - 1][0]).toBe('�?');
     expect(writes.some((text) => /─+/.test(text))).toBe(false);
   });
 });
+

@@ -1,12 +1,12 @@
 'use strict';
 
 /**
- * Structured-result recovery â€” machine-readable channels over prose scraping.
+ * Structured-result recovery â€?machine-readable channels over prose scraping.
  *
  * Covers:
- *   1. extractFirstJson â€” recovers a JSON value embedded in prose / fences /
+ *   1. extractFirstJson â€?recovers a JSON value embedded in prose / fences /
  *      truncated output, so consumers read typed data instead of regex-scraping.
- *   2. verificationAgent.adversarialVerify â€” prefers a structured JSON verdict
+ *   2. verificationAgent.adversarialVerify â€?prefers a structured JSON verdict
  *      block, and still falls back to the legacy VERDICT/Result prose format.
  */
 
@@ -15,7 +15,7 @@ const { adversarialVerify } = require('../src/services/verificationAgent');
 
 describe('extractFirstJson', () => {
   test('recovers a JSON object wrapped in prose', () => {
-    const txt = 'Sure, here is the result:\n{"verdict": "PASS", "n": 2} â€” done.';
+    const txt = 'Sure, here is the result:\n{"verdict": "PASS", "n": 2} â€?done.';
     expect(extractFirstJson(txt, null)).toEqual({ verdict: 'PASS', n: 2 });
   });
 
@@ -43,7 +43,7 @@ describe('extractFirstJson', () => {
   });
 });
 
-describe('adversarialVerify â€” structured verdict channel', () => {
+describe('adversarialVerify â€?structured verdict channel', () => {
   const params = (executeAI) => ({
     files: ['a.js'],
     cwd: process.cwd(),
@@ -73,3 +73,4 @@ describe('adversarialVerify â€” structured verdict channel', () => {
     expect(r.verdict).toBe('PARTIAL');
   });
 });
+

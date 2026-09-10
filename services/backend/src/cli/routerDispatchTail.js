@@ -158,7 +158,7 @@ async function dispatchTailCommand(command, _ctx) {
         console.log(
           `  对话记录:       ${chalk.white(cleanup.humanSize(report.conversations.size))} (${report.conversations.count} 个)`
         );
-        console.log(chalk.dim('  ' + '─'.repeat(30)));
+        console.log("");
         console.log(`  总计:           ${chalk.bold(report.totalHuman)}`);
         if (last) {
           const triggerLabel =
@@ -210,6 +210,85 @@ async function dispatchTailCommand(command, _ctx) {
           );
         }
       }
+      return true;
+    }
+
+    // ── Dream / memory consolidation ──
+    // /dream            — run deep consolidation (AI synthesis + health recovery)
+    // /dream light      — fast dedup (0.9 threshold)
+    // /dream deep       — AI synthesis + health recovery (default)
+    // /dream rem        — cross-memory pattern extraction (weekly)
+    // /dream status     — show health score + phase stats
+    // /dream force      — bypass recency throttle
+    case 'dream': {
+      const enhancer = require('../services/memoryDreamEnhancer');
+      const phase = (args[0] || 'deep').toLowerCase();
+      const force = options.force === true || args.includes('--force') || args.includes('-f');
+
+      if (phase === 'status' || phase === 'health') {
+        // Read health from existing dream tools
+        let healthInfo;
+        try {
+          const tools = enhancer.createDreamTools();
+          const healthTool = tools.find(t => t.name === 'memory_health');
+          healthInfo = healthTool ? await healthTool.handler({}) : null;
+        } catch (e) {
+          healthInfo = null;
+        }
+
+        console.log(chalk.bold('\n  🧠 Memory Health\n'));
+        if (healthInfo) {
+          console.log(`  Health Score: ${chalk.cyan(healthInfo.health?.score?.toFixed(2) || 'N/A')}`);
+          console.log(`  Active: ${healthInfo.health?.active || 0}`);
+          console.log(`  Compressed: ${healthInfo.health?.compressed || 0}`);
+          console.log(`  Pruned: ${healthInfo.health?.pruned || 0}`);
+          if (healthInfo.recommendations?.length) {
+            console.log(chalk.dim('\n  Recommendations:'));
+            healthInfo.recommendations.forEach(r => console.log(chalk.dim(`    - ${r}`)));
+          }
+        } else {
+          printInfo('Memory dreaming engine not available.');
+        }
+        console.log('');
+        return true;
+      }
+
+      const validPhases = ['light', 'deep', 'rem', 'all'];
+      if (!validPhases.includes(phase)) {
+        printError(`Unknown phase: ${phase}. Use: light | deep | rem | all | status`);
+        return true;
+      }
+
+      // Access the dreaming instance via the enhancer's tools
+      let result;
+      try {
+        const tools = enhancer.createDreamTools();
+        const triggerTool = tools.find(t => t.name === 'trigger_dream');
+
+        if (!triggerTool) {
+          // Fallback: use assistant.runDream for file-level consolidation
+          const { runDream } = require('../assistant/autoDream');
+          const gateway = require('../services/gateway/aiGateway');
+          console.log(chalk.dim(`\n  🌙 Running dream consolidation (${phase})...\n`));
+          result = await runDream(gateway);
+        } else {
+          console.log(chalk.dim(`\n  🌙 Running dream consolidation (${phase}${force ? ', forced' : ''})...\n`));
+          result = await triggerTool.handler({ phase, force });
+        }
+      } catch (e) {
+        printError(`Dream failed: ${e.message}`);
+        return true;
+      }
+
+      console.log(chalk.bold('  ✓ Dream Complete\n'));
+      if (result.phases) {
+        result.phases.forEach(p => console.log(`  ${chalk.green('✓')} ${p}`));
+      }
+      if (result.filesCreated?.length) {
+        console.log(chalk.dim(`\n  Files created:`));
+        result.filesCreated.forEach(f => console.log(chalk.dim(`    - ${f}`)));
+      }
+      console.log('');
       return true;
     }
 
@@ -293,7 +372,7 @@ async function dispatchTailCommand(command, _ctx) {
           printInfo(line);
         }
         if (options.show === true || options.show === 'true') {
-          console.log(chalk.dim('\n  ── MEMORY.md 契约种子 ──\n'));
+          console.log(chalk.dim('\n  MEMORY.md 契约种子\n'));
           console.log(
             contract.buildProjectMemoryIndexContract({
               projectRoot: info.projectRoot,
@@ -1078,7 +1157,7 @@ async function dispatchTailCommand(command, _ctx) {
       } else {
         console.log('');
         console.log(chalk.cyan.bold('  👤 当前用户'));
-        console.log(chalk.dim('  ' + '─'.repeat(30)));
+        console.log("");
         console.log(`  用户名:   ${chalk.bold(user.username)}`);
         if (user.email) {
           console.log(`  邮箱:     ${chalk.dim(user.email)}`);
@@ -1450,7 +1529,7 @@ async function dispatchTailCommand(command, _ctx) {
         }
         if (worker.result) {
           console.log('');
-          console.log(chalk.dim('  ── Result ──'));
+          console.log("");
           console.log(worker.result);
         }
         console.log('');

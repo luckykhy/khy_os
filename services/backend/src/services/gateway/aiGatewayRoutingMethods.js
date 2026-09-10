@@ -1542,11 +1542,11 @@ const AIGatewayRoutingMethods = {
            for (const m of models) {
              const cw = m.contextWindow || m.context_length || m.context_window;
              if (cw && cw > 0 && m.id) {
-               if (this._contextWindowCache.size >= (this._contextWindowCache._MAX || 500)) {
+               if (this._contextWindowCache.size >= 500) {
                  const oldest = this._contextWindowCache.keys().next().value;
                  this._contextWindowCache.delete(oldest);
                }
-               this._contextWindowCache.set(m.id, cw);
+               this._setContextWindowCache(m.id, cw, 4 * 60 * 60 * 1000, 'listModels');
               }
               // Cache the model output token limit alongside the context window
               // (same refresh path; consumed by the maxTokens preflight policy).
@@ -1638,7 +1638,7 @@ const AIGatewayRoutingMethods = {
    */
   setModelContextWindow(modelId, contextWindow) {
     if (modelId && contextWindow > 0) {
-      this._contextWindowCache.set(modelId, contextWindow);
+      this._setContextWindowCache(modelId, contextWindow, 4 * 60 * 60 * 1000, 'generate-response');
     }
   },
 
@@ -1684,21 +1684,36 @@ const AIGatewayRoutingMethods = {
    * Get the context window for a model.
    * Priority: adapter-reported cache → env override → 0 (unknown).
    * For unknown models, triggers async background refresh so next call has real data.
+   * Cache entries carry TTL: stale values are returned immediately (no阻塞),
+   * background refresh is triggered to update for next call.
    */
   getModelContextWindow(modelId) {
     if (!modelId) {
       return 0;
     }
-    // 1. Check adapter-reported cache (real data from API or model metadata)
+    // 1. Check cache (with TTL)
     const cached = this._contextWindowCache.get(modelId);
-    if (cached) {
-      return cached;
+    if (cached !== undefined) {
+      // 兼容旧格式（纯数字）和新格式（{value, expiresAt, source}）
+      if (typeof cached === 'number') {
+        return cached;
+      }
+      if (cached.value > 0) {
+        const now = Date.now();
+        if (!cached.expiresAt || now < cached.expiresAt) {
+          return cached.value; // 未过期，直接返回
+        }
+        // 已过期：返回旧值（不阻塞），后台刷新
+        this._resolveContextWindowAsync(modelId);
+        return cached.value;
+      }
     }
     // 2. Partial match in cache (model IDs often have version suffixes)
     const lower = modelId.toLowerCase();
     for (const [key, val] of this._contextWindowCache) {
       if (lower.includes(key.toLowerCase()) || key.toLowerCase().includes(lower)) {
-        return val;
+        if (typeof val === 'number') return val;
+        if (val.value > 0) return val.value;
       }
     }
     // 3. Env override
@@ -1709,6 +1724,111 @@ const AIGatewayRoutingMethods = {
     // 4. Trigger background refresh — next call will have real data
     this._resolveContextWindowAsync(modelId);
     return 0;
+  },
+
+  /**
+   * 带 TTL 写入上下文窗口缓存。
+   * @param {string} modelId
+   * @param {number} value - 上下文窗口 token 数
+   * @param {number} ttlMs - TTL 毫秒（默认 4 小时）
+   * @param {string} source - 来源标识（用于诊断）
+   */
+  _setContextWindowCache(modelId, value, ttlMs = 4 * 60 * 60 * 1000, source = 'unknown') {
+    if (!modelId || !value || value <= 0) return;
+    this._contextWindowCache.set(modelId, {
+      value,
+      expiresAt: ttlMs > 0 ? Date.now() + ttlMs : 0,
+      source,
+    });
+  },
+
+  /**
+   * 异步获取模型上下文窗口（等待探测完成）。
+   * 首次调用触发 adapter.listModels() 探测，带3秒超时。
+   * 后续调用直接从缓存返回。
+   *
+   * @param {string} modelId
+   * @param {number} [timeoutMs=3000] - 探测超时（毫秒）
+   * @returns {Promise<number>} 上下文窗口 token 数（0 = 未知）
+   */
+  async getModelContextWindowAsync(modelId, timeoutMs = 3000) {
+    // 快速路径：缓存已有
+    const sync = this.getModelContextWindow(modelId);
+    if (sync > 0) {
+      return sync;
+    }
+    // Level 4a: listModels() 探测
+    this._resolveContextWindowAsync(modelId);
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 200));
+      const found = this.getModelContextWindow(modelId);
+      if (found > 0) return found;
+      if (this._contextWindowPending && !this._contextWindowPending.has(modelId)) break;
+    }
+    // Level 4b: 实际 API 请求探测（发送最小请求 + 超限探测）
+    try {
+      const probed = await this._probeContextWindowForModel(modelId);
+      if (probed > 0) {
+        this._setContextWindowCache(modelId, probed, 4 * 60 * 60 * 1000, 'probe');
+        return probed;
+      }
+    } catch {
+      /* fail-soft */
+    }
+    return 0;
+  },
+
+  /**
+   * 通过实际 API 请求探测模型上下文窗口。
+   * 发送最小请求（1 token），从响应 headers/body/错误消息中提取真实值。
+   * 内置失败冷却：连续失败 ≥2 次 → 冷却 10 分钟，避免无意义重试。
+   * @param {string} modelId
+   * @returns {Promise<number>} 上下文窗口 token 数（0 = 未探测到）
+   */
+  async _probeContextWindowForModel(modelId) {
+    // 失败冷却：连续失败 ≥2 次 → 冷却 10 分钟
+    if (!this._probeFailureCount) this._probeFailureCount = new Map();
+    if (!this._probeCooldownUntil) this._probeCooldownUntil = new Map();
+    const now = Date.now();
+    const cooldownEnd = this._probeCooldownUntil.get(modelId) || 0;
+    if (now < cooldownEnd) return 0; // 冷却中，跳过
+
+    try {
+      const pool = require('../apiKeyPool');
+      const { probeContextWindow } = require('./upstreamModelProbe');
+      const parts = String(modelId || '').split(':');
+      const poolKey = parts.length >= 2 && parts[0] === 'api' ? parts[1] : null;
+      const rawModelId = parts.length >= 3 ? parts.slice(2).join(':') : modelId;
+      if (!poolKey) return 0;
+      const picked = pool.pick(poolKey);
+      if (!picked || !picked.endpoint || !picked.key) return 0;
+      const result = await probeContextWindow({
+        endpoint: picked.endpoint,
+        apiKey: picked.key,
+        modelId: rawModelId,
+        proxyUrl: picked.proxy,
+        timeoutMs: 5000,
+      });
+      if (result > 0) {
+        this._probeFailureCount.set(modelId, 0); // 成功 → 重置失败计数
+        return result;
+      }
+      // 探测返回 0 → 计入失败
+      this._probeFailureCount.set(modelId, (this._probeFailureCount.get(modelId) || 0) + 1);
+      if (this._probeFailureCount.get(modelId) >= 2) {
+        this._probeCooldownUntil.set(modelId, now + 10 * 60 * 1000); // 冷却 10 分钟
+        this._probeFailureCount.set(modelId, 0);
+      }
+      return 0;
+    } catch {
+      this._probeFailureCount.set(modelId, (this._probeFailureCount.get(modelId) || 0) + 1);
+      if ((this._probeFailureCount.get(modelId) || 0) >= 2) {
+        this._probeCooldownUntil.set(modelId, now + 10 * 60 * 1000);
+        this._probeFailureCount.set(modelId, 0);
+      }
+      return 0;
+    }
   },
 
   /**
@@ -1740,10 +1860,8 @@ const AIGatewayRoutingMethods = {
             for (const m of models) {
               const cw = m.contextWindow || m.context_length || m.context_window;
               if (cw && cw > 0 && m.id) {
-                this._contextWindowCache.set(m.id, cw);
+                this._setContextWindowCache(m.id, cw, 4 * 60 * 60 * 1000, 'listModels');
               }
-              // Same cache-fill discipline as _refreshModelsBackground: output
-              // limits ride along with the context-window resolution pass.
               const mo =
                 m.maxOutputTokens ||
                 m.max_output_tokens ||
@@ -1753,7 +1871,6 @@ const AIGatewayRoutingMethods = {
                 this.setModelMaxOutputTokens(m.id, mo);
               }
             }
-            // Check if we found it
             const found = this.getModelContextWindow(modelId);
             if (found > 0) {
               break;

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * displayFormatters.test.js — pure REPL display formatters.
+ * displayFormatters.test.js �?pure REPL display formatters.
  *
  * These three helpers were extracted verbatim from the cli/repl.js god file as
  * part of the behavior-preserving split. They had NO direct test coverage while
@@ -113,7 +113,7 @@ describe('formatToolSummary', () => {
 
   test('renders call count and elapsed seconds with no file ops', () => {
     expect(formatToolSummary({ totalCalls: 3, totalDurationMs: 2500 }))
-      .toBe('工具摘要: 3 次调用 · 2.5s');
+      .toBe('工具摘要: 3 次调�?· 2.5s');
   });
 
   test('appends file-op tallies in fixed order, counting scaffold as create', () => {
@@ -129,36 +129,36 @@ describe('formatToolSummary', () => {
         { operation: 'delete' },
       ],
     });
-    expect(out).toBe('工具摘要: 5 次调用 · 1.0s · 修改 1 · 新建 2 · 重命名 1 · 移动 1 · 删除 1');
+    expect(out).toBe('工具摘要: 5 次调�?· 1.0s · 修改 1 · 新建 2 · 重命�?1 · 移动 1 · 删除 1');
   });
 
   test('clamps negatives to zero', () => {
     expect(formatToolSummary({ totalCalls: -4, totalDurationMs: -2000 }))
-      .toBe('工具摘要: 0 次调用 · 0.0s');
+      .toBe('工具摘要: 0 次调�?· 0.0s');
   });
 
-  // CC backend-logic parity: a ≥60s turn routes the elapsed through the SAME
+  // CC backend-logic parity: a �?0s turn routes the elapsed through the SAME
   // ccFormatDuration SSOT as the TUI turn-stats line ("1m 30s"), instead of the
   // old "90.0s". Sub-minute elapsed keeps its tenths precision (informative,
-  // byte-identical to before). Gate off (KHY_CC_FORMAT) → legacy "90.0s".
-  test('routes a ≥60s elapsed through ccFormatDuration (CC parity), <60s keeps tenths', () => {
-    // <60s unchanged — tenths precision preserved.
+  // byte-identical to before). Gate off (KHY_CC_FORMAT) �?legacy "90.0s".
+  test('routes a �?0s elapsed through ccFormatDuration (CC parity), <60s keeps tenths', () => {
+    // <60s unchanged �?tenths precision preserved.
     expect(formatToolSummary({ totalCalls: 2, totalDurationMs: 59900 }))
-      .toBe('工具摘要: 2 次调用 · 59.9s');
-    // ≥60s → CC formatDuration "1m 30s", not "90.0s".
+      .toBe('工具摘要: 2 次调�?· 59.9s');
+    // �?0s �?CC formatDuration "1m 30s", not "90.0s".
     expect(formatToolSummary({ totalCalls: 3, totalDurationMs: 90000 }))
-      .toBe('工具摘要: 3 次调用 · 1m 30s');
-    // ≥60s with file ops still appends the tallies after the CC-formatted time.
+      .toBe('工具摘要: 3 次调�?· 1m 30s');
+    // �?0s with file ops still appends the tallies after the CC-formatted time.
     expect(formatToolSummary({ totalCalls: 4, totalDurationMs: 125000, fileOps: [{ operation: 'modify' }] }))
-      .toBe('工具摘要: 4 次调用 · 2m 5s · 修改 1');
+      .toBe('工具摘要: 4 次调�?· 2m 5s · 修改 1');
   });
 
-  test('gate off (KHY_CC_FORMAT=0) → ≥60s falls back to legacy "90.0s"', () => {
+  test('gate off (KHY_CC_FORMAT=0) �?�?0s falls back to legacy "90.0s"', () => {
     const prev = process.env.KHY_CC_FORMAT;
     process.env.KHY_CC_FORMAT = '0';
     try {
       expect(formatToolSummary({ totalCalls: 3, totalDurationMs: 90000 }))
-        .toBe('工具摘要: 3 次调用 · 90.0s');
+        .toBe('工具摘要: 3 次调�?· 90.0s');
     } finally {
       if (prev === undefined) delete process.env.KHY_CC_FORMAT;
       else process.env.KHY_CC_FORMAT = prev;
@@ -191,7 +191,7 @@ describe('toolProgressStart', () => {
   });
 
   test('returns null for unknown tools', () => {
-    expect(toolProgressStart('totally_unknown', {})).toBeNull();
+    expect(toolProgressStart('totally_unknown', {})).toBe();
   });
 });
 
@@ -212,3 +212,4 @@ describe('toolProgressDone', () => {
       .toEqual({ status: 'error', label: 'Failed', detail: '' });
   });
 });
+

@@ -3,7 +3,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { copyPayload } = require('../../../src/services/resources/archiveInstaller');
+const { copyPayload } = require('../../../src/services/domain/data/resources/archiveInstaller.js');
 
 describe('archive installer', () => {
   let root;

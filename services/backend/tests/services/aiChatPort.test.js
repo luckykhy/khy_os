@@ -34,7 +34,7 @@ describe('aiChatPort', () => {
   });
 
   test('workflowExecutor defaultPrimitives.chat throws structured error when unregistered', async () => {
-    const { defaultPrimitives } = require('../../src/services/workflow/workflowExecutor');
+    const { defaultPrimitives } = require('../../src/services/domain/project/workflow/workflowExecutor.js');
     const prim = defaultPrimitives();
     await assert.rejects(
       () => prim.chat('x'),
@@ -44,7 +44,7 @@ describe('aiChatPort', () => {
 
   test('workflowExecutor defaultPrimitives.chat routes through the port when registered', async () => {
     port.registerAiChat(async (p) => ({ reply: `p:${p}` }));
-    const { defaultPrimitives } = require('../../src/services/workflow/workflowExecutor');
+    const { defaultPrimitives } = require('../../src/services/domain/project/workflow/workflowExecutor.js');
     const prim = defaultPrimitives();
     assert.deepEqual(await prim.chat('go'), { reply: 'p:go' });
   });

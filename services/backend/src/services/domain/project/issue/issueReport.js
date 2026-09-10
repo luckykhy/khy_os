@@ -219,7 +219,7 @@ function buildIssueBody(opts = {}) {
     }
   }
   if (template.trim()) {
-    lines.push('---');
+    lines.push('');
     lines.push('');
     lines.push(template.trim());
   }

@@ -18,26 +18,27 @@
 export const viewLoaders = {
   '/': () => import('@/views/Layout.vue'),
   '/login': () => import('@/views/Login.vue'),
+  '/forgot-password': () => import('@/views/ForgotPassword.vue'),
   '/home': () => import('@/views/UserHome.vue'),
-  '/dashboard': () => import('@/views/AIDashboard.vue'),
-  '/gateway': () => import('@/views/AIGateway.vue'),
+  '/admin/overview': () => import('@/views/AIDashboard.vue'),
+  '/admin/models': () => import('@/views/AIGateway.vue'),
   '/bridge-channels': () => import('@/views/BridgeChannels.vue'),
-  '/wx-binding': () => import('@/views/WxBinding.vue'),
-  '/accounts': () => import('@/views/AccountPool.vue'),
+  '/admin/settings/wx': () => import('@/views/WxBinding.vue'),
+  '/admin/accounts': () => import('@/views/AccountPool.vue'),
   '/assets-customers': () => import('@/views/AIAssetsCustomers.vue'),
   '/payments': () => import('@/views/AIPayments.vue'),
   '/usage': () => import('@/views/UsageLogs.vue'),
   '/pricing': () => import('@/views/Pricing.vue'),
   '/monitor': () => import('@/views/AIMonitor.vue'),
   '/traffic': () => import('@/views/TrafficMonitor/index.vue'),
-  '/settings': () => import('@/views/Settings.vue'),
+  '/admin/settings': () => import('@/views/Settings.vue'),
   '/agents': () => import('@/views/AgentDashboard.vue'),
   '/chat': () => import('@/views/AIChat.vue'),
   '/prompts': () => import('@/views/PromptLibrary.vue'),
   '/features': () => import('@/views/FeatureCatalog.vue'),
   '/khyos': () => import('@/views/KhyOsTerminal.vue'),
   '/khyos/desktop': () => import('@/views/KhyOsDesktop.vue'),
-  '/my-gateway': () => import('@/views/MyGateway.vue'),
+  '/keys': () => import('@/views/MyGateway.vue'),
   '/workflows': () => import('@/views/Workflows.vue'),
   '/workflows/:id': () => import('@/views/WorkflowEditor.vue'),
   '/projects': () => import('@/views/Projects.vue'),
@@ -53,8 +54,14 @@ export const viewLoaders = {
   '/web-frontend-eval/tasks/:id': () => import('@/views/WebFrontendEvalTaskEditor.vue'),
   '/web-frontend-eval/runs': () => import('@/views/WebFrontendEvalRuns.vue'),
   '/web-frontend-eval/runs/:id': () => import('@/views/WebFrontendEvalRunDetail.vue'),
+  '/admin/channels': () => import('@/views/ChannelApis.vue'),
+  '/admin/channels/:id': () => import('@/views/ChannelApiEditor.vue'),
   '/markdown': () => import('@/views/Markdown.vue'),
+  '/security': () => import('@/views/Security.vue'),
   '/not-found': () => import('@/views/NotFound.vue'),
+  '/401': () => import('@/views/NotAuthenticated.vue'),
+  '/403': () => import('@/views/Forbidden.vue'),
+  '/500': () => import('@/views/ServerError.vue'),
 };
 
 // Chunks already requested — guards against re-importing on every hover.
@@ -79,10 +86,10 @@ export function prefetchView(path) {
 // every sidebar destination so switching never stalls on a first-visit download.
 export function prefetchViewsIdle(paths) {
   if (typeof window === 'undefined' || !Array.isArray(paths)) return;
-  // Warm the heaviest / most visited views first ('/chat', '/gateway'), then
-  // the rest in their original order — idle time may be short, so priority
-  // targets must be requested before the budget runs out.
-  const priority = ['/chat', '/gateway'];
+  // Warm the heaviest / most visited views first ('/chat', '/admin/models'),
+  // then the rest in their original order — idle time may be short, so
+  // priority targets must be requested before the budget runs out.
+  const priority = ['/chat', '/admin/models'];
   const ordered = [
     ...priority.filter((p) => paths.includes(p)),
     ...paths.filter((p) => !priority.includes(p)),

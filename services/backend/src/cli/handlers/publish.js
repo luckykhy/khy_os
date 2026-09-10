@@ -9,6 +9,7 @@ const { spawn, spawnSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 
 // 还原完整性对账（bundled 运行时纯叶）+ 磁盘落地文件枚举原语（既有 bundled 服务）。
 // 把「快照头 fileCount 只被打印、从不与磁盘对账」这条死字段接上线，让 restore 横幅诚实。
@@ -2280,4 +2281,15 @@ module.exports = {
   // Exposed so the deploy orchestrator can build a Docker bundle and read back
   // its archivePath/bundleName directly instead of parsing CLI stdout.
   _buildDockerBundle,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'restore',
+    aliases: ['restore-source'],
+    description: '解密 + 提取 pip/npm 包中嵌入的完整源码快照到目标目录',
+    usage: 'restore [target-dir]',
+    category: 'system',
+    handler: async (parsed) => {
+      await handleRestore(parsed.subCommand ? [parsed.subCommand, ...parsed.args] : parsed.args, parsed.options);
+      return true;
+    },
+  },
 };

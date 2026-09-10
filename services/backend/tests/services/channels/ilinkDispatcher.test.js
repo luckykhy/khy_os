@@ -26,7 +26,7 @@ process.env.KHY_ILINK_TYPING_KEEPALIVE_MS = '5';
 process.env.KHY_ILINK_QUERY_TIMEOUT_MS = '5000';
 
 const { IlinkDispatcher, buildSessionKey, normalizeReply } =
-  require('../../../src/services/channels/ilinkDispatcher');
+  require('../../../src/services/domain/messaging/channels/ilinkDispatcher.js');
 
 // ── buildSessionKey:纯函数,四种 scope + 非法回退 ────────────────────────────
 

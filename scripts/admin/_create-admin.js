@@ -31,7 +31,8 @@ async function main() {
 
   // We need to use the same sequelize instance as the app
   // Let's use the direct model module
-  const User = require('D:/Portable/khy-os/platform/packages/shared/src/models/User');
+  // Repo root = two levels up from scripts/admin/.
+  const User = require('../../platform/packages/shared/src/models/User');
 
   // Check if User has sequelize configured
   console.log('User model loaded');

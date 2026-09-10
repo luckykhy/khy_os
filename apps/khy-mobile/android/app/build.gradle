@@ -10,16 +10,31 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        // 多平台适配：支持 Android 和鸿蒙
+        multiDexEnabled true
+
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
-             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f13544452/tools/aapt/AaptAssets.cpp#61
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+
+        // 支持鸿蒙 HDB 调试
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64'
         }
     }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    // PRoot 需要原生库解压到磁盘（W^X 策略要求）
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
         }
     }
 }
@@ -40,6 +55,9 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+    // Shizuku API for advanced device control (used by DeviceControlPlugin)
+    implementation "dev.rikka.shizuku:api:12.1.0"
+    implementation "dev.rikka.shizuku:provider:12.1.0"
 }
 
 apply from: 'capacitor.build.gradle'

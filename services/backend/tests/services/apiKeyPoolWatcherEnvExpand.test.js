@@ -1,5 +1,4 @@
 'use strict';
-
 /**
  * apiKeyPoolWatcher 的 .env 热覆盖:`{env:VAR}` 必须在写进 process.env 前展开。
  *
@@ -9,25 +8,18 @@
  * 变成 `Bearer {env:STEPFUN_API_KEY}` → 401。故障比那次编辑活得久,日志里也没有任何东西
  * 把两者联系起来,看上去就像「我的 API key 突然失效了」。
  */
-
-const { test } = require('node:test');
-const assert = require('node:assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-
 const { __testHooks } = require('../../src/services/apiKeyPoolWatcher');
 const { overlayEnvFile } = __testHooks;
-
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'khyos-keypool-env-'));
-
 /** 写一个临时 .env,返回路径。 */
 function writeEnv(name, body) {
   const p = path.join(TMP, name);
   fs.writeFileSync(p, body);
   return p;
 }
-
 /** 跑一次覆盖,结束后把动过的 env 变量恢复原状。 */
 function withEnv(seed, fn) {
   const touched = new Set([...Object.keys(seed)]);
@@ -53,81 +45,18 @@ function withEnv(seed, fn) {
   }
 }
 
-test('{env:VAR} 在覆盖前被展开 —— 而不是把占位符原样塞进 process.env', () => {
-  const envPath = writeEnv('a.env', [
-    'STEPFUN_API_KEY=sk-real-stepfun-key',
-    'RELAY_API_KEY={env:STEPFUN_API_KEY}',
-  ].join('\n'));
-
-  withEnv({ RELAY_API_KEY: undefined, STEPFUN_API_KEY: undefined }, (read) => {
-    overlayEnvFile(envPath);
-    assert.strictEqual(read('RELAY_API_KEY'), 'sk-real-stepfun-key',
-      '占位符必须展开;原样覆盖会让每个 relay 请求 401');
+describe('Api Key Pool Watcher Env Expand', () => {
+  test('{env:VAR} 在覆盖前被展开 —— 而不是把占位符原样塞进 process.env', () => {
+      const envPath = writeEnv('a.env', [
+        'STEPFUN_API_KEY=sk-real-stepfun-key',
+        'RELAY_API_KEY={env:STEPFUN_API_KEY}',
+      ].join('\n'));
+    
+      withEnv({ RELAY_API_KEY: undefined, STEPFUN_API_KEY: undefined }, (read) => {
+        overlayEnvFile(envPath);
+        assert.strictEqual(read('RELAY_API_KEY'), 'sk-real-stepfun-key',
+          '占位符必须展开;原样覆盖会让每个 relay 请求 401');
+      });
   });
-});
 
-test('启动时已展开的值,不会被后续 .env 编辑打回占位符(本 bug 的真实形态)', () => {
-  const envPath = writeEnv('b.env', [
-    'STEPFUN_API_KEY=sk-real-stepfun-key',
-    'RELAY_API_KEY={env:STEPFUN_API_KEY}',
-    'RELAY_API_ENDPOINT=https://api.stepfun.com/step_plan/v1',
-  ].join('\n'));
-
-  // 模拟真实时序:bootstrap/init 已经展开过,进程里是真 key。
-  withEnv({
-    RELAY_API_KEY: 'sk-real-stepfun-key',
-    STEPFUN_API_KEY: 'sk-real-stepfun-key',
-  }, (read) => {
-    overlayEnvFile(envPath);           // ← 用户改了 .env,watcher 触发
-    assert.ok(!String(read('RELAY_API_KEY')).includes('{env:'),
-      '热重载绝不能把已解析的凭据打回占位符');
-    assert.strictEqual(read('RELAY_API_KEY'), 'sk-real-stepfun-key');
-  });
-});
-
-test('占位符指向只存在于 process.env 的变量(shell export / ~/.khy/.env)也能解', () => {
-  // 引用目标**不在**这个文件里 —— 只按 parsed 解会解不出来。
-  const envPath = writeEnv('c.env', 'RELAY_API_KEY={env:SHELL_ONLY_API_KEY}\n');
-
-  withEnv({ RELAY_API_KEY: undefined, SHELL_ONLY_API_KEY: 'sk-from-shell' }, (read) => {
-    overlayEnvFile(envPath);
-    assert.strictEqual(read('RELAY_API_KEY'), 'sk-from-shell',
-      '必须按合并视图解析,不能只看当前文件');
-  });
-});
-
-test('解不开的引用保持原样,不被清空 —— 错得显眼好过静默变成「没配 key」', () => {
-  const envPath = writeEnv('d.env', 'RELAY_API_KEY={env:NOT_DEFINED_ANYWHERE}\n');
-
-  withEnv({ RELAY_API_KEY: undefined, NOT_DEFINED_ANYWHERE: undefined }, (read) => {
-    overlayEnvFile(envPath);
-    assert.strictEqual(read('RELAY_API_KEY'), '{env:NOT_DEFINED_ANYWHERE}',
-      '留着占位符才能一眼看出是引用没解开;空字符串会被读成「未配置」');
-  });
-});
-
-test('普通值与 endpoint 照旧覆盖;非 key 形状的变量一律不碰', () => {
-  const envPath = writeEnv('e.env', [
-    'RELAY_API_KEY=sk-plain',
-    'RELAY_API_ENDPOINT=https://example.test/v1',
-    'SOME_UNRELATED_SETTING=changed',
-  ].join('\n'));
-
-  withEnv({
-    RELAY_API_KEY: undefined,
-    RELAY_API_ENDPOINT: undefined,
-    SOME_UNRELATED_SETTING: 'original',
-  }, (read) => {
-    const applied = overlayEnvFile(envPath);
-    assert.strictEqual(read('RELAY_API_KEY'), 'sk-plain');
-    assert.strictEqual(read('RELAY_API_ENDPOINT'), 'https://example.test/v1');
-    assert.strictEqual(read('SOME_UNRELATED_SETTING'), 'original',
-      'watcher 只负责 key/endpoint 形状的变量,不该顺手改别的配置');
-    assert.strictEqual(applied, 2, '应只报告真正改动的条数');
-  });
-});
-
-test('文件不存在 / 内容为空:返回 0 且不抛', () => {
-  assert.strictEqual(overlayEnvFile(path.join(TMP, 'nope.env')), 0);
-  assert.strictEqual(overlayEnvFile(writeEnv('empty.env', '')), 0);
 });

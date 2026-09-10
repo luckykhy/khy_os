@@ -16,7 +16,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const hot = require('../src/services/backup/sqliteHotCopy');
+const hot = require('../src/services/domain/backup/backup/sqliteHotCopy.js');
 const Database = require('../src/config/sqlite-adapter');
 
 let tmpRoot;

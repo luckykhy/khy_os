@@ -17,6 +17,7 @@
     "./config/sqlite-adapter.js": "./src/config/sqlite-adapter.js",
     "./middleware/auth": "./src/middleware/auth.js",
     "./middleware/errorHandler": "./src/middleware/errorHandler.js",
+    "./errorEnvelope": "./src/errorEnvelope.js",
     "./middleware/rateLimit": "./src/middleware/rateLimit.js",
     "./models": "./src/models/index.js",
     "./models/*": "./src/models/*.js",

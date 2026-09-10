@@ -1,5 +1,4 @@
 'use strict';
-
 /**
  * Leaf-contract test for replSession.js (the interactive session loop isolated from cli/repl.js).
  *
@@ -18,48 +17,49 @@
  * startRepl drives the interactive REPL (readline, heavy IO, network), so this test stays on the
  * deterministic surface (export shape, wiring identity, setter guard) and never starts an actual session.
  */
-const test = require('node:test');
-const assert = require('node:assert');
-
 const SIB = '../../src/cli/replSession';
 const HOST = '../../src/cli/repl';
 
-test('sibling exports startRepl (async) + DI setter', () => {
-  const sib = require(SIB);
-  assert.strictEqual(typeof sib.startRepl, 'function');
-  assert.strictEqual(sib.startRepl.constructor.name, 'AsyncFunction');
-  assert.strictEqual(typeof sib.setReplSessionDeps, 'function');
+describe('Repl Session Leaf', () => {
+  test('sibling exports startRepl (async) + DI setter', () => {
+      const sib = require(SIB);
+      expect(typeof sib.startRepl).toBe('function');
+      expect(sib.startRepl.constructor.name).toBe('AsyncFunction');
+      expect(typeof sib.setReplSessionDeps).toBe('function');
+  });
+
+  test('public entry re-exports the stable surface + startRepl identity is the sibling wiring', () => {
+      const host = require(HOST);
+      const sib = require(SIB);
+      expect(typeof host.startRepl).toBe('function');
+      expect(host.startRepl).toBe(sib.startRepl, 'host.startRepl must be the sibling startRepl');
+      expect(typeof host.formatShellEscapeContext).toBe('function');
+      expect(typeof host._formatImageSize).toBe('function');
+      expect(host.READ_SEARCH_TOOLS instanceof Set).toBeTruthy();
+      expect(host.READ_SEARCH_TOOLS.size > 0).toBeTruthy();
+  });
+
+  test('host utilities remain functional in the public entry', () => {
+      const host = require(HOST);
+      expect(host._formatImageSize(1536)).toBe('1.5KB');
+      expect(host.formatShellEscapeContext([])).toBe('');
+  });
+
+  test('setReplSessionDeps is a guarded, idempotent, non-throwing DI setter', () => {
+      const { setReplSessionDeps } = require(SIB);
+      expect(() => setReplSessionDeps().not.toThrow());
+      expect(() => setReplSessionDeps({}).not.toThrow());
+      // Non-function fn-deps are ignored; the value dep accepts any defined value.
+      expect(() => setReplSessionDeps({ _formatImageSize: 1, READ_SEARCH_TOOLS: null }).not.toThrow());
+      const fn = () => {};
+      const fake = {
+        _formatImageSize: fn, _tk1: fn, _tk0: fn, _tkSpin: fn,
+        formatShellEscapeContext: fn, _resetGatewayBreakerOnSessionClear: fn,
+        READ_SEARCH_TOOLS: new Set(['Read']),
+      };
+      expect(() => setReplSessionDeps(fake).not.toThrow());
+      expect(() => setReplSessionDeps(fake).not.toThrow());
+  });
+
 });
 
-test('public entry re-exports the stable surface + startRepl identity is the sibling wiring', () => {
-  const host = require(HOST);
-  const sib = require(SIB);
-  assert.strictEqual(typeof host.startRepl, 'function');
-  assert.strictEqual(host.startRepl, sib.startRepl, 'host.startRepl must be the sibling startRepl');
-  assert.strictEqual(typeof host.formatShellEscapeContext, 'function');
-  assert.strictEqual(typeof host._formatImageSize, 'function');
-  assert.ok(host.READ_SEARCH_TOOLS instanceof Set);
-  assert.ok(host.READ_SEARCH_TOOLS.size > 0);
-});
-
-test('host utilities remain functional in the public entry', () => {
-  const host = require(HOST);
-  assert.strictEqual(host._formatImageSize(1536), '1.5KB');
-  assert.strictEqual(host.formatShellEscapeContext([]), '');
-});
-
-test('setReplSessionDeps is a guarded, idempotent, non-throwing DI setter', () => {
-  const { setReplSessionDeps } = require(SIB);
-  assert.doesNotThrow(() => setReplSessionDeps());
-  assert.doesNotThrow(() => setReplSessionDeps({}));
-  // Non-function fn-deps are ignored; the value dep accepts any defined value.
-  assert.doesNotThrow(() => setReplSessionDeps({ _formatImageSize: 1, READ_SEARCH_TOOLS: null }));
-  const fn = () => {};
-  const fake = {
-    _formatImageSize: fn, _tk1: fn, _tk0: fn, _tkSpin: fn,
-    formatShellEscapeContext: fn, _resetGatewayBreakerOnSessionClear: fn,
-    READ_SEARCH_TOOLS: new Set(['Read']),
-  };
-  assert.doesNotThrow(() => setReplSessionDeps(fake));
-  assert.doesNotThrow(() => setReplSessionDeps(fake));
-});

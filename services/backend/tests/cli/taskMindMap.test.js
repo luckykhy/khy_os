@@ -76,3 +76,4 @@ describe('taskMindMap', () => {
     expect(payload).toContain('stay at start node');
   });
 });
+

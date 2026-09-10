@@ -3,7 +3,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 
-const leaf = require('../../../src/services/claimMain/claimMainPlan');
+const leaf = require('../../../src/services/domain/maintenance/claimMain/claimMainPlan.js');
 
 // ── 语法解析 ──────────────────────────────────────────────────────────────
 test('parseClaimArgs: 空参 = claim', () => {

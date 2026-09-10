@@ -770,7 +770,7 @@ async function compress(messages, opts) {
   let summarySource = 'ai'; // 'ai' | 'manual-extract' — reported in the audit row
   try {
     const summaryInput = taskAnchorText
-      ? `[Original task to preserve]\n${taskAnchorText}\n\n---\n\n${oldTextWithTasks}`
+      ? `[Original task to preserve]\n${taskAnchorText}\n\n${oldTextWithTasks}`
       : oldTextWithTasks;
     const result = await callModelFn(summaryInput, { effort: 'medium', _isFollowUp: true });
     summary = result?.reply || result?.content || result;

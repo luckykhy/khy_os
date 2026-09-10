@@ -27,7 +27,7 @@ process.env.KHY_ILINK_QUERY_TIMEOUT_MS = '5000';
 const {
   IlinkDispatcher,
   _migrateLegacyIlinkSession,
-} = require('../../../src/services/channels/ilinkDispatcher');
+} = require('../../../src/services/domain/messaging/channels/ilinkDispatcher.js');
 
 // ── 内存假持久化桩:实现迁移用到的三个方法(loadSessionMeta/restoreSession/persistSession)。
 //    persistSession 复刻真实"append-only:只补超出现有条数的新消息"语义,故一个全新键会

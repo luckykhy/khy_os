@@ -805,9 +805,16 @@ class ToolExecutionEngine {
           intentKey = `__intent__:shell:${intent}`;
         }
       } else if (_isFsTool(call.name)) {
-        const pathIntent = extractPathIntent(call.name, call.params);
-        if (pathIntent) {
-          intentKey = `__intent__:fspath:${pathIntent}`;
+        // Mutating FS tools (edit_file, write_file, …): the fspath intent key
+        // is path-only and too coarse — two different edits to the same file
+        // would collide.  Skip intent dedup for them; the exact-key dedup
+        // (content-sensitive) handles genuine duplicates.
+        const isObs = isObservationCall(call);
+        if (isObs) {
+          const pathIntent = extractPathIntent(call.name, call.params);
+          if (pathIntent) {
+            intentKey = `__intent__:fspath:${pathIntent}`;
+          }
         }
       } else if (_isSearchTool(call.name)) {
         const searchIntent = extractSearchIntent(call.params);

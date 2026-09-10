@@ -1,8 +1,8 @@
 <template>
   <div class="usage-logs-page">
     <KhyPageHeader
-      title="用量日志"
       subtitle="网关请求计量、计费与明细（CLI 适配器为估算值，标注 estimated）"
+      title="用量日志"
     >
       <template #actions>
         <el-button :loading="billing.loading.value" @click="refresh">
@@ -11,6 +11,9 @@
         </el-button>
       </template>
     </KhyPageHeader>
+
+    <!-- 接口失败时明确报错，而不是空表格 -->
+    <LoadErrorBanner :message="billing.loadError" />
 
     <!-- Summary metric cards -->
     <div class="metric-row">
@@ -45,28 +48,28 @@
     </div>
 
     <!-- Filters -->
-    <el-card shadow="never" class="filter-card">
+    <el-card class="filter-card" shadow="never">
       <div class="filter-bar">
-        <el-input v-model="filters.model" placeholder="模型" clearable style="width: 180px" />
+        <el-input v-model="filters.model" clearable placeholder="模型" style="width: 180px" />
         <el-input
           v-model="filters.customerId"
-          placeholder="客户 ID"
           clearable
+          placeholder="客户 ID"
           style="width: 200px"
         />
-        <el-input v-model="filters.tokenId" placeholder="令牌 ID" clearable style="width: 180px" />
-        <el-select v-model="filters.status" placeholder="状态" clearable style="width: 130px">
+        <el-input v-model="filters.tokenId" clearable placeholder="令牌 ID" style="width: 180px" />
+        <el-select v-model="filters.status" clearable placeholder="状态" style="width: 130px">
           <el-option label="成功" value="ok" />
           <el-option label="错误" value="error" />
         </el-select>
         <el-date-picker
           v-model="dateRange"
-          type="datetimerange"
+          end-placeholder="结束时间"
           range-separator="至"
           start-placeholder="开始时间"
-          end-placeholder="结束时间"
-          value-format="YYYY-MM-DDTHH:mm:ss"
           style="width: 360px"
+          type="datetimerange"
+          value-format="YYYY-MM-DDTHH:mm:ss"
         />
         <el-button type="primary" @click="applyFilters">查询</el-button>
         <el-button @click="resetFilters">重置</el-button>
@@ -74,56 +77,56 @@
     </el-card>
 
     <!-- Table -->
-    <el-card shadow="never" class="table-card">
+    <el-card class="table-card" shadow="never">
       <el-table
-        :data="logs.items"
-        stripe
-        size="small"
         v-loading="billing.loading.value"
+        :data="logs.items"
         empty-text="暂无日志"
+        size="small"
+        stripe
       >
-        <el-table-column prop="ts" label="时间" width="180">
+        <el-table-column label="时间" prop="ts" width="180">
           <template #default="{ row }">{{ formatTime(row.ts) }}</template>
         </el-table-column>
-        <el-table-column prop="customerName" label="客户" min-width="120">
+        <el-table-column label="客户" min-width="120" prop="customerName">
           <template #default="{ row }">{{ row.customerName || '—' }}</template>
         </el-table-column>
-        <el-table-column prop="model" label="模型" min-width="160" show-overflow-tooltip />
-        <el-table-column prop="group" label="分组" width="100" />
-        <el-table-column label="输入" width="90" align="right">
+        <el-table-column label="模型" min-width="160" prop="model" show-overflow-tooltip />
+        <el-table-column label="分组" prop="group" width="100" />
+        <el-table-column align="right" label="输入" width="90">
           <template #default="{ row }">{{ row.inputTokens }}</template>
         </el-table-column>
-        <el-table-column label="输出" width="90" align="right">
+        <el-table-column align="right" label="输出" width="90">
           <template #default="{ row }">{{ row.outputTokens }}</template>
         </el-table-column>
-        <el-table-column label="计费" width="110" align="right">
+        <el-table-column align="right" label="计费" width="110">
           <template #default="{ row }">¥{{ Number(row.billedCny || 0).toFixed(5) }}</template>
         </el-table-column>
-        <el-table-column label="计量" width="90" align="center">
+        <el-table-column align="center" label="计量" width="90">
           <template #default="{ row }">
             <el-tag v-if="row.estimated" size="small" type="warning">估算</el-tag>
             <el-tag v-else size="small" type="success">实际</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="90" align="center">
+        <el-table-column align="center" label="状态" width="90">
           <template #default="{ row }">
             <el-tag size="small" :type="row.status === 'ok' ? 'success' : 'danger'">
               {{ row.status === 'ok' ? row.httpStatus : row.httpStatus || 'err' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="延迟" width="90" align="right">
+        <el-table-column align="right" label="延迟" width="90">
           <template #default="{ row }">{{ row.latencyMs }}ms</template>
         </el-table-column>
       </el-table>
 
       <div class="pager">
         <el-pagination
-          layout="total, prev, pager, next, sizes"
-          :total="logs.total"
-          :page-size="pageSize"
           :current-page="currentPage"
+          layout="total, prev, pager, next, sizes"
+          :page-size="pageSize"
           :page-sizes="[20, 50, 100, 200]"
+          :total="logs.total"
           @current-change="onPageChange"
           @size-change="onSizeChange"
         />
@@ -134,9 +137,10 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
-import { Refresh, Histogram, Coin, Money, WarningFilled } from '@element-plus/icons-vue';
+import { Refresh } from '@element-plus/icons-vue';
 import { useGatewayBilling } from '@/composables/useGatewayBilling';
 import KhyPageHeader from '@/components/KhyPageHeader.vue';
+import LoadErrorBanner from '@/components/LoadErrorBanner.vue';
 
 const billing = useGatewayBilling();
 const logs = billing.logs;

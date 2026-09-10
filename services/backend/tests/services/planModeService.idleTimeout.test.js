@@ -97,3 +97,4 @@ describe('planModeService idle timeout behavior', () => {
     expect(String(resolvedResult.rawResponse || '')).toContain('Plan generation timeout after 120s');
   });
 });
+

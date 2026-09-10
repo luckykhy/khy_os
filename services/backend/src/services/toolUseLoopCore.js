@@ -815,11 +815,46 @@ function _parsePositiveInt(value, fallback, min = 1, max = Number.MAX_SAFE_INTEG
   return Math.min(max, n);
 }
 
-function _resolveMaxIterations(requestedMaxIterations) {
+// 最小安全迭代数（动态）：根据模型上下文窗口自适应计算。
+// 小上下文(32K)→5轮(空间紧张，必须高效)，大上下文(200K+)→12轮(有余量)。
+// 未获取到上下文时回退静态默认 8。
+const MIN_SAFE_ITERATIONS_FALLBACK = 8;
+
+function _resolveMinSafeIterations(contextWindowTokens) {
+  if (!contextWindowTokens || contextWindowTokens <= 0) {
+    return MIN_SAFE_ITERATIONS_FALLBACK;
+  }
+  // 每轮工具结果约占上下文 5%，最多可用 60% 给工具轮次，留 40% 给系统提示+模型输出。
+  // 最小轮次 = floor(60% / 5%) = 12，但小上下文需要更紧凑。
+  // 公式：clamp(上下文token / 20000, 5, 15)
+  return Math.max(5, Math.min(15, Math.floor(contextWindowTokens / 20000)));
+}
+
+/**
+ * 将数值 clamp 到 [min, max] 范围（不回退 fallback）。
+ * 与 _parsePositiveInt 的区别：无效值 → fallback，有效但越界 → clamp。
+ */
+function _clampInt(value, fallback, min, max) {
+  const n = Number.parseInt(String(value || '').trim(), 10);
+  if (!Number.isFinite(n)) {
+    return fallback;
+  }
+  return Math.max(min, Math.min(max, n));
+}
+
+function _resolveMaxIterations(requestedMaxIterations, contextWindowTokens) {
+  const minSafe = _resolveMinSafeIterations(contextWindowTokens);
+  // 显式传入 → clamp 到安全范围（不回退 fallback）
+  // 环境变量/未设 → _parsePositiveInt（无效值回退默认）
   const base =
     requestedMaxIterations !== undefined && requestedMaxIterations !== null
-      ? _parsePositiveInt(requestedMaxIterations, MAX_ITERATIONS, 1, 100)
-      : _parsePositiveInt(process.env.KHY_TOOL_LOOP_MAX_ITERATIONS, MAX_ITERATIONS, 1, 100);
+      ? _clampInt(requestedMaxIterations, MAX_ITERATIONS, minSafe, 100)
+      : _parsePositiveInt(
+          process.env.KHY_TOOL_LOOP_MAX_ITERATIONS,
+          MAX_ITERATIONS,
+          minSafe,
+          100
+        );
   // 20 倍模式:开则把工具循环迭代上限顶到硬顶(不低于 base、封顶 100)。关 → 逐字节回退 base。
   try {
     const { scaleIterations } = require('./twentyXMode');
@@ -1532,8 +1567,23 @@ function crossTurnRepeatDecision(call, recentSigs, state, env) {
   const { sig, intentKey } = _signatureForCall(name, params, null);
   const matched =
     (sig && hasExact && exact.has(sig)) || (intentKey && hasIntents && intents.has(intentKey));
-  if (!matched || (isObservation && _isReobserveRequested(call))) {
-    return { steer: false, reobserve: isObservation && matched };
+  if (!matched) {
+    return { steer: false, reobserve: false };
+  }
+  // Explicit reobserve request: observation tool that the caller wants fresh
+  if (isObservation && _isReobserveRequested(call)) {
+    return { steer: false, reobserve: true };
+  }
+  // Filesystem tools with a file-path parameter (read_file, edit_file,
+  // write_file, grep on a file, …): the intra-turn dedup has a content-hash
+  // staleness check that correctly allows re-reads when the file changed.
+  // Cross-turn steering runs BEFORE that check and would wrongly block a
+  // legitimate re-read or a different-content edit to the same file.
+  // → Skip cross-turn steering for any call that carries a file-path param;
+  //   let the intra-turn layer (file hash / params-equality) decide instead.
+  const _hasFilePath = !!(call.params && (call.params.file_path || call.params.path || call.params.filePath));
+  if (_hasFilePath) {
+    return { steer: false, reobserve: false };
   }
 
   const key = sig || intentKey;
@@ -1943,7 +1993,7 @@ async function runToolUseLoop(userMessage, options = {}) {
       .trim()
       .toLowerCase()
   );
-  let _intentFrame = { detailAnchors: [], tailDetails: [] };
+  let _intentFrame = { detailAnchors: [], tailDetails: [], summary: '' };
   if (_intentCoverageEnabled) {
     try {
       const { buildIntentAssuranceDirective } = require('./khyUpgradeRuntime');
@@ -1951,6 +2001,10 @@ async function runToolUseLoop(userMessage, options = {}) {
       _intentFrame = {
         detailAnchors: Array.isArray(_f && _f.detailAnchors) ? _f.detailAnchors : [],
         tailDetails: Array.isArray(_f && _f.tailDetails) ? _f.tailDetails : [],
+        // Task summary (main goal): consumed by the question context fallback
+        // (questionQuality.buildQuestionContextNote) so AskUserQuestion cards can
+        // carry a deterministic one-line note of which task the question serves. fail-soft.
+        summary: String((_f && _f.summary) || ''),
       };
     } catch {
       /* fail-soft：意图抽取失败 → 留空 frame，回核自然 no-op */
@@ -2314,22 +2368,42 @@ async function runToolUseLoop(userMessage, options = {}) {
     toolProtocolAdapter: _toolProtocolAdapter,
   });
 
-  const resolvedMaxIterations = _resolveMaxIterations(requestedMaxIterations);
+  // 从 chatOpts 提取上下文窗口，用于动态计算迭代预算下限。
+  // 如果调用方未传入，尝试从 aiGateway 同步获取（缓存命中）。
+  let _contextWindowForBudget = Number(chatOpts?.contextWindowTokens) || 0;
+  if (_contextWindowForBudget <= 0 && chatOpts?.preferredModel) {
+    try {
+      const _gw = require('./gateway/aiGateway');
+      if (typeof _gw.getModelContextWindow === 'function') {
+        _contextWindowForBudget = _gw.getModelContextWindow(chatOpts.preferredModel) || 0;
+      }
+    } catch {
+      /* fail-soft: 保持 0 → 使用回退 */
+    }
+  }
+  const resolvedMaxIterations = _resolveMaxIterations(
+    requestedMaxIterations,
+    _contextWindowForBudget
+  );
   const transientRecoveryMax = _resolveTransientRecoveryMax(originalUserMessage, options);
   // Apply intentGate outerBoost: coding +18, ultrawork +12, analyze +6
   const { getLoopLimitBoost } = require('./intentGate');
   const _loopBoost = getLoopLimitBoost(gatedInput.activatedModes || []);
   const hasExplicitMaxIterations =
     requestedMaxIterations !== undefined && requestedMaxIterations !== null;
-  const effectiveMaxIterations = hasExplicitMaxIterations
-    ? resolvedMaxIterations
-    : Math.min(
-        200,
-        resolvedMaxIterations +
-          _loopBoost.outerBoost +
-          transientRecoveryMax +
-          (_harnessProfile.maxIterationsBoost || 0)
-      );
+  const _dynamicMinSafe = _resolveMinSafeIterations(_contextWindowForBudget);
+  const effectiveMaxIterations = Math.max(
+    _dynamicMinSafe,
+    hasExplicitMaxIterations
+      ? resolvedMaxIterations
+      : Math.min(
+          200,
+          resolvedMaxIterations +
+            _loopBoost.outerBoost +
+            transientRecoveryMax +
+            (_harnessProfile.maxIterationsBoost || 0)
+        )
+  );
   const maxElapsedMs = _resolveMaxElapsedMs();
   let transientRecoveryUsed = 0;
   // /s! 紧急 steer 重发计数：用户抢占在飞模型回合并注入修正后原地重发，bounded 防滥用。
@@ -2934,7 +3008,7 @@ async function runToolUseLoop(userMessage, options = {}) {
     if (recovered && recovered.goal && Date.now() - (recovered.timestamp || 0) < 3600_000) {
       const recoveryPrompt = _canonicalState.formatAsPrompt(recovered);
       if (recoveryPrompt) {
-        currentMessage = `[SYSTEM: Recovered context from prior session]\n${recoveryPrompt}\n\n---\n\n${currentMessage}`;
+        currentMessage = `[SYSTEM: Recovered context from prior session]\n${recoveryPrompt}\n\n${currentMessage}`;
       }
     }
   } catch {
@@ -3096,6 +3170,31 @@ async function runToolUseLoop(userMessage, options = {}) {
       }
     }
     let _tokensSpent = 0;
+
+    // ── 动态工具结果预算：根据模型上下文窗口自适应 ─────────────────
+    // 每次 loop 启动时探测真实上下文窗口（而非使用回退值128K）。
+    // 探测完成后设置动态预算，替代硬编码的 maxResultSizeChars。
+    try {
+      let _cwForBudget = Number(effectiveChatOpts?.contextWindowTokens) || 0;
+      // 如果调用方未传入上下文窗口，尝试从 aiGateway 异步探测真实值
+      if (_cwForBudget <= 0 && effectiveChatOpts?.preferredModel) {
+        try {
+          const _gw = require('./gateway/aiGateway');
+          if (typeof _gw.getModelContextWindowAsync === 'function') {
+            _cwForBudget = await _gw.getModelContextWindowAsync(
+              effectiveChatOpts.preferredModel,
+              3000 // 3秒超时，不阻塞太久
+            );
+          }
+        } catch {
+          /* fail-soft: 保持 _cwForBudget=0 → 使用回退 */
+        }
+      }
+      require('../tools/index').setDynamicContextBudget(_cwForBudget);
+    } catch {
+      /* fail-soft: 保持静态回退 */
+    }
+
     // Whole-loop cumulative usage returned to callers (separate from _tokensSpent,
     // which only drives the budget governor — do not merge the two).
     const _usageTotals = {
@@ -3769,6 +3868,76 @@ async function runToolUseLoop(userMessage, options = {}) {
         } catch {
           /* diagnostic grounding best-effort — never block delivery on its own errors */
         }
+      }
+
+      // ── 上下文压缩：接近模型窗口时自动压缩 ─────────────────────
+      // 对抗式核验：超过上下文分母后没有压缩上下文仍可继续交谈 → 此处接入。
+      // 触发条件：累积 token > 上下文窗口 × 70%（contextCompressor 默认阈值）。
+      try {
+        let _ccCtxWindow = Number(effectiveChatOpts?.contextWindowTokens) || 0;
+        // 如果调用方未传入上下文窗口，从 aiGateway 获取（同步缓存或异步探测）
+        if (_ccCtxWindow <= 0 && effectiveChatOpts?.preferredModel) {
+          try {
+            const _gw = require('./gateway/aiGateway');
+            _ccCtxWindow = _gw.getModelContextWindow(effectiveChatOpts.preferredModel) || 0;
+          } catch {
+            /* fail-soft */
+          }
+        }
+        // 最终回退：使用上下文窗口默认值
+        if (_ccCtxWindow <= 0) {
+          try {
+            _ccCtxWindow = require('../constants/contextWindowDefaults').UNKNOWN_MODEL_CONTEXT_WINDOW;
+          } catch {
+            _ccCtxWindow = 128000;
+          }
+        }
+        if (_ccCtxWindow > 0 && conversationMessages.length >= 5) {
+          const _ccEstFn = (text) => {
+            try {
+              return require('./khyUpgradeRuntime').estimateTokens(text);
+            } catch {
+              return Math.ceil((text || '').length / 4);
+            }
+          };
+          const _ccTotalTokens = conversationMessages.reduce(
+            (s, m) =>
+              s + _ccEstFn(typeof m.content === 'string' ? m.content : JSON.stringify(m.content || '')),
+            0
+          );
+          const _ccThreshold = Math.floor(_ccCtxWindow * 0.7);
+          if (_ccTotalTokens > _ccThreshold) {
+            const cc = require('./contextCompressor');
+            const _ccResult = await cc.compress(conversationMessages, {
+              estimateTokensFn: _ccEstFn,
+              callModelFn: chat,
+              contextWindowTokens: _ccCtxWindow,
+            });
+            if (_ccResult.compressed && _ccResult.compressed.length < conversationMessages.length) {
+              const _before = conversationMessages.length;
+              conversationMessages = _ccResult.compressed;
+              // 重建 currentMessage 为压缩后的最后一条用户消息
+              const _lastUser = [...conversationMessages].reverse().find((m) => m.role === 'user');
+              if (_lastUser) {
+                currentMessage = _lastUser.content;
+              }
+              if (context && typeof context.onActivity === 'function') {
+                try {
+                  context.onActivity({
+                    phase: 'context_compressed',
+                    before: _before,
+                    after: conversationMessages.length,
+                    freedTokens: _ccResult.freedTokens || 0,
+                  });
+                } catch {
+                  /* non-critical */
+                }
+              }
+            }
+          }
+        }
+      } catch {
+        /* 压缩失败不影响主流程 */
       }
 
       if (_loopFsm) {
@@ -6835,7 +7004,7 @@ async function runToolUseLoop(userMessage, options = {}) {
           endsWithUnfulfilledIntent(finalText)
         ) {
           finalText +=
-            '\n\n---\n**⚠ 部分操作未执行**：上面提到将执行进一步操作（如访问网页获取信息），但最终没有发出对应的工具调用，以上内容可能不是完整答案。你可以回复「继续」让我实际执行，或换个方式提问。';
+            '\n\n⚠ 部分操作未执行：上面提到将执行进一步操作（如访问网页获取信息），但最终没有发出对应的工具调用，以上内容可能不是完整答案。你可以回复「继续」让我实际执行，或换个方式提问。';
         }
         // ── A1 被动兜底：模型补总结轮后仍无结论 → 服务端合成一句收尾（一次性）──
         // 反双渲染：buildSummaryFallback 内部已判 hasSynthesizedConclusion，模型自己补了就返回 ''。
@@ -6859,7 +7028,7 @@ async function runToolUseLoop(userMessage, options = {}) {
 
           // 执行摘要
           parts.push(
-            `\n\n---\n**任务未完成** — 已执行 ${totalToolCalls} 次工具调用（${succeeded.length} 成功, ${failed.length} 失败${denied.length ? `, ${denied.length} 被拒绝` : ''}）`
+            `\n\n**任务未完成** — 已执行 ${totalToolCalls} 次工具调用（${succeeded.length} 成功, ${failed.length} 失败${denied.length ? `, ${denied.length} 被拒绝` : ''}）`
           );
 
           // 具体失败原因 —— 真因多在 t.result.data.outputTail(如 build_project
@@ -7072,7 +7241,7 @@ async function runToolUseLoop(userMessage, options = {}) {
                 .slice(0, 3)
                 .map((t) => `  - \`${t.tool || t.name || 'unknown'}\`: ${_entryErrText(t)}`)
                 .join('\n');
-              finalText += `\n\n---\n**⚠ 部分操作未成功**（${_failedSilent.length} 项失败）:\n${_lines}\n如需我换一种方法重试，请告诉我。`;
+              finalText += `\n\n⚠ 部分操作未成功（${_failedSilent.length} 项失败）:\n${_lines}\n如需我换一种方法重试，请告诉我。`;
             }
           }
           // 交付摘要：优先使用模型自己写的结论散文。只有当模型没有给出有效结尾
@@ -7282,7 +7451,7 @@ async function runToolUseLoop(userMessage, options = {}) {
               .map((t) => `\`${t.tool || t.name || 'unknown'}\``)
               .join('、');
             finalText +=
-              `\n\n---\n**⚠ 自相矛盾的拒绝（已记录为待改进项）**\n` +
+              `\n\n**⚠ 自相矛盾的拒绝（已记录为待改进项）**\n` +
               `本轮 ${_okData.length} 个工具调用已成功取回数据（${_okTools}），` +
               `但模型最终仍回复了拒绝/免责套话。这是一次「伪成功拒绝」缺陷：数据已就绪却未被用于作答。\n` +
               `请重试，或输入"继续"让我基于上方已取回的结果重新整理答案。`;
@@ -7302,7 +7471,7 @@ async function runToolUseLoop(userMessage, options = {}) {
               _bareRefusalAttribution = null;
             }
             finalText +=
-              `\n\n---\n**⚠ 这是一句没有具体原因的拒绝（已记录为待改进项）**\n` +
+              `\n\n**⚠ 这是一句没有具体原因的拒绝（已记录为待改进项）**\n` +
               `模型未调用任何工具、也未说明究竟缺什么（权限 / 依赖 / 目标不存在 / 超出能力范围），` +
               `只回了一句笼统的"无法给到"。这通常意味着上游模型通道降级或被无关上下文带偏，` +
               `而不是这件事真的做不了。\n` +
@@ -7332,7 +7501,7 @@ async function runToolUseLoop(userMessage, options = {}) {
         if (_lengthTruncatedFinal) {
           if (!/因长度限制被截断/.test(String(finalText || ''))) {
             finalText +=
-              '\n\n---\n> ⚠ 本次回复因长度限制被截断（max_tokens），以上内容不完整。可输入“继续”让我从中断处补完。';
+              '\n\n> ⚠ 本次回复因长度限制被截断（max_tokens），以上内容不完整。可输入"继续"让我从中断处补完。';
           }
           _loopBreadcrumb('length-truncation-final', {
             iteration,
@@ -8102,9 +8271,15 @@ async function runToolUseLoop(userMessage, options = {}) {
                       intentKey = `__intent__:shell:${intent}`;
                     }
                   } else if (_isFsTool(call.name)) {
-                    const pathIntent = extractPathIntent(call.name, call.params);
-                    if (pathIntent) {
-                      intentKey = `__intent__:fspath:${pathIntent}`;
+                    // Mutating FS tools (edit_file, write_file, …): the fspath
+                    // intent key is path-only and too coarse — two different
+                    // edits to the same file would collide.  Skip intent dedup
+                    // for them; the exact-key dedup handles genuine duplicates.
+                    if (isObservationCall) {
+                      const pathIntent = extractPathIntent(call.name, call.params);
+                      if (pathIntent) {
+                        intentKey = `__intent__:fspath:${pathIntent}`;
+                      }
                     }
                   } else if (_isSearchTool(call.name)) {
                     // Semantically-similar web searches with DIFFERENT query strings escape
@@ -8993,9 +9168,16 @@ async function runToolUseLoop(userMessage, options = {}) {
                     _seqIntentKey = `__intent__:shell:${_si}`;
                   }
                 } else if (_isFsTool(call.name)) {
-                  const _pi = extractPathIntent(call.name, call.params);
-                  if (_pi) {
-                    _seqIntentKey = `__intent__:fspath:${_pi}`;
+                  // Mutating FS tools (edit_file, write_file, …): the fspath
+                  // intent key is path-only and too coarse — two different
+                  // edits to the same file would collide.  Skip intent dedup
+                  // for them; the exact-key dedup (content-sensitive) handles
+                  // genuine duplicates.
+                  if (isObservationCall) {
+                    const _pi = extractPathIntent(call.name, call.params);
+                    if (_pi) {
+                      _seqIntentKey = `__intent__:fspath:${_pi}`;
+                    }
                   }
                 } else if (_isSearchTool(call.name)) {
                   const _se = extractSearchIntent(call.params);
@@ -9725,6 +9907,22 @@ async function runToolUseLoop(userMessage, options = {}) {
             Array.isArray(r.questions) && r.questions.length
               ? r.questions
               : [{ question: r.question, options: r.options || [], multiSelect: !!r.multiSelect }];
+          // Question context fallback (single source of truth: questionQuality): if the card is
+          // detectably detached from the task context (language mismatch with the session /
+          // zero token overlap with the original request), attach one deterministic Chinese
+          // note rendered above the card so the user can answer against the task goal.
+          // Purely additive — never intercepts/rewrites the model's questions; empty note keeps
+          // today's request shape byte-for-byte. Gated KHY_QUESTION_CONTEXT_NOTE, fail-soft.
+          let _qContextNote = '';
+          try {
+            _qContextNote = require('./questionQuality').buildQuestionContextNote(questions, {
+              originalMessage: originalUserMessage || '',
+              intentSummary: _intentFrame && _intentFrame.summary,
+              env: process.env,
+            }).note;
+          } catch {
+            _qContextNote = '';
+          }
           let ctrlResp = null;
           try {
             // Race the control-request against parentAbort so an ESC/interrupt/
@@ -9738,7 +9936,11 @@ async function runToolUseLoop(userMessage, options = {}) {
                 request: {
                   subtype: 'can_use_tool',
                   tool_name: 'AskUserQuestion',
-                  input: { ...(r.input || {}), questions },
+                  input: {
+                    ...(r.input || {}),
+                    questions,
+                    ...(_qContextNote ? { contextNote: _qContextNote } : {}),
+                  },
                 },
               }),
               { signal: parentAbort.signal, env: process.env }

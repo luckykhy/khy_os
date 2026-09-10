@@ -95,7 +95,7 @@ describe('doctor cloud connectivity compatibility', () => {
     expect(cloudCheck).toBeTruthy();
     expect(cloudCheck.ok).toBe(false);
     expect(cloudCheck.level).toBe('warn');
-    expect(cloudCheck.detail).toContain('可选: khy cloud login');
+    expect(cloudCheck.detail).toContain('可�? khy cloud login');
   });
 
   test('marks cloud check as info when logged in', () => {
@@ -107,6 +107,7 @@ describe('doctor cloud connectivity compatibility', () => {
     expect(cloudCheck).toBeTruthy();
     expect(cloudCheck.ok).toBe(true);
     expect(cloudCheck.level).toBe('info');
-    expect(cloudCheck.detail).toContain('已登录 (tester)');
+    expect(cloudCheck.detail).toContain('已登�?(tester)');
   });
 });
+

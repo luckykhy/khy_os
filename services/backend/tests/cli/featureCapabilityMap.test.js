@@ -65,3 +65,4 @@ describe('FeatureCapabilityMap', () => {
     expect(snap.executable).toBe('ready');
   });
 });
+

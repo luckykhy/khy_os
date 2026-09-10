@@ -1,61 +1,60 @@
 'use strict';
-
-const test = require('node:test');
-const assert = require('node:assert');
-
 const plan = require('../../../src/services/gitSpawnPlan');
-
 // ── 门控(CANON 4 词)──────────────────────────────────────────────────────────
-test('isShellFreeGitEnabled: default-on', () => {
-  assert.strictEqual(plan.isShellFreeGitEnabled({}), true);
-  assert.strictEqual(plan.isShellFreeGitEnabled(undefined), true);
-});
-
-test('isShellFreeGitEnabled: CANON falsy words → off', () => {
-  for (const w of ['0', 'false', 'off', 'no', 'OFF', ' No ']) {
-    assert.strictEqual(plan.isShellFreeGitEnabled({ KHY_GIT_SHELL_FREE: w }), false, w);
-  }
-});
-
-test('isShellFreeGitEnabled: EXTENDED words stay on for CANON flag', () => {
-  assert.strictEqual(plan.isShellFreeGitEnabled({ KHY_GIT_SHELL_FREE: 'disable' }), true);
-  assert.strictEqual(plan.isShellFreeGitEnabled({ KHY_GIT_SHELL_FREE: 'disabled' }), true);
-});
-
 // ── toGitArgv:分词 + shell 元字符防御 ────────────────────────────────────────
-test('toGitArgv: tokenizes the real git-context commands', () => {
-  assert.deepStrictEqual(plan.toGitArgv('rev-parse --show-toplevel'), ['rev-parse', '--show-toplevel']);
-  assert.deepStrictEqual(plan.toGitArgv('rev-parse --abbrev-ref HEAD'), ['rev-parse', '--abbrev-ref', 'HEAD']);
-  assert.deepStrictEqual(plan.toGitArgv('symbolic-ref refs/remotes/origin/HEAD'), ['symbolic-ref', 'refs/remotes/origin/HEAD']);
-  assert.deepStrictEqual(plan.toGitArgv('branch --list main master'), ['branch', '--list', 'main', 'master']);
-  assert.deepStrictEqual(plan.toGitArgv('status --short --branch -u'), ['status', '--short', '--branch', '-u']);
-  assert.deepStrictEqual(plan.toGitArgv('log --oneline -15 --no-decorate'), ['log', '--oneline', '-15', '--no-decorate']);
-  assert.deepStrictEqual(plan.toGitArgv('diff --cached --stat'), ['diff', '--cached', '--stat']);
-});
 
-test('toGitArgv: collapses irregular whitespace', () => {
-  assert.deepStrictEqual(plan.toGitArgv('  rev-parse   --show-toplevel  '), ['rev-parse', '--show-toplevel']);
-});
+describe('Git Spawn Plan', () => {
+  test('isShellFreeGitEnabled: default-on', () => {
+      expect(plan.isShellFreeGitEnabled({})).toBe(true);
+      expect(plan.isShellFreeGitEnabled(undefined)).toBe(true);
+  });
 
-test('toGitArgv: returns null on shell metacharacters (forces execSync fallback)', () => {
-  assert.strictEqual(plan.toGitArgv('log --format="%H"'), null);      // quotes
-  assert.strictEqual(plan.toGitArgv('status; rm -rf x'), null);        // ;
-  assert.strictEqual(plan.toGitArgv('log | head'), null);             // pipe
-  assert.strictEqual(plan.toGitArgv('log --pretty=$FORMAT'), null);    // $ var
-  assert.strictEqual(plan.toGitArgv('log > out.txt'), null);          // redirect
-  assert.strictEqual(plan.toGitArgv('log --grep=(x)'), null);         // parens
-});
+  test('isShellFreeGitEnabled: CANON falsy words → off', () => {
+      for (const w of ['0', 'false', 'off', 'no', 'OFF', ' No ']) {
+        expect(plan.isShellFreeGitEnabled({ KHY_GIT_SHELL_FREE: w })).toBe(false, w);
+      }
+  });
 
-test('toGitArgv: null/empty/non-string → null', () => {
-  assert.strictEqual(plan.toGitArgv(''), null);
-  assert.strictEqual(plan.toGitArgv('   '), null);
-  assert.strictEqual(plan.toGitArgv(null), null);
-  assert.strictEqual(plan.toGitArgv(undefined), null);
-  assert.strictEqual(plan.toGitArgv(42), null);
-});
+  test('isShellFreeGitEnabled: EXTENDED words stay on for CANON flag', () => {
+      expect(plan.isShellFreeGitEnabled({ KHY_GIT_SHELL_FREE: 'disable' })).toBe(true);
+      expect(plan.isShellFreeGitEnabled({ KHY_GIT_SHELL_FREE: 'disabled' })).toBe(true);
+  });
 
-test('never throws', () => {
-  assert.doesNotThrow(() => plan.isShellFreeGitEnabled(null));
-  assert.doesNotThrow(() => plan.toGitArgv({}));
-  assert.doesNotThrow(() => plan.toGitArgv([1, 2, 3]));
+  test('toGitArgv: tokenizes the real git-context commands', () => {
+      expect(plan.toGitArgv('rev-parse --show-toplevel')).toEqual(['rev-parse', '--show-toplevel']);
+      expect(plan.toGitArgv('rev-parse --abbrev-ref HEAD')).toEqual(['rev-parse', '--abbrev-ref', 'HEAD']);
+      expect(plan.toGitArgv('symbolic-ref refs/remotes/origin/HEAD')).toEqual(['symbolic-ref', 'refs/remotes/origin/HEAD']);
+      expect(plan.toGitArgv('branch --list main master')).toEqual(['branch', '--list', 'main', 'master']);
+      expect(plan.toGitArgv('status --short --branch -u')).toEqual(['status', '--short', '--branch', '-u']);
+      expect(plan.toGitArgv('log --oneline -15 --no-decorate')).toEqual(['log', '--oneline', '-15', '--no-decorate']);
+      expect(plan.toGitArgv('diff --cached --stat')).toEqual(['diff', '--cached', '--stat']);
+  });
+
+  test('toGitArgv: collapses irregular whitespace', () => {
+      expect(plan.toGitArgv('  rev-parse   --show-toplevel  ')).toEqual(['rev-parse', '--show-toplevel']);
+  });
+
+  test('toGitArgv: returns null on shell metacharacters (forces execSync fallback)', () => {
+      expect(plan.toGitArgv('log --format="%H"')).toBe(null);      // quotes
+      expect(plan.toGitArgv('status; rm -rf x')).toBe(null);        // ;
+      expect(plan.toGitArgv('log | head')).toBe(null);             // pipe
+      expect(plan.toGitArgv('log --pretty=$FORMAT')).toBe(null);    // $ var
+      expect(plan.toGitArgv('log > out.txt')).toBe(null);          // redirect
+      expect(plan.toGitArgv('log --grep=(x)')).toBe(null);         // parens
+  });
+
+  test('toGitArgv: null/empty/non-string → null', () => {
+      expect(plan.toGitArgv('')).toBe(null);
+      expect(plan.toGitArgv('   ')).toBe(null);
+      expect(plan.toGitArgv(null)).toBe(null);
+      expect(plan.toGitArgv(undefined)).toBe(null);
+      expect(plan.toGitArgv(42)).toBe(null);
+  });
+
+  test('never throws', () => {
+      expect(() => plan.isShellFreeGitEnabled(null).not.toThrow());
+      expect(() => plan.toGitArgv({}).not.toThrow());
+      expect(() => plan.toGitArgv([1, 2, 3]).not.toThrow());
+  });
+
 });

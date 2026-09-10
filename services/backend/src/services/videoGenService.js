@@ -20,8 +20,13 @@
  *   - multi-image   : `extra_body.image[]`
  *   - keyframes     : `extra_body.image[]` + `extra_body.mode="keyframes"`
  *
- * Frame constraints: num_frames <= 441 and num_frames ≡ 1 (mod 8); frame_rate 1-60.
- * Duration ≈ num_frames / frame_rate.
+ * 2.5 payload schema is strict: width / height / num_frames / frame_rate /
+ * num_inference_steps / seed / negative_prompt are all FORBIDDEN fields — the
+ * service rejects them with 400. Only `model` + `prompt` (+ optional `image`)
+ * are accepted. Frame constraints below are kept as client-side sanity checks
+ * only; they do NOT get sent to the API.
+ *
+ * Duration ≈ num_frames / frame_rate (kept for local reporting).
  */
 
 const fs = require('fs');
@@ -32,7 +37,7 @@ const DEFAULT_TIMEOUT_MS = 120_000;
 const DEFAULT_POLL_INTERVAL_MS = 5_000; // Agnes docs recommend 5s polling
 const DEFAULT_MAX_WAIT_MS = 10 * 60_000; // give up after 10 minutes
 const DEFAULT_AGNES_BASE_URL = 'https://apihub.agnes-ai.com'; // host root: /v1/videos + /agnesapi
-const DEFAULT_AGNES_MODEL = 'agnes-video-v2.0';
+const DEFAULT_AGNES_MODEL = 'agnes-video-2.5';
 const DEFAULT_NUM_FRAMES = 121;
 const DEFAULT_FRAME_RATE = 24;
 const MAX_NUM_FRAMES = 441;
@@ -614,22 +619,27 @@ function _buildAgnesBody(model, opts) {
     numInferenceSteps,
     seed,
     negativePrompt,
+    duration,
   } = opts;
-  const body = { model, prompt, num_frames: numFrames, frame_rate: frameRate };
+  // 2.5 的 payload schema 很严：实测 width / height / num_frames / frame_rate
+  // 全是 forbidden field，服务端只认 model + prompt（+ 可选 image）。
+  // 保留这些变量的解构仅为兼容未来 schema 变更，当前一律不写入 body。
+  void numFrames;
+  void frameRate;
+  void numInferenceSteps;
+  void seed;
+  void negativePrompt;
+
+  const body = { model, prompt };
+
   if (Number.isFinite(width)) {
     body.width = Math.trunc(width);
   }
   if (Number.isFinite(height)) {
     body.height = Math.trunc(height);
   }
-  if (Number.isFinite(numInferenceSteps)) {
-    body.num_inference_steps = Math.trunc(numInferenceSteps);
-  }
-  if (Number.isFinite(seed)) {
-    body.seed = Math.trunc(seed);
-  }
-  if (negativePrompt) {
-    body.negative_prompt = String(negativePrompt);
+  if (Number.isFinite(duration)) {
+    body.duration = Math.trunc(duration);
   }
 
   const list = Array.isArray(images) ? images.filter(Boolean).map(String) : [];

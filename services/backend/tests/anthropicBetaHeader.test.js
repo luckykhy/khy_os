@@ -1,6 +1,6 @@
 'use strict';
 
-// Workstream E â€” tier-aware anthropic-beta header + 400 auto-fallback.
+// Workstream E â€?tier-aware anthropic-beta header + 400 auto-fallback.
 //
 // _buildBetaHeader(model):
 //   - always sends tool-search-tool (proven working)
@@ -34,7 +34,7 @@ function withCleanEnv(fn) {
   }
 }
 
-describe('_buildBetaHeader â€” tier gating', () => {
+describe('_buildBetaHeader â€?tier gating', () => {
   test('T0 (opus) includes context-1m + interleaved + tool-search', () => {
     withCleanEnv(() => {
       const h = T.buildBetaHeader('claude-opus-4-8');
@@ -44,7 +44,7 @@ describe('_buildBetaHeader â€” tier gating', () => {
     });
   });
 
-  test('T1 (qwen-max) gets ONLY tool-search â€” zero regression', () => {
+  test('T1 (qwen-max) gets ONLY tool-search â€?zero regression', () => {
     withCleanEnv(() => {
       const h = T.buildBetaHeader('qwen-max');
       expect(h).toBe('tool-search-tool-2025-10-19');
@@ -93,8 +93,8 @@ describe('_buildBetaHeader â€” tier gating', () => {
   });
 });
 
-describe('_defaultThinkingBudget â€” tier-aware', () => {
-  test('T0 frontier â†’ 16000, others â†’ 10000', () => {
+describe('_defaultThinkingBudget â€?tier-aware', () => {
+  test('T0 frontier â†?16000, others â†?10000', () => {
     withCleanEnv(() => {
       expect(T.defaultThinkingBudget('claude-opus-4-8')).toBe(16000);
       expect(T.defaultThinkingBudget('qwen-max')).toBe(10000);
@@ -102,3 +102,4 @@ describe('_defaultThinkingBudget â€” tier-aware', () => {
     });
   });
 });
+

@@ -14,6 +14,7 @@
  *   khy traffic detail <id> 查看单条记录详情
  */
 
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const chalk = require('chalk').default || require('chalk');
 const { printError, printWarn, printInfo, printTable } = require('../formatters');
 
@@ -363,4 +364,12 @@ async function handleTraffic(subCommand, args = [], _options = {}) {
   }
 }
 
-module.exports = { handleTraffic };
+module.exports = {
+  handleTraffic,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'traffic',
+    description: 'traffic command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleTraffic(parsed.subCommand, parsed.args, parsed.options),
+  },
+};

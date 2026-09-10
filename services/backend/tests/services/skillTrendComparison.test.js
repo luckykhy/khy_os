@@ -8,7 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-describe('compareWithHistory — skill-scenario drift detection', () => {
+describe('compareWithHistory �?skill-scenario drift detection', () => {
   let tmpDir;
   let historyDir;
 
@@ -123,3 +123,4 @@ describe('compareWithHistory — skill-scenario drift detection', () => {
     expect(result.regressions[0].prev).toBe(0.9);
   });
 });
+

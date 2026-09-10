@@ -502,6 +502,7 @@ async function buildGatewayModelChoices({ onNotice = () => {}, onError = () => {
       : chalk.green(`● ${test.connectivity.latencyMs}ms`);
     const statusTag = generationWarn ? chalk.yellow('[可用-告警]') : chalk.green('[可用]');
 
+    let listModelsErr;
     try {
       const modelListTimeoutMs = _getAdapterModelListTimeoutMs(
         s.type,
@@ -543,9 +544,10 @@ async function buildGatewayModelChoices({ onNotice = () => {}, onError = () => {
       listedCount++;
     } catch (err) {
       listedCount++;
+      listModelsErr = err;
     } finally {
       onProgress({ kind: 'count', current: listedCount, total: enabledAdapters.length, label: '获取模型列表' });
-      const reasonText = err && err.message ? err.message : 'listModels failed';
+      const reasonText = listModelsErr && listModelsErr.message ? listModelsErr.message : 'listModels failed';
       if (String(s.type || '').toLowerCase() === 'kiro' && _isTimeoutLikeReason(reasonText)) {
         // Keep Kiro selectable when model listing is slow; selection still works
         // and runtime can refresh models in background.

@@ -11,7 +11,7 @@
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { validateAgainstSchema, formatSchemaErrors } = require('../../../src/services/output/jsonSchemaValidate');
+const { validateAgainstSchema, formatSchemaErrors } = require('../../../src/services/domain/structured/output/jsonSchemaValidate.js');
 
 describe('type', () => {
   test('基础类型命中/不命中', () => {

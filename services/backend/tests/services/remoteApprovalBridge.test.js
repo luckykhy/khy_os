@@ -55,3 +55,4 @@ describe('RemoteApprovalBridge state import/export', () => {
     expect(exported[0].consumed_by_idempotency_key).toBe('idem-bridge-1');
   });
 });
+

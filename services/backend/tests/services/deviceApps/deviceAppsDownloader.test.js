@@ -12,7 +12,7 @@
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const dl = require('../../../src/services/deviceApps/deviceAppsDownloader');
+const dl = require('../../../src/services/domain/desktop/deviceApps/deviceAppsDownloader.js');
 
 describe('computeProgress', () => {
   test('已知总量:半程 50%', () => {

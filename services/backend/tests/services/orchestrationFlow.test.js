@@ -6,7 +6,7 @@ const {
   _buildSummary,
 } = require('../../src/services/orchestrationFlow');
 
-describe('orchestrationFlow â€” step type derivation (B2)', () => {
+describe('orchestrationFlow â€?step type derivation (B2)', () => {
   test('explicit stepType wins over derivation', () => {
     expect(resolveStepType({ stepType: 'flexible', risk: 'high' })).toBe('flexible');
     expect(resolveStepType({ stepType: 'human-gate' })).toBe('human-gate');
@@ -21,14 +21,14 @@ describe('orchestrationFlow â€” step type derivation (B2)', () => {
   });
 
   test('an unspecified subtask derives flexible from riskGate (medium default)', () => {
-    // With no risk signals, riskGate ranks risk as medium â†’ flexible. The
+    // With no risk signals, riskGate ranks risk as medium â†?flexible. The
     // run-mode fallback only applies if riskGate itself is unavailable.
     expect(resolveStepType({}, 'hardened')).toBe('flexible');
     expect(resolveStepType({}, 'mixed')).toBe('flexible');
   });
 });
 
-describe('orchestrationFlow â€” hardened SOP execution (B2)', () => {
+describe('orchestrationFlow â€?hardened SOP execution (B2)', () => {
   test('runs subtasks strictly in declared order', async () => {
     const order = [];
     const out = await runHardenedFlow({
@@ -64,7 +64,7 @@ describe('orchestrationFlow â€” hardened SOP execution (B2)', () => {
     expect(out.summary.subtasks.map(s => s.status)).toEqual(['completed', 'failed', 'skipped']);
   });
 
-  test('a failed flexible step is non-fatal â€” the run continues', async () => {
+  test('a failed flexible step is non-fatal â€?the run continues', async () => {
     const ran = [];
     const out = await runHardenedFlow({
       subtasks: [
@@ -132,3 +132,4 @@ describe('orchestrationFlow â€” hardened SOP execution (B2)', () => {
     expect(summary.subtasks[0]).toMatchObject({ executor: 'claude', stepType: 'hardened', durationMs: 10, status: 'completed' });
   });
 });
+

@@ -1,5 +1,4 @@
 'use strict';
-
 /**
  * Leaf-contract test for aiGatewayModelMethods.js (extracted from services/gateway/aiGateway.js).
  *
@@ -14,12 +13,8 @@
  * instance, so this test stays on the deterministic surface (export shape, prototype presence, setter
  * guard) and never drives an actual model selection / verification.
  */
-const test = require('node:test');
-const assert = require('node:assert');
-
 const LEAF = '../../src/services/gateway/aiGatewayModelMethods';
 const HOST = '../../src/services/gateway/aiGateway';
-
 const MIXIN_METHODS = [
   'autoSelectModel', 'generateWithSubModel', 'isLocalAdapter', 'getAvailableLocalAdapter',
   'getAdapterOrigin', 'getStatus', 'getKhyProtocolPriorityRisk', 'getFirstAvailableAdapter',
@@ -28,40 +23,44 @@ const MIXIN_METHODS = [
   'verifyModel', 'verifyVisionCapability', 'verifyToolCalling', '_maybeBackgroundProbeToolCalling', 'destroy', 'testAdapter',
 ];
 
-test('leaf exports the model/adapter mixin object + DI setter', () => {
-  const leaf = require(LEAF);
-  assert.strictEqual(typeof leaf.setAiGatewayModelMethodsDeps, 'function');
-  assert.ok(leaf.AIGatewayModelMethods && typeof leaf.AIGatewayModelMethods === 'object');
-  assert.strictEqual(Object.keys(leaf.AIGatewayModelMethods).length, MIXIN_METHODS.length);
-  for (const n of MIXIN_METHODS) {
-    assert.strictEqual(typeof leaf.AIGatewayModelMethods[n], 'function', `missing mixin ${n}`);
-  }
+describe('Ai Gateway Model Methods Leaf', () => {
+  test('leaf exports the model/adapter mixin object + DI setter', () => {
+      const leaf = require(LEAF);
+      expect(typeof leaf.setAiGatewayModelMethodsDeps).toBe('function');
+      expect(leaf.AIGatewayModelMethods && typeof leaf.AIGatewayModelMethods === 'object').toBeTruthy();
+      expect(Object.keys(leaf.AIGatewayModelMethods).length).toBe(MIXIN_METHODS.length);
+      for (const n of MIXIN_METHODS) {
+        expect(typeof leaf.AIGatewayModelMethods[n]).toBe('function', `missing mixin ${n}`);
+      }
+  });
+
+  test('host gateway prototype carries every mixed-in method + untouched class / prior mixins', () => {
+      const gateway = require(HOST);
+      const proto = Object.getPrototypeOf(gateway);
+      for (const n of MIXIN_METHODS) {
+        expect(typeof proto[n]).toBe('function', `prototype missing ${n}`);
+      }
+      expect(typeof proto.generate).toBe('function');
+      expect(typeof gateway.classifyError).toBe('function');
+      // Prior mixins still present (all three coexist on the prototype).
+      expect(typeof proto._recordAdapterFailure).toBe('function');       // cooldown mixin
+      expect(typeof proto._rankAdaptersForDefaultRoute).toBe('function'); // routing mixin
+  });
+
+  test('setAiGatewayModelMethodsDeps is a guarded, idempotent, non-throwing DI setter', () => {
+      const { setAiGatewayModelMethodsDeps } = require(LEAF);
+      expect(() => setAiGatewayModelMethodsDeps().not.toThrow());
+      expect(() => setAiGatewayModelMethodsDeps({}).not.toThrow());
+      expect(() => setAiGatewayModelMethodsDeps({ _parseMs: 1, _ADAPTER_SOURCE_LABELS: null }).not.toThrow());
+      const fake = {
+        safeKillChildProc: () => {}, _shouldUseFastFail: () => false, _parseMs: () => 0,
+        _getKhyProtocolPriorityRisk: () => 0, _extractResultErrorMessage: () => '',
+        resolvePreferredModelForAdapter: () => null,
+        _ADAPTER_SOURCE_LABELS: {}, CODEX_GENERATION_PROBE_PROMPT: 'x',
+      };
+      expect(() => setAiGatewayModelMethodsDeps(fake).not.toThrow());
+      expect(() => setAiGatewayModelMethodsDeps(fake).not.toThrow());
+  });
+
 });
 
-test('host gateway prototype carries every mixed-in method + untouched class / prior mixins', () => {
-  const gateway = require(HOST);
-  const proto = Object.getPrototypeOf(gateway);
-  for (const n of MIXIN_METHODS) {
-    assert.strictEqual(typeof proto[n], 'function', `prototype missing ${n}`);
-  }
-  assert.strictEqual(typeof proto.generate, 'function');
-  assert.strictEqual(typeof gateway.classifyError, 'function');
-  // Prior mixins still present (all three coexist on the prototype).
-  assert.strictEqual(typeof proto._recordAdapterFailure, 'function');       // cooldown mixin
-  assert.strictEqual(typeof proto._rankAdaptersForDefaultRoute, 'function'); // routing mixin
-});
-
-test('setAiGatewayModelMethodsDeps is a guarded, idempotent, non-throwing DI setter', () => {
-  const { setAiGatewayModelMethodsDeps } = require(LEAF);
-  assert.doesNotThrow(() => setAiGatewayModelMethodsDeps());
-  assert.doesNotThrow(() => setAiGatewayModelMethodsDeps({}));
-  assert.doesNotThrow(() => setAiGatewayModelMethodsDeps({ _parseMs: 1, _ADAPTER_SOURCE_LABELS: null }));
-  const fake = {
-    safeKillChildProc: () => {}, _shouldUseFastFail: () => false, _parseMs: () => 0,
-    _getKhyProtocolPriorityRisk: () => 0, _extractResultErrorMessage: () => '',
-    resolvePreferredModelForAdapter: () => null,
-    _ADAPTER_SOURCE_LABELS: {}, CODEX_GENERATION_PROBE_PROMPT: 'x',
-  };
-  assert.doesNotThrow(() => setAiGatewayModelMethodsDeps(fake));
-  assert.doesNotThrow(() => setAiGatewayModelMethodsDeps(fake));
-});

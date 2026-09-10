@@ -5,13 +5,13 @@ const os = require('os');
 const path = require('path');
 
 // Regression: under the Ink TUI, interactive tool approval must route through the
-// host channel (onControlRequest → Ink PermissionsPrompt) and must NOT touch the
+// host channel (onControlRequest �?Ink PermissionsPrompt) and must NOT touch the
 // shared TTY raw mode. The classic readline dialog calls stdin.setRawMode(false),
 // which drops the Ink TUI to cooked mode (↑→^[[A, Enter→newline, input leaks below
 // the box). These tests pin the routing + decision mapping at the requestPermission
 // seam, and assert raw mode is never touched on the host-channel path.
 
-describe('toolCalling requestPermission — host control channel (Ink-safe)', () => {
+describe('toolCalling requestPermission �?host control channel (Ink-safe)', () => {
   const originalEnv = { ...process.env };
   let tmpHome;
 
@@ -39,7 +39,7 @@ describe('toolCalling requestPermission — host control channel (Ink-safe)', ()
       deny: jest.fn(),
       getProfile: jest.fn(() => 'normal'),
     }));
-    // Unknown tool in the registry → not auto-approved as safe/low.
+    // Unknown tool in the registry �?not auto-approved as safe/low.
     jest.doMock('../src/tools', () => ({ get: jest.fn(() => undefined) }));
   });
 
@@ -62,7 +62,7 @@ describe('toolCalling requestPermission — host control channel (Ink-safe)', ()
     });
   }
 
-  test('onControlRequest resolving true → allow, raw mode untouched', async () => {
+  test('onControlRequest resolving true �?allow, raw mode untouched', async () => {
     const permStore = require('../src/services/permissionStore');
     const { requestPermission } = require('../src/services/toolCalling');
     await withRawModeSpy(async (rawSpy) => {
@@ -78,7 +78,7 @@ describe('toolCalling requestPermission — host control channel (Ink-safe)', ()
     });
   });
 
-  test("onControlRequest resolving 'always' → allow-always, persisted forever", async () => {
+  test("onControlRequest resolving 'always' �?allow-always, persisted forever", async () => {
     const permStore = require('../src/services/permissionStore');
     const { requestPermission } = require('../src/services/toolCalling');
     await withRawModeSpy(async (rawSpy) => {
@@ -89,7 +89,7 @@ describe('toolCalling requestPermission — host control channel (Ink-safe)', ()
     });
   });
 
-  test('onControlRequest resolving false → deny, raw mode untouched', async () => {
+  test('onControlRequest resolving false �?deny, raw mode untouched', async () => {
     const permStore = require('../src/services/permissionStore');
     const { requestPermission } = require('../src/services/toolCalling');
     await withRawModeSpy(async (rawSpy) => {
@@ -100,7 +100,7 @@ describe('toolCalling requestPermission — host control channel (Ink-safe)', ()
     });
   });
 
-  test('no host channel → falls back to the injected prompter (port, not direct require)', async () => {
+  test('no host channel �?falls back to the injected prompter (port, not direct require)', async () => {
     // DESIGN-ARCH-057: the dialog is injected via permissionPromptPort, not
     // required from cli. The service consumes whatever the cli registered.
     const prompt = jest.fn(async () => 'deny');
@@ -112,7 +112,7 @@ describe('toolCalling requestPermission — host control channel (Ink-safe)', ()
   });
 });
 
-describe('preflightPermission runPreflight — Ink channel skips classic batch dialog', () => {
+describe('preflightPermission runPreflight �?Ink channel skips classic batch dialog', () => {
   const originalEnv = { ...process.env };
   afterEach(() => {
     process.env = { ...originalEnv };
@@ -120,7 +120,7 @@ describe('preflightPermission runPreflight — Ink channel skips classic batch d
     jest.clearAllMocks();
   });
 
-  test('with onControlRequest → returns empty sets and never opens the batch dialog', async () => {
+  test('with onControlRequest �?returns empty sets and never opens the batch dialog', async () => {
     const promptBatch = jest.fn(async () => ({ decision: 'approve-all' }));
     require('../src/services/permissionPromptPort').registerPermissionPrompter({ promptBatch });
     const { runPreflight } = require('../src/services/preflightPermission');
@@ -133,3 +133,4 @@ describe('preflightPermission runPreflight — Ink channel skips classic batch d
     expect(promptBatch).not.toHaveBeenCalled();
   });
 });
+

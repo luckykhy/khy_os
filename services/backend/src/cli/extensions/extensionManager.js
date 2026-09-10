@@ -10,4 +10,4 @@
  * original import path for any dynamic/legacy reference.
  */
 
-module.exports = require('extensionManager.js');
+module.exports = require('../../services/domain/extensions/extensions/extensionManager.js');

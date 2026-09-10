@@ -3,7 +3,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 
-const lock = require('../../../src/services/channels/ilinkExecutionLock');
+const lock = require('../../../src/services/domain/messaging/channels/ilinkExecutionLock.js');
 
 test('runExclusive: 两个并发调用严格串行,执行区间不重叠', async () => {
   let active = 0;

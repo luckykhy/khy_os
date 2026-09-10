@@ -484,4 +484,23 @@ async function handleHealth(parsed = {}) {
   return true;
 }
 
-module.exports = { handleHealth, collectHealth, _bytesHuman };
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
+
+// Self-registration manifest — picked up by commandAutoRegistry.
+// Adding this manifest means `khy health` is dispatched without a
+// hardcoded case in router.js. The existing `case 'health'` branch
+// in router.js is kept as a regression baseline and can be removed
+// once this path is verified in production.
+module.exports = {
+  handleHealth,
+  collectHealth,
+  _bytesHuman,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'health',
+    aliases: ['jkx', 'healthcheck'],
+    description: '聚合运行时/数据/认证/网络/磁盘/内存/服务注册表健康信号到一份可操作报告',
+    usage: 'health [--json]',
+    category: 'system',
+    handler: handleHealth,
+  },
+};

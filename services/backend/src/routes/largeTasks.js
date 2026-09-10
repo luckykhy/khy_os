@@ -14,6 +14,7 @@ const runtime = require('../tasks/largeTaskRuntimeStore');
 const { createLargeTaskWorkerService } = require('../tasks/largeTaskWorkerService');
 const { getLegacyDataHome } = require('../utils/dataHome');
 const envInt = require('../utils/envInt');
+const apiResponse = require('../utils/apiResponse');
 
 const {
   RETRY_POLICY_APPROVAL_DEFAULT_LIMIT,
@@ -68,20 +69,22 @@ const workerService = createLargeTaskWorkerService({
   taskHandler: _runBuiltinTaskHandler,
 });
 
+function _taskControlCode(status, code) {
+  if (code) return code;
+  switch (status) {
+    case 400: return 'INVALID_ARGUMENT';
+    case 401: return 'AUTH_INVALID';
+    case 403: return 'PERMISSION_DENIED';
+    case 404: return 'MODEL_NOT_FOUND';
+    case 409: return 'INVALID_ARGUMENT';
+    default: return 'INTERNAL';
+  }
+}
+
 function _taskControlFail(res, traceId, operationName, result = {}) {
   const status = Number.isFinite(Number(result.status)) ? Number(result.status) : 500;
-  const data = {
-    trace_id: traceId,
-    code: result.code || 'task_control_failed',
-  };
-  if (result.task) {
-    data.task = result.task;
-  }
-  return res.status(status).json({
-    success: false,
-    message: `${operationName}失败: ${result.message || '未知错误'}`,
-    data,
-  });
+  const code = _taskControlCode(status, result.code);
+  return apiResponse.fail(res, code, `${operationName}失败: ${result.message || '未知错误'}`, { status });
 }
 
 function _candidateTodoStateFiles() {
@@ -644,21 +647,12 @@ router.post('/', async (req, res) => {
       trace_id: explicitTraceId,
     });
 
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        task,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      task,
     });
   } catch (error) {
-    return res.status(400).json({
-      success: false,
-      message: `创建大型任务失败: ${error.message}`,
-      data: {
-        trace_id: traceId,
-      },
-    });
+    return apiResponse.fail(res, 'INVALID_ARGUMENT', `创建大型任务失败: ${error.message}`, { status: 400 });
   }
 });
 
@@ -678,22 +672,13 @@ router.get('/', async (req, res) => {
 
     const sliced = tasks.slice(Math.max(0, tasks.length - limit));
 
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        total: tasks.length,
-        tasks: sliced,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      total: tasks.length,
+      tasks: sliced,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `查询大型任务列表失败: ${error.message}`,
-      data: {
-        trace_id: traceId,
-      },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `查询大型任务列表失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -701,21 +686,12 @@ router.get('/metrics', async (req, res) => {
   const traceId = _buildTraceId(req);
   try {
     const metrics = orchestrator.getMetrics();
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        metrics,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      metrics,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `查询大型任务指标失败: ${error.message}`,
-      data: {
-        trace_id: traceId,
-      },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `查询大型任务指标失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -742,20 +718,13 @@ router.get('/events', async (req, res) => {
       })
       .map(_normalizeEventRecord);
 
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        total: events.length,
-        events,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      total: events.length,
+      events,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `查询大型任务事件失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `查询大型任务事件失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -763,19 +732,12 @@ router.get('/worker/status', async (req, res) => {
   const traceId = _buildTraceId(req);
   try {
     const worker = workerService.status();
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        worker,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      worker,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `查询大型任务工作器状态失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `查询大型任务工作器状态失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -784,20 +746,13 @@ router.post('/worker/start', async (req, res) => {
   try {
     const startOptions = _buildWorkerStartOptions(req.body || {});
     const result = await workerService.start(startOptions);
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        started: result.started,
-        worker: result.status,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      started: result.started,
+      worker: result.status,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `启动大型任务工作器失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `启动大型任务工作器失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -805,20 +760,13 @@ router.post('/worker/stop', async (req, res) => {
   const traceId = _buildTraceId(req);
   try {
     const result = await workerService.stop();
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        stopped: result.stopped,
-        worker: result.status,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      stopped: result.stopped,
+      worker: result.status,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `停止大型任务工作器失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `停止大型任务工作器失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -838,16 +786,9 @@ router.post('/:taskId/cancel', async (req, res) => {
     if (result.already_terminal) {
       data.already_terminal = true;
     }
-    return res.json({
-      success: true,
-      data,
-    });
+    return apiResponse.success(res, data);
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `取消大型任务失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `取消大型任务失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -866,16 +807,9 @@ router.post('/:taskId/pause', async (req, res) => {
     if (result.already_paused) {
       data.already_paused = true;
     }
-    return res.json({
-      success: true,
-      data,
-    });
+    return apiResponse.success(res, data);
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `暂停大型任务失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `暂停大型任务失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -894,16 +828,9 @@ router.post('/:taskId/resume', async (req, res) => {
     if (result.already_running) {
       data.already_running = true;
     }
-    return res.json({
-      success: true,
-      data,
-    });
+    return apiResponse.success(res, data);
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `恢复大型任务失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `恢复大型任务失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -943,60 +870,50 @@ router.get('/handover/snapshot', async (req, res) => {
     });
 
     if (mobileCompact) {
-      return res.json({
-        success: true,
-        data: {
-          trace_id: traceId,
-          snapshot: _buildMobileSnapshot({
-            windowMinutes,
-            recentOperations,
-            recentRetentionChanges,
-            activeTasks,
-            todoSnapshot,
-            remoteSnapshot,
-            metrics,
-          }),
-        },
+      return apiResponse.success(res, {
+        trace_id: traceId,
+        snapshot: _buildMobileSnapshot({
+          windowMinutes,
+          recentOperations,
+          recentRetentionChanges,
+          activeTasks,
+          todoSnapshot,
+          remoteSnapshot,
+          metrics,
+        }),
       });
     }
 
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        snapshot: {
-          generated_at: new Date().toISOString(),
-          window_minutes: windowMinutes,
-          recent_operations: recentOperations,
-          recent_retry_policy_approval_retention_changes: recentRetentionChanges,
-          active_large_tasks: activeTasks,
-          pending_todos: todoSnapshot.pending_todos,
-          pending_todo_meta: {
-            source: todoSnapshot.source,
-            updated_at: todoSnapshot.updated_at,
-            total_todo_count: todoSnapshot.total_todo_count,
-            pending_total: todoSnapshot.pending_total,
-          },
-          active_remote_sessions: remoteSnapshot.active_remote_sessions,
-          pending_remote_approvals: remoteSnapshot.pending_remote_approvals,
-          summary: {
-            recent_operation_count: recentOperations.length,
-            retention_policy_change_count: recentRetentionChanges.length,
-            active_large_task_count: activeTasks.length,
-            pending_todo_count: todoSnapshot.pending_total,
-            pending_remote_approval_count: remoteSnapshot.summary.pending_approval_count,
-            active_remote_session_count: remoteSnapshot.summary.active_session_count,
-            queue_depth: Number(metrics.queue_depth || 0),
-          },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      snapshot: {
+        generated_at: new Date().toISOString(),
+        window_minutes: windowMinutes,
+        recent_operations: recentOperations,
+        recent_retry_policy_approval_retention_changes: recentRetentionChanges,
+        active_large_tasks: activeTasks,
+        pending_todos: todoSnapshot.pending_todos,
+        pending_todo_meta: {
+          source: todoSnapshot.source,
+          updated_at: todoSnapshot.updated_at,
+          total_todo_count: todoSnapshot.total_todo_count,
+          pending_total: todoSnapshot.pending_total,
+        },
+        active_remote_sessions: remoteSnapshot.active_remote_sessions,
+        pending_remote_approvals: remoteSnapshot.pending_remote_approvals,
+        summary: {
+          recent_operation_count: recentOperations.length,
+          retention_policy_change_count: recentRetentionChanges.length,
+          active_large_task_count: activeTasks.length,
+          pending_todo_count: todoSnapshot.pending_total,
+          pending_remote_approval_count: remoteSnapshot.summary.pending_approval_count,
+          active_remote_session_count: remoteSnapshot.summary.active_session_count,
+          queue_depth: Number(metrics.queue_depth || 0),
         },
       },
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `读取跨设备交接快照失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `读取跨设备交接快照失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -1234,20 +1151,13 @@ router.get('/circuit/commit', async (req, res) => {
   try {
     const scope = _trimmedString(req.query?.scope) || 'default';
     const circuit = orchestrator.getCommitCircuitStatus(scope);
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        scope,
-        circuit,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      scope,
+      circuit,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `查询提交断路器状态失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `查询提交断路器状态失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -1265,24 +1175,17 @@ router.get('/retry-policy', async (req, res) => {
         })
       : [];
 
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        retry_policy: retryPolicy,
-        audit: {
-          included: includeAudit,
-          total: events.length,
-          events,
-        },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      retry_policy: retryPolicy,
+      audit: {
+        included: includeAudit,
+        total: events.length,
+        events,
       },
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `查询重试策略失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `查询重试策略失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -1296,20 +1199,13 @@ router.get('/retry-policy/events', async (req, res) => {
       after_id: afterId,
       trace_id: _trimmedString(req.query?.trace_id) || undefined,
     });
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        total: events.length,
-        events,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      total: events.length,
+      events,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `查询重试策略审计事件失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `查询重试策略审计事件失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -1321,20 +1217,13 @@ router.get('/retry-policy/approvals/pending', async (req, res) => {
       status: 'pending',
       limit,
     });
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        total_pending: approvals.length,
-        approvals,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      total_pending: approvals.length,
+      approvals,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `查询重试策略审批队列失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `查询重试策略审批队列失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -1342,19 +1231,12 @@ router.get('/retry-policy/approvals/retention', async (req, res) => {
   const traceId = _buildTraceId(req);
   try {
     const retention = runtime.getRetryPolicyApprovalRetention();
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        retry_policy_approval_retention: retention,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      retry_policy_approval_retention: retention,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `查询重试策略审批保留策略失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `查询重试策略审批保留策略失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -1367,11 +1249,7 @@ router.post('/retry-policy/approvals/retention', async (req, res) => {
       req.body?.retention;
     const { errors, patch } = _validateRetryPolicyApprovalRetentionPatch(retentionInput);
     if (errors.length > 0 || !patch) {
-      return res.status(400).json({
-        success: false,
-        message: `更新重试策略审批保留策略失败: ${errors.join(' ')}`,
-        data: { trace_id: traceId },
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', `更新重试策略审批保留策略失败: ${errors.join(' ')}`, { status: 400 });
     }
 
     const actor =
@@ -1386,21 +1264,14 @@ router.post('/retry-policy/approvals/retention', async (req, res) => {
       source: 'route:large_tasks',
       reason,
     });
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        changed: updated.changed,
-        retry_policy_approval_retention: updated.retention,
-        audit_event: updated.event,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      changed: updated.changed,
+      retry_policy_approval_retention: updated.retention,
+      audit_event: updated.event,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `更新重试策略审批保留策略失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `更新重试策略审批保留策略失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -1415,21 +1286,14 @@ router.get('/retry-policy/approvals/retention/events', async (req, res) => {
       trace_id: _trimmedString(req.query?.trace_id) || undefined,
       actor: _trimmedString(req.query?.actor) || undefined,
     });
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        after_id: afterId,
-        total: events.length,
-        events,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      after_id: afterId,
+      total: events.length,
+      events,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `查询重试策略审批保留策略审计事件失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `查询重试策略审批保留策略审计事件失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -1555,21 +1419,14 @@ router.get('/retry-policy/approvals/events', async (req, res) => {
       event_type: eventType || undefined,
     });
 
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        after_id: afterId,
-        total: events.length,
-        events,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      after_id: afterId,
+      total: events.length,
+      events,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `查询重试策略审批事件失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `查询重试策略审批事件失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -1586,34 +1443,18 @@ router.post('/retry-policy/approvals/decision', async (req, res) => {
     const reason = _trimmedString(req.body?.reason) || null;
 
     if (!ticketId) {
-      return res.status(400).json({
-        success: false,
-        message: '审批失败: ticket_id 为必填项。',
-        data: { trace_id: traceId },
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '审批失败: ticket_id 为必填项。', { status: 400 });
     }
     if (decision !== 'approve' && decision !== 'reject') {
-      return res.status(400).json({
-        success: false,
-        message: '审批失败: decision 仅支持 approve 或 reject。',
-        data: { trace_id: traceId, ticket_id: ticketId },
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '审批失败: decision 仅支持 approve 或 reject。', { status: 400 });
     }
 
     const ticket = runtime.getRetryPolicyApprovalTicket(ticketId);
     if (!ticket) {
-      return res.status(404).json({
-        success: false,
-        message: '审批失败: 未找到对应审批单。',
-        data: { trace_id: traceId, ticket_id: ticketId },
-      });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', '审批失败: 未找到对应审批单。', { status: 404 });
     }
     if (ticket.status !== 'pending') {
-      return res.status(409).json({
-        success: false,
-        message: `审批失败: 当前审批单状态为 ${ticket.status}，无法再次审批。`,
-        data: { trace_id: traceId, ticket_id: ticketId, status: ticket.status },
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', `审批失败: 当前审批单状态为 ${ticket.status}，无法再次审批。`, { status: 409 });
     }
 
     const nextTicket =
@@ -1625,19 +1466,12 @@ router.post('/retry-policy/approvals/decision', async (req, res) => {
             reason || 'rejected_by_reviewer'
           );
 
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        ticket: nextTicket,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      ticket: nextTicket,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `审批失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `审批失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -1647,11 +1481,7 @@ router.post('/retry-policy', async (req, res) => {
     const policyInput = req.body?.retry_policy || req.body?.retryPolicy || req.body?.policy;
     const { errors, patch } = _validateRetryPolicyPatch(policyInput);
     if (errors.length > 0 || !patch) {
-      return res.status(400).json({
-        success: false,
-        message: `更新重试策略失败: ${errors.join(' ')}`,
-        data: { trace_id: traceId },
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', `更新重试策略失败: ${errors.join(' ')}`, { status: 400 });
     }
 
     const actor =
@@ -1708,15 +1538,8 @@ router.post('/retry-policy', async (req, res) => {
       if (!consumed.ok) {
         const code = String(consumed.code || '');
         const status = code === 'ticket_not_found' ? 404 : 409;
-        return res.status(status).json({
-          success: false,
-          message: `更新重试策略失败: ${consumed.message || code}`,
-          data: {
-            trace_id: traceId,
-            code,
-            ticket_id: approvalTicketId,
-          },
-        });
+        const errorCode = status === 404 ? 'MODEL_NOT_FOUND' : 'INVALID_ARGUMENT';
+        return apiResponse.fail(res, errorCode, `更新重试策略失败: ${consumed.message || code}`, { status });
       }
     }
 
@@ -1727,22 +1550,15 @@ router.post('/retry-policy', async (req, res) => {
       reason: reason || null,
     });
 
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        changed: update.changed,
-        risk,
-        retry_policy: update.policy,
-        audit_event: update.event,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      changed: update.changed,
+      risk,
+      retry_policy: update.policy,
+      audit_event: update.event,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `更新重试策略失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `更新重试策略失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -1754,19 +1570,12 @@ router.get('/:taskId', async (req, res) => {
     if (!detail.ok) {
       return _taskControlFail(res, traceId, '查询大型任务详情', detail);
     }
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        task: detail.task,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      task: detail.task,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `查询大型任务详情失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `查询大型任务详情失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -1775,35 +1584,20 @@ router.get('/:taskId/audit', async (req, res) => {
   try {
     const taskId = _trimmedString(req.params?.taskId);
     if (!taskId) {
-      return res.status(400).json({
-        success: false,
-        message: '查询大型任务审计失败: taskId 为必填项。',
-        data: { trace_id: traceId },
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '查询大型任务审计失败: taskId 为必填项。', { status: 400 });
     }
 
     const audit = _normalizeTaskAudit(orchestrator.getTaskAudit(taskId));
     if (!audit.task) {
-      return res.status(404).json({
-        success: false,
-        message: `查询大型任务审计失败: 未找到任务 ${taskId}。`,
-        data: { trace_id: traceId },
-      });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', `查询大型任务审计失败: 未找到任务 ${taskId}。`, { status: 404 });
     }
 
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        audit,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      audit,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `查询大型任务审计失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `查询大型任务审计失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -1812,34 +1606,19 @@ router.post('/:taskId/checkpoints', async (req, res) => {
   try {
     const taskId = _trimmedString(req.params?.taskId);
     if (!taskId) {
-      return res.status(400).json({
-        success: false,
-        message: '保存大型任务检查点失败: taskId 为必填项。',
-        data: { trace_id: traceId },
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '保存大型任务检查点失败: taskId 为必填项。', { status: 400 });
     }
     if (!runtime.getTask(taskId)) {
-      return res.status(404).json({
-        success: false,
-        message: `保存大型任务检查点失败: 未找到任务 ${taskId}。`,
-        data: { trace_id: traceId },
-      });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', `保存大型任务检查点失败: 未找到任务 ${taskId}。`, { status: 404 });
     }
 
     const checkpoint = runtime.saveCheckpoint(taskId, req.body || {});
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        checkpoint,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      checkpoint,
     });
   } catch (error) {
-    return res.status(400).json({
-      success: false,
-      message: `保存大型任务检查点失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INVALID_ARGUMENT', `保存大型任务检查点失败: ${error.message}`, { status: 400 });
   }
 });
 
@@ -1848,48 +1627,26 @@ router.post('/:taskId/run', async (req, res) => {
   try {
     const taskId = _trimmedString(req.params?.taskId);
     if (!taskId) {
-      return res.status(400).json({
-        success: false,
-        message: '执行大型任务失败: taskId 为必填项。',
-        data: { trace_id: traceId },
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '执行大型任务失败: taskId 为必填项。', { status: 400 });
     }
     if (!runtime.getTask(taskId)) {
-      return res.status(404).json({
-        success: false,
-        message: `执行大型任务失败: 未找到任务 ${taskId}。`,
-        data: { trace_id: traceId },
-      });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', `执行大型任务失败: 未找到任务 ${taskId}。`, { status: 404 });
     }
 
     const runOptions = _buildRunOptions(req.body || {});
 
     const runResult = await orchestrator.runTask(taskId, _runBuiltinTaskHandler, runOptions);
     if (runResult.code === 'not_claimed') {
-      return res.status(409).json({
-        success: false,
-        message: `执行大型任务失败: ${runResult.message}`,
-        data: {
-          trace_id: traceId,
-          task_id: taskId,
-        },
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', `执行大型任务失败: ${runResult.message}`, { status: 409 });
     }
 
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        task_id: taskId,
-        run_result: runResult,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      task_id: taskId,
+      run_result: runResult,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `执行大型任务失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `执行大型任务失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -1899,19 +1656,12 @@ router.post('/run-next', async (req, res) => {
     const runOptions = _buildRunOptions(req.body || {});
 
     const runResult = await orchestrator.runNext(_runBuiltinTaskHandler, runOptions);
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        run_result: runResult,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      run_result: runResult,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `执行下一个大型任务失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `执行下一个大型任务失败: ${error.message}`, { status: 500 });
   }
 });
 

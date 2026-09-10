@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const adapter = require('../src/services/updateAdapters/packageAdapter');
+const adapter = require('../src/services/domain/network/updateAdapters/packageAdapter.js');
 
 function state(root) {
   return {

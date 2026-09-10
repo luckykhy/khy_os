@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tests for heartbeatCooldown.js â€” intent-based wake scheduling
+ * Tests for heartbeatCooldown.js â€?intent-based wake scheduling
  * with flood guard and per-agent tracking.
  */
 
@@ -67,7 +67,7 @@ describe('shouldDeferWake', () => {
     expect(result.defer).toBe(false);
   });
 
-  test('event intent â€” first wake (no prior run) is not deferred', () => {
+  test('event intent â€?first wake (no prior run) is not deferred', () => {
     const result = shouldDeferWake({
       intent: 'event',
       now: 1000,
@@ -77,7 +77,7 @@ describe('shouldDeferWake', () => {
     expect(result.defer).toBe(false);
   });
 
-  test('event intent â€” defers when not due', () => {
+  test('event intent â€?defers when not due', () => {
     const result = shouldDeferWake({
       intent: 'event',
       now: 1000,
@@ -88,7 +88,7 @@ describe('shouldDeferWake', () => {
     expect(result.reason).toBe('not-due');
   });
 
-  test('event intent â€” defers on min spacing violation', () => {
+  test('event intent â€?defers on min spacing violation', () => {
     const now = 1000;
     const result = shouldDeferWake({
       intent: 'event',
@@ -167,3 +167,4 @@ describe('constants', () => {
     expect(DEFAULT_FLOOD_THRESHOLD).toBe(5);
   });
 });
+

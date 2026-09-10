@@ -22,6 +22,7 @@
  * @module handlers/agentAssets
  */
 const chalk = require('chalk').default || require('chalk');
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 
 const M = require('../../services/domain/agents/agentAssets/assetModel.js');
 const registry = require('../commands/registry.js');
@@ -462,4 +463,15 @@ function handleAgentAssets(parsed = {}) {
   return _printHelp();
 }
 
-module.exports = { handleAgentAssets };
+module.exports = {
+  handleAgentAssets,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'agent-assets',
+    aliases: ['agentassets', 'aassets'],
+    description: '发现/迁移外部 agent 工具的记忆、工具、技能三类资产',
+    usage: 'agent-assets [discover|caps|plan|import|export|sync]',
+    subCommands: ['discover', 'caps', 'plan', 'import', 'export', 'sync'],
+    category: 'dev',
+    handler: handleAgentAssets,
+  },
+};

@@ -23,7 +23,7 @@
  *      phantom answer the way an answer-resume does.
  */
 
-const { runGraph } = require('../src/services/workflow/workflowExecutor');
+const { runGraph } = require('../src/services/domain/project/workflow/workflowExecutor.js');
 
 // Deterministic primitives — chat echoes its prompt so vars are reproducible.
 function primitives() {

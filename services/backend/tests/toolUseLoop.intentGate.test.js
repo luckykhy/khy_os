@@ -81,3 +81,4 @@ describe('toolUseLoop intent gate integration', () => {
     expect(chat.mock.calls[0][1].preferredModel).toBe('claude-4-sonnet');
   });
 });
+

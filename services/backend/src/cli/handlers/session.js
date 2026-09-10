@@ -12,6 +12,7 @@
 
 // ── Imports ──
 
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const chalk = require('chalk').default || require('chalk');
 
 const { printInfo, printError, printSuccess, printWarn } = require('../formatters');
@@ -634,7 +635,7 @@ function formatSessionMarkdown(data) {
     }
     lines.push(`- Updated: ${stamp}`);
   }
-  lines.push('', '---', '');
+  lines.push('', '', '');
   for (const m of messages) {
     const role =
       m.role === 'user' ? '🧑 User' : m.role === 'assistant' ? '🤖 Assistant' : m.role || 'unknown';
@@ -1108,4 +1109,10 @@ module.exports = {
   _attachArtifacts,
   _buildAnalysisRounds,
   _aggregateRoundMetrics,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'session',
+    description: 'session command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleSessionCommand(parsed.subCommand, parsed.args, parsed.options),
+  },
 };

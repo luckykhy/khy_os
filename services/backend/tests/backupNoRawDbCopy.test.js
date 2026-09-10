@@ -157,7 +157,7 @@ describe('规则的规则:排除清单必须把 .db 关在文件遍历之外', (
   });
 
   test('规则实际生效(与 backupAssetPlan.test.js 互为双保险)', () => {
-    const plan = require('../src/services/backup/backupAssetPlan');
+    const plan = require('../src/services/domain/backup/backup/backupAssetPlan.js');
     for (const n of ['x.db', 'x.sqlite', 'x.db-wal', 'x.db-shm', 'x.db-journal']) {
       const r = plan.classifyFile(n, plan.TIER_FULL);
       assert.equal(r.include, false, n);

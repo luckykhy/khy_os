@@ -13,7 +13,7 @@
 'use strict';
 
 const assert = require('assert');
-const leaf = require('../src/services/query/shortStopContinuation');
+const leaf = require('../src/services/domain/query/query/shortStopContinuation.js');
 const {
   isEnabled, shouldContinue, buildContinuationMessage,
   NATURAL_STOP_REASONS, DEFAULT_MAX_CHARS,

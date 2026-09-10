@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const crypto = require('crypto');
 
-const core = require('../../../src/services/messaging/msgChannelCore');
+const core = require('../../../src/services/domain/messaging/messaging/msgChannelCore.js');
 
 // 固定向量:secret='SECbenchmark', timestampMs=1700000000000
 const SECRET = 'SECbenchmark';

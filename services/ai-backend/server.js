@@ -91,6 +91,10 @@ if (mdWorkbench.enabled()) {
 // ── News Data (for AI agents) ──
 app.use('/api/news', require('./src/routes/news'));
 
+// ── 四端配置同步 (auth required, 后端即同步中心) ──
+// 门控 KHY_CONFIG_SYNC 关时路由返回 503, 客户端降级本地文件
+app.use('/api/config-sync', require('./src/routes/configSync'));
+
 // ── Database Initialization ──
 async function start() {
   const PORT = parseInt(process.env.AI_MGMT_PORT, 10) || 9090;

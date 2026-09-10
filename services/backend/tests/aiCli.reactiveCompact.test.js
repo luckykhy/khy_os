@@ -19,15 +19,15 @@ const { _isContextOverflowFailure } = ai.__test__;
 
 describe('s08 — _isContextOverflowFailure (reactive compaction trigger)', () => {
   test('detects overflow by errorType=context_length', () => {
-    assert.strictEqual(_isContextOverflowFailure({ success: false, errorType: 'context_length' }), true);
+    expect(_isContextOverflowFailure({ success: false, errorType: 'context_length' })).toBe(true);
   });
 
   test('detects overflow by errorType=context_overflow', () => {
-    assert.strictEqual(_isContextOverflowFailure({ success: false, errorType: 'context_overflow' }), true);
+    expect(_isContextOverflowFailure({ success: false, errorType: 'context_overflow' })).toBe(true);
   });
 
   test('detects overflow by errorType=payload_too_large', () => {
-    assert.strictEqual(_isContextOverflowFailure({ success: false, errorType: 'payload_too_large' }), true);
+    expect(_isContextOverflowFailure({ success: false, errorType: 'payload_too_large' })).toBe(true);
   });
 
   test('detects overflow from a prompt_too_long message', () => {
@@ -45,12 +45,12 @@ describe('s08 — _isContextOverflowFailure (reactive compaction trigger)', () =
   });
 
   test('does NOT trigger on a successful result', () => {
-    assert.strictEqual(_isContextOverflowFailure({ success: true, content: 'hello' }), false);
+    expect(_isContextOverflowFailure({ success: true, content: 'hello' })).toBe(false);
   });
 
   test('does NOT trigger on null / undefined', () => {
-    assert.strictEqual(_isContextOverflowFailure(null), false);
-    assert.strictEqual(_isContextOverflowFailure(undefined), false);
+    expect(_isContextOverflowFailure(null)).toBe(false);
+    expect(_isContextOverflowFailure(undefined)).toBe(false);
   });
 
   test('does NOT trigger on an unrelated failure (rate limit)', () => {

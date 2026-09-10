@@ -1,14 +1,14 @@
 'use strict';
 
 /**
- * Tests for maxTokensPolicy.resolveMaxTokens â€” the unified dynamic max_tokens
+ * Tests for maxTokensPolicy.resolveMaxTokens â€?the unified dynamic max_tokens
  * decision (pure function, zero IO). Pins the four contract rules:
  *   1. Explicit value wins; provably-overflowing explicit values are safely
  *      clamped down to the available window (never raised).
- *   2. No explicit value + known window â†’ derive min(outputLimit, available);
+ *   2. No explicit value + known window â†?derive min(outputLimit, available);
  *      abstain (null) when available < minCompletion.
- *   3. Unknown window + known model output limit â†’ use the output limit.
- *   4. Everything unknown â†’ abstain (null); never invent a large value.
+ *   3. Unknown window + known model output limit â†?use the output limit.
+ *   4. Everything unknown â†?abstain (null); never invent a large value.
  */
 
 const assert = require('assert');
@@ -16,7 +16,7 @@ const assert = require('assert');
 const { resolveMaxTokens } = require('../src/services/gateway/maxTokensPolicy');
 
 describe('maxTokensPolicy.resolveMaxTokens', () => {
-  describe('rule 1 â€” explicit value', () => {
+  describe('rule 1 â€?explicit value', () => {
     test('respects an explicit value that fits the window', () => {
       const r = resolveMaxTokens({
         explicitMaxTokens: 4000,
@@ -25,19 +25,19 @@ describe('maxTokensPolicy.resolveMaxTokens', () => {
         safetyBuffer: 512,
         minCompletion: 256,
       });
-      assert.strictEqual(r.maxTokens, 4000);
-      assert.strictEqual(r.source, 'explicit');
-      assert.strictEqual(r.clamped, false);
+      expect(r.maxTokens).toBe(4000);
+      expect(r.source).toBe('explicit');
+      expect(r.clamped).toBe(false);
     });
 
     test('respects an explicit value when the window is unknown', () => {
       const r = resolveMaxTokens({ explicitMaxTokens: 9000, contextWindow: 0 });
-      assert.strictEqual(r.maxTokens, 9000);
-      assert.strictEqual(r.source, 'explicit');
+      expect(r.maxTokens).toBe(9000);
+      expect(r.source).toBe('explicit');
     });
 
     test('safely clamps an explicit value that overflows the window', () => {
-      // available = 8000 - 4000 - 512 = 3488; explicit 6000 > 3488 â†’ clamp
+      // available = 8000 - 4000 - 512 = 3488; explicit 6000 > 3488 â†?clamp
       const r = resolveMaxTokens({
         explicitMaxTokens: 6000,
         promptTokenEstimate: 4000,
@@ -45,13 +45,13 @@ describe('maxTokensPolicy.resolveMaxTokens', () => {
         safetyBuffer: 512,
         minCompletion: 256,
       });
-      assert.strictEqual(r.maxTokens, 3488);
-      assert.strictEqual(r.source, 'explicit_clamped');
-      assert.strictEqual(r.clamped, true);
+      expect(r.maxTokens).toBe(3488);
+      expect(r.source).toBe('explicit_clamped');
+      expect(r.clamped).toBe(true);
     });
 
     test('keeps the explicit value when the window is too tight to clamp usefully', () => {
-      // available = 4000 - 3800 - 512 < minCompletion â†’ keep explicit, no clamp
+      // available = 4000 - 3800 - 512 < minCompletion â†?keep explicit, no clamp
       const r = resolveMaxTokens({
         explicitMaxTokens: 6000,
         promptTokenEstimate: 3800,
@@ -59,13 +59,13 @@ describe('maxTokensPolicy.resolveMaxTokens', () => {
         safetyBuffer: 512,
         minCompletion: 256,
       });
-      assert.strictEqual(r.maxTokens, 6000);
-      assert.strictEqual(r.source, 'explicit');
-      assert.strictEqual(r.clamped, false);
+      expect(r.maxTokens).toBe(6000);
+      expect(r.source).toBe('explicit');
+      expect(r.clamped).toBe(false);
     });
   });
 
-  describe('rule 2 â€” derive from known context window', () => {
+  describe('rule 2 â€?derive from known context window', () => {
     test('uses the available window when no output limit is known', () => {
       // available = 128000 - 10000 - 512 = 117488
       const r = resolveMaxTokens({
@@ -74,8 +74,8 @@ describe('maxTokensPolicy.resolveMaxTokens', () => {
         safetyBuffer: 512,
         minCompletion: 256,
       });
-      assert.strictEqual(r.maxTokens, 117488);
-      assert.strictEqual(r.source, 'context_window');
+      expect(r.maxTokens).toBe(117488);
+      expect(r.source).toBe('context_window');
     });
 
     test('caps at the model output limit when it is smaller than available', () => {
@@ -86,8 +86,8 @@ describe('maxTokensPolicy.resolveMaxTokens', () => {
         safetyBuffer: 512,
         minCompletion: 256,
       });
-      assert.strictEqual(r.maxTokens, 8192);
-      assert.strictEqual(r.source, 'model_output_limit');
+      expect(r.maxTokens).toBe(8192);
+      expect(r.source).toBe('model_output_limit');
     });
 
     test('caps at available when the output limit exceeds it', () => {
@@ -99,37 +99,37 @@ describe('maxTokensPolicy.resolveMaxTokens', () => {
         safetyBuffer: 512,
         minCompletion: 256,
       });
-      assert.strictEqual(r.maxTokens, 5488);
-      assert.strictEqual(r.source, 'context_window');
+      expect(r.maxTokens).toBe(5488);
+      expect(r.source).toBe('context_window');
     });
 
     test('abstains (null) when available < minCompletion', () => {
-      // available = 8000 - 7800 - 512 < 0 â†’ no useful budget
+      // available = 8000 - 7800 - 512 < 0 â†?no useful budget
       const r = resolveMaxTokens({
         promptTokenEstimate: 7800,
         contextWindow: 8000,
         safetyBuffer: 512,
         minCompletion: 256,
       });
-      assert.strictEqual(r.maxTokens, null);
-      assert.strictEqual(r.source, 'insufficient_window');
+      expect(r.maxTokens).toBe(null);
+      expect(r.source).toBe('insufficient_window');
     });
   });
 
-  describe('rule 3 â€” unknown window, known output limit', () => {
+  describe('rule 3 â€?unknown window, known output limit', () => {
     test('uses the model output limit as-is', () => {
       const r = resolveMaxTokens({ contextWindow: 0, maxOutputTokens: 32000 });
-      assert.strictEqual(r.maxTokens, 32000);
-      assert.strictEqual(r.source, 'model_output_limit');
+      expect(r.maxTokens).toBe(32000);
+      expect(r.source).toBe('model_output_limit');
     });
   });
 
-  describe('rule 4 â€” everything unknown', () => {
+  describe('rule 4 â€?everything unknown', () => {
     test('abstains with null and never invents a value', () => {
       const r = resolveMaxTokens({});
-      assert.strictEqual(r.maxTokens, null);
-      assert.strictEqual(r.source, 'unknown');
-      assert.strictEqual(r.clamped, false);
+      expect(r.maxTokens).toBe(null);
+      expect(r.source).toBe('unknown');
+      expect(r.clamped).toBe(false);
     });
 
     test('treats malformed inputs as unknown (fail-soft)', () => {
@@ -138,31 +138,31 @@ describe('maxTokensPolicy.resolveMaxTokens', () => {
         contextWindow: -5,
         maxOutputTokens: NaN,
       });
-      assert.strictEqual(r.maxTokens, null);
-      assert.strictEqual(r.source, 'unknown');
+      expect(r.maxTokens).toBe(null);
+      expect(r.source).toBe('unknown');
     });
   });
 
-  describe('rule 4 â€” centralized defaultFallback', () => {
-    test('everything unknown + defaultFallback > 0 â†’ uses the fallback value', () => {
+  describe('rule 4 â€?centralized defaultFallback', () => {
+    test('everything unknown + defaultFallback > 0 â†?uses the fallback value', () => {
       const r = resolveMaxTokens({ defaultFallback: 4096 });
-      assert.strictEqual(r.maxTokens, 4096);
-      assert.strictEqual(r.source, 'default_fallback');
-      assert.strictEqual(r.clamped, false);
-      assert.strictEqual(r.diagnostics.defaultFallback, 4096);
+      expect(r.maxTokens).toBe(4096);
+      expect(r.source).toBe('default_fallback');
+      expect(r.clamped).toBe(false);
+      expect(r.diagnostics.defaultFallback).toBe(4096);
     });
 
-    test('everything unknown + defaultFallback absent/0 â†’ still abstains (null)', () => {
+    test('everything unknown + defaultFallback absent/0 â†?still abstains (null)', () => {
       const rAbsent = resolveMaxTokens({});
-      assert.strictEqual(rAbsent.maxTokens, null);
-      assert.strictEqual(rAbsent.source, 'unknown');
+      expect(rAbsent.maxTokens).toBe(null);
+      expect(rAbsent.source).toBe('unknown');
       const rZero = resolveMaxTokens({ defaultFallback: 0 });
-      assert.strictEqual(rZero.maxTokens, null);
-      assert.strictEqual(rZero.source, 'unknown');
+      expect(rZero.maxTokens).toBe(null);
+      expect(rZero.source).toBe('unknown');
     });
 
     test('insufficient_window abstain is NOT overridden by defaultFallback', () => {
-      // available = 8000 - 7800 - 512 < minCompletion â†’ abstain regardless of fallback
+      // available = 8000 - 7800 - 512 < minCompletion â†?abstain regardless of fallback
       const r = resolveMaxTokens({
         promptTokenEstimate: 7800,
         contextWindow: 8000,
@@ -170,14 +170,14 @@ describe('maxTokensPolicy.resolveMaxTokens', () => {
         minCompletion: 256,
         defaultFallback: 4096,
       });
-      assert.strictEqual(r.maxTokens, null);
-      assert.strictEqual(r.source, 'insufficient_window');
+      expect(r.maxTokens).toBe(null);
+      expect(r.source).toBe('insufficient_window');
     });
 
     test('explicit value still wins over defaultFallback (Rule 1 priority)', () => {
       const r = resolveMaxTokens({ explicitMaxTokens: 9000, defaultFallback: 4096 });
-      assert.strictEqual(r.maxTokens, 9000);
-      assert.strictEqual(r.source, 'explicit');
+      expect(r.maxTokens).toBe(9000);
+      expect(r.source).toBe('explicit');
     });
   });
 
@@ -189,14 +189,15 @@ describe('maxTokensPolicy.resolveMaxTokens', () => {
         safetyBuffer: 100,
         minCompletion: 256,
       });
-      assert.ok(r.diagnostics && typeof r.diagnostics === 'object');
-      assert.strictEqual(r.diagnostics.available, 800);
-      assert.strictEqual(r.diagnostics.reason, 'preflight');
+      expect(r.diagnostics && typeof r.diagnostics === 'object').toBeTruthy();
+      expect(r.diagnostics.available).toBe(800);
+      expect(r.diagnostics.reason).toBe('preflight');
     });
 
     test('tags the length_recovery reason through', () => {
       const r = resolveMaxTokens({ reason: 'length_recovery' });
-      assert.strictEqual(r.diagnostics.reason, 'length_recovery');
+      expect(r.diagnostics.reason).toBe('length_recovery');
     });
   });
 });
+

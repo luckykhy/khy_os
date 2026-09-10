@@ -101,7 +101,7 @@ describe('platformUtils windows compatibility', () => {
 });
 
 /**
- * getShellConfiguration â€” single source of truth for shell selection across the
+ * getShellConfiguration â€?single source of truth for shell selection across the
  * tool-execution path (shellCommand, grep, lintCode, runTests, buildProject,
  * claudeAdapter seeded_shell). `isWin` is captured at module require-time from
  * process.platform, so each case fakes process.platform BEFORE require (with
@@ -139,7 +139,7 @@ describe('getShellConfiguration', () => {
   // computeShellConfigWithFs variant pins existence explicitly, so the Unix
   // defaults hold on any runner.
 
-  test('Unix default â†’ non-login bash (/bin/bash -c)', () => {
+  test('Unix default â†?non-login bash (/bin/bash -c)', () => {
     expect(computeShellConfigWithFs({
       platform: 'linux',
       env: { SHELL: undefined },
@@ -148,7 +148,7 @@ describe('getShellConfiguration', () => {
       .toEqual({ executable: '/bin/bash', argsPrefix: ['-c'], shell: 'bash' });
   });
 
-  test('Unix login:true â†’ login bash (/bin/bash -lc) for profile PATH', () => {
+  test('Unix login:true â†?login bash (/bin/bash -lc) for profile PATH', () => {
     expect(computeShellConfigWithFs({
       platform: 'linux',
       env: { SHELL: undefined },
@@ -158,7 +158,7 @@ describe('getShellConfiguration', () => {
       .toEqual({ executable: '/bin/bash', argsPrefix: ['-lc'], shell: 'bash' });
   });
 
-  test('Windows Git Bash (MSYSTEM=MINGW64) â†’ bash with -c', () => {
+  test('Windows Git Bash (MSYSTEM=MINGW64) â†?bash with -c', () => {
     const cfg = computeShellConfigWithFs({
       platform: 'win32',
       // KHY_GIT_BASH_PATH points at a path that exists (pinned via the mocked
@@ -171,7 +171,7 @@ describe('getShellConfiguration', () => {
     expect(cfg.executable).toBe('/bin/bash');
   });
 
-  test('Windows PowerShell (COMSPEC=powershell.exe) â†’ -NoProfile -NonInteractive -Command', () => {
+  test('Windows PowerShell (COMSPEC=powershell.exe) â†?-NoProfile -NonInteractive -Command', () => {
     const cfg = computeShellConfig({
       platform: 'win32',
       env: {
@@ -185,7 +185,7 @@ describe('getShellConfiguration', () => {
     expect(cfg.executable.toLowerCase()).toContain('powershell.exe');
   });
 
-  test('Windows default (COMSPEC=cmd.exe) â†’ cmd with /d /s /c', () => {
+  test('Windows default (COMSPEC=cmd.exe) â†?cmd with /d /s /c', () => {
     const cfg = computeShellConfig({
       platform: 'win32',
       env: { MSYSTEM: undefined, TERM: 'dumb', COMSPEC: 'C:\\Windows\\System32\\cmd.exe' },
@@ -238,7 +238,7 @@ describe('getShellConfiguration', () => {
     }
   }
 
-  test('Alpine (no /bin/bash, SHELL=/bin/ash) â†’ falls back to ash with -c', () => {
+  test('Alpine (no /bin/bash, SHELL=/bin/ash) â†?falls back to ash with -c', () => {
     const cfg = computeShellConfigWithFs({
       platform: 'linux',
       env: { SHELL: '/bin/ash' },
@@ -247,7 +247,7 @@ describe('getShellConfiguration', () => {
     expect(cfg).toEqual({ executable: '/bin/ash', argsPrefix: ['-c'], shell: 'sh' });
   });
 
-  test('no /bin/bash and no usable $SHELL â†’ last-resort /bin/sh -c', () => {
+  test('no /bin/bash and no usable $SHELL â†?last-resort /bin/sh -c', () => {
     const cfg = computeShellConfigWithFs({
       platform: 'linux',
       env: { SHELL: undefined },
@@ -263,11 +263,11 @@ describe('getShellConfiguration', () => {
       options: { login: true },
       existsSync: (p) => p === '/bin/ash',
     });
-    // dash/busybox login semantics are unreliable â†’ must stay -c, never -lc
+    // dash/busybox login semantics are unreliable â†?must stay -c, never -lc
     expect(cfg.argsPrefix).toEqual(['-c']);
   });
 
-  test('bash present â†’ still preferred even when $SHELL points elsewhere', () => {
+  test('bash present â†?still preferred even when $SHELL points elsewhere', () => {
     const cfg = computeShellConfigWithFs({
       platform: 'linux',
       env: { SHELL: '/bin/zsh' },
@@ -277,3 +277,4 @@ describe('getShellConfiguration', () => {
     expect(cfg).toEqual({ executable: '/bin/bash', argsPrefix: ['-lc'], shell: 'bash' });
   });
 });
+

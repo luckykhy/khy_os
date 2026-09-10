@@ -1,13 +1,13 @@
 'use strict';
 
 /**
- * workflowRunWorker.quantum.test.js — Phase C-3 (§4.C), worker/DB side.
+ * workflowRunWorker.quantum.test.js �?Phase C-3 (§4.C), worker/DB side.
  *
  * The pure interpreter test (workflowExecutor.quantum.test.js) proves the yield
  * math. This proves the CROSS-PROCESS half: a quantum yield is persisted to the
  * `workflow_runs` row and a fresh worker invocation (a separate "process") picks
  * the run back up and continues from the durable checkpoint, eventually reaching
- * the SAME terminal state as an uninterrupted run — plus the ready-queue fairness
+ * the SAME terminal state as an uninterrupted run �?plus the ready-queue fairness
  * that makes preemption worthwhile (a yielded run yields its turn).
  *
  * Boots a throwaway SQLite DB bound to the shared sequelize singleton BEFORE
@@ -25,8 +25,8 @@ process.env.NODE_ENV = 'test';
 process.env.KHY_WORKFLOW_WORKER = '0'; // never auto-start the interval in tests
 
 const { sequelize, User, UserWorkflow, WorkflowRun } = require('@khy/shared/models');
-const worker = require('../src/services/workflow/workflowRunWorker');
-const executor = require('../src/services/workflow/workflowExecutor');
+const worker = require('../src/services/domain/project/workflow/workflowRunWorker.js');
+const executor = require('../src/services/domain/project/workflow/workflowExecutor.js');
 
 let userId;
 let workflowId;
@@ -85,7 +85,7 @@ async function enqueue(graph, vars = {}) {
   return row.id;
 }
 
-describe('quantum preemption — cross-process resume', () => {
+describe('quantum preemption �?cross-process resume', () => {
   test('a long run yields, persists a quantum checkpoint, and resumes to the same result', async () => {
     process.env.KHY_WORKFLOW_QUANTUM_STEPS = '2';
     const graph = linearGraph(6); // executed order: s, p1..p6, e
@@ -102,8 +102,8 @@ describe('quantum preemption — cross-process resume', () => {
     expect(row.logJson.map((l) => l.nodeId)).toEqual(['s', 'p1']);
     expect(row.logJson.some((l) => l.status === 'awaiting_input')).toBe(false);
 
-    // Keep ticking — each tick is a fresh "process invocation" resuming the
-    // durable checkpoint — until the run terminates. Bound to avoid a hang.
+    // Keep ticking �?each tick is a fresh "process invocation" resuming the
+    // durable checkpoint �?until the run terminates. Bound to avoid a hang.
     let ticks = 1;
     for (; ticks < 50 && row.status !== 'succeeded'; ticks++) {
       // eslint-disable-next-line no-await-in-loop
@@ -119,7 +119,7 @@ describe('quantum preemption — cross-process resume', () => {
     expect(row.varsJson.r1).toBe('echo:step 1 X');
     expect(row.varsJson.r6).toBe('echo:step 6 X');
     expect(row.logJson.map((l) => l.nodeId)).toEqual(['s', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'e']);
-    // 8 nodes at 2 per slice ⇒ it really did preempt several times.
+    // 8 nodes at 2 per slice �?it really did preempt several times.
     expect(ticks).toBeGreaterThanOrEqual(4);
   });
 
@@ -149,12 +149,12 @@ describe('quantum preemption — cross-process resume', () => {
   });
 });
 
-describe('ready-queue fairness — a yielded run yields its turn', () => {
+describe('ready-queue fairness �?a yielded run yields its turn', () => {
   test('with quantum on, claim order follows updatedAt so a re-queued run goes to the back', async () => {
     await WorkflowRun.destroy({ where: {} }); // isolate from prior tests' rows
     process.env.KHY_WORKFLOW_QUANTUM_STEPS = '2';
     // A enqueued first (lower id), B second. Timestamps are written by Sequelize
-    // (consistent format) so SQL ORDER BY updated_at is well-defined — never
+    // (consistent format) so SQL ORDER BY updated_at is well-defined �?never
     // hand-format dates here, or a lexical mismatch breaks the ordering.
     const aId = await enqueue(linearGraph(6), { seed: 'A' });
     const bId = await enqueue(linearGraph(1), { seed: 'B' });
@@ -165,7 +165,7 @@ describe('ready-queue fairness — a yielded run yields its turn', () => {
     // Simulate A yielding: re-queue via Sequelize (updatedAt bumped to now = newest).
     await first.update({ status: 'queued' });
 
-    // Now the next claim must pick B — A yielded its turn despite the lower id.
+    // Now the next claim must pick B �?A yielded its turn despite the lower id.
     const second = await worker.claimNext(WorkflowRun);
     expect(second.id).toBe(bId);
   });
@@ -186,3 +186,4 @@ describe('ready-queue fairness — a yielded run yields its turn', () => {
     expect(claimed.id).toBe(loId); // lowest id wins regardless of updatedAt
   });
 });
+

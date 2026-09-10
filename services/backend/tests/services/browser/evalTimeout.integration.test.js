@@ -18,8 +18,8 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('path');
 
-const ENGINE_PATH = path.resolve(__dirname, '../../../src/services/browser/engine.js');
-const SESSION_PATH = path.resolve(__dirname, '../../../src/services/browser/session.js');
+const ENGINE_PATH = path.resolve(__dirname, '../../../src/services/domain/desktop/browser/engine.js');
+const SESSION_PATH = path.resolve(__dirname, '../../../src/services/domain/desktop/browser/session.js');
 
 function freshSession() {
   delete require.cache[require.resolve(SESSION_PATH)];

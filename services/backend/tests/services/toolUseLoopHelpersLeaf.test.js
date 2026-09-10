@@ -1,5 +1,4 @@
 'use strict';
-
 /**
  * Leaf-contract test for toolUseLoopHelpers.js (the tool-result / delivery / classification / recovery /
  * scaffold / patch / nudge / write-diff / complexity band isolated from services/toolUseLoop.js).
@@ -22,58 +21,59 @@
  * loop. Behavioural coverage lives in the toolUseLoop.* / patchEmptyToolNames / appLaunch* suites, which
  * exercise the band end-to-end through the wired core.
  */
-const test = require('node:test');
-const assert = require('node:assert');
-
 const HELP = '../../src/services/toolUseLoopHelpers';
 const CORE = '../../src/services/toolUseLoopCore';
 const HOST = '../../src/services/toolUseLoop';
 
-test('helpers leaf exports its function surface + DI setter', () => {
-  const help = require(HELP);
-  assert.strictEqual(typeof help.setToolUseLoopHelpersDeps, 'function');
-  // Representatives drawn from each sub-band of the relocated helper region.
-  for (const name of [
-    '_buildToolResultMessage', '_stripToolCalls', '_pruneOldToolOutputs',
-    '_looksLikeCannedRefusal', '_recoverWebSearchAfterShellFailure', '_patchEmptyShellCommand',
-    '_matchBlockedToolConstraint', '_filterToolCallsByIntent', '_buildDeliverySummary',
-    '_safeReadForDiff', '_finalizeWriteDiff', 'isEnabled', 'maybeForgeStructuredIntent',
-  ]) {
-    assert.strictEqual(typeof help[name], 'function', `helpers must export ${name}`);
-  }
+describe('Tool Use Loop Helpers Leaf', () => {
+  test('helpers leaf exports its function surface + DI setter', () => {
+      const help = require(HELP);
+      expect(typeof help.setToolUseLoopHelpersDeps).toBe('function');
+      // Representatives drawn from each sub-band of the relocated helper region.
+      for (const name of [
+        '_buildToolResultMessage', '_stripToolCalls', '_pruneOldToolOutputs',
+        '_looksLikeCannedRefusal', '_recoverWebSearchAfterShellFailure', '_patchEmptyShellCommand',
+        '_matchBlockedToolConstraint', '_filterToolCallsByIntent', '_buildDeliverySummary',
+        '_safeReadForDiff', '_finalizeWriteDiff', 'isEnabled', 'maybeForgeStructuredIntent',
+      ]) {
+        expect(typeof help[name]).toBe('function', `helpers must export ${name}`);
+      }
+  });
+
+  test('public entry re-exports the monolith surface; helper-backed export identity is the leaf wiring', () => {
+      const host = require(HOST);
+      const core = require(CORE);
+      const help = require(HELP);
+      // The facade is a straight re-export of the core surface.
+      expect(host).toBe(core, 'toolUseLoop.js must re-export the core module object');
+      expect(typeof host.runToolUseLoop).toBe('function');
+      expect(host.runToolUseLoop.constructor.name).toBe('AsyncFunction');
+      // Shorthand exports resolve to the exact identity the helpers leaf provides (core destructured them),
+      // proving the leaf is wired into the live surface and is not a dead copy.
+      assert.strictEqual(host.isEnabled, help.isEnabled,
+        'host.isEnabled must be the helpers leaf function (wiring intact)');
+      assert.strictEqual(host._safeReadForDiff, help._safeReadForDiff,
+        'host._safeReadForDiff must be the helpers leaf function (wiring intact)');
+      expect(host._parseToolCalls === undefined).toBe(false, '_parseToolCalls stays a core export');
+  });
+
+  test('setToolUseLoopHelpersDeps is a guarded, idempotent, non-throwing DI setter', () => {
+      const { setToolUseLoopHelpersDeps } = require(HELP);
+      expect(() => setToolUseLoopHelpersDeps().not.toThrow());
+      expect(() => setToolUseLoopHelpersDeps({}).not.toThrow());
+      // The six core bindings accept any defined value (data consts + functions); undefined is ignored.
+      const fn = () => {};
+      const deps = {
+        _APP_TARGET_PROBE_BINS: new Set(['code']),
+        _SEARCH_TERM_STOPWORDS: new Set(['the']),
+        _parsePositiveInt: fn,
+        _resolveAutoWebSearchMode: fn,
+        _extractToolOutput: fn,
+        _getActiveModelContextWindow: fn,
+      };
+      expect(() => setToolUseLoopHelpersDeps(deps).not.toThrow());
+      expect(() => setToolUseLoopHelpersDeps(deps).not.toThrow());
+  });
+
 });
 
-test('public entry re-exports the monolith surface; helper-backed export identity is the leaf wiring', () => {
-  const host = require(HOST);
-  const core = require(CORE);
-  const help = require(HELP);
-  // The facade is a straight re-export of the core surface.
-  assert.strictEqual(host, core, 'toolUseLoop.js must re-export the core module object');
-  assert.strictEqual(typeof host.runToolUseLoop, 'function');
-  assert.strictEqual(host.runToolUseLoop.constructor.name, 'AsyncFunction');
-  // Shorthand exports resolve to the exact identity the helpers leaf provides (core destructured them),
-  // proving the leaf is wired into the live surface and is not a dead copy.
-  assert.strictEqual(host.isEnabled, help.isEnabled,
-    'host.isEnabled must be the helpers leaf function (wiring intact)');
-  assert.strictEqual(host._safeReadForDiff, help._safeReadForDiff,
-    'host._safeReadForDiff must be the helpers leaf function (wiring intact)');
-  assert.strictEqual(host._parseToolCalls === undefined, false, '_parseToolCalls stays a core export');
-});
-
-test('setToolUseLoopHelpersDeps is a guarded, idempotent, non-throwing DI setter', () => {
-  const { setToolUseLoopHelpersDeps } = require(HELP);
-  assert.doesNotThrow(() => setToolUseLoopHelpersDeps());
-  assert.doesNotThrow(() => setToolUseLoopHelpersDeps({}));
-  // The six core bindings accept any defined value (data consts + functions); undefined is ignored.
-  const fn = () => {};
-  const deps = {
-    _APP_TARGET_PROBE_BINS: new Set(['code']),
-    _SEARCH_TERM_STOPWORDS: new Set(['the']),
-    _parsePositiveInt: fn,
-    _resolveAutoWebSearchMode: fn,
-    _extractToolOutput: fn,
-    _getActiveModelContextWindow: fn,
-  };
-  assert.doesNotThrow(() => setToolUseLoopHelpersDeps(deps));
-  assert.doesNotThrow(() => setToolUseLoopHelpersDeps(deps));
-});

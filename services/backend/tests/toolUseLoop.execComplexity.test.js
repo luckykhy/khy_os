@@ -1,5 +1,4 @@
 'use strict';
-
 /**
  * toolUseLoop.execComplexity.test.js — 执行中复杂度升级的**接线**回归。
  *
@@ -12,16 +11,10 @@
  *
  * 驱动真实 runToolUseLoop + 计数假 chat + monkeypatch executeTool。零网络、零进程。
  */
-
-const { describe, test, before, after, beforeEach, afterEach } = require('node:test');
-const assert = require('node:assert/strict');
-
 process.env.KHY_TASK_CAPABILITY_GATE = 'false';
 process.env.KHY_EXEC_APPROVAL = 'off';
-
 const toolCalling = require('../src/services/toolCalling');
 const toolUseLoop = require('../src/services/toolUseLoop');
-
 // 三个文件、三个目录 → 叶子打分 files+2 / dirs+2 = 4,正好越过默认阈值 4。
 // 用**真实存在且可解析**的路径:executeTool 已被替身,不会真写盘,但循环里的语法
 // 验证门会去 require 这些路径——指向不存在的文件会让它反复要求修复而空转。
@@ -30,17 +23,13 @@ const SPREAD_CALLS = [
   { type: 'tool_use', id: 'e2', name: 'write_file', input: { path: 'src/cli/router.js', content: 'x' } },
   { type: 'tool_use', id: 'e3', name: 'write_file', input: { path: 'src/utils/logger.js', content: 'x' } },
 ];
-
 // 单文件 → 打分 0,不该越线。
 const NARROW_CALLS = [
   { type: 'tool_use', id: 'n1', name: 'write_file', input: { path: 'src/services/taskComplexity.js', content: 'x' } },
 ];
-
 const DIRECTIVE_RE = /规模复核/;
-
 describe('toolUseLoop — 执行中复杂度升级(措辞判简单、事实判复杂)', () => {
   let _origExecute;
-
   before(() => {
     process.env.KHY_TOOL_LOOP_RECOVERY_DELAY_MS = '1';
   });
@@ -55,7 +44,6 @@ describe('toolUseLoop — 执行中复杂度升级(措辞判简单、事实判�
   afterEach(() => {
     toolCalling.executeTool = _origExecute;
   });
-
   /**
    * 跑一轮:第 1 次 chat 发工具调用,之后收尾。返回每次 chat 收到的消息文本。
    * @param {Array<object>} blocks - 第 1 轮返回的 tool_use 块
@@ -80,29 +68,32 @@ describe('toolUseLoop — 执行中复杂度升级(措辞判简单、事实判�
     await toolUseLoop.runToolUseLoop('把错误处理统一成一套', { chat, maxIterations: 3 });
     return seen;
   }
+});
 
+describe('Tool Use Loop exec Complexity', () => {
   test('跨目录多文件改动 → 下一轮输入里带上补计划指令', async () => {
-    const seen = await runWith(SPREAD_CALLS);
-    assert.ok(seen.length >= 2, '应至少发生两次 chat(工具轮 + 续接轮)');
-    const injected = seen.slice(1).join('\n');
-    assert.match(injected, DIRECTIVE_RE, '越线后续接轮输入必须带「规模复核」指令');
-    assert.match(injected, /<execution_plan>/, '指令要求摆计划');
-    assert.match(injected, /TaskCreate/, '指令要求登记任务板');
-    assert.match(injected, /已改动 3 个文件/, '指令要带具体证据(状态透明红线)');
+        const seen = await runWith(SPREAD_CALLS);
+        expect(seen.length >= 2).toBeTruthy();
+        const injected = seen.slice(1).join('\n');
+        expect(injected).toMatch(DIRECTIVE_RE);
+        expect(injected).toMatch(/<execution_plan>/);
+        expect(injected).toMatch(/TaskCreate/);
+        expect(injected).toMatch(/已改动 3 个文件/);
   });
 
   test('单文件改动 → 不注入(零上下文开销)', async () => {
-    const seen = await runWith(NARROW_CALLS);
-    assert.doesNotMatch(seen.join('\n'), DIRECTIVE_RE, '未越线不得注入');
+        const seen = await runWith(NARROW_CALLS);
+        expect(seen.join('\n')).not.toMatch(DIRECTIVE_RE);
   });
 
   test('门控关闭 → 不注入', async () => {
-    process.env.KHY_EXEC_COMPLEXITY_ESCALATION = '0';
-    try {
-      const seen = await runWith(SPREAD_CALLS);
-      assert.doesNotMatch(seen.join('\n'), DIRECTIVE_RE, '门控关闭时必须完全静默');
-    } finally {
-      delete process.env.KHY_EXEC_COMPLEXITY_ESCALATION;
-    }
+        process.env.KHY_EXEC_COMPLEXITY_ESCALATION = '0';
+        try {
+          const seen = await runWith(SPREAD_CALLS);
+          expect(seen.join('\n')).not.toMatch(DIRECTIVE_RE);
+        } finally {
+          delete process.env.KHY_EXEC_COMPLEXITY_ESCALATION;
+        }
   });
+
 });

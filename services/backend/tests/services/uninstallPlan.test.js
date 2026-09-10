@@ -10,7 +10,7 @@ const {
   uninstallEnabled,
   buildUninstallTargets,
   KIND,
-} = require('../../src/services/uninstall/uninstallPlan');
+} = require('../../src/services/domain/maintenance/uninstall/uninstallPlan.js');
 
 const HOME = '/home/tester';
 

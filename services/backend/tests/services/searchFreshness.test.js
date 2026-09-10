@@ -15,7 +15,7 @@
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const fr = require('../../src/services/search/searchFreshness');
+const fr = require('../../src/services/domain/query/search/searchFreshness.js');
 
 // 固定 now,保持确定性:2026-06-25T00:00:00Z。
 const NOW = Date.UTC(2026, 5, 25);

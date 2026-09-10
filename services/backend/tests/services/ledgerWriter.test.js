@@ -17,7 +17,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const writer = require('../../src/services/uninstall/ledgerWriter');
+const writer = require('../../src/services/domain/maintenance/uninstall/ledgerWriter.js');
 const handler = require('../../src/cli/handlers/uninstall');
 
 function _tmpHome() {

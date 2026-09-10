@@ -26,18 +26,18 @@ describe('paintYieldEnabled — submit paint-yield gate', () => {
   afterEach(() => { delete process.env[FLAG]; });
 
   test('enabled by default (flag unset)', () => {
-    assert.strictEqual(load()(), true);
+    expect(load()()).toBe(true);
   });
 
   test('disabled via 0/false/off/no (case/space tolerant)', () => {
     for (const v of ['0', 'false', 'off', 'no', ' OFF ', 'False']) {
-      assert.strictEqual(load(v)(), false, `value=${JSON.stringify(v)}`);
+      expect(load(v)()).toBe(false);
     }
   });
 
   test('any other value keeps it enabled', () => {
     for (const v of ['1', 'true', 'on', 'yes', 'anything']) {
-      assert.strictEqual(load(v)(), true, `value=${JSON.stringify(v)}`);
+      expect(load(v)()).toBe(true);
     }
   });
 });

@@ -135,9 +135,9 @@ function buildPrompt(changes, options = {}) {
     prompt += `\n\nAdditional context from the developer:\n${options.extraContext}`;
   }
 
-  prompt += '\n\n--- Diff stat ---\n';
+  prompt += '\n\nDiff stat:\n';
   prompt += changes.stat || '(no stat available)';
-  prompt += '\n\n--- Diff ---\n';
+  prompt += '\n\nDiff:\n';
   prompt += changes.diff || '(no diff available)';
 
   return prompt;

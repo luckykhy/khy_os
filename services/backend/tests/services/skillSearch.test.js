@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tests for skillSearch.js â€” skill discovery and relevance matching.
+ * Tests for skillSearch.js â€?skill discovery and relevance matching.
  *
  * Internal scoring functions are tested indirectly through the public API.
  * We mock the skill sources to isolate the search/scoring logic.
@@ -120,3 +120,4 @@ descFn('skillSearch', () => {
     expect(result.explicit).toBeNull();
   });
 });
+

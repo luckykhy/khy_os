@@ -110,9 +110,10 @@ describeOrSkip('ToolLines tool-error faithful render (刀40)', () => {
     process.env.KHY_TOOL_ERROR_FOLD = 'on';
     process.env.KHY_DIFF_CONTENT_WIDTH = 'on';
     const frame = await frameFor([LONG_ERR], { expanded: true });
-    // ink 在 80 列会把整行自然换行(可能把尾标记拆到换行处),故剥除所有空白再比对:
-    // 全部字符在帧内即证明无固定 120 截断(整行交 ink,Ctrl+O 真全貌)。
-    const flat = frame.replace(/\s+/g, '');
+    // ink 在 80 列会把整行自然换行(可能把尾标记拆到换行处),故剥除所有空白+
+    // 边框字符(╭╮╰╯─│)再比对:全部字符在帧内即证明无固定 120 截断(整行交 ink,Ctrl+O 真全貌)。
+    // 边框字符源于工具卡片化(borderStyle: round)后的视觉包装,不影响内容完整性。
+    const flat = frame.replace(/[\s╭╮╰╯─│]+/g, '');
     expect(flat).toContain(LONG_TAIL);
     expect(frame).not.toContain('…');
   });
@@ -123,7 +124,7 @@ describeOrSkip('ToolLines tool-error faithful render (刀40)', () => {
     const frame = await frameFor([LONG_ERR], { expanded: false });
     // 折叠态:diffClipWidth 返回终端感知宽(80 列下远 < 137)→ 截尾 + `…`,尾标记丢失。
     // 与「gate ON + expanded 全貌」形成对照,实证展开→Infinity 的差异是真实可见的(非 no-op)。
-    const flat = frame.replace(/\s+/g, '');
+    const flat = frame.replace(/[\s╭╮╰╯─│]+/g, '');
     expect(flat).not.toContain(LONG_TAIL);
     expect(frame).toContain('…');
   });
@@ -132,7 +133,7 @@ describeOrSkip('ToolLines tool-error faithful render (刀40)', () => {
     process.env.KHY_TOOL_ERROR_FOLD = 'off';
     const frame = await frameFor([LONG_ERR], { expanded: true });
     // 关门:无视展开,固定裁 120 → 尾标记丢失 + `…`(与 gate ON + expanded 的全貌形成对照)。
-    const flat = frame.replace(/\s+/g, '');
+    const flat = frame.replace(/[\s╭╮╰╯─│]+/g, '');
     expect(flat).not.toContain(LONG_TAIL);
     expect(frame).toContain('…');
   });

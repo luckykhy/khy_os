@@ -8,7 +8,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const SUT = '../../src/services/syscallGateway/permissionCache';
+const SUT = '../../src/services/domain/system/syscallGateway/permissionCache';
 const { LEVELS } = require('../../src/services/syscallGateway/resourceClassifier');
 
 function fresh() {

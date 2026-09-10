@@ -1,8 +1,8 @@
 <template>
   <div class="pricing-page">
     <KhyPageHeader
-      title="计费定价"
       subtitle="分组倍率与默认限额、模型单价（CNY / 1M tokens）。计费金额 = 基础成本 × 分组倍率"
+      title="计费定价"
     >
       <template #actions>
         <el-button :loading="billing.loading.value" @click="reload">
@@ -12,34 +12,37 @@
       </template>
     </KhyPageHeader>
 
+    <!-- 接口失败时明确报错，而不是「暂无分组」的空态 -->
+    <LoadErrorBanner :message="billing.loadError" />
+
     <!-- Groups -->
-    <el-card shadow="never" class="block-card">
+    <el-card class="block-card" shadow="never">
       <template #header>
         <div class="block-head">
           <span class="block-title">定价分组</span>
           <el-button size="small" type="primary" @click="openGroupDialog()">新增分组</el-button>
         </div>
       </template>
-      <el-table :data="groupRows" stripe size="small" empty-text="暂无分组">
-        <el-table-column prop="id" label="分组 ID" min-width="140" />
-        <el-table-column label="倍率" width="120" align="right">
+      <el-table :data="groupRows" empty-text="暂无分组" size="small" stripe>
+        <el-table-column label="分组 ID" min-width="140" prop="id" />
+        <el-table-column align="right" label="倍率" width="120">
           <template #default="{ row }">×{{ Number(row.ratio).toFixed(2) }}</template>
         </el-table-column>
-        <el-table-column label="默认 RPM" width="120" align="right">
+        <el-table-column align="right" label="默认 RPM" width="120">
           <template #default="{ row }">{{ row.limits.rpm || '不限' }}</template>
         </el-table-column>
-        <el-table-column label="默认 TPM" width="130" align="right">
+        <el-table-column align="right" label="默认 TPM" width="130">
           <template #default="{ row }">{{ row.limits.tpm || '不限' }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="160" align="center">
+        <el-table-column align="center" label="操作" width="160">
           <template #default="{ row }">
-            <el-button size="small" link type="primary" @click="openGroupDialog(row)"
+            <el-button link size="small" type="primary" @click="openGroupDialog(row)"
               >编辑</el-button
             >
             <el-button
               v-if="row.id !== 'default'"
-              size="small"
               link
+              size="small"
               type="danger"
               @click="removeGroup(row.id)"
               >删除</el-button
@@ -50,7 +53,7 @@
     </el-card>
 
     <!-- Model pricing -->
-    <el-card shadow="never" class="block-card">
+    <el-card class="block-card" shadow="never">
       <template #header>
         <div class="block-head">
           <span class="block-title">模型单价（CNY / 1M tokens）</span>
@@ -59,23 +62,23 @@
       </template>
       <el-table
         :data="modelRows"
-        stripe
-        size="small"
         empty-text="未配置模型单价（回退内置 USD 价表）"
+        size="small"
+        stripe
       >
-        <el-table-column prop="model" label="模型" min-width="200" />
-        <el-table-column label="输入单价" width="160" align="right">
+        <el-table-column label="模型" min-width="200" prop="model" />
+        <el-table-column align="right" label="输入单价" width="160">
           <template #default="{ row }">¥{{ Number(row.input).toFixed(2) }}</template>
         </el-table-column>
-        <el-table-column label="输出单价" width="160" align="right">
+        <el-table-column align="right" label="输出单价" width="160">
           <template #default="{ row }">¥{{ Number(row.output).toFixed(2) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="160" align="center">
+        <el-table-column align="center" label="操作" width="160">
           <template #default="{ row }">
-            <el-button size="small" link type="primary" @click="openModelDialog(row)"
+            <el-button link size="small" type="primary" @click="openModelDialog(row)"
               >编辑</el-button
             >
-            <el-button size="small" link type="danger" @click="removeModel(row.model)"
+            <el-button link size="small" type="danger" @click="removeModel(row.model)"
               >删除</el-button
             >
           </template>
@@ -89,7 +92,7 @@
       :title="groupDialog.mode === 'create' ? '新增分组' : '编辑分组'"
       width="460px"
     >
-      <el-form :model="groupDialog.form" label-width="110px">
+      <el-form label-width="110px" :model="groupDialog.form">
         <el-form-item label="分组 ID">
           <el-input
             v-model="groupDialog.form.id"
@@ -98,18 +101,18 @@
           />
         </el-form-item>
         <el-form-item label="倍率">
-          <el-input-number v-model="groupDialog.form.ratio" :min="0" :step="0.1" :precision="2" />
+          <el-input-number v-model="groupDialog.form.ratio" :min="0" :precision="2" :step="0.1" />
         </el-form-item>
         <el-form-item label="默认 RPM">
-          <el-input-number v-model="groupDialog.form.rpm" :min="0" :max="100000" />
+          <el-input-number v-model="groupDialog.form.rpm" :max="100000" :min="0" />
         </el-form-item>
         <el-form-item label="默认 TPM">
-          <el-input-number v-model="groupDialog.form.tpm" :min="0" :max="100000000" />
+          <el-input-number v-model="groupDialog.form.tpm" :max="100000000" :min="0" />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="groupDialog.visible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="saveGroup">保存</el-button>
+        <el-button :loading="saving" type="primary" @click="saveGroup">保存</el-button>
       </template>
     </el-dialog>
 
@@ -119,7 +122,7 @@
       :title="modelDialog.mode === 'create' ? '新增模型定价' : '编辑模型定价'"
       width="460px"
     >
-      <el-form :model="modelDialog.form" label-width="130px">
+      <el-form label-width="130px" :model="modelDialog.form">
         <el-form-item label="模型">
           <el-input
             v-model="modelDialog.form.model"
@@ -128,15 +131,15 @@
           />
         </el-form-item>
         <el-form-item label="输入（¥/1M）">
-          <el-input-number v-model="modelDialog.form.input" :min="0" :step="0.5" :precision="2" />
+          <el-input-number v-model="modelDialog.form.input" :min="0" :precision="2" :step="0.5" />
         </el-form-item>
         <el-form-item label="输出（¥/1M）">
-          <el-input-number v-model="modelDialog.form.output" :min="0" :step="0.5" :precision="2" />
+          <el-input-number v-model="modelDialog.form.output" :min="0" :precision="2" :step="0.5" />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="modelDialog.visible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="saveModel">保存</el-button>
+        <el-button :loading="saving" type="primary" @click="saveModel">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -148,6 +151,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { Refresh } from '@element-plus/icons-vue';
 import { useGatewayBilling } from '@/composables/useGatewayBilling';
 import KhyPageHeader from '@/components/KhyPageHeader.vue';
+import LoadErrorBanner from '@/components/LoadErrorBanner.vue';
 
 defineOptions({ name: 'Pricing' });
 

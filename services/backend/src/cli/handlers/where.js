@@ -8,6 +8,7 @@
  * installed copy is actually running (dev / portable / npm / pip).
  */
 
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const fs = require('fs');
 const path = require('path');
 
@@ -128,4 +129,12 @@ function handleWhere() {
   console.log('');
 }
 
-module.exports = { handleWhere };
+module.exports = {
+  handleWhere,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'where',
+    description: 'where command (auto-migrated)',
+    category: 'system',
+    handler: async () => { handleWhere(); return true; },
+  },
+};

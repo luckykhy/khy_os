@@ -10,7 +10,7 @@
 const { describe, test, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 
-const queue = require('../../../src/services/conversation/btwNoteQueue');
+const queue = require('../../../src/services/domain/session/conversation/btwNoteQueue.js');
 
 beforeEach(() => queue.clear());
 
@@ -56,7 +56,7 @@ describe('clear', () => {
 describe('模块单例', () => {
   test('二次 require 共享同一队列', () => {
     queue.enqueue('shared');
-    const again = require('../../../src/services/conversation/btwNoteQueue');
+    const again = require('../../../src/services/domain/session/conversation/btwNoteQueue.js');
     assert.equal(again.count(), 1);
     assert.deepEqual(again.drainAll(), ['shared']);
     assert.equal(queue.count(), 0);

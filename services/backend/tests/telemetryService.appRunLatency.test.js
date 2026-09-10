@@ -58,3 +58,4 @@ describe('telemetryService app run latency', () => {
   });
 
 });
+

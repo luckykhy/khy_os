@@ -934,25 +934,8 @@ async function chat(userMessage, opts = {}) {
     /* non-critical */
   }
 
-  // 清理 C/D 盘时把「扫描深度」「颗粒细度」交给用户决定:检测到清盘意图(清理动作+磁盘目标)时,
-  // 确定性地提示模型**先用 AskUserQuestion** 把这两个维度做成选项卡让用户选,再据选择给 DiskCleanup
-  // 传 maxDepth/granularity。单一真源 diskCleanupClarify(也是「选项→工具参数」的映射真源)。注入系统
-  // 提示词;门控 KHY_DISK_CLEANUP_CLARIFY 默认开(关闭则 sp 字节不变)。与「选项卡澄清」正交互补。
-  let _diskCleanupClarifyDirective = '';
-  try {
-    const { routeDiskCleanupClarify } = require('../services/diskCleanupClarify');
-    const _dc = routeDiskCleanupClarify({ text: userMessage, options: opts });
-    if (_dc && _dc.directive) {
-      _diskCleanupClarifyDirective = _dc.directive;
-      onStatus({
-        phase: 'init',
-        message: '清理磁盘：等待用户选择扫描深度',
-        elapsed: Date.now() - startTime,
-      });
-    }
-  } catch {
-    /* non-critical */
-  }
+  // 磁盘清理的方式/深度/颗粒选项由 DiskCleanupTool 工具面自然承载(常驻模型上下文,
+  // 见 tools/DiskCleanupTool + services/diskCleanupClarify 选项 SSOT),不再走正则意图注入。
 
   // 抽出错误信号(≥2 条且有修复意图/像日志),在进入修复模式前强制走「枚举模式」三步走
   // (列全部错误→确认覆盖完整性→排序逐个修),并要求收尾自检。KHY 哲学:用代码兜底模型的
@@ -1464,7 +1447,6 @@ async function chat(userMessage, opts = {}) {
     _clarificationDirective,
     _referenceDisambiguationDirective,
     _promptIntentRepairDirective,
-    _diskCleanupClarifyDirective,
     _searchNecessityDirective,
     _groundTruthDirective,
     _mathSolveDirective,
@@ -1733,7 +1715,7 @@ async function chat(userMessage, opts = {}) {
           if (d.file_previews?.length > 0) {
             for (const fp of d.file_previews) {
               if (fp.preview && !fp.preview.startsWith('[')) {
-                parts.push(`--- ${fp.path} (${fp.lines || '?'} lines) ---\n${fp.preview}`);
+                parts.push(`📄 ${fp.path} (${fp.lines || '?'} lines)\n${fp.preview}`);
               }
             }
           }
@@ -2059,7 +2041,6 @@ async function chat(userMessage, opts = {}) {
     const referenceDisambiguationDirective = String(
       chatOpts._referenceDisambiguationDirective || ''
     ).trim();
-    const diskCleanupClarifyDirective = String(chatOpts._diskCleanupClarifyDirective || '').trim();
     const searchNecessityDirective = String(chatOpts._searchNecessityDirective || '').trim();
     const groundTruthDirective = String(chatOpts._groundTruthDirective || '').trim();
     const mathSolveDirective = String(chatOpts._mathSolveDirective || '').trim();
@@ -2159,7 +2140,6 @@ async function chat(userMessage, opts = {}) {
           { key: 'promptIntentRepair', directive: promptIntentRepairDirective },
           { key: 'clarification', directive: clarificationDirective },
           { key: 'referenceDisambiguation', directive: referenceDisambiguationDirective },
-          { key: 'diskCleanupClarify', directive: diskCleanupClarifyDirective },
           { key: 'searchNecessity', directive: searchNecessityDirective },
           { key: 'groundTruth', directive: groundTruthDirective },
           { key: 'mathSolve', directive: mathSolveDirective },
@@ -2188,7 +2168,6 @@ async function chat(userMessage, opts = {}) {
         multimodalIntentDirective,
         promptIntentRepairDirective,
         clarificationDirective,
-        diskCleanupClarifyDirective,
         searchNecessityDirective,
         groundTruthDirective,
         referenceDisambiguationDirective,
@@ -2492,6 +2471,19 @@ async function chat(userMessage, opts = {}) {
     if (_spOverride) {
       sp += '\n\n[SYSTEM_PROMPT — governing instruction, authoritative]\n' + _spOverride;
     }
+    // ── Taste 注入：用户偏好自动注入系统提示词 ───────────────────
+    // 合并 ~/.khyos/taste/（用户级）和 .commandcode/taste/（项目级 Command Code 共享）
+    // 的偏好条目，注入 <user_taste> 标签块。每次对话实时读取（无缓存），确保双向同步
+    // 的变更立即生效。
+    try {
+      const tasteSection = require('../services/tasteService').renderTasteSection();
+      if (tasteSection) {
+        sp += '\n\n' + tasteSection;
+      }
+    } catch {
+      /* taste 注入失败不影响对话 */
+    }
+
     // Claude Code SDK alignment: `--append-system-prompt` (print mode) appends
     // extra guidance to the fully-assembled system prompt.
     const _spAppend =
@@ -4592,7 +4584,7 @@ async function chat(userMessage, opts = {}) {
         const _durLegacy = `${(ts.totalDurationMs / 1000).toFixed(1)}s`;
         dur = require('./ccFormat').ccFormatDurationOr(ts.totalDurationMs, _durLegacy, process.env);
       }
-      safeReply += `\n\n---\n执行完成（${ts.totalCalls} 次工具调用${dur ? `，耗时 ${dur}` : ''}）。`;
+      safeReply += `\n\n执行完成（${ts.totalCalls} 次工具调用${dur ? `，耗时 ${dur}` : ''}）。`;
       const fileOps = Array.isArray(ts.fileOps) ? ts.fileOps : [];
       if (fileOps.length > 0) {
         const ops = fileOps

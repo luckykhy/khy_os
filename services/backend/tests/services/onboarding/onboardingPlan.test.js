@@ -9,7 +9,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const leaf = require('../../../src/services/onboarding/onboardingPlan');
+const leaf = require('../../../src/services/domain/onboarding/onboarding/onboardingPlan.js');
 
 test('parseOnboardingArgs: 空参 → full', () => {
   const p = leaf.parseOnboardingArgs([]);

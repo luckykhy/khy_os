@@ -692,7 +692,7 @@ Usage notes:
           return `${indent}- ${s.heading}`;
         })
         .join('\n');
-      text = `## Page Structure\n${toc}\n\n---\n\n${text}`;
+      text = `## Page Structure\n${toc}\n\n${text}`;
     }
 
     return { content: text, sections };

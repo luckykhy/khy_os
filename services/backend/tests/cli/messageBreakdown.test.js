@@ -6,7 +6,7 @@ const assert = require('node:assert');
 const {
   analyzeMessageBreakdown,
   messageBreakdownEnabled,
-} = require('../../src/services/context/messageBreakdown');
+} = require('../../src/services/domain/session/context/messageBreakdown.js');
 
 // 确定性估算器:1 token / 4 字符。
 const est = (t) => Math.ceil(String(t || '').length / 4);

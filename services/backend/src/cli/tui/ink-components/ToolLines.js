@@ -20,6 +20,7 @@ const { pathMiddleTruncateEnabled, truncatePathMiddle } = require('../../toolPar
 const { shouldRenderTransparentBody } = require('../../toolResultTransparency');
 const { effectiveCols } = require('../effectiveCols');
 const inkRuntime = require('../inkRuntime');
+const _mouse = require('../mouseButtons');
 // 有效列宽单一真源:右栏(railLayout)激活时工具输出只能按 cols - 栏宽 折行,否则宽出来的
 // 行会软换行成额外视觉行(高度账本没算过)并溢进槽位。门控关 → 真实列宽 → 逐字节 legacy。
 // 传 undefined 作 fallback:diffClipWidth 对「宽度未知」有专门语义,不能替成 80。
@@ -68,6 +69,15 @@ const _toolLiteralOutputMemo = require('./toolLiteralOutputMemo');
 // 把列 100 之后的代码静默吞掉,违背本文件自述的「Ctrl+O 真正显示全貌」诚实原则。改:折叠态按
 // 终端列宽算单行预算裁切;展开态返回 Infinity(=不裁,交 ink 像 CC 一样自动换行,绝不丢内容)。
 // 门控 KHY_DIFF_CONTENT_WIDTH 默认开;关 → 恒 100 字裁切,逐字节回退。
+
+// 工具卡片边框颜色单一真源(零散落字面量):运行中=黄、完成=绿、错误=红、悬停=蓝。
+// 与 layout-preview.html 设计对齐:每个工具调用是带颜色边框的可点击卡片。
+const TOOL_CARD_COLOR = {
+  running: 'yellow',
+  done: 'green',
+  error: 'red',
+  hover: 'blue',
+};
 
 // Tools whose result IS literal command / third-party-app stdout. Only these
 // get the "few lines + fold + Ctrl+O expand" treatment; the agent's own prose
@@ -848,12 +858,59 @@ function errorText(result, env = process.env) {
   return stripInternalControlText(String(cand), opts);
 }
 
-function ToolLines({ tools = [], expanded = false, live = false }) {
+function ToolLines({ tools = [], expanded = false, live = false, onErrorClick = null }) {
   const { Box, Text } = inkRuntime.get();
   const h = React.createElement;
   if (!tools || tools.length === 0) {
     return null;
   }
+
+  // Per-tool expand/collapse state (Map: toolIndex → boolean).
+  // Tracks which tools are individually expanded by user click.
+  const [toolExpanded, setToolExpanded] = React.useState(() => new Map());
+  // Hover preview state (300ms delay before showing parameter summary).
+  const [hoveredTool, setHoveredTool] = React.useState(null);
+  const hoverTimerRef = React.useRef(null);
+
+  // Click handler for tool head row:
+  //   - Error tools → onErrorClick callback (jump to sidebar)
+  //   - Normal tools → toggle per-tool expanded state
+  const handleToolClick = React.useCallback((toolIndex, tool) => {
+    const done = !!tool && !!tool.result;
+    const isErr =
+      done &&
+      (tool.result.isError || tool.result.is_error || tool.result.error || tool.result.success === false);
+    if (isErr && onErrorClick) {
+      onErrorClick(toolIndex, tool);
+      return;
+    }
+    setToolExpanded((prev) => {
+      const next = new Map(prev);
+      next.set(toolIndex, !next.get(toolIndex));
+      return next;
+    });
+  }, [onErrorClick]);
+
+  // Hover handlers (300ms delay, gated by KHY_MOUSE_HOVER).
+  const handleMouseOver = React.useCallback((toolIndex) => {
+    if (!_mouse.mouseHoverEnabled(process.env)) return;
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = setTimeout(() => {
+      setHoveredTool(toolIndex);
+    }, 300);
+  }, []);
+
+  const handleMouseOut = React.useCallback(() => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    setHoveredTool(null);
+  }, []);
+
+  // Cleanup hover timer on unmount.
+  React.useEffect(() => {
+    return () => {
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    };
+  }, []);
 
   // 每帧只取一次工作目录,传给每行头部记忆做 cwd 守卫键——把「每工具一次 process.cwd()
   // 系统调用」降到「每帧一次」。summarizeArgs 内部仍在 miss 时读 process.cwd()(同步 render 内
@@ -873,9 +930,19 @@ function ToolLines({ tools = [], expanded = false, live = false }) {
     // spawns (_agentTree empty) we fall through to the normal single-line row.
     const agentTree = Array.isArray(t._agentTree) && t._agentTree.length > 0 ? t._agentTree : null;
     if (agentTree) {
+      const done = !!t.result;
+      const isErr = done && (t.result.isError || t.result.is_error || t.result.error || t.result.success === false);
+      const cardColor = isErr ? TOOL_CARD_COLOR.error : done ? TOOL_CARD_COLOR.done : TOOL_CARD_COLOR.running;
       return h(
         Box,
-        { key: `tool-${i}`, flexDirection: 'column', marginLeft: 1 },
+        {
+          key: `tool-${i}`,
+          flexDirection: 'column',
+          marginTop: i > 0 ? 1 : 0,
+          borderStyle: 'round',
+          borderColor: cardColor,
+          paddingX: 1,
+        },
         h(AgentTree, { agents: agentTree, expanded, live })
       );
     }
@@ -946,9 +1013,38 @@ function ToolLines({ tools = [], expanded = false, live = false }) {
         h(Text, { bold: true }, name),
         argSummary ? h(Text, { dimColor: true }, `(${argSummary})`) : null,
         durTag ? h(Text, { dimColor: true }, ` (${durTag})`) : null,
-        provLabel ? h(Text, { color: provColor }, `  ${provLabel}`) : null
+        provLabel ? h(Text, { color: provColor }, `  ${provLabel}`) : null,
+        // Per-tool expand/collapse hint (only for non-error tools).
+        !isErr
+          ? h(
+              Text,
+              { dimColor: true, key: 'hint' },
+              toolExpanded.get(i) ? '  [点击折叠]' : '  [点击展开]'
+            )
+          : null
       ),
     ];
+
+    // Per-tool expanded details: show parameters + result inline when the user
+    // clicked to expand this specific tool (independent of the global Ctrl+O expanded).
+    const isToolExpanded = toolExpanded.get(i);
+    if (isToolExpanded && !isErr) {
+      // Show input parameters summary.
+      const inputRaw = t.input ?? t.args ?? t.parameters ?? t.arguments;
+      if (inputRaw != null) {
+        const inputStr = typeof inputRaw === 'string' ? inputRaw : JSON.stringify(inputRaw, null, 2);
+        const inputLines = String(inputStr).split('\n').slice(0, 20);
+        children.push(
+          h(
+            Box,
+            { key: 'params', marginLeft: 2, flexDirection: 'column' },
+            ...inputLines.map((ln, j) =>
+              h(Text, { key: j, dimColor: true }, clip(ln, 120))
+            )
+          )
+        );
+      }
+    }
 
     // 执行中阶段性说明（staged transparency）: while a tool is still running
     // (live preview only — committed rows always have results), render its
@@ -1115,7 +1211,32 @@ function ToolLines({ tools = [], expanded = false, live = false }) {
       }
     }
 
-    return h(Box, { key: `tool-${i}`, flexDirection: 'column', marginLeft: 1 }, ...children);
+    // 卡片边框颜色:悬停 > 错误 > 完成 > 运行中(优先级降序)。
+    const isHovered = hoveredTool === i;
+    const cardColor = isHovered
+      ? TOOL_CARD_COLOR.hover
+      : isErr
+        ? TOOL_CARD_COLOR.error
+        : done
+          ? TOOL_CARD_COLOR.done
+          : TOOL_CARD_COLOR.running;
+
+    return h(
+      Box,
+      {
+        key: `tool-${i}`,
+        flexDirection: 'column',
+        marginY: 0,
+        marginTop: i > 0 ? 1 : 0, // 卡片间距:顶部留一行空白
+        borderStyle: 'round',
+        borderColor: cardColor,
+        paddingX: 1,
+        onClick: () => handleToolClick(i, t),
+        onMouseOver: () => handleMouseOver(i),
+        onMouseOut: handleMouseOut,
+      },
+      ...children
+    );
   });
 
   return h(Box, { flexDirection: 'column' }, ...blocks);

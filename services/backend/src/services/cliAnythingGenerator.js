@@ -342,7 +342,7 @@ function buildStagePrompt(software, stageId, runtime) {
 
   return [
     harness,
-    `\n---\n# Stage ${stageId}: ${stage.label}\n`,
+    `\n# Stage ${stageId}: ${stage.label}\n`,
     stageTemplate,
     `\n## Runtime: ${runtimeLabel}\n`,
     `\n## Skeleton Reference\n${skeleton}\n`,
@@ -480,7 +480,7 @@ function buildFullAIPrompt(repoOrPath, options = {}) {
   const harness = _readTemplate('HARNESS_PROMPT.md') || '';
   const stageSections = STAGES.map((s) => {
     const tmpl = _readTemplate(s.template) || '';
-    return `---\n# Stage ${s.id}: ${s.label}\n${tmpl}`;
+    return `# Stage ${s.id}: ${s.label}\n${tmpl}`;
   }).join('\n\n');
 
   const skeleton = runtime === 'node' ? _getNodeSkeletonSummary() : _getPythonSkeletonSummary();
@@ -490,7 +490,7 @@ function buildFullAIPrompt(repoOrPath, options = {}) {
     `\n## Target Software\n- Source: \`${repoOrPath}\`\n- Name: \`${software}\`\n- Runtime: ${runtime === 'node' ? 'Node.js' : 'Python'}\n- Output: \`${workDir}\`\n`,
     `## Skeleton Reference\n${skeleton}\n`,
     stageSections,
-    `\n---\n\nExecute all 8 stages sequentially. For each stage, save outputs to \`${workDir}/\`.`,
+    `\nExecute all 8 stages sequentially. For each stage, save outputs to \`${workDir}/\`.`,
     `After Stage 7 (packaging), run \`khy app cli-sync\` to register the new CLI in KHY OS.`,
   ].join('\n\n');
 }

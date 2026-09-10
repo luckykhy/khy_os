@@ -24,12 +24,12 @@ process.env.KHY_ILINK_DISABLE_TOOL_LOOP = '1';
 const { test } = require('node:test');
 const assert = require('node:assert');
 
-const core = require('../../../src/services/messaging/ilinkCore');
-const cryptoUtil = require('../../../src/services/messaging/ilinkCrypto');
-const media = require('../../../src/services/messaging/ilinkMedia');
+const core = require('../../../src/services/domain/messaging/messaging/ilinkCore.js');
+const cryptoUtil = require('../../../src/services/domain/messaging/messaging/ilinkCrypto.js');
+const media = require('../../../src/services/domain/messaging/messaging/ilinkMedia.js');
 const defaults = require('../../../src/constants/serviceDefaults');
-const { IlinkChannel } = require('../../../src/services/channels/ilinkChannel');
-const { IlinkDispatcher } = require('../../../src/services/channels/ilinkDispatcher');
+const { IlinkChannel } = require('../../../src/services/domain/messaging/channels/ilinkChannel.js');
+const { IlinkDispatcher } = require('../../../src/services/domain/messaging/channels/ilinkDispatcher.js');
 
 // ── 1. buildFileItems:纯函数结构断言(真实协议:file_item.media,不含 size/md5)──
 

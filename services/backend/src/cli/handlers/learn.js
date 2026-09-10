@@ -528,7 +528,7 @@ async function _offlineBugCaseInteract(bugCase, curriculum) {
 
   console.log('');
   console.log(`  ${chalk.bold.cyan('🔍 Bug 案例:')} ${chalk.bold.white(bugCase.title)}`);
-  console.log(`  ${chalk.dim('─'.repeat(Math.max(8, (process.stdout.columns || 80) - 6)))}`);
+  console.log("");
   console.log(
     `  ${chalk.dim('严重等级:')} ${bugCase.severity}  ${chalk.dim('标签:')} ${bugCase.tags.map((t) => chalk.cyan(t)).join(chalk.dim(', '))}`
   );
@@ -649,7 +649,7 @@ async function _runTopicQuiz(layer, topic, curriculum) {
   let correct = 0;
   console.log('');
   console.log(`  ${chalk.bold.cyan('🧠 理解检查:')} ${chalk.white(topic.title)}`);
-  console.log(`  ${chalk.dim('─'.repeat(Math.max(8, (process.stdout.columns || 80) - 6)))}`);
+  console.log("");
 
   for (let i = 0; i < questions.length; i++) {
     const q = questions[i];
@@ -692,7 +692,7 @@ async function _runLayerQuiz(layer, curriculum) {
   console.log(
     `  ${chalk.bold.cyan('📝 概念自测:')} ${chalk.white(`第 ${layer.id} 层 — ${layer.title}`)}`
   );
-  console.log(`  ${chalk.dim('─'.repeat(Math.max(8, (process.stdout.columns || 80) - 6)))}`);
+  console.log("");
   console.log(`  ${chalk.dim('根据描述，选择对应的知识点')}`);
 
   for (let i = 0; i < count; i++) {

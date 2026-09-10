@@ -15,16 +15,13 @@ const {
 } = require('../services/authPolicy');
 const authSessionService = require('../services/authSessionService');
 const UserLogService = require('../services/userLogService');
+const apiResponse = require('../utils/apiResponse');
 const { Op } = Sequelize;
 
 // 获取客户端IP地址（使用 req.ip，Express 标准，自动处理 IPv6 和 trust proxy）
 const getClientIP = (req) => {
   return req.ip || req.socket?.remoteAddress || '127.0.0.1';
 };
-
-// 仅在非生产环境下附带错误详情，避免向客户端泄露内部实现细节
-const devErrorDetail = (error) =>
-  process.env.NODE_ENV !== 'production' ? { error: error?.message } : {};
 
 const issueAuthResponseData = async (user, req, options = {}) => {
   const bundle = await authSessionService.issueSessionForUser(user, req, options);
@@ -52,6 +49,45 @@ const mapRefreshFailure = (result) => {
 
 const QR_LOGIN_TTL_MS = 60 * 1000;
 const qrLoginStore = new Map();
+
+// ── Login capability discovery ────────────────────────────────────────────
+// One declarative table is the single source of truth for what the login
+// surface may render. Every bit below corresponds to a route that actually
+// exists in this file or a sibling router; adding a login method means adding
+// both the route and its entry here. The frontend must never guess which
+// recovery path exists — it reads `passwordReset.mode`.
+//
+// Public and unauthenticated on purpose: the login page calls this before any
+// token exists. It must therefore carry no user-level or secret information.
+const AUTH_CAPABILITIES = {
+  passwordLogin: true,
+  registration: true,
+  // No OAuth identity providers are wired. The gateway's OAuth manager is for
+  // AI provider tokens, not user login.
+  oauthProviders: [],
+  qrLogin: {
+    enabled: true,
+    ttlSeconds: Math.floor(QR_LOGIN_TTL_MS / 1000),
+  },
+  // API keys issued by /api/api-keys authenticate via X-API-Key (flexibleAuth),
+  // which is what the CLI uses instead of a browser session.
+  cliTokenLogin: true,
+  webauthn: true,
+  changePassword: true,
+  securityQuestion: true,
+  // /api/auth/default-admin lives in the daemon server only, so the monolith
+  // never serves it. Keeping the flag here stops the login page from rendering
+  // a button that always 404s.
+  defaultAdminAvailable: false,
+  passwordReset: { mode: 'security-question' },
+  // No first-run setup gate exists yet; the app has always had a default admin.
+  setupRequired: false,
+};
+
+// 登录能力发现（公开，无需认证）：登录页一次取回全部能力位
+router.get('/capabilities', (req, res) => {
+  apiResponse.success(res, AUTH_CAPABILITIES);
+});
 
 const getExternalBaseUrl = (req) => {
   const host = (req.headers['x-forwarded-host'] || req.get('host') || `localhost:${BACKEND_PORT}`)
@@ -194,10 +230,7 @@ router.post(
       });
 
       if (existingUser) {
-        return res.status(400).json({
-          success: false,
-          message: '用户名或邮箱已被注册',
-        });
+        return apiResponse.fail(res, 'INVALID_ARGUMENT', '用户名或邮箱已被注册', {status:400});
       }
 
       // 创建新用户数据
@@ -233,24 +266,13 @@ router.post(
 
       const authData = await issueAuthResponseData(user, req, { authMethod: 'register' });
 
-      res.status(201).json({
-        success: true,
-        message: '注册成功',
-        data: authData,
-      });
+      return apiResponse.created(res, authData, {message: '注册成功'});
     } catch (error) {
       if (error instanceof UniqueConstraintError || error?.name === 'SequelizeUniqueConstraintError') {
-        return res.status(409).json({
-          success: false,
-          message: '用户名或邮箱已被注册',
-        });
+        return apiResponse.fail(res, 'INVALID_ARGUMENT', '用户名或邮箱已被注册', {status:409});
       }
       console.error('注册错误:', error);
-      res.status(500).json({
-        success: false,
-        message: '注册失败，请稍后重试',
-        ...devErrorDetail(error),
-      });
+      return apiResponse.fail(res, 'INTERNAL', '注册失败，请稍后重试', {status:500});
     }
   }
 );
@@ -300,10 +322,7 @@ router.post(
           },
         });
 
-        return res.status(401).json({
-          success: false,
-          message: '用户名或密码错误',
-        });
+        return apiResponse.fail(res, 'AUTH_INVALID', '用户名或密码错误', {status:401});
       }
 
       // 验证密码
@@ -325,10 +344,7 @@ router.post(
           },
         });
 
-        return res.status(401).json({
-          success: false,
-          message: '用户名或密码错误',
-        });
+        return apiResponse.fail(res, 'AUTH_INVALID', '用户名或密码错误', {status:401});
       }
 
       if (user.status !== 'active') {
@@ -346,10 +362,7 @@ router.post(
           },
         });
 
-        return res.status(403).json({
-          success: false,
-          message: '账户已被禁用',
-        });
+        return apiResponse.fail(res, 'PERMISSION_DENIED', '账户已被禁用', {status:403});
       }
 
       // 更新最后登录时间
@@ -380,18 +393,10 @@ router.post(
 
       const authData = await issueAuthResponseData(user, req, { authMethod: 'password' });
 
-      res.json({
-        success: true,
-        message: '登录成功',
-        data: authData,
-      });
+      return apiResponse.success(res, authData, {message: '登录成功'});
     } catch (error) {
       console.error('登录错误:', error);
-      res.status(500).json({
-        success: false,
-        message: '登录失败',
-        ...devErrorDetail(error),
-      });
+      return apiResponse.fail(res, 'INTERNAL', '登录失败', {status:500});
     }
   }
 );
@@ -415,21 +420,14 @@ router.post('/qr-token', async (req, res) => {
       confirmedAt: null,
     });
 
-    res.json({
-      success: true,
-      data: {
-        token,
-        qrUrl,
-        expiresIn: Math.floor(QR_LOGIN_TTL_MS / 1000),
-      },
+    return apiResponse.success(res, {
+      token,
+      qrUrl,
+      expiresIn: Math.floor(QR_LOGIN_TTL_MS / 1000),
     });
   } catch (error) {
     console.error('生成扫码登录 token 错误:', error);
-    res.status(500).json({
-      success: false,
-      message: '生成扫码登录 token 失败，请稍后重试',
-      ...devErrorDetail(error),
-    });
+    return apiResponse.fail(res, 'INTERNAL', '生成扫码登录 token 失败，请稍后重试', {status:500});
   }
 });
 
@@ -439,7 +437,7 @@ router.get('/qr-status', async (req, res) => {
   const token = String(req.query?.token || '');
 
   if (!token) {
-    return res.status(400).json({ success: false, message: 'Missing token' });
+    return apiResponse.fail(res, 'INVALID_ARGUMENT', 'Missing token', {status:400});
   }
 
   const record = qrLoginStore.get(token);
@@ -454,8 +452,7 @@ router.get('/qr-status', async (req, res) => {
 
   if (record.status === 'confirmed' && record.authToken) {
     qrLoginStore.delete(token);
-    return res.json({
-      success: true,
+    return apiResponse.success(res, {
       status: 'confirmed',
       token: record.authToken,
       user: record.user,
@@ -463,8 +460,7 @@ router.get('/qr-status', async (req, res) => {
     });
   }
 
-  return res.json({
-    success: true,
+  return apiResponse.success(res, {
     status: 'pending',
     expiresIn: Math.max(0, Math.ceil((record.expiresAt - Date.now()) / 1000)),
   });
@@ -514,11 +510,11 @@ router.post(
 
       const record = qrLoginStore.get(token);
       if (!record) {
-        return res.status(404).json({ success: false, message: 'QR login request not found' });
+        return apiResponse.fail(res, 'MODEL_NOT_FOUND', 'QR login request not found', {status:404});
       }
       if (record.expiresAt <= Date.now()) {
         qrLoginStore.delete(token);
-        return res.status(410).json({ success: false, message: 'QR login token expired' });
+        return apiResponse.fail(res, 'INVALID_ARGUMENT', 'QR login token expired', {status:410});
       }
 
       const user = await User.findOne({
@@ -528,16 +524,16 @@ router.post(
       });
 
       if (!user) {
-        return res.status(401).json({ success: false, message: 'Invalid username or password' });
+        return apiResponse.fail(res, 'AUTH_INVALID', 'Invalid username or password', {status:401});
       }
 
       const validPassword = await user.comparePassword(password);
       if (!validPassword) {
-        return res.status(401).json({ success: false, message: 'Invalid username or password' });
+        return apiResponse.fail(res, 'AUTH_INVALID', 'Invalid username or password', {status:401});
       }
 
       if (user.status !== 'active') {
-        return res.status(403).json({ success: false, message: '账户已被禁用' });
+        return apiResponse.fail(res, 'PERMISSION_DENIED', '账户已被禁用', {status:403});
       }
 
       await user.update({ lastLoginAt: new Date() });
@@ -564,14 +560,10 @@ router.post(
         },
       }).catch(() => {});
 
-      res.json({ success: true, message: 'QR login confirmed' });
+      return apiResponse.success(res, null, {message: 'QR login confirmed'});
     } catch (error) {
       console.error('扫码登录确认错误:', error);
-      res.status(500).json({
-        success: false,
-        message: '扫码登录确认失败，请稍后重试',
-        ...devErrorDetail(error),
-      });
+      return apiResponse.fail(res, 'INTERNAL', '扫码登录确认失败，请稍后重试', {status:500});
     }
   }
 );
@@ -580,23 +572,16 @@ router.post(
 router.get('/me', authMiddleware, async (req, res) => {
   try {
     const user = req.user.toJSON();
-    res.json({
-      success: true,
-      data: {
-        ...user,
-        user,
-        session: authSessionService.serializeSession(req.authSession, req.authSession?.id || ''),
-        authMethod: req.auth?.method || 'jwt',
-        legacySession: !!req.auth?.legacy,
-      },
+    return apiResponse.success(res, {
+      ...user,
+      user,
+      session: authSessionService.serializeSession(req.authSession, req.authSession?.id || ''),
+      authMethod: req.auth?.method || 'jwt',
+      legacySession: !!req.auth?.legacy,
     });
   } catch (error) {
     console.error('获取用户信息错误:', error);
-    res.status(500).json({
-      success: false,
-      message: '获取用户信息失败',
-      ...devErrorDetail(error),
-    });
+    return apiResponse.fail(res, 'INTERNAL', '获取用户信息失败', {status:500});
   }
 });
 
@@ -608,23 +593,14 @@ router.post('/refresh', async (req, res) => {
 
     if (!result.ok) {
       const failure = mapRefreshFailure(result);
-      return res.status(failure.status).json({
-        success: false,
-        message: failure.message,
-      });
+      const code = failure.status === 403 ? 'PERMISSION_DENIED'
+        : failure.status === 400 ? 'INVALID_ARGUMENT' : 'AUTH_INVALID';
+      return apiResponse.fail(res, code, failure.message, {status: failure.status});
     }
 
-    return res.json({
-      success: true,
-      message: '令牌刷新成功',
-      data: authSessionService.createAuthResponseData(result.user, result),
-    });
+    return apiResponse.success(res, authSessionService.createAuthResponseData(result.user, result), {message: '令牌刷新成功'});
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: '刷新令牌失败',
-      ...devErrorDetail(error),
-    });
+    return apiResponse.fail(res, 'INTERNAL', '刷新令牌失败', {status:500});
   }
 });
 
@@ -635,20 +611,13 @@ router.get('/sessions', authMiddleware, async (req, res) => {
       req.user.id,
       req.authSession?.id || ''
     );
-    res.json({
-      success: true,
-      data: {
-        currentSessionId: req.authSession?.id || null,
-        legacySession: !!req.auth?.legacy,
-        sessions,
-      },
+    return apiResponse.success(res, {
+      currentSessionId: req.authSession?.id || null,
+      legacySession: !!req.auth?.legacy,
+      sessions,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: '获取登录会话失败',
-      ...devErrorDetail(error),
-    });
+    return apiResponse.fail(res, 'INTERNAL', '获取登录会话失败', {status:500});
   }
 });
 
@@ -678,21 +647,13 @@ router.post('/logout', authMiddleware, async (req, res) => {
       },
     });
 
-    res.json({
-      success: true,
-      message: '退出登录成功',
-      data: {
-        revoked,
-        currentSessionId: req.authSession?.id || null,
-      },
-    });
+    return apiResponse.success(res, {
+      revoked,
+      currentSessionId: req.authSession?.id || null,
+    }, {message: '退出登录成功'});
   } catch (error) {
     console.error('退出登录错误:', error);
-    res.status(500).json({
-      success: false,
-      message: '退出登录失败',
-      ...devErrorDetail(error),
-    });
+    return apiResponse.fail(res, 'INTERNAL', '退出登录失败', {status:500});
   }
 });
 
@@ -718,19 +679,11 @@ router.post('/logout-all', authMiddleware, async (req, res) => {
       },
     });
 
-    res.json({
-      success: true,
-      message: '已退出所有设备',
-      data: {
-        revokedSessions: revokeResult.revokedCount,
-      },
-    });
+    return apiResponse.success(res, {
+      revokedSessions: revokeResult.revokedCount,
+    }, {message: '已退出所有设备'});
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: '退出所有设备失败',
-      ...devErrorDetail(error),
-    });
+    return apiResponse.fail(res, 'INTERNAL', '退出所有设备失败', {status:500});
   }
 });
 
@@ -739,10 +692,7 @@ router.delete('/sessions/:sessionId', authMiddleware, async (req, res) => {
   try {
     const sessionId = String(req.params.sessionId || '').trim();
     if (!sessionId) {
-      return res.status(400).json({
-        success: false,
-        message: '缺少会话编号',
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '缺少会话编号', {status:400});
     }
 
     const sessions = await authSessionService.listUserSessions(
@@ -751,27 +701,16 @@ router.delete('/sessions/:sessionId', authMiddleware, async (req, res) => {
     );
     const target = sessions.find((session) => String(session.id) === sessionId);
     if (!target) {
-      return res.status(404).json({
-        success: false,
-        message: '会话不存在',
-      });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', '会话不存在', {status:404});
     }
 
     const result = await authSessionService.revokeSessionById(sessionId, 'manual_revoke');
-    return res.json({
-      success: true,
-      message: '会话已撤销',
-      data: {
-        revoked: !!result.revoked,
-        sessionId,
-      },
-    });
+    return apiResponse.success(res, {
+      revoked: !!result.revoked,
+      sessionId,
+    }, {message: '会话已撤销'});
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: '撤销会话失败',
-      ...devErrorDetail(error),
-    });
+    return apiResponse.fail(res, 'INTERNAL', '撤销会话失败', {status:500});
   }
 });
 
@@ -821,19 +760,13 @@ router.post(
           },
         });
 
-        return res.status(400).json({
-          success: false,
-          message: '当前密码错误',
-        });
+        return apiResponse.fail(res, 'INVALID_ARGUMENT', '当前密码错误', {status:400});
       }
 
       // 检查新密码是否与当前密码相同
       const isSamePassword = await req.user.comparePassword(newPassword);
       if (isSamePassword) {
-        return res.status(400).json({
-          success: false,
-          message: '新密码不能与当前密码相同',
-        });
+        return apiResponse.fail(res, 'INVALID_ARGUMENT', '新密码不能与当前密码相同', {status:400});
       }
 
       // 更新密码
@@ -859,22 +792,14 @@ router.post(
         },
       });
 
-      res.json({
-        success: true,
-        message: '密码修改成功',
-        data: {
-          revokedOtherSessions: revokeResult.revokedCount,
-          currentSessionPreserved: !!req.authSession?.id,
-          legacySession: !!req.auth?.legacy,
-        },
-      });
+      return apiResponse.success(res, {
+        revokedOtherSessions: revokeResult.revokedCount,
+        currentSessionPreserved: !!req.authSession?.id,
+        legacySession: !!req.auth?.legacy,
+      }, {message: '密码修改成功'});
     } catch (error) {
       console.error('修改密码错误:', error);
-      res.status(500).json({
-        success: false,
-        message: '修改密码失败',
-        ...devErrorDetail(error),
-      });
+      return apiResponse.fail(res, 'INTERNAL', '修改密码失败', {status:500});
     }
   }
 );

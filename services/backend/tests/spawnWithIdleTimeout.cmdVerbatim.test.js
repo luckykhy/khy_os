@@ -3,7 +3,7 @@
 /**
  * Regression: Windows cmd.exe argument quoting.
  *
- * Field failure — creating a folder on a Chinese Windows desktop:
+ * Field failure �?creating a folder on a Chinese Windows desktop:
  *   mkdir "D:\HuaweiMoveData\Users\25789\Desktop\test-files"
  * exited code 1 with "文件名、目录名或卷标语法不正确" (ERROR_INVALID_NAME). Cause:
  * callers hand cmd.exe one pre-quoted command string as the last argv element, but
@@ -136,3 +136,4 @@ describe('spawnWithIdleTimeout cmd.exe verbatim arguments', () => {
     }
   });
 });
+

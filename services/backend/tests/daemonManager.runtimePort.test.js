@@ -123,3 +123,4 @@ describe('daemonManager runtime port discovery', () => {
     expect(updatedPid.port).toBe(9090);
   });
 });
+

@@ -1,843 +1,145 @@
-# [DESIGN-FE-003] 前端快速参考卡
+# [DESIGN-FE-003] 前端快速参考卡（实测对齐版）
 
-> 快速查阅 khy-os 前端规范的参考卡。
+> 一页速查 khy-os 网页端规范。**只收录代码中真实存在的东西**——每项都能在下注的路径里找到。细则真源：`[DESIGN-FE-001]`；IA 真源：`[DESIGN-ARCH-080]`。
+
+---
+
+## 两个前端与共享层
+
+| 应用 | 路径 | 特点 |
+|------|------|------|
+| ai-frontend | `apps/ai-frontend/` | Vue3 + Vite5 + Element Plus + Pinia + axios；@vue-flow、xterm |
+| khyquant-frontend | `software/khyquant/frontend/` | 同基座 + Capacitor(Android) + PWA + sass + lightweight-charts |
+| @khy/ui-shared | `platform/packages/ui-shared/` | 共享 http/auth 原语（无 UI 组件），子路径导入 |
+
+两前端**不得互相 import**；共用逻辑只能下沉 `@khy/ui-shared`。
 
 ---
 
 ## 设计令牌速查
 
-### 颜色系统
+**真源文件**：`apps/ai-frontend/src/styles/newapi-theme.css`（`:root` 浅色 + `html.dark` 深色，尾部是 Element Plus `--el-*` 映射）。
 
 ```css
-/* 品牌色 */
---khy-primary: #3b82f6;
---khy-primary-hover: #2563eb;
---khy-primary-active: #1d4ed8;
---khy-primary-light: #eff6ff;
-
-/* 状态色 */
---khy-success: #10b981;
---khy-warning: #f59e0b;
---khy-danger: #ef4444;
---khy-info: #3b82f6;
-
-/* 灰度色阶 */
---khy-gray-50: #f9fafb;
---khy-gray-100: #f3f4f6;
---khy-gray-200: #e5e7eb;
---khy-gray-300: #d1d5db;
---khy-gray-400: #9ca3af;
---khy-gray-500: #6b7280;
---khy-gray-600: #4b5563;
---khy-gray-700: #374151;
---khy-gray-800: #1f2937;
---khy-gray-900: #111827;
+/* 表面 */
+var(--khy-bg-main)      /* #f4f7fc 页面底 */
+var(--khy-bg-elevated)  /* 卡片/浮层 */
+var(--khy-bg-soft)      /* #eff4ff 浅填充 */
+/* 文本四级 */
+var(--khy-text-main)  var(--khy-text-strong)
+var(--khy-text-secondary)  var(--khy-text-muted)
+/* 线条 */
+var(--khy-border)  var(--khy-border-light)
+/* 品牌与状态 */
+var(--khy-primary)        /* #2f7ef7 */
+var(--khy-primary-strong) var(--khy-primary-soft)
+var(--khy-success)  var(--khy-warning)  var(--khy-danger)
+/* 几何 */
+var(--khy-radius)     /* 12px */   var(--khy-radius-sm)  /* 8px */
+var(--khy-radius-lg)  /* 16px */
+var(--khy-shadow)  var(--khy-shadow-lift)
+/* 字体 */
+var(--khy-font)       /* Public Sans 栈 */
+var(--khy-font-mono)  /* JetBrains Mono 栈：Key/ID/模型名 */
+/* 骨架屏 */
+var(--khy-skeleton-base)  var(--khy-skeleton-highlight)
 ```
 
-### 字体系统
-
-```css
-/* 字体族 */
---khy-font-sans: 'Public Sans', -apple-system, BlinkMacSystemFont, 
-                 'Segoe UI', Roboto, 'PingFang SC', 'Noto Sans SC', 
-                 'Microsoft YaHei', sans-serif;
---khy-font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', 
-                 'Monaco', monospace;
-
-/* 字体大小 */
---khy-text-xs: 0.75rem;    /* 12px */
---khy-text-sm: 0.875rem;   /* 14px */
---khy-text-base: 1rem;     /* 16px */
---khy-text-lg: 1.125rem;   /* 18px */
---khy-text-xl: 1.25rem;    /* 20px */
---khy-text-2xl: 1.5rem;    /* 24px */
---khy-text-3xl: 1.875rem;  /* 30px */
-```
-
-### 间距系统
-
-```css
---khy-space-1: 0.25rem;   /* 4px */
---khy-space-2: 0.5rem;    /* 8px */
---khy-space-3: 0.75rem;   /* 12px */
---khy-space-4: 1rem;      /* 16px */
---khy-space-5: 1.25rem;   /* 20px */
---khy-space-6: 1.5rem;    /* 24px */
---khy-space-8: 2rem;      /* 32px */
---khy-space-10: 2.5rem;   /* 40px */
---khy-space-12: 3rem;     /* 48px */
---khy-space-16: 4rem;     /* 64px */
-```
-
-### 圆角系统
-
-```css
---khy-radius-sm: 0.25rem;   /* 4px */
---khy-radius: 0.5rem;       /* 8px */
---khy-radius-md: 0.75rem;   /* 12px */
---khy-radius-lg: 1rem;      /* 16px */
---khy-radius-xl: 1.5rem;    /* 24px */
---khy-radius-2xl: 2rem;     /* 32px */
---khy-radius-full: 9999px;
-```
-
-### 阴影系统
-
-```css
---khy-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
---khy-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
---khy-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
---khy-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
---khy-shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-```
+**纪律**：
+- 新样式一律 `var(--khy-*)`，禁字面量 hex（扫存量：`npm run frontend:fix-colors`）；
+- 新 token 必须 `:root` + `html.dark` **成对定义**；
+- 间距/字号**没有 token**——间距用 4px 倍数（8/12/16/24），正文 14px、页标题 20px；不要引用不存在的 `--khy-space-*`；
+- `--khy-accent*` 紫色族只用于浮动球等品牌场景；
+- ⚠️ `--khy-white` 当前被引用但未定义（缺口 G1），收敛前写 `#fff` 以外的表面色请用 `--khy-bg-elevated`。
 
 ---
 
 ## 组件速查
 
-### 按钮组件 (KhyButton)
+**基座是 Element Plus，不要重新封装。** 不存在 `KhyButton/KhyInput/KhyCard`，需要按钮就 `el-button`（颜色随 `--el-*` 映射自动跟主题）。
 
-```vue
-<template>
-  <!-- 基础用法 -->
-  <KhyButton>默认按钮</KhyButton>
-  <KhyButton variant="primary">主要按钮</KhyButton>
-  <KhyButton variant="success">成功按钮</KhyButton>
-  <KhyButton variant="warning">警告按钮</KhyButton>
-  <KhyButton variant="danger">危险按钮</KhyButton>
-  
-  <!-- 不同大小 -->
-  <KhyButton size="sm">小按钮</KhyButton>
-  <KhyButton size="md">中按钮</KhyButton>
-  <KhyButton size="lg">大按钮</KhyButton>
-  
-  <!-- 状态 -->
-  <KhyButton disabled>禁用按钮</KhyButton>
-  <KhyButton loading>加载中...</KhyButton>
-  <KhyButton block>块级按钮</KhyButton>
-</template>
-```
+| 共享组件（真实存在） | 用途 |
+|------|------|
+| `KhyPageHeader` | 管理页顶部：标题+描述+右侧操作区 |
+| `KhyEmpty` | 空态：标题+描述+操作插槽 |
+| `KhyIcon` | 统一图标出口 |
+| `LoadErrorBanner` | 区块加载失败内联条（配 `api/loadError.js`） |
+| `GlobalProgressBar` | 全局 HTTP 进度条（自动，axios 拦截器驱动） |
+| `KhyFloatBall` | 品牌浮动球 |
 
-**属性**：
-| 属性 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| variant | String | 'default' | 按钮类型 |
-| size | String | 'md' | 按钮大小 |
-| disabled | Boolean | false | 是否禁用 |
-| loading | Boolean | false | 是否加载中 |
-| block | Boolean | false | 是否块级 |
-
-### 输入框组件 (KhyInput)
-
-```vue
-<template>
-  <!-- 基础用法 -->
-  <KhyInput v-model="value" placeholder="请输入" />
-  
-  <!-- 带标签 -->
-  <KhyInput v-model="value" label="用户名" placeholder="请输入用户名" />
-  
-  <!-- 带提示 -->
-  <KhyInput v-model="value" hint="请输入有效的邮箱地址" />
-  
-  <!-- 带错误 -->
-  <KhyInput v-model="value" error="此项为必填项" />
-  
-  <!-- 不同大小 -->
-  <KhyInput v-model="value" size="sm" />
-  <KhyInput v-model="value" size="md" />
-  <KhyInput v-model="value" size="lg" />
-</template>
-```
-
-**属性**：
-| 属性 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| modelValue | String/Number | '' | 绑定值 |
-| type | String | 'text' | 输入类型 |
-| label | String | - | 标签 |
-| placeholder | String | - | 占位符 |
-| hint | String | - | 提示信息 |
-| error | String | - | 错误信息 |
-| disabled | Boolean | false | 是否禁用 |
-| readonly | Boolean | false | 是否只读 |
-| required | Boolean | false | 是否必填 |
-| maxlength | Number | - | 最大长度 |
-| size | String | 'md' | 尺寸 |
-
-### 卡片组件 (KhyCard)
-
-```vue
-<template>
-  <!-- 基础用法 -->
-  <KhyCard>
-    <p>卡片内容</p>
-  </KhyCard>
-  
-  <!-- 带头部和底部 -->
-  <KhyCard>
-    <template #header>
-      <h3>卡片标题</h3>
-    </template>
-    <p>卡片内容</p>
-    <template #footer>
-      <KhyButton>操作</KhyButton>
-    </template>
-  </KhyCard>
-  
-  <!-- 不同变体 -->
-  <KhyCard variant="elevated">阴影卡片</KhyCard>
-  <KhyCard variant="outlined">边框卡片</KhyCard>
-</template>
-```
-
-**属性**：
-| 属性 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| variant | String | 'default' | 卡片类型 |
-| padding | String | 'md' | 内边距 |
-| hoverable | Boolean | false | 是否可悬停 |
-| clickable | Boolean | false | 是否可点击 |
+- 新组件：跨 ≥2 页复用才进 `components/`；`Khy` 前缀只给通用壳；`<script setup>` + props validator + `scoped` 样式 + 全 token。
+- 可复用逻辑抽 composable 进 `src/composables/`（`use*.js` 现状 26 个）。
+- khyquant 移动端独立交互 → 造 `Mobile*` 变体（`MobileLayout`/`MobileNav`/`MobileToast` …），触控 ≥44px。
 
 ---
 
-## 布局速查
+## API 与服务发现速查
 
-### 页面布局
+**零硬编码**：端点只能来自 env / 运行时 JSON / `serviceDefaults.js`。
 
-```vue
-<template>
-  <div class="khy-page">
-    <header class="khy-page-header">
-      <slot name="header" />
-    </header>
-    <main class="khy-page-content">
-      <slot />
-    </main>
-    <footer class="khy-page-footer">
-      <slot name="footer" />
-    </footer>
-  </div>
-</template>
-
-<style scoped>
-.khy-page {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: var(--khy-space-6);
-}
-</style>
+```js
+// 标准调用（ai-frontend 模板）
+import request from '@/api/request';   // axios 实例：30s 超时、GET 网络错误重试一次、
+const data = await request.get('/api/channels');          // 401 自动跳登录、失败集中 toast
+const data2 = await request.get('/api/x', { silent: true }); // 自带降级 UI 时抑制 toast
 ```
 
-### 侧边栏布局
+- `baseURL`：生产留空（同源，后端托管 `dist/`）；dev 设 `VITE_AI_API_BASE_URL`（**必须带 `/api` 前缀**）。
+- dev proxy 目标由 `backendDiscovery.mjs` 发现：显式 env → `ai_manage_runtime.json` 的 `apiPort` → 端口 env → 兜底 `127.0.0.1:9090`（镜像 `serviceDefaults.js`）。
+- 端口真源：`services/backend/src/constants/serviceDefaults.js`（`BACKEND_PORT=3000`、`WEB_FRONTEND_PORT=8090`）。
+- 流式对话走原生 `fetch()`（`api/authedFetch.js`），不经 axios，不受 30s 限制；WS 超时走 `VITE_AI_WS_*` env，必须空闲重置式。
+- api 文件分工：`request.js`(实例) / `authedFetch.js`(流式) / `unwrap.js`(错误解包) / `notify.js`(toast) / `loadError.js`(区块错误) / `daemonProbe.js`(探活)。
 
-```vue
-<template>
-  <div class="khy-layout">
-    <aside class="khy-sidebar">
-      <slot name="sidebar" />
-    </aside>
-    <div class="khy-main">
-      <slot />
-    </div>
-  </div>
-</template>
+---
 
-<style scoped>
-.khy-layout {
-  display: flex;
-  min-height: 100vh;
-}
+## 页面与导航速查
 
-.khy-sidebar {
-  width: 250px;
-  background: var(--khy-bg-elevated);
-  border-right: 1px solid var(--khy-gray-200);
-}
+- 用户高频路由无前缀（`/login` `/chat` `/home`）；管理页一律 `/admin/*`，不再产生新裸路径。
+- **加页面 = 只改 `src/nav/index.js`**（`NAV` 数组派生侧栏/路由/页标题），并补 `nav.wiring.test.js` 类 wiring test。
+- 布局壳只有 `AuthenticatedLayout` 一套；无独立 admin shell、无第二套登录。
+- 命名：运维者侧 `auth/login/session`；上游 Key 侧统一 `channel-apis`，文案禁裸写「凭证」。
 
-.khy-main {
-  flex: 1;
-  padding: var(--khy-space-6);
-}
+---
 
-@media (max-width: 1023px) {
-  .khy-sidebar {
-    position: fixed;
-    z-index: 100;
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
-  }
-  
-  .khy-sidebar.open {
-    transform: translateX(0);
-  }
-}
-</style>
-```
+## 状态与文案速查
 
-### 网格系统
+| 场景 | 做法 |
+|------|------|
+| 全局加载 | GlobalProgressBar（自动） |
+| 区块加载 | 骨架屏（`--khy-skeleton-*`） |
+| 空态 | `KhyEmpty`：没什么 + 如何有 + 入口按钮 |
+| 区块错误 | `LoadErrorBanner`：`{问题}：{原因}，{修复建议}` |
+| toast | 统一走 `api/notify.js`，禁止裸 `ElMessage.error('出错了')` |
 
-```vue
-<template>
-  <div class="khy-grid">
-    <div class="khy-col-6">半宽</div>
-    <div class="khy-col-6">半宽</div>
-  </div>
-  
-  <div class="khy-grid">
-    <div class="khy-col-4">三分之一</div>
-    <div class="khy-col-4">三分之一</div>
-    <div class="khy-col-4">三分之一</div>
-  </div>
-</template>
+文案红线：`加载中…`❌ → `加载渠道列表（第 2 次重试）…`✅；`请求失败`❌ → `限流 (429)：请求过多，稍后重试或运行 khy gateway config 切换通道`✅。
 
-<style scoped>
-.khy-grid {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: var(--khy-space-4);
-}
+---
 
-.khy-col-4 { grid-column: span 4; }
-.khy-col-6 { grid-column: span 6; }
-.khy-col-12 { grid-column: span 12; }
-</style>
+## 响应式 / 主题 / 性能
+
+- 断点：`<640` / `640–1023` / `≥1024`；khyquant 布局间距用 `clamp()`（见 `theme.css`）。
+- 暗色：`useTheme.js` 切 `html.dark`；PR 前双主题自查（表面分层、文本对比、投影量级）。
+- 性能：路由懒加载默认；重组件（Vue Flow/xterm/K线）异步 chunk；预取走 `useRoutePrefetch`；体积门 `npm run check:frontend-size`（基线只降不升）。
+
+---
+
+## 常用命令
+
+```bash
+npm run test:frontend                  # ai-frontend vitest
+npm run check:frontend-size            # 体积基线门禁
+npm run frontend:fix-colors            # 预览硬编码颜色（:apply 修复）
+npm run frontend:fix-var               # CSS 变量声明检查（:apply 修复）
+npm run frontend:cleanup-console       # console 残留清理
+node scripts/ci/check-agent-rules.js --changed   # 全仓红线
+npm run lint                           # 各前端目录内（error 硬 0）
 ```
 
 ---
 
-## 交互速查
+## 已知缺口（只降不升，细则见 FE-001 §12）
 
-### 动画
-
-```css
-/* 淡入淡出 */
-.khy-fade-enter-active,
-.khy-fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.khy-fade-enter-from,
-.khy-fade-leave-to {
-  opacity: 0;
-}
-
-/* 滑动 */
-.khy-slide-enter-active,
-.khy-slide-leave-active {
-  transition: transform 0.3s ease;
-}
-
-.khy-slide-enter-from {
-  transform: translateX(-100%);
-}
-
-.khy-slide-leave-to {
-  transform: translateX(100%);
-}
-
-/* 缩放 */
-.khy-scale-enter-active,
-.khy-scale-leave-active {
-  transition: transform 0.2s ease, opacity 0.2s ease;
-}
-
-.khy-scale-enter-from,
-.khy-scale-leave-to {
-  transform: scale(0.95);
-  opacity: 0;
-}
-```
-
-### 微交互
-
-```css
-/* 按钮悬停 */
-.khy-button:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--khy-shadow-md);
-}
-
-/* 卡片悬停 */
-.khy-card:hover {
-  box-shadow: var(--khy-shadow-lg);
-}
-
-/* 输入框聚焦 */
-.khy-input__wrapper:focus-within {
-  border-color: var(--khy-primary);
-  box-shadow: 0 0 0 3px var(--khy-primary-light);
-}
-```
-
-### 加载状态
-
-```vue
-<!-- 骨架屏 -->
-<template>
-  <div v-if="loading" class="khy-skeleton">
-    <div class="khy-skeleton__line" />
-    <div class="khy-skeleton__line khy-skeleton__line--short" />
-  </div>
-  <div v-else>
-    <slot />
-  </div>
-</template>
-
-<style scoped>
-.khy-skeleton__line {
-  height: 1rem;
-  background: linear-gradient(90deg, var(--khy-gray-200) 25%, var(--khy-gray-100) 50%, var(--khy-gray-200) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: var(--khy-radius-sm);
-  margin-bottom: var(--khy-space-2);
-}
-
-.khy-skeleton__line--short {
-  width: 60%;
-}
-
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-</style>
-```
-
----
-
-## 响应式速查
-
-### 断点
-
-```css
-/* 移动端 */
-@media (max-width: 639px) {
-  /* 手机样式 */
-}
-
-/* 平板端 */
-@media (min-width: 640px) and (max-width: 1023px) {
-  /* 平板样式 */
-}
-
-/* 桌面端 */
-@media (min-width: 1024px) {
-  /* 桌面样式 */
-}
-```
-
-### 触控优化
-
-```css
-/* 增大点击区域 */
-.khy-button {
-  min-height: 44px;
-  min-width: 44px;
-}
-
-/* 优化输入框 */
-.khy-input__wrapper input {
-  font-size: 16px; /* 防止 iOS 缩放 */
-}
-
-/* 防止双击缩放 */
-.khy-button {
-  touch-action: manipulation;
-}
-```
-
-### 响应式表格
-
-```vue
-<template>
-  <div class="khy-responsive-table">
-    <table>
-      <thead>
-        <tr>
-          <th>姓名</th>
-          <th>邮箱</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td data-label="姓名">张三</td>
-          <td data-label="邮箱">zhangsan@example.com</td>
-          <td data-label="操作">
-            <KhyButton size="sm">编辑</KhyButton>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-</template>
-
-<style scoped>
-@media (max-width: 639px) {
-  .khy-responsive-table thead {
-    display: none;
-  }
-  
-  .khy-responsive-table tbody tr {
-    display: block;
-    margin-bottom: var(--khy-space-4);
-    border: 1px solid var(--khy-gray-200);
-    border-radius: var(--khy-radius);
-  }
-  
-  .khy-responsive-table td {
-    display: flex;
-    justify-content: space-between;
-    padding: var(--khy-space-2) var(--khy-space-3);
-    border-bottom: 1px solid var(--khy-gray-100);
-  }
-  
-  .khy-responsive-table td::before {
-    content: attr(data-label);
-    font-weight: 500;
-    color: var(--khy-text-secondary);
-  }
-}
-</style>
-```
-
----
-
-## 可访问性速查
-
-### 语义化 HTML
-
-```vue
-<template>
-  <header>
-    <nav aria-label="主导航">
-      <ul>
-        <li><a href="/">首页</a></li>
-        <li><a href="/about">关于</a></li>
-      </ul>
-    </nav>
-  </header>
-  
-  <main>
-    <article>
-      <h1>页面标题</h1>
-      <section>
-        <h2>章节标题</h2>
-        <p>内容...</p>
-      </section>
-    </article>
-  </main>
-  
-  <footer>
-    <p>版权信息</p>
-  </footer>
-</template>
-```
-
-### ARIA 属性
-
-```vue
-<template>
-  <!-- 按钮 -->
-  <button aria-label="关闭对话框" @click="close">×</button>
-  
-  <!-- 输入框 -->
-  <input
-    aria-label="搜索"
-    aria-describedby="search-hint"
-    type="search"
-  />
-  <p id="search-hint">输入关键词搜索</p>
-  
-  <!-- 对话框 -->
-  <div role="dialog" aria-modal="true" aria-labelledby="dialog-title">
-    <h2 id="dialog-title">确认操作</h2>
-    <p>确定要删除吗？</p>
-  </div>
-  
-  <!-- 加载状态 -->
-  <div aria-live="polite" aria-busy="true">
-    加载中...
-  </div>
-</template>
-```
-
-### 键盘导航
-
-```vue
-<template>
-  <div role="tablist" @keydown="handleKeydown">
-    <button
-      v-for="(tab, index) in tabs"
-      :key="tab.id"
-      role="tab"
-      :aria-selected="activeTab === tab.id"
-      :tabindex="activeTab === tab.id ? 0 : -1"
-      @click="activeTab = tab.id"
-    >
-      {{ tab.label }}
-    </button>
-  </div>
-</template>
-
-<script setup>
-const handleKeydown = (event) => {
-  const tabs = document.querySelectorAll('[role="tab"]');
-  const currentIndex = Array.from(tabs).indexOf(event.target);
-  
-  switch (event.key) {
-    case 'ArrowRight':
-      event.preventDefault();
-      const nextIndex = (currentIndex + 1) % tabs.length;
-      tabs[nextIndex].focus();
-      break;
-    case 'ArrowLeft':
-      event.preventDefault();
-      const prevIndex = (currentIndex - 1 + tabs.length) % tabs.length;
-      tabs[prevIndex].focus();
-      break;
-  }
-};
-</script>
-```
-
-### 动画偏好
-
-```css
-/* 尊重用户的动画偏好 */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-```
-
----
-
-## 性能速查
-
-### 代码分割
-
-```javascript
-// 路由懒加载
-const routes = [
-  {
-    path: '/dashboard',
-    component: () => import('@/views/Dashboard.vue')
-  }
-];
-
-// 组件懒加载
-const HeavyComponent = defineAsyncComponent(() => 
-  import('@/components/HeavyComponent.vue')
-);
-```
-
-### 图片优化
-
-```vue
-<template>
-  <picture>
-    <source :srcset="srcSetWebp" type="image/webp" />
-    <source :srcset="srcSetJpg" type="image/jpeg" />
-    <img
-      :src="fallbackSrc"
-      :alt="alt"
-      loading="lazy"
-      decoding="async"
-    />
-  </picture>
-</template>
-```
-
-### 缓存策略
-
-```javascript
-// Pinia 缓存
-export const useUserStore = defineStore('user', {
-  state: () => ({
-    users: [],
-    lastFetch: null
-  }),
-  
-  actions: {
-    async fetchUsers() {
-      const now = Date.now();
-      if (this.lastFetch && now - this.lastFetch < 5 * 60 * 1000) {
-        return this.users;
-      }
-      
-      this.users = await api.getUsers();
-      this.lastFetch = now;
-      return this.users;
-    }
-  }
-});
-```
-
----
-
-## 测试速查
-
-### 单元测试
-
-```javascript
-import { describe, it, expect } from 'vitest';
-import { mount } from '@vue/test-utils';
-import KhyButton from '../KhyButton.vue';
-
-describe('KhyButton', () => {
-  it('renders correctly', () => {
-    const wrapper = mount(KhyButton, {
-      slots: { default: 'Button' }
-    });
-    
-    expect(wrapper.text()).toBe('Button');
-  });
-  
-  it('emits click event', async () => {
-    const wrapper = mount(KhyButton);
-    
-    await wrapper.trigger('click');
-    
-    expect(wrapper.emitted('click')).toBeTruthy();
-  });
-});
-```
-
-### 集成测试
-
-```javascript
-import { describe, it, expect } from 'vitest';
-import { mount } from '@vue/test-utils';
-import { createTestingPinia } from '@pinia/testing';
-import UserProfile from '../UserProfile.vue';
-
-describe('UserProfile', () => {
-  it('displays user information', () => {
-    const wrapper = mount(UserProfile, {
-      global: {
-        plugins: [
-          createTestingPinia({
-            initialState: {
-              user: {
-                name: 'John Doe',
-                email: 'john@example.com'
-              }
-            }
-          })
-        ]
-      }
-    });
-    
-    expect(wrapper.text()).toContain('John Doe');
-  });
-});
-```
-
----
-
-## 常见问题速查
-
-### Q: 如何创建新组件？
-
-**A**:
-```vue
-<template>
-  <div :class="componentClasses">
-    <slot />
-  </div>
-</template>
-
-<script setup>
-const props = defineProps({
-  variant: {
-    type: String,
-    default: 'default'
-  }
-});
-
-const componentClasses = computed(() => [
-  'khy-component',
-  `khy-component--${props.variant}`
-]);
-</script>
-
-<style scoped>
-.khy-component {
-  /* 样式 */
-}
-</style>
-```
-
-### Q: 如何使用设计令牌？
-
-**A**:
-```css
-.my-component {
-  color: var(--khy-text-main);
-  background: var(--khy-bg-elevated);
-  padding: var(--khy-space-4);
-  border-radius: var(--khy-radius);
-  box-shadow: var(--khy-shadow);
-}
-```
-
-### Q: 如何实现响应式布局？
-
-**A**:
-```css
-.container {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: var(--khy-space-4);
-}
-
-.col {
-  grid-column: span 12;
-}
-
-@media (min-width: 640px) {
-  .col {
-    grid-column: span 6;
-  }
-}
-
-@media (min-width: 1024px) {
-  .col {
-    grid-column: span 4;
-  }
-}
-```
-
-### Q: 如何处理加载状态？
-
-**A**:
-```vue
-<template>
-  <div v-if="loading" class="khy-skeleton">
-    <div class="khy-skeleton__line" />
-    <div class="khy-skeleton__line khy-skeleton__line--short" />
-  </div>
-  <div v-else>
-    <slot />
-  </div>
-</template>
-```
-
----
-
-## 相关文档
-
-- `[DESIGN-FE-001]` 前端页面规范
-- `[DESIGN-FE-002]` 前端组件库规范
-- `[DESIGN-ARCH-072]` 项目规范化总纲
+G1 `--khy-white` 引用 24 次 0 定义 ｜ G2 khyquant 悬空 `--khy-*` 引用 ｜ G3 khyquant 双轨命名 ｜ G4 fix-colors 映射未定义灰阶 ｜ G5 间距/字号无 token ｜ G6 虚构组件库文档已标注
 
 ---
 
@@ -845,8 +147,9 @@ const componentClasses = computed(() => [
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
-| 1.0.0 | 2026-09-04 | 初始版本，提供前端快速参考 |
+| 1.0.0 | 2026-09-04 | 初始版本（含虚构组件与令牌） |
+| 2.0.0 | 2026-09-09 | 重写为实测对齐版：只收录代码中真实存在的令牌/组件/命令 |
 
 ---
 
-*本参考卡由 khy-os 前端团队维护*
+*本参考卡由 khy-os 前端方向维护*

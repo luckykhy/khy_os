@@ -39,6 +39,7 @@ request.interceptors.request.use(
 request.interceptors.response.use(
   (response) => {
     httpDone();
+    // 四端统一错误格式透传: apiErrorFormatter 返回的 code/reason/suggestions 挂在 response.data 上
     return response;
   },
   async (error) => {
@@ -76,7 +77,7 @@ request.interceptors.response.use(
         error?.response?.data?.message || error?.response?.data?.error || ''
       ).toLowerCase();
       if (msg.includes('admin') || msg.includes('管理员')) {
-        error.userMessage = '当前账号没有管理员权限，请切换到用户视图或使用管理员账号登录。';
+        error.userMessage = '当前账号没有管理员权限，请改用管理员账号登录。';
       }
     }
     if (error.userMessage) {

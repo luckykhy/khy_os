@@ -223,6 +223,12 @@ const {
 const { formatStatusMessage } = require('./statusMessageFormatter');
 setRouterDispatchTailDeps({ chk });
 
+// Self-registering command auto-registry (progressive migration).
+// Commands that export a manifest are dispatched here, before the
+// hardcoded switch. Unmigrated commands still fall through to the switch.
+const commandAutoRegistry = require('./commandAutoRegistry');
+commandAutoRegistry.init();
+
 // ════════════════════════════════════════════════════════════════
 // Constants
 // ════════════════════════════════════════════════════════════════
@@ -325,6 +331,7 @@ const KHY_ONLY_COMMANDS_IN_APP_MODE = new Set([
   'receipts',
   'rewind',
   'undo',
+  'cleandisk',
 ]);
 
 // Commands that accept a Chinese positional argument (stock names, search
@@ -966,6 +973,30 @@ async function route(parsed, context = {}) {
         return __tail;
       }
     }
+    // Self-registering commands: dispatched before the hardcoded switch.
+    // Adding a new command no longer requires editing this file — just drop
+    // a handler in handlers/ that exports a manifest.
+    {
+      const __auto = await commandAutoRegistry.dispatch(command, {
+        subCommand,
+        args,
+        options,
+        rawCommandToken,
+        parsed,
+        context,
+        printError,
+        printHelp,
+        printInfo,
+        printTable,
+        printSuccess,
+        printWarn,
+        withSpinner,
+        chalk,
+      });
+      if (__auto.handled) {
+        return __auto.result;
+      }
+    }
     switch (command) {
       // ════════════════════════════════════════════════════════════════
       // Configuration & System Commands (version, help, clear, exit, menu, khyos, meta, manage...)
@@ -1022,94 +1053,11 @@ async function route(parsed, context = {}) {
         require('./commandCatalogUi').renderCommandCatalog();
         return true;
 
-      // ── KHY OS bare-metal kernel (khy os …) ──
-      case 'khyos':
-      case 'os': {
-        const { handleKhyos } = require('./handlers/khyos');
-        return await handleKhyos(parsed);
-      }
-
-      // ── Project maintainability metadata (.ai/ seed docs) ──
-      case 'metadata':
-      case 'meta':
-        return await require('./handlers/metadata').handleMetadata(parsed);
-
-      // ── MarkText(muya)WYSIWYG Markdown 工作台 + 右键「打开方式」注册 ──
-      // khy md <file> / open <file> → muya 打开 .md；register/unregister → 系统关联。
-      case 'md':
-        return await require('./handlers/md').handleMd(parsed);
-
-      // ── Unified management plane (khy manage) ──
-      case 'manage':
-        return await require('./handlers/manage').handleManage(parsed);
-
-      // ── Maintainer cockpit (khy maintain) ──
-      // `maintain` 既是 metadata 的别名（gen/refresh/check/show/link/hook），
-      // 也提供单人维护者驾驶舱（bare / status / health / doctor / audit）。按子命令分流。
-      case 'maintain': {
-        // Metadata sub-verbs come from commandSchema (SSOT); keep them defined there only.
-        const METADATA_SUBS = new Set(SUB_COMMANDS.metadata);
-        const sub = String(
-          parsed.subCommand || (Array.isArray(args) && args[0]) || ''
-        ).toLowerCase();
-        if (METADATA_SUBS.has(sub)) {
-          return await require('./handlers/metadata').handleMetadata(parsed);
-        }
-        return await require('./handlers/maintain').handleMaintain(parsed);
-      }
-
-      // ── Modular packaging management (khy modules) ──
-      // List, inspect, and build standalone module executables.
-      case 'modules':
-        return require('./handlers/modules')(args.slice(1));
-
-      // ── Unified self-service health check (khy health) ──
-      // 聚合 services health / maintain / network / 外部后端 / 磁盘 / 内存 等分散信号到
-      // 一个顶层自助诊断入口；支持 --json，red 项非零退出可作健康门禁。
-      case 'health':
-        return await require('./handlers/health').handleHealth(parsed);
-
-      // ── Capability-as-code registry (khy capability) ──
-      // Surfaces learned capabilities (tools authored to the capability
-      // convention: code + tests + auto-discovery) and their test coverage.
-      case 'capability':
-        return await require('./handlers/capability').handleCapability(parsed);
-
-      // ── 外部 agent 资产管理(khy agent-assets …) ──
-      // 统一发现/迁移外部 agent 工具的记忆·工具·技能三类资产。写操作默认干跑,
-      // 冲突默认 keep-both(绝不覆盖用户资产)。判定与搬运全在 services/agentAssets。
-      case 'agent-assets':
-        return require('./handlers/agentAssets').handleAgentAssets(parsed);
-
-      // ── RTK 省 token 模式(khy rtk …) ──
-      // 检测/状态/省量统计/开关。RTK 在 shell 与 grep(content)执行前压缩输出省 token。
-      case 'rtk':
-        return await require('./handlers/rtk').handleRtk(parsed);
-
-      // ── 20 倍模式(khy 20x …) ──
-      // CC 有 Max 20x 满负荷档;khy 对齐同一体感 = 可开关的满负荷模式(effort=max + 扩展思考
-      // + 更高工具迭代/并行子代理上限)。状态/开关。opt-in 默认关,关 = 逐字节回退今日行为。
-      case '20x':
-        return await require('./handlers/twentyX').handleTwentyX(parsed);
-
-      // ── 懒人方法论(khy lazy …) ──
-      // 学自 ponytail:阶梯/债务台账/强度/开关。判定与数据全在纯叶子 codeLaziness。
-      case 'lazy':
-        return require('./handlers/lazy').handleLazy(subCommand, args, options);
-
       // ── 持久目标(khy goal …) ──
       // 对齐 Claude Code /goal:设定后每轮注入系统提示词提醒模型朝它推进,直到清除。
       // 判定/规范化/指令在纯叶子 goalCore;持久化在 goalStore(~/.khyos/goals)。
       // freeform `/goal <文本>` 直设并「设定即开跑」:handler 返回 { code, aiForward } 时,
       // 透传 aiForward 让 REPL/TUI 主循环立刻跑一轮 agentic(对齐 CC 截图的 Crystallizing)。
-      case 'goal': {
-        const goalRes = require('./handlers/goal').handleGoal(subCommand, args, options);
-        if (goalRes && typeof goalRes === 'object' && goalRes.aiForward) {
-          return { aiForward: goalRes.aiForward };
-        }
-        return goalRes;
-      }
-
       // ── 前端工程生成(khy create-frontend …) ──
       // 薄编排入口:用户自然语言描述需求 → 组装引导性任务描述,复用既有 agentic 循环
       // (与 goal 同一 aiForward 契约:handler 返回 { code, aiForward } 时透传给
@@ -1126,61 +1074,6 @@ async function route(parsed, context = {}) {
         }
         return cfRes;
       }
-
-      // ── 会话洞见(khy insights …) ──
-      // 对齐 Claude Code /insights:回顾会话(轮次/工具/话题/耗时)。
-      // 统计/排版在纯叶子 sessionInsights;transcript 读盘在 sessionPersistence。
-      case 'insights':
-        return (
-          require('./handlers/createFrontend') &&
-          require('./handlers/insights').handleInsights(subCommand, args, options)
-        );
-
-      // ── 密钥保险库(khy vault …) ──
-      // 对齐 Claude Code 的密钥保险库:机密存本地(~/.khyos/vault,0600),模型用 {{vault:NAME}}
-      // 占位符引用,真值由 VaultHttpFetch 服务端注入,绝不进入模型上下文。
-      // 校验/脱敏在纯叶子 vaultCore;持久化在 vaultStore。
-      case 'vault':
-        return require('./handlers/vault').handleVault(subCommand, args, options);
-
-      // ── Multi-instance mesh (khy mesh …) ──
-      // 同机多个独立 khy 实例彼此发现/attach/detach/跨进程互发消息。
-      // 校验/信封在纯叶子 meshCore;在册表 + 信箱 IO 在 meshStore。
-      case 'mesh':
-        return require('./handlers/mesh').handleMesh(subCommand, args, options);
-
-      // ── Off-terminal push notifications (khy notify …) ── 报文在纯叶子 pushNotifyCore;配置落 push.json。
-      case 'notify':
-        return require('./handlers/notify').handleNotify(subCommand, args, options);
-
-      // 多平台消息收发(khy msg …)钉钉/飞书/企业微信。报文/验签在纯叶子 msgChannelCore/msgInboundCore。
-      case 'msg':
-        return require('./handlers/msg').handleMsg(subCommand, args, options);
-
-      // 微信个人号扫码接入(khy wx …)走 ilink bot API。协议在纯叶子 ilinkCore/ilinkCrypto。
-      case 'wx':
-        return await require('./handlers/wx').handleWx(subCommand, args, options);
-
-      // 飞书接入(khy feishu …)两种传输:① 群机器人+事件订阅(channels/feishuChannel,
-      // 需公网入口);② 长连接(adapters/im/feishuAdapter,不需公网入口,掉线指数退避重连)。
-      case 'feishu':
-        return await require('./handlers/feishu').handleFeishu(subCommand, args, options);
-
-      // ── Document operations (khy doc …) ──
-      // First capability instance: `doc title` restyles a Word title/heading.
-      case 'doc':
-        return await require('./handlers/doc').handleDoc(parsed);
-
-      // ── File-format conversion (khy convert …) ──
-      // Second capability instance: image→PDF / →TXT / PDF↔TXT / Word↔TXT, etc.
-      case 'convert':
-        return await require('./handlers/convert').handleConvert(parsed);
-
-      // ── Role play (khy role …) ──
-      // Third capability instance (first behavioral one): adopt a role/character
-      // from a prompt; active for this conversation (--save persists to persona).
-      case 'role':
-        return await require('./handlers/role').handleRole(parsed);
 
       // ════════════════════════════════════════════════════════════════
       // Data & Market Commands (quote, data, backtest, strategy, search, watch, rank, analyze...)
@@ -1276,7 +1169,7 @@ async function route(parsed, context = {}) {
           if (result.success) {
             console.log('');
             console.log(chalk.bold.cyan('  🔍 搜索结果'));
-            console.log(chalk.dim('  ─'.repeat(30)));
+            console.log("");
             for (const r of (result.results || []).slice(0, 10)) {
               console.log('');
               console.log(chalk.bold.white(`  ${r.title}`));
@@ -1456,17 +1349,6 @@ async function route(parsed, context = {}) {
         return { aiForward: `分析一下 ${sym} 的走势和交易机会` };
       }
 
-      // ── Project Analysis (分层渐进式大项目分析) ──
-      // 解决「全量读代码上下文爆炸，不读代码AI找不到文件」的矛盾。
-      // project map 生成轻量地图；project analyze 注入地图 + AI 按需工具探索。
-      // 详见 handlers/project.js + services/projectAnalysis/projectMapService.js
-      case 'project':
-      case 'proj':
-      case '项目': {
-        const { handleProjectCommand } = require('./handlers/project');
-        return await handleProjectCommand(subCommand, args, options);
-      }
-
       // ════════════════════════════════════════════════════════════════
       // Development & DevOps Commands (server, db, app, init, doctor, deploy, workspace...)
       // ════════════════════════════════════════════════════════════════
@@ -1484,30 +1366,11 @@ async function route(parsed, context = {}) {
         return true;
       }
 
-      case 'app': {
-        const { handleApp } = require('./handlers/app');
-        await handleApp(subCommand, args, options);
-        return true;
-      }
-
-      case 'device': {
-        const { handleDevice } = require('./handlers/device');
-        await handleDevice(subCommand, args, options);
-        return true;
-      }
-
+      case 'cross':
       // ── Test-key(厂商连通性自检:输入 key 测是否连通)──
       // pip 装后 `khy test-key <厂商> --key <k>` / `--all` / `list`;判定委托
       // providerConnectivitySpec 单一真源。厂商名是动态位置参数(不进 SUB_COMMANDS),
       // 故读 args[0] 而非 subCommand。key 只在运行时传入,绝不落盘。
-      case 'test-key':
-      case 'testkey':
-      case 'test-keys': {
-        const { handleTestKey } = require('./handlers/testKey');
-        await handleTestKey(args, options);
-        return true;
-      }
-
       case 'db': {
         const service = require('./handlers/service');
         if (subCommand === 'init') {
@@ -1696,87 +1559,9 @@ async function route(parsed, context = {}) {
       }
 
       // ── Init / Doctor ──
-      case 'init': {
-        const { handleInit } = require('./handlers/init');
-        await handleInit(options);
-        return true;
-      }
-
       case 'doctor': {
         const { handleDoctor } = require('./handlers/init');
         await handleDoctor(options, args);
-        return true;
-      }
-
-      case 'state': {
-        const { handleState } = require('./handlers/state');
-        await handleState(options, args);
-        return true;
-      }
-
-      case 'verify': {
-        const { handleVerify } = require('./handlers/verify');
-        await handleVerify(subCommand, args, options);
-        return true;
-      }
-
-      case 'resource': {
-        const { handleResource } = require('./handlers/resource');
-        await handleResource(subCommand, args, options);
-        return true;
-      }
-
-      case 'runtime': {
-        const { handleRuntime } = require('./handlers/runtime');
-        await handleRuntime(subCommand, args, options);
-        return true;
-      }
-
-      case 'trace': {
-        const { handleTrace } = require('./handlers/trace');
-        await handleTrace(subCommand, args, options);
-        return true;
-      }
-
-      case 'traffic': {
-        const { handleTraffic } = require('./handlers/traffic');
-        await handleTraffic(subCommand, args, options);
-        return true;
-      }
-
-      case 'credentials': {
-        const { handleCredentials } = require('./handlers/credentials');
-        await handleCredentials(subCommand, args, options);
-        return true;
-      }
-
-      case 'replay': {
-        const { handleReplay } = require('./handlers/replay');
-        await handleReplay(subCommand, args, options);
-        return true;
-      }
-
-      case 'guide': {
-        const { handleGuide } = require('./handlers/guide');
-        await handleGuide(subCommand, args, options);
-        return true;
-      }
-
-      case 'channels': {
-        const { handleChannels } = require('./handlers/channels');
-        await handleChannels(subCommand, args, options);
-        return true;
-      }
-
-      case 'workspace': {
-        const { handleWorkspace } = require('./handlers/workspace');
-        await handleWorkspace(subCommand ? [subCommand, ...args] : args, options);
-        return true;
-      }
-
-      case 'receipts': {
-        const { handleReceipts } = require('./handlers/receipts');
-        await handleReceipts(subCommand, args, options);
         return true;
       }
 
@@ -1784,111 +1569,6 @@ async function route(parsed, context = {}) {
       case 'undo': {
         const { handleRollback } = require('./handlers/rollback');
         await handleRollback(command, subCommand, args, options);
-        return true;
-      }
-
-      case 'publish': {
-        const { handlePublish } = require('./handlers/publish');
-        await handlePublish(subCommand, args, options);
-        return true;
-      }
-
-      case 'restore':
-      case 'restore-source': {
-        // Decrypt + extract the full-source snapshot embedded in the pip/npm
-        // package into a target dir (default ./Khy-OS), preserving the layout.
-        const { handleRestore } = require('./handlers/publish');
-        await handleRestore(subCommand ? [subCommand, ...args] : args, options);
-        return true;
-      }
-
-      case 'companion': {
-        // AgentFS: file-driven, git-versioned, layered per-agent storage.
-        // companion has no registered SUB_COMMANDS, so peel the verb off args.
-        const { handleCompanion } = require('./handlers/companion');
-        const sub = subCommand || args[0] || null;
-        const rest = subCommand ? args : args.slice(1);
-        await handleCompanion(sub, rest, options);
-        return true;
-      }
-
-      case 'mobile': {
-        const { handleMobile } = require('./handlers/mobile');
-        await handleMobile(subCommand, args, options);
-        return true;
-      }
-
-      case 'desktop': {
-        const { handleDesktop } = require('./handlers/desktop');
-        await handleDesktop(subCommand, args, options);
-        return true;
-      }
-
-      case 'extension':
-      case 'ext': {
-        // Extension marketplace (list/search/install/.../new). The handler was
-        // fully implemented + backed by services/extensionMarketplace but had no
-        // dispatch case, so `khy ext ...` was unreachable. handleExtension takes a
-        // single input string (subcommand + args), so reassemble it here.
-        const { handleExtension } = require('./handlers/extension');
-        const input = [subCommand, ...(args || [])].filter(Boolean).join(' ');
-        await handleExtension(input, { options });
-        return true;
-      }
-
-      case 'repo': {
-        // Beginner-safe version-management entry (status/save/history/branch/publish).
-        // `repo` registers its verbs as SUB_COMMANDS, so subCommand is already peeled.
-        const { handleRepo } = require('./handlers/repo');
-        await handleRepo(subCommand, args, options);
-        return true;
-      }
-
-      case 'deploy': {
-        // Deploy an arbitrary project to a target location and (optionally) start it.
-        const { handleDeploy } = require('./handlers/deploy');
-        await handleDeploy(parsed);
-        return true;
-      }
-
-      case 'docs': {
-        const docs = require('./handlers/docs');
-        if (subCommand === 'browse') {
-          await docs.handleDocsBrowse(args, options);
-        } else if (subCommand === 'search') {
-          await docs.handleDocsSearch(args.join(' '), options);
-        } else if (subCommand === 'quickstart' || subCommand === 'start') {
-          await docs.handleDocsQuickstart();
-        } else if (
-          subCommand === 'ai-fastlane' ||
-          subCommand === 'ai' ||
-          subCommand === 'fastlane'
-        ) {
-          await docs.handleDocsAiFastlane(args, options);
-        } else if (subCommand === 'maintainer') {
-          await docs.handleDocsMaintainer();
-        } else if (subCommand === 'claude') {
-          await docs.handleDocsClaude();
-        } else if (subCommand === 'gateway') {
-          await docs.handleDocsGateway();
-        } else if (subCommand === 'strategy') {
-          await docs.handleDocsStrategy();
-        } else if (subCommand === 'faq') {
-          await docs.handleDocsFaq();
-        } else if (subCommand === 'subscribe' || subCommand === 'sub') {
-          await docs.handleDocsSubscription();
-        } else if (subCommand === 'check' || subCommand === 'freshness') {
-          await docs.handleDocsFreshness(args, options);
-        } else {
-          await docs.handleDocsQuickstart();
-        } // default to quickstart
-        return true;
-      }
-
-      case 'subscribe':
-      case 'sub': {
-        const docs = require('./handlers/docs');
-        await docs.handleDocsSubscription();
         return true;
       }
 
@@ -1920,7 +1600,7 @@ async function route(parsed, context = {}) {
           const summary = userProfile.getProfileSummary();
           console.log('');
           console.log(chalk.cyan.bold('  📊 用户画像'));
-          console.log(chalk.dim('  ' + '─'.repeat(40)));
+          console.log("");
           console.log(`  会话次数: ${chalk.bold(summary.sessions)}`);
           console.log(`  命令总数: ${chalk.bold(summary.totalCommands)}`);
           console.log(
@@ -2057,7 +1737,7 @@ async function route(parsed, context = {}) {
           const config = cloud.loadCloudConfig();
           console.log('');
           console.log(chalk.cyan.bold('  ☁️  云同步状态'));
-          console.log(chalk.dim('  ' + '─'.repeat(40)));
+          console.log("");
           if (config.username) {
             console.log(`  账号:     ${chalk.green(config.username)} ✓`);
           } else {
@@ -2385,96 +2065,6 @@ async function route(parsed, context = {}) {
       }
 
       // ── Account Pool ──
-      case 'pool': {
-        const pool = require('./handlers/pool');
-        if (subCommand === 'list') {
-          await pool.handlePoolList(args[0]);
-        } else if (subCommand === 'add') {
-          await pool.handlePoolAdd(args[0], args[1]);
-        } else if (subCommand === 'delete' || subCommand === 'remove') {
-          await pool.handlePoolDelete(args[0]);
-        } else if (subCommand === 'enable') {
-          await pool.handlePoolEnable(args[0]);
-        } else if (subCommand === 'disable') {
-          await pool.handlePoolDisable(args[0]);
-        } else if (subCommand === 'import') {
-          await pool.handlePoolImport(args[0], args[1]);
-        } else if (subCommand === 'use') {
-          await pool.handlePoolUse(args[0], args[1]);
-        } else if (subCommand === 'api') {
-          await pool.handlePoolApi(args[0]);
-        } else if (subCommand === 'status') {
-          await pool.handlePoolStatus();
-        } else if (subCommand === 'scheduling') {
-          await pool.handlePoolScheduling(args[0]);
-        } else if (subCommand === 'auto-import') {
-          await pool.handlePoolAutoImport(args[0], args[1], args[2]);
-        } else {
-          await pool.handlePoolStatus();
-        }
-        return true;
-      }
-
-      // ── Proxy ──
-      case 'proxy': {
-        const proxy = require('./handlers/proxy');
-        if (subCommand === 'start') {
-          await proxy.handleProxyStart(options);
-        } else if (subCommand === 'stop') {
-          await proxy.handleProxyStop();
-        } else if (subCommand === 'status') {
-          await proxy.handleProxyStatus();
-        } else if (subCommand === 'help') {
-          await proxy.handleProxyHelp();
-        } else if (subCommand === 'quickstart') {
-          await proxy.handleProxyQuickstart(args, options);
-        } else if (subCommand === 'cert') {
-          await proxy.handleProxyCert(args[0] || 'generate', args.slice(1), options);
-        } else if (subCommand === 'core') {
-          await proxy.handleProxyCore(args[0] || 'status', args.slice(1), options);
-        } else if (subCommand === 'client') {
-          await proxy.handleProxyClient(args[0] || 'list', args.slice(1), options);
-        } else if (subCommand === 'token') {
-          await proxy.handleProxyToken(args[0] || 'status', args.slice(1), options);
-        } else if (subCommand === 'subscription' || subCommand === 'sub') {
-          await proxy.handleProxySubscription(args[0] || 'list', args.slice(1), options);
-        } else if (subCommand === 'tls') {
-          await proxy.handleProxyTls(args[0] || 'status', args[1] || null);
-        } else if (subCommand === 'switch-center' || subCommand === 'switch') {
-          await proxy.handleProxySwitchCenter(args[0] || 'status', args.slice(1), options);
-        } else if (subCommand === 'trae-switch') {
-          await proxy.handleProxyTraeSwitch(args[0] || 'status', args.slice(1), options);
-        } else if (subCommand === 'windsurf-switch') {
-          await proxy.handleProxyWindsurfSwitch(args[0] || 'status', args.slice(1), options);
-        } else if (subCommand === 'cursor2api') {
-          await proxy.handleProxyCursor2Api(args[0] || 'status', args.slice(1), options);
-        } else {
-          await proxy.handleProxyHelp();
-        }
-        return true;
-      }
-
-      // ── Cron Scheduler ──
-      case 'cron': {
-        const { handleCronCommand } = require('./handlers/cron');
-        await handleCronCommand(subCommand, args, options);
-        return true;
-      }
-
-      // ── Portable CLI Tools (claude/codex/opencode 便携版) ──
-      case 'tools': {
-        const { handleToolsCommand } = require('./handlers/tools');
-        await handleToolsCommand(subCommand, args);
-        return true;
-      }
-
-      // ── Self-location diagnostic ──
-      case 'where': {
-        const { handleWhere } = require('./handlers/where');
-        handleWhere();
-        return true;
-      }
-
       // ── Portable Sync (legacy `khy sync`; watcher replaced by `khy portable sync`) ──
       case 'sync': {
         const { handlePortableSync } = require('./handlers/portableSync');
@@ -2483,12 +2073,6 @@ async function route(parsed, context = {}) {
       }
 
       // ── Portable copy one-shot sync (dev tree → portable root) ──
-      case 'portable': {
-        const { handlePortable } = require('./handlers/portable');
-        await handlePortable(subCommand, args, options);
-        return true;
-      }
-
       // ════════════════════════════════════════════════════════════════
       // UI & Display Commands (skin, skill, persona, features, toollist, toolcheck...)
       // ════════════════════════════════════════════════════════════════
@@ -2525,122 +2109,27 @@ async function route(parsed, context = {}) {
         return true;
       }
 
-      // ── Skills ──
-      case 'skill': {
-        const { handleSkillCommand } = require('./handlers/skill');
-        await handleSkillCommand(subCommand, args, options);
-        return true;
-      }
-
-      // ── Persona (C1) ──
-      case 'persona': {
-        const { handlePersonaCommand } = require('./handlers/persona');
-        await handlePersonaCommand(subCommand, args, options);
-        return true;
-      }
 
       // ════════════════════════════════════════════════════════════════
       // Session & History Commands (session, storage, uninstall, heal...)
       // ════════════════════════════════════════════════════════════════
 
-      // ── Session Search ──
-      case 'session': {
-        const { handleSessionCommand } = require('./handlers/session');
-        await handleSessionCommand(subCommand, args, options);
-        return true;
-      }
 
-      case 'clean': {
-        // 分级清理:构建产物 / 可重装依赖 / 运行时状态。默认只清点不删,
-        // 真删要 --yes;会话历史(.khy/checkpoints)不在任何默认档内。
-        const { handleCleanCommand } = require('./handlers/clean');
-        await handleCleanCommand(subCommand, args, options);
-        return true;
-      }
 
-      case 'storage': {
-        // Storage placement: show where data lives + migrate the data home onto
-        // a non-system drive (explicit, verified, reversible — never automatic).
-        const { handleStorageCommand } = require('./handlers/storage');
-        await handleStorageCommand(subCommand, args, options);
-        return true;
-      }
-      case 'backup': {
-        // 数据备份与恢复。SQLite 走 VACUUM INTO 热备(不停机、不拷正在写的 .db),
-        // JSON 状态文件逐个原子复制。注意:数据恢复是 `backup restore` 子命令 ——
-        // 顶层 `restore` 是加密源码包恢复,两者不同域。
-        const { handleBackupCommand } = require('./handlers/backup');
-        await handleBackupCommand(subCommand, args, options);
-        return true;
-      }
 
-      // Full uninstall / historical-residual cleanup. Enumerates every data home
-      // / runtime / pointer / visible-alias khy ever placed under $HOME (SSOT in
-      // services/uninstall/uninstallPlan.js), previews by default, removes only
-      // with --yes, and can optionally purge the npm-global / pip package too.
-      case 'uninstall': {
-        const { handleUninstall } = require('./handlers/uninstall');
-        await handleUninstall(subCommand, args, options);
-        return true;
-      }
 
       // Feature index / command discovery. Prints every discoverable command
       // grouped by category, consuming the same SSOT
       // (services/commandCatalog/commandCatalog.buildCommandCatalog) as the
       // backend GET /api/commands endpoint and the frontend FeatureCatalog view,
       // so "有了功能却不知去哪用" never happens across surfaces.
-      case 'features': {
-        const { handleFeatures } = require('./handlers/features');
-        await handleFeatures(subCommand, args, options);
-        return true;
-      }
 
-      // Tool list / capability discovery. Prints every AI tool khy can call
-      // (Read/Edit/Bash/… + MCP + custom), grouped by category, consuming the
-      // tool registry SSOT via services/toolCatalog/toolCatalog.buildToolCatalog.
-      // Sibling to /features (which lists slash commands, not model tools).
-      case 'toollist': {
-        const { handleToolList } = require('./handlers/toollist');
-        await handleToolList(subCommand, args, options);
-        return true;
-      }
 
-      // Tool contract check / precision audit. Sweeps the whole tool registry
-      // and reports bad shapes / schemas / naming collisions (cross-risk or
-      // cross-category = error), consuming services/toolCatalog/toolContract.
-      // Sibling to /toollist; the same auditor backs scripts/check-tool-contract.js.
-      case 'toolcheck': {
-        const { handleToolCheck } = require('./handlers/toolcheck');
-        await handleToolCheck(subCommand, args, options);
-        return true;
-      }
-
-      // ── Source self-heal ──
-      // 手动源码自愈:体检并修复缺失/损坏的运行时源码文件(默认 dry-run,--apply 真修复)。
-      // 覆盖 goal 触发点⑦「其他」+ 人工控制;自动触发点由 bootstrap/TUI 的 runStartupHeal 覆盖。
-      case 'heal': {
-        const { handleHeal } = require('./handlers/heal');
-        await handleHeal(subCommand, args, options);
-        return true;
-      }
-
-      // ── Runtime self-heal (path auto-fix) ──
-      case 'selfheal': {
-        const { handleSelfHeal } = require('./handlers/selfHeal');
-        await handleSelfHeal(subCommand, args, options);
-        return true;
-      }
 
       // ── Template jobs (CC `/job` alignment) ──
       // Instantiate a reusable markdown template into a durable job under
       // <dataHome>/jobs, then reply/inspect. Sibling to /cron (scheduled) and
       // /tasks (runtime tasks). Handler: cli/handlers/job.js.
-      case 'job': {
-        const { handleJob } = require('./handlers/job');
-        await handleJob(subCommand, args, options);
-        return true;
-      }
-
       // ── Local models (Ollama) ──
       case 'models': {
         const mgr = require('../services/ollamaModelManager');

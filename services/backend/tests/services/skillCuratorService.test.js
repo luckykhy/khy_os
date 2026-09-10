@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 
 const fs = require('fs');
 const path = require('path');
@@ -7,7 +7,7 @@ const os = require('os');
 describe('skillCuratorService', () => {
   let curator;
   // The curator resolves its usage file via getAppHome() (isolated data home
-  // under jest) 鈥?use the exported USAGE_FILE rather than a hardcoded
+  // under jest) �?use the exported USAGE_FILE rather than a hardcoded
   // ~/.khyquant/growth path so tests never touch the real user home.
   let USAGE_FILE;
   let BACKUP_FILE;
@@ -39,7 +39,7 @@ describe('skillCuratorService', () => {
     curator._resetForTest();
   });
 
-  // 鈹€鈹€ recordUsage 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+  // ── recordUsage ───────────────────────────────────────────────────
 
   test('recordUsage creates entry and increments use_count', () => {
     curator.recordUsage('test-skill', 'user');
@@ -72,7 +72,7 @@ describe('skillCuratorService', () => {
     expect(curator.getSkillUsage('nonexistent')).toBeNull();
   });
 
-  // 鈹€鈹€ Pin/Unpin 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+  // ── Pin/Unpin ────────────────────────────────────────────────────
 
   test('pinSkill and unpinSkill', () => {
     curator.recordUsage('pin-test', 'user');
@@ -88,9 +88,9 @@ describe('skillCuratorService', () => {
     expect(curator.pinSkill('nope')).toBe(false);
   });
 
-  // 鈹€鈹€ runCurator 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+  // ── runCurator ───────────────────────────────────────────────────
 
-  test('runCurator transitions active鈫抯tale after staleAfterDays', () => {
+  test('runCurator transitions active→stale after staleAfterDays', () => {
     curator.recordUsage('old-skill', 'user');
 
     // Backdate last_activity to 31 days ago
@@ -140,7 +140,7 @@ describe('skillCuratorService', () => {
     expect(result.summary).toContain('No lifecycle transitions');
   });
 
-  // 鈹€鈹€ getCuratorStatus 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+  // ── getCuratorStatus ──────────────────────────────────────────────
 
   test('getCuratorStatus counts states correctly', () => {
     curator.recordUsage('a-active', 'user');
@@ -162,10 +162,11 @@ describe('skillCuratorService', () => {
     expect(status.staleList).toContain('b-stale');
   });
 
-  // 鈹€鈹€ Config 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+  // ── Config ────────────────────────────────────────────────────────
 
   test('DEFAULT_CONFIG has expected shape', () => {
     expect(curator.DEFAULT_CONFIG.staleAfterDays).toBe(30);
     expect(curator.DEFAULT_CONFIG.archiveAfterDays).toBe(60);
   });
 });
+

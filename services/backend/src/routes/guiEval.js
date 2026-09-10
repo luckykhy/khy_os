@@ -3,6 +3,7 @@
 const express = require('express');
 const router = express.Router();
 const { GuiEvalTask, GuiEvalRun } = require('@khy/shared/models');
+const apiResponse = require('../utils/apiResponse');
 
 const { authenticateToken, requireAdmin } = require('khy-ai-backend/middleware/auth');
 
@@ -88,12 +89,9 @@ router.get('/tasks', authenticateToken, async (req, res) => {
       limit: pageSize,
       offset,
     });
-    res.json({
-      success: true,
-      data: { tasks: rows.map(serializeTask), total: count, page, pageSize },
-    });
+    return apiResponse.success(res, { tasks: rows.map(serializeTask), total: count, page, pageSize });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || '获取任务列表失败' });
+    return apiResponse.fail(res, 'INTERNAL', err.message || '获取任务列表失败', { status: 500 });
   }
 });
 
@@ -104,11 +102,11 @@ router.get('/tasks/:id', authenticateToken, async (req, res) => {
       include: [{ model: GuiEvalRun, as: 'runs', limit: 20, order: [['createdAt', 'DESC']] }],
     });
     if (!task) {
-      return res.status(404).json({ success: false, message: '任务不存在' });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', '任务不存在', { status: 404 });
     }
-    res.json({ success: true, data: serializeTask(task) });
+    return apiResponse.success(res, serializeTask(task));
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || '获取任务详情失败' });
+    return apiResponse.fail(res, 'INTERNAL', err.message || '获取任务详情失败', { status: 500 });
   }
 });
 
@@ -138,12 +136,12 @@ router.post('/tasks', authenticateToken, requireAdmin, async (req, res) => {
       created_by: req.user && req.user.id ? req.user.id : 0,
     };
     if (!data.name) {
-      return res.status(400).json({ success: false, message: '任务名称不能为空' });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '任务名称不能为空', { status: 400 });
     }
     const task = await GuiEvalTask.create(data);
-    res.status(201).json({ success: true, data: serializeTask(task) });
+    return apiResponse.created(res, serializeTask(task));
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || '创建任务失败' });
+    return apiResponse.fail(res, 'INTERNAL', err.message || '创建任务失败', { status: 500 });
   }
 });
 
@@ -152,7 +150,7 @@ router.put('/tasks/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const task = await GuiEvalTask.findByPk(req.params.id);
     if (!task) {
-      return res.status(404).json({ success: false, message: '任务不存在' });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', '任务不存在', { status: 404 });
     }
     const body = req.body || {};
     const allowed = [
@@ -192,15 +190,15 @@ router.put('/tasks/:id', authenticateToken, requireAdmin, async (req, res) => {
       }
     }
     if (update.status && !['draft', 'active', 'archived', 'deprecated'].includes(update.status)) {
-      return res.status(400).json({ success: false, message: '无效的 status 值' });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '无效的 status 值', { status: 400 });
     }
     if (update.difficulty && !['easy', 'medium', 'hard', 'expert'].includes(update.difficulty)) {
-      return res.status(400).json({ success: false, message: '无效的 difficulty 值' });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '无效的 difficulty 值', { status: 400 });
     }
     await task.update(update);
-    res.json({ success: true, data: serializeTask(task) });
+    return apiResponse.success(res, serializeTask(task));
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || '更新任务失败' });
+    return apiResponse.fail(res, 'INTERNAL', err.message || '更新任务失败', { status: 500 });
   }
 });
 
@@ -209,12 +207,12 @@ router.delete('/tasks/:id', authenticateToken, requireAdmin, async (req, res) =>
   try {
     const task = await GuiEvalTask.findByPk(req.params.id);
     if (!task) {
-      return res.status(404).json({ success: false, message: '任务不存在' });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', '任务不存在', { status: 404 });
     }
     await task.destroy();
-    res.json({ success: true, message: '任务已删除' });
+    return apiResponse.success(res, null, { message: '任务已删除' });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || '删除任务失败' });
+    return apiResponse.fail(res, 'INTERNAL', err.message || '删除任务失败', { status: 500 });
   }
 });
 
@@ -225,10 +223,10 @@ router.post('/tasks/:id/run', authenticateToken, async (req, res) => {
   try {
     const task = await GuiEvalTask.findByPk(req.params.id);
     if (!task) {
-      return res.status(404).json({ success: false, message: '任务不存在' });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', '任务不存在', { status: 404 });
     }
     if (task.status !== 'active') {
-      return res.status(400).json({ success: false, message: '任务状态非 active，无法执行' });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '任务状态非 active，无法执行', { status: 400 });
     }
 
     const body = req.body || {};
@@ -241,12 +239,9 @@ router.post('/tasks/:id/run', authenticateToken, async (req, res) => {
       user_id: req.user && req.user.id ? req.user.id : 0,
     });
 
-    res.status(201).json({
-      success: true,
-      data: { runId: run.id, status: run.status, message: '任务已入队，开始执行' },
-    });
+    return apiResponse.created(res, { runId: run.id, status: run.status, message: '任务已入队，开始执行' });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || '启动任务执行失败' });
+    return apiResponse.fail(res, 'INTERNAL', err.message || '启动任务执行失败', { status: 500 });
   }
 });
 
@@ -277,12 +272,9 @@ router.get('/runs', authenticateToken, async (req, res) => {
       offset,
       include: [{ model: GuiEvalTask, as: 'task', attributes: ['id', 'name', 'difficulty'] }],
     });
-    res.json({
-      success: true,
-      data: { runs: rows.map(serializeRun), total: count, page, pageSize },
-    });
+    return apiResponse.success(res, { runs: rows.map(serializeRun), total: count, page, pageSize });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || '获取执行记录失败' });
+    return apiResponse.fail(res, 'INTERNAL', err.message || '获取执行记录失败', { status: 500 });
   }
 });
 
@@ -293,11 +285,11 @@ router.get('/runs/:id', authenticateToken, async (req, res) => {
       include: [{ model: GuiEvalTask, as: 'task' }],
     });
     if (!run) {
-      return res.status(404).json({ success: false, message: '执行记录不存在' });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', '执行记录不存在', { status: 404 });
     }
-    res.json({ success: true, data: serializeRun(run) });
+    return apiResponse.success(res, serializeRun(run));
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || '获取执行记录详情失败' });
+    return apiResponse.fail(res, 'INTERNAL', err.message || '获取执行记录详情失败', { status: 500 });
   }
 });
 
@@ -308,20 +300,17 @@ router.post('/runs/:id/evaluate', authenticateToken, requireAdmin, async (req, r
       include: [{ model: GuiEvalTask, as: 'task' }],
     });
     if (!run) {
-      return res.status(404).json({ success: false, message: '执行记录不存在' });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', '执行记录不存在', { status: 404 });
     }
     if (run.status !== 'running' && run.status !== 'completed' && run.status !== 'failed') {
-      return res.status(400).json({ success: false, message: '当前状态不可评测' });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '当前状态不可评测', { status: 400 });
     }
     // Evaluation is handled by the runEngine — here we just flip the state
     // and return a signal that the engine should run checkpoints.
     await run.update({ status: 'evaluating' });
-    res.json({
-      success: true,
-      data: { runId: run.id, status: 'evaluating', message: '评测已触发' },
-    });
+    return apiResponse.success(res, { runId: run.id, status: 'evaluating', message: '评测已触发' });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || '触发评测失败' });
+    return apiResponse.fail(res, 'INTERNAL', err.message || '触发评测失败', { status: 500 });
   }
 });
 
@@ -330,20 +319,20 @@ router.post('/runs/:id/review', authenticateToken, requireAdmin, async (req, res
   try {
     const run = await GuiEvalRun.findByPk(req.params.id);
     if (!run) {
-      return res.status(404).json({ success: false, message: '执行记录不存在' });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', '执行记录不存在', { status: 404 });
     }
     const body = req.body || {};
     const manualScore = safeNum(body.manualScore);
     if (manualScore < 0 || manualScore > 1) {
-      return res.status(400).json({ success: false, message: 'manualScore 须在 0~1 之间' });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', 'manualScore 须在 0~1 之间', { status: 400 });
     }
     await run.update({
       manual_score: manualScore,
       verdict: manualScore >= 0.8 ? 'pass' : manualScore >= 0.5 ? 'partial' : 'fail',
     });
-    res.json({ success: true, data: { runId: run.id, manualScore, verdict: run.verdict } });
+    return apiResponse.success(res, { runId: run.id, manualScore, verdict: run.verdict });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || '提交复核失败' });
+    return apiResponse.fail(res, 'INTERNAL', err.message || '提交复核失败', { status: 500 });
   }
 });
 
@@ -363,22 +352,19 @@ router.get('/stats', authenticateToken, async (req, res) => {
     const activeTasks = await GuiEvalTask.count({ where: { status: 'active' } });
     const payoutRaw = await GuiEvalRun.sum('payout_amount');
     const payout = safeNum(payoutRaw, 0);
-    res.json({
-      success: true,
-      data: {
-        runs: {
-          total: totalRuns,
-          pass: passRuns,
-          partial: partialRuns,
-          fail: failRuns,
-          pending: pendingRuns,
-        },
-        tasks: { total: totalTasks, active: activeTasks },
-        payout: { total: payout },
+    return apiResponse.success(res, {
+      runs: {
+        total: totalRuns,
+        pass: passRuns,
+        partial: partialRuns,
+        fail: failRuns,
+        pending: pendingRuns,
       },
+      tasks: { total: totalTasks, active: activeTasks },
+      payout: { total: payout },
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || '获取统计失败' });
+    return apiResponse.fail(res, 'INTERNAL', err.message || '获取统计失败', { status: 500 });
   }
 });
 
@@ -405,9 +391,9 @@ router.get('/leaderboard', authenticateToken, async (req, res) => {
         totalPayout: safeNum(d.totalPayout, 0),
       };
     });
-    res.json({ success: true, data: { leaderboard: rows } });
+    return apiResponse.success(res, { leaderboard: rows });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message || '获取排行榜失败' });
+    return apiResponse.fail(res, 'INTERNAL', err.message || '获取排行榜失败', { status: 500 });
   }
 });
 

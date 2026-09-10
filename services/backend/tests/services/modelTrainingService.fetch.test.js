@@ -58,3 +58,4 @@ describe('modelTrainingService createRemoteRepo fetch transport', () => {
     await expect(service.createRemoteRepo('gitee', 'fixture-repo', 'TOKEN')).resolves.toBeUndefined();
   });
 });
+

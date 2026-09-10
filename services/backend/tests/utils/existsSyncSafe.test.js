@@ -1,34 +1,46 @@
 'use strict';
 
-const existsSyncSafe = require('../../src/utils/existsSyncSafe');
 const fs = require('fs');
-const path = require('path');
-const os = require('os');
+
+jest.mock('fs');
+
+const existsSyncSafe = require('../../src/utils/existsSyncSafe');
 
 describe('existsSyncSafe', () => {
-  const tmpDir = path.join(os.tmpdir(), `khy-test-${Date.now()}`);
-  const testFile = path.join(tmpDir, 'test.txt');
-
-  beforeAll(() => {
-    fs.mkdirSync(tmpDir, { recursive: true });
-    fs.writeFileSync(testFile, 'hello', 'utf8');
+  beforeEach(() => {
+    jest.clearAllMocks();
   });
 
-  afterAll(() => {
-    try { fs.unlinkSync(testFile); } catch {}
-    try { fs.rmdirSync(tmpDir); } catch {}
+  test('returns true when path exists', () => {
+    fs.existsSync.mockReturnValue(true);
+    expect(existsSyncSafe('/some/path')).toBe(true);
+    expect(fs.existsSync).toHaveBeenCalledWith('/some/path');
   });
 
-  test('returns true for existing file', () => {
-    expect(existsSyncSafe(testFile)).toBe(true);
+  test('returns false when path does not exist', () => {
+    fs.existsSync.mockReturnValue(false);
+    expect(existsSyncSafe('/nonexistent')).toBe(false);
   });
 
-  test('returns false for non-existent file', () => {
-    expect(existsSyncSafe('/non/existent/file.txt')).toBe(false);
+  test('returns false when fs.existsSync throws', () => {
+    fs.existsSync.mockImplementation(() => {
+      throw new Error('EACCES');
+    });
+    expect(existsSyncSafe('/restricted')).toBe(false);
   });
 
-  test('returns false for invalid input', () => {
+  test('handles null path', () => {
+    fs.existsSync.mockReturnValue(false);
     expect(existsSyncSafe(null)).toBe(false);
+  });
+
+  test('handles undefined path', () => {
+    fs.existsSync.mockReturnValue(false);
     expect(existsSyncSafe(undefined)).toBe(false);
+  });
+
+  test('handles empty string path', () => {
+    fs.existsSync.mockReturnValue(false);
+    expect(existsSyncSafe('')).toBe(false);
   });
 });

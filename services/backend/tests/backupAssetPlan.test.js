@@ -11,7 +11,7 @@
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const plan = require('../src/services/backup/backupAssetPlan');
+const plan = require('../src/services/domain/backup/backup/backupAssetPlan.js');
 
 describe('F1:SQLite 一律排除在文件遍历之外', () => {
   test('.db / .sqlite / .sqlite3 及其 -wal/-shm/-journal 全部排除,理由为 sqlite:hot-copy-only', () => {

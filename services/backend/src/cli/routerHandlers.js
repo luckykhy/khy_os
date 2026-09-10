@@ -203,7 +203,7 @@ function createRouterHandlers(deps) {
 
     console.log('');
     console.log(chalk.bold(`  📋 最近 ${recentLines.length} 条${kindLabel}日志:`));
-    console.log(chalk.dim('  ─'.repeat(25)));
+    console.log("");
 
     const knownFixes = {
       ECONNREFUSED: { desc: '连接被拒绝', fix: '检查目标服务是否运行', cmd: 'server start' },

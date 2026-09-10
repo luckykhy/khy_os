@@ -11,7 +11,7 @@
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const mf = require('../src/services/backup/backupManifest');
+const mf = require('../src/services/domain/backup/backup/backupManifest.js');
 
 const SHA = 'a'.repeat(64);
 const DAY = 24 * 60 * 60 * 1000;

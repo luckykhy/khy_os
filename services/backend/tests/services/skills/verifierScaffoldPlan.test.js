@@ -18,7 +18,7 @@ const {
   planVerifierNameScoped,
   buildScaffoldInstructions,
   isEnabled,
-} = require('../../../src/services/skills/verifierScaffoldPlan');
+} = require('../../../src/services/domain/skills/skills/verifierScaffoldPlan.js');
 
 describe('planVerifierName', () => {
   test('web → verifier-playwright', () => {

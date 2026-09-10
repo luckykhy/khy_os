@@ -30,7 +30,7 @@ process.env.KHY_ILINK_QUERY_TIMEOUT_MS = '5000'; // 放宽墙钟上限,避免看
 process.env.KHY_DISABLE_SESSION_PERSIST = '1';
 process.env.KHY_DISABLE_MEMORY = '1';
 
-const { IlinkDispatcher } = require('../../../src/services/channels/ilinkDispatcher');
+const { IlinkDispatcher } = require('../../../src/services/domain/messaging/channels/ilinkDispatcher.js');
 
 /** 只收集出站文本的假通道。 */
 function fakeChannel() {

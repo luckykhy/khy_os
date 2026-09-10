@@ -9,7 +9,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const leaf = require('../../../src/services/assistant/proactiveTogglePlan');
+const leaf = require('../../../src/services/domain/agents/assistant/proactiveTogglePlan.js');
 
 test('parseProactiveArgs: 空参 → toggle', () => {
   const p = leaf.parseProactiveArgs([]);

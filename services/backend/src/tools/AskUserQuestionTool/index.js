@@ -33,6 +33,8 @@ Usage notes:
 Write high-quality questions:
 - Ask the smallest number of questions that actually unblock you — one focused decision per question, not a survey.
 - The question must be specific and answerable in one read: name the concrete choice at stake, not "What do you want?".
+- Ground the question in the task so far: name the concrete decision the work has led to (what you read, tried, or ruled out), so the user can answer without re-explaining context. Never send a context-free card the user cannot connect to their request.
+- Match the user's language: if the conversation is in Chinese, write the question, header, option labels, and descriptions in Chinese (keep code, paths, and proper nouns verbatim).
 - Options must be mutually exclusive and jointly cover the realistic space — no overlap, no "it depends" catch-alls (the user always has "Other").
 - Give each option a short distinct label (1-5 words) plus a description that states the concrete consequence of choosing it, so options can be told apart at a glance.
 - Recommend one option when you genuinely have a lean: put it first, mark it "(Recommended)", and let its description say WHY it is the safer/faster default. If you truly have no lean, do not fabricate a recommendation.

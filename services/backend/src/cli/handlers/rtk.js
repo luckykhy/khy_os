@@ -15,6 +15,7 @@
  * @module handlers/rtk
  */
 const chalk = require('chalk').default || require('chalk');
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const rtkEffectiveState = require('../../services/rtkEffectiveState');
 const rtkMode = require('../../services/rtkMode');
 const { printInfo, printError, printSuccess, printWarn, printTable } = require('../formatters');
@@ -200,4 +201,15 @@ async function handleRtk(parsed = {}) {
   }
 }
 
-module.exports = { handleRtk };
+module.exports = {
+  handleRtk,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'rtk',
+    aliases: ['rtkmode', '省token'],
+    description: 'RTK (Rust Token Killer) 省 token 模式：状态/安装/开关/省量统计',
+    usage: 'rtk [status|gain|install|on|off]',
+    subCommands: ['status', 'gain', 'install', 'on', 'off'],
+    category: 'system',
+    handler: handleRtk,
+  },
+};

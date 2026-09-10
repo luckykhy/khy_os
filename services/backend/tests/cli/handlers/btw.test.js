@@ -12,7 +12,7 @@ const assert = require('node:assert/strict');
 
 const HANDLER_PATH = require.resolve('../../../src/cli/handlers/btw');
 const FORMATTERS_PATH = require.resolve('../../../src/cli/formatters');
-const queue = require('../../../src/services/conversation/btwNoteQueue');
+const queue = require('../../../src/services/domain/session/conversation/btwNoteQueue.js');
 
 let calls;
 

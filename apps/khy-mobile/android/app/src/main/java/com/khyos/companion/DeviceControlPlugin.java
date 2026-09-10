@@ -25,7 +25,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import rikka.shizuku.Shizuku;
-import rikka.shizuku.ShizukuRemoteProcess;
 
 /**
  * DeviceControlPlugin —— AI 助手的"动手"层。
@@ -415,24 +414,25 @@ public class DeviceControlPlugin extends Plugin {
 
     /**
      * 用 Shizuku.newProcess 跑一条命令（adb 身份）。
-     * 注意：Shizuku 13 的 newProcess() 接受 String[] argv 形式；底层会 fork sh -c。
+     * Shizuku 13+ 的 newProcess() 是 private，通过反射调用。
      * 返回 true 表示进程能 fork；不保证命令本身在目标 App 上生效。
      */
     private boolean runShizukuCommand(String command) {
-        ShizukuRemoteProcess proc = null;
         try {
-            proc = Shizuku.newProcess(
+            java.lang.reflect.Method method = Shizuku.class.getDeclaredMethod(
+                "newProcess", String[].class, String[].class, String.class);
+            method.setAccessible(true);
+            Object proc = method.invoke(null,
                 new String[] { "sh", "-c", command }, null, null);
-            proc.waitFor();
-            int code = proc.exitValue();
+            // 使用反射调用 waitFor 和 exitValue
+            java.lang.reflect.Method waitForMethod = proc.getClass().getMethod("waitFor");
+            waitForMethod.invoke(proc);
+            java.lang.reflect.Method exitValueMethod = proc.getClass().getMethod("exitValue");
+            int code = (Integer) exitValueMethod.invoke(proc);
             return code == 0;
         } catch (Throwable t) {
             Log.e(TAG, "Shizuku 命令失败: " + t.getMessage());
             return false;
-        } finally {
-            if (proc != null) {
-                try { proc.destroy(); } catch (Throwable ignored) {}
-            }
         }
     }
 }

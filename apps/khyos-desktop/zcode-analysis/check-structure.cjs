@@ -1,0 +1,12 @@
+const fs = require('fs');
+const doc = fs.readFileSync(`${__dirname}/../docs/[DESIGN-ARCH-092] ZCode 1：1 复刻设计文档.md`, 'utf8');
+const lines = doc.split('\n');
+const h1 = lines.filter((l) => /^# [^#]/.test(l));
+const h2 = lines.filter((l) => /^## [^#]/.test(l));
+const h3 = lines.filter((l) => /^### [^#]/.test(l));
+const codeBlocks = (doc.match(/```/g) || []).length / 2;
+const tables = (doc.match(/^\|/gm) || []).length;
+console.log(`size: ${doc.length} bytes, lines: ${lines.length}`);
+console.log(`H1: ${h1.length}  H2: ${h2.length}  H3: ${h3.length}  code blocks: ${codeBlocks}  table-rows: ${tables}`);
+console.log('\n--- H2 sections ---');
+for (const l of h2) console.log(l.replace(/^## /, ''));

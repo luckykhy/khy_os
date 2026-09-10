@@ -21,7 +21,7 @@ const path = require('path');
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-agentfs-'));
 process.env.KHY_DATA_HOME = TMP;
 
-const svc = require('../../src/services/agentFs/agentFsService');
+const svc = require('../../src/services/domain/agents/agentFs/agentFsService.js');
 svc.createAgent({ name: 'Tester', id: 'tester' });
 
 function receiptsAsset(id, opts) {
@@ -50,7 +50,7 @@ test('throwing injector degrades to 0 (receipts optional)', () => {
 
 test('cycle-break invariant: agentFsService does not import receiptService', () => {
   const src = fs.readFileSync(
-    path.join(__dirname, '../../src/services/agentFs/agentFsService.js'),
+    path.join(__dirname, '../../src/services/domain/agents/agentFs/agentFsService.js'),
     'utf8',
   );
   assert.ok(!/require\(\s*['"]\.\.\/receiptService['"]\s*\)/.test(src),

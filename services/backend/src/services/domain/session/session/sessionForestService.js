@@ -424,7 +424,7 @@ function _consolidatePrompt(messages, base) {
     '用来理解本分支聊了什么、得出什么结论、还留着什么待办。要点式、客观、不超过 6 行。',
     '绝不包含密钥/令牌。',
     base ? `已有粗摘要(供参考):${base}` : '',
-    '---',
+    '',
     recent,
   ]
     .filter(Boolean)

@@ -16,7 +16,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const r = require('../../../src/services/config/nlExternalAppResolver');
+const r = require('../../../src/services/domain/config/config/nlExternalAppResolver.js');
 
 test('recognizes all six app names', () => {
   assert.equal(r._extractApp('给 opencode 配置模型'), 'opencode');

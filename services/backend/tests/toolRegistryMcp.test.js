@@ -65,3 +65,4 @@ describe('tool registry MCP support', () => {
     expect(result.output.startsWith('01234')).toBe(true);
   });
 });
+

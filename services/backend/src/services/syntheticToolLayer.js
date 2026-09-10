@@ -499,8 +499,8 @@ function formatWithSyntheticAction(originalText, result, plan) {
     }[plan.name] || plan.name;
 
   const suffix = result.success
-    ? `\n\n---\n✅ ${actionLabel} 完成` + (result.outputPath ? `：${result.outputPath}` : '')
-    : `\n\n---\n⚠️ ${actionLabel} 失败：${result.error || '未知错误'}`;
+    ? `\n\n✅ ${actionLabel} 完成` + (result.outputPath ? `：${result.outputPath}` : '')
+    : `\n\n⚠️ ${actionLabel} 失败：${result.error || '未知错误'}`;
 
   if (plan.confidence >= 0.9) {
     // Silent: just append result

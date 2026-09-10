@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tests for B4 â€” Auto Dream lossless forgetting.
+ * Tests for B4 â€?Auto Dream lossless forgetting.
  *
  * Covers the memory lifecycle state machine (memoryLifecycle.js) and the
  * lossless consolidation behavior wired into MemoryDreaming: duplicates are
@@ -26,7 +26,7 @@ function tmpStore() {
   };
 }
 
-describe('memoryLifecycle â€” state machine', () => {
+describe('memoryLifecycle â€?state machine', () => {
   test('exposes all six lifecycle stages in decay order', () => {
     expect(lifecycle.STAGE_ORDER).toEqual([
       'active', 'recent', 'archived', 'dream', 'compressed', 'pruned',
@@ -57,7 +57,7 @@ describe('memoryLifecycle â€” state machine', () => {
   });
 });
 
-describe('memoryLifecycle â€” type weights', () => {
+describe('memoryLifecycle â€?type weights', () => {
   test('known types map to documented weights', () => {
     expect(lifecycle.typeWeight('milestone')).toBe(0.9);
     expect(lifecycle.typeWeight('decision')).toBe(0.8);
@@ -73,7 +73,7 @@ describe('memoryLifecycle â€” type weights', () => {
   });
 });
 
-describe('memoryLifecycle â€” stageFromAge', () => {
+describe('memoryLifecycle â€?stageFromAge', () => {
   test('derives active/recent/archived from age in days', () => {
     expect(lifecycle.stageFromAge(0)).toBe('active');
     expect(lifecycle.stageFromAge(1)).toBe('active');
@@ -87,7 +87,7 @@ describe('memoryLifecycle â€” stageFromAge', () => {
   });
 });
 
-describe('MemoryDreaming â€” lifecycle field', () => {
+describe('MemoryDreaming â€?lifecycle field', () => {
   test('addMemory initializes lifecycle to active', () => {
     const eng = new MemoryDreaming({});
     const m = eng.addMemory('hello', 'session');
@@ -112,7 +112,7 @@ describe('MemoryDreaming â€” lifecycle field', () => {
   });
 });
 
-describe('MemoryDreaming â€” lossless dedup', () => {
+describe('MemoryDreaming â€?lossless dedup', () => {
   test('duplicates are archived, not destroyed, and total content is preserved', async () => {
     const t = tmpStore();
     try {
@@ -128,7 +128,7 @@ describe('MemoryDreaming â€” lossless dedup', () => {
       // The archived entry keeps its original content verbatim.
       expect(typeof archived[0].content).toBe('string');
       expect(archived[0].content.length).toBeGreaterThan(0);
-      // Folded into the keeper â†’ recorded as compressed, with a back-reference.
+      // Folded into the keeper â†?recorded as compressed, with a back-reference.
       expect(archived[0].lifecycle).toBe('compressed');
       expect(archived[0].consolidatedInto).toBeTruthy();
 
@@ -153,3 +153,4 @@ describe('MemoryDreaming â€” lossless dedup', () => {
     }
   });
 });
+

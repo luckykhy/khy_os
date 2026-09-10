@@ -120,3 +120,4 @@ describe('instrumentSyncService', () => {
     }).not.toThrow();
   });
 });
+

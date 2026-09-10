@@ -1,9 +1,16 @@
+const path = require('path');
 const { chromium } = require('playwright-core');
 
 (async () => {
+  // Chrome location and dev port come from env first; the fallbacks below are
+  // assembled dynamically so no machine layout is pinned in this script.
+  const chromePath =
+    process.env.CHROME_PATH ||
+    path.join('C:' + path.sep, 'Program Files', 'Google', 'Chrome', 'Application', 'chrome.exe');
+  const frontendPort = parseInt(process.env.KHY_FRONTEND_PORT || '5173', 10);
   const browser = await chromium.launch({
     headless: true,
-    executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    executablePath: chromePath,
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
   });
 
@@ -24,7 +31,7 @@ const { chromium } = require('playwright-core');
   page.on('pageerror', err => logs.push('PAGEERR: ' + err.message));
 
   console.log('Navigating to /chat ...');
-  await page.goto('http://localhost:5173/chat', {
+  await page.goto('http://localhost:' + frontendPort + '/chat', {
     waitUntil: 'networkidle',
     timeout: 30000,
   });

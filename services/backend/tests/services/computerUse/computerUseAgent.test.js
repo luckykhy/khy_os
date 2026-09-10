@@ -16,8 +16,8 @@ const os = require('os');
 const path = require('path');
 const zlib = require('zlib');
 
-const { ComputerUseAgent, SYSTEM_PROMPT, _internals } = require('../../../src/services/computerUse/computerUseAgent');
-const setOfMarks = require('../../../src/services/computerUse/setOfMarks');
+const { ComputerUseAgent, SYSTEM_PROMPT, _internals } = require('../../../src/services/domain/desktop/computerUse/computerUseAgent.js');
+const setOfMarks = require('../../../src/services/domain/desktop/computerUse/setOfMarks.js');
 const { getDataHome } = require('../../../src/utils/dataHome');
 
 // ── 测试用 PNG 编码器（复用 stateDetector 测试的 RGB 生成）──────────────────

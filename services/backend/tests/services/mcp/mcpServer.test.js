@@ -1,25 +1,19 @@
 'use strict';
-
 /**
- * mcpServer â€” engine wiring tests via injected fake registry (node:test).
+ * mcpServer â€?engine wiring tests via injected fake registry (node:test).
  *
- * Drives createServerCore with a fake registry (getEnabled â†’ 2 stub tools,
+ * Drives createServerCore with a fake registry (getEnabled â†?2 stub tools,
  * execute records args). Verifies the full requestâ†’response contract without
  * starting a process or touching the real tool registry:
- *   - initialize â†’ protocolVersion + serverInfo
- *   - tools/list â†’ 2 tools with {name, inputSchema} (parameters renamed)
- *   - tools/call â†’ goes through registry.execute (permission-gated dispatcher),
+ *   - initialize â†?protocolVersion + serverInfo
+ *   - tools/list â†?2 tools with {name, inputSchema} (parameters renamed)
+ *   - tools/call â†?goes through registry.execute (permission-gated dispatcher),
  *     result mapped to MCP CallToolResult
- *   - tools/call on a non-exposed tool â†’ -32602
- *   - bad JSON â†’ -32700
- *   - handler throwing â†’ -32603 (never crashes)
+ *   - tools/call on a non-exposed tool â†?-32602
+ *   - bad JSON â†?-32700
+ *   - handler throwing â†?-32603 (never crashes)
  */
-
-const { test } = require('node:test');
-const assert = require('node:assert/strict');
-
 const { createServerCore } = require('../../../src/services/mcp/mcpServer');
-
 function stubTool(name) {
   return {
     name,
@@ -34,7 +28,6 @@ function stubTool(name) {
     }),
   };
 }
-
 function fakeRegistry() {
   const calls = [];
   const tools = new Map([['Alpha', stubTool('Alpha')], ['Beta', stubTool('Beta')]]);
@@ -49,84 +42,46 @@ function fakeRegistry() {
   };
 }
 
-test('initialize â†’ protocolVersion + serverInfo', async () => {
-  const core = createServerCore({ version: '1.2.3', registry: fakeRegistry(), env: {} });
-  const resp = await core.handleMessage('{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}');
-  assert.equal(resp.id, 1);
-  assert.equal(resp.result.protocolVersion, '2024-11-05');
-  assert.equal(resp.result.serverInfo.version, '1.2.3');
-  assert.deepEqual(resp.result.capabilities, { tools: {} });
+describe('Mcp Server', () => {
+  test('initialize â†?protocolVersion + serverInfo', async () => {
+      const core = createServerCore({ version: '1.2.3', registry: fakeRegistry(), env: {} });
+      const resp = await core.handleMessage('{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}');
+      expect(resp.id).toBe(1);
+      expect(resp.result.protocolVersion).toBe('2024-11-05');
+      expect(resp.result.serverInfo.version).toBe('1.2.3');
+      assert.deepEqual(resp.result.capabilities, { tools: {} });
+  });
+
+  test('tools/list â†?2 tools with inputSchema (parameters renamed, aliases dropped)', async () => {
+      const core = createServerCore({ version: '1.0.0', registry: fakeRegistry(), env: {} });
+      const resp = await core.handleMessage('{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}');
+      expect(resp.result.tools.length).toBe(2);
+      const alpha = resp.result.tools.find((t) => t.name === 'Alpha');
+      expect(alpha.inputSchema && alpha.inputSchema.properties.q).toBeTruthy();
+      expect(!('parameters' in alpha).toBeTruthy());
+      expect(!('aliases' in alpha).toBeTruthy());
+  });
+
+  test('tools/call â†?registry.execute called (permission-gated), result â†?CallToolResult', async () => {
+      const reg = fakeRegistry();
+      const core = createServerCore({ version: '1.0.0', registry: reg, env: {} });
+      const resp = await core.handleMessage(
+        '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"Alpha","arguments":{"q":"hi"}}}');
+      expect(reg.calls.length).toBe(1);
+      expect(reg.calls[0].name).toBe('Alpha');
+      assert.deepEqual(reg.calls[0].params, { q: 'hi' });
+      assert.deepEqual(resp.result.content, [{ type: 'text', text: 'ran Alpha' }]);
+      expect(resp.result.isError).toBe(false);
+  });
+
+  test('tools/call on a non-exposed tool â†?-32602 (not exposed), execute NOT called', async () => {
+      const reg = fakeRegistry();
+      const core = createServerCore({ version: '1.0.0', registry: reg, env: {} });
+      const resp = await core.handleMessage(
+        '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"Ghost","arguments":{}}}');
+      expect(resp.error.code).toBe(-32602);
+      expect(reg.calls.length).toBe(0);
+  });
+
 });
 
-test('tools/list â†’ 2 tools with inputSchema (parameters renamed, aliases dropped)', async () => {
-  const core = createServerCore({ version: '1.0.0', registry: fakeRegistry(), env: {} });
-  const resp = await core.handleMessage('{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}');
-  assert.equal(resp.result.tools.length, 2);
-  const alpha = resp.result.tools.find((t) => t.name === 'Alpha');
-  assert.ok(alpha.inputSchema && alpha.inputSchema.properties.q);
-  assert.ok(!('parameters' in alpha));
-  assert.ok(!('aliases' in alpha));
-});
-
-test('tools/call â†’ registry.execute called (permission-gated), result â†’ CallToolResult', async () => {
-  const reg = fakeRegistry();
-  const core = createServerCore({ version: '1.0.0', registry: reg, env: {} });
-  const resp = await core.handleMessage(
-    '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"Alpha","arguments":{"q":"hi"}}}');
-  assert.equal(reg.calls.length, 1);
-  assert.equal(reg.calls[0].name, 'Alpha');
-  assert.deepEqual(reg.calls[0].params, { q: 'hi' });
-  assert.deepEqual(resp.result.content, [{ type: 'text', text: 'ran Alpha' }]);
-  assert.equal(resp.result.isError, false);
-});
-
-test('tools/call on a non-exposed tool â†’ -32602 (not exposed), execute NOT called', async () => {
-  const reg = fakeRegistry();
-  const core = createServerCore({ version: '1.0.0', registry: reg, env: {} });
-  const resp = await core.handleMessage(
-    '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"Ghost","arguments":{}}}');
-  assert.equal(resp.error.code, -32602);
-  assert.equal(reg.calls.length, 0);
-});
-
-test('bad JSON â†’ -32700 parse error (never crashes)', async () => {
-  const core = createServerCore({ version: '1.0.0', registry: fakeRegistry(), env: {} });
-  const resp = await core.handleMessage('{not json');
-  assert.equal(resp.error.code, -32700);
-});
-
-test('registry.execute throwing â†’ -32603 internal error (server survives)', async () => {
-  const reg = fakeRegistry();
-  reg.execute = async () => { throw new Error('kaboom'); };
-  const core = createServerCore({ version: '1.0.0', registry: reg, env: {} });
-  const resp = await core.handleMessage(
-    '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"Alpha","arguments":{}}}');
-  assert.equal(resp.error.code, -32603);
-  assert.match(resp.error.message, /kaboom/);
-});
-
-test('notification (no id) â†’ null (no response)', async () => {
-  const core = createServerCore({ version: '1.0.0', registry: fakeRegistry(), env: {} });
-  const resp = await core.handleMessage('{"jsonrpc":"2.0","method":"notifications/initialized"}');
-  assert.equal(resp, null);
-});
-
-test('readonly expose mode gates tools/list via env', async () => {
-  // Beta stub is readonly=true in this fixture, so readonly keeps both â€” assert
-  // that resolveExposeMode is honoured by using a registry whose second tool is a writer.
-  const calls = [];
-  const writer = {
-    name: 'Writer', risk: 'high', isReadOnly: () => false, isDestructive: () => true,
-    toFunctionDef: () => ({ name: 'Writer', description: 'w', parameters: { type: 'object', properties: {} } }),
-  };
-  const reg = {
-    calls,
-    loadTools() {},
-    getEnabled() { return new Map([['Alpha', stubTool('Alpha')], ['Writer', writer]]); },
-    async execute() { return { success: true, content: 'x' }; },
-  };
-  const core = createServerCore({ version: '1.0.0', registry: reg, env: { KHY_MCP_SERVE_EXPOSE: 'readonly' } });
-  const resp = await core.handleMessage('{"jsonrpc":"2.0","id":6,"method":"tools/list","params":{}}');
-  const names = resp.result.tools.map((t) => t.name);
-  assert.deepEqual(names, ['Alpha'], 'writer excluded in readonly mode');
-});

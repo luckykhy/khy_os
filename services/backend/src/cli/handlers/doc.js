@@ -18,6 +18,7 @@
  */
 const { spawn } = require('child_process');
 const fs = require('fs');
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const os = require('os');
 const path = require('path');
 
@@ -223,4 +224,15 @@ async function handleDoc(parsed = {}) {
   return true;
 }
 
-module.exports = { handleDoc, runTitleStyle };
+module.exports = {
+  handleDoc,
+  runTitleStyle,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'doc',
+    aliases: ['d', '文档'],
+    description: '文档操作：Word 标题/正文样式重排（Capability 实例）',
+    usage: 'doc <subcommand> [args]',
+    category: 'dev',
+    handler: handleDoc,
+  },
+};

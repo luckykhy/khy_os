@@ -15,7 +15,7 @@ const assert = require('node:assert/strict');
 
 const HANDLER_PATH = require.resolve('../../../src/cli/handlers/recap');
 const FORMATTERS_PATH = require.resolve('../../../src/cli/formatters');
-const FOREST_PATH = require.resolve('../../../src/services/session/sessionForestService');
+const FOREST_PATH = require.resolve('../../../src/services/domain/session/session/sessionForestService.js');
 const PERSIST_PATH = require.resolve('../../../src/services/sessionPersistence');
 const RECAP_PATH = require.resolve('../../../src/services/sessionRecapService');
 

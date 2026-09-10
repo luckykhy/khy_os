@@ -12,6 +12,7 @@
 
 // ── Imports ──
 
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const fs = require('fs');
 const path = require('path');
 
@@ -502,4 +503,10 @@ module.exports = {
   _volumeKey,
   _isNonEmptyDir,
   _fmtBytes,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'storage',
+    description: 'storage command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleStorageCommand(parsed.subCommand, parsed.args, parsed.options),
+  },
 };

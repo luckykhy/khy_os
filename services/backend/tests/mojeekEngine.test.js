@@ -14,7 +14,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const path = require('node:path');
 
-const leaf = require(path.join(__dirname, '../src/services/search/mojeekEngine'));
+const leaf = require(path.join(__dirname, '../src/services/domain/query/search/mojeekEngine.js'));
 const svc = require(path.join(__dirname, '../src/services/webSearchService'));
 
 const ON = {};

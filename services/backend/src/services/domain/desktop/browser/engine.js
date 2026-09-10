@@ -153,6 +153,11 @@ function getProxyServer() {
 /**
  * Acquire a browser instance: connect to a remote endpoint if configured,
  * otherwise launch a local headless Chromium. Returns { browser, isRemote }.
+ *
+ * Extended to support channel-based launch (Edge/Chrome) for Y-code parity:
+ *   - KHY_BROWSER_CHANNEL = 'msedge' | 'chrome' | 'chromium' (default)
+ *   - KHY_BROWSER_PROFILE_DIR = path to user data dir (persistent context)
+ *
  * @param {object} chromium - the resolved `playwright.chromium` namespace.
  */
 async function acquireBrowser(chromium) {
@@ -172,7 +177,19 @@ async function acquireBrowser(chromium) {
   }
   const headless = process.env.KHY_PLAYWRIGHT_HEADLESS !== 'false';
   const proxyServer = getProxyServer();
-  const launchOpts = { headless, args: ['--no-sandbox', '--disable-dev-shm-usage'] };
+  const channel = process.env.KHY_BROWSER_CHANNEL || null;
+  const profileDir = process.env.KHY_BROWSER_PROFILE_DIR || null;
+
+  const launchOpts = {
+    headless,
+    args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-blink-features=AutomationControlled'],
+  };
+
+  // Channel support: use user's installed Edge/Chrome instead of bundled Chromium
+  if (channel === 'msedge' || channel === 'chrome') {
+    launchOpts.channel = channel === 'msedge' ? 'msedge' : 'chrome';
+  }
+
   if (proxyServer) {
     launchOpts.proxy = { server: proxyServer };
   }
@@ -182,8 +199,17 @@ async function acquireBrowser(chromium) {
   if (_hardTimeoutEnabled()) {
     launchOpts.timeout = launchTimeoutMs();
   }
-  const browser = await chromium.launch(launchOpts);
-  return { browser, isRemote: false };
+
+  let browser;
+  if (profileDir) {
+    // Persistent context: reuse user's profile (logged-in sessions, extensions, etc.)
+    // NOTE: profileDir must NOT be in use by another browser instance
+    browser = await chromium.launchPersistentContext(profileDir, launchOpts);
+  } else {
+    browser = await chromium.launch(launchOpts);
+  }
+
+  return { browser, isRemote: false, channel: channel || 'chromium', profileDir };
 }
 
 module.exports = {

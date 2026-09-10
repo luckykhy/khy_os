@@ -13,7 +13,7 @@
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { getManager } = require('../../../src/services/deviceApps/deviceAppManager');
+const { getManager } = require('../../../src/services/domain/desktop/deviceApps/deviceAppManager.js');
 
 function depsWith({ platform = 'linux', bins = ['apt-get'], listStdout = '', runResults = [] } = {}) {
   const calls = { capture: [], inherit: [] };

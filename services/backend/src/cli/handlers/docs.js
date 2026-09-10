@@ -5,6 +5,7 @@
 const chalk = require('chalk').default || require('chalk');
 const fs = require('fs');
 const os = require('os');
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const path = require('path');
 
 const { getDataHome, getLegacyDataHome } = require('../../utils/dataHome');
@@ -237,7 +238,7 @@ function renderMarkdown(content) {
 async function handleDocsQuickstart() {
   console.log('');
   console.log(chalk.cyan.bold('  🚀 khy OS 快速开始'));
-  console.log(chalk.dim('  ' + '─'.repeat(50)));
+  console.log("");
   console.log('');
   console.log('  ' + chalk.bold('5 分钟上手：'));
   console.log('');
@@ -255,7 +256,7 @@ async function handleDocsQuickstart() {
   console.log('  ' + chalk.green('Step 4') + ' — 网关配置 (选择 AI 通道):');
   console.log(chalk.dim('    $ khy gateway model'));
   console.log('');
-  console.log(chalk.dim('  ' + '─'.repeat(50)));
+  console.log("");
   console.log('');
   console.log('  ' + chalk.bold('常用命令:'));
   console.log('');
@@ -282,7 +283,7 @@ async function handleDocsAiFastlane(args = [], options = {}) {
 
   console.log('');
   console.log(chalk.cyan.bold('  ⚡ KHY AI 快速通道'));
-  console.log(chalk.dim('  ' + '─'.repeat(50)));
+  console.log("");
   console.log('');
   if (shouldCopy) {
     const copied = copyTextToClipboard(packContent);
@@ -380,7 +381,7 @@ async function handleDocsClaude() {
 async function handleDocsGateway() {
   console.log('');
   console.log(chalk.cyan.bold('  🌐 AI 网关使用指南'));
-  console.log(chalk.dim('  ' + '─'.repeat(50)));
+  console.log("");
   console.log('');
   console.log('  khy OS 支持多种 AI 通道，按优先级自动选择:');
   console.log('');
@@ -455,7 +456,7 @@ async function handleDocsGateway() {
 async function handleDocsStrategy() {
   console.log('');
   console.log(chalk.cyan.bold('  📊 量化策略入门'));
-  console.log(chalk.dim('  ' + '─'.repeat(50)));
+  console.log("");
   console.log('');
   console.log('  ' + chalk.bold('内置策略:'));
   console.log('');
@@ -480,7 +481,7 @@ async function handleDocsStrategy() {
 async function handleDocsFaq() {
   console.log('');
   console.log(chalk.cyan.bold('  🔧 常见问题 FAQ'));
-  console.log(chalk.dim('  ' + '─'.repeat(50)));
+  console.log("");
   console.log('');
   console.log(chalk.bold('  Q: 安装时报 "WinError 5 拒绝访问"?'));
   console.log(chalk.dim('  A: Windows 文件被占用。解决方法:'));
@@ -513,7 +514,7 @@ async function handleDocsFaq() {
 async function handleDocsSubscription() {
   console.log('');
   console.log(chalk.cyan.bold('  💳 AI 模型订阅与获取指南'));
-  console.log(chalk.dim('  ' + '─'.repeat(55)));
+  console.log("");
   console.log('');
   console.log(chalk.bold.green('  🆓 免费方案 (国内直接可用):'));
   console.log('');
@@ -597,7 +598,7 @@ async function handleDocsMaintainer() {
 
   console.log('');
   console.log(chalk.cyan.bold('  🛠 仓库维护入口'));
-  console.log(chalk.dim('  ' + '─'.repeat(50)));
+  console.log("");
   console.log('');
   console.log('  目标: 让小白人工、小模型、大模型都能按同一套入口维护 KHY-OS。');
   console.log('');
@@ -702,7 +703,7 @@ async function handleDocsFreshness(args, options = {}) {
 
   console.log('');
   console.log(chalk.cyan.bold('  📄 文档新鲜度自检'));
-  console.log(chalk.dim('  ' + '─'.repeat(50)));
+  console.log("");
 
   if (!result.ran) {
     printInfo('未运行(门控 KHY_DOCS_FRESHNESS 关闭,或无可检项)。');
@@ -922,4 +923,44 @@ module.exports = {
   handleDocsFreshness,
   handleDocsBrowse,
   handleDocsSearch,
+  // Main docs command (handles all sub-commands)
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'docs',
+    aliases: ['doc', 'subscribe', 'sub'],
+    description: '内置文档/教程：quickstart/ai-fastlane/maintainer/claude/gateway/strategy/faq/subscribe/freshness/browse/search',
+    usage: 'docs <subcommand> [args]',
+    subCommands: ['quickstart', 'start', 'ai-fastlane', 'ai', 'fastlane', 'maintainer', 'claude', 'gateway', 'strategy', 'faq', 'subscribe', 'sub', 'check', 'freshness', 'browse', 'search'],
+    category: 'system',
+    handler: async (parsed) => {
+      const sub = String(parsed.subCommand || '').toLowerCase();
+      const args = parsed.args || [];
+      const opts = parsed.options || {};
+      if (sub === 'browse') {
+        await handleDocsBrowse(args, opts);
+      } else if (sub === 'search') {
+        await handleDocsSearch(args.join(' '), opts);
+      } else if (sub === 'quickstart' || sub === 'start') {
+        await handleDocsQuickstart();
+      } else if (sub === 'ai-fastlane' || sub === 'ai' || sub === 'fastlane') {
+        await handleDocsAiFastlane(args, opts);
+      } else if (sub === 'maintainer') {
+        await handleDocsMaintainer();
+      } else if (sub === 'claude') {
+        await handleDocsClaude();
+      } else if (sub === 'gateway') {
+        await handleDocsGateway();
+      } else if (sub === 'strategy') {
+        await handleDocsStrategy();
+      } else if (sub === 'faq') {
+        await handleDocsFaq();
+      } else if (sub === 'subscribe' || sub === 'sub') {
+        await handleDocsSubscription();
+      } else if (sub === 'check' || sub === 'freshness') {
+        await handleDocsFreshness(args, opts);
+      } else {
+        await handleDocsQuickstart();
+      }
+      return true;
+    },
+  },
 };

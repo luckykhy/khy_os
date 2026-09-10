@@ -1,6 +1,6 @@
 'use strict';
 
-// capacityFlow diagnostics overlay â€” proves the blind spot is closed:
+// capacityFlow diagnostics overlay â€?proves the blind spot is closed:
 // preRequestCheckpoint used to decide purely on token ratio (overflow only).
 // Now a poisoned/distracted context at a HEALTHY token ratio escalates,
 // while existing ratio-only behavior stays byte-identical and zero-regression.
@@ -35,13 +35,13 @@ function healthyMessages() {
 }
 
 describe('capacityFlow diagnostics overlay', () => {
-  test('no messages â†’ identical to legacy ratio-only behavior', () => {
+  test('no messages â†?identical to legacy ratio-only behavior', () => {
     const r = cf.preRequestCheckpoint({ usedTokens: 1000, contextWindow: 128000 });
     expect(r.decision).toBe(cf.CapacityDecision.None);
     expect(r.details.diagnostics).toBeUndefined();
   });
 
-  test('healthy context at low ratio â†’ None, but diagnostics attached for observability', () => {
+  test('healthy context at low ratio â†?None, but diagnostics attached for observability', () => {
     const r = cf.preRequestCheckpoint({
       usedTokens: 2000, contextWindow: 128000, messages: healthyMessages(),
     });
@@ -78,7 +78,7 @@ describe('capacityFlow diagnostics overlay', () => {
   });
 
   test('overlay only escalates, never downgrades an existing decision', () => {
-    // Critical ratio â†’ legacy returns TargetedRefresh/Critical. Even on a poisoned
+    // Critical ratio â†?legacy returns TargetedRefresh/Critical. Even on a poisoned
     // context the overlay must not weaken it; diagnostics is attached for observability.
     const r = cf.preRequestCheckpoint({
       usedTokens: 120000, contextWindow: 128000, messages: poisonedMessages(),
@@ -94,3 +94,4 @@ describe('capacityFlow diagnostics overlay', () => {
     expect(r.details.diagnostics).toBeUndefined();
   });
 });
+

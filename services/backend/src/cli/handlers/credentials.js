@@ -11,6 +11,7 @@
  *   khy credentials export              导出凭据清单（脱敏）
  */
 
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const chalk = require('chalk').default || require('chalk');
 const { printError, printWarn, printInfo, printTable } = require('../formatters');
 const fs = require('fs');
@@ -293,4 +294,12 @@ async function handleCredentials(subCommand, args = [], _options = {}) {
   }
 }
 
-module.exports = { handleCredentials };
+module.exports = {
+  handleCredentials,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'credentials',
+    description: 'credentials command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleCredentials(parsed.subCommand, parsed.args, parsed.options),
+  },
+};

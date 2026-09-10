@@ -149,3 +149,4 @@ describe('windsurf adapter token priority and fallback', () => {
     expect(httpsMock.request.mock.calls[1][0].headers.Authorization).toBe(`Bearer ${localToken}`);
   });
 });
+

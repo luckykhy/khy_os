@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build --bundles nsis && powershell -c \"New-Item -ItemType Directory -Force output | Out-Null; Copy-Item 'C:\\cargo-target\\openflux-rust\\release\\bundle\\nsis\\*.exe' output\\ -Force; Write-Host 'Installer copied to output\\'\""
+    "tauri:build": "tauri build --bundles nsis && node scripts/copy-installer.cjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.0",

@@ -144,6 +144,7 @@ function listPersistedPlans(limit = 10) {
 
 // ── State ─────────────────────────────────────────────────────────────
 let _state = 'idle'; // idle | generating | reviewing | executing | complete
+let _stage = 'plan'; // plan | build | review (three-stage control)
 let _currentPlan = null;
 let _currentPlanSlug = null;
 let _verification = null; // [P-verify] last plan verification report (null when not run)
@@ -1879,10 +1880,139 @@ function isPlanReadOnly() {
 }
 
 /**
+ * Get current plan stage.
+ * @returns {'plan' | 'build' | 'review'}
+ */
+function getStage() {
+  return _stage;
+}
+
+/**
+ * Set plan stage.
+ * @param {'plan' | 'build' | 'review'} stage
+ */
+function setStage(stage) {
+  const validStages = ['plan', 'build', 'review'];
+  if (!validStages.includes(stage)) {
+    return false;
+  }
+  _stage = stage;
+  return true;
+}
+
+/**
+ * Check if current stage allows write operations.
+ * @returns {boolean}
+ */
+function canWrite() {
+  return _stage === 'build';
+}
+
+/**
+ * Check if current stage is read-only.
+ * @returns {boolean}
+ */
+function isStageReadOnly() {
+  return _stage === 'plan' || _stage === 'review';
+}
+
+/**
+ * Transition to next stage.
+ * @returns {boolean}
+ */
+function advanceStage() {
+  const stageOrder = ['plan', 'build', 'review'];
+  const currentIndex = stageOrder.indexOf(_stage);
+  if (currentIndex < 0 || currentIndex >= stageOrder.length - 1) {
+    return false;
+  }
+  _stage = stageOrder[currentIndex + 1];
+  return true;
+}
+
+/**
+ * Validate dependency graph for a plan.
+ * Detects circular dependencies and orphaned references.
+ * @param {object} plan - Plan with steps containing blockedBy arrays
+ * @returns {{ valid: boolean, errors: string[] }}
+ */
+function validateDependencies(plan) {
+  const errors = [];
+  if (!plan || !plan.steps || plan.steps.length === 0) {
+    return { valid: true, errors: [] };
+  }
+
+  const stepIds = new Set(plan.steps.map((s) => s.id));
+
+  // Check for circular dependencies using DFS
+  const visited = new Set();
+  const recursionStack = new Set();
+
+  function hasCircularDep(stepId) {
+    visited.add(stepId);
+    recursionStack.add(stepId);
+
+    const step = plan.steps.find((s) => s.id === stepId);
+    if (step && step.blockedBy) {
+      for (const depId of step.blockedBy) {
+        if (!visited.has(depId)) {
+          if (hasCircularDep(depId)) return true;
+        } else if (recursionStack.has(depId)) {
+          return true;
+        }
+      }
+    }
+
+    recursionStack.delete(stepId);
+    return false;
+  }
+
+  for (const step of plan.steps) {
+    if (!visited.has(step.id)) {
+      if (hasCircularDep(step.id)) {
+        errors.push(`Circular dependency detected involving step ${step.id}`);
+      }
+    }
+  }
+
+  // Check for orphaned references
+  for (const step of plan.steps) {
+    if (step.blockedBy) {
+      for (const depId of step.blockedBy) {
+        if (!stepIds.has(depId)) {
+          errors.push(`Step ${step.id} depends on non-existent step ${depId}`);
+        }
+      }
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+/**
+ * Get steps that are ready to execute (all dependencies completed).
+ * @param {object} plan
+ * @returns {object[]} Ready steps
+ */
+function getReadySteps(plan) {
+  if (!plan || !plan.steps) return [];
+  const completedIds = new Set(
+    plan.steps.filter((s) => s.status === 'completed').map((s) => s.id)
+  );
+
+  return plan.steps.filter((step) => {
+    if (step.status !== 'pending') return false;
+    if (!step.blockedBy || step.blockedBy.length === 0) return true;
+    return step.blockedBy.every((depId) => completedIds.has(depId));
+  });
+}
+
+/**
  * Reset plan mode to idle.
  */
 function reset() {
   _state = 'idle';
+  _stage = 'plan';
   _currentPlan = null;
   _currentPlanSlug = null;
   _verification = null;
@@ -1904,6 +2034,14 @@ module.exports = {
   listPersistedPlans,
   retryPlanStep,
   analyzeStepFailure,
+  // Three-stage control
+  getStage,
+  setStage,
+  canWrite,
+  isStageReadOnly,
+  advanceStage,
+  validateDependencies,
+  getReadySteps,
   PLAN_PROMPT,
   // [P-verify] 富计划验证段落地:导出运行器与只读访问器(供 REPL/报告/测试使用)。
   _runPlanVerification,

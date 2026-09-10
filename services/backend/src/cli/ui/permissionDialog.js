@@ -615,7 +615,7 @@ function renderCompactDiffPreview(diffInfo) {
 
     // Frame with dimmed box borders
     const output = [];
-    output.push(chalk.dim('    ╭─ diff preview'));
+    output.push(chalk.dim('    diff preview'));
     for (const line of diffLines) {
       output.push(line);
     }
@@ -638,7 +638,7 @@ function renderCompactDiffPreview(diffInfo) {
       statParts.push(chalk.red(`-${removals}`));
     }
     const stats = statParts.length > 0 ? ` (${statParts.join(', ')})` : '';
-    output.push(chalk.dim(`    ╰─${stats}`));
+    output.push(chalk.dim(`    ${stats}`));
 
     return output;
   } catch {

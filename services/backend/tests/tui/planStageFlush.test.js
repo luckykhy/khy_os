@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * planStageFlush â€” Phase 1.1 drain decision for the streaming timeline. Pure
+ * planStageFlush â€?Phase 1.1 drain decision for the streaming timeline. Pure
  * planner behind useQueryBridge.flushCompletedStages: given the live timeline
  * and flags, it returns { k, sealed } = how many leading WHOLE segments to
  * commit plus a markdown-safe prefix of the open trailing text to commit
@@ -9,7 +9,7 @@
  *
  * The end-to-end invariant these tests protect: across a streamed turn, the
  * concatenation of every committed fragment plus the final force-drain equals
- * the full text â€” no loss, no duplication, never a cut mid-structure.
+ * the full text â€?no loss, no duplication, never a cut mid-structure.
  */
 
 const { planStageFlush, splitSealedText } = require('../../src/cli/tui/hooks/useQueryBridge');
@@ -18,7 +18,7 @@ const txt = (text) => ({ type: 'text', text });
 const tool = (result) => ({ type: 'tool', tool: { name: 'Read', id: 'x', result } });
 const pendingTool = () => ({ type: 'tool', tool: { name: 'Read', id: 'x' } });
 
-describe('planStageFlush â€” whole-segment draining', () => {
+describe('planStageFlush â€?whole-segment draining', () => {
   test('empty timeline drains nothing', () => {
     expect(planStageFlush([], {})).toEqual({ k: 0, sealed: '' });
   });
@@ -34,7 +34,7 @@ describe('planStageFlush â€” whole-segment draining', () => {
 
   test('stops at a pending tool, keeping it and everything after live', () => {
     const tl = [txt('intro\n\n'), pendingTool(), txt('later')];
-    // The intro text is sealed (a tool follows it) â†’ k advances past it; the
+    // The intro text is sealed (a tool follows it) â†?k advances past it; the
     // pending tool halts the drain.
     expect(planStageFlush(tl, {})).toMatchObject({ k: 1 });
   });
@@ -49,10 +49,10 @@ describe('planStageFlush â€” whole-segment draining', () => {
     expect(planStageFlush(tl, { sealTrailing: true })).toEqual({ k: 1, sealed: '' });
   });
 
-  test('sealTrailing on a >64KB open segment drains it whole â€” seal + remainder reconstruct the text', () => {
+  test('sealTrailing on a >64KB open segment drains it whole â€?seal + remainder reconstruct the text', () => {
     // Capacity seal guard scenario (KHY_TUI_LIVE_SEAL_KB): a very long reply
     // whose open segment exceeded 64KB is sealed on a newline boundary via
-    // flushCompletedStages(false, undefined, true) â†’ sealTrailing here.
+    // flushCompletedStages(false, undefined, true) â†?sealTrailing here.
     const line = 'a long line of streamed prose that keeps on going and going\n';
     let big = '';
     while (big.length <= 64 * 1024) big += line;
@@ -68,7 +68,7 @@ describe('planStageFlush â€” whole-segment draining', () => {
   });
 });
 
-describe('planStageFlush â€” progressive seal of the open tail', () => {
+describe('planStageFlush â€?progressive seal of the open tail', () => {
   test('seals the completed prefix of a lone open text segment', () => {
     const tl = [txt('para one\n\npara two in progress')];
     expect(planStageFlush(tl, {})).toEqual({ k: 0, sealed: 'para one\n\n' });
@@ -133,3 +133,4 @@ describe('progressive commit reconstructs the full text (end-to-end)', () => {
     expect((fenceFrag.match(/```/g) || []).length).toBe(2);
   });
 });
+

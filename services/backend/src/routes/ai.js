@@ -7,6 +7,7 @@ const imageGenService = require('../services/imageGenService');
 const stockAnalysisEngine = require('../services/stockAnalysisEngine');
 const trainingData = require('../services/trainingDataService');
 const { request: nativeRequest } = require('../utils/nativeHttp');
+const apiResponse = require('../utils/apiResponse');
 // Model-name SSOT: direct provider-call model choices flow from constants/models.js.
 
 // Call a provider with JSON or form data using the shared native HTTP transport.
@@ -161,7 +162,6 @@ async function handleImageGeneration(message) {
   // Check that at least one backend is configured
   if (!imageGenService.isAnyBackendConfigured()) {
     return {
-      success: true,
       answer: `🎨 图像生成暂不可用：未检测到任何图像生成后端。\n\n${imageGenService.backendHelpText()}`,
       model: '小K图像生成',
       timestamp: Date.now(),
@@ -183,7 +183,6 @@ async function handleImageGeneration(message) {
     }));
 
     return {
-      success: true,
       answer: `🎨 已为您生成 ${imageEntries.length} 张图像（${result.backend} / ${result.model || '默认'}，${result.size}）`,
       model: `图像生成:${result.backend}`,
       timestamp: Date.now(),
@@ -202,7 +201,6 @@ async function handleImageGeneration(message) {
       userMsg = `🎨 图像生成 API 密钥已耗尽，请稍后再试。`;
     }
     return {
-      success: true, // chat endpoint stays 200 — the "failure" is in the answer text
       answer: userMsg,
       model: '图像生成',
       timestamp: Date.now(),
@@ -234,10 +232,7 @@ router.post('/chat', authMiddleware, async (req, res) => {
     }
 
     if (!safeQuestion) {
-      return res.status(400).json({
-        success: false,
-        message: '问题不能为空',
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '问题不能为空', { status: 400 });
     }
 
     console.log('收到AI对话请求:', {
@@ -270,8 +265,7 @@ router.post('/chat', authMiddleware, async (req, res) => {
       } catch (recordErr) {
         console.error('[TrainingData] Record failed:', recordErr.message);
       }
-      return res.json({
-        success: true,
+      return apiResponse.success(res, {
         answer: greeting,
         model: '小K智能助手',
         timestamp: Date.now(),
@@ -296,7 +290,7 @@ router.post('/chat', authMiddleware, async (req, res) => {
       } catch (recordErr) {
         console.error('[TrainingData] Record failed:', recordErr.message);
       }
-      return res.json(imageResult);
+      return apiResponse.success(res, imageResult);
     }
 
     // Auto-detect bare stock code input and convert to a full analysis request
@@ -307,8 +301,7 @@ router.post('/chat', authMiddleware, async (req, res) => {
           mergedContext,
           safeQuestion
         );
-        return res.json({
-          success: true,
+        return apiResponse.success(res, {
           answer: result.answer,
           model: '小K智能助手',
           confidence: result.confidence,
@@ -341,8 +334,7 @@ router.post('/chat', authMiddleware, async (req, res) => {
       } catch (recordErr) {
         console.error('[TrainingData] Record failed:', recordErr.message);
       }
-      return res.json({
-        success: true,
+      return apiResponse.success(res, {
         answer: result.answer,
         model: '小K智能助手',
         confidence: result.confidence,
@@ -376,8 +368,7 @@ router.post('/chat', authMiddleware, async (req, res) => {
         } catch (recordErr) {
           console.error('[TrainingData] Record failed:', recordErr.message);
         }
-        return res.json({
-          success: true,
+        return apiResponse.success(res, {
           answer: answer,
           model: 'Cloud AI',
           timestamp: Date.now(),
@@ -389,19 +380,14 @@ router.post('/chat', authMiddleware, async (req, res) => {
 
     // 最后降级到预定义模式
     const answer = generatePredefinedAnswer(safeQuestion, mergedContext);
-    res.json({
-      success: true,
+    return apiResponse.success(res, {
       answer: answer,
       model: '小K金融量化助手(简化模式)',
       timestamp: Date.now(),
     });
   } catch (error) {
     console.error('AI对话错误:', error);
-    res.status(500).json({
-      success: false,
-      message: '对话服务暂时不可用',
-      error: error.message,
-    });
+    return apiResponse.error(res, error);
   }
 });
 
@@ -572,7 +558,15 @@ router.post('/chat/stream', authMiddleware, async (req, res) => {
     }
   } catch (err) {
     console.error('SSE stream error:', err);
-    sendEvent({ type: 'error', message: err.message || 'Internal error' });
+    // 四端统一错误格式: 与 CLI/TUI/Web/Mobile 共享结构化错误分类
+    let payload;
+    try {
+      const { formatApiError } = require('../services/apiErrorFormatter');
+      payload = formatApiError(err, { context: 'AI 对话流' });
+    } catch {
+      payload = { success: false, code: 'UNKNOWN_ERROR', title: '服务错误', reason: err.message || '内部错误', suggestions: ['请稍后重试'], kind: 'unknown', httpStatus: 500 };
+    }
+    sendEvent({ type: 'error', ...payload });
   } finally {
     clearInterval(heartbeatTimer);
   }
@@ -872,9 +866,9 @@ router.get('/persona', (req, res) => {
   try {
     const personaService = require('../services/personaService');
     const summary = personaService.summarizePersona(process.cwd());
-    res.json({ success: true, ...summary });
+    return apiResponse.success(res, summary);
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message, present: false, sections: [] });
+    return apiResponse.error(res, err);
   }
 });
 

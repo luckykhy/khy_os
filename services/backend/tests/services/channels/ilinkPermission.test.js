@@ -15,8 +15,8 @@ process.env.KHY_ILINK_TYPING_KEEPALIVE_MS = '5';
 // 让注入的假 chat 直接被调 —— 工具循环的接线由 ilinkToolLoop.test.js 覆盖。
 process.env.KHY_ILINK_DISABLE_TOOL_LOOP = '1';
 
-const core = require('../../../src/services/messaging/ilinkCore');
-const { IlinkDispatcher } = require('../../../src/services/channels/ilinkDispatcher');
+const core = require('../../../src/services/domain/messaging/messaging/ilinkCore.js');
+const { IlinkDispatcher } = require('../../../src/services/domain/messaging/channels/ilinkDispatcher.js');
 const port = require('../../../src/services/permissionPromptPort');
 
 /** 只收集出站文本的假通道。 */

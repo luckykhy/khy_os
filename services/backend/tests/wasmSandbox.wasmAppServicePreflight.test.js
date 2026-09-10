@@ -222,3 +222,4 @@ describe('wasmAppService numeric-v1 khy_sys ABI precheck', () => {
     }
   });
 });
+

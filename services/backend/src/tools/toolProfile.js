@@ -17,7 +17,7 @@
 const PROFILES = {
   minimal: {
     description: 'Read-only tools for exploration and search',
-    tools: ['readFile', 'glob', 'grep', 'search', 'toolSearch', 'quote', 'dataFetch', 'webSearch'],
+    tools: ['readFile', 'glob', 'grep', 'search', 'toolSearch', 'quote', 'dataFetch', 'webSearch', 'taste'],
   },
 
   coding: {

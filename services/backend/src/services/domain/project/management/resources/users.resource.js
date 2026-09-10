@@ -5,7 +5,7 @@
  * Both the CLI (`khy manage users ...`) and the Web management page invoke
  * these ops through managementRegistry, so the two surfaces stay in lockstep.
  */
-const { User } = require('../../../../../constants/models');
+const { User } = require('../../../../../models');
 
 const PUBLIC_ATTRS = ['id', 'username', 'email', 'role', 'status', 'lastLoginAt', 'createdAt'];
 

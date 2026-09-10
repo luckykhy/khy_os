@@ -116,7 +116,7 @@ describe('video route', () => {
     test('happy path — creates task and returns videoId + videoUrl', async () => {
       videoGenService.generate.mockResolvedValue({
         backend: 'agnes',
-        model: 'agnes-video-v2.0',
+        model: 'agnes-video-2.5',
         videoId: 'video_abc123',
         taskId: 'task_abc123',
         status: 'completed',
@@ -148,7 +148,7 @@ describe('video route', () => {
     test('passes images / mode / seed / numFrames / frameRate', async () => {
       videoGenService.generate.mockResolvedValue({
         backend: 'agnes',
-        model: 'agnes-video-v2.0',
+        model: 'agnes-video-2.5',
         videoId: 'v1',
         taskId: 't1',
         status: 'completed',
@@ -257,7 +257,7 @@ describe('video route', () => {
         task_id: 'task_1',
         status: 'completed',
         progress: 100,
-        model: 'agnes-video-v2.0',
+        model: 'agnes-video-2.5',
         seconds: '5.0',
         size: '1280x768',
         remixed_from_video_id: 'https://example.com/v.mp4',
@@ -281,7 +281,7 @@ describe('video route', () => {
       videoGenService.__testHooks._pollAgnes.mockResolvedValue({
         status: 'in_progress',
         progress: 60,
-        model: 'agnes-video-v2.0',
+        model: 'agnes-video-2.5',
       });
 
       const res = await sendRequest(server, {
@@ -300,7 +300,7 @@ describe('video route', () => {
       videoGenService.__testHooks._pollAgnes.mockResolvedValue({
         status: 'failed',
         error: { message: 'nsfw detected' },
-        model: 'agnes-video-v2.0',
+        model: 'agnes-video-2.5',
       });
 
       const res = await sendRequest(server, {
@@ -361,7 +361,7 @@ describe('video route', () => {
   describe('GET /backends', () => {
     test('returns backend status and model catalog', async () => {
       videoGenService.catalogModels.mockReturnValue([
-        { backend: 'agnes', model: 'agnes-video-v2.0', capability: 'video' },
+        { backend: 'agnes', model: 'agnes-video-2.5', capability: 'video' },
       ]);
       videoGenService.backendStatus.mockReturnValue({ agnes: true });
 

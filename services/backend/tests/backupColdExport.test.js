@@ -27,11 +27,11 @@ const path = require('path');
 const zlib = require('zlib');
 const crypto = require('crypto');
 
-const backupService = require('../src/services/backup/backupService');
-const restoreService = require('../src/services/backup/restoreService');
-const cold = require('../src/services/backup/coldExportService');
-const plan = require('../src/services/backup/backupAssetPlan');
-const mf = require('../src/services/backup/backupManifest');
+const backupService = require('../src/services/domain/backup/backup/backupService.js');
+const restoreService = require('../src/services/domain/backup/backup/restoreService.js');
+const cold = require('../src/services/domain/backup/backup/coldExportService.js');
+const plan = require('../src/services/domain/backup/backup/backupAssetPlan.js');
+const mf = require('../src/services/domain/backup/backup/backupManifest.js');
 const { BACKUP, COLD_EXPORT } = require('../src/constants/serviceDefaults');
 
 const NL = String.fromCharCode(10);

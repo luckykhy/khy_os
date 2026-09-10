@@ -81,3 +81,19 @@ test('ProxyManagement: 内核缺失横幅显示确切下载 URL + 落地路径 +
 test('ProxyManagement: 冷门平台无描述符时仍给官方 releases 兜底链接(绝不留死路)', () => {
   assert.match(VIEW, /MetaCubeX\/mihomo\/releases/);
 });
+
+test('useProxies: fetchEgressStatus 失败不静默——记到 loadError 并返回 null', () => {
+  // 旧实现是 try/finally 无 catch,失败抛给调用方;onMounted 处又是一个静默 catch,
+  // 于是 /api/proxy-egress 挂掉时页面呈现为「停用 + 内核未安装」。
+  assert.match(COMPOSABLE, /loadError\.value = ''/);
+  assert.match(COMPOSABLE, /function recordEgressFailure\(/);
+  assert.match(COMPOSABLE, /describeLoadError\(/);
+  assert.match(COMPOSABLE, /recordEgressFailure\(err\);[\s\S]*?return null/);
+  assert.match(COMPOSABLE, /egressStatus,\s*\n\s*loadError,/);
+});
+
+test('ProxyManagement: 出站错误横幅已接线,且 onMounted 不再静默吞掉 fetchEgressStatus', () => {
+  assert.match(VIEW, /import LoadErrorBanner from '@\/components\/LoadErrorBanner\.vue';/);
+  assert.match(VIEW, /<LoadErrorBanner :message="loadError" \/>/);
+  assert.doesNotMatch(VIEW, /fail-soft:出站状态拿不到不阻塞页面/);
+});

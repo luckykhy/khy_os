@@ -132,3 +132,4 @@ describe('klineDataService', () => {
     expect(result).toHaveLength(2);
   });
 });
+

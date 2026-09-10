@@ -25,7 +25,7 @@ process.env.SQLITE_DB_PATH = path.join(require('node:os').tmpdir(), `khy_bridge_
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'bridge-test-secret-key-at-least-32-chars-xx';
 
 const models = require('@khy/shared/models');
-const bridge = require('../src/services/plugins/pluginToolBridge');
+const bridge = require('../src/services/domain/extensions/plugins/pluginToolBridge.js');
 
 const OPENAPI = {
   openapi: '3.0.0',
@@ -101,7 +101,7 @@ test('executePluginTool refuses a disabled plugin', async () => {
 test('executePluginTool resolves + invokes for the owning user', async () => {
   // Monkey-patch the invoker module the bridge uses, so we assert resolution
   // wiring (right openapi/operation/auth) without real HTTP.
-  const invoker = require('../src/services/plugins/pluginInvoker');
+  const invoker = require('../src/services/domain/extensions/plugins/pluginInvoker.js');
   const orig = invoker.invoke;
   let seen = null;
   invoker.invoke = async (opts) => { seen = opts; return { ok: true, status: 200, contentType: 'application/json', data: { city: opts.args.city } }; };

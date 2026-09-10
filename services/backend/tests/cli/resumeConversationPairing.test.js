@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * resumeConversation / autoResumeLastSession — orphan tool_use pairing on the
+ * resumeConversation / autoResumeLastSession �?orphan tool_use pairing on the
  * legacy conversations/*.json restore path (Store A).
  *
  * #60 taught the JSONL store (resumePersistedSession) to pair orphan tool_use
@@ -39,9 +39,9 @@ if (typeof _describe !== 'function' || typeof _expect !== 'function') {
   _describe = nt.describe;
   _test = nt.test;
   _expect = (actual) => ({
-    toBe: (e) => assert.strictEqual(actual, e),
-    toEqual: (e) => assert.deepStrictEqual(actual, e),
-    toBeTruthy: () => assert.ok(actual, 'expected truthy'),
+    toBe: (e) => expect(actual).toBe(e),
+    toEqual: (e) => expect(actual).toEqual(e),
+    toBeTruthy: () => expect(actual).toBeTruthy(),
   });
 }
 
@@ -84,7 +84,7 @@ const ORPHAN_MESSAGES = [
 
 /* ── resumeConversation ─────────────────────────────────────────────────── */
 
-_describe('resumeConversation — orphan tool_use pairing (legacy JSON store)', () => {
+_describe('resumeConversation �?orphan tool_use pairing (legacy JSON store)', () => {
   _test('injects exactly one placeholder tool_result for a trailing orphan', () => {
     _writeConvo('orphan-a.json', ORPHAN_MESSAGES);
     const r = ai.resumeConversation('orphan-a.json');
@@ -97,7 +97,7 @@ _describe('resumeConversation — orphan tool_use pairing (legacy JSON store)', 
     _expect(_countPlaceholders(msgs, 'orphan-1')).toBe(1);
   });
 
-  _test('stays idempotent — an already-paired transcript gains no new placeholder', () => {
+  _test('stays idempotent �?an already-paired transcript gains no new placeholder', () => {
     // A file that already carries the matching tool_result: pairing is a no-op.
     _writeConvo('paired-a.json', [
       { role: 'user', content: 'read the file' },
@@ -112,10 +112,10 @@ _describe('resumeConversation — orphan tool_use pairing (legacy JSON store)', 
 
 /* ── autoResumeLastSession ──────────────────────────────────────────────── */
 
-_describe('autoResumeLastSession — orphan tool_use pairing (legacy JSON store)', () => {
+_describe('autoResumeLastSession �?orphan tool_use pairing (legacy JSON store)', () => {
   _test('pairs a trailing orphan when auto-resuming the latest conversation', () => {
-    // Future-dated filename → guaranteed lexically-latest, so loadLastConversation
-    // picks it; timestamp = now → inside the auto-resume window and segment.
+    // Future-dated filename �?guaranteed lexically-latest, so loadLastConversation
+    // picks it; timestamp = now �?inside the auto-resume window and segment.
     _writeConvo('9999-12-31T23-59-59-auto.json', ORPHAN_MESSAGES, new Date().toISOString());
     const r = ai.autoResumeLastSession();
     _expect(r).toBeTruthy();
@@ -123,3 +123,4 @@ _describe('autoResumeLastSession — orphan tool_use pairing (legacy JSON store)
     _expect(_countPlaceholders(chatState.messages, 'orphan-1')).toBe(1);
   });
 });
+

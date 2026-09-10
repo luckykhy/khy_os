@@ -1,12 +1,12 @@
 'use strict';
 
 /**
- * splitSealedText â€” Phase 1.1 progressive text commit. Splits an OPEN
+ * splitSealedText â€?Phase 1.1 progressive text commit. Splits an OPEN
  * (still-streaming) text segment into a markdown-safe `sealed` prefix that can
  * be committed to scrollback and the in-flight `live` remainder.
  *
  * The contract the finalize drain relies on:
- *   - sealed + live === input   (no loss, no duplication â€” char-offset based)
+ *   - sealed + live === input   (no loss, no duplication â€?char-offset based)
  *   - a cut is made ONLY at a blank line that is NOT inside a fenced code block
  *   - the last (unterminated) line is never a boundary (still streaming)
  *   - tables/lists are safe for free: they end at a blank line and never
@@ -20,7 +20,7 @@ function assertLossless(input) {
   expect(sealed + live).toBe(input);
 }
 
-describe('splitSealedText â€” no-loss invariant', () => {
+describe('splitSealedText â€?no-loss invariant', () => {
   test('sealed + live always reconstructs the input', () => {
     [
       '',
@@ -33,8 +33,8 @@ describe('splitSealedText â€” no-loss invariant', () => {
   });
 });
 
-describe('splitSealedText â€” boundary selection', () => {
-  test('no boundary yet â†’ everything stays live', () => {
+describe('splitSealedText â€?boundary selection', () => {
+  test('no boundary yet â†?everything stays live', () => {
     expect(splitSealedText('still going, no blank line')).toEqual({
       sealed: '', live: 'still going, no blank line',
     });
@@ -53,7 +53,7 @@ describe('splitSealedText â€” boundary selection', () => {
   });
 
   test('a trailing blank line (turn ended on a blank) is itself a boundary', () => {
-    // "x\n\n" â†’ lines ['x','',''] : the middle blank is terminated, the last is
+    // "x\n\n" â†?lines ['x','',''] : the middle blank is terminated, the last is
     // empty/unterminated. Seals up to and including the terminated blank.
     const { sealed, live } = splitSealedText('x\n\n');
     expect(sealed).toBe('x\n\n');
@@ -61,7 +61,7 @@ describe('splitSealedText â€” boundary selection', () => {
   });
 });
 
-describe('splitSealedText â€” never cuts inside a fence', () => {
+describe('splitSealedText â€?never cuts inside a fence', () => {
   test('blank line inside an OPEN fence is not a boundary', () => {
     const input = 'intro\n\n```js\nconst a = 1;\n\nconst b = 2;';
     const { sealed, live } = splitSealedText(input);
@@ -84,7 +84,7 @@ describe('splitSealedText â€” never cuts inside a fence', () => {
   });
 });
 
-describe('splitSealedText â€” tables never split mid-row', () => {
+describe('splitSealedText â€?tables never split mid-row', () => {
   test('an in-progress table with no trailing blank stays fully live', () => {
     const input = '| a | b |\n| - | - |\n| 1 | 2 |';
     expect(splitSealedText(input)).toEqual({ sealed: '', live: input });
@@ -97,3 +97,4 @@ describe('splitSealedText â€” tables never split mid-row', () => {
     expect(live).toBe('next para');
   });
 });
+

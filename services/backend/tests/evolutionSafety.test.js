@@ -261,7 +261,7 @@ test('decideOutcome: 安全门控关时被忽略(字节回退)', () => {
 
 // ── transactionRunner 集成 ──────────────────────────────────────────
 test('transactionRunner: 门控开 + 行为源改动 → 强制 runTests=true 传给 validateFiles', async () => {
-  const { runRepairTransaction } = require('../src/services/selfRepair/transactionRunner');
+  const { runRepairTransaction } = require('../src/services/domain/maintenance/selfRepair/transactionRunner.js');
   let seenPlan = null;
   await runRepairTransaction({
     env: { ...ON, KHY_SELF_REPAIR_TRANSACTION: '1' },
@@ -275,7 +275,7 @@ test('transactionRunner: 门控开 + 行为源改动 → 强制 runTests=true �
 });
 
 test('transactionRunner: 安全门控关 → 不强制 runTests(字节回退)', async () => {
-  const { runRepairTransaction } = require('../src/services/selfRepair/transactionRunner');
+  const { runRepairTransaction } = require('../src/services/domain/maintenance/selfRepair/transactionRunner.js');
   let seenPlan = null;
   await runRepairTransaction({
     env: { ...OFF, KHY_SELF_REPAIR_TRANSACTION: '1' },
@@ -289,7 +289,7 @@ test('transactionRunner: 安全门控关 → 不强制 runTests(字节回退)', 
 });
 
 test('transactionRunner: 受影响测试失败 → 回滚(由 v.tests 阻断,安全层不重复但裁决一致)', async () => {
-  const { runRepairTransaction } = require('../src/services/selfRepair/transactionRunner');
+  const { runRepairTransaction } = require('../src/services/domain/maintenance/selfRepair/transactionRunner.js');
   let restored = false;
   const res = await runRepairTransaction({
     env: { ...ON, KHY_SELF_REPAIR_TRANSACTION: '1' },
@@ -307,7 +307,7 @@ test('transactionRunner: 受影响测试失败 → 回滚(由 v.tests 阻断,安
 });
 
 test('transactionRunner: 行为改动未覆盖(默认) → 保留 + 告警(不回滚)', async () => {
-  const { runRepairTransaction } = require('../src/services/selfRepair/transactionRunner');
+  const { runRepairTransaction } = require('../src/services/domain/maintenance/selfRepair/transactionRunner.js');
   let restored = false;
   const res = await runRepairTransaction({
     env: { ...ON, KHY_SELF_REPAIR_TRANSACTION: '1' },
@@ -326,7 +326,7 @@ test('transactionRunner: 行为改动未覆盖(默认) → 保留 + 告警(不�
 });
 
 test('transactionRunner: 未覆盖时 repair_validate_done 事件携带 safetyReport(供 onEvent 消费)', async () => {
-  const { runRepairTransaction } = require('../src/services/selfRepair/transactionRunner');
+  const { runRepairTransaction } = require('../src/services/domain/maintenance/selfRepair/transactionRunner.js');
   const events = [];
   await runRepairTransaction({
     env: { ...ON, KHY_SELF_REPAIR_TRANSACTION: '1' },
@@ -346,7 +346,7 @@ test('transactionRunner: 未覆盖时 repair_validate_done 事件携带 safetyRe
 });
 
 test('transactionRunner: enforce 下行为改动未覆盖 → 回滚', async () => {
-  const { runRepairTransaction } = require('../src/services/selfRepair/transactionRunner');
+  const { runRepairTransaction } = require('../src/services/domain/maintenance/selfRepair/transactionRunner.js');
   let restored = false;
   const res = await runRepairTransaction({
     env: { ...ENFORCE, KHY_SELF_REPAIR_TRANSACTION: '1' },

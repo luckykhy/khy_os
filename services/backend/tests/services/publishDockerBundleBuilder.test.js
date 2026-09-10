@@ -19,7 +19,7 @@ const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
-const builder = require('../../src/services/publish/dockerBundleBuilder');
+const builder = require('../../src/services/domain/deploy/publish/dockerBundleBuilder.js');
 const pub = require('../../src/cli/handlers/publish');
 
 const isWin = process.platform === 'win32';
@@ -121,7 +121,7 @@ describe('publish.js import-back of the docker bundle builder', () => {
   test('re-exports a working _buildDockerBundle wrapper and shares the resolver', () => {
     assert.equal(typeof pub._buildDockerBundle, 'function');
     // The low-level resolver is the SAME function object (import-back identity).
-    const direct = require('../../src/services/publish/dockerBundleBuilder');
+    const direct = require('../../src/services/domain/deploy/publish/dockerBundleBuilder.js');
     assert.equal(typeof direct._resolveDockerBackendSource, 'function');
   });
 });

@@ -4,9 +4,9 @@ const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { validateManifest } = require('../../../src/services/resources/manifestLoader');
-const { createResourceManager } = require('../../../src/services/resources/resourceManager');
-const { createStore } = require('../../../src/services/resources/resourceStore');
+const { validateManifest } = require('../../../src/services/domain/data/resources/manifestLoader.js');
+const { createResourceManager } = require('../../../src/services/domain/data/resources/resourceManager.js');
+const { createStore } = require('../../../src/services/domain/data/resources/resourceStore.js');
 
 function tempDir() { return fs.mkdtempSync(path.join(os.tmpdir(), 'khy-resource-')); }
 function manifestFor(hash, version = '1.0.0', sources = ['https://example.test/fixture.bin']) {
@@ -134,3 +134,4 @@ describe('resource manager', () => {
     expect(fs.existsSync(fresh)).toBe(true);
   });
 });
+

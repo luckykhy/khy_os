@@ -4,6 +4,11 @@ const diskCleanup = require('../../services/diskCleanup');
 const _clarify = require('../../services/diskCleanupClarify');
 const { BaseTool } = require('../_baseTool');
 
+// 扫/规划结果回给模型时的自然上下文提示：交互终端想逐组确认用户大文件，有 interactive 档。
+// 让「交互式清理」选项在清理情景中自然浮现，而不是靠关键词命中与否。
+const _INTERACTIVE_HINT =
+  '交互终端用户想逐组确认删除大文件？以 mode:"interactive" 重新调用本工具，进入 khy cleandisk 交互式分组清理（先自动清白名单垃圾，大文件 4-5 个一组逐组请用户确认）。';
+
 /**
  * DiskCleanupTool — 安全清理 C 盘/D 盘的磁盘清理工具（教 khyos 不破坏用户数据地清盘）。
  *
@@ -24,38 +29,62 @@ class DiskCleanupTool extends BaseTool {
   static searchHint =
     '清理 C盘 D盘 磁盘 垃圾 缓存 临时文件 回收站 清理空间 disk cleanup free space';
 
-  // 动态风险：仅 mode=clean && apply=true 时才是破坏性，scan/plan 为只读。
+  // 动态风险：scan/plan 只读；clean+apply 破坏性；interactive 会在用户终端先跑自动档
+  // （引擎白名单）再逐组请用户确认删除——人闸在终端内，但发起即含删除，同样不可绕人闸。
   isReadOnly(input) {
     const mode = input && input.mode;
-    return mode !== 'clean';
+    return mode !== 'clean' && mode !== 'interactive';
   }
   isDestructive(input) {
-    return !!(input && input.mode === 'clean' && input.apply === true);
+    const mode = input && input.mode;
+    if (mode === 'interactive') {
+      return true;
+    }
+    return !!(mode === 'clean' && input.apply === true);
   }
   isConcurrencySafe() {
     return false;
   }
 
   prompt() {
+    // 选项文案全部从 diskCleanupClarify SSOT 渲染，绝不在这里再写一份——
+    // 选项卡、参数映射、工具说明共用同一份定义，改档位只改一处。
+    const modeLines = _clarify.CLEANUP_MODE_OPTIONS.map(
+      (o) => `  · ${o.label} → ${o.description}`
+    ).join('\n');
+    const depthLines = _clarify.SCAN_DEPTH_OPTIONS.map(
+      (o) => `  · ${o.label} → 传 maxDepth:${o.depth}(${o.description})`
+    ).join('\n');
+    const granLines = _clarify.GRANULARITY_OPTIONS.map(
+      (o) => `  · ${o.label} → 传 granularity:"${o.value}"(${o.description})`
+    ).join('\n');
     return [
       '安全清理磁盘（C盘/D盘）空间，绝不破坏用户数据。',
       '只从已知垃圾白名单清理：系统/用户临时文件、浏览器HTTP缓存、缩略图/崩溃转储、',
       'npm/pip/yarn/cargo 等包管理器缓存、本项目自身缓存。',
       '绝不碰：文档/桌面/下载/图片/视频/云盘/源码工程/数据库等用户数据（两道否决+fail-closed）。',
       '',
-      'mode:',
-      '  scan  — 只读，列全部候选（含被保护/在用/跳过项，最透明）',
-      '  plan  — 只读，给「会清什么 + 可回收多少」计划与报告（推荐先跑）',
-      '  clean — 真正清理，需 apply:true（破坏性，会经人工确认闸）',
+      '用户表达清理磁盘意图时（无论措辞），先用 AskUserQuestion 弹一张「清理方式」卡让用户选',
+      '（用户已在消息里明确方式时跳过），再按所选方式执行。方式定义：',
+      modeLines,
+      '',
+      '分支执行规则：',
+      '· interactive → 立即以 mode:"interactive" 调用本工具。逐组删除确认由命令在用户终端内完成；',
+      '  不要再问扫描深度/颗粒细度，不要用 Bash 代跑 khy cleandisk（子进程非交互，删除会被安全闸拦下），',
+      '  更不要替用户加 --yes。执行完向用户转述回收结果即可，不要重复清理。',
+      '· engine(clean) → 继续把「扫描深度」「颗粒细度」两张卡交给用户选（可放进同一次 AskUserQuestion），',
+      '  据选择传 maxDepth/granularity，先 mode:"plan" 看清单并给用户过目，确认后再 mode:"clean" apply:true。',
+      '· report → 直接 mode:"plan"，把报告原文给用户，不动磁盘。',
+      '',
+      'depth/granularity 选项卡（engine 分支用）：',
+      depthLines,
+      granLines,
       '',
       'roots: 限定盘符如 ["C:"] 或 ["C:","D:"]；省略=全部可写盘。',
       'includeReview: 是否一并清「需确认」类（回收站/系统更新缓存/macOS/Linux 大缓存）——',
       '  这些涉及可恢复数据，默认 false，务必先向用户说明再开启。',
       'keepRecentHours: 最近多少小时内有写入的目录判为「在用」跳过（默认 2）。',
-      'scanDepth/maxDepth: 扫描深度——shallow(2层)/standard(6层,默认)/deep(12层),越深越准越慢。',
-      'granularity: scan 结果颗粒度——coarse(按大类汇总)/standard(按目录)/fine(逐项按体积明细)。',
-      '清盘前应先用 AskUserQuestion 把「扫描深度」「颗粒细度」交给用户选,再据其选择传参。',
-      '建议流程：先 plan 看清单 → 用户确认 → clean apply。',
+      '建议流程：先问清理方式 → 按方式收集参数 → plan 看清单 → 用户确认 → 执行。',
     ].join('\n');
   }
 
@@ -65,8 +94,9 @@ class DiskCleanupTool extends BaseTool {
       properties: {
         mode: {
           type: 'string',
-          description: 'scan 只读列候选 / plan 只读计划 / clean 真正清理',
-          enum: ['scan', 'plan', 'clean'],
+          description:
+            'interactive 交互式分组清理(推荐,进程内路由 khy cleandisk,逐组确认) / scan 只读列候选 / plan 只读计划 / clean 真正清理',
+          enum: ['interactive', 'scan', 'plan', 'clean'],
           default: 'plan',
         },
         roots: {
@@ -116,6 +146,10 @@ class DiskCleanupTool extends BaseTool {
 
   async execute(params) {
     const mode = (params && params.mode) || 'plan';
+    // interactive 优先短路:不进 scan/plan/clean 的参数装配,直接进程内路由 cleandisk。
+    if (mode === 'interactive') {
+      return this._runInteractive();
+    }
     // 扫描深度:用户选的档(scanDepth)或直接数字(maxDepth)→ 归一为递归深度上限;缺省 null
     // → 不放进 opts,scanner 逐字节回退全局阈值(6)。颗粒细度只作用于 scan 输出形状。
     const _depth = _clarify.resolveScanDepth(params);
@@ -155,6 +189,7 @@ class DiskCleanupTool extends BaseTool {
         candidateCount: candidates.length,
         // coarse → 汇总行(rolledUp);standard/fine → 候选明细(fine 已按体积降序)。
         ...(shaped.rolledUp ? { categorySummary: shaped.rows } : { candidates: shaped.rows }),
+        hint: _INTERACTIVE_HINT,
       };
     }
 
@@ -165,6 +200,7 @@ class DiskCleanupTool extends BaseTool {
         mode,
         ...this._planSummary(p),
         report: diskCleanup.renderPlanReport(p),
+        hint: _INTERACTIVE_HINT,
       };
     }
 
@@ -194,6 +230,55 @@ class DiskCleanupTool extends BaseTool {
     };
   }
 
+  /**
+   * interactive 模式：经 commandDispatchPort 在**本进程内**路由 `cleandisk`。
+   * REPL 场景 stdin/stdout 就是用户终端（TTY），交互式逐组确认因此跑得起来；
+   * headless/子进程场景如实拒绝并给回退建议，绝不静默降级成自动删除。
+   */
+  async _runInteractive() {
+    let dispatcher = null;
+    try {
+      dispatcher = require('../../services/commandDispatchPort').getDispatcher();
+    } catch {
+      dispatcher = null;
+    }
+    if (!dispatcher) {
+      return {
+        success: false,
+        mode: 'interactive',
+        error: '命令路由不可用（CLI 层未加载，headless 环境）',
+        fallback: '改用 mode:"plan" 出清理报告，或让用户在终端直接运行 khy cleandisk',
+      };
+    }
+    if (!(process.stdin.isTTY && process.stdout.isTTY)) {
+      return {
+        success: false,
+        mode: 'interactive',
+        error: '当前不是交互终端，交互式分组清理需要真人逐组应答',
+        fallback:
+          '改用 mode:"plan" 出报告；确需无人值守自动清，让用户自己在终端运行 khy cleandisk --yes',
+      };
+    }
+    try {
+      const parsed = dispatcher.parseInput('cleandisk');
+      const routeResult = await dispatcher.route(parsed);
+      return {
+        success: true,
+        mode: 'interactive',
+        routed: 'cleandisk',
+        routeResult,
+        note: '交互式清理已在用户终端执行完毕；向用户转述回收结果即可，不要重复清理',
+      };
+    } catch (err) {
+      return {
+        success: false,
+        mode: 'interactive',
+        error: (err && err.message) || String(err),
+        fallback: '改用 mode:"plan" 出报告',
+      };
+    }
+  }
+
   _planSummary(p) {
     return {
       platform: p.platform,
@@ -218,7 +303,12 @@ class DiskCleanupTool extends BaseTool {
 
   getActivityDescription(input) {
     const mode = (input && input.mode) || 'plan';
-    const map = { scan: '扫描磁盘垃圾', plan: '规划磁盘清理', clean: '清理磁盘空间' };
+    const map = {
+      interactive: '交互式分组清理',
+      scan: '扫描磁盘垃圾',
+      plan: '规划磁盘清理',
+      clean: '清理磁盘空间',
+    };
     return map[mode] || '磁盘清理';
   }
 }

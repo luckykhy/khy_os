@@ -14,7 +14,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const resolver = require('../../../src/services/config/nlProviderResolver');
+const resolver = require('../../../src/services/domain/config/config/nlProviderResolver.js');
 
 const ON = {}; // 未设 → 默认开(总门控 + 子门控都开)
 const REPLACE_OFF = { KHY_NL_PROVIDER_REPLACE: 'off' };

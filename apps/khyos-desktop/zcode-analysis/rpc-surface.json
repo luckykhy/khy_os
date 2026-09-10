@@ -1,0 +1,1018 @@
+[
+  {
+    "name": "AcknowledgePostUpdateReleaseNotes",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "ActivateOrSetWorkspace",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "ApplicationLocaleChanged",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "BindRemoteWorkspaceSessionContext",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "BotRemoteWorkspaceReconnected",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "BrowserViewAttachGuest",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "BrowserViewCloseTab",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "BrowserViewCloseTabFromRenderer",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "BrowserViewDetachGuest",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "BrowserViewEnsureResident",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "BrowserViewOperation",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "BrowserViewReady",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "BrowserViewReportResidency",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "BrowserViewRestore",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "BrowserViewRestoreTabs",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "BrowserViewScreenshotSurfacePrepare",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "BrowserViewScreenshotSurfaceReady",
+    "invoke": 0,
+    "on": 0,
+    "send": 1,
+    "sendSync": 0,
+    "via": "send"
+  },
+  {
+    "name": "BrowserViewScreenshotSurfaceRelease",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "BrowserViewSuspend",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "BrowserViewSuspendReady",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "BrowserViewUpdateViewport",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "BrowserViewViewportChanged",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "BrowserViewVisibility",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "CancelCuaPermissionOnboarding",
+    "invoke": 0,
+    "on": 0,
+    "send": 1,
+    "sendSync": 0,
+    "via": "send"
+  },
+  {
+    "name": "CancelPendingRemoteConnection",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "CancelUpdateDownload",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "CanOpenCommunity",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "CaptureWindowScreenshot",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "ClearEmbeddedBrowserData",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "ClearFinalArmsCustomEventsE2E",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "CloseActiveContextRequest",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "ConfigureFinalArmsCustomEventsE2E",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "ConnectRemote",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "CreateTempTextAttachment",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "DesktopWindowChromeStateChanged",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "DesktopZoomLevelChanged",
+    "invoke": 0,
+    "on": 2,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "DisposeRemoteSession",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "DownloadUpdate",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "ExecuteDesktopCommand",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "ExportLogs",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "FocusTab",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "GetApplicationIcon",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "GetAutoUpdatePreferences",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "GetCuaGrayEnabled",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "GetDesktopSessionActivity",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "GetDesktopWindowChromeState",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "GetDesktopZoomLevel",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "GetDeviceId",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "GetInstalledEditors",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "GetRendererActionTraceConfig",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "GetSystemLocale",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "GetUpdateState",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "GetWebRemoteControlStatus",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "GetZCodeStdioTapDevState",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "ImportChromeBrowserData",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "IsDockerAvailable",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "ListDockerContainers",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "ListSSHConfigAliases",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "ListWSLDistros",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "LoadMcpFromUserDirectory",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "Log",
+    "invoke": 0,
+    "on": 0,
+    "send": 1,
+    "sendSync": 0,
+    "via": "send"
+  },
+  {
+    "name": "MigrateLegacyCommonMcp",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "NewTab",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "NewTask",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "OAuthCallback",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "OAuthCallbackHandled",
+    "invoke": 0,
+    "on": 0,
+    "send": 1,
+    "sendSync": 0,
+    "via": "send"
+  },
+  {
+    "name": "OAuthRegisterState",
+    "invoke": 0,
+    "on": 0,
+    "send": 1,
+    "sendSync": 0,
+    "via": "send"
+  },
+  {
+    "name": "OpenBrowserUrl",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "OpenCuaPermissionOnboarding",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "OpenExternal",
+    "invoke": 0,
+    "on": 0,
+    "send": 1,
+    "sendSync": 0,
+    "via": "send"
+  },
+  {
+    "name": "OpenFeedbackDialog",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "OpenInEditor",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "OpenInFileManager",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "OpenTicketsPanel",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "OpenUpdateStatusWindow",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "OpenWorkspace",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "OpenWorkspacePath",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "PaymentCallback",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "PostUpdateReleaseNotes",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "PrepareCuaHelperPermissionDrag",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "PrintToPdf",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "QuitAndInstallUpdate",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "ReadFinalArmsCustomEventsE2E",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "RemoteConnectionLog",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "RemoteSessionClosed",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "RendererActionTraceConfigChanged",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "RendererReady",
+    "invoke": 0,
+    "on": 0,
+    "send": 1,
+    "sendSync": 0,
+    "via": "send"
+  },
+  {
+    "name": "ReportArmsCustomEvent",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "ReportRendererActionTraceBatch",
+    "invoke": 0,
+    "on": 0,
+    "send": 1,
+    "sendSync": 0,
+    "via": "send"
+  },
+  {
+    "name": "ReportTelemetryEvent",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "ResetWebRemoteControlPairing",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "SaveFile",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "SaveMcpToUserDirectory",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "ScopedServicePort",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "ScopedServicePortReady",
+    "invoke": 0,
+    "on": 0,
+    "send": 1,
+    "sendSync": 0,
+    "via": "send"
+  },
+  {
+    "name": "SelectDirectory",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "SelectFile",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "SelectFiles",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "ServicePort",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "SetApplicationLocale",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "SetAutoDownloadAndInstallUpdates",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "SettingsChanged",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "SetTitleBarTheme",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "ShowTaskNotification",
+    "invoke": 0,
+    "on": 0,
+    "send": 1,
+    "sendSync": 0,
+    "via": "send"
+  },
+  {
+    "name": "SkipUpdateVersion",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "StartCuaHelperPermissionDrag",
+    "invoke": 0,
+    "on": 0,
+    "send": 1,
+    "sendSync": 0,
+    "via": "send"
+  },
+  {
+    "name": "StartPerformanceTrace",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "StartWebRemoteControl",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "StopPerformanceTrace",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "StopWebRemoteControl",
+    "invoke": 1,
+    "on": 0,
+    "send": 0,
+    "sendSync": 0,
+    "via": "invoke"
+  },
+  {
+    "name": "SyncActiveTaskSession",
+    "invoke": 0,
+    "on": 0,
+    "send": 1,
+    "sendSync": 0,
+    "via": "send"
+  },
+  {
+    "name": "SyncAppSettings",
+    "invoke": 0,
+    "on": 0,
+    "send": 1,
+    "sendSync": 0,
+    "via": "send"
+  },
+  {
+    "name": "SyncTelemetryContext",
+    "invoke": 0,
+    "on": 0,
+    "send": 1,
+    "sendSync": 0,
+    "via": "send"
+  },
+  {
+    "name": "SyncWebRemoteControlTasks",
+    "invoke": 0,
+    "on": 0,
+    "send": 1,
+    "sendSync": 0,
+    "via": "send"
+  },
+  {
+    "name": "SyncWebRemoteControlWorkspaces",
+    "invoke": 0,
+    "on": 0,
+    "send": 1,
+    "sendSync": 0,
+    "via": "send"
+  },
+  {
+    "name": "SyncWindowTabs",
+    "invoke": 0,
+    "on": 0,
+    "send": 1,
+    "sendSync": 0,
+    "via": "send"
+  },
+  {
+    "name": "SyncWindowUnreadCount",
+    "invoke": 0,
+    "on": 0,
+    "send": 1,
+    "sendSync": 0,
+    "via": "send"
+  },
+  {
+    "name": "TaskNotificationClick",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "TaskNotificationSound",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "UpdateCheckResult",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "UpdateReady",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "UpdateStateChanged",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "WebRemoteControlReconnectWorkspace",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "WebRemoteControlStatusChanged",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "WindowControlsOverlayChanged",
+    "invoke": 0,
+    "on": 2,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  },
+  {
+    "name": "WindowControlsOverlayReady",
+    "invoke": 0,
+    "on": 0,
+    "send": 1,
+    "sendSync": 0,
+    "via": "send"
+  },
+  {
+    "name": "WindowFullscreenChanged",
+    "invoke": 0,
+    "on": 1,
+    "send": 0,
+    "sendSync": 0,
+    "via": "on"
+  }
+]

@@ -67,7 +67,6 @@ const DIRECTIVE_REGISTRY = Object.freeze({
     tier: 'protocol',
     label: '指代消歧(代词/身份指向——唯一则展开·歧义则让用户选·多次澄清则降级推断)',
   },
-  diskCleanupClarify: { tier: 'protocol', label: '清盘参数澄清(扫描深度/颗粒细度交用户选)' },
   mathSolve: { tier: 'protocol', label: '数学解题协议(分步+精确值+回代自检)' },
   testWriting: { tier: 'protocol', label: '测试编写协议(对齐框架+成体系覆盖+确定性+跑出证据)' },
   errorEnumeration: { tier: 'protocol', label: '先枚举再修复(列全错误清单再逐个修)' },

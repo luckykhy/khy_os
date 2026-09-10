@@ -18,6 +18,7 @@ import { operationStatus } from '@/api/status';
 const SETTINGS = {
   defaultModel: 'settings_default_model',
   mode: 'settings_mode',
+  providerModels: 'settings_provider_models', // 持久化各 provider 拉取到的模型列表
 };
 
 export const useModelsStore = defineStore('mobile-models', () => {
@@ -71,13 +72,31 @@ export const useModelsStore = defineStore('mobile-models', () => {
   });
 
   async function restore() {
-    const [storedModel, storedMode] = await Promise.all([
+    const [storedModel, storedMode, storedProviderModels] = await Promise.all([
       getSetting(SETTINGS.defaultModel),
       getSetting(SETTINGS.mode),
+      getSetting(SETTINGS.providerModels),
     ]);
     defaultModel.value = storedModel || '';
     mode.value = storedMode || '';
     providers.value = standaloneProviders();
+
+    // 恢复持久化的模型列表
+    if (storedProviderModels && typeof storedProviderModels === 'object') {
+      providers.value = providers.value.map((p) => ({
+        ...p,
+        models: storedProviderModels[p.id] || p.models,
+      }));
+    }
+  }
+
+  // 持久化各 provider 的模型列表
+  async function persistProviderModels() {
+    const map = {};
+    for (const p of providers.value) {
+      map[p.id] = p.models;
+    }
+    await setSetting(SETTINGS.providerModels, map);
   }
 
   async function setDefaultModel(model) {
@@ -109,10 +128,15 @@ export const useModelsStore = defineStore('mobile-models', () => {
       providers.value.find((p) => p.id === provider)?.baseUrl || '',
       value.trim()
     ).then((list) => {
-      // 第一次配该 provider：把 defaultModel 设为列表第一个（让 ChatView 立即能用）
-      if (list?.length && !defaultModel.value) {
-        defaultModel.value = list[0];
-        setSetting(SETTINGS.defaultModel, list[0]).catch(() => {});
+      // 自动把 defaultModel 设为该 provider 列表第一个（让 ChatView 立即能用）
+      if (list?.length) {
+        const isCurrentProvider = (effectiveStandaloneProvider.value === provider);
+        const modelInList = list.includes(defaultModel.value);
+        // 当前无默认模型 / 默认模型不在新列表里 / 正好是当前 provider → 自动更新
+        if (!defaultModel.value || !modelInList || isCurrentProvider) {
+          defaultModel.value = list[0];
+          setSetting(SETTINGS.defaultModel, list[0]).catch(() => {});
+        }
       }
     }).catch(() => { /* 静默 — 用户可以手动点「拉取模型」 */ });
   }
@@ -138,6 +162,8 @@ export const useModelsStore = defineStore('mobile-models', () => {
         providers.value[index] = { ...providers.value[index], models };
       }
       if (provider === 'custom') customModels.value = models;
+      // 持久化模型列表到本地存储
+      await persistProviderModels();
       status.value = operationStatus('拉取', `模型列表（${provider}）`, '已更新', 'success');
       return models;
     } catch (cause) {
@@ -194,5 +220,6 @@ export const useModelsStore = defineStore('mobile-models', () => {
     refreshStandaloneModels,
     refreshRemoteCatalog,
     ensureKeysLoaded,
+    persistProviderModels,
   };
 });

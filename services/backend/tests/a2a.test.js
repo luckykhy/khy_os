@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * A2A Tests â€” Comprehensive tests for the A2A implementation.
+ * A2A Tests â€?Comprehensive tests for the A2A implementation.
  */
 
 const { describe, it, expect, beforeEach, afterEach } = require('@jest/globals');

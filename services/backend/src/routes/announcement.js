@@ -6,6 +6,7 @@ const { Op } = require('sequelize');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 const { Announcement, AnnouncementRead, User } = require('../models');
 const notificationService = require('../services/notificationService');
+const apiResponse = require('../utils/apiResponse');
 
 // 管理员创建公告
 router.post('/', authMiddleware, adminMiddleware, async (req, res) => {
@@ -23,10 +24,7 @@ router.post('/', authMiddleware, adminMiddleware, async (req, res) => {
     } = req.body;
 
     if (!title || !content) {
-      return res.status(400).json({
-        success: false,
-        message: '标题和内容不能为空',
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '标题和内容不能为空', {status: 400});
     }
 
     const announcement = await Announcement.create({
@@ -66,18 +64,10 @@ router.post('/', authMiddleware, adminMiddleware, async (req, res) => {
       console.error('广播公告通知失败:', broadcastError);
     }
 
-    res.json({
-      success: true,
-      message: '公告发布成功',
-      data: fullAnnouncement,
-    });
+    apiResponse.success(res, fullAnnouncement, {message: '公告发布成功'});
   } catch (error) {
     console.error('创建公告错误:', error);
-    res.status(500).json({
-      success: false,
-      message: '创建公告失败',
-      error: error.message,
-    });
+    apiResponse.fail(res, 'INTERNAL', '创建公告失败', {status: 500});
   }
 });
 
@@ -135,22 +125,16 @@ router.get('/admin', authMiddleware, adminMiddleware, async (req, res) => {
       }
     }
 
-    res.json({
-      success: true,
-      data: {
-        list: announcements.rows,
-        total: announcements.count,
-        page: parseInt(page),
-        pageSize: parseInt(pageSize),
-      },
+    const totalPages = Math.ceil(announcements.count / parseInt(pageSize));
+    apiResponse.page(res, announcements.rows, {
+      page: parseInt(page),
+      pageSize: parseInt(pageSize),
+      total: announcements.count,
+      totalPages,
     });
   } catch (error) {
     console.error('获取管理员公告列表错误:', error);
-    res.status(500).json({
-      success: false,
-      message: '获取公告列表失败',
-      error: error.message,
-    });
+    apiResponse.fail(res, 'INTERNAL', '获取公告列表失败', {status: 500});
   }
 });
 
@@ -227,23 +211,16 @@ router.get('/', authMiddleware, async (req, res) => {
     // 如果只要未读的，过滤结果
     const finalResult = unreadOnly === 'true' ? result.filter((item) => !item.isRead) : result;
 
-    res.json({
-      success: true,
-      data: {
-        list: finalResult,
-        total: unreadOnly === 'true' ? finalResult.length : announcements.count,
-        page: parseInt(page),
-        pageSize: parseInt(pageSize),
-        unreadCount: result.filter((item) => !item.isRead).length,
-      },
+    apiResponse.success(res, {
+      list: finalResult,
+      total: unreadOnly === 'true' ? finalResult.length : announcements.count,
+      page: parseInt(page),
+      pageSize: parseInt(pageSize),
+      unreadCount: result.filter((item) => !item.isRead).length,
     });
   } catch (error) {
     console.error('获取公告列表错误:', error);
-    res.status(500).json({
-      success: false,
-      message: '获取公告列表失败',
-      error: error.message,
-    });
+    apiResponse.fail(res, 'INTERNAL', '获取公告列表失败', {status: 500});
   }
 });
 
@@ -263,18 +240,12 @@ router.get('/:id', authMiddleware, async (req, res) => {
     });
 
     if (!announcement) {
-      return res.status(404).json({
-        success: false,
-        message: '公告不存在',
-      });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', '公告不存在', {status: 404});
     }
 
     // 检查用户是否有权限查看
     if (announcement.status !== 'published' && req.user.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        message: '无权限查看此公告',
-      });
+      return apiResponse.fail(res, 'PERMISSION_DENIED', '无权限查看此公告', {status: 403});
     }
 
     // 检查是否已读
@@ -296,22 +267,15 @@ router.get('/:id', authMiddleware, async (req, res) => {
       await announcement.increment('readCount');
     }
 
-    res.json({
-      success: true,
-      data: {
-        ...announcement.toJSON(),
-        isRead: !!read,
-        readAt: read?.readAt,
-        isLiked: read?.isLiked || false,
-      },
+    apiResponse.success(res, {
+      ...announcement.toJSON(),
+      isRead: !!read,
+      readAt: read?.readAt,
+      isLiked: read?.isLiked || false,
     });
   } catch (error) {
     console.error('获取公告详情错误:', error);
-    res.status(500).json({
-      success: false,
-      message: '获取公告详情失败',
-      error: error.message,
-    });
+    apiResponse.fail(res, 'INTERNAL', '获取公告详情失败', {status: 500});
   }
 });
 
@@ -322,10 +286,7 @@ router.post('/:id/like', authMiddleware, async (req, res) => {
 
     const announcement = await Announcement.findByPk(id);
     if (!announcement) {
-      return res.status(404).json({
-        success: false,
-        message: '公告不存在',
-      });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', '公告不存在', {status: 404});
     }
 
     const [read, created] = await AnnouncementRead.findOrCreate({
@@ -344,20 +305,10 @@ router.post('/:id/like', authMiddleware, async (req, res) => {
       await read.save();
     }
 
-    res.json({
-      success: true,
-      message: read.isLiked ? '点赞成功' : '取消点赞',
-      data: {
-        isLiked: read.isLiked,
-      },
-    });
+    apiResponse.success(res, {isLiked: read.isLiked}, {message: read.isLiked ? '点赞成功' : '取消点赞'});
   } catch (error) {
     console.error('点赞公告错误:', error);
-    res.status(500).json({
-      success: false,
-      message: '操作失败',
-      error: error.message,
-    });
+    apiResponse.fail(res, 'INTERNAL', '操作失败', {status: 500});
   }
 });
 
@@ -369,10 +320,7 @@ router.put('/:id', authMiddleware, adminMiddleware, async (req, res) => {
 
     const announcement = await Announcement.findByPk(id);
     if (!announcement) {
-      return res.status(404).json({
-        success: false,
-        message: '公告不存在',
-      });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', '公告不存在', {status: 404});
     }
 
     await announcement.update({
@@ -384,18 +332,10 @@ router.put('/:id', authMiddleware, adminMiddleware, async (req, res) => {
       },
     });
 
-    res.json({
-      success: true,
-      message: '公告更新成功',
-      data: announcement,
-    });
+    apiResponse.success(res, announcement, {message: '公告更新成功'});
   } catch (error) {
     console.error('更新公告错误:', error);
-    res.status(500).json({
-      success: false,
-      message: '更新公告失败',
-      error: error.message,
-    });
+    apiResponse.fail(res, 'INTERNAL', '更新公告失败', {status: 500});
   }
 });
 
@@ -406,10 +346,7 @@ router.delete('/:id', authMiddleware, adminMiddleware, async (req, res) => {
 
     const announcement = await Announcement.findByPk(id);
     if (!announcement) {
-      return res.status(404).json({
-        success: false,
-        message: '公告不存在',
-      });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', '公告不存在', {status: 404});
     }
 
     // 删除相关的阅读记录
@@ -420,17 +357,10 @@ router.delete('/:id', authMiddleware, adminMiddleware, async (req, res) => {
     // 删除公告
     await announcement.destroy();
 
-    res.json({
-      success: true,
-      message: '公告删除成功',
-    });
+    apiResponse.success(res, null, {message: '公告删除成功'});
   } catch (error) {
     console.error('删除公告错误:', error);
-    res.status(500).json({
-      success: false,
-      message: '删除公告失败',
-      error: error.message,
-    });
+    apiResponse.fail(res, 'INTERNAL', '删除公告失败', {status: 500});
   }
 });
 
@@ -458,30 +388,23 @@ router.get('/admin/stats', authMiddleware, adminMiddleware, async (req, res) => 
       group: ['priority'],
     });
 
-    res.json({
-      success: true,
-      data: {
-        total: totalCount,
-        published: publishedCount,
-        draft: draftCount,
-        sticky: stickyCount,
-        typeStats: typeStats.map((item) => ({
-          type: item.type,
-          count: parseInt(item.dataValues.count),
-        })),
-        priorityStats: priorityStats.map((item) => ({
-          priority: item.priority,
-          count: parseInt(item.dataValues.count),
-        })),
-      },
+    apiResponse.success(res, {
+      total: totalCount,
+      published: publishedCount,
+      draft: draftCount,
+      sticky: stickyCount,
+      typeStats: typeStats.map((item) => ({
+        type: item.type,
+        count: parseInt(item.dataValues.count),
+      })),
+      priorityStats: priorityStats.map((item) => ({
+        priority: item.priority,
+        count: parseInt(item.dataValues.count),
+      })),
     });
   } catch (error) {
     console.error('获取公告统计错误:', error);
-    res.status(500).json({
-      success: false,
-      message: '获取统计信息失败',
-      error: error.message,
-    });
+    apiResponse.fail(res, 'INTERNAL', '获取统计信息失败', {status: 500});
   }
 });
 

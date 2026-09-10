@@ -16,6 +16,7 @@
  * @module handlers/twentyX
  */
 const chalk = require('chalk').default || require('chalk');
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const twentyXMode = require('../../services/twentyXMode');
 const { printInfo, printError, printSuccess } = require('../formatters');
 
@@ -85,4 +86,15 @@ async function handleTwentyX(parsed = {}) {
   }
 }
 
-module.exports = { handleTwentyX };
+module.exports = {
+  handleTwentyX,
+  [MANIFEST_EXPORT_KEY]: {
+    name: '20x',
+    aliases: ['20倍', '满负荷'],
+    description: '20 倍满负荷模式：状态/开关（effort=max + 扩展思考 + 更高工具迭代上限）',
+    usage: '20x [status|on|off]',
+    subCommands: ['status', 'on', 'off'],
+    category: 'system',
+    handler: handleTwentyX,
+  },
+};

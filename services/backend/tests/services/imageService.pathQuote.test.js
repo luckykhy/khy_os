@@ -37,3 +37,4 @@ describe('imageService.writeClipboardText', () => {
     expect(typeof imageService.writeClipboardText(undefined)).toBe('boolean');
   });
 });
+

@@ -13,7 +13,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const lt = require('../../../src/services/browser/_evalTimeout');
+const lt = require('../../../src/services/domain/desktop/browser/_evalTimeout.js');
 
 test('isEvalTimeoutEnabled:默认 on;显式 off/0/false/no 关', () => {
   assert.equal(lt.isEvalTimeoutEnabled({}), true);

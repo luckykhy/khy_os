@@ -13,8 +13,8 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const inst = require('../../src/services/proxy/proxyCoreInstaller');
-const mgr = require('../../src/services/proxy/proxyCoreManager');
+const inst = require('../../src/services/domain/network/proxy/proxyCoreInstaller.js');
+const mgr = require('../../src/services/domain/network/proxy/proxyCoreManager.js');
 const { FLAG } = inst;
 
 // ── 内存 fake fs(记录写/chmod/unlink)──────────────────────────────────────

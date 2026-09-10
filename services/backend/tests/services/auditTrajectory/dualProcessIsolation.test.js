@@ -354,7 +354,7 @@ describe('workerProcess：启动方案在 spawn 之前就定死', () => {
 
 describe('attachInWorker：轨迹归属取被钉死的目录', () => {
   test('进程内 chdir 之后写的事件仍归属 workspace', async () => {
-    const hookSystem = require('../../../src/services/hooks/hookSystem');
+    const hookSystem = require('../../../src/services/domain/extensions/hooks/hookSystem.js');
     const root = mkRoot('attach-pinned');
     const workspace = path.join(root, 'workspace');
     fs.mkdirSync(workspace, { recursive: true });

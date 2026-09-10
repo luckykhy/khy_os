@@ -1704,14 +1704,13 @@ function formatProgressTable(progress) {
   const colTitle = Math.max(8, W - colId - colBar - 4); // 标题列 (扣除分隔符)
   const barLen = Math.max(6, colBar - 12); // 进度条块数 (去掉 " 100% 0/0 ")
 
-  const hRule = (l, m, r) =>
-    T.sep(l + '─'.repeat(colId) + m + '─'.repeat(colTitle) + m + '─'.repeat(colBar) + r);
+  const hRule = (l, m, r) => '';
   const lines = [];
 
   // 标题行
   const titleText = T.title('KHY OS 学习进度');
   const pad1 = Math.max(0, W - 20);
-  lines.push(T.sep('╭─── ') + titleText + T.sep(' ' + '─'.repeat(Math.max(1, pad1 - 5)) + '╮'));
+  lines.push(T.sep('') + titleText);
 
   // 汇总行
   const sumText = `  ${T.hint('总经验:')} ${T.xp(String(progress.totalXP).padEnd(6) + ' XP')}    ${T.hint('当前层级:')} ${T.layerNum('第 ' + progress.currentLayer + ' 层')}`;
@@ -1761,7 +1760,6 @@ function formatProgressTable(progress) {
     );
   }
 
-  lines.push(hRule('╰', '┴', '╯'));
   return lines.join('\n');
 }
 
@@ -1772,7 +1770,6 @@ function formatLayerList() {
   const lines = [];
   lines.push('');
   lines.push(`  ${T.title('KHY OS 学习路线图')} ${T.sep('—')} ${T.hint('从零到精通')}`);
-  lines.push(`  ${T.sep(_rule())}`);
   lines.push('');
   for (const layer of LAYERS) {
     const total = layer.topics.length;

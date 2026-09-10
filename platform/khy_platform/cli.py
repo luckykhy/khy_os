@@ -1715,6 +1715,7 @@ _KNOWN_COMMANDS = {
     "chat", "gateway", "os", "khyos", "upgrade", "update",
     "help", "version", "docs", "analytics", "config",
     "status", "info", "init", "start", "restart",
+    "server", "daemon", "bridge", "mobile", "md", "resume",
 }
 
 

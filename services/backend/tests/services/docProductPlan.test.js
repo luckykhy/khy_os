@@ -9,7 +9,7 @@ const {
   docRegenEnabled,
   planDocProducts,
   _stripExt,
-} = require('../../src/services/docsFreshness/docProductPlan');
+} = require('../../src/services/domain/docs/docsFreshness/docProductPlan.js');
 
 test('docRegenEnabled 默认开,{0,false,off,no} 关', () => {
   assert.strictEqual(docRegenEnabled({}), true);

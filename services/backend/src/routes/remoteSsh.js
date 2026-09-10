@@ -19,6 +19,7 @@ const {
   markPersistenceAlertsAcknowledged,
 } = require('../services/remote');
 const { attach: attachSseKeepalive } = require('../services/sseKeepalive');
+const apiResponse = require('../utils/apiResponse');
 
 const router = express.Router();
 
@@ -210,23 +211,14 @@ router.get('/hosts', async (req, res) => {
       credential_status: sshCredentialGuard.validateHostCredentials(host),
     }));
 
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        config_path: discovered.configPath,
-        total_hosts: hosts.length,
-        hosts,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      config_path: discovered.configPath,
+      total_hosts: hosts.length,
+      hosts,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `读取 SSH 主机配置失败: ${error.message}`,
-      data: {
-        trace_id: traceId,
-      },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `读取 SSH 主机配置失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -238,47 +230,24 @@ router.post('/connect', async (req, res) => {
     const purpose = _trimmedString(req.body?.purpose) || 'development';
 
     if (!hostAlias) {
-      return res.status(400).json({
-        success: false,
-        message: '连接远程主机失败: hostAlias 为必填项。',
-        data: { trace_id: traceId },
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '连接远程主机失败: hostAlias 为必填项。', { status: 400 });
     }
 
     const allowlist = _allowedHostAliasSet();
     if (allowlist.size > 0 && !allowlist.has(hostAlias)) {
-      return res.status(403).json({
-        success: false,
-        message: `连接远程主机失败: 主机别名 ${hostAlias} 不在允许列表中。`,
-        data: {
-          trace_id: traceId,
-          allowed_aliases: Array.from(allowlist),
-        },
-      });
+      return apiResponse.fail(res, 'PERMISSION_DENIED', `连接远程主机失败: 主机别名 ${hostAlias} 不在允许列表中。`, { status: 403 });
     }
 
     const discovered = sshConfigService.listHosts();
     const hostEntry = discovered.hosts.find((item) => item.alias === hostAlias);
 
     if (!hostEntry) {
-      return res.status(404).json({
-        success: false,
-        message: `连接远程主机失败: 未找到别名 ${hostAlias}。`,
-        data: { trace_id: traceId },
-      });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', `连接远程主机失败: 未找到别名 ${hostAlias}。`, { status: 404 });
     }
 
     const credentialStatus = sshCredentialGuard.validateHostCredentials(hostEntry);
     if (!credentialStatus.ok) {
-      return res.status(400).json({
-        success: false,
-        message: `连接远程主机失败: ${credentialStatus.message}`,
-        data: {
-          trace_id: traceId,
-          host_alias: hostAlias,
-          credential_status: credentialStatus,
-        },
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', `连接远程主机失败: ${credentialStatus.message}`, { status: 400 });
     }
 
     const workspace = remoteWorkspaceResolver.resolveWorkspace({
@@ -293,29 +262,22 @@ router.post('/connect', async (req, res) => {
       traceId,
     });
 
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        connection_id: session.connectionId,
-        status: session.status,
-        host_alias: session.hostAlias,
-        host: session.host,
-        port: session.port,
-        user: session.remoteUser,
-        workspace: session.remoteWorkspace,
-        purpose: session.purpose,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      connection_id: session.connectionId,
+      status: session.status,
+      host_alias: session.hostAlias,
+      host: session.host,
+      port: session.port,
+      user: session.remoteUser,
+      workspace: session.remoteWorkspace,
+      purpose: session.purpose,
     });
   } catch (error) {
-    const code = error.code === 'workspace_not_allowed' ? 400 : 500;
-    return res.status(code).json({
-      success: false,
-      message: `连接远程主机失败: ${error.message}`,
-      data: {
-        trace_id: traceId,
-      },
-    });
+    if (error.code === 'workspace_not_allowed') {
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', `连接远程主机失败: ${error.message}`, { status: 400 });
+    }
+    return apiResponse.fail(res, 'INTERNAL', `连接远程主机失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -325,40 +287,24 @@ router.post('/disconnect', async (req, res) => {
     const connectionId = _trimmedString(req.body?.connection_id);
 
     if (!connectionId) {
-      return res.status(400).json({
-        success: false,
-        message: '断开远程会话失败: connection_id 为必填项。',
-        data: { trace_id: traceId },
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '断开远程会话失败: connection_id 为必填项。', { status: 400 });
     }
 
     const result = sshConnectionManager.disconnect(connectionId);
     if (!result.disconnected) {
-      const statusCode = result.status === 'not_found' ? 404 : 400;
-      return res.status(statusCode).json({
-        success: false,
-        message: `断开远程会话失败: ${result.status}`,
-        data: {
-          trace_id: traceId,
-          connection_id: connectionId,
-        },
-      });
+      if (result.status === 'not_found') {
+        return apiResponse.fail(res, 'MODEL_NOT_FOUND', `断开远程会话失败: ${result.status}`, { status: 404 });
+      }
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', `断开远程会话失败: ${result.status}`, { status: 400 });
     }
 
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        connection_id: result.connectionId,
-        status: result.status,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      connection_id: result.connectionId,
+      status: result.status,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `断开远程会话失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `断开远程会话失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -376,22 +322,11 @@ router.post('/exec', async (req, res) => {
         : null;
 
     if (!connectionId) {
-      return res.status(400).json({
-        success: false,
-        message: '执行远程命令失败: connection_id 为必填项。',
-        data: { trace_id: traceId },
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '执行远程命令失败: connection_id 为必填项。', { status: 400 });
     }
 
     if (commands.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: '执行远程命令失败: commands 不能为空。',
-        data: {
-          trace_id: traceId,
-          connection_id: connectionId,
-        },
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '执行远程命令失败: commands 不能为空。', { status: 400 });
     }
 
     if (dryRun) {
@@ -401,10 +336,7 @@ router.post('/exec', async (req, res) => {
         traceId,
         riskContext,
       });
-      return res.json({
-        success: true,
-        data: dryRunResult,
-      });
+      return apiResponse.success(res, dryRunResult);
     }
 
     const execResult = await remoteExecService.requestExecution({
@@ -417,11 +349,7 @@ router.post('/exec', async (req, res) => {
     });
 
     if (execResult.status === 'idempotency_key_required') {
-      return res.status(400).json({
-        success: false,
-        message: '执行远程命令失败: 副作用操作必须提供 idempotency_key。',
-        data: execResult,
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '执行远程命令失败: 副作用操作必须提供 idempotency_key。', { status: 400 });
     }
 
     if (execResult.status === 'approval_required') {
@@ -432,79 +360,43 @@ router.post('/exec', async (req, res) => {
     }
 
     if (execResult.status === 'idempotency_conflict') {
-      return res.status(409).json({
-        success: false,
-        message: '执行远程命令失败: idempotency_key 与历史请求冲突。',
-        data: execResult,
-      });
+      return apiResponse.fail(res, 'CONFLICT', '执行远程命令失败: idempotency_key 与历史请求冲突。', { status: 409 });
     }
 
     if (execResult.status === 'idempotency_in_progress') {
-      return res.status(409).json({
-        success: false,
-        message: '执行远程命令失败: 相同 idempotency_key 的请求正在处理中。',
-        data: execResult,
-      });
+      return apiResponse.fail(res, 'CONFLICT', '执行远程命令失败: 相同 idempotency_key 的请求正在处理中。', { status: 409 });
     }
 
     if (execResult.status === 'approval_idempotency_mismatch') {
-      return res.status(409).json({
-        success: false,
-        message: '执行远程命令失败: idempotency_key 与审批单不匹配。',
-        data: execResult,
-      });
+      return apiResponse.fail(res, 'CONFLICT', '执行远程命令失败: idempotency_key 与审批单不匹配。', { status: 409 });
     }
 
     if (execResult.status === 'approval_ticket_consumed') {
-      return res.status(409).json({
-        success: false,
-        message: '执行远程命令失败: 该审批单已被消费。',
-        data: execResult,
-      });
+      return apiResponse.fail(res, 'CONFLICT', '执行远程命令失败: 该审批单已被消费。', { status: 409 });
     }
 
     if (execResult.status === 'approval_ticket_consume_failed') {
-      return res.status(409).json({
-        success: false,
-        message: '执行远程命令失败: 审批单消费失败。',
-        data: execResult,
-      });
+      return apiResponse.fail(res, 'CONFLICT', '执行远程命令失败: 审批单消费失败。', { status: 409 });
     }
 
     if (execResult.status === 'execution_disabled') {
-      return res.status(409).json({
-        success: false,
-        message: '远程副作用执行已禁用: 当前阶段仅支持 dry_run 预演。',
-        data: execResult,
-      });
+      return apiResponse.fail(res, 'CONFLICT', '远程副作用执行已禁用: 当前阶段仅支持 dry_run 预演。', { status: 409 });
     }
 
     if (execResult.status === 'idempotent_replay') {
-      return res.json({
-        success: true,
-        data: execResult,
-      });
+      return apiResponse.success(res, execResult);
     }
 
     if (execResult.status === 'execution_error') {
-      return res.status(500).json({
-        success: false,
-        message: '执行远程命令失败: 远程执行器返回错误。',
-        data: execResult,
-      });
+      return apiResponse.fail(res, 'INTERNAL', '执行远程命令失败: 远程执行器返回错误。', { status: 500 });
     }
 
-    return res.json({
-      success: true,
-      data: execResult,
-    });
+    return apiResponse.success(res, execResult);
   } catch (error) {
-    const statusCode = error.code === 'session_not_found' ? 404 : 500;
-    return res.status(statusCode).json({
-      success: false,
-      message: `执行远程命令失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    if (error.code === 'session_not_found') {
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', `执行远程命令失败: ${error.message}`, { status: 404 });
+    }
+    return apiResponse.fail(res, 'INTERNAL', `执行远程命令失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -534,22 +426,11 @@ router.post('/exec/stream', async (req, res) => {
       dryRunExplicit;
 
     if (!hasExecutionPayload && !streamIdFromBody && !streamIdFromHeader) {
-      return res.status(400).json({
-        success: false,
-        message: '恢复执行流失败: 缺少 stream_id，且未提供新的执行参数。',
-        data: { trace_id: traceId },
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '恢复执行流失败: 缺少 stream_id，且未提供新的执行参数。', { status: 400 });
     }
 
     if (!hasExecutionPayload && !remoteExecStreamStore.hasSession(streamId)) {
-      return res.status(404).json({
-        success: false,
-        message: '恢复执行流失败: 未找到对应 stream_id。',
-        data: {
-          trace_id: traceId,
-          stream_id: streamId,
-        },
-      });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', '恢复执行流失败: 未找到对应 stream_id。', { status: 404 });
     }
 
     const requestContext = hasExecutionPayload
@@ -585,17 +466,10 @@ router.post('/exec/stream', async (req, res) => {
     });
 
     if (!ensureResult.ok) {
-      const status = ensureResult.code === 'stream_payload_conflict' ? 409 : 400;
-      return res.status(status).json({
-        success: false,
-        message: `执行流创建失败: ${ensureResult.message}`,
-        data: {
-          trace_id: traceId,
-          stream_id: streamId,
-          code: ensureResult.code,
-          session: ensureResult.session || null,
-        },
-      });
+      if (ensureResult.code === 'stream_payload_conflict') {
+        return apiResponse.fail(res, 'CONFLICT', `执行流创建失败: ${ensureResult.message}`, { status: 409 });
+      }
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', `执行流创建失败: ${ensureResult.message}`, { status: 400 });
     }
 
     res.setHeader('X-KHY-Remote-Stream-Id', streamId);
@@ -720,11 +594,7 @@ router.post('/exec/stream', async (req, res) => {
         });
     }
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `执行远程命令失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `执行远程命令失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -735,61 +605,36 @@ router.get('/exec/stream/:streamId', async (req, res) => {
     const afterSeq = _parseAfterSeqFromRequest(req);
 
     if (!streamId) {
-      return res.status(400).json({
-        success: false,
-        message: '读取执行流失败: stream_id 为必填项。',
-        data: { trace_id: traceId },
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '读取执行流失败: stream_id 为必填项。', { status: 400 });
     }
 
     const session = remoteExecStreamStore.getSession(streamId);
     if (!session) {
-      return res.status(404).json({
-        success: false,
-        message: '读取执行流失败: 未找到对应 stream_id。',
-        data: {
-          trace_id: traceId,
-          stream_id: streamId,
-        },
-      });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', '读取执行流失败: 未找到对应 stream_id。', { status: 404 });
     }
 
     const replay = remoteExecStreamStore.getEventsSince(streamId, afterSeq);
     if (!replay) {
-      return res.status(404).json({
-        success: false,
-        message: '读取执行流失败: 执行流已过期或不存在。',
-        data: {
-          trace_id: traceId,
-          stream_id: streamId,
-        },
-      });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', '读取执行流失败: 执行流已过期或不存在。', { status: 404 });
     }
 
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        stream: {
-          stream_id: session.stream_id,
-          created_at: session.created_at,
-          updated_at: session.updated_at,
-          started: session.started,
-          done: session.done,
-          terminal_status: session.terminal_status,
-          last_seq: session.last_seq,
-          request_fingerprint: session.request_fingerprint,
-          connection_id: session.metadata?.connection_id || null,
-        },
-        replay,
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      stream: {
+        stream_id: session.stream_id,
+        created_at: session.created_at,
+        updated_at: session.updated_at,
+        started: session.started,
+        done: session.done,
+        terminal_status: session.terminal_status,
+        last_seq: session.last_seq,
+        request_fingerprint: session.request_fingerprint,
+        connection_id: session.metadata?.connection_id || null,
       },
+      replay,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `读取执行流失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `读取执行流失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -797,20 +642,13 @@ router.get('/approvals/pending', async (req, res) => {
   const traceId = _buildTraceId(req);
   try {
     const tickets = remoteApprovalBridge.listPendingTickets();
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        total_pending: tickets.length,
-        approvals: tickets,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      total_pending: tickets.length,
+      approvals: tickets,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `读取远程审批队列失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `读取远程审批队列失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -823,39 +661,19 @@ router.post('/approvals/decision', async (req, res) => {
     const reason = _trimmedString(req.body?.reason) || null;
 
     if (!ticketId) {
-      return res.status(400).json({
-        success: false,
-        message: '审批失败: ticket_id 为必填项。',
-        data: { trace_id: traceId },
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '审批失败: ticket_id 为必填项。', { status: 400 });
     }
     if (decision !== 'approve' && decision !== 'reject') {
-      return res.status(400).json({
-        success: false,
-        message: '审批失败: decision 仅支持 approve 或 reject。',
-        data: { trace_id: traceId, ticket_id: ticketId },
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '审批失败: decision 仅支持 approve 或 reject。', { status: 400 });
     }
 
     const ticket = remoteApprovalBridge.getTicket(ticketId);
     if (!ticket) {
-      return res.status(404).json({
-        success: false,
-        message: '审批失败: 未找到对应审批单。',
-        data: { trace_id: traceId, ticket_id: ticketId },
-      });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', '审批失败: 未找到对应审批单。', { status: 404 });
     }
 
     if (ticket.status !== 'pending') {
-      return res.status(409).json({
-        success: false,
-        message: `审批失败: 当前审批单状态为 ${ticket.status}，无法再次审批。`,
-        data: {
-          trace_id: traceId,
-          ticket_id: ticketId,
-          status: ticket.status,
-        },
-      });
+      return apiResponse.fail(res, 'CONFLICT', `审批失败: 当前审批单状态为 ${ticket.status}，无法再次审批。`, { status: 409 });
     }
 
     const nextTicket =
@@ -863,19 +681,12 @@ router.post('/approvals/decision', async (req, res) => {
         ? remoteApprovalBridge.approveTicket(ticketId, reviewer)
         : remoteApprovalBridge.rejectTicket(ticketId, reviewer, reason || 'rejected_by_reviewer');
 
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        ticket: nextTicket,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      ticket: nextTicket,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `审批失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `审批失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -883,19 +694,12 @@ router.get('/sessions', async (req, res) => {
   const traceId = _buildTraceId(req);
   try {
     const snapshot = remoteStateSyncService.getSnapshot();
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        ...snapshot,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      ...snapshot,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `读取远程会话状态失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `读取远程会话状态失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -908,25 +712,18 @@ router.get('/alerts/persistence', async (req, res) => {
     const alerts = listPersistenceAlerts({ afterId, limit, onlyUnacked });
     const snapshot = remoteStateSyncService.getSnapshot();
 
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        total: alerts.length,
-        after_id: afterId,
-        limit,
-        only_unacked: onlyUnacked,
-        alerts,
-        latest: snapshot.persistence?.latest_alert || null,
-        latest_unacked: snapshot.persistence?.latest_unacked_alert || null,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      total: alerts.length,
+      after_id: afterId,
+      limit,
+      only_unacked: onlyUnacked,
+      alerts,
+      latest: snapshot.persistence?.latest_alert || null,
+      latest_unacked: snapshot.persistence?.latest_unacked_alert || null,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `读取持久化告警失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `读取持久化告警失败: ${error.message}`, { status: 500 });
   }
 });
 
@@ -938,11 +735,7 @@ router.post('/alerts/persistence/ack', async (req, res) => {
     const reviewer = _trimmedString(req.body?.reviewer) || null;
 
     if (alertId == null && upToId == null) {
-      return res.status(400).json({
-        success: false,
-        message: '确认持久化告警失败: alert_id 或 up_to_id 至少提供一个。',
-        data: { trace_id: traceId },
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '确认持久化告警失败: alert_id 或 up_to_id 至少提供一个。', { status: 400 });
     }
 
     const ackResult = markPersistenceAlertsAcknowledged({
@@ -952,40 +745,19 @@ router.post('/alerts/persistence/ack', async (req, res) => {
     });
 
     if (!ackResult.ok) {
-      return res.status(400).json({
-        success: false,
-        message: `确认持久化告警失败: ${ackResult.code}`,
-        data: {
-          trace_id: traceId,
-          ...ackResult,
-        },
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', `确认持久化告警失败: ${ackResult.code}`, { status: 400 });
     }
 
     if (ackResult.acked_count === 0) {
-      return res.status(404).json({
-        success: false,
-        message: '确认持久化告警失败: 未找到可确认的告警。',
-        data: {
-          trace_id: traceId,
-          ...ackResult,
-        },
-      });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', '确认持久化告警失败: 未找到可确认的告警。', { status: 404 });
     }
 
-    return res.json({
-      success: true,
-      data: {
-        trace_id: traceId,
-        ...ackResult,
-      },
+    return apiResponse.success(res, {
+      trace_id: traceId,
+      ...ackResult,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: `确认持久化告警失败: ${error.message}`,
-      data: { trace_id: traceId },
-    });
+    return apiResponse.fail(res, 'INTERNAL', `确认持久化告警失败: ${error.message}`, { status: 500 });
   }
 });
 

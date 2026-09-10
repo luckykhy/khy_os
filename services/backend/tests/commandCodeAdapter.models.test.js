@@ -1,7 +1,6 @@
 'use strict';
-
 /**
- * commandCodeAdapter.models.test.js â€” verifies the model-list surface that
+ * commandCodeAdapter.models.test.js â€?verifies the model-list surface that
  * the new `khy provider` command (sprint 17) relies on. No real CLI is
  * spawned; we redirect the adapter's commandCodeHome by writing
  * config.json / providers.json into a temp dir, then point
@@ -20,13 +19,9 @@
  *  4. _listModels dedupes when a model id appears in both sources
  *  5. getStatus() reports the adapter name + the KHY_COMMANDCODE gate correctly
  */
-
-const test = require('node:test');
-const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-
 function withTempCmdcHome(fn) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'khyos-cmdc-adapter-'));
   const prevHome = process.env.COMMAND_CODE_HOME;
@@ -57,72 +52,76 @@ function withTempCmdcHome(fn) {
   }
 }
 
-test('listModels returns [] when config.json is missing', async () => {
-  await withTempCmdcHome(async (adapter) => {
-    const models = await adapter.listModels();
-    assert.deepEqual(models, []);
+describe('Command Code Adapter models', () => {
+  test('listModels returns [] when config.json is missing', async () => {
+      await withTempCmdcHome(async (adapter) => {
+        const models = await adapter.listModels();
+        assert.deepEqual(models, []);
+      });
   });
+
+  test('listModels surfaces defaultModel from config.json', async () => {
+      await withTempCmdcHome(async (adapter, dir) => {
+        fs.writeFileSync(
+          path.join(dir, 'config.json'),
+          JSON.stringify({ model: 'minimax/minimax-m3-free', provider: 'command-code' }, null, 2)
+        );
+        const models = await adapter.listModels();
+        expect(models.length).toBe(1);
+        expect(models[0].id).toBe('minimax/minimax-m3-free');
+        expect(models[0].isDefault).toBe(true);
+        expect(models[0].provider).toBe('commandcode');
+      });
+  });
+
+  test('listModels surfaces BYOK provider/model pairs from providers.json', async () => {
+      await withTempCmdcHome(async (adapter, dir) => {
+        fs.writeFileSync(
+          path.join(dir, 'providers.json'),
+          JSON.stringify({
+            provider: {
+              'my-deepseek': {
+                name: 'My DeepSeek',
+                models: { 'deepseek-chat': { id: 'deepseek-chat' } },
+              },
+            },
+          }, null, 2)
+        );
+        const models = await adapter.listModels();
+        expect(models.length).toBe(1);
+        expect(models[0].id).toBe('my-deepseek/deepseek-chat');
+        expect(models[0].name).toBe('My DeepSeek / deepseek-chat');
+      });
+  });
+
+  test('listModels merges default + BYOK with dedup', async () => {
+      await withTempCmdcHome(async (adapter, dir) => {
+        fs.writeFileSync(
+          path.join(dir, 'config.json'),
+          JSON.stringify({ model: 'minimax/minimax-m3-free' }, null, 2)
+        );
+        fs.writeFileSync(
+          path.join(dir, 'providers.json'),
+          JSON.stringify({
+            provider: {
+              'my-x': { name: 'MyX', models: { 'foo': { id: 'foo' } } },
+            },
+          }, null, 2)
+        );
+        const models = await adapter.listModels();
+        const ids = models.map((m) => m.id).sort();
+        assert.deepEqual(ids, ['minimax/minimax-m3-free', 'my-x/foo']);
+      });
+  });
+
+  test('getStatus returns adapter name and availability flag', async () => {
+      withTempCmdcHome((adapter) => {
+        const status = adapter.getStatus();
+        expect(status.name).toBe('CommandCode');
+        expect(status.type).toBe('commandcode');
+        expect(typeof status.available).toBe('boolean');
+      });
+  });
+
 });
 
-test('listModels surfaces defaultModel from config.json', async () => {
-  await withTempCmdcHome(async (adapter, dir) => {
-    fs.writeFileSync(
-      path.join(dir, 'config.json'),
-      JSON.stringify({ model: 'minimax/minimax-m3-free', provider: 'command-code' }, null, 2)
-    );
-    const models = await adapter.listModels();
-    assert.equal(models.length, 1);
-    assert.equal(models[0].id, 'minimax/minimax-m3-free');
-    assert.equal(models[0].isDefault, true);
-    assert.equal(models[0].provider, 'commandcode');
-  });
-});
-
-test('listModels surfaces BYOK provider/model pairs from providers.json', async () => {
-  await withTempCmdcHome(async (adapter, dir) => {
-    fs.writeFileSync(
-      path.join(dir, 'providers.json'),
-      JSON.stringify({
-        provider: {
-          'my-deepseek': {
-            name: 'My DeepSeek',
-            models: { 'deepseek-chat': { id: 'deepseek-chat' } },
-          },
-        },
-      }, null, 2)
-    );
-    const models = await adapter.listModels();
-    assert.equal(models.length, 1);
-    assert.equal(models[0].id, 'my-deepseek/deepseek-chat');
-    assert.equal(models[0].name, 'My DeepSeek / deepseek-chat');
-  });
-});
-
-test('listModels merges default + BYOK with dedup', async () => {
-  await withTempCmdcHome(async (adapter, dir) => {
-    fs.writeFileSync(
-      path.join(dir, 'config.json'),
-      JSON.stringify({ model: 'minimax/minimax-m3-free' }, null, 2)
-    );
-    fs.writeFileSync(
-      path.join(dir, 'providers.json'),
-      JSON.stringify({
-        provider: {
-          'my-x': { name: 'MyX', models: { 'foo': { id: 'foo' } } },
-        },
-      }, null, 2)
-    );
-    const models = await adapter.listModels();
-    const ids = models.map((m) => m.id).sort();
-    assert.deepEqual(ids, ['minimax/minimax-m3-free', 'my-x/foo']);
-  });
-});
-
-test('getStatus returns adapter name and availability flag', () => {
-  withTempCmdcHome((adapter) => {
-    const status = adapter.getStatus();
-    assert.equal(status.name, 'CommandCode');
-    assert.equal(status.type, 'commandcode');
-    assert.equal(typeof status.available, 'boolean');
-  });
-});

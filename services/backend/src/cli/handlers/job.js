@@ -23,6 +23,7 @@
  *
  * @module handlers/job
  */
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const chalk = require('chalk').default || require('chalk');
 const store = require('../../jobs/jobStore');
 const templatesApi = require('../../jobs/jobTemplates');
@@ -213,4 +214,13 @@ async function handleJob(subCommand, args = [], _options = {}) {
   return true;
 }
 
-module.exports = { handleJob, templateJobsEnabled };
+module.exports = {
+  handleJob,
+  templateJobsEnabled,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'job',
+    description: 'job command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleJob(parsed.subCommand, parsed.args, parsed.options),
+  },
+};

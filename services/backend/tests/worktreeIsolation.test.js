@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tests for the s18 fix: worktree isolation — binding a task to its own git
+ * Tests for the s18 fix: worktree isolation �?binding a task to its own git
  * worktree so parallel teammates work in separate directories, never clobbering
  * the same file.
  *
@@ -34,46 +34,46 @@ afterEach(() => {
   bus._resetForTest();
 });
 
-describe('s18 — validateName path-traversal hardening', () => {
+describe('s18 �?validateName path-traversal hardening', () => {
   test('accepts normal and nested names', () => {
     for (const ok of ['feature-login', 'a.b_c-1', 'feature/login', wt.generateWorktreeName()]) {
-      assert.strictEqual(wt.validateName(ok), true, `should accept ${ok}`);
+      expect(wt.validateName(ok)).toBe(true);
     }
   });
 
   test('rejects traversal, empty segments, and illegal input', () => {
     for (const bad of ['', '.', '..', '../etc', 'a/../b', 'a//b', 'foo bar', null, 'x'.repeat(65)]) {
-      assert.strictEqual(wt.validateName(bad), false, `should reject ${JSON.stringify(bad)}`);
+      expect(wt.validateName(bad)).toBe(false);
     }
   });
 });
 
-describe('s18 — _taskStore.bindWorktree (binding never changes status)', () => {
+describe('s18 �?_taskStore.bindWorktree (binding never changes status)', () => {
   test('writes the worktree field and leaves status pending', () => {
     const id = freshId();
     taskStore.add({ id, subject: 'refactor auth', status: 'pending' });
 
     const r = taskStore.bindWorktree(id, 'auth-refactor');
-    assert.strictEqual(r.ok, true);
-    assert.strictEqual(r.task.worktree, 'auth-refactor');
-    assert.strictEqual(r.task.status, 'pending', 'binding must not advance status');
-    assert.strictEqual(taskStore.get(id).status, 'pending');
-    assert.strictEqual(taskStore.get(id).worktree, 'auth-refactor');
+    expect(r.ok).toBe(true);
+    expect(r.task.worktree).toBe('auth-refactor');
+    expect(r.task.status).toBe('pending');
+    expect(taskStore.get(id).status).toBe('pending');
+    expect(taskStore.get(id).worktree).toBe('auth-refactor');
   });
 
   test('rejects a path-traversal worktree name', () => {
     const id = freshId();
     taskStore.add({ id, subject: 's', status: 'pending' });
     const r = taskStore.bindWorktree(id, '../escape');
-    assert.strictEqual(r.ok, false);
-    assert.strictEqual(r.reason, 'invalid_name');
-    assert.strictEqual(taskStore.get(id).worktree, null, 'bad name never persisted');
+    expect(r.ok).toBe(false);
+    expect(r.reason).toBe('invalid_name');
+    expect(taskStore.get(id).worktree).toBe(null);
   });
 
   test('reports not_found for an unknown task', () => {
     const r = taskStore.bindWorktree('no-such-task', 'wt');
-    assert.strictEqual(r.ok, false);
-    assert.strictEqual(r.reason, 'not_found');
+    expect(r.ok).toBe(false);
+    expect(r.reason).toBe('not_found');
   });
 
   test('a bound task is still claimable through the normal board flow', () => {
@@ -81,14 +81,14 @@ describe('s18 — _taskStore.bindWorktree (binding never changes status)', () =>
     taskStore.add({ id, subject: 'iso work', status: 'pending' });
     taskStore.bindWorktree(id, 'iso-1');
     const res = taskStore.claimNext('alice');
-    assert.strictEqual(res.ok, true);
-    assert.strictEqual(res.task.id, id);
-    assert.strictEqual(res.task.worktree, 'iso-1', 'binding survives the claim');
-    assert.strictEqual(res.task.status, 'in_progress');
+    expect(res.ok).toBe(true);
+    expect(res.task.id).toBe(id);
+    expect(res.task.worktree).toBe('iso-1');
+    expect(res.task.status).toBe('in_progress');
   });
 });
 
-describe('s18 — teammateBus.autonomousPoll cwd-switch bridge', () => {
+describe('s18 �?teammateBus.autonomousPoll cwd-switch bridge', () => {
   test('claiming a worktree-bound task surfaces its absolute path', () => {
     bus.setTeammateRunner(() => new Promise(() => {}));
     const t = bus.createTeammate({ name: 'wt-worker', task: 'work the board' });
@@ -97,11 +97,11 @@ describe('s18 — teammateBus.autonomousPoll cwd-switch bridge', () => {
     taskStore.bindWorktree(id, 'd-bridge');
 
     const res = bus.autonomousPoll(t.id);
-    assert.strictEqual(res.action, 'claimed');
-    assert.strictEqual(res.task.worktree, 'd-bridge');
-    assert.ok(res.worktreePath, 'a worktree-bound task yields a path');
-    assert.ok(path.isAbsolute(res.worktreePath));
-    assert.ok(res.worktreePath.endsWith(path.join('.khy', 'worktrees', 'd-bridge')));
+    expect(res.action).toBe('claimed');
+    expect(res.task.worktree).toBe('d-bridge');
+    expect(res.worktreePath).toBeTruthy();
+    expect(path.isAbsolute(res.worktreePath)).toBeTruthy();
+    expect(res.worktreePath.endsWith(path.join('.khy', 'worktrees', 'd-bridge'))).toBeTruthy();
   });
 
   test('an unbound task yields no worktree path', () => {
@@ -111,8 +111,8 @@ describe('s18 — teammateBus.autonomousPoll cwd-switch bridge', () => {
     taskStore.add({ id, subject: 'plain task', status: 'pending' });
 
     const res = bus.autonomousPoll(t.id);
-    assert.strictEqual(res.action, 'claimed');
-    assert.strictEqual(res.worktreePath, undefined);
+    expect(res.action).toBe('claimed');
+    expect(res.worktreePath).toBe(undefined);
   });
 });
 
@@ -120,7 +120,7 @@ describe('s18 — teammateBus.autonomousPoll cwd-switch bridge', () => {
 const gitOk = spawnSync('git', ['--version'], { encoding: 'utf-8' }).status === 0;
 const describeGit = gitOk ? describe : describe.skip;
 
-describeGit('s18 — worktree lifecycle + events.jsonl audit (temp repo)', () => {
+describeGit('s18 �?worktree lifecycle + events.jsonl audit (temp repo)', () => {
   let repo;
 
   const git = (args) => spawnSync('git', args, { cwd: repo, encoding: 'utf-8' });
@@ -145,21 +145,21 @@ describeGit('s18 — worktree lifecycle + events.jsonl audit (temp repo)', () =>
     taskStore.add({ id: taskId, subject: 'isolated build', status: 'pending' });
 
     const created = wt.createWorktree({ name: 'build-iso', cwd: repo, taskId });
-    assert.strictEqual(created.name, 'build-iso');
-    assert.strictEqual(created.branch, 'khy-worktree/build-iso');
-    assert.ok(fs.existsSync(created.path));
+    expect(created.name).toBe('build-iso');
+    expect(created.branch).toBe('khy-worktree/build-iso');
+    expect(fs.existsSync(created.path)).toBeTruthy();
 
     // Task bound (status unchanged) via the create+bind path.
-    assert.strictEqual(taskStore.get(taskId).worktree, 'build-iso');
-    assert.strictEqual(taskStore.get(taskId).status, 'pending');
+    expect(taskStore.get(taskId).worktree).toBe('build-iso');
+    expect(taskStore.get(taskId).status).toBe('pending');
 
     const listed = wt.listWorktrees(repo).map((w) => w.path);
-    assert.ok(listed.some((p) => p.endsWith(path.join('.khy', 'worktrees', 'build-iso'))));
+    expect(listed.some((p) => p.endsWith(path.join('.khy', 'worktrees', 'build-iso')))).toBeTruthy();
 
     const events = wt.readEvents(repo);
     const createEvt = events.find((e) => e.type === 'create' && e.worktree === 'build-iso');
-    assert.ok(createEvt, 'a create event was logged');
-    assert.strictEqual(createEvt.taskId, taskId);
+    expect(createEvt).toBeTruthy();
+    expect(createEvt.taskId).toBe(taskId);
 
     // cleanup
     wt.removeWorktree(created.path, { force: true });
@@ -170,31 +170,32 @@ describeGit('s18 — worktree lifecycle + events.jsonl audit (temp repo)', () =>
     fs.writeFileSync(path.join(created.path, 'scratch.txt'), 'wip\n');
 
     const refused = wt.removeWorktree(created.path);
-    assert.strictEqual(refused.removed, false);
-    assert.ok(Array.isArray(refused.uncommittedChanges) && refused.uncommittedChanges.length > 0);
-    assert.ok(fs.existsSync(created.path), 'worktree preserved on refusal');
+    expect(refused.removed).toBe(false);
+    expect(Array.isArray(refused.uncommittedChanges) && refused.uncommittedChanges.length > 0).toBeTruthy();
+    expect(fs.existsSync(created.path)).toBeTruthy();
 
     const forced = wt.removeWorktree(created.path, { force: true });
-    assert.strictEqual(forced.removed, true);
-    assert.ok(!fs.existsSync(created.path));
+    expect(forced.removed).toBe(true);
+    expect(!fs.existsSync(created.path)).toBeTruthy();
 
     const events = wt.readEvents(repo);
-    assert.ok(events.some((e) => e.type === 'remove' && e.worktree === 'dirty-wt'));
+    expect(events.some((e) => e.type === 'remove' && e.worktree === 'dirty-wt')).toBeTruthy();
   });
 
   test('keepWorktree leaves the tree intact and logs a keep event', () => {
     const created = wt.createWorktree({ name: 'keep-wt', cwd: repo });
     const kept = wt.keepWorktree('keep-wt', { cwd: repo });
-    assert.strictEqual(kept.kept, true);
-    assert.strictEqual(kept.branch, 'khy-worktree/keep-wt');
-    assert.ok(fs.existsSync(created.path), 'keep does not remove the worktree');
+    expect(kept.kept).toBe(true);
+    expect(kept.branch).toBe('khy-worktree/keep-wt');
+    expect(fs.existsSync(created.path)).toBeTruthy();
 
-    assert.ok(wt.readEvents(repo).some((e) => e.type === 'keep' && e.worktree === 'keep-wt'));
+    expect(wt.readEvents(repo).some((e) => e.type === 'keep' && e.worktree === 'keep-wt')).toBeTruthy();
 
     wt.removeWorktree(created.path, { force: true });
   });
 
   test('createWorktree rejects a path-traversal name before touching git', () => {
-    assert.throws(() => wt.createWorktree({ name: '../escape', cwd: repo }), /Invalid worktree name/);
+    expect(() => wt.createWorktree({ name: '../escape', cwd: repo })).toThrow();
   });
 });
+

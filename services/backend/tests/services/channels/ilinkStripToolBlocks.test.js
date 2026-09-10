@@ -24,7 +24,7 @@ const path = require('path');
 // Some module init reads KHYOS_HOME; keep it isolated like the sibling suite.
 process.env.KHYOS_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'khyos-strip-'));
 
-const { normalizeReply } = require('../../../src/services/channels/ilinkDispatcher');
+const { normalizeReply } = require('../../../src/services/domain/messaging/channels/ilinkDispatcher.js');
 
 test('single-object tool_use JSON no longer yields "[object Object]"', () => {
   // Old behavior: JSON.parse → object → String(object) === "[object Object]".

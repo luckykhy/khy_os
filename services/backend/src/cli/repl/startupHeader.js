@@ -34,10 +34,11 @@ function createStartupVisuals(deps) {
     formatShortCwd,
     getClassicMonsterPetLines,
     showGettingStarted,
+    claudeUiEnabled,
   } = deps;
 
   // Use shared banner data service (single source of truth for banner data)
-  const { getBannerData } = require('../../bannerDataService');
+  const { getBannerData } = require('../bannerDataService');
 
   function tryPrintMascotImagePreview() {
     if (!process.stdout.isTTY) {

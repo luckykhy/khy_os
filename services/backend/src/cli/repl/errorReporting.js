@@ -149,7 +149,7 @@ function _buildFoldedStatusDetailText() {
   if (reasonParts.length > 0) {
     lines.push(`原因汇总: ${reasonParts.join(' · ')}`);
   }
-  lines.push('---');
+  lines.push('');
   for (const item of _foldedStatusRecords) {
     const t = new Date(item.lastAt || Date.now()).toTimeString().slice(0, 8);
     const phase = String(item.phase || 'status');

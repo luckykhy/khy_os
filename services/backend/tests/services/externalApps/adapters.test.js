@@ -24,7 +24,7 @@ function mkTmp(prefix) {
 
 // ── opencode(JSON) ───────────────────────────────────────────────────────────
 test('opencode: add → list → get → remove', () => {
-  const a = require('../../../src/services/externalApps/opencodeAdapter');
+  const a = require('../../../src/services/domain/network/externalApps/opencodeAdapter.js');
   const dir = mkTmp('opencode');
   const env = { HOME: dir, XDG_CONFIG_HOME: path.join(dir, '.config') };
 
@@ -56,7 +56,7 @@ test('opencode: add → list → get → remove', () => {
 });
 
 test('opencode: merge preserves unrelated providers', () => {
-  const a = require('../../../src/services/externalApps/opencodeAdapter');
+  const a = require('../../../src/services/domain/network/externalApps/opencodeAdapter.js');
   const dir = mkTmp('opencode-merge');
   const env = { HOME: dir, XDG_CONFIG_HOME: path.join(dir, '.config') };
   a.add({ provider: 'openai', model: 'gpt-4o', apiKey: 'sk-openai' }, env);
@@ -68,7 +68,7 @@ test('opencode: merge preserves unrelated providers', () => {
 
 // ── openclaw(JSON + .env) ─────────────────────────────────────────────────────
 test('openclaw: add writes json + .env key, remove with removeKeys clears .env', () => {
-  const a = require('../../../src/services/externalApps/openclawAdapter');
+  const a = require('../../../src/services/domain/network/externalApps/openclawAdapter.js');
   const dir = mkTmp('openclaw');
   const env = { HOME: dir, OPENCLAW_HOME: path.join(dir, '.openclaw') };
 
@@ -93,7 +93,7 @@ test('openclaw: add writes json + .env key, remove with removeKeys clears .env',
 
 // ── claude-code(settings.json env 块) ────────────────────────────────────────
 test('claude-code: add writes env block, merge preserves other settings', () => {
-  const a = require('../../../src/services/externalApps/claudeCodeAdapter');
+  const a = require('../../../src/services/domain/network/externalApps/claudeCodeAdapter.js');
   const dir = mkTmp('claude');
   const env = { HOME: dir, CLAUDE_CONFIG_DIR: path.join(dir, '.claude') };
   // 预置一份带无关设置的 settings.json。
@@ -118,7 +118,7 @@ test('claude-code: add writes env block, merge preserves other settings', () => 
 
 // ── reasonix(config.toml [[providers]] + .env) ───────────────────────────────
 test('reasonix: add writes toml [[providers]] + .env key', () => {
-  const a = require('../../../src/services/externalApps/reasonixAdapter');
+  const a = require('../../../src/services/domain/network/externalApps/reasonixAdapter.js');
   const dir = mkTmp('reasonix');
   const env = { HOME: dir, REASONIX_HOME: path.join(dir, '.reasonix') };
 
@@ -148,7 +148,7 @@ test('reasonix: add writes toml [[providers]] + .env key', () => {
 
 // ── deepseek-tui(config.toml [providers.<id>]) ───────────────────────────────
 test('deepseek-tui: add writes [providers.<id>] subtable with inline api_key', () => {
-  const a = require('../../../src/services/externalApps/deepseekTuiAdapter');
+  const a = require('../../../src/services/domain/network/externalApps/deepseekTuiAdapter.js');
   const dir = mkTmp('dstui');
   const env = { HOME: dir, DEEPSEEK_HOME: path.join(dir, '.deepseek') };
 
@@ -173,7 +173,7 @@ test('deepseek-tui: add writes [providers.<id>] subtable with inline api_key', (
 
 // ── coze(YAML,含降级) ───────────────────────────────────────────────────────
 test('coze: add writes model_template yaml when project root given', () => {
-  const a = require('../../../src/services/externalApps/cozeAdapter');
+  const a = require('../../../src/services/domain/network/externalApps/cozeAdapter.js');
   const dir = mkTmp('coze');
   const modelDir = path.join(dir, 'backend', 'conf', 'model');
   const env = { HOME: dir, COZE_MODEL_DIR: modelDir };
@@ -193,7 +193,7 @@ test('coze: add writes model_template yaml when project root given', () => {
 });
 
 test('coze: degrades to returning yaml text when no project root', () => {
-  const a = require('../../../src/services/externalApps/cozeAdapter');
+  const a = require('../../../src/services/domain/network/externalApps/cozeAdapter.js');
   const env = { HOME: mkTmp('coze-nohome') }; // no COZE_HOME/COZE_MODEL_DIR
   const added = a.add({ provider: 'deepseek', model: 'deepseek-v4-flash', apiKey: 'sk-x' }, env);
   assert.equal(added.success, true);
@@ -218,7 +218,7 @@ test('all adapters: fail-soft on missing required field', () => {
 // (不脱敏)+ endpoint + models + defaultModel。coze/claude-code 走各自形状。
 
 test('opencode.usable: returns raw apiKey + endpoint + models after add', () => {
-  const a = require('../../../src/services/externalApps/opencodeAdapter');
+  const a = require('../../../src/services/domain/network/externalApps/opencodeAdapter.js');
   const dir = mkTmp('opencode-usable');
   const env = { HOME: dir, XDG_CONFIG_HOME: path.join(dir, '.config') };
   a.add({ provider: 'deepseek', model: 'deepseek-v4-flash', apiKey: 'sk-raw-oc', endpoint: 'https://api.deepseek.com/v1' }, env);
@@ -232,7 +232,7 @@ test('opencode.usable: returns raw apiKey + endpoint + models after add', () => 
 });
 
 test('openclaw.usable: returns raw apiKey from .env', () => {
-  const a = require('../../../src/services/externalApps/openclawAdapter');
+  const a = require('../../../src/services/domain/network/externalApps/openclawAdapter.js');
   const dir = mkTmp('openclaw-usable');
   const env = { HOME: dir, OPENCLAW_HOME: path.join(dir, '.openclaw') };
   a.add({ provider: 'deepseek', model: 'deepseek-v4-flash', apiKey: 'sk-raw-claw', endpoint: 'https://api.deepseek.com' }, env);
@@ -243,7 +243,7 @@ test('openclaw.usable: returns raw apiKey from .env', () => {
 });
 
 test('claude-code.usable: returns raw apiKey from env block', () => {
-  const a = require('../../../src/services/externalApps/claudeCodeAdapter');
+  const a = require('../../../src/services/domain/network/externalApps/claudeCodeAdapter.js');
   const dir = mkTmp('claude-usable');
   const env = { HOME: dir, CLAUDE_CONFIG_DIR: path.join(dir, '.claude') };
   a.add({ provider: 'anthropic', model: 'claude-opus-4-6', apiKey: 'sk-raw-ant', endpoint: 'https://api.anthropic.com' }, env);
@@ -255,7 +255,7 @@ test('claude-code.usable: returns raw apiKey from env block', () => {
 });
 
 test('reasonix.usable: returns raw apiKey from .env via api_key_env', () => {
-  const a = require('../../../src/services/externalApps/reasonixAdapter');
+  const a = require('../../../src/services/domain/network/externalApps/reasonixAdapter.js');
   const dir = mkTmp('reasonix-usable');
   const env = { HOME: dir, REASONIX_HOME: path.join(dir, '.reasonix') };
   a.add({ provider: 'deepseek', model: 'deepseek-v4-flash', apiKey: 'sk-raw-rx', endpoint: 'https://api.deepseek.com' }, env);
@@ -267,7 +267,7 @@ test('reasonix.usable: returns raw apiKey from .env via api_key_env', () => {
 });
 
 test('deepseek-tui.usable: returns raw inline apiKey', () => {
-  const a = require('../../../src/services/externalApps/deepseekTuiAdapter');
+  const a = require('../../../src/services/domain/network/externalApps/deepseekTuiAdapter.js');
   const dir = mkTmp('dstui-usable');
   const env = { HOME: dir, DEEPSEEK_HOME: path.join(dir, '.deepseek') };
   a.add({ provider: 'deepseek', model: 'deepseek-v4-flash', apiKey: 'sk-raw-tui', endpoint: 'https://api.deepseek.com' }, env);
@@ -278,7 +278,7 @@ test('deepseek-tui.usable: returns raw inline apiKey', () => {
 });
 
 test('coze.usable: returns raw apiKey from yaml conn_config', () => {
-  const a = require('../../../src/services/externalApps/cozeAdapter');
+  const a = require('../../../src/services/domain/network/externalApps/cozeAdapter.js');
   const dir = mkTmp('coze-usable');
   const modelDir = path.join(dir, 'backend', 'conf', 'model');
   const env = { HOME: dir, COZE_MODEL_DIR: modelDir };

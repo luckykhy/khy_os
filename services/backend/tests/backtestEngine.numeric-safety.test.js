@@ -2,7 +2,7 @@
 
 // The engine lives at software/khyquant/services/backtestEngine.js and requires
 // its dependencies via './klineDataService' etc., which resolve to the software
-// copies â€” NOT the backend src/services re-exports. Mock the software paths the
+// copies â€?NOT the backend src/services re-exports. Mock the software paths the
 // engine actually loads, otherwise the mock is silently bypassed and the engine
 // falls through to live/hybrid data.
 jest.mock('../../../software/khyquant/services/klineDataService', () => ({
@@ -39,3 +39,4 @@ describe('backtest engine numeric safety', () => {
     expect(Number.isFinite(result.sharpeRatio)).toBe(true);
   });
 });
+

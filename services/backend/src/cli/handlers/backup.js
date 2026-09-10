@@ -17,6 +17,7 @@
  */
 
 // ── Imports ──
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const chalk = require('chalk').default || require('chalk');
 const fs = require('fs');
 const path = require('path');
@@ -378,4 +379,12 @@ async function handleBackupCommand(subCommand, args = [], options = {}) {
   }
 }
 
-module.exports = { handleBackupCommand };
+module.exports = {
+  handleBackupCommand,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'backup',
+    description: 'backup command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleBackupCommand(parsed.subCommand, parsed.args, parsed.options),
+  },
+};

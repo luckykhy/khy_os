@@ -13,7 +13,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const fc = require('../../../src/services/forge/forgeCore');
+const fc = require('../../../src/services/domain/build/forge/forgeCore.js');
 
 // ── 门控 ────────────────────────────────────────────────────────────
 test('isEnabled: 默认开;0/false/off/no 关', () => {

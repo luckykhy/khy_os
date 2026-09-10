@@ -16,7 +16,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const resolver = require('../../../src/services/config/nlProviderResolver');
+const resolver = require('../../../src/services/domain/config/config/nlProviderResolver.js');
 
 const ON = {}; // 未设 → 默认开
 const OFF = { KHY_NL_PROVIDER: 'off' };

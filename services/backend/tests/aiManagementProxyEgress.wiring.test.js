@@ -29,9 +29,13 @@ test('wiring: 宿主 require 了 aiManagementProxyEgress 并调 setProxyEgressDe
 });
 
 test('wiring: routeRequest 分派 /api/proxy-egress 三路(status/enable/disable)', () => {
-  assert.match(SERVER_SRC, /pathname === '\/api\/proxy-egress'\) return handleGetProxyEgressStatus/);
-  assert.match(SERVER_SRC, /pathname === '\/api\/proxy-egress\/enable'\) return handleEnableProxyEgress/);
-  assert.match(SERVER_SRC, /pathname === '\/api\/proxy-egress\/disable'\) return handleDisableProxyEgress/);
+  // 旧写法把 `if (...) return handleX` 写成单行断言,源码按 2 空格缩进换成
+  // 花括号 + 换行后就永远匹配不上——用例在验证格式,而不是在验证接线。
+  // 归一化空白再匹配,断言的才是「条件与处理器成对存在」这件事。
+  const flat = SERVER_SRC.replace(/\s+/g, ' ');
+  assert.match(flat, /pathname === '\/api\/proxy-egress'\)\s*\{?\s*return handleGetProxyEgressStatus/);
+  assert.match(flat, /pathname === '\/api\/proxy-egress\/enable'\)\s*\{?\s*return handleEnableProxyEgress/);
+  assert.match(flat, /pathname === '\/api\/proxy-egress\/disable'\)\s*\{?\s*return handleDisableProxyEgress/);
 });
 
 // ── 2) 处理器行为(注入 fake 反向边 + fake proxyConfig)──────────────

@@ -303,7 +303,7 @@ function formatDiscoveryFooter(emerging) {
     return `  • ${s.host}（${note}）`;
   });
   return (
-    '\n\n---\n🆕 新发现来源（非内置搜索源，但在结果里反复出现，可用 WebSearch 加 `site:` 深入）：\n' +
+    '\n\n🆕 新发现来源（非内置搜索源，但在结果里反复出现，可用 WebSearch 加 `site:` 深入）：\n' +
     lines.join('\n')
   );
 }

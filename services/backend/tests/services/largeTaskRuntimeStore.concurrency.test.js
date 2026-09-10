@@ -18,10 +18,10 @@ const { execFileSync } = require('child_process');
 
 const { createLargeTaskRuntimeStore } = require('../../src/tasks/largeTaskRuntimeStore');
 
-// Increase test timeout â€” two child processes do 50 I/O each
+// Increase test timeout â€?two child processes do 50 I/O each
 jest.setTimeout(60_000);
 
-describe('largeTaskRuntimeStore â€” multi-process concurrency', () => {
+describe('largeTaskRuntimeStore â€?multi-process concurrency', () => {
   let tempDir;
   let storePath;
 
@@ -36,7 +36,7 @@ describe('largeTaskRuntimeStore â€” multi-process concurrency', () => {
     }
   });
 
-  test('two child processes each doing 50 createTask+update â†’ 100 tasks, no orphans, no lock dirs', () => {
+  test('two child processes each doing 50 createTask+update â†?100 tasks, no orphans, no lock dirs', () => {
     // Write a small inline worker script to tempDir
     const workerScript = `
 'use strict';
@@ -120,3 +120,4 @@ children.forEach((child) => {
     expect(lockDirs).toHaveLength(0);
   });
 });
+

@@ -10,8 +10,8 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 
-const core = require('../../../src/services/messaging/ilinkCore');
-const { IlinkApi } = require('../../../src/services/messaging/ilinkApi');
+const core = require('../../../src/services/domain/messaging/messaging/ilinkCore.js');
+const { IlinkApi } = require('../../../src/services/domain/messaging/messaging/ilinkApi.js');
 
 /** 装一个假的全局 fetch,记录一次调用并返回 2xx JSON。返回 {calls, restore}。 */
 function installFetch(json = { ret: 0, upload_param: 'UP' }) {

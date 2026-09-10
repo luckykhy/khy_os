@@ -3,10 +3,10 @@
 /**
  * Tests for s07 skill-loading fixes:
  *   1. SkillTool resolves through the name-based manifest registry (src/skills),
- *      so bundled built-in skills are reachable via the Skill tool â€” and lookup
+ *      so bundled built-in skills are reachable via the Skill tool â€?and lookup
  *      is by registry name, never a path built from the argument.
  *   2. The marketplace registry's installed-skill branch rejects ids that could
- *      escape SKILLS_DIR (path-traversal â†’ arbitrary require()).
+ *      escape SKILLS_DIR (path-traversal â†?arbitrary require()).
  */
 
 const assert = require('assert');
@@ -16,38 +16,38 @@ const skillToolModule = require('../../src/tools/SkillTool');
 const manifestRegistry = require('../../src/skills');
 const marketplaceRegistry = require('../../src/services/skillRegistry');
 
-describe('SkillTool â€” name-based manifest routing (s07 Level-2)', () => {
+describe('SkillTool â€?name-based manifest routing (s07 Level-2)', () => {
   test('loads a bundled built-in skill by name via the manifest registry', async () => {
     // Pick whatever bundled skill the manifest registry actually discovers, so
     // the test is robust to the exact built-in set.
     const skills = manifestRegistry.getCachedSkills();
     const first = [...skills.values()][0];
-    assert.ok(first, 'expected at least one discoverable manifest skill');
+    expect(first).toBeTruthy();
 
     const res = await skillToolModule.execute({ skill: first.name }, {});
-    assert.strictEqual(res.success, true, `execute failed: ${res.error}`);
-    assert.strictEqual(res.skill, first.name);
+    expect(res.success).toBe(true);
+    expect(res.skill).toBe(first.name);
     // Content is returned via the tool result (CC "inject via tool_result").
-    assert.ok(res.output && (res.output.content !== undefined || res.output.type !== undefined));
+    expect(res.output && (res.output.content !== undefined || res.output.type !== undefined)).toBeTruthy();
   });
 
   test('a path-traversal skill name does not resolve to a file load', async () => {
     // findSkill must not match a traversal string, so the manifest branch is
     // skipped; the marketplace branch then rejects it (see traversal test below),
     // and the whole call fails cleanly rather than touching the filesystem.
-    assert.strictEqual(manifestRegistry.findSkill('../../../../etc/passwd'), null);
+    expect(manifestRegistry.findSkill('../../../../etc/passwd')).toBe(null);
     const res = await skillToolModule.execute({ skill: '../../../../etc/passwd' }, {});
-    assert.strictEqual(res.success, false);
+    expect(res.success).toBe(false);
   });
 
   test('missing skill name is rejected', async () => {
     const res = await skillToolModule.execute({}, {});
-    assert.strictEqual(res.success, false);
-    assert.ok(/required/i.test(res.error));
+    expect(res.success).toBe(false);
+    expect(/required/i.test(res.error)).toBeTruthy();
   });
 });
 
-describe('skillRegistry.executeSkill â€” path-traversal hardening (s07)', () => {
+describe('skillRegistry.executeSkill â€?path-traversal hardening (s07)', () => {
   const malicious = [
     '../../../../etc/passwd',
     '..%2f..%2ffoo',
@@ -77,6 +77,7 @@ describe('skillRegistry.executeSkill â€” path-traversal hardening (s07)', () => 
     );
     // Sanity: path.join WOULD have escaped, proving the guard is load-bearing.
     const escaped = path.join('/x/y/skills', '../evil.js');
-    assert.ok(!escaped.startsWith('/x/y/skills' + path.sep));
+    expect(!escaped.startsWith('/x/y/skills' + path.sep)).toBeTruthy();
   });
 });
+

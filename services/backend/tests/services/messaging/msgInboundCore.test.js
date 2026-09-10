@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const crypto = require('crypto');
 
-const inb = require('../../../src/services/messaging/msgInboundCore');
+const inb = require('../../../src/services/domain/messaging/messaging/msgInboundCore.js');
 
 // ── 独立实现的平台加密(不调用被测代码的内部),用于验证被测的解密/验签 ──
 

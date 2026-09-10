@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 import request from '@/api/request';
 import { unwrap } from '@/api/unwrap';
+import { useLoadError, describeLoadError } from '@/api/loadError';
 
 /**
  * Per-user proxy subscription state ("代理管理").
@@ -11,6 +12,18 @@ import { unwrap } from '@/api/unwrap';
  * `unwrap(res)` envelope handling (from `@/api/unwrap`) and ref-backed state.
  * Everything is scoped to the logged-in user on the backend.
  */
+
+// Shared across instances so the page can keep showing the last failure after a
+// navigation round-trip, same pattern as useGatewayBilling's loadError.
+const loadError = useLoadError();
+
+function recordEgressFailure(err) {
+  loadError.value = describeLoadError(
+    err,
+    '出站状态',
+    '请确认 ai-backend 服务已启动后重试'
+  );
+}
 
 export function useProxies() {
   const groups = ref([]);
@@ -90,9 +103,19 @@ export function useProxies() {
   // ── 出站桥(/api/proxy-egress):选节点实际路由 + 启用/停用 ──────────────
   // 当前出站状态:enabled/activeNode/coreStatus(附内核是否装、是否在跑)。
   async function fetchEgressStatus() {
-    const res = await request.get('/api/proxy-egress');
-    egressStatus.value = unwrap(res);
-    return egressStatus.value;
+    loadError.value = '';
+    try {
+      const res = await request.get('/api/proxy-egress');
+      egressStatus.value = unwrap(res);
+      return egressStatus.value;
+    } catch (err) {
+      // A dead /api/proxy-egress used to surface as an OFF switch plus a
+      // "内核未安装" tag — every signal the page shows is derived from
+      // egressStatus, so an empty state was indistinguishable from a
+      // genuinely unconfigured box. Record the failure instead.
+      recordEgressFailure(err);
+      return null;
+    }
   }
 
   // 用选中节点激活真实出站。传**整个节点对象**(clash-native 字段)。返回结构化结果:
@@ -130,6 +153,7 @@ export function useProxies() {
     loading,
     busy,
     egressStatus,
+    loadError,
     listGroups,
     getGroup,
     addSubscription,

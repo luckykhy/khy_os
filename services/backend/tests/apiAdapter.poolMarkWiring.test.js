@@ -1,16 +1,16 @@
 'use strict';
 
 /**
- * apiAdapter pool markFailure/markSuccess 接线测试。
+ * apiAdapter pool markFailure/markSuccess 接线测试�?
  *
- * 背景修复:apiAdapter 此前只在远端模型列表探测时 markSuccess,chat 生成失败从不 markFailure →
- * 失败 key 永不进 cooldown,网关无限重试同一把抖动/失效 key(卡死根因)。修复后,generate 成功
- * → _poolMark('markSuccess'),失败 → _poolMark('markFailure', statusCode, error)。
+ * 背景修复:apiAdapter 此前只在远端模型列表探测�?markSuccess,chat 生成失败从不 markFailure �?
+ * 失败 key 永不�?cooldown,网关无限重试同一把抖�?失效 key(卡死根因)。修复后,generate 成功
+ * �?_poolMark('markSuccess'),失败 �?_poolMark('markFailure', statusCode, error)�?
  *
- * 本测试 mock apiKeyPool.pick / markSuccess / markFailure,验证:
- *   1. 成功时 markSuccess 被调用
- *   2. 失败时 markFailure 被调用,带 statusCode + error
- *   3. 无 poolKey(非池模型)时不触碰 pool
+ * 本测�?mock apiKeyPool.pick / markSuccess / markFailure,验证:
+ *   1. 成功�?markSuccess 被调�?
+ *   2. 失败�?markFailure 被调�?�?statusCode + error
+ *   3. �?poolKey(非池模型)时不触碰 pool
  */
 
 const mockInstances = [];
@@ -31,7 +31,7 @@ jest.mock('../src/services/multiFreeService', () => {
         openai: { name: 'OpenAI', apiKey: 'env-openai', enabled: true, model: 'gpt-4o-mini', baseUrl: 'https://api.openai.com' },
       },
       generateResponse: jest.fn(async (prompt, options) => {
-        // 失败还是成功由测试动态控制
+        // 失败还是成功由测试动态控�?
         const fail = global.__GATEWAY_FAKE_FAIL__;
         if (fail) {
           return {
@@ -87,7 +87,7 @@ describe('apiAdapter pool markFailure/markSuccess wiring', () => {
     expect(mockPool.markFailure).toHaveBeenCalledTimes(1);
     expect(mockPool.markFailure.mock.calls[0][0]).toBe('key-agnes-123');
     expect(mockPool.markFailure.mock.calls[0][1]).toBe(502);
-    expect(String(mockPool.markFailure.mock.calls[0][2])).toContain('502');
+    expect(String(mockPool.markFailure.mock.calls[0][2])).toBe('502');
   });
 
   test('generate success calls pool.markSuccess', async () => {
@@ -112,10 +112,11 @@ describe('apiAdapter pool markFailure/markSuccess wiring', () => {
       apiKey: 'direct-key',
     });
 
-    // openai 也是池别名 → 失败应 markFailure 到 openai pool key(这才是修复本意:任何池 key 失败都降级)。
+    // openai 也是池别�?�?失败�?markFailure �?openai pool key(这才是修复本�?任何�?key 失败都降�?�?
     expect(result.success).toBe(false);
     expect(mockPool.pick).toHaveBeenCalledWith('openai');
     expect(mockPool.markFailure).toHaveBeenCalledTimes(1);
     expect(mockPool.markFailure.mock.calls[0][0]).toBe('key-agnes-123');
   });
 });
+

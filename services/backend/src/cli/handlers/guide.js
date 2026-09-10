@@ -14,10 +14,11 @@
  */
 'use strict';
 
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const chalk = require('chalk').default || require('chalk');
 const { PRIMARY: MODELS } = require('../../constants/models');
 const sessionPersistence = require('../../services/sessionPersistence');
-const trajectoryGuideConfig = require('config.js');
+const trajectoryGuideConfig = require('./config.js');
 const mapAuthor = require('../../services/domain/trajectory/trajectoryGuide/mapAuthor.js');
 const mapExport = require('../../services/domain/trajectory/trajectoryGuide/mapExport.js');
 const mapStore = require('../../services/domain/trajectory/trajectoryGuide/mapStore.js');
@@ -166,4 +167,12 @@ async function handleGuide(subCommand, args = [], options = {}) {
   return undefined;
 }
 
-module.exports = { handleGuide };
+module.exports = {
+  handleGuide,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'guide',
+    description: 'guide command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleGuide(parsed.subCommand, parsed.args, parsed.options),
+  },
+};

@@ -741,6 +741,23 @@ const AIGatewayGenerateMethod = {
     // preflight resolution in the SAME request may raise maxTokens above it
     // (shrink wins over the KHY_MAX_TOKENS_AUTO_RESOLVE preflight). 0 = no shrink yet.
     let _maxTokensShrunkTo = 0;
+    // 实际探测：从 context_length 错误中提取真实上下文窗口并缓存。
+    // 当 API 返回 "maximum context length is 128000 tokens" 时，128000 就是真实窗口。
+    // 缓存后 getModelContextWindow() 立即返回正确值，不再回退 128K 默认。
+    const _cacheProbedContextWindow = (modelId, limitTokens) => {
+      if (!modelId || !limitTokens || limitTokens <= 0) return;
+      try {
+        // 错误提取是最可信来源（API 直接返回的真实限制），TTL 24 小时
+        if (typeof this._setContextWindowCache === 'function') {
+          this._setContextWindowCache(modelId, limitTokens, 24 * 60 * 60 * 1000, 'error-extract');
+        } else {
+          this._contextWindowCache.set(modelId, limitTokens);
+        }
+      } catch {
+        /* fail-soft */
+      }
+    };
+
     // A: try an in-place maxTokens shrink for a context-overflow failure.
     // Returns { adjusted, tokenInfo }; tokenInfo is non-null whenever the error
     // message was parseable (callers attach it to diagnostics on no-space).
@@ -5645,6 +5662,13 @@ const AIGatewayGenerateMethod = {
                 attempt,
                 maxLoopAttempts
               );
+              // 实际探测：从错误消息中缓存真实上下文窗口
+              if (overflowAdjust.tokenInfo?.limitTokens > 0) {
+                _cacheProbedContextWindow(
+                  String(adapterOptions.model || '').trim(),
+                  overflowAdjust.tokenInfo.limitTokens
+                );
+              }
               if (overflowAdjust.adjusted) {
                 attempt--; // guarded by contextOverflowAdjusted (max 1 per request)
                 continue;
@@ -5810,6 +5834,13 @@ const AIGatewayGenerateMethod = {
                 attempt,
                 maxLoopAttempts
               );
+              // 实际探测：从错误消息中缓存真实上下文窗口
+              if (overflowAdjust.tokenInfo?.limitTokens > 0) {
+                _cacheProbedContextWindow(
+                  String(adapterOptions.model || '').trim(),
+                  overflowAdjust.tokenInfo.limitTokens
+                );
+              }
               if (overflowAdjust.adjusted) {
                 attempt--; // guarded by contextOverflowAdjusted (max 1 per request)
                 continue;

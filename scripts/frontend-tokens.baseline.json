@@ -1,0 +1,8 @@
+{
+  "note": "Design-token drift budget. Values may only decrease. See check-frontend-tokens.js.",
+  "themeExcluded": "apps/ai-frontend/src/styles/newapi-theme.css",
+  "hex": 214,
+  "rgba": 29,
+  "staticStyle": 133,
+  "bindStyle": 11
+}

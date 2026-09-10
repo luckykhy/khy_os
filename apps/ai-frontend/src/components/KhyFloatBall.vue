@@ -176,7 +176,7 @@
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import request from '@/api/request';
+import { resolveWsUrl } from '@/utils/ws';
 import { safeSet } from '@/utils/safeStorage';
 import { useUserStore } from '@/stores/user';
 
@@ -415,20 +415,6 @@ function launchKhy() {
   router.push('/khyos').catch(() => {
     /* 已在该页或导航被取消,忽略 */
   });
-}
-
-// ── /ws 一次性本机动作:连接→鉴权→发一条动作→等状态回执→关闭 ────────────
-function resolveWsUrl(path) {
-  const normalizedPath = `/${String(path || '/ws').replace(/^\/+/, '')}`;
-  if (typeof window === 'undefined') return normalizedPath;
-  const origin = String(window.location.origin || '').trim();
-  const base = String(request.defaults.baseURL || '').trim();
-  const url = base ? new URL(base, origin) : new URL(origin);
-  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-  url.pathname = normalizedPath;
-  url.search = '';
-  url.hash = '';
-  return url.toString();
 }
 
 /**
@@ -741,10 +727,10 @@ onBeforeUnmount(() => {
   padding: 0;
   border: none;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6d5efc 0%, #8b5cf6 55%, #d946ef 100%);
+  background: linear-gradient(135deg, var(--khy-accent) 0%, var(--khy-accent-mid) 55%, var(--khy-accent-end) 100%);
   box-shadow:
-    0 6px 18px rgba(109, 94, 252, 0.42),
-    inset 0 1px 1px rgba(255, 255, 255, 0.35);
+    0 6px 18px var(--khy-accent-glow),
+    inset 0 1px 1px var(--khy-highlight);
   color: var(--khy-white);
   display: flex;
   align-items: center;
@@ -760,8 +746,8 @@ onBeforeUnmount(() => {
 .khy-fb__ball:hover {
   transform: scale(1.07);
   box-shadow:
-    0 10px 26px rgba(139, 92, 246, 0.6),
-    inset 0 1px 1px rgba(255, 255, 255, 0.45);
+    0 10px 26px var(--khy-accent-glow-strong),
+    inset 0 1px 1px var(--khy-highlight-strong);
 }
 .khy-fb__ball:active {
   cursor: grabbing;
@@ -798,7 +784,7 @@ onBeforeUnmount(() => {
   height: 52px;
   margin: -26px 0 0 -26px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 70%);
+  background: radial-gradient(circle, var(--khy-ripple) 0%, var(--khy-ripple-fade) 70%);
   pointer-events: none;
   transform: scale(0.2);
   opacity: 0;
@@ -820,7 +806,7 @@ onBeforeUnmount(() => {
   position: absolute;
   inset: -4px;
   border-radius: 50%;
-  border: 2px solid rgba(139, 92, 246, 0.45);
+  border: 2px solid var(--khy-accent-ring);
   animation: khy-fb-breathe 2.8s ease-in-out infinite;
   pointer-events: none;
 }
@@ -847,7 +833,7 @@ onBeforeUnmount(() => {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  border: 2.5px solid rgba(255, 255, 255, 0.35);
+  border: 2.5px solid var(--khy-highlight);
   border-top-color: var(--khy-white);
   animation: khy-fb-spin 0.8s linear infinite;
   pointer-events: none;
@@ -885,12 +871,12 @@ onBeforeUnmount(() => {
   min-width: 232px;
   padding: 8px;
   border-radius: 16px;
-  background: var(--el-bg-color, #1c2130); /* 不支持 color-mix 的引擎回退到实心面板 */
-  background: color-mix(in srgb, var(--el-bg-color, #1c2130) 88%, transparent);
+  background: var(--khy-panel); /* 不支持 color-mix 的引擎回退到实心面板 */
+  background: color-mix(in srgb, var(--khy-panel) 88%, transparent);
   backdrop-filter: blur(14px) saturate(1.2);
   -webkit-backdrop-filter: blur(14px) saturate(1.2);
-  border: 1px solid var(--el-border-color, rgba(255, 255, 255, 0.12));
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--el-border-color);
+  box-shadow: var(--khy-overlay-shadow);
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -908,14 +894,14 @@ onBeforeUnmount(() => {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.3px;
-  color: var(--el-text-color-secondary, #9aa2b1);
+  color: var(--khy-ink-dim);
 }
 .khy-fb__menu-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6d5efc, #d946ef);
-  box-shadow: 0 0 8px rgba(139, 92, 246, 0.8);
+  background: linear-gradient(135deg, var(--khy-accent), var(--khy-accent-end));
+  box-shadow: 0 0 8px var(--khy-accent-glow-halo);
 }
 .khy-fb__item {
   display: flex;
@@ -926,7 +912,7 @@ onBeforeUnmount(() => {
   border: none;
   border-radius: 11px;
   background: transparent;
-  color: var(--el-text-color-primary, #e7e9ee);
+  color: var(--khy-ink);
   text-align: left;
   cursor: pointer;
   transition: background 0.14s ease;
@@ -970,10 +956,10 @@ onBeforeUnmount(() => {
   }
 }
 .khy-fb__item:hover:not(:disabled) {
-  background: var(--el-fill-color, rgba(255, 255, 255, 0.08));
+  background: var(--el-fill-color);
 }
 .khy-fb__item:active:not(:disabled) {
-  background: var(--el-fill-color-dark, rgba(255, 255, 255, 0.13));
+  background: var(--el-fill-color-dark);
 }
 .khy-fb__item:disabled {
   opacity: 0.5;
@@ -991,8 +977,8 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #c4b5fd;
-  background: linear-gradient(135deg, rgba(109, 94, 252, 0.18), rgba(217, 70, 239, 0.16));
+  color: var(--khy-accent-tint);
+  background: linear-gradient(135deg, var(--khy-accent-soft), var(--khy-accent-soft-end));
   transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .khy-fb__item-body {
@@ -1009,7 +995,7 @@ onBeforeUnmount(() => {
 .khy-fb__item-sub {
   font-size: 11px;
   line-height: 1.2;
-  color: var(--el-text-color-secondary, #8b93a3);
+  color: var(--khy-ink-mute);
 }
 
 .khy-fb-menu-enter-active,
@@ -1039,12 +1025,12 @@ onBeforeUnmount(() => {
   max-height: 60vh;
   padding: 10px;
   border-radius: 16px;
-  background: var(--el-bg-color, #1c2130);
-  background: color-mix(in srgb, var(--el-bg-color, #1c2130) 90%, transparent);
+  background: var(--khy-panel);
+  background: color-mix(in srgb, var(--khy-panel) 90%, transparent);
   backdrop-filter: blur(14px) saturate(1.2);
   -webkit-backdrop-filter: blur(14px) saturate(1.2);
-  border: 1px solid var(--el-border-color, rgba(255, 255, 255, 0.12));
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.42);
+  border: 1px solid var(--el-border-color);
+  box-shadow: var(--khy-overlay-shadow);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1058,7 +1044,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   padding: 2px 4px 9px;
-  border-bottom: 1px solid var(--el-border-color-lighter, rgba(255, 255, 255, 0.08));
+  border-bottom: 1px solid var(--el-border-color-lighter);
   margin-bottom: 6px;
 }
 .khy-fb__tasks-title {
@@ -1067,30 +1053,30 @@ onBeforeUnmount(() => {
   gap: 7px;
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--el-text-color-primary, #e7e9ee);
+  color: var(--khy-ink);
 }
 /* 实时状态灯:同步中呼吸绿,连接中脉冲黄,失败红,关闭灰。 */
 .khy-fb__live-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #8b93a3;
+  background: var(--khy-off);
   flex: none;
 }
 .khy-fb__live-dot.is-ok {
-  background: #22c55e;
-  box-shadow: 0 0 8px rgba(34, 197, 94, 0.8);
+  background: var(--khy-ok);
+  box-shadow: 0 0 8px var(--khy-ok-glow);
   animation: khy-fb-pulse 2s ease-in-out infinite;
 }
 .khy-fb__live-dot.is-connecting {
-  background: #eab308;
+  background: var(--khy-busy);
   animation: khy-fb-pulse 1s ease-in-out infinite;
 }
 .khy-fb__live-dot.is-error {
   background: var(--khy-danger);
 }
 .khy-fb__live-dot.is-disabled {
-  background: #8b93a3;
+  background: var(--khy-off);
 }
 @keyframes khy-fb-pulse {
   0%,
@@ -1109,8 +1095,8 @@ onBeforeUnmount(() => {
   font-size: 11px;
   font-weight: 600;
   text-align: center;
-  color: #c4b5fd;
-  background: rgba(139, 92, 246, 0.18);
+  color: var(--khy-accent-tint);
+  background: var(--khy-accent-soft);
 }
 .khy-fb__tasks-close {
   margin-left: 6px;
@@ -1120,7 +1106,7 @@ onBeforeUnmount(() => {
   border: none;
   border-radius: 7px;
   background: transparent;
-  color: var(--el-text-color-secondary, #9aa2b1);
+  color: var(--khy-ink-dim);
   font-size: 17px;
   cursor: pointer;
   transition:
@@ -1128,17 +1114,17 @@ onBeforeUnmount(() => {
     color 0.14s ease;
 }
 .khy-fb__tasks-close:hover {
-  background: var(--el-fill-color, rgba(255, 255, 255, 0.08));
-  color: var(--el-text-color-primary, #e7e9ee);
+  background: var(--el-fill-color);
+  color: var(--khy-ink);
 }
 .khy-fb__tasks-hint {
   padding: 16px 8px;
   text-align: center;
   font-size: 12.5px;
-  color: var(--el-text-color-secondary, #8b93a3);
+  color: var(--khy-ink-mute);
 }
 .khy-fb__tasks-hint.is-error {
-  color: #f87171;
+  color: var(--khy-danger);
   cursor: pointer;
 }
 .khy-fb__tasks-hint.is-error:hover {
@@ -1159,12 +1145,12 @@ onBeforeUnmount(() => {
   gap: 8px;
   padding: 5px 8px;
   border-radius: 7px;
-  background: var(--el-fill-color, rgba(255, 255, 255, 0.04));
+  background: var(--el-fill-color);
 }
 .khy-fb__task-progress-text {
   font-size: 11px;
   font-weight: 600;
-  color: var(--el-text-color-secondary, #9aa2b1);
+  color: var(--khy-ink-dim);
   white-space: nowrap;
 }
 .khy-fb__task-progress-bar {
@@ -1178,7 +1164,7 @@ onBeforeUnmount(() => {
   display: block;
   height: 100%;
   border-radius: 2px;
-  background: linear-gradient(90deg, #6d5efc, #22c55e);
+  background: linear-gradient(90deg, var(--khy-accent), var(--khy-ok));
   transition: width 0.3s ease;
 }
 .khy-fb__task {
@@ -1190,7 +1176,7 @@ onBeforeUnmount(() => {
   transition: background 0.14s ease;
 }
 .khy-fb__task:hover {
-  background: var(--el-fill-color, rgba(255, 255, 255, 0.06));
+  background: var(--el-fill-color);
 }
 .khy-fb__task-ico {
   flex: none;
@@ -1198,13 +1184,13 @@ onBeforeUnmount(() => {
   text-align: center;
   font-size: 13px;
   line-height: 1.5;
-  color: #8b93a3;
+  color: var(--khy-off);
 }
 .khy-fb__task.is-completed .khy-fb__task-ico {
-  color: #22c55e;
+  color: var(--khy-ok);
 }
 .khy-fb__task.is-in_progress .khy-fb__task-ico {
-  color: #a78bfa;
+  color: var(--khy-rest);
 }
 .khy-fb__task.is-error .khy-fb__task-ico {
   color: var(--khy-danger);
@@ -1218,13 +1204,13 @@ onBeforeUnmount(() => {
 .khy-fb__task-title {
   font-size: 12.5px;
   line-height: 1.35;
-  color: var(--el-text-color-primary, #e7e9ee);
+  color: var(--khy-ink);
   word-break: break-word;
 }
 .khy-fb__task.is-completed .khy-fb__task-title {
-  color: var(--el-text-color-secondary, #9aa2b1);
+  color: var(--khy-ink-dim);
   text-decoration: line-through;
-  text-decoration-color: rgba(154, 162, 177, 0.5);
+  text-decoration-color: var(--khy-fade);
 }
 .khy-fb__task-meta {
   display: flex;
@@ -1236,14 +1222,14 @@ onBeforeUnmount(() => {
   line-height: 1.3;
   padding: 0 6px;
   border-radius: 6px;
-  color: var(--el-text-color-secondary, #8b93a3);
-  background: var(--el-fill-color-light, rgba(255, 255, 255, 0.06));
+  color: var(--khy-ink-mute);
+  background: var(--el-fill-color-light);
 }
 
 .khy-fb__mcp {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid var(--el-border-color-lighter, rgba(255, 255, 255, 0.08));
+  border-top: 1px solid var(--el-border-color-lighter);
 }
 .khy-fb__mcp-head {
   display: flex;
@@ -1254,7 +1240,7 @@ onBeforeUnmount(() => {
 .khy-fb__mcp-title {
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--el-text-color-primary, #e7e9ee);
+  color: var(--khy-ink);
 }
 .khy-fb__mcp-count {
   margin-left: auto;
@@ -1264,17 +1250,17 @@ onBeforeUnmount(() => {
   font-size: 11px;
   font-weight: 600;
   text-align: center;
-  color: #a5f3fc;
-  background: rgba(34, 211, 238, 0.18);
+  color: var(--khy-cyan);
+  background: var(--khy-cyan-soft);
 }
 .khy-fb__mcp-hint {
   padding: 10px 8px;
   text-align: center;
   font-size: 12.5px;
-  color: var(--el-text-color-secondary, #8b93a3);
+  color: var(--khy-ink-mute);
 }
 .khy-fb__mcp-hint.is-error {
-  color: #f87171;
+  color: var(--khy-danger);
   cursor: pointer;
 }
 .khy-fb__mcp-hint.is-error:hover {
@@ -1299,32 +1285,32 @@ onBeforeUnmount(() => {
   transition: background 0.14s ease;
 }
 .khy-fb__mcp-item:hover {
-  background: var(--el-fill-color, rgba(255, 255, 255, 0.06));
+  background: var(--el-fill-color);
 }
 .khy-fb__mcp-status {
   width: 7px;
   height: 7px;
   border-radius: 50%;
   flex: none;
-  background: #8b93a3;
+  background: var(--khy-off);
 }
 .khy-fb__mcp-status.is-connected {
-  background: #22c55e;
-  box-shadow: 0 0 6px rgba(34, 197, 94, 0.7);
+  background: var(--khy-ok);
+  box-shadow: 0 0 6px var(--khy-ok-glow);
 }
 .khy-fb__mcp-status.is-connecting,
 .khy-fb__mcp-status.is-pending {
-  background: #eab308;
+  background: var(--khy-busy);
 }
 .khy-fb__mcp-status.is-failed {
   background: var(--khy-danger);
 }
 .khy-fb__mcp-status.is-disabled {
-  background: #6b7280;
+  background: var(--khy-off-strong);
 }
 .khy-fb__mcp-name {
   font-size: 12px;
-  color: var(--el-text-color-primary, #e7e9ee);
+  color: var(--khy-ink);
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1332,7 +1318,7 @@ onBeforeUnmount(() => {
 }
 .khy-fb__mcp-server {
   font-size: 10.5px;
-  color: var(--el-text-color-secondary, #8b93a3);
+  color: var(--khy-ink-mute);
   flex: none;
 }
 

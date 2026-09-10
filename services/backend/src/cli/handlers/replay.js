@@ -22,10 +22,11 @@
  */
 'use strict';
 
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const chalk = require('chalk').default || require('chalk');
 
 const sessionPersistence = require('../../services/sessionPersistence');
-const trajectoryGuideConfig = require('config.js');
+const trajectoryGuideConfig = require('./config.js');
 const replayBundle = require('../../services/domain/trajectory/trajectoryReplay/replayBundle.js');
 const replayEngine = require('../../services/domain/trajectory/trajectoryReplay/replayEngine.js');
 const replayLedger = require('../../services/domain/trajectory/trajectoryReplay/replayLedger.js');
@@ -343,4 +344,12 @@ async function handleReplay(subCommand, args = [], options = {}) {
   return undefined;
 }
 
-module.exports = { handleReplay };
+module.exports = {
+  handleReplay,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'replay',
+    description: 'replay command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleReplay(parsed.subCommand, parsed.args, parsed.options),
+  },
+};

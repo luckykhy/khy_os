@@ -1,5 +1,5 @@
 /**
- * Workflow run WORKER — atomic claim + native execution + status write-back.
+ * Workflow run WORKER �?atomic claim + native execution + status write-back.
  *
  * Boots a throwaway SQLite DB bound to the shared sequelize singleton BEFORE
  * @khy/shared/models is required (so the worker resolves the same instances),
@@ -7,7 +7,7 @@
  * against MOCKED primitives (no LLM / tools). Verifies:
  *   - a queued run is claimed and executed to `succeeded`, vars/log written back;
  *   - a graph whose node throws lands `failed` with an error message;
- *   - claimNext() is atomic — a second claim returns null (no double-execute).
+ *   - claimNext() is atomic �?a second claim returns null (no double-execute).
  */
 'use strict';
 
@@ -22,8 +22,8 @@ process.env.NODE_ENV = 'test';
 process.env.KHY_WORKFLOW_WORKER = '0'; // never auto-start the interval in tests
 
 const { sequelize, User, UserWorkflow, WorkflowRun } = require('@khy/shared/models');
-const worker = require('../src/services/workflow/workflowRunWorker');
-const executor = require('../src/services/workflow/workflowExecutor');
+const worker = require('../src/services/domain/project/workflow/workflowRunWorker.js');
+const executor = require('../src/services/domain/project/workflow/workflowExecutor.js');
 
 let userId;
 let workflowId;
@@ -96,7 +96,7 @@ describe('workflowRunWorker', () => {
     expect(row.finishedAt).toBeTruthy();
   });
 
-  test('claimNext is atomic — second claim of the same queued set returns the next or null', async () => {
+  test('claimNext is atomic �?second claim of the same queued set returns the next or null', async () => {
     // Single queued run: first claim wins, second finds nothing queued.
     const runId = await enqueue(OK_GRAPH);
     const first = await worker.claimNext(WorkflowRun);
@@ -155,7 +155,7 @@ describe('workflowRunWorker', () => {
     const past = new Date(Date.now() - 600000);
     const orphan0 = await WorkflowRun.findByPk(orphanId);
     await orphan0.update({ status: 'running', startedAt: past });
-    // Backdate the heartbeat directly — the ORM always bumps updated_at to now.
+    // Backdate the heartbeat directly �?the ORM always bumps updated_at to now.
     await sequelize.query('UPDATE workflow_runs SET updated_at = :ts WHERE id = :id', {
       replacements: { ts: past.toISOString(), id: orphanId },
     });
@@ -175,6 +175,7 @@ describe('workflowRunWorker', () => {
     expect(orphan.logJson[orphan.logJson.length - 1]).toMatchObject({ type: 'system', status: 'recovered' });
 
     const live = await WorkflowRun.findByPk(liveId);
-    expect(live.status).toBe('running'); // untouched — heartbeat was fresh
+    expect(live.status).toBe('running'); // untouched �?heartbeat was fresh
   });
 });
+

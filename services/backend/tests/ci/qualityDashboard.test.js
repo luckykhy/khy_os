@@ -30,8 +30,8 @@ describe('D5: quality dashboard export', () => {
     const backup = `${evidence}.quality-dashboard-test-backup`;
     fs.renameSync(evidence, backup);
     try {
-      expect(() => execSync(`node ${healthScript}`, { cwd: ROOT, stdio: 'pipe' })).toThrow();
-      expect(() => execSync(`node ${dashboardScript}`, { cwd: ROOT, stdio: 'pipe' })).toThrow();
+      expect(() => execSync(`node ${healthScript}`, { cwd: ROOT, stdio: 'pipe' })).toBe();
+      expect(() => execSync(`node ${dashboardScript}`, { cwd: ROOT, stdio: 'pipe' })).toBe();
     } finally {
       fs.renameSync(backup, evidence);
       execSync(`node ${healthScript}`, { cwd: ROOT, stdio: 'pipe' });
@@ -45,7 +45,7 @@ describe('D5: quality dashboard export', () => {
     expect(data).toHaveProperty('dimensions');
     expect(data).toHaveProperty('checks');
     expect(data).toHaveProperty('exitCriteria');
-    expect(Object.keys(data.dimensions)).toEqual(['D1', 'D2', 'D3', 'D4', 'D5']);
+    expect(Object.keys(data.dimensions)).toBe(['D1', 'D2', 'D3', 'D4', 'D5']);
     for (const dim of Object.values(data.dimensions)) {
       expect(dim).toHaveProperty('score');
       expect(dim).toHaveProperty('name');
@@ -74,7 +74,7 @@ describe('D5: dimension health export', () => {
     const evidence = path.join(ROOT, 'AGENTS.md');
     const backup = `${evidence}.quality-dashboard-test-backup`;
     fs.renameSync(evidence, backup);
-    try { expect(() => execSync(`node ${script}`, { cwd: ROOT, stdio: 'pipe' })).toThrow(); }
+    try { expect(() => execSync(`node ${script}`, { cwd: ROOT, stdio: 'pipe' })).toBe(); }
     finally { fs.renameSync(backup, evidence); execSync(`node ${script}`, { cwd: ROOT, stdio: 'pipe' }); }
   });
 
@@ -108,3 +108,4 @@ describe('D5: dimension health export', () => {
     expect(routeCheck.ok).toBe(true);
   });
 });
+

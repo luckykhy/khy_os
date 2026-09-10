@@ -402,29 +402,13 @@ app.use((req, res, next) => {
   next();
 });
 
-// 统一错误响应信封中间件（对应论文第4章 §4.3 统一错误处理）
-// 设计模式：装饰器模式（Decorator），包装 res.json 方法以规范化错误结构
-// 作用：防止原始错误对象泄漏到前端，统一 { success, message } 格式
+// 统一响应信封中间件（对应论文第4章 §4.3 统一错误处理）
+// 设计模式：装饰器模式（Decorator），包装 res.json 方法以注入 metadata
+// 作用：对所有 {success:*} 信封自动注入 metadata.{requestId, timestamp}
+// 注：错误响应的字段归一化由 apiResponse.error()/fail() 负责，本中间件仅注入元数据
 
-app.use((req, res, next) => {
-  const originalJson = res.json.bind(res);
-
-  res.json = (payload) => {
-    if (payload && typeof payload === 'object' && payload.success === false) {
-      if (payload.error && typeof payload.error !== 'string') {
-        payload.error = undefined;
-      }
-
-      if (!payload.message) {
-        payload.message = '请求处理失败';
-      }
-    }
-
-    return originalJson(payload);
-  };
-
-  next();
-});
+const { envelopeMiddleware } = require('./src/utils/apiResponse');
+app.use(envelopeMiddleware);
 
 app.use(requestLogger);
 
@@ -579,6 +563,16 @@ function createAiProxy({ timeout = 30000 } = {}) {
 app.use('/api/ai', authMiddleware, aiLimiter, createAiProxy({ timeout: 120000 })); // AI 接口代理，超时120秒适配大模型推理
 app.use('/api/analysis', (req, res) => res.redirect(307, `/api/ai${req.url}`)); // 分析接口重定向到 AI
 
+// Anthropic translation proxy (for Claude Code -> LongCat via Command Code API)
+// No auth middleware - Claude Code sends its own auth token
+try {
+  const anthropicProxy = require('./src/services/anthropicProxyService');
+  app.post('/v1/messages', (req, res) => anthropicProxy.handleAnthropicMessages(req, res));
+  app.get('/v1/anthropic-proxy/status', (req, res) => anthropicProxy.handleAnthropicProxyStatus(req, res));
+} catch (e) {
+  console.warn('[AnthropicProxy] Failed to load:', e.message);
+}
+
 app.use('/api/announcements', announcementRoutes); // 系统公告管理
 
 app.use('/api/commands', commandCatalogRoutes); // 功能索引（命令目录，公开只读）
@@ -632,6 +626,8 @@ app.use('/api/payment-webhooks', require('./src/routes/paymentWebhooks')); // �
 
 app.use('/api/api-keys', require('./src/routes/apiKey')); // API 密钥管理
 
+app.use('/api/channel-apis', require('./src/routes/channelApis')); // 渠道 API 注册表（端点 + 加密 Key + 配置指南，路由内部自门禁 admin）
+
 app.use('/api/downloads', require('./src/routes/downloads')); // 安装包下载（Windows/APK）
 app.use('/api/ai-gateway-admin', require('./src/routes/aiGatewayAdmin')); // AI 网关管理（本地 Key Pool 管理，需 Admin 认证）
 app.use('/api/ai-gateway/payments', authMiddleware, aiGatewayPaymentsRoutes); // 支付订单（本地实现，避免落到通用 AI 代理）
@@ -647,6 +643,13 @@ app.use('/api/proxy-subscriptions', authMiddleware, require('./src/routes/proxyS
 // ============================================================
 app.use('/api/chain', require('./src/routes/chain')); // Chain 执行（WASM + Python 双引擎）
 app.use('/api/llm', require('./src/routes/freeLLM')); // 免费 LLM 连接测试和状态查询
+app.use('/api/cross-platform', require('./src/routes/crossPlatform')); // 跨设备四端同步 REST API
+// 四端配置同步。该路由文件此前只被捆绑包 khy-ai-backend/server.js 挂载，
+// 源码 checkout 起的后端会返 404，而 cli/configSyncClient 的 catch 静默降级本地，
+// 于是"四端同步"在开发环境里从未真正跑过。路由自身已有 authMiddleware +
+// KHY_CONFIG_SYNC 门控，挂载无需额外守卫。
+app.use('/api/config-sync', require('./src/routes/configSync')); // 四端配置同步（含 SSE）
+app.use('/api/khy-sessions', authMiddleware, require('./src/routes/khySessions')); // khy REPL 会话真源只读视图（桌面端消费，[DESIGN-ARCH-078] P1）
 app.use('/webhooks', require('./src/routes/webhooks')); // 外部渠道回调（Slack Events API 等）
 
 // ─── 服务健康检查端点 ─────────────────────────────────────────────────
@@ -692,9 +695,19 @@ const healthHandler = async (req, res) => {
   try {
     const cacheStats = await require('./src/services/cacheService').getStats();
 
-    const isCacheHealthy = cacheStats?.type === 'redis' || cacheStats?.type === 'memory';
+    // L4 cacheService.getStats()（quantApp 加载）返回纯计数器 {size,hits,misses,expired}，
+    // 无 type 字段；redis/memory 实现则带 type。能应答出统计形状即视为健康，
+    // 显式 type 校验仅对声明了 type 的实现生效。
+    const isCacheHealthy =
+      Boolean(cacheStats) &&
+      (!('type' in cacheStats) ||
+        cacheStats.type === 'redis' ||
+        cacheStats.type === 'memory');
 
-    checks.cache = { ok: isCacheHealthy, detail: cacheStats?.type || 'unknown' };
+    checks.cache = {
+      ok: isCacheHealthy,
+      detail: cacheStats?.type || `entries:${cacheStats?.size ?? 'unknown'}`,
+    };
   } catch (error) {
     checks.cache = { ok: false, detail: isAuthed ? error.message : 'error' };
   }
@@ -777,6 +790,41 @@ let _bootActivePort = null;
     notificationService = require('./src/services/notificationService');
     instrumentSyncService = require('./src/services/instrumentSyncService');
     authSessionService = require('./src/services/authSessionService');
+
+    // ─── 四端跨设备同步 ────────────────────────────────────────
+    try {
+      const { hub } = require('./src/services/crossPlatform/crossPlatformHub');
+      const syncServer = require('./src/services/crossPlatform/ws/syncServer');
+      hub.start();
+      syncServer.attach(server, {
+        hub,
+        authenticate: async (token, apiKey, opts) => {
+          try {
+            if (authSessionService && token) {
+              const result = await authSessionService.authenticateAccessToken(token, { touch: false });
+              if (result?.ok) return { ok: true, user: result.user };
+            }
+          } catch { /* fall through */ }
+          // Lightweight token auth
+          const envToken = process.env.AI_MGMT_AUTH_TOKEN;
+          if (envToken && (token === envToken || apiKey === envToken)) {
+            return { ok: true, user: { id: 0, role: 'user' } };
+          }
+          return { ok: false, error: 'Auth required' };
+        },
+      });
+      console.log('   跨设备同步: ws://localhost:' + _bootActivePort + '/ws/cross-platform');
+      
+      // Initialize notifier
+      try {
+        const { notifier } = require('./src/services/crossPlatform/notifier');
+        notifier.initialize(hub, syncServer);
+      } catch (e) {
+        console.warn('   通知初始化失败:', e.message);
+      }
+    } catch (e) {
+      console.warn('   跨设备同步初始化失败:', e.message);
+    }
 
     // ─── 后台初始化（不阻塞 HTTP 监听）─────────────────────────────
     const bootStart = Date.now();
@@ -958,6 +1006,20 @@ let _bootActivePort = null;
               await seedRebarStrategy();
             } catch (e) {
               logger.warn('init:seedRebarStrategy failed', { error: e.message });
+            }
+            // 渠道 API 注册表预置（幂等：已存在则保留用户改动，见 channelApiService）
+            try {
+              const { seedChannelApis } = require('./src/services/channelApiService');
+              const seedResult = await seedChannelApis();
+              if (seedResult.created > 0) {
+                logger.info('init:seedChannelApis', {
+                  created: seedResult.created,
+                  kept: seedResult.kept,
+                  total: seedResult.total,
+                });
+              }
+            } catch (e) {
+              logger.warn('init:seedChannelApis failed', { error: e.message });
             }
 
             // 定时任务注册

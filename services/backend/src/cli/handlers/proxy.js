@@ -15,6 +15,7 @@ const path = require('path');
 const http = require('http');
 const https = require('https');
 const { spawn, spawnSync } = require('child_process');
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 
 const normalizeModelId = require('../../services/gateway/_modelIdParse').normalizeModelIdTrimQuotes;
 const parseBooleanMaybe = require('../../utils/parseBoolean');
@@ -2849,5 +2850,39 @@ module.exports = {
     parsePositiveInt,
     generateSelfSignedCert,
     ensureHttpsTlsOptions,
+  },
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'proxy',
+    aliases: ['代理', 'proxy-server'],
+    description: '代理服务管理：启动/停止/状态/快速入门/证书/客户端/Token/核心/订阅/TLS/Cursor2API/切换',
+    usage: 'proxy <subcommand> [args]',
+    subCommands: ['start', 'stop', 'status', 'help', 'quickstart', 'cert', 'core', 'client', 'token', 'subscription', 'sub', 'tls', 'switch-center', 'switch', 'trae-switch', 'windsurf-switch', 'cursor2api'],
+    category: 'system',
+    handler: async (parsed) => {
+      const sub = String(parsed.subCommand || '').toLowerCase();
+      const args = parsed.args || [];
+      const opts = parsed.options || {};
+      const a0 = args[0] || 'status';
+      const a1 = args[1] || null;
+      const rest = args.slice(1);
+      switch (sub) {
+        case 'start': return await handleProxyStart(opts);
+        case 'stop': return await handleProxyStop();
+        case 'status': return await handleProxyStatus();
+        case 'help': return await handleProxyHelp();
+        case 'quickstart': return await handleProxyQuickstart(args, opts);
+        case 'cert': return await handleProxyCert(args[0] || 'generate', rest, opts);
+        case 'core': return await handleProxyCore(a0, rest, opts);
+        case 'client': return await handleProxyClient(a0, rest, opts);
+        case 'token': return await handleProxyToken(a0, rest, opts);
+        case 'subscription': case 'sub': return await handleProxySubscription(a0, rest, opts);
+        case 'tls': return await handleProxyTls(a0, a1);
+        case 'switch-center': case 'switch': return await handleProxySwitchCenter(a0, rest, opts);
+        case 'trae-switch': return await handleProxyTraeSwitch(a0, rest, opts);
+        case 'windsurf-switch': return await handleProxyWindsurfSwitch(a0, rest, opts);
+        case 'cursor2api': return await handleProxyCursor2Api(a0, rest, opts);
+        default: return await handleProxyHelp();
+      }
+    },
   },
 };

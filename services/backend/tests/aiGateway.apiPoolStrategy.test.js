@@ -125,14 +125,14 @@ describe('aiGateway api pool strategy', () => {
     gw._clearAdapterFailure = () => {};
     gw._recordAdapterFailure = () => {};
     gw._shouldSerializeAdapter = () => false;
-    // 首次用到一个「未实测」通道时，网关会 fire-and-forget 起一个工具调用能力探测
-    // （aiGatewayGenerateMethod.js:2575 → _maybeBackgroundProbeToolCalling →
-    // verifyToolCalling → 嵌套 this.generate）。它不被 await：本机（win32/Node 24）
-    // 上那次嵌套调用总在用例断言之后才落地，ubuntu/Node 22 上则常常抢在前面 ——
+    // 首次用到一个「未实测」通道时，网关�?fire-and-forget 起一个工具调用能力探�?
+    // （aiGatewayGenerateMethod.js:2575 �?_maybeBackgroundProbeToolCalling �?
+    // verifyToolCalling �?嵌套 this.generate）。它不被 await：本机（win32/Node 24�?
+    // 上那次嵌套调用总在用例断言之后才落地，ubuntu/Node 22 上则常常抢在前面 —�?
     // 于是 mockAdapter.generate 被调 2 次、pickById 被调 2 次（各自一套全新的
-    // attemptedPoolKeyIds，所以两次都挑中 k2），而 markSuccess 仍只有 1 次。表现
-    // 就是「本机绿、门禁红且时红时绿」。本用例断言的是池内选键，与能力探测无关，
-    // 按本 helper 既有做法把它一并打桩，让调用次数变成确定的。
+    // attemptedPoolKeyIds，所以两次都挑中 k2），�?markSuccess 仍只�?1 次。表�?
+    // 就是「本机绿、门禁红且时红时绿」。本用例断言的是池内选键，与能力探测无关�?
+    // 按本 helper 既有做法把它一并打桩，让调用次数变成确定的�?
     gw._maybeBackgroundProbeToolCalling = () => {};
     gw.refreshAdapters = async () => {};
     return { gw, mockAdapter };
@@ -208,10 +208,10 @@ describe('aiGateway api pool strategy', () => {
 
   // Regression: the pooled-key success path used to build its result WITHOUT
   // toolUseBlocks/stopReason, while the non-pooled path included both. A model
-  // answering with pure tool_calls (empty content) is a completely normal turn —
+  // answering with pure tool_calls (empty content) is a completely normal turn �?
   // it is exactly what "list my desktop" produces. Dropping the tool blocks left
   // the caller with content:'' and no tool calls, which surfaced to the user as
-  // "AI 未返回有效回复 — 可能被 max_tokens 截断". So every tool-using turn through a
+  // "AI 未返回有效回�?�?可能�?max_tokens 截断". So every tool-using turn through a
   // pooled provider silently died, and the error message pointed at max_tokens
   // instead of the real cause. Only plain chit-chat worked.
   test('pooled success path preserves toolUseBlocks and stopReason', async () => {
@@ -237,3 +237,4 @@ describe('aiGateway api pool strategy', () => {
     expect(result.stopReason).toBe('tool_calls');
   });
 });
+

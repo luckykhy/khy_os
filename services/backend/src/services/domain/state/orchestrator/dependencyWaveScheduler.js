@@ -469,7 +469,7 @@ function injectPredecessorContext(promptText, contextBlock) {
   if (typeof contextBlock !== 'string' || contextBlock.length === 0) {
     return p;
   }
-  return `${contextBlock}\n\n---\n\n${p}`;
+  return `${contextBlock}\n\n${p}`;
 }
 
 module.exports = {

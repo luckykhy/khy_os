@@ -149,7 +149,7 @@ describe('windows shell executor compatibility', () => {
 
     // An earlier test in this suite leaves a partial platformUtils doMock
     // registered (jest.doMock survives resetModules); cancel it so the real
-    // helper (isGuiApp, getShellConfiguration, …) is loaded here.
+    // helper (isGuiApp, getShellConfiguration, �? is loaded here.
     jest.resetModules();
     jest.unmock('../src/tools/platformUtils');
 
@@ -171,10 +171,10 @@ describe('windows shell executor compatibility', () => {
   });
 
   test('cmd: ASCII-only command WITH Chinese output also forces chcp 65001 (dir 乱码 fix)', async () => {
-    // 用户实测破口：`dir "D:\..."` 命令本身纯 ASCII，但输出含中文（本地化表头 +
-    // 中文文件名）。旧实现仅当命令含非 ASCII 才强制 chcp，故此命令漏强制 → 子进程
-    // 吐 GBK 字节被按 UTF-8 解码成 `������ D �еľ��� Data` 乱码。修复后强制条件取决于
-    // shell 类型而非命令字节，故纯 ASCII 命令同样获得 chcp 65001 + utf-8 解码。
+    // 用户实测破口：`dir "D:\..."` 命令本身�?ASCII，但输出含中文（本地化表�?+
+    // 中文文件名）。旧实现仅当命令含非 ASCII 才强�?chcp，故此命令漏强制 �?子进�?
+    // �?GBK 字节被按 UTF-8 解码�?`������ D �еľ��� Data` 乱码。修复后强制条件取决�?
+    // shell 类型而非命令字节，故�?ASCII 命令同样获得 chcp 65001 + utf-8 解码�?
     setPlatform('win32');
     process.env.COMSPEC = 'C:\\Windows\\System32\\cmd.exe';
     process.env.KHY_SHELL_IDLE_TIMEOUT_ENABLED = 'true';
@@ -194,7 +194,7 @@ describe('windows shell executor compatibility', () => {
     expect(opts.outputEncoding).toBe('utf-8');
   });
 
-  test('cmd: KHY_WIN_FORCE_UTF8=0 disables forcing (escape valve → spawn-side auto-detect)', async () => {
+  test('cmd: KHY_WIN_FORCE_UTF8=0 disables forcing (escape valve �?spawn-side auto-detect)', async () => {
     setPlatform('win32');
     process.env.COMSPEC = 'C:\\Windows\\System32\\cmd.exe';
     process.env.KHY_SHELL_IDLE_TIMEOUT_ENABLED = 'true';
@@ -210,7 +210,7 @@ describe('windows shell executor compatibility', () => {
     await shellCommandTool.execute({ command: 'dir test' }, {});
 
     const [, args, opts] = spawnWithIdleTimeout.mock.calls[0];
-    // 关闭强制后命令逐字不变，解码回落 spawn 侧代码页自动探测（outputEncoding=null）。
+    // 关闭强制后命令逐字不变，解码回�?spawn 侧代码页自动探测（outputEncoding=null）�?
     expect(args[3]).toBe('dir test');
     expect(opts.outputEncoding).toBeNull();
     delete process.env.KHY_WIN_FORCE_UTF8;
@@ -241,3 +241,4 @@ describe('windows shell executor compatibility', () => {
     expect(opts.outputEncoding).toBe('utf-8');
   });
 });
+

@@ -41,3 +41,4 @@ describe('ephemeralTmp', () => {
     handle.dispose(); // should not throw
   });
 });
+

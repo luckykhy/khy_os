@@ -55,6 +55,7 @@
     "arch:debt:baseline": "node scripts/archDebtScan.js --update-baseline",
     "arch:god": "node scripts/archDebtScan.js --god-report",
     "test": "jest",
+    "test:one": "jest",
     "test:node": "node --test tests/**/*.test.js",
     "test:all": "npm test && npm run test:node",
     "test:summary": "node scripts/test-summary.js",

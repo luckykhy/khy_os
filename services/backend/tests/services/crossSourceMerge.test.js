@@ -15,7 +15,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const m = require('../../src/services/search/crossSourceMerge');
+const m = require('../../src/services/domain/query/search/crossSourceMerge.js');
 
 // ── normalizers ───────────────────────────────────────────────────────────────
 

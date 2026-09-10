@@ -58,3 +58,4 @@ describe('User model', () => {
     expect(typeof User.prototype.comparePassword).toBe('function');
   });
 });
+

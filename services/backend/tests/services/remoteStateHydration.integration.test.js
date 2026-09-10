@@ -95,3 +95,4 @@ describe('remote index persistence integration', () => {
     expect(['never', 'saved']).toContain(snapshot.persistence.last_save_status);
   });
 });
+

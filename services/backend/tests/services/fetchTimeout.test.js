@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tests for fetchTimeout.js â€” timeout signal composition,
+ * Tests for fetchTimeout.js â€?timeout signal composition,
  * fetchWithTimeout execution, and URL sanitization.
  */
 
@@ -135,3 +135,4 @@ describe('DEFAULT_FETCH_TIMEOUT_MS', () => {
     expect(DEFAULT_FETCH_TIMEOUT_MS).toBe(120000);
   });
 });
+

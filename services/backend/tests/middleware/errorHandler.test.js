@@ -114,3 +114,4 @@ describe('errorHandler middleware', () => {
     expect(res._body.requestId).toBeUndefined();
   });
 });
+

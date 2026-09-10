@@ -60,7 +60,23 @@ L5 内部的契约（目录形状、manifest、发现与激活、删除语义）
 
 ### 1.3 根级生成目录
 
-`build/`、`dist/` 与 `*.egg-info/` 是构建或打包工具生成的临时产物，不属于 L0-L6 或横切源码层。它们必须保持在 `.gitignore` 中，层级守卫仅通过封闭的 `GENERATED_TOP_LEVEL_DIRS` 集合排除；新增生成目录时须同步补充忽略规则和守卫集合。
+`build/`、`dist/`、`dist-electron/` 与 `*.egg-info/` 是构建或打包工具生成的临时产物，不属于 L0-L6 或横切源码层。它们必须保持在 `.gitignore` 中，层级守卫仅通过封闭的 `GENERATED_TOP_LEVEL_DIRS` 集合排除；新增生成目录时须同步补充忽略规则和守卫集合。
+
+`dist-electron/` 是 Electron 便携版打包输出（`KhyOS-Desktop/` + `启动KhyOS.bat`），由 `electron-builder` 生成，2026-09-08 补登记。
+
+### 1.4 根级例外目录（登记在册，不新增层级）
+
+有两个顶层目录既不属于 L0-L6，也不属于 §1.2 的横切层，但它们是历史遗留的根级实体，
+不是误放的临时产物。守卫通过 `CROSSCUTTING` 登记它们，使 `layer-registry` 能区分
+「已登记的例外」与「真新增的未登记目录」—— 后者仍会报错。
+
+| 目录 | 性质 | 说明 |
+| --- | --- | --- |
+| `electron/` | 根级 Electron 桌面壳 | `main.js` / `preload.js` / `services/`。入口是根 `package.json` 的 `electron:dev`（`node scripts/electron-dev.js`），依赖（`electron` 32.3.3 / `electron-builder`）也声明在根级。刻意未并入 `apps/`：它在根级独立构建与打包，且与 `apps/khyos-desktop/` 是两条并行产物线 |
+| `tests/` | 测试债务登记 | 目前只含 `DEBT.md`（已知失败用例登记，真源见其内「最后更新」日期）。内容属文档性质，**待迁 `docs/05_TEST_测试/`**；迁移完成前按根级例外登记，避免 `layer-registry` 每次报警 |
+
+**新增例外目录的门槛**：必须在 §1.4 表格补一行说明「为什么不能归入 L0-L6 或 §1.2 横切」，
+再同步补 `scripts/ci/check-repo-layout.js` 的 `CROSSCUTTING`。只改脚本不改本文即视为违规。
 
 ---
 

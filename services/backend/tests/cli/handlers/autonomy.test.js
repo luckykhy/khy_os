@@ -14,7 +14,7 @@ const assert = require('node:assert/strict');
 
 const HANDLER_PATH = require.resolve('../../../src/cli/handlers/autonomy');
 const FORMATTERS_PATH = require.resolve('../../../src/cli/formatters');
-const ORCH_PATH = require.resolve('../../../src/services/orchestrator/orchestrationService');
+const ORCH_PATH = require.resolve('../../../src/services/domain/state/orchestrator/orchestrationService.js');
 
 let calls;
 let orchStub;

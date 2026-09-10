@@ -3,7 +3,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 
-const leaf = require('../../../src/services/advisor/advisorPlan');
+const leaf = require('../../../src/services/domain/agents/advisor/advisorPlan.js');
 
 // ── 语法解析 ──────────────────────────────────────────────────────────────
 test('parseAdvisorArgs: 空参 = recommend', () => {

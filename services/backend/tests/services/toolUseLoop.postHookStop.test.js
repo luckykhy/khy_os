@@ -1,16 +1,16 @@
 'use strict';
 
 /**
- * s04 — PostToolUse preventContinuation (graceful stop / hook_stopped_continuation).
+ * s04 �?PostToolUse preventContinuation (graceful stop / hook_stopped_continuation).
  *
  * A PostToolUse hook may signal `preventContinuation` to halt the agent loop
  * after the current tool batch. The loop then concludes cleanly on the next
- * iteration boundary — flagged `hookStopped: true` — instead of issuing another
+ * iteration boundary �?flagged `hookStopped: true` �?instead of issuing another
  * model turn or being mislabelled as having hit the iteration ceiling.
  */
 
 function mockHookSystem(triggerImpl) {
-  jest.doMock('../../src/services/hooks/hookSystem', () => ({
+  jest.doMock('../../src/services/domain/extensions/hooks/hookSystem.js', () => ({
     isInitialized: () => true,
     init: () => {},
     registry: { count: 1 },
@@ -69,7 +69,7 @@ describe('toolUseLoop PostToolUse graceful stop', () => {
     expect(result.maxIterationsReached).toBeUndefined();
   }, 30000);
 
-  test('no preventContinuation → loop proceeds normally', async () => {
+  test('no preventContinuation �?loop proceeds normally', async () => {
     mockToolCalling();
     mockHookSystem(async () => ({ blocked: false, context: {} }));
 
@@ -94,3 +94,4 @@ describe('toolUseLoop PostToolUse graceful stop', () => {
     expect(turn).toBe(2); // tool turn + conclusion turn
   }, 30000);
 });
+

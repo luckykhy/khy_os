@@ -4,7 +4,7 @@ const http = require('http');
 const { test, after } = require('node:test');
 const assert = require('node:assert');
 
-const { defaultPrimitives } = require('../src/services/workflow/workflowExecutor');
+const { defaultPrimitives } = require('../src/services/domain/project/workflow/workflowExecutor.js');
 const { testConnectivity } = require('../src/services/gateway/providerConnectivityTester');
 
 const received = [];

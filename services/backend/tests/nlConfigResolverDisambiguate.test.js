@@ -16,7 +16,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const r = require('../src/services/config/nlConfigResolver');
+const r = require('../src/services/domain/config/config/nlConfigResolver.js');
 
 // 真并列短语:同时含 push-notify 的『推送通知』(4) 与 push-on-done 的『完成推送』(4)。
 const TIE_TEXT = '帮我关掉完成推送通知';

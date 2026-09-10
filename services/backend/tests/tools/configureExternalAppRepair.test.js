@@ -20,7 +20,7 @@ function mkTmp(prefix) {
   return fs.mkdtempSync(path.join(os.tmpdir(), `khy-${prefix}-`));
 }
 
-const OC = require('../../src/services/externalApps/opencodeAdapter');
+const OC = require('../../src/services/domain/network/externalApps/opencodeAdapter.js');
 
 const BROKEN = {
   $schema: 'https://opencode.ai/config.json',

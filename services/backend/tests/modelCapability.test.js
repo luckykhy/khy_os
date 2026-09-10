@@ -21,7 +21,7 @@ afterEach(() => {
 describe('source hint wins (origin-based)', () => {
   test('image/video source overrides any name', () => {
     expect(cap.classifyCapability('agnes-image-2.1-flash', { source: 'image' })).toBe('image');
-    expect(cap.classifyCapability('agnes-video-v2.0', { source: 'video' })).toBe('video');
+    expect(cap.classifyCapability('agnes-video-2.5', { source: 'video' })).toBe('video');
     // a chat-named model forced to image by origin
     expect(cap.classifyCapability('gpt-4o', { source: 'image' })).toBe('image');
   });
@@ -31,7 +31,7 @@ describe('Agnes triplet without source hint', () => {
   test('chat model → text, image/video names → regex buckets', () => {
     expect(cap.classifyCapability('agnes-2.0-flash')).toBe('text');
     expect(cap.classifyCapability('agnes-image-2.1-flash')).toBe('image');
-    expect(cap.classifyCapability('agnes-video-v2.0')).toBe('video');
+    expect(cap.classifyCapability('agnes-video-2.5')).toBe('video');
   });
 });
 

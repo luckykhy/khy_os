@@ -274,7 +274,9 @@ function hasStatusDetail(text) {
 
 function isTestLikePath(normPath = '') {
   return /(?:^|\/)(?:__tests__|tests)\//.test(normPath)
-    || /\.(?:test|spec)\.[^.]+$/.test(normPath);
+    || /\.(?:test|spec)\.[^.]+$/.test(normPath)
+    // e2e-test.cjs, my-test.js, etc. — hyphenated "-test"/"-spec" before the extension
+    || /-(?:test|spec)\.[^.]+$/i.test(normPath);
 }
 
 function isLikelyUserFacingStatusLine(line = '') {

@@ -227,7 +227,7 @@ function createMemoryTools(options = {}) {
         let finalContent = content;
         if (append && fs.existsSync(filePath)) {
           const existing = fs.readFileSync(filePath, 'utf-8');
-          finalContent = `${existing}\n\n---\n\n${content}`;
+          finalContent = `${existing}\n\n${content}`;
         }
 
         // Atomic write

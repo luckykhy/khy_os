@@ -41,7 +41,7 @@ describe('plugins', () => {
       // plugins._appHome() delegates to dataHome.getAppHome() (legacy
       // ~/.khyquant established-wins, else the unified data home). Asserting
       // against the same resolver keeps the test correct under jest's data-home
-      // isolation (KHY_DATA_HOME â†’ tmp dir) and on any platform.
+      // isolation (KHY_DATA_HOME â†?tmp dir) and on any platform.
       expect(plugins.PLUGINS_DIR).toBe(path.join(getAppHome(), 'commands'));
     });
   });
@@ -73,3 +73,4 @@ describe('plugins', () => {
     });
   });
 });
+

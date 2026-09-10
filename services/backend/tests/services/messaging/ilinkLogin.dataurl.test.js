@@ -9,7 +9,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const { renderQrToDataUrl } = require('../../../src/services/messaging/ilinkLogin');
+const { renderQrToDataUrl } = require('../../../src/services/domain/messaging/messaging/ilinkLogin.js');
 
 test('正常 url → 返回 PNG data URL', async () => {
   const out = await renderQrToDataUrl('https://liteapp.weixin.qq.com/qr/abc123');

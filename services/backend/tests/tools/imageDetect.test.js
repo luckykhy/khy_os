@@ -1,5 +1,5 @@
 /**
- * imageDetect.test.js â€” unit tests for image_detect tool.
+ * imageDetect.test.js â€?unit tests for image_detect tool.
  *
  * The aiGateway is mocked so no real model is called. A small temp PNG fixture
  * is written so the FS validation passes. Tests assert: schema, mode prompt
@@ -129,3 +129,4 @@ describe('image_detect tool', () => {
     expect(mockGenerate).not.toHaveBeenCalled();
   });
 });
+

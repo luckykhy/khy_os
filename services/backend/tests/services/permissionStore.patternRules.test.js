@@ -7,7 +7,7 @@
  *   - gate off (default): check() byte-compatible with legacy behavior even
  *     when storePatternRules exist on disk; APIs are explicit no-ops
  *   - gate on: allow/deny pattern matching in check(); deny > allow
- *   - old permissions.json without the field â†’ backward compatible
+ *   - old permissions.json without the field â†?backward compatible
  *   - approvePattern / denyPattern / listPatternRules; forever persistence
  *
  * Hermetic isolation: KHY_APP_HOME + KHY_DATA_HOME are redirected to a fresh
@@ -64,7 +64,7 @@ afterEach(() => {
   try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch { /* best effort */ }
 });
 
-describe('gate off (default) â€” byte-compatible legacy behavior', () => {
+describe('gate off (default) â€?byte-compatible legacy behavior', () => {
   test('check() ignores storePatternRules present on disk', () => {
     writePermissionsFile({
       storePatternRules: [
@@ -111,7 +111,7 @@ describe('gate off (default) â€” byte-compatible legacy behavior', () => {
   });
 });
 
-describe('gate on â€” pattern matching in check()', () => {
+describe('gate on â€?pattern matching in check()', () => {
   test('allow pattern rule allows matching command prefixes', () => {
     enableGate();
     const store = loadStore();
@@ -134,7 +134,7 @@ describe('gate on â€” pattern matching in check()', () => {
     const store = loadStore();
     store.approvePattern('Bash', 'npm *', 'session');
     store.denyPattern('Bash', 'npm run *', 'session');
-    // Both rules match â€” deny wins.
+    // Both rules match â€?deny wins.
     expect(store.check('Bash', { command: 'npm run build' })).toBe('deny');
     // Only the allow rule matches.
     expect(store.check('Bash', { command: 'npm install' })).toBe('allow');
@@ -157,7 +157,7 @@ describe('gate on â€” pattern matching in check()', () => {
   });
 });
 
-describe('gate on â€” approvePattern / denyPattern / listPatternRules', () => {
+describe('gate on â€?approvePattern / denyPattern / listPatternRules', () => {
   test('session scope stays in memory (not persisted)', () => {
     enableGate();
     const store = loadStore();
@@ -224,3 +224,4 @@ describe('gate on â€” approvePattern / denyPattern / listPatternRules', () => {
     expect(readPermissionsFile().storePatternRules).toBeUndefined();
   });
 });
+

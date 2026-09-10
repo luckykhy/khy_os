@@ -10,7 +10,7 @@ const path = require('path');
 const TMP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'khyos-ilink-'));
 process.env.KHYOS_HOME = TMP_HOME;
 
-const store = require('../../../src/services/messaging/ilinkAccountStore');
+const store = require('../../../src/services/domain/messaging/messaging/ilinkAccountStore.js');
 
 const ACC = {
   botToken: 'tok_abcdefghij0123456789',

@@ -57,3 +57,4 @@ describe('publish handler db preflight', () => {
     expect(runAutoDbMigration).not.toHaveBeenCalled();
   });
 });
+

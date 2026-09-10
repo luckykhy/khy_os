@@ -34,3 +34,4 @@ describe('ownerControlService built-in study secret', () => {
     expect(result.ok).toBe(true);
   });
 });
+

@@ -39,7 +39,7 @@ const { getDataHome, getLegacyDataHome } = require('../../../../utils/dataHome')
 const atomicWriteJson = require('../../../../utils/atomicWriteJson');
 const { atomicWriteText } = require('../../../../utils/atomicWriteJson');
 const { safeReadJsonSync } = require('../../../configGuard');
-const { PROTOCOLS, APPS, DATA_FILE, SCHEMA_VERSION } = require('../../collab/proactiveCollaboration/constants');
+const { PROTOCOLS, APPS, DATA_FILE, SCHEMA_VERSION } = require('./constants');
 
 const apiKeyPool = require('../../../apiKeyPool');
 

@@ -19,6 +19,7 @@
  */
 
 const { printInfo, printError, printTable, printSuccess } = require('../formatters');
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 
 function _store() {
   return require('../../services/meshStore');
@@ -231,4 +232,14 @@ function handleMesh(subCommand, args = [], options = {}, deps = {}) {
   return 1;
 }
 
-module.exports = { handleMesh };
+module.exports = {
+  handleMesh,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'mesh',
+    aliases: ['mesh-node', '网格'],
+    description: '多实例网格：同机多个独立 khy 实例发现/attach/detach/互发消息',
+    usage: 'mesh <subcommand> [args]',
+    category: 'system',
+    handler: async (parsed) => handleMesh(parsed.subCommand, parsed.args, parsed.options),
+  },
+};

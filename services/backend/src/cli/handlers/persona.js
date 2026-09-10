@@ -10,6 +10,7 @@
  *                        unless --force); --dest <file> targets a specific path
  *   persona paths      — list which persona.md files were discovered
  */
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const chalk = require('chalk').default || require('chalk');
 const { printSuccess, printError, printInfo } = require('../formatters');
 
@@ -79,4 +80,12 @@ async function handlePersonaCommand(subCommand, args, options) {
   }
 }
 
-module.exports = { handlePersonaCommand };
+module.exports = {
+  handlePersonaCommand,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'persona',
+    description: 'persona command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handlePersonaCommand(parsed.subCommand, parsed.args, parsed.options),
+  },
+};

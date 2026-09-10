@@ -14,7 +14,7 @@
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const plan = require('../../../src/services/browser/scrollPlan');
+const plan = require('../../../src/services/domain/desktop/browser/scrollPlan.js');
 
 describe('scrollPlan.isEnabled (gate)', () => {
   test('default on', () => {

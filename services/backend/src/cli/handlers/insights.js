@@ -14,6 +14,7 @@
  */
 
 const { printInfo, printError, printTable, printSuccess } = require('../formatters');
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 
 function _leaf() {
   return require('../../services/sessionInsights');
@@ -145,4 +146,15 @@ function handleInsights(subCommand, args = [], options = {}, deps = {}) {
   return _handleReport(subCommand);
 }
 
-module.exports = { handleInsights };
+module.exports = {
+  handleInsights,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'insights',
+    aliases: ['session-insights', '会话洞见'],
+    description: '会话洞见：回顾会话轮次/工具/话题/耗时（对齐 Claude Code /insights）',
+    usage: 'insights [<sessionId>|list]',
+    subCommands: ['list'],
+    category: 'dev',
+    handler: async (parsed) => handleInsights(parsed.subCommand, parsed.args, parsed.options),
+  },
+};

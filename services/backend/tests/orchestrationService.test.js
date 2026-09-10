@@ -24,8 +24,8 @@ process.env.KHY_DATA_HOME = TMP_HOME;
 const test = require('node:test');
 const assert = require('node:assert');
 
-const svc = require('../src/services/orchestrator/orchestrationService');
-const journal = require('../src/services/orchestrator/orchestrationJournal');
+const svc = require('../src/services/domain/state/orchestrator/orchestrationService.js');
+const journal = require('../src/services/domain/state/orchestrator/orchestrationJournal.js');
 
 // Globally unique id counter — real taskBoard never reuses ids across runs, so
 // each run gets its own journal file (run-<id>.jsonl). A per-instance counter

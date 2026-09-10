@@ -7,7 +7,7 @@
  */
 'use strict';
 
-const { markdownToAst, parseInlineRuns, PAGEBREAK_SENTINELS } = require('../../../src/services/typeset/markdownToAst');
+const { markdownToAst, parseInlineRuns, PAGEBREAK_SENTINELS } = require('../../../src/services/domain/structured/typeset/markdownToAst.js');
 
 describe('markdownToAst — block parsing', () => {
   test('ATX headings carry their level', () => {

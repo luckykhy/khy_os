@@ -17,14 +17,16 @@
       "name": "install-autostart",
       "description": "注册 Qoder 桥接器开机自启",
       "type": "shell",
+      "script": "install_autostart.ps1",
       "entry": "install_autostart.ps1"
     },
     {
       "name": "start-bridge",
       "description": "启动 Qoder 桥接器",
       "type": "shell",
+      "script": "start_qoder_bridge.ps1",
       "entry": "start_qoder_bridge.ps1"
     }
   ],
-  "_note": "两个 PowerShell 脚本，commands 字段列出这些入口脚本。保留 manifest 是为了让这个目录「说得清自己是什么」（§2.3 的「既不是拓展也不是分类目录」会报没有 manifest 的目录）。"
+  "_note": "两个 PowerShell 脚本，commands 字段列出这些入口脚本。保留 manifest 是为了让这个目录「说得清自己是什么」（§2.3 的「既不是拓展也不是分类目录」会报没有 manifest 的目录）。\n\n2026-09-08 补齐 v2.0 契约的 commands[].script（toolchain 入口真源，check-repo-layout 核对磁盘存在性）。命令此前只写 entry 没写 script —— 与 khy-alpine-iso 同一批漏项，说明这批 manifest 是 2026-08-19 迁目录时按 v1 习惯写的。entry 保留为冗余别名。"
 }

@@ -1,5 +1,4 @@
 'use strict';
-
 /**
  * visionDescribePinApiAdapter.test.js — 锁定「图像识别始终 404」的根因修复。
  *
@@ -20,34 +19,33 @@
  *
  * 纯正确性修复,不加新 flag(apiPoolProvider 定向必须配合 api 适配器钉选才生效)。
  */
-
-const { test } = require('node:test');
-const assert = require('node:assert');
-
 // module.exports = gateway 单例;方法直接挂实例。
 const gateway = require('../../../src/services/gateway/aiGateway');
 
-test('有 poolHint(如 glm)→ 应钉 api 适配器(否则被 OpenAI 兼容通道抢答 → 404)', () => {
-  assert.strictEqual(gateway._shouldPinApiAdapterForVisionDescribe('glm'), true);
-  assert.strictEqual(gateway._shouldPinApiAdapterForVisionDescribe('deepseek'), true);
-  assert.strictEqual(gateway._shouldPinApiAdapterForVisionDescribe('qwen'), true);
-  // 前后空白容忍(归一化后仍是真实 poolHint)。
-  assert.strictEqual(gateway._shouldPinApiAdapterForVisionDescribe('  glm  '), true);
-});
+describe('Vision Describe Pin Api Adapter', () => {
+  test('有 poolHint(如 glm)→ 应钉 api 适配器(否则被 OpenAI 兼容通道抢答 → 404)', () => {
+      expect(gateway._shouldPinApiAdapterForVisionDescribe('glm')).toBe(true);
+      expect(gateway._shouldPinApiAdapterForVisionDescribe('deepseek')).toBe(true);
+      expect(gateway._shouldPinApiAdapterForVisionDescribe('qwen')).toBe(true);
+      // 前后空白容忍(归一化后仍是真实 poolHint)。
+      expect(gateway._shouldPinApiAdapterForVisionDescribe('  glm  ')).toBe(true);
+  });
 
-test('无 poolHint(裸候选,默认同池)→ 不钉(逐字节回退,让级联自然解析)', () => {
-  assert.strictEqual(gateway._shouldPinApiAdapterForVisionDescribe(undefined), false);
-  assert.strictEqual(gateway._shouldPinApiAdapterForVisionDescribe(null), false);
-  assert.strictEqual(gateway._shouldPinApiAdapterForVisionDescribe(''), false);
-  // 纯空白 → 非真实 poolHint → 不钉。
-  assert.strictEqual(gateway._shouldPinApiAdapterForVisionDescribe('   '), false);
-});
+  test('无 poolHint(裸候选,默认同池)→ 不钉(逐字节回退,让级联自然解析)', () => {
+      expect(gateway._shouldPinApiAdapterForVisionDescribe(undefined)).toBe(false);
+      expect(gateway._shouldPinApiAdapterForVisionDescribe(null)).toBe(false);
+      expect(gateway._shouldPinApiAdapterForVisionDescribe('')).toBe(false);
+      // 纯空白 → 非真实 poolHint → 不钉。
+      expect(gateway._shouldPinApiAdapterForVisionDescribe('   ')).toBe(false);
+  });
 
-test('fail-soft:异常/非常规输入绝不抛(实际调用点 poolHint 恒为 string|undefined)', () => {
-  // String() 归一化后非空即 true;`0`/`123` → "0"/"123" 非空 → true(非调用路径,仅证不抛)。
-  assert.doesNotThrow(() => gateway._shouldPinApiAdapterForVisionDescribe());
-  assert.doesNotThrow(() => gateway._shouldPinApiAdapterForVisionDescribe(123));
-  assert.doesNotThrow(() => gateway._shouldPinApiAdapterForVisionDescribe(false));
-  // false → String(false)="false" 非空 → true(边界,非真实调用形态)。
-  assert.strictEqual(gateway._shouldPinApiAdapterForVisionDescribe(false), true);
+  test('fail-soft:异常/非常规输入绝不抛(实际调用点 poolHint 恒为 string|undefined)', () => {
+      // String() 归一化后非空即 true;`0`/`123` → "0"/"123" 非空 → true(非调用路径,仅证不抛)。
+      expect(() => gateway._shouldPinApiAdapterForVisionDescribe().not.toThrow());
+      expect(() => gateway._shouldPinApiAdapterForVisionDescribe(123).not.toThrow());
+      expect(() => gateway._shouldPinApiAdapterForVisionDescribe(false).not.toThrow());
+      // false → String(false)="false" 非空 → true(边界,非真实调用形态)。
+      expect(gateway._shouldPinApiAdapterForVisionDescribe(false)).toBe(true);
+  });
+
 });

@@ -2,8 +2,12 @@
  * 密码重置 REST API —— 忘记密码和密码找回流程
  *
  * 架构角色：属于接入与路由层（对应论文第4.2节）
- *   提供基于邮箱验证码的密码重置功能，
- *   重置令牌有时效限制，防止重放攻击。
+ *   提供基于密保问题（security question）的密码重置功能，
+ *   每个端点带 resetLimiter 限流，防止暴力猜测。
+ *
+ * 注意：这里是密保问题方案，不是邮箱验证码方案。CLI 侧调用的
+ * `/send-code` 与 `/verify-code` 端点在 routes/ 下没有定义，
+ * 能力真源见 `/api/auth/capabilities` 的 `passwordReset.mode`。
  *
  * 对应论文：第5.1节（认证与中间件实现）
  */
@@ -11,6 +15,7 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 
 const router = express.Router();
+const apiResponse = require('../utils/apiResponse');
 const { authMiddleware } = require('../middleware/auth');
 const { User } = require('../models');
 const { normalizeLoginIdentifier, validatePassword } = require('../services/authPolicy');
@@ -35,10 +40,7 @@ router.post('/get-question', resetLimiter, async (req, res) => {
     const { username, email } = req.body;
 
     if (!username && !email) {
-      return res.status(400).json({
-        success: false,
-        message: '请提供用户名或邮箱',
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '请提供用户名或邮箱', { status: 400 });
     }
 
     // 查找用户
@@ -52,28 +54,21 @@ router.post('/get-question', resetLimiter, async (req, res) => {
 
     const user = await User.findOne({ where: whereClause });
 
-    if (!user || !user.securityQuestion) {
-      // Return a generic response to prevent user enumeration
-      return res.status(400).json({
-        success: false,
-        message: '无法找到对应的密保问题，请确认账号信息或联系管理员',
-      });
-    }
-
-    res.json({
-      success: true,
-      data: {
-        username: user.username,
-        securityQuestion: user.securityQuestion,
-      },
+    // Uniform success shape whether or not the account exists. This endpoint is
+    // reachable without authentication, so a 200-vs-400 split would be a
+    // username-enumeration oracle: an attacker could map live accounts against
+    // accounts that have a security question set. The negative case now looks
+    // exactly like the positive one — same status, same keys, same latency
+    // class — with the question simply null. Callers already treat a null
+    // question as "nothing to show", so no frontend change is required.
+    const hasQuestion = !!(user && user.securityQuestion);
+    apiResponse.success(res, {
+      username: hasQuestion ? user.username : null,
+      securityQuestion: hasQuestion ? user.securityQuestion : null,
     });
   } catch (error) {
     console.error('获取密保问题失败:', error);
-    res.status(500).json({
-      success: false,
-      message: '获取密保问题失败',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
+    apiResponse.fail(res, 'INTERNAL', '获取密保问题失败', { status: 500 });
   }
 });
 
@@ -90,45 +85,30 @@ router.post('/reset', resetLimiter, async (req, res) => {
 
     // 验证必填字段
     if (!username || !securityAnswer || !newPassword) {
-      return res.status(400).json({
-        success: false,
-        message: '请填写所有必填字段',
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '请填写所有必填字段', { status: 400 });
     }
 
     const passwordError = validatePassword(newPassword);
     if (passwordError) {
-      return res.status(400).json({
-        success: false,
-        message: passwordError,
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', passwordError, { status: 400 });
     }
 
     // 查找用户 — use generic error to prevent user enumeration
     const user = await User.findOne({ where: { username } });
 
     if (!user || !user.securityQuestion || !user.securityAnswer) {
-      return res.status(400).json({
-        success: false,
-        message: '用户名或密保信息不正确',
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '用户名或密保信息不正确', { status: 400 });
     }
 
     if (user.status !== 'active') {
-      return res.status(403).json({
-        success: false,
-        message: '账户当前不可重置密码，请联系管理员',
-      });
+      return apiResponse.fail(res, 'PERMISSION_DENIED', '账户当前不可重置密码，请联系管理员', { status: 403 });
     }
 
     // 验证密保答案
     const isAnswerValid = await user.compareSecurityAnswer(securityAnswer);
 
     if (!isAnswerValid) {
-      return res.status(400).json({
-        success: false,
-        message: '用户名或密保信息不正确',
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '用户名或密保信息不正确', { status: 400 });
     }
 
     // 更新密码
@@ -138,17 +118,10 @@ router.post('/reset', resetLimiter, async (req, res) => {
     await authSessionService.revokeUserSessions(user.id, { reason: 'password_reset' });
     await authSessionService.invalidateLegacyTokens(user.id, 'password_reset');
 
-    res.json({
-      success: true,
-      message: '密码重置成功，请使用新密码登录',
-    });
+    apiResponse.success(res, null, { message: '密码重置成功，请使用新密码登录' });
   } catch (error) {
     console.error('重置密码失败:', error);
-    res.status(500).json({
-      success: false,
-      message: '重置密码失败',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
+    apiResponse.fail(res, 'INTERNAL', '重置密码失败', { status: 500 });
   }
 });
 
@@ -163,30 +136,21 @@ router.post('/set-security', authMiddleware, async (req, res) => {
     const userId = req.user.id; // From JWT token via authMiddleware
 
     if (!securityQuestion || !securityAnswer || !currentPassword) {
-      return res.status(400).json({
-        success: false,
-        message: '请填写所有必填字段',
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '请填写所有必填字段', { status: 400 });
     }
 
     // 查找用户
     const user = await User.findByPk(userId);
 
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: '用户不存在',
-      });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', '用户不存在', { status: 404 });
     }
 
     // 验证当前密码
     const isPasswordValid = await user.comparePassword(currentPassword);
 
     if (!isPasswordValid) {
-      return res.status(401).json({
-        success: false,
-        message: '当前密码错误',
-      });
+      return apiResponse.fail(res, 'AUTH_INVALID', '当前密码错误', { status: 401 });
     }
 
     // 更新密保问题和答案
@@ -194,17 +158,10 @@ router.post('/set-security', authMiddleware, async (req, res) => {
     user.securityAnswer = securityAnswer;
     await user.save();
 
-    res.json({
-      success: true,
-      message: '密保问题设置成功',
-    });
+    apiResponse.success(res, null, { message: '密保问题设置成功' });
   } catch (error) {
     console.error('设置密保问题失败:', error);
-    res.status(500).json({
-      success: false,
-      message: '设置密保问题失败',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
+    apiResponse.fail(res, 'INTERNAL', '设置密保问题失败', { status: 500 });
   }
 });
 

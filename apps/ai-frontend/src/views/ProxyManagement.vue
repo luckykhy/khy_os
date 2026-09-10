@@ -1,8 +1,8 @@
 <template>
   <div class="proxy-page khy-page">
-    <KhyPageHeader title="代理管理" subtitle="订阅、代理组与本地设置（仿 Clash Verge）">
+    <KhyPageHeader subtitle="订阅、代理组与本地设置（仿 Clash Verge）" title="代理管理">
       <template #actions>
-        <el-button v-if="activeTabProxy === 'subs'" type="primary" :icon="Plus" @click="openImport"
+        <el-button v-if="activeTabProxy === 'subs'" :icon="Plus" type="primary" @click="openImport"
           >添加订阅</el-button
         >
         <el-button :icon="Refresh" :loading="loading" @click="listGroups">刷新</el-button>
@@ -10,20 +10,24 @@
     </KhyPageHeader>
 
     <!-- ── 出站状态条:全局启用/停用 + 当前激活节点 + 内核状态 ── -->
-    <el-card shadow="never" class="egress-bar section-card">
+    <el-card class="egress-bar section-card" shadow="never">
+      <!-- 状态条每一格都派生自 egressStatus,拿不到时会显示成「停用 + 内核未安装」,
+           与一台真没配过代理的机器完全无法区分。拿到失败原因再让用户做判断。 -->
+      <LoadErrorBanner :message="loadError" />
+
       <div class="egress-row">
         <div class="egress-main">
           <el-switch
-            :model-value="egressEnabled"
-            :loading="busy"
             active-text="代理已启用"
             inactive-text="代理已停用"
+            :loading="busy"
+            :model-value="egressEnabled"
             @change="onToggleEgress"
           />
           <span v-if="egressActiveNode" class="egress-node">
             当前节点:<strong>{{ egressActiveNode.name || '(未命名)' }}</strong>
-            <el-tag size="small" class="egress-tag">{{ egressActiveNode.protocol || '—' }}</el-tag>
-            <el-tag size="small" type="info" class="egress-tag">{{
+            <el-tag class="egress-tag" size="small">{{ egressActiveNode.protocol || '—' }}</el-tag>
+            <el-tag class="egress-tag" size="small" type="info">{{
               egressModeLabel(egressActiveNode.egressMode)
             }}</el-tag>
           </span>
@@ -32,10 +36,10 @@
           >
         </div>
         <div class="egress-core">
-          <el-tag :type="coreBinaryInstalled ? 'success' : 'warning'" size="small">
+          <el-tag size="small" :type="coreBinaryInstalled ? 'success' : 'warning'">
             内核{{ coreBinaryInstalled ? '已安装' : '未安装' }}
           </el-tag>
-          <el-tag v-if="coreRunning" type="success" size="small">内核运行中</el-tag>
+          <el-tag v-if="coreRunning" size="small" type="success">内核运行中</el-tag>
         </div>
       </div>
       <div v-if="!coreBinaryInstalled" class="egress-hint">
@@ -47,13 +51,13 @@
         <div v-if="coreDownload && coreDownload.supported" class="egress-dl">
           <div class="egress-dl-row">
             <span class="egress-dl-label">下载地址({{ coreDownload.version }}):</span>
-            <a :href="coreDownload.url" target="_blank" rel="noopener noreferrer" class="egress-dl-url">{{
+            <a class="egress-dl-url" :href="coreDownload.url" rel="noopener noreferrer" target="_blank">{{
               coreDownload.url
             }}</a>
             <el-button
+              :icon="DocumentCopy"
               size="small"
               text
-              :icon="DocumentCopy"
               @click="copyText(coreDownload.url, '已复制下载地址')"
               >复制</el-button
             >
@@ -62,9 +66,9 @@
             <span class="egress-dl-label">解压后放到:</span>
             <code>{{ coreDownload.binDir }}/</code>
             <el-button
+              :icon="DocumentCopy"
               size="small"
               text
-              :icon="DocumentCopy"
               @click="copyText(coreDownload.binDir, '已复制落地目录')"
               >复制</el-button
             >
@@ -76,8 +80,8 @@
         <p v-else class="egress-dl-note">
           请下载 mihomo(clash-meta)内核放到 <code>~/.khyquant/bin/</code> (<a
             href="https://github.com/MetaCubeX/mihomo/releases"
-            target="_blank"
             rel="noopener noreferrer"
+            target="_blank"
             >官方 releases</a
           >), 或改用 http 类型节点 / 本机 Clash。
         </p>
@@ -96,11 +100,11 @@
         <div v-loading="loading" class="group-grid">
           <KhyEmpty
             v-if="!groups.length"
+            description="点右上角「添加订阅」，粘贴机场 / Clash 订阅链接，即可导入代理节点并分组管理。"
             :icon="Connection"
             title="还没有订阅组"
-            description="点右上角「添加订阅」，粘贴机场 / Clash 订阅链接，即可导入代理节点并分组管理。"
           />
-          <el-card v-for="g in groups" :key="g.id" shadow="hover" class="group-card section-card">
+          <el-card v-for="g in groups" :key="g.id" class="group-card section-card" shadow="hover">
             <div class="group-head">
               <span class="group-name">{{ g.name }}</span>
               <el-tag size="small" type="info">{{ g.format }}</el-tag>
@@ -112,8 +116,8 @@
                 <el-tag
                   v-for="(count, proto) in g.protocolCount"
                   :key="proto"
-                  size="small"
                   class="proto-tag"
+                  size="small"
                   >{{ proto }} · {{ count }}</el-tag
                 >
               </div>
@@ -122,8 +126,8 @@
             <div v-if="g.userinfo" class="group-usage">
               <el-progress
                 v-if="g.userinfo.usedRatio != null"
-                :percentage="Math.round(g.userinfo.usedRatio * 100)"
                 :color="usageColor(g.userinfo.usedRatio)"
+                :percentage="Math.round(g.userinfo.usedRatio * 100)"
                 :stroke-width="8"
               />
               <div class="usage-text">
@@ -137,11 +141,11 @@
             </div>
             <div class="group-time">更新于 {{ formatTime(g.updatedAt) }}</div>
             <div class="group-actions">
-              <el-button text type="primary" :icon="View" @click="viewNodes(g)">查看节点</el-button>
-              <el-button text type="primary" :icon="Refresh" :loading="busy" @click="doRefresh(g)"
+              <el-button :icon="View" text type="primary" @click="viewNodes(g)">查看节点</el-button>
+              <el-button :icon="Refresh" :loading="busy" text type="primary" @click="doRefresh(g)"
                 >刷新</el-button
               >
-              <el-button text type="danger" :icon="Delete" @click="confirmRemove(g)"
+              <el-button :icon="Delete" text type="danger" @click="confirmRemove(g)"
                 >删除</el-button
               >
             </div>
@@ -159,9 +163,9 @@
 
         <KhyEmpty
           v-if="!groups.length"
+          description="先到「订阅」页导入一个订阅组，这里就能按协议筛选、搜索并复制每个节点的配置。"
           :icon="Grid"
           title="还没有可浏览的节点"
-          description="先到「订阅」页导入一个订阅组，这里就能按协议筛选、搜索并复制每个节点的配置。"
         />
 
         <template v-else>
@@ -173,9 +177,9 @@
             <el-input
               v-model="nodeSearch"
               class="node-search"
-              :prefix-icon="Search"
-              placeholder="搜索节点名 / 服务器"
               clearable
+              placeholder="搜索节点名 / 服务器"
+              :prefix-icon="Search"
             />
             <el-select v-model="sortKey" class="sort-select">
               <el-option label="按名称" value="name" />
@@ -199,11 +203,11 @@
 
           <el-table
             v-loading="loadingNodes"
-            :data="filteredNodes"
-            :size="prefDensity"
-            max-height="560"
             class="node-table section-card"
+            :data="filteredNodes"
             empty-text="没有匹配的节点"
+            max-height="560"
+            :size="prefDensity"
           >
             <el-table-column type="expand">
               <template #default="{ row }">
@@ -212,15 +216,15 @@
             </el-table-column>
             <el-table-column
               v-if="selectedGroupId === 'all'"
-              prop="__group"
               label="订阅组"
               min-width="120"
+              prop="__group"
               show-overflow-tooltip
             />
-            <el-table-column prop="name" label="节点名" min-width="160" show-overflow-tooltip>
+            <el-table-column label="节点名" min-width="160" prop="name" show-overflow-tooltip>
               <template #default="{ row }">
                 <span :class="{ 'active-node-name': isActiveNode(row) }">{{ row.name }}</span>
-                <el-tag v-if="isActiveNode(row)" size="small" type="success" class="active-badge"
+                <el-tag v-if="isActiveNode(row)" class="active-badge" size="small" type="success"
                   >使用中</el-tag
                 >
               </template>
@@ -230,25 +234,25 @@
                 <el-tag size="small">{{ row.protocol || row.type }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="server" label="服务器" min-width="140" show-overflow-tooltip />
-            <el-table-column prop="port" label="端口" width="80" align="center" />
-            <el-table-column label="TLS" width="64" align="center">
+            <el-table-column label="服务器" min-width="140" prop="server" show-overflow-tooltip />
+            <el-table-column align="center" label="端口" prop="port" width="80" />
+            <el-table-column align="center" label="TLS" width="64">
               <template #default="{ row }">
                 <el-tag v-if="isTls(row)" size="small" type="success">on</el-tag>
                 <span v-else class="muted">—</span>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="180" align="center">
+            <el-table-column align="center" label="操作" width="180">
               <template #default="{ row }">
                 <el-button
-                  text
-                  type="primary"
                   :icon="Connection"
                   :loading="busy"
+                  text
+                  type="primary"
                   @click="useNode(row)"
                   >使用此节点</el-button
                 >
-                <el-button text type="primary" :icon="DocumentCopy" @click="copyNode(row)"
+                <el-button :icon="DocumentCopy" text type="primary" @click="copyNode(row)"
                   >复制</el-button
                 >
               </template>
@@ -270,7 +274,7 @@
           >
         </template>
 
-        <el-card shadow="never" class="settings-block section-card">
+        <el-card class="settings-block section-card" shadow="never">
           <template #header>
             <div class="block-head">
               <span class="block-title">本地偏好</span>
@@ -303,7 +307,7 @@
           </el-form>
         </el-card>
 
-        <el-card shadow="never" class="settings-block section-card">
+        <el-card class="settings-block section-card" shadow="never">
           <template #header><span class="block-title">自动刷新</span></template>
           <el-form label-width="140px">
             <el-form-item label="自动刷新订阅">
@@ -335,21 +339,21 @@
         <el-form-item label="订阅地址">
           <el-input
             v-model="importForm.url"
-            type="textarea"
-            :rows="3"
             placeholder="https://example.com/subscribe?token=... （支持 Clash / vmess / vless / trojan / ss 订阅）"
+            :rows="3"
+            type="textarea"
           />
         </el-form-item>
         <el-form-item label="或导入">
-          <el-button size="small" :icon="DocumentCopy" @click="pasteFromClipboard"
+          <el-button :icon="DocumentCopy" size="small" @click="pasteFromClipboard"
             >从剪贴板粘贴</el-button
           >
-          <el-button size="small" :icon="Upload" @click="triggerFilePick">从文件导入</el-button>
+          <el-button :icon="Upload" size="small" @click="triggerFilePick">从文件导入</el-button>
           <input
             ref="fileInput"
-            type="file"
             accept=".txt,.yaml,.yml,.conf,.list,text/plain"
             style="display: none"
+            type="file"
             @change="onFilePicked"
           />
           <span v-if="importForm.content" class="content-hint"
@@ -362,7 +366,7 @@
       </el-form>
       <template #footer>
         <el-button @click="importVisible = false">取消</el-button>
-        <el-button type="primary" :loading="busy" @click="doImport">导入</el-button>
+        <el-button :loading="busy" type="primary" @click="doImport">导入</el-button>
       </template>
     </el-dialog>
   </div>
@@ -387,11 +391,12 @@ import { useProxies } from '@/composables/useProxies';
 import { safeSet, safeRemove } from '@/utils/safeStorage';
 import KhyEmpty from '@/components/KhyEmpty.vue';
 import KhyPageHeader from '@/components/KhyPageHeader.vue';
+import LoadErrorBanner from '@/components/LoadErrorBanner.vue';
 
 defineOptions({ name: 'ProxyManagement' });
 
 const proxies = useProxies();
-const { groups, loading, busy, egressStatus } = proxies;
+const { groups, loading, busy, egressStatus, loadError } = proxies;
 
 function listGroups() {
   return proxies.listGroups();
@@ -837,11 +842,9 @@ async function confirmRemove(g) {
 onMounted(async () => {
   await listGroups();
   await loadNodes();
-  try {
-    await proxies.fetchEgressStatus();
-  } catch {
-    /* fail-soft:出站状态拿不到不阻塞页面 */
-  }
+  // 出站状态在 useProxies 内部 fail-soft(记到 loadError),这里不再需要 catch;
+  // 旧的静默吞掉让 /api/proxy-egress 挂掉时页面呈现为「停用 + 内核未安装」。
+  await proxies.fetchEgressStatus();
   setupAutoRefresh();
 });
 

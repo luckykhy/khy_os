@@ -24,7 +24,7 @@ process.env.KHYOS_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'khyos-ilinkloop-
 process.env.KHY_ILINK_TYPING_KEEPALIVE_MS = '5';
 
 const { IlinkDispatcher, normalizeReply, _resolveToolLoop } =
-  require('../../../src/services/channels/ilinkDispatcher');
+  require('../../../src/services/domain/messaging/channels/ilinkDispatcher.js');
 
 /** 只收集出站文本的假通道。 */
 function fakeChannel() {

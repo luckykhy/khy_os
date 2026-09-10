@@ -132,7 +132,7 @@ function mdStream(text, width) {
 // on every frame — anti-staircase, gate KHY_LIVE_HARD_CLAMP (default on) falls
 // back to byte-identical raw-line tailing. See liveHeightClamp.js for details.
 
-function StreamingBlock({ streaming, status, expanded, reserveRows, contentWidth }) {
+function StreamingBlock({ streaming, status, expanded, reserveRows, contentWidth, onErrorClick = null }) {
   const { Box, Text } = inkRuntime.get();
   const h = React.createElement;
   if (!streaming) {
@@ -318,7 +318,7 @@ function StreamingBlock({ streaming, status, expanded, reserveRows, contentWidth
       if (gapOn && (streaming.text || hasThinking)) {
         children.push(gapRow('gap-tools'));
       }
-      children.push(h(ToolLines, { key: 'tools', tools: streaming.tools, expanded, live: true }));
+      children.push(h(ToolLines, { key: 'tools', tools: streaming.tools, expanded, live: true, onErrorClick }));
     }
   }
 

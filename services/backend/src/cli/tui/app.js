@@ -37,8 +37,16 @@ async function startInkApp(options = {}) {
   inkRuntime.registerJsx();
   const { render } = await inkRuntime.loadInk();
 
+  // CC 模式门控（KHY_CC_TUI=1）：渲染 CcApp 替代 Legacy App。
+  // 零破坏原则：门控关闭时 require 路径与修改前逐字节相同。
+  const { isCcMode } = require('./utils/ccMode');
+  const isCc = isCcMode();
+
   // App is a .jsx component; require AFTER registerJsx() so babel transpiles it.
-  const App = require('./ink-components/App');
+  // CC 模式下渲染 CcApp（Claude Code 复刻），否则渲染 Legacy App。
+  const App = isCc
+    ? require('./ink-components/CcApp')
+    : require('./ink-components/App');
 
   // React development 渲染每帧调 performance.measure 且从不清理 → 数小时后累积到百万条
   // (MaxPerformanceEntryBufferExceededWarning 实证),内存/性能持续劣化 → TUI 越用越卡、搜索
@@ -166,6 +174,18 @@ async function startInkApp(options = {}) {
     const _pad = require('./startupAnchor').anchorBottomPad(_realOut, process.env);
     if (_pad) _realOut.write(_pad);
   } catch { /* cosmetic — never block the TUI on the pad */ }
+
+  // Alternate screen buffer(门控 KHY_ALT_SCREEN 默认开):进入备用缓冲区运行 TUI,
+  // 退出时恢复原终端内容。防残影核心机制:
+  //   - 放大缩小时终端只重绘备用缓冲区,不污染原生 scrollback
+  //   - 退出后用户的 shell 历史完好无损
+  //   - 与 scrollbackPreserve 正交:scrollbackPreserve 管「fullscreen 帧不擦回滚」,
+  //     本层管「整个 TUI 不进回滚」。
+  const ALT_SCREEN_ENABLED = String(process.env.KHY_ALT_SCREEN || '1').trim() !== '0';
+  if (ALT_SCREEN_ENABLED && _realOut.isTTY) {
+    // \x1B[?1049h = 进入备用缓冲区 + 保存光标位置
+    _realOut.write('\x1B[?1049h');
+  }
 
   // Mouse layer. Two separate things happen here, in this order:
   //

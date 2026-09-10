@@ -23,6 +23,7 @@
  * @module handlers/wx
  */
 
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const {
   printInfo,
   printError,
@@ -680,4 +681,18 @@ function handleWx(subCommand, args = [], options = {}) {
   return 1;
 }
 
-module.exports = { handleWx, _printQrArt, _resolveAccountId, _loginSuccessLine, _formatBoundAt };
+module.exports = {
+  handleWx,
+  _printQrArt,
+  _resolveAccountId,
+  _loginSuccessLine,
+  _formatBoundAt,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'wx',
+    aliases: ['wechat', '微信'],
+    description: '微信个人号扫码接入（ilink bot API）：登录/绑定/启动/停止',
+    usage: 'wx <subcommand> [args]',
+    category: 'workflow',
+    handler: async (parsed) => handleWx(parsed.subCommand, parsed.args, parsed.options),
+  },
+};

@@ -1,5 +1,4 @@
 'use strict';
-
 /**
  * capabilityVector.test.js — marshal 的**唯一在产叶子**的覆盖。
  *
@@ -11,36 +10,35 @@
  *
  * 纯确定性、零外部依赖；node:test 直跑。
  */
-
-const { describe, test } = require('node:test');
-const assert = require('node:assert/strict');
-
-const cap = require('../../../src/services/marshal/capabilityVector');
-
+const cap = require('../../../src/services/domain/security/marshal/capabilityVector.js');
 describe('capabilityVector: 评分与强弱裁决', () => {
+});
+
+describe('Capability Vector', () => {
   test('分数随层级单调下降，reasoning 主导', () => {
-    const t0 = cap.capabilityScore('claude-opus-4-8');
-    const t1 = cap.capabilityScore('claude-sonnet-4-6');
-    const t2 = cap.capabilityScore('qwen-4b');
-    const t3 = cap.capabilityScore('gpt-4o-mini');
-    assert.ok(t0 > t1 && t1 > t2 && t2 > t3, `期望 T0>T1>T2>T3，实得 ${t0}/${t1}/${t2}/${t3}`);
+        const t0 = cap.capabilityScore('claude-opus-4-8');
+        const t1 = cap.capabilityScore('claude-sonnet-4-6');
+        const t2 = cap.capabilityScore('qwen-4b');
+        const t3 = cap.capabilityScore('gpt-4o-mini');
+        expect(t0 > t1 && t1 > t2 && t2 > t3).toBeTruthy();
   });
 
   test('强弱裁决按 reasoning 阈值切分：T0/T1 强、T2/T3 弱', () => {
-    assert.equal(cap.assess('claude-opus-4-8').strength, 'strong');
-    assert.equal(cap.assess('claude-sonnet-4-6').strength, 'strong');
-    assert.equal(cap.assess('qwen-4b').strength, 'weak');
-    assert.equal(cap.assess('gpt-4o-mini').strength, 'weak');
+        expect(cap.assess('claude-opus-4-8').strength).toBe('strong');
+        expect(cap.assess('claude-sonnet-4-6').strength).toBe('strong');
+        expect(cap.assess('qwen-4b').strength).toBe('weak');
+        expect(cap.assess('gpt-4o-mini').strength).toBe('weak');
   });
 
   test('阈值可由环境变量覆盖（零硬编码）', () => {
-    const prev = process.env.KHY_MARSHAL_STRONG_THRESHOLD;
-    try {
-      process.env.KHY_MARSHAL_STRONG_THRESHOLD = '10'; // 极低阈值 → 连弱模型也算强
-      assert.equal(cap.assess('qwen-4b').strength, 'strong');
-    } finally {
-      if (prev === undefined) delete process.env.KHY_MARSHAL_STRONG_THRESHOLD;
-      else process.env.KHY_MARSHAL_STRONG_THRESHOLD = prev;
-    }
+        const prev = process.env.KHY_MARSHAL_STRONG_THRESHOLD;
+        try {
+          process.env.KHY_MARSHAL_STRONG_THRESHOLD = '10'; // 极低阈值 → 连弱模型也算强
+          expect(cap.assess('qwen-4b').strength).toBe('strong');
+        } finally {
+          if (prev === undefined) delete process.env.KHY_MARSHAL_STRONG_THRESHOLD;
+          else process.env.KHY_MARSHAL_STRONG_THRESHOLD = prev;
+        }
   });
+
 });

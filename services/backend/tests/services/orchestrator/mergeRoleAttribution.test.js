@@ -13,7 +13,7 @@ const {
   formatRoleTag,
   formatRoleFailureSummary,
   _roleAttributionEnabled,
-} = require('../../../src/services/orchestrator/mergeRoleAttribution');
+} = require('../../../src/services/domain/state/orchestrator/mergeRoleAttribution.js');
 
 // Toggle the gate for one synchronous body, restoring the prior value after.
 function withGate(value, fn) {

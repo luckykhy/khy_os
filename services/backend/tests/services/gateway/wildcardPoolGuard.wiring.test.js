@@ -1,5 +1,4 @@
 'use strict';
-
 /**
  * wildcardPoolGuard.wiring.test.js — 功能级接线验证:守卫接入 aiGateway 的
  * `_resolveApiPoolProviderForRequest`(通配兜底解析末位)。
@@ -14,13 +13,8 @@
  * 备注:运行时池由本机 ~/.khy/api_keys.json 决定(现场 sensenova/glm/example-provider,无 agnes)。
  * 本测试只断言 agnes(确定无池)与显式/scoped/门控路径,不依赖某个恰好有池的裸厂商,避免环境漂移。
  */
-
-const { test } = require('node:test');
-const assert = require('node:assert');
-
 const gateway = require('../../../src/services/gateway/aiGateway');
 const resolve = gateway.__test__._resolveApiPoolProviderForRequest;
-
 function withEnv(overrides, fn) {
   const saved = {};
   for (const k of Object.keys(overrides)) { saved[k] = process.env[k]; process.env[k] = overrides[k]; }
@@ -33,46 +27,49 @@ function withEnv(overrides, fn) {
   }
 }
 
-test('explicit apiPoolProvider is honored — guard never fires', () => {
-  withEnv({ GATEWAY_API_POOL_PROVIDER: 'relay' }, () => {
-    assert.strictEqual(resolve({ apiPoolProvider: 'glm', model: 'agnes-2.0-flash' }), 'glm');
+describe('Wildcard Pool Guard wiring', () => {
+  test('explicit apiPoolProvider is honored — guard never fires', () => {
+      withEnv({ GATEWAY_API_POOL_PROVIDER: 'relay' }, () => {
+        expect(resolve({ apiPoolProvider: 'glm', model: 'agnes-2.0-flash' })).toBe('glm');
+      });
   });
-});
 
-test('explicit provider is honored — guard never fires', () => {
-  withEnv({ GATEWAY_API_POOL_PROVIDER: 'relay' }, () => {
-    assert.strictEqual(resolve({ provider: 'glm', model: 'agnes-2.0-flash' }), 'glm');
+  test('explicit provider is honored — guard never fires', () => {
+      withEnv({ GATEWAY_API_POOL_PROVIDER: 'relay' }, () => {
+        expect(resolve({ provider: 'glm', model: 'agnes-2.0-flash' })).toBe('glm');
+      });
   });
-});
 
-test('scoped pool:model hint is honored — passes through', () => {
-  withEnv({ GATEWAY_API_POOL_PROVIDER: 'relay' }, () => {
-    assert.strictEqual(resolve({ model: 'agnes:agnes-2.0-flash' }), 'agnes');
-    assert.strictEqual(resolve({ model: 'glm/glm-4.6' }), 'glm');
+  test('scoped pool:model hint is honored — passes through', () => {
+      withEnv({ GATEWAY_API_POOL_PROVIDER: 'relay' }, () => {
+        expect(resolve({ model: 'agnes:agnes-2.0-flash' })).toBe('agnes');
+        expect(resolve({ model: 'glm/glm-4.6' })).toBe('glm');
+      });
   });
-});
 
-test('bare agnes under wildcard relay → guard blocks blind fallback (null)', () => {
-  withEnv({ GATEWAY_API_POOL_PROVIDER: 'relay' }, () => {
-    assert.strictEqual(resolve({ model: 'agnes-2.0-flash' }), null);
+  test('bare agnes under wildcard relay → guard blocks blind fallback (null)', () => {
+      withEnv({ GATEWAY_API_POOL_PROVIDER: 'relay' }, () => {
+        expect(resolve({ model: 'agnes-2.0-flash' })).toBe(null);
+      });
   });
-});
 
-test('gate off → byte-revert: bare agnes falls to wildcard pool (today behavior)', () => {
-  withEnv({ GATEWAY_API_POOL_PROVIDER: 'relay', KHY_WILDCARD_POOL_GUARD: '0' }, () => {
-    assert.strictEqual(resolve({ model: 'agnes-2.0-flash' }), 'relay');
+  test('gate off → byte-revert: bare agnes falls to wildcard pool (today behavior)', () => {
+      withEnv({ GATEWAY_API_POOL_PROVIDER: 'relay', KHY_WILDCARD_POOL_GUARD: '0' }, () => {
+        expect(resolve({ model: 'agnes-2.0-flash' })).toBe('relay');
+      });
   });
-});
 
-test('no wildcard env → unchanged (null, byte-equivalent to today), no throw', () => {
-  withEnv({ GATEWAY_API_POOL_PROVIDER: '' }, () => {
-    assert.strictEqual(resolve({ model: 'agnes-2.0-flash' }), null);
+  test('no wildcard env → unchanged (null, byte-equivalent to today), no throw', () => {
+      withEnv({ GATEWAY_API_POOL_PROVIDER: '' }, () => {
+        expect(resolve({ model: 'agnes-2.0-flash' })).toBe(null);
+      });
   });
-});
 
-test('resolver never throws on garbage options', () => {
-  withEnv({ GATEWAY_API_POOL_PROVIDER: 'relay' }, () => {
-    assert.doesNotThrow(() => resolve());
-    assert.doesNotThrow(() => resolve({ model: 42 }));
+  test('resolver never throws on garbage options', () => {
+      withEnv({ GATEWAY_API_POOL_PROVIDER: 'relay' }, () => {
+        expect(() => resolve().not.toThrow());
+        expect(() => resolve({ model: 42 }).not.toThrow());
+      });
   });
+
 });

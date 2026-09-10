@@ -18,11 +18,11 @@ const TMP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'khyos-msg-cli-'));
 process.env.KHYOS_HOME = TMP_HOME;
 process.env.KHY_MSG = 'true';
 
-const store = require('../../../src/services/messaging/msgConfigStore');
+const store = require('../../../src/services/domain/messaging/messaging/msgConfigStore.js');
 const { handleMsg } = require('../../../src/cli/handlers/msg');
 
 // 桩掉 sender:直接改 require 缓存里的 sendText,断言参数、不出网。
-const senderPath = require.resolve('../../../src/services/messaging/msgSender');
+const senderPath = require.resolve('../../../src/services/domain/messaging/messaging/msgSender.js');
 const senderMod = require(senderPath);
 let _sentCalls = [];
 const _origSendText = senderMod.sendText;

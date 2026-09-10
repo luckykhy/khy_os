@@ -108,3 +108,4 @@ describe('toolUseLoop structured continuation context', () => {
     expect(continuationTextBlocks).toHaveLength(1);
   });
 });
+

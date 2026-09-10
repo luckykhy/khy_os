@@ -28,7 +28,7 @@ const {
   firstNonEmpty,
   parseBoolean,
   dedupePaths,
-} = require('../../src/services/accountPool/credentialHelpers');
+} = require('../../src/services/domain/account/accountPool/credentialHelpers.js');
 
 describe('normalizePoolType', () => {
   test('lowercases, trims, and collapses known aliases onto canonical names', () => {

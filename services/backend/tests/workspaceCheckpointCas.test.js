@@ -12,12 +12,12 @@ function git(args, cwd) {
 }
 
 function loadCheckpointService(dataHome) {
-  const modulePath = require.resolve('../src/services/workspace/checkpointService');
+  const modulePath = require.resolve('../src/services/domain/workspace/workspace/checkpointService.js');
   const dataHomePath = require.resolve('../src/utils/dataHome');
   delete require.cache[modulePath];
   delete require.cache[dataHomePath];
   process.env.KHY_DATA_HOME = dataHome;
-  return require('../src/services/workspace/checkpointService');
+  return require('../src/services/domain/workspace/workspace/checkpointService.js');
 }
 
 function loadCleanupService(appHome) {

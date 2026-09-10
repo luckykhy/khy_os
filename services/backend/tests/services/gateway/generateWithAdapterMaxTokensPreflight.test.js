@@ -1,30 +1,24 @@
 'use strict';
-
 /**
  * generateWithAdapterMaxTokensPreflight.test.js (node:test)
  *
  * Locks the symmetric preflight max_tokens resolution on the direct-adapter
- * path (AIGatewayModelMethods.generateWithAdapter â€” used by IDE conversation
+ * path (AIGatewayModelMethods.generateWithAdapter â€?used by IDE conversation
  * mode), which bypasses the generate() main loop and previously fell through
  * to small adapter hardcoded fallbacks when the caller passed no maxTokens.
  *
  * Pins:
- *   - no maxTokens + known context window â†’ adapter receives a dynamically
- *     injected maxTokens (= min(maxOutput || available, window âˆ’ prompt
- *     estimate âˆ’ safety buffer)) plus a _maxTokensPolicy marker;
- *   - explicit maxTokens â†’ passed through verbatim, no injection marker;
- *   - KHY_MAX_TOKENS_AUTO_RESOLVE=0 â†’ no injection at all.
+ *   - no maxTokens + known context window â†?adapter receives a dynamically
+ *     injected maxTokens (= min(maxOutput || available, window âˆ?prompt
+ *     estimate âˆ?safety buffer)) plus a _maxTokensPolicy marker;
+ *   - explicit maxTokens â†?passed through verbatim, no injection marker;
+ *   - KHY_MAX_TOKENS_AUTO_RESOLVE=0 â†?no injection at all.
  *
  * Hermetic: stubs _generateWithAdapterIsolation to capture the options the
  * adapter would receive; prefills _contextWindowCache; no network calls.
  */
-
-const test = require('node:test');
-const assert = require('node:assert');
-
 const gateway = require('../../../src/services/gateway/aiGateway');
 const { estimateTokens } = require('../../../src/services/tokenPricing');
-
 /**
  * Run fn with the gateway temporarily rewired: stub adapters list, capture
  * isolation-call options, and swap in fresh metadata caches. Everything is
@@ -55,7 +49,6 @@ async function withStubbedGateway({ contextWindows = {}, outputLimits = {} }, fn
     gateway._modelOutputLimitCache = saved.outCache;
   }
 }
-
 /** Run fn with select env vars overridden, restoring originals afterwards. */
 async function withEnv(overrides, fn) {
   const savedEnv = {};
@@ -74,54 +67,58 @@ async function withEnv(overrides, fn) {
   }
 }
 
-test('no maxTokens + known window â†’ injects dynamic maxTokens with policy marker', async () => {
-  await withEnv({ KHY_MAX_TOKENS_AUTO_RESOLVE: undefined, KHY_DEFAULT_MAX_TOKENS: undefined }, async () => {
-    await withStubbedGateway({ contextWindows: { 'unit-model-alpha': 32000 } }, async (captured) => {
-      const prompt = 'hello preflight world';
-      await gateway.generateWithAdapter('stub', prompt, { model: 'unit-model-alpha' });
-      // Expected budget mirrors the policy: window âˆ’ prompt estimate âˆ’ buffer(512)
-      const expected = 32000 - estimateTokens(prompt) - 512;
-      assert.strictEqual(captured.options.maxTokens, expected);
-      assert.ok(captured.options._maxTokensPolicy, 'policy marker must be attached');
-      assert.strictEqual(captured.options._maxTokensPolicy.source, 'context_window');
-      assert.strictEqual(captured.options._maxTokensPolicy.preflightMax, expected);
-      assert.strictEqual(captured.options._maxTokensPolicy.shrunk, false);
-    });
+describe('Generate With Adapter Max Tokens Preflight', () => {
+  test('no maxTokens + known window â†?injects dynamic maxTokens with policy marker', async () => {
+      await withEnv({ KHY_MAX_TOKENS_AUTO_RESOLVE: undefined, KHY_DEFAULT_MAX_TOKENS: undefined }, async () => {
+        await withStubbedGateway({ contextWindows: { 'unit-model-alpha': 32000 } }, async (captured) => {
+          const prompt = 'hello preflight world';
+          await gateway.generateWithAdapter('stub', prompt, { model: 'unit-model-alpha' });
+          // Expected budget mirrors the policy: window âˆ?prompt estimate âˆ?buffer(512)
+          const expected = 32000 - estimateTokens(prompt) - 512;
+          expect(captured.options.maxTokens).toBe(expected);
+          expect(captured.options._maxTokensPolicy).toBeTruthy();
+          expect(captured.options._maxTokensPolicy.source).toBe('context_window');
+          expect(captured.options._maxTokensPolicy.preflightMax).toBe(expected);
+          expect(captured.options._maxTokensPolicy.shrunk).toBe(false);
+        });
+      });
   });
+
+  test('no maxTokens + window + smaller output limit â†?caps at the output limit', async () => {
+      await withEnv({ KHY_MAX_TOKENS_AUTO_RESOLVE: undefined, KHY_DEFAULT_MAX_TOKENS: undefined }, async () => {
+        await withStubbedGateway({
+          contextWindows: { 'unit-model-beta': 128000 },
+          outputLimits: { 'unit-model-beta': 8192 },
+        }, async (captured) => {
+          await gateway.generateWithAdapter('stub', 'short prompt', { model: 'unit-model-beta' });
+          expect(captured.options.maxTokens).toBe(8192);
+          expect(captured.options._maxTokensPolicy.source).toBe('model_output_limit');
+        });
+      });
+  });
+
+  test('explicit maxTokens: 123 â†?passed through verbatim, no injection marker', async () => {
+      await withEnv({ KHY_MAX_TOKENS_AUTO_RESOLVE: undefined }, async () => {
+        await withStubbedGateway({ contextWindows: { 'unit-model-alpha': 32000 } }, async (captured) => {
+          const callerOptions = { model: 'unit-model-alpha', maxTokens: 123 };
+          await gateway.generateWithAdapter('stub', 'hi', callerOptions);
+          expect(captured.options.maxTokens).toBe(123);
+          expect(captured.options._maxTokensPolicy).toBe(undefined);
+          // Caller object is passed as-is (no clone, no mutation) on this branch.
+          expect(captured.options).toBe(callerOptions);
+        });
+      });
+  });
+
+  test('KHY_MAX_TOKENS_AUTO_RESOLVE=0 â†?no injection even with known window', async () => {
+      await withEnv({ KHY_MAX_TOKENS_AUTO_RESOLVE: '0' }, async () => {
+        await withStubbedGateway({ contextWindows: { 'unit-model-alpha': 32000 } }, async (captured) => {
+          await gateway.generateWithAdapter('stub', 'hi', { model: 'unit-model-alpha' });
+          expect(captured.options.maxTokens).toBe(undefined);
+          expect(captured.options._maxTokensPolicy).toBe(undefined);
+        });
+      });
+  });
+
 });
 
-test('no maxTokens + window + smaller output limit â†’ caps at the output limit', async () => {
-  await withEnv({ KHY_MAX_TOKENS_AUTO_RESOLVE: undefined, KHY_DEFAULT_MAX_TOKENS: undefined }, async () => {
-    await withStubbedGateway({
-      contextWindows: { 'unit-model-beta': 128000 },
-      outputLimits: { 'unit-model-beta': 8192 },
-    }, async (captured) => {
-      await gateway.generateWithAdapter('stub', 'short prompt', { model: 'unit-model-beta' });
-      assert.strictEqual(captured.options.maxTokens, 8192);
-      assert.strictEqual(captured.options._maxTokensPolicy.source, 'model_output_limit');
-    });
-  });
-});
-
-test('explicit maxTokens: 123 â†’ passed through verbatim, no injection marker', async () => {
-  await withEnv({ KHY_MAX_TOKENS_AUTO_RESOLVE: undefined }, async () => {
-    await withStubbedGateway({ contextWindows: { 'unit-model-alpha': 32000 } }, async (captured) => {
-      const callerOptions = { model: 'unit-model-alpha', maxTokens: 123 };
-      await gateway.generateWithAdapter('stub', 'hi', callerOptions);
-      assert.strictEqual(captured.options.maxTokens, 123);
-      assert.strictEqual(captured.options._maxTokensPolicy, undefined);
-      // Caller object is passed as-is (no clone, no mutation) on this branch.
-      assert.strictEqual(captured.options, callerOptions);
-    });
-  });
-});
-
-test('KHY_MAX_TOKENS_AUTO_RESOLVE=0 â†’ no injection even with known window', async () => {
-  await withEnv({ KHY_MAX_TOKENS_AUTO_RESOLVE: '0' }, async () => {
-    await withStubbedGateway({ contextWindows: { 'unit-model-alpha': 32000 } }, async (captured) => {
-      await gateway.generateWithAdapter('stub', 'hi', { model: 'unit-model-alpha' });
-      assert.strictEqual(captured.options.maxTokens, undefined);
-      assert.strictEqual(captured.options._maxTokensPolicy, undefined);
-    });
-  });
-});

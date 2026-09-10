@@ -11,7 +11,7 @@ const {
   buildDocPathIndex,
   matchStaleSuspects,
   _cleanSourcePath,
-} = require('../../src/services/docsFreshness/docPathIndex');
+} = require('../../src/services/domain/docs/docsFreshness/docPathIndex.js');
 
 test('docsFreshnessEnabled 默认开(unset / 空 / 未知值),{0,false,off,no} 关', () => {
   assert.strictEqual(docsFreshnessEnabled({}), true);

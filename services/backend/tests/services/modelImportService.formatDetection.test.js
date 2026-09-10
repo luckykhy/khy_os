@@ -44,3 +44,4 @@ describe('modelImportService format detection', () => {
     expect(out.absPath).toBe(archivePath);
   });
 });
+

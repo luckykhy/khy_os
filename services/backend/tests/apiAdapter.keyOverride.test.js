@@ -99,3 +99,4 @@ describe('apiAdapter key override', () => {
     expect(overridden.generateResponse.mock.calls[0][1].model).toBe('gpt-4o-mini');
   });
 });
+

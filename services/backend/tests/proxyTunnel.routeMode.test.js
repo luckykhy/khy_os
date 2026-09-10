@@ -94,3 +94,4 @@ describe('_proxyTunnel route mode', () => {
     )).rejects.toThrow(/Proxy required/);
   });
 });
+

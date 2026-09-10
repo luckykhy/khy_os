@@ -38,8 +38,8 @@ before(() => {
   // MUST set before any module that touches getAppHome caches the home.
   process.env.KHY_APP_HOME = homeDir;
   // Fresh requires so EXTENSIONS_DIR resolves under the temp home.
-  delete require.cache[require.resolve('../src/services/plugins/pluginContribResolver')];
-  resolver = require('../src/services/plugins/pluginContribResolver');
+  delete require.cache[require.resolve('../src/services/domain/extensions/plugins/pluginContribResolver.js')];
+  resolver = require('../src/services/domain/extensions/plugins/pluginContribResolver.js');
   tools = require('../src/tools');
 });
 

@@ -18,6 +18,8 @@ const WelcomeBanner = require('./WelcomeBanner');
 // 的 ED2→ED0 就地擦除，把重复缓解到最低。
 const MemoWelcomeBanner = React.memo(WelcomeBanner);
 const Transcript = require('./Transcript');
+// Viewport — 有界视口,消息区内滚动不带动输入框(Bubble Tea viewport 范式)
+const Viewport = require('./Viewport');
 // TranscriptView 的工具行摘要复用 ToolLines 的 summarizeArgs,视图里的
 // `✓ readFile(src/a.js)` 与 committed 区逐字一致(含相对路径/中间截断门控)。
 const ToolLines = require('./ToolLines');
@@ -33,6 +35,9 @@ const HelpMenu = require('./HelpMenu');
 const ShellView = require('./ShellView');
 const TranscriptView = require('./TranscriptView');
 const TaskListPanel = require('./TaskListPanel');
+// Boot screen — first-frame loading animation (gated KHY_BOOT_SCREEN, default on).
+// Fail-soft require; missing module → _BootScreen stays null → main UI renders directly.
+const BootScreen = require('./BootScreen');
 // 独占输入的全屏覆盖层(/model·/khyos)期间隐藏输入框/页脚的判定单一真源。
 const overlayLiveBudget = require('./overlayLiveBudget');
 const TopologyPanel = require('./TopologyPanel');
@@ -306,6 +311,72 @@ const _submitModules = (() => {
  * @param {object} [overrides] 测试注入用（{ pkg?, updateLine?, bridge? }）
  * @returns {object} bannerProps
  */
+/**
+ * 右栏 · 待办树形 (对齐预览图 .sb-tree)。数据源 _taskStore。fail-soft → []。
+ */
+function buildSidebarTodos() {
+  try {
+    const store = require('../../../tools/_taskStore');
+    const snap = typeof store.snapshot === 'function' ? store.snapshot() : '';
+    if (!snap) return [];
+    const lines = String(snap).split('\n').filter(Boolean).slice(0, 6);
+    return lines.map((ln) => {
+      const done = /✓/.test(ln);
+      const running = /→|●/.test(ln);
+      const text = ln.replace(/^[✓→●○\s]+/, '').replace(/\|/g, '').replace(/├│└─/g, '').trim();
+      return { text, done, running };
+    });
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * 右栏 · MCP 服务器列表 (轻量,仅名称)。fail-soft → []。
+ */
+function buildSidebarMcp() {
+  try {
+    const reg = require('../../../services/domain/messaging/mcp/mcpEcosystemRegistry');
+    const list = (reg && reg.listServers && reg.listServers()) || reg || [];
+    return Array.isArray(list) ? list.slice(0, 4) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * 右栏 · LSP 服务器列表 (轻量)。fail-soft → []。
+ */
+function buildSidebarLsp() {
+  // LSP 数据源当前无统一注册中心,返回空(避免画蛇添足)。
+  return [];
+}
+
+/**
+ * 右栏 · 工具列表 (对齐预览图 工具 1/N)。取 streaming.tools 摘要。
+ */
+function buildSidebarTools(streaming) {
+  try {
+    const tools = (streaming && Array.isArray(streaming.tools)) ? streaming.tools : [];
+    return tools.slice(0, 3).map((t) => {
+      const done = !!t.result;
+      const isErr = done && (t.result.isError || t.result.is_error || t.result.error || t.result.success === false);
+      const name = t.name || t.toolName || t.tool || 'tool';
+      let summary = '';
+      if (isErr) {
+        summary = 'error';
+      } else if (done) {
+        summary = 'done';
+      } else {
+        summary = 'running';
+      }
+      return { name, error: isErr, running: !done, summary };
+    });
+  } catch {
+    return [];
+  }
+}
+
 function _resolveBannerProps(footer = {}, overrides = {}) {
   const props = {};
   // 协作链接透传：原样交给 WelcomeBanner，未运行就 falsy，行内自行省略。
@@ -653,6 +724,7 @@ function App({ options = {} }) {
     }
   }, []);
   const [selectedIndex, setSelectedIndex] = React.useState(0);
+  const [completionPage, setCompletionPage] = React.useState(0);
   const [showHelp, setShowHelp] = React.useState(false);
   // Ctrl+R reverse-incremental history search (CC parity). null = inactive;
   // active = { query, matches, index, current } as returned by the pure leaf
@@ -767,6 +839,72 @@ function App({ options = {} }) {
   // scroll within it. `shellScroll` is the line offset into the tool output.
   const [shellViewOpen, setShellViewOpen] = React.useState(false);
   const [shellScroll, setShellScroll] = React.useState(0);
+  // Shell mode (gated KHY_PROMPT_SHELL_MODE): true when the input text starts
+  // with `!`. Drives the placeholder swap to "Run a command…" and the visual
+  // indicator. Off → shellMode stays false → byte-identical legacy placeholder.
+  const [shellMode, setShellMode] = React.useState(false);
+  // ── Boot screen (gated KHY_BOOT_SCREEN, default on) ─────────────────────
+  // First-frame loading animation shown while ink + gateway + session init.
+  // BootScreen component renders a braille spinner + step list; once all
+  // steps complete the parent swaps to the main UI. Gate off / component
+  // unavailable → _bootScreenEl stays null → main UI renders directly.
+  const [_bootComplete, setBootComplete] = React.useState(false);
+  const _bootTracker = React.useRef(null);
+  if (_bootTracker.current === null) {
+    _bootTracker.current = BootScreen && typeof BootScreen.createBootTracker === 'function'
+      ? BootScreen.createBootTracker()
+      : null;
+  }
+  // Mark ink loaded once the first frame commits.
+  React.useEffect(() => {
+    if (_bootTracker.current) {
+      _bootTracker.current.done('ink');
+    }
+  }, []);
+  // Mark gateway ready when query bridge status leaves the initial idle
+  // (useQueryBridge sets status to 'idle' on creation; gateway init makes it
+  // transiently 'thinking' or keeps it idle if no turn — either way, after
+  // the first async tick the bridge is functional).
+  const _bootGateRef = React.useRef(false);
+  React.useEffect(() => {
+    if (_bootGateRef.current || !_bootTracker.current) return;
+    if (query.status !== 'idle') {
+      _bootGateRef.current = true;
+      _bootTracker.current.done('gateway');
+    }
+  }, [query.status]);
+  // Mark session ready after the banner async init resolves (or after a
+  // safety timeout so the boot screen never sticks on slow sessions).
+  React.useEffect(() => {
+    const markSession = () => {
+      if (_bootTracker.current && !_bootGateRef.current) {
+        _bootGateRef.current = true;
+        _bootTracker.current.done('gateway');
+      }
+      if (_bootTracker.current) {
+        _bootTracker.current.done('session');
+        // Short delay so the user sees the "ready" step, then transition.
+        setTimeout(() => setBootComplete(true), 400);
+      }
+    };
+    // bannerUpdateLine resolves asynchronously after mount — that's our signal
+    // that at least the banner init is done.
+    const id = setTimeout(markSession, 1500); // safety: 1.5s max boot time
+    return () => clearTimeout(id);
+  }, [bannerUpdateLine]);
+  // 主内容视口滚动偏移(页面内滚动,不带动输入框)。
+  // 消息区(committed + streaming)在固定高度视口内滚动,PromptFrame 始终钉在底部。
+  const [mainViewportScroll, setMainViewportScroll] = React.useState(0);
+  const _mainViewportScrollRef = React.useRef(0);
+  // 视口几何:高度 + 内容总行数(供键盘滚动 handler 读取,避免每次 render 重算)。
+  const _viewportHeightRef = React.useRef(10);
+  const _viewportTotalLinesRef = React.useRef(0);
+  // Preview 布局 · 主内容视口滚动偏移(页面内滚动,不带动输入框)。
+  const [previewViewportScroll, setPreviewViewportScroll] = React.useState(0);
+  // Preview 布局 · 右栏看板滚动偏移。
+  const [previewSidebarScroll, setPreviewSidebarScroll] = React.useState(0);
+  // Preview 布局激活态 ref(useInput 处理器在 render 早期定义,无法直接读取 previewLayoutMode)。
+  const previewLayoutActiveRef = React.useRef(false);
   // Transcript 视图(对齐 CC 的 `app:toggleTranscript`):Ctrl+O 打开全量会话的可滚动
   // 视图,在里面能回到**任意**早前段落并展开它 —— 这是旧的「就地展开最后一条」做不到
   // 的事。`transcriptScroll` 是行偏移,`showAll` 对应 CC 的 `transcript:toggleShowAll`,
@@ -3148,6 +3286,11 @@ function App({ options = {} }) {
     onModeChange: setVimMode,
     onChange: handleInputChange,
     mouseModule: _mouse,
+    onShellModeChange: (active) => {
+      // Placeholder is resolved once per render; setShellMode forces a re-render
+      // with the updated placeholder when shell mode toggles.
+      setShellMode(active);
+    },
   });
   const { value, offset } = textInput;
 
@@ -3708,6 +3851,19 @@ function App({ options = {} }) {
     }
   }, [busy, shellViewOpen]);
 
+  // Selected tool state (for error tool → sidebar jump highlight).
+  // When an error tool is clicked, setSelectedTool focuses the sidebar and
+  // highlights the tool in the sidebar detail view.
+  const [selectedTool, setSelectedTool] = React.useState(null); // { toolIndex, tool } | null
+
+  const handleToolErrorClick = React.useCallback((toolIndex, tool) => {
+    setSelectedTool({ toolIndex, tool });
+    // Auto-focus sidebar when error tool is clicked.
+    if (sidebarNav && !sidebarNav.focused) {
+      sidebarNav.onToggleFocus();
+    }
+  }, [sidebarNav]);
+
   // Push topic changes to the pinned bar (coarse instantly, AI-refined in place).
   React.useEffect(() => {
     if (!topicBarOn) {
@@ -3878,6 +4034,10 @@ function App({ options = {} }) {
           return;
         }
         if (sidebarNav.focused) {
+          if (key.leftArrow && selectedTool) {
+            setSelectedTool(null);
+            return;
+          }
           if (key.upArrow) {
             sidebarNav.onUp();
             return;
@@ -3891,6 +4051,7 @@ function App({ options = {} }) {
             return;
           }
           if (key.escape) {
+            setSelectedTool(null);
             sidebarNav.onEscape();
             return;
           }
@@ -4290,12 +4451,35 @@ function App({ options = {} }) {
 
       // 3) Completion menu navigation (when open).
       if (completion.active) {
+        const ITEMS_PER_PAGE = 10;
+        const totalPages = Math.ceil(completion.items.length / ITEMS_PER_PAGE);
         if (key.upArrow) {
           setSelectedIndex((i) => (i - 1 + completion.items.length) % completion.items.length);
+          // Sync page with selection
+          setCompletionPage(Math.floor((selectedIndex - 1 + completion.items.length) % completion.items.length / ITEMS_PER_PAGE));
           return;
         }
         if (key.downArrow) {
           setSelectedIndex((i) => (i + 1) % completion.items.length);
+          // Sync page with selection
+          setCompletionPage(Math.floor((selectedIndex + 1) % completion.items.length / ITEMS_PER_PAGE));
+          return;
+        }
+        // PageUp/PageDown — navigate between pages
+        if (key.pageUp && totalPages > 1) {
+          setCompletionPage((p) => {
+            const np = Math.max(0, p - 1);
+            setSelectedIndex(np * ITEMS_PER_PAGE);
+            return np;
+          });
+          return;
+        }
+        if (key.pageDown && totalPages > 1) {
+          setCompletionPage((p) => {
+            const np = Math.min(totalPages - 1, p + 1);
+            setSelectedIndex(np * ITEMS_PER_PAGE);
+            return np;
+          });
           return;
         }
         // Tab → complete the highlighted item into the buffer (keep editing).
@@ -4304,6 +4488,7 @@ function App({ options = {} }) {
           const { text, offset: off } = applyCompletion(value, completion, item);
           textInput.setText(text, off);
           setDismissedFor(null);
+          setCompletionPage(0);
           return;
         }
         // Enter → for a slash command, run the highlighted command immediately
@@ -4314,16 +4499,19 @@ function App({ options = {} }) {
           if (completion.kind === 'slash') {
             textInput.setText('', 0);
             setDismissedFor(null);
+            setCompletionPage(0);
             handleSubmit(item.value);
             return;
           }
           const { text, offset: off } = applyCompletion(value, completion, item);
           textInput.setText(text, off);
           setDismissedFor(null);
+          setCompletionPage(0);
           return;
         }
         if (key.escape) {
           setDismissedFor(value);
+          setCompletionPage(0);
           return;
         }
         // any other key falls through to editing (and recomputes the menu)
@@ -4479,6 +4667,67 @@ function App({ options = {} }) {
         return;
       }
 
+      // 4.8) 主内容视口滚动(非 Preview 布局时生效)。
+      // 当消息区内容超出视口高度时,↑/↓/PgUp/PgDn 在消息区内滚动,输入框不动。
+      // 仅在非 transcript 视图、非覆盖层、非补全菜单时生效。
+      if (
+        !previewLayoutActiveRef.current &&
+        !transcriptOpen &&
+        !_overlayOwnsLive &&
+        !revSearch &&
+        !completion.active
+      ) {
+        if (!vimEnabled && !planPhase && !showHelp) {
+          const _vp = require('./Viewport');
+          const _viewH = _viewportHeightRef.current || Math.max(3, Number(_resRows) - 10);
+          const _total = _viewportTotalLinesRef.current || 0;
+          if (_viewH > 0 && _total > _viewH) {
+            let _act = null;
+            if (key.upArrow || (!key.ctrl && input === 'k')) _act = 'lineUp';
+            else if (key.downArrow || (!key.ctrl && input === 'j')) _act = 'lineDown';
+            else if (!key.ctrl && input === ' ') _act = 'fullPageDown';
+            else if (key.pageUp) _act = 'fullPageUp';
+            else if (key.pageDown) _act = 'fullPageDown';
+            else if (!key.ctrl && input === 'g') _act = 'top';
+            else if (!key.ctrl && input === 'G') _act = 'bottom';
+            if (_act) {
+              setMainViewportScroll((s) =>
+                _vp.applyViewportScroll(_act, { offset: s, viewport: _viewH, total: _total })
+              );
+              return;
+            }
+          }
+        }
+      }
+
+      // 4.9) Preview 布局 · 主内容 + 右栏看板滚动(↑/↓/j/k/space/g/G,不带动输入框)。
+      // 主视口与右栏独立滚动(偏移各自维护),共享同一组键位。
+      if (previewLayoutActiveRef.current && !revSearch && !completion.active && !_overlayOwnsLive) {
+        if (!vimEnabled && !planPhase && !showHelp) {
+          const _vp = require('./Viewport');
+          const _viewH = Math.max(3, Number(process.stdout.rows) - 8);
+          let _act = null;
+          if (key.upArrow || (!key.ctrl && input === 'k')) _act = 'lineUp';
+          else if (key.downArrow || (!key.ctrl && input === 'j')) _act = 'lineDown';
+          else if (!key.ctrl && input === ' ') _act = 'fullPageDown';
+          else if (key.pageUp) _act = 'fullPageUp';
+          else if (key.pageDown) _act = 'fullPageDown';
+          else if (!key.ctrl && input === 'g') _act = 'top';
+          else if (!key.ctrl && input === 'G') _act = 'bottom';
+          if (_act) {
+            // 主内容视口滚动
+            setPreviewViewportScroll((s) =>
+              _vp.applyViewportScroll(_act, { offset: s, viewport: _viewH, total: 30 })
+            );
+            // 右栏看板滚动(同步偏移方向)
+            setPreviewSidebarScroll((s) =>
+              _vp.applyViewportScroll(_act, { offset: s, viewport: _viewH, total: 20 })
+            );
+            return;
+          }
+        }
+      }
+
       // 5) Everything else → text editing.
       textInput.onInput(input, key);
     },
@@ -4498,6 +4747,8 @@ function App({ options = {} }) {
   let placeholder;
   try {
     const _pp = require('../promptPlaceholder');
+    // Shell mode overrides the placeholder to indicate command execution mode.
+    const _shellPlaceholder = shellMode ? 'Run a command…' : undefined;
     placeholder = _pp.resolvePromptPlaceholder(
       {
         reviewing: planPhase === 'reviewing',
@@ -4506,7 +4757,7 @@ function App({ options = {} }) {
         queueHintExhausted: queueHintUsesRef.current >= _pp.QUEUE_HINT_MAX_SHOWS,
         reviewText: 'Enter 确认执行 · skip/edit/add 修改 · n 取消',
         busyText: '',
-        defaultText: '输入消息，/ 命令，@ 文件，! shell，# 记忆，? 快捷键，Alt+M 语音',
+        defaultText: _shellPlaceholder || '输入消息，/ 命令，@ 文件，! shell，# 记忆，? 快捷键，Alt+M 语音',
         queueHintText: '按 ↑ 编辑排队消息，或继续输入',
       },
       process.env
@@ -4517,7 +4768,9 @@ function App({ options = {} }) {
         ? 'Enter 确认执行 · skip/edit/add 修改 · n 取消'
         : busy
           ? ''
-          : '输入消息，/ 命令，@ 文件，! shell，# 记忆，? 快捷键，Alt+M 语音';
+          : shellMode
+            ? 'Run a command…'
+            : '输入消息，/ 命令，@ 文件，! shell，# 记忆，? 快捷键，Alt+M 语音';
   }
 
   // ── Live-region height coordination (anti scroll-jump) ──────────────────────
@@ -4751,6 +5004,119 @@ function App({ options = {} }) {
     });
     return { lines, viewport: TranscriptView.bodyHeight(_resRows, lines.length) };
   }, [transcriptOpen, expanded, query.messages, _resCols, _resRows]);
+
+  // ── 主内容视口几何(固定高度 = 终端高 - 输入框 - 页脚 - 看板)────────────────
+  // 消息区(committed + streaming)在此固定高度内滚动;PromptFrame 始终钉在底部。
+  // 高度算法对齐 Bubble Tea chat example: viewport.Height = rows - textarea.Height - footer.Height
+  // _taskProps must be declared before this IIFE (TDZ-safe ordering).
+  let _taskProps = {};
+  const _viewportHeight = (() => {
+    const termRows = Number(_resRows) > 0 ? Number(_resRows) : 24;
+    // PromptFrame 高度:上边框(1) + 输入行(最少1) + 下边框(1) = 3(单行输入时)
+    const promptH = 3;
+    // FooterBar 高度:1 行状态栏
+    const footerH = 1;
+    // TaskPanel 高度(有任务时占 1-2 行,无任务时 0)
+    const taskH = (_taskProps?.lines?.length > 0) ? Math.min(3, _taskProps.lines.length) : 0;
+    // CompletionMenu 高度(有补全时占 1-3 行)
+    const completionH = completion.active ? Math.min(4, (completion.items?.length || 0) + 1) : 0;
+    // 余量 1 行(防止触底 pending-wrap)
+    const slack = 1;
+    const h = termRows - promptH - footerH - taskH - completionH - slack;
+    return Math.max(3, h); // 最少 3 行内容区
+  })();
+  // 同步到 ref,供键盘滚动 handler 读取(避免每次 render 重算)
+  _viewportHeightRef.current = _viewportHeight;
+
+  // ── 主内容行投影(committed messages + streaming + activity → 可视行数组)────
+  // 只在非 transcript 视图、非 preview 布局时计算(这些模式有自己的视口)。
+  const _mainContentLines = React.useMemo(() => {
+    if (transcriptOpen || previewLayoutActiveRef.current) return [];
+    const cols = _railCols(0) || Number(_resCols) || 80;
+    const lines = [];
+
+    // 1) committed messages 投影为行(复用 transcriptLines 的渲染逻辑)
+    if (_transcriptLines && query.messages.length > 0) {
+      const committedLines = _transcriptLines.buildTranscriptLines(query.messages, {
+        cols,
+        showAll: expanded,
+        renderMarkdown: Transcript.renderMarkdown,
+        summarizeTool: ToolLines.summarizeArgs,
+      });
+      for (const ln of committedLines) {
+        lines.push(ln);
+      }
+    }
+
+    // 2) streaming 内容投影为行
+    if (query.streaming) {
+      // 流式文本段
+      if (query.streaming.text) {
+        const textLines = String(query.streaming.text).split('\n');
+        for (const tl of textLines) {
+          // 按视口宽度截断
+          if (tl.length > cols) {
+            for (let i = 0; i < tl.length; i += cols) {
+              lines.push(tl.slice(i, i + cols));
+            }
+          } else {
+            lines.push(tl);
+          }
+        }
+      }
+      // 思考段
+      if (query.streaming.thinking) {
+        lines.push('  💭 ' + String(query.streaming.thinking).slice(0, cols - 6));
+      }
+      // 工具调用
+      if (query.streaming.tools && query.streaming.tools.length > 0) {
+        for (const tool of query.streaming.tools) {
+          const name = tool.name || tool.toolName || 'tool';
+          const summary = ToolLines.summarizeArgs ? ToolLines.summarizeArgs(tool) : '';
+          const status = tool.result ? (tool.result.isError ? '✗' : '✓') : '●';
+          lines.push(`  ${status} ${name}${summary ? ' ' + summary : ''}`);
+        }
+      }
+    }
+
+    // 3) 活动指示(spinner / 队列 / 中断提示)
+    if (busy && !awaitingUserChoice) {
+      const spinnerLabel = _turnPhaseLabel(
+        query.turnPhase,
+        _getStatusLabel(query.status, _liveActivity(query.status, query.streaming, query.statusDetail) || _taskActivity())
+      );
+      if (spinnerLabel) {
+        lines.push('  ◎ ' + spinnerLabel);
+      }
+    }
+    if (query.queueLen > 0) {
+      lines.push(`  ⋯ 已排 ${query.queueLen} 条待发`);
+    }
+
+    // 上限:防止超长会话爆内存(保留尾部)
+    const CAP = 5000;
+    if (lines.length > CAP) {
+      const dropped = lines.length - CAP;
+      const tail = lines.slice(lines.length - CAP);
+      tail.unshift(`  ⋯ (已省略最早 ${dropped} 行)`);
+      return tail;
+    }
+    return lines;
+  }, [
+    transcriptOpen,
+    previewLayoutActiveRef.current,
+    query.messages,
+    query.streaming,
+    expanded,
+    busy,
+    awaitingUserChoice,
+    query.status,
+    query.turnPhase,
+    query.queueLen,
+    _resCols,
+  ]);
+  // 同步总行数到 ref,供键盘滚动 handler 使用
+  _viewportTotalLinesRef.current = _mainContentLines.length;
   // Task #23: at startup (no committed messages yet) the welcome banner
   // renders inside the live row's LEFT column, so its version line and the
   // sidebar's top edge share the SAME terminal row (left/right split — the
@@ -4812,6 +5178,13 @@ function App({ options = {} }) {
     });
   }
   const _liveBannerElement = _bannerElementRef.current;
+  // Boot screen element: created once on first render, kept stable until
+  // boot completes (then discarded via the conditional return below).
+  // BootScreen module exports { BootScreen, createBootTracker, ... } —
+  // use BootScreen.BootScreen (the component), not the module object.
+  const _bootScreenEl = !_bootComplete && _bootTracker.current && BootScreen.BootScreen
+    ? h(BootScreen.BootScreen, { key: 'boot-screen', steps: _bootTracker.current.steps })
+    : null;
   // Rows the banner renders above its version line — SSOT exported by
   // WelcomeBanner (bannerRowsBeforeVersion) so the sidebar's top edge lands
   // on the SAME terminal row as `── khy OS vX.X.X ──` without magic numbers.
@@ -4828,7 +5201,6 @@ function App({ options = {} }) {
   // independent of sidebar/wide-terminal gates and is height-capped through the
   // same liveRegionBudget ledger used by StreamingBlock.
   let _streamReserve = null;
-  let _taskProps = {};
   if (_liveBudget) {
     // Same sticky-resolved rows as the dims block above (根因 B): a phantom
     // undefined-rows frame must not shrink/regrow the task-line budget.
@@ -4924,6 +5296,7 @@ function App({ options = {} }) {
     notifyTtl: _notifyTtl,
     notifyFadeRatio: _notifyFade,
     width: _sidebarWidthV,
+    selectedTool,
   };
   // Reserve ledger note (任务#8/#11): the post-first-message board shares the
   // flex row with the left live column, so its rows do NOT add to the live
@@ -5046,17 +5419,369 @@ function App({ options = {} }) {
   } catch {
     _overlayOwnsLive = !!modelPicker;
   }
+
+  // ── Three-column layout mode ──────────────────────────────────────────────
+  // When enabled (env KHY_THREE_COLUMN / auto wide-terminal), delegate to
+  // ThreeColumnLayout which reuses ALL existing leaf components in a
+  // left-sidebar | center-chat | right-panel shell. The legacy return below
+  // stays untouched as the fallback path — zero regression risk.
+  const threeColumnMode = (() => {
+    const v = String(process.env.KHY_THREE_COLUMN || '').trim().toLowerCase();
+    if (v === '0' || v === 'false' || v === 'off' || v === 'no') return false;
+    if (v === '1' || v === 'true' || v === 'on' || v === 'yes') return true;
+    // Auto: enable on wide terminals (>= 120 cols) when not explicitly disabled.
+    return Number(_resCols) >= 120;
+  })();
+
+  // Overlay nodes — extracted so both layout paths can render them on top.
+  const overlayNodes = h(
+    Box,
+    { flexDirection: 'column' },
+    query.controlRequest
+      ? isQuestionRequest(query.controlRequest)
+        ? h(QuestionPrompt, {
+            request: query.controlRequest.request,
+            onResolve: query.resolveControl,
+          })
+        : h(PermissionsPrompt, {
+            request: query.controlRequest.request,
+            onResolve: query.resolveControl,
+          })
+      : null,
+    modelPicker
+      ? h(ModelPicker, {
+          choices: modelPicker.choices,
+          defaultValue: modelPicker.defaultValue,
+          onResolve: resolveModelPicker,
+          recent: modelPicker.recent,
+        })
+      : null,
+    gatewayProgress && !modelPicker ? h(ProgressBar, { ...gatewayProgress }) : null,
+    rewindPicker
+      ? h(RewindPicker, {
+          targets: rewindPicker.targets,
+          onResolve: resolveRewindPicker,
+        })
+      : null,
+    rollbackPicker
+      ? h(RewindPicker, {
+          targets: rollbackPicker.targets,
+          title: '选择要回滚到的检查点（↑/↓ 选择，回车确认）',
+          onResolve: resolveRollbackPicker,
+        })
+      : null,
+    formFlow
+      ? h(FormFlow, {
+          fields: formFlow.fields,
+          title: formFlow.title,
+          onResolve: resolveFormFlow,
+        })
+      : null,
+    khyosOpen ? h(KhyOsView, { onExit: () => setKhyosOpen(false) }) : null,
+    topologyView
+      ? h(
+          Box,
+          { flexDirection: 'column' },
+          h(TopologyPanel, {
+            forest: topologyView.forest,
+            currentId: topologyView.currentId,
+            degraded: topologyView.degraded,
+          }),
+          h(Text, { dimColor: true }, '（Esc / 回车 关闭)')
+        )
+      : null
+  );
+
+  // ── Preview 布局 (对齐 layout-preview.html) ──────────────────────────────
+  // 结构: 标题栏 + 横幅 + 分割(左 MAIN + 右 SIDEBAR) + 底部固定层。
+  // 无左会话栏。门控 KHY_PREVIEW_LAYOUT (默认宽终端 ≥122 列自动开)。
+  const previewLayoutMode = (() => {
+    const v = String(process.env.KHY_PREVIEW_LAYOUT || '').trim().toLowerCase();
+    if (v === '0' || v === 'false' || v === 'off' || v === 'no') return false;
+    if (v === '1' || v === 'true' || v === 'on' || v === 'yes') return true;
+    return Number(_resCols) >= 122;
+  })();
+  // 同步到 ref,供 useInput 键盘处理器读取。
+  previewLayoutActiveRef.current = !!(previewLayoutMode && inputActive && !_overlayOwnsLive);
+
+  // Pre-compute topologyView overlay element outside h() call args to avoid nested ternary
+  // parser ambiguity that causes "missing ) after argument list" at the closing paren.
+  const _topologyViewEl = topologyView
+    ? h(
+        Box,
+        { flexDirection: 'column' },
+        h(TopologyPanel, {
+          forest: topologyView.forest,
+          currentId: topologyView.currentId,
+          degraded: topologyView.degraded,
+        }),
+        h(Text, { dimColor: true }, '（Esc / 回车 关闭)')
+      )
+    : null;
+
+  // Pre-compute the live region element outside h() args. The inline ternary
+  // `inputActive ? h(innerBox, ...) : null` confuses the parser when nested
+  // inside h(outerBox, props, child1, ternary, child3, child4) because the
+  // closing ) of h(innerBox, ...) is mistaken for the end of h(outerBox, ...)'s
+  // argument list, producing "missing ) after argument list".
+  const _liveRegionEl = inputActive
+    ? h(
+        Box,
+        { key: 'live', flexDirection: 'column' },
+        h(
+          Box,
+          {
+            flexDirection: 'row',
+            alignItems: 'flex-start',
+            height: _viewportHeight,
+            flexShrink: 0,
+          },
+          // ── 左列:可滚动消息视口 ──────────────────────────────────────────
+          // 内容 = committed messages + streaming + activity → 统一投影为 _mainContentLines
+          // Viewport 只渲染可见行,高度固定 = 终端高度 - 输入框 - 页脚 - 余量
+          // ── 区域② MAIN 左列 — 可滚动视口 ────────────────────────────────
+          //   全部内容(committed + streaming + activity)投影为 _mainContentLines,
+          //   Viewport 只渲染可见行,高度固定,内容滚动不带动输入框。
+          //   特殊视图(Transcript/Shell/Plan/Help)有独立视口,此处跳过。
+          transcriptOpen && _transcriptView
+            ? h(TranscriptView, {
+                lines: _transcriptView.lines,
+                scroll: transcriptScroll,
+                showAll: expanded,
+                rows: _resRows,
+              })
+            : shellViewOpen
+              ? h(ShellView, { streaming: query.streaming, scroll: shellScroll })
+              : showHelp
+                ? h(HelpMenu, null)
+                : planPhase === 'generating'
+                  ? h(PlanApproval, { generating: true, genText: planGenText })
+                  : planPhase === 'reviewing'
+                    ? h(PlanApproval, { plan: currentPlan })
+                    : h(Viewport, {
+                        key: 'main-viewport',
+                        height: _viewportHeight,
+                        lines: _mainContentLines,
+                        scroll: mainViewportScroll,
+                        onScroll: setMainViewportScroll,
+                        autoScroll: true,
+                        emptyText: '  暂无对话,输入消息开始...',
+                        width: _railCols(0) || Number(_resCols) || 80,
+                      }),
+          // Right-column board (任务#8/#11) — always inside the flex row:
+          _sidebarOn && !_railOut
+            ? _bannerInLive
+              ? h(
+                  Box,
+                  {
+                    flexDirection: 'column',
+                    flexShrink: 0,
+                    justifyContent: 'flex-start',
+                    marginTop: _bannerVersionOffset,
+                  },
+                  h(SidebarPanel, {
+                    ..._sidebarProps,
+                    stableRows: _sidebarStableRowsV,
+                    fitContent: false,
+                    selectedTool,
+                  })
+                )
+              : h(
+                  Box,
+                  {
+                    flexDirection: 'column',
+                    flexShrink: 0,
+                    justifyContent: 'flex-start',
+                    alignSelf: 'flex-start',
+                  },
+                  h(SidebarPanel, {
+                    ..._sidebarProps,
+                    stableRows: _sidebarFillRowsV,
+                    fitContent: false,
+                    selectedTool,
+                  })
+                )
+            : null
+        ), // end upper row — everything below stays full terminal width
+
+        // ── 区域④ TASK_PANEL(全宽任务看板)─────────────────────────────────
+        h(TaskListPanel, {
+          key: 'task-panel',
+          tick: nowTick,
+          ..._taskProps,
+          ...(tasksHidden ? { lines: [], hidden: 0, hiddenLines: [] } : {}),
+        }),
+
+        // ── 区域⑤ COMPLETION_MENU(斜杠命令补全菜单)────────────────────────
+        completion.active
+          ? h(CompletionMenu, {
+              completion,
+              selectedIndex,
+              marginLeft: _completionMarginLeft,
+              page: completionPage,
+            })
+          : null,
+
+        // Reverse-incremental history search prompt (Ctrl+R).
+        revSearch && _HistorySearchOverlay
+          ? h(_HistorySearchOverlay, { state: revSearch })
+          : null,
+
+        hint ? h(Text, { dimColor: true }, hint) : null,
+
+        // ── 区域⑤b STREAMING_STATUS(输入框正上方)──────────────────────────
+        busy && !awaitingUserChoice && !_overlayOwnsLive
+          ? h(
+              Box,
+              {
+                flexDirection: 'column',
+                borderBottom: true,
+                borderStyle: 'single',
+                paddingX: 2,
+                paddingY: 0,
+              },
+              h(
+                Box,
+                null,
+                h(Spinner, {
+                  label: _turnPhaseLabel(
+                    query.turnPhase,
+                    _getStatusLabel(
+                      query.status,
+                      _liveActivity(query.status, query.streaming, query.statusDetail) || _taskActivity()
+                    )
+                  ),
+                  dimColor: false,
+                })
+              )
+            )
+          : null,
+
+        // Control-request overlay
+        query.controlRequest
+          ? isQuestionRequest(query.controlRequest)
+            ? h(QuestionPrompt, {
+                request: query.controlRequest.request,
+                onResolve: query.resolveControl,
+              })
+            : h(PermissionsPrompt, {
+                request: query.controlRequest.request,
+                onResolve: query.resolveControl,
+              })
+          : null,
+
+        modelPicker
+          ? h(ModelPicker, {
+              choices: modelPicker.choices,
+              defaultValue: modelPicker.defaultValue,
+              onResolve: resolveModelPicker,
+              recent: modelPicker.recent,
+            })
+          : null,
+
+        gatewayProgress && !modelPicker
+          ? h(ProgressBar, { ...gatewayProgress })
+          : null,
+
+        rewindPicker
+          ? h(RewindPicker, {
+              targets: rewindPicker.targets,
+              onResolve: resolveRewindPicker,
+            })
+          : null,
+
+        rollbackPicker
+          ? h(RewindPicker, {
+              targets: rollbackPicker.targets,
+              title: '选择要回滚到的检查点（↑/↓ 选择，回车确认）',
+              onResolve: resolveRollbackPicker,
+            })
+          : null,
+
+        formFlow
+          ? h(FormFlow, {
+              fields: formFlow.fields,
+              title: formFlow.title,
+              onResolve: resolveFormFlow,
+            })
+          : null,
+
+        khyosOpen ? h(KhyOsView, { onExit: () => setKhyosOpen(false) }) : null,
+
+        _topologyViewEl,
+      )
+    : null;
+
+  // Preview layout — early return when wide terminal + input active.
+  if (previewLayoutMode && inputActive && !_overlayOwnsLive) {
+    const PreviewLayout = require('./PreviewLayout');
+    return h(PreviewLayout, {
+      titleBar: { title: 'khy-os TUI' },
+      banner: null,
+      staticItems: query.staticItems,
+      bannerElement: _liveBannerElement,
+      expanded,
+      streaming: query.streaming,
+      status: query.status,
+      onToolErrorClick: handleToolErrorClick,
+      taskProps: { ..._taskProps, ...(tasksHidden ? { lines: [], hidden: 0, hiddenLines: [] } : {}) },
+      tasksHidden,
+      nowTick,
+      value,
+      offset,
+      placeholder,
+      accent,
+      vimEnabled,
+      vimMode,
+      mic: { active: dictating, onClick: toggleDictation },
+      completion,
+      selectedIndex,
+      completionPage,
+      completionMarginLeft: _completionMarginLeft,
+      hint,
+      footer: {
+        ...footer,
+        contextTokens: query.contextTokens || 0,
+        contextPlan: query.contextPlan,
+        permissionMode,
+        localMode,
+        fastMode,
+        voiceMode,
+        autoRedPass,
+        goalActive,
+        cooldownUntilMs: query.cooldownUntilMs || 0,
+        modelStatus: footer.modelStatus,
+      },
+      sidebar: {
+        width: 45,
+        workDir: process.cwd(),
+        todos: buildSidebarTodos(),
+        mcp: buildSidebarMcp(),
+        lsp: buildSidebarLsp(),
+        tools: buildSidebarTools(query.streaming),
+        queueLen: query.queueLen || 0,
+        notifications,
+        inputEcho: value || '',
+      },
+      width: Number(_resCols) > 0 ? Number(_resCols) : 80,
+      viewportHeight: Math.max(3, Number(_resRows) > 0 ? Number(_resRows) - 8 : 10),
+      viewportScroll: previewViewportScroll,
+      onViewportScroll: setPreviewViewportScroll,
+      sidebarScroll: previewSidebarScroll,
+      onSidebarScroll: setPreviewSidebarScroll,
+      overlays: overlayNodes,
+    });
+  }
+
+  // Boot screen: render BootScreen during init, then switch to main UI.
+  if (_bootScreenEl) {
+    return _bootScreenEl;
+  }
+
   return h(
     Box,
     { flexDirection: 'column', width: _railContentCols || undefined },
     // ── 区域① BANNER + 已 commit 转录(全屏,跨越 MAIN/SIDEBAR)─────────────────
-    //   <Static> 装历史 commit 的对话,首屏时含 WelcomeBanner;一旦首个 turn commit,
-    //   banner 永久转入 scrollback,MAIN 顶部回到最新消息。区域划分的真源见
-    //   ./regionLayout.js#REGION,本数组的兄弟顺序与该 SSOT 一一对应 —— 任何新增 /
-    //   调整区域,先改 regionLayout 再改这里。
-    // Committed transcript output via <Static>. Always mounted so
-    // that suspending the live UI does not reprint scrollback.
-    // Banner 作为第一个 item 渲染在顶部,对话消息在它下方。
     h(Static, { items: query.staticItems }, (item) => {
       if (item.kind === 'banner') {
         return _liveBannerElement;
@@ -5064,446 +5789,38 @@ function App({ options = {} }) {
       return h(Transcript.MessageBlock, { key: item.key, msg: item.msg, expanded });
     }),
 
-    // Live region — suspended while an interactive command owns the terminal.
-    // Structure: column [ row [ left column | board ], PromptFrame, footer &
-    // overlays ]. The row boundary ends BEFORE PromptFrame so the prompt and
-    // the footer keep the FULL terminal width. 任务#8/#11: the board stays in
-    // the flex row in BOTH modes — at startup it tops the right column next
-    // to the banner; after the first message its top edge sits right under
-    // <Static> (message area's bottom edge) and its height HUGS the content,
-    // capped by sidebarFillRows. <Static> stays OUTSIDE (ink extracts it).
-    // alignItems flex-start keeps both columns TOP-ALIGNED so the board's bg
-    // block covers exactly its content rows (never stretched to the left
-    // column's height).
-    inputActive
-      ? h(
-          Box,
-          { key: 'live', flexDirection: 'column' },
-          h(
-            Box,
-            { flexDirection: 'row', alignItems: 'flex-start' },
-            h(
-              Box,
-              { flexDirection: 'column', flexGrow: 1, minHeight: MAIN_MIN_HEIGHT },
-              // ── 区域② MAIN 左列(三层结构:6 大区 + 10 小区)────────────────────
-              //   顶 → 底大区索引(详细说明见 regionLayout.js#REGION):
-              //     ②.1  MAIN_TEXT       流式正文(不含思考);t${i} / 'text' 等文本段
-              //     ②.2  MAIN_REASONING  思考区(大区);含 live + committed 两个小区
-              //     ②.3  MAIN_OUTPUT     输出大区(工具相关);含 HDR / VIEW / INLINE 三个小区
-              //     ②.4  MAIN_ACTIVITY   活动区(忙态指示);含 SPINNER / QUEUE / STEER / INTERRUPT
-              //     ②.5  MAIN_TIP        提示区(大区);含 DOUBLE_PRESS 一个小区
-              //     ②.6  MAIN_SUBVIEW    局部子视图;Ctrl+O 详情 + PlanApproval + TranscriptView
-              //   几何契约:列宽 = regionLayout.railCols() - sidebarWidth,横向收缩由
-              //   contentWidth 透传给 StreamingBlock。
-              //
-              //   注意:StreamingBlock 内部顺序 = 正文(②.1) → 思考(②.2) → 工具头行(②.3.1)
-              //   → 工具内联结果(②.3.3),四者在 children 数组里压在同一个 <StreamingBlock>
-              //   节点下,但物理上是四个独立子区域。下方标注**仅指代 StreamingBlock 整体**,
-              //   不要再在 StreamingBlock 内部追加区域注释。
+    // Live region (computed above to avoid nested ternary parser ambiguity).
+    _liveRegionEl,
 
-              // Banner 已移至 <Static> 区域①,不再在 live region 中渲染
-              // (避免重复显示)
+    // ── 区域⑥ PROMPT(输入框) — 固定底部 ─────────────────────────────────
+    _overlayOwnsLive
+      ? null
+      : h(PromptFrame, {
+          value,
+          offset,
+          busy,
+          placeholder,
+          accent,
+          vimMode: vimEnabled ? vimMode : null,
+          mic: { active: dictating, onClick: toggleDictation },
+        }),
 
-              // [区域②.6 MAIN_SUBVIEW · Ctrl+O 详情] Removable detail for the latest committed
-              // <Static> turn. MessageBlock already force-expands role:'expansion'; keeping this
-              // outside Static makes the second keypress a true collapse.
-              committedExpansion
-                ? h(Transcript.MessageBlock, {
-                    key: 'committed-expansion',
-                    msg: committedExpansion,
-                  })
-                : null,
-
-              // [区域②.1 + ②.2 + ②.3.1 + ②.3.3 共四子区域合并渲染 = StreamingBlock]
-              // Live streaming turn. 任务#12: while the board is visible this block only
-              // spans the LEFT column, so its wrap/height budgets must use the left-
-              // column width (contentWidth) — board off → null → legacy full width.
-              // 内部子区域:
-              //   ②.1   MAIN_TEXT          — body / t${i} / 'text' 等流式文本段(不含思考)
-              //   ②.2   MAIN_REASONING     — think-ell / think 思考段(gate:streaming.thinking)
-              //   ②.3.1 MAIN_OUTPUT_HDR    — ToolLines / ProcessGroup 的 `✓ readFile(...)` 头行
-              //   ②.3.3 MAIN_OUTPUT_INLINE — ToolLines 头行之下的 literal output + diff 行
-              query.streaming
-                ? h(StreamingBlock, {
-                    streaming: query.streaming,
-                    status: query.status,
-                    expanded,
-                    reserveRows: _streamReserve == null ? null : _streamReserve + extraReserve,
-                    contentWidth: (_sidebarOn || _railOut) && _mainColsV > 0 ? _mainColsV : null,
-                  })
-                : null,
-
-              // [区域②.6 MAIN_SUBVIEW · 完工标]
-              query.status === 'done' ? h(Text, { dimColor: true }, '✱ 完成') : null,
-
-              // [区域②.6 MAIN_SUBVIEW · PlanApproval + plan 执行态 Spinner]
-              // Plan-mode surface (stage 3): generation preview, approval view, or the
-              // execution spinner. Step progress itself lands in the transcript.
-              planPhase === 'generating'
-                ? h(PlanApproval, { generating: true, genText: planGenText })
-                : null,
-              planPhase === 'reviewing' ? h(PlanApproval, { plan: currentPlan }) : null,
-              // [区域②.4a MAIN_ACTIVITY_SPINNER · plan 执行态] 计划在执行时切换到这个 Spinner
-              planPhase === 'executing'
-                ? h(Box, { marginTop: 1 }, h(Spinner, { label: '执行计划中…' }))
-                : null,
-
-              // [区域②.3.2 MAIN_OUTPUT_VIEW] Shell peek panel (块4 SUBVIEW): live tool
-              // command + output, ↓ to open while executing, ← to return, ↑/↓ to scroll.
-              shellViewOpen
-                ? h(ShellView, { streaming: query.streaming, scroll: shellScroll })
-                : null,
-
-              // [区域②.6 MAIN_SUBVIEW · TranscriptView] Transcript 视图(CC app:toggleTranscript):
-              // 全量会话的可滚动回看,Ctrl+O 开关。行数组与视口高度由 _transcriptView 一次算好,
-              // 键位分支与组件切片共用同一组数字。
-              transcriptOpen && _transcriptView
-                ? h(TranscriptView, {
-                    lines: _transcriptView.lines,
-                    scroll: transcriptScroll,
-                    showAll: expanded,
-                    rows: _resRows,
-                  })
-                : null,
-
-              // [区域②.4 MAIN_ACTIVITY 大区,含 4 个小区合并渲染] 活体活动区主体:
-              // busy 期间一个共享 Box 内同步挂四件。物理渲染顺序按下方书写序,
-              // 但每件都有独立小区 ID,便于后续单独隐藏:
-              //   ②.4.1 MAIN_ACTIVITY_SPINNER   Spinner + CompactionProgress
-              //   ②.4.2 MAIN_ACTIVITY_QUEUE     队列面板
-              //   ②.4.3 MAIN_ACTIVITY_STEER     方向修正提示
-              //   ②.4.4 MAIN_ACTIVITY_INTERRUPT Esc 中断提示
-              busy && !awaitingUserChoice
-                ? query.status === 'compacting'
-                  // [区域②.4.1 MAIN_ACTIVITY_SPINNER · 压缩中]
-                  ? h(CompactionProgress, { compaction: query.compaction })
-                  : h(
-                      Box,
-                      { marginTop: 1, flexDirection: 'column' },
-                      // [区域②.4.1 MAIN_ACTIVITY_SPINNER · 主忙态]
-                      h(Spinner, {
-                        label: _turnPhaseLabel(
-                          query.turnPhase,
-                          _getStatusLabel(
-                            query.status,
-                            _liveActivity(query.status, query.streaming, query.statusDetail) ||
-                              _taskActivity()
-                          )
-                        ),
-                        detail: query.statusDetail,
-                        ..._spinnerProgress(
-                          query.turnStartedAt,
-                          nowTick,
-                          lastActivityRef.current,
-                          query.streaming
-                        ),
-                      }),
-                      // [区域②.4.2 MAIN_ACTIVITY_QUEUE]
-                      ...(query.queueLen > 0 ? _renderQueuePanel(query.queueItems) : []),
-                      // [区域②.4.3 MAIN_ACTIVITY_STEER]
-                      ...(query.steerLen > 0
-                        ? [
-                            h(
-                              inkRuntime.get().Text,
-                              { key: 'steer-pending', dimColor: true },
-                              `  ⟳ ${query.steerLen} 条方向修正待注入（下一个工具边界生效）`
-                            ),
-                          ]
-                        : []),
-                      // [区域②.4.4 MAIN_ACTIVITY_INTERRUPT]
-                      // Discoverability of the interrupt affordance (对齐 CC isLoading footer
-                      // "esc to interrupt"). Only when NOTHING is queued — with a queue the
-                      // panel above already shows the accurate two-step "Esc 取回并清空；再按
-                      // Esc 打断". Decision + text live in the interruptHint leaf; gated by
-                      // KHY_ESC_INTERRUPT_HINT (default on). Empty string → nothing rendered.
-                      ...(() => {
-                        const hint = interruptHint.buildInterruptHint({
-                          busy: true,
-                          queueLen: query.queueLen,
-                          compacting: query.status === 'compacting',
-                          awaitingChoice: awaitingUserChoice,
-                        });
-                        return hint
-                          ? [
-                              h(
-                                inkRuntime.get().Text,
-                                { key: 'esc-interrupt-hint', dimColor: true },
-                                `  ⎋ ${hint}`
-                              ),
-                            ]
-                          : [];
-                      })()
-                    )
-                : null,
-
-              // [区域②.6 MAIN_SUBVIEW · HelpMenu] Help overlay.
-              showHelp ? h(HelpMenu, null) : null,
-
-              // Input mode indicator (CC PromptInputModeIndicator).
-              bashMode
-                ? h(Text, { color: 'magenta' }, '! BASH 模式 · Enter 运行 shell 命令')
-                : null,
-              memoryMode
-                ? h(Text, { color: 'green' }, '# 记忆模式 · Enter 写入记忆（下次对话生效）')
-                : null,
-
-              // Staged image attachments (Ctrl+V). Each item has its own clickable
-              // delete control; labels are recomputed from the surviving list so
-              // deleting 图2 leaves 图1 intact and keeps payload order stable.
-              pendingImages.length > 0
-                ? h(
-                    Box,
-                    { flexDirection: 'row', flexWrap: 'wrap', columnGap: 1 },
-                    h(Text, { color: 'blue' }, `📎 已附加 ${pendingImages.length} 张图片：`),
-                    ...pendingImageAttachments.labels(pendingImages).map((item) =>
-                      h(
-                        Box,
-                        {
-                          key: item.id,
-                          flexShrink: 0,
-                          onClick: () => removePendingImage(item.id),
-                        },
-                        h(Text, { color: 'cyan', bold: true }, `${item.label} ×`)
-                      )
-                    ),
-                    h(Text, { color: 'blue', dimColor: true }, ' · Enter 发送 · Ctrl+V 再加 · Esc 清除')
-                  )
-                : null,
-
-              // Vim mode indicator (CC PromptInputModeIndicator). Only while /vim is on.
-              vimEnabled
-                ? h(
-                    Text,
-                    { color: vimMode === 'NORMAL' ? 'green' : 'yellow', bold: true },
-                    vimMode === 'NORMAL' ? '-- NORMAL --' : '-- INSERT --'
-                  )
-                : null,
-
-            ), // end left column
-            // Right-column board (任务#8/#11) — always inside the flex row:
-            //  - startup (_bannerInLive): STABLE height, version-line offset so the
-            //    board's top edge shares the terminal row with the banner's version
-            //    line (task #23 left/right split; behaviour unchanged).
-            //  - post-first-message: top edge on the row's FIRST line (the message
-            //    area's bottom edge); height HUGS the content (fitContent — two
-            //    content lines paint two rows, no filler) and only grows with the
-            //    task list up to the sidebarFillRows ceiling (honest “… 其余 N 行”
-            //    marker beyond it). The row's alignItems flex-start keeps the bg
-            //    block from stretching to the left column's height.
-            //
-            // 右栏模式(_railOut)例外:看板已经出树,改由 runtime/sidebarRail 在预留槽位里用
-            // 绝对坐标带外画。任务#7:看板底边锚定在输入框下线(FooterBar 高度由 setChrome 前馈),
-            // 内容向上生长 —— 覆盖旧的顶部/右上角锚定规则。这里必须返回 null,否则同一份内容会在
-            // 活动区里再画一遍。外层 flex 行与 alignItems 刻意保留不动(diff 最小),右列为空时
-            // Yoga 的行高就是左列高度,与今天一致。
-            _sidebarOn && !_railOut
-              ? _bannerInLive
-                ? h(
-                    Box,
-                    {
-                      flexDirection: 'column',
-                      flexShrink: 0,
-                      justifyContent: 'flex-start',
-                      marginTop: _bannerVersionOffset,
-                    },
-                    h(SidebarPanel, {
-                      ..._sidebarProps,
-                      stableRows: _sidebarStableRowsV,
-                      fitContent: true,
-                    })
-                  )
-                : h(
-                    Box,
-                    {
-                      // ── 区域③ SIDEBAR(仅宽终端显示)────────────────────────────
-                      //   顶对齐 MAIN 左列第一行(顶偏移由 bannerRowsBeforeVersion
-                      //   单源控制 —— regionLayout.sidebarTopAnchorRows())。内容由
-                      //   buildSidebarLines 纯叶子驱动:任务清单 + 工具活动 +
-                      //   排队消息 + 背景通知。窄屏(_sidebarOn=false && _railOut=false)
-                      //   → 整块不挂,MAIN 占满全宽。
-                      // Top-right anchor (post-first-message): pin the hugging board
-                      // to the row's top edge explicitly (alignSelf flex-start) so it
-                      // can never ride the bottom of a tall left column; no banner
-                      // offset here (startup branch above owns that).
-                      flexDirection: 'column',
-                      flexShrink: 0,
-                      justifyContent: 'flex-start',
-                      alignSelf: 'flex-start',
-                    },
-                    h(SidebarPanel, {
-                      ..._sidebarProps,
-                      stableRows: _sidebarFillRowsV,
-                      fitContent: true,
-                    })
-                  )
-              : null
-          ), // end upper row — everything below stays full terminal width
-
-          // ── 区域④ TASK_PANEL(全宽任务看板)─────────────────────────────────
-          //   唯一全宽兄弟节点,夹在 MAIN/SIDEBAR 上行与 PROMPT 下行之间,Ctrl+T
-          //   隐藏(tasksHidden=true 时整块被传空 lines+hiddenLines,生命周期由
-          //   _taskProps 驱动)。语义分两段:本会话任务 + 项目任务。
-          // Canonical task checklist: full-width sibling between the latest
-          // transcript/live content and the prompt. The existing heartbeat keeps
-          // store and plan status changes current; coordinated empty lines unmount it.
-          h(TaskListPanel, {
-            key: 'task-panel',
-            tick: nowTick,
-            ..._taskProps,
-            ...(tasksHidden ? { lines: [], hidden: 0, hiddenLines: [] } : {}),
-          }),
-
-          // ── 区域⑤ COMPLETION_MENU(斜杠命令补全菜单)────────────────────────
-          //   浮在 PROMPT 上方;completion.active 时挂载。
-          //   职责:斜杠命令 / @file 补全菜单;不干涉 PROMPT / FOOTER / OVERLAY。
-          completion.active
-            ? h(CompletionMenu, { completion, selectedIndex, marginLeft: _completionMarginLeft })
-            : null,
-
-          // Reverse-incremental history search prompt (Ctrl+R). Thin read-only
-          // overlay; state comes from the historyReverseSearch leaf.
-          revSearch && _HistorySearchOverlay
-            ? h(_HistorySearchOverlay, { state: revSearch })
-            : null,
-
-          // [区域②.5.1 MAIN_TIP_DOUBLE_PRESS] Transient double-press affordance
-          // ("再按一次 Ctrl-C 退出" 等). 1.5s 自动消失,由 showHint() 驱动。
-          hint ? h(Text, { dimColor: true }, hint) : null,
-
-          // ── 区域⑥ PROMPT(输入框)────────────────────────────────────────────
-          //   独占输入覆盖层挂载期间被隐藏,判定真源见
-          //   regionLayout.overlaysHidingChrome —— 这里只读 _overlayOwnsLive 标志。
-          //   职责:输入框;不干涉 FOOTER / STATUS_AREA / OVERLAY。
-          _overlayOwnsLive
-            ? null
-            : h(PromptFrame, {
-                value,
-                offset,
-                busy,
-                placeholder,
-                accent,
-                vimMode: vimEnabled ? vimMode : null,
-                mic: { active: dictating, onClick: toggleDictation },
-              }),
-
-          // ── 区域⑦ FOOTER(状态栏,输入框正下方)──────────────────────────────
-          //   与区域⑥ PROMPT 共享同一 _overlayOwnsLive 标志,独占输入覆盖层期间同步隐藏。
-          //   显示:模型 + 精度 + 上下文用量(已用 / 窗口)+ 权限模式 + local/fast/voice
-          //   徽标 + 协作桥状态 + 当前持久目标 + 置顶栏降级时显示 topic。
-          //   职责:状态栏;不干涉 PROMPT / OVERLAY。
-          _overlayOwnsLive
-            ? null
-            : h(FooterBar, {
-                ...footer,
-                contextTokens: query.contextTokens || 0,
-                contextPlan: query.contextPlan,
-                permissionMode,
-                localMode,
-                fastMode,
-                voiceMode,
-                autoRedPass,
-                topic: topicBarOn ? null : topic,
-                bridge: bridgeStatus,
-                goalActive,
-                cooldownUntilMs: query.cooldownUntilMs || 0,
-                modelStatus: footer.modelStatus,
-              }),
-
-          // ── 区域⑧ STATUS_AREA(状态区,页尾 5 行空行,FOOTER 之下)────────────
-          //   固定在终端最底部;预留未来扩展(实时状态 / 快捷操作 / 系统通知)。
-          //   职责:5 行空行占位;不干涉 PROMPT / OVERLAY。
-          //   当前渲染:5 个空 Box 行,高度固定不随内容变化。
-          _overlayOwnsLive
-            ? null
-            : h(Box, { flexDirection: 'column', height: 5 },
-                h(Text, null, ''),
-                h(Text, null, ''),
-                h(Text, null, ''),
-                h(Text, null, ''),
-                h(Text, null, ''),
-              ),
-
-          // ── 区域⑨ OVERLAY(全屏覆盖层,独占输入时挂载)─────────────────────────
-          //   注册表真源见 ./regionLayout.js#OWNING_OVERLAYS,六类覆盖层按需挂载,
-          //   不占纵向顺序。新加独占输入的覆盖层:在 OWNING_OVERLAYS 加一行 +
-          //   在 App.js 加 state + 这里加判定。覆盖层对 PROMPT/FOOTER 的隐藏
-          //   由 _overlayOwnsLive 统一驱动。
-
-          // Control-request overlay: AskUserQuestion → selection menu, else permission.
-          query.controlRequest
-            ? isQuestionRequest(query.controlRequest)
-              ? h(QuestionPrompt, {
-                  request: query.controlRequest.request,
-                  onResolve: query.resolveControl,
-                })
-              : h(PermissionsPrompt, {
-                  request: query.controlRequest.request,
-                  onResolve: query.resolveControl,
-                })
-            : null,
-
-          // [regionLayout.OWNING_OVERLAYS.modelPicker — /model,已确认贴顶,hideChrome=true]
-          modelPicker
-            ? h(ModelPicker, {
-                choices: modelPicker.choices,
-                defaultValue: modelPicker.defaultValue,
-                onResolve: resolveModelPicker,
-                recent: modelPicker.recent,
-              })
-            : null,
-
-          // Progress bar for /model probe — shown while gatewayProgress is set
-          // (during buildGatewayModelChoices), hidden once the picker mounts.
-          gatewayProgress && !modelPicker
-            ? h(ProgressBar, { ...gatewayProgress })
-            : null,
-
-          // [regionLayout.OWNING_OVERLAYS.rewindPicker — 双击 Esc 触发的回溯选择,hideChrome=false]
-          rewindPicker
-            ? h(RewindPicker, {
-                targets: rewindPicker.targets,
-                onResolve: resolveRewindPicker,
-              })
-            : null,
-
-          // [regionLayout.OWNING_OVERLAYS.rollbackPicker — /rollback 检查点选择(复用 RewindPicker),hideChrome=false]
-          rollbackPicker
-            ? h(RewindPicker, {
-                targets: rollbackPicker.targets,
-                title: '选择要回滚到的检查点（↑/↓ 选择，回车确认）',
-                onResolve: resolveRollbackPicker,
-              })
-            : null,
-
-          // [regionLayout.OWNING_OVERLAYS.formFlow — /login /register /passwd /apikey 等顺序表单,hideChrome=false]
-          formFlow
-            ? h(FormFlow, {
-                fields: formFlow.fields,
-                title: formFlow.title,
-                onResolve: resolveFormFlow,
-              })
-            : null,
-
-          // [regionLayout.OWNING_OVERLAYS.khyosOpen — /khyos /os,QEMU 内核串口,已确认贴顶,hideChrome=true]
-          khyosOpen ? h(KhyOsView, { onExit: () => setKhyosOpen(false) }) : null,
-
-          // [regionLayout.OWNING_OVERLAYS.topologyView — /topology view 会话森林只读视图,hideChrome=false]
-          // 会话拓扑「森林」只读面板。TopologyPanel 自身只着色;走树/字形/标签全来自共享
-          // SSOT(sessionTopology)。Esc/Enter 关闭(主 useInput 0d 分支消费)。
-          topologyView
-            ? h(
-                Box,
-                { flexDirection: 'column' },
-                h(TopologyPanel, {
-                  forest: topologyView.forest,
-                  currentId: topologyView.currentId,
-                  degraded: topologyView.degraded,
-                }),
-                h(Text, { dimColor: true }, '（Esc / 回车 关闭)')
-              )
-            : null
-        )
-      : null
+    // ── 区域⑦ FOOTER(状态栏) — 固定底部 ─────────────────────────────────
+    _overlayOwnsLive
+      ? null
+      : h(FooterBar, {
+          ...footer,
+          contextTokens: query.contextTokens || 0,
+          contextPlan: query.contextPlan,
+          permissionMode,
+          localMode,
+          fastMode,
+          voiceMode,
+          autoRedPass,
+          goalActive,
+          cooldownUntilMs: query.cooldownUntilMs || 0,
+          modelStatus: footer.modelStatus,
+        }),
   );
 }
 

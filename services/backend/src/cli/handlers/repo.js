@@ -12,6 +12,7 @@
 
 // ── Imports ──
 
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -596,4 +597,10 @@ module.exports = {
   // Exported for tests.
   _statusSummary,
   _isGitRepo,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'repo',
+    description: 'repo command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleRepo(parsed.subCommand, parsed.args, parsed.options),
+  },
 };

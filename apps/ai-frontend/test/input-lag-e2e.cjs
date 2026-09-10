@@ -2,14 +2,20 @@
  * E2E: verify AIChat input responsiveness during streaming.
  * Uses system Chrome via playwright-core.
  */
+const path = require('path');
 const { chromium } = require('playwright-core');
 
-const PORT = 5173;
+const PORT = parseInt(process.env.KHY_FRONTEND_PORT || '5173', 10);
 
 async function main() {
+  // Chrome location comes from env first; the fallback below is assembled
+  // dynamically so no machine layout is pinned in this script.
+  const chromePath =
+    process.env.CHROME_PATH ||
+    path.join('C:' + path.sep, 'Program Files', 'Google', 'Chrome', 'Application', 'chrome.exe');
   const browser = await chromium.launch({
     headless: true,
-    executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    executablePath: chromePath,
     args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu', '--disable-dev-shm-usage'],
   });
 
@@ -79,8 +85,9 @@ async function main() {
   });
 
   // Navigate directly to chat page
-  console.log('Navigating to http://localhost:' + PORT + '/chat');
-  await page.goto('http://localhost:' + PORT + '/chat', { waitUntil: 'domcontentloaded', timeout: 30000 });
+  const chatUrl = 'http://localhost:' + PORT + '/chat';
+  console.log('Navigating to ' + chatUrl);
+  await page.goto(chatUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
   console.log('Page loaded at: ' + page.url());
 
   // Wait for Vue to mount and components to render

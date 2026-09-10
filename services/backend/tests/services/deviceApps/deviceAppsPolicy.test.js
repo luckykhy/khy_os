@@ -18,7 +18,7 @@
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const policy = require('../../../src/services/deviceApps/deviceAppsPolicy');
+const policy = require('../../../src/services/domain/desktop/deviceApps/deviceAppsPolicy.js');
 
 // 谓词工厂:给定「已装 bin 集合」。
 function hasExe(set) {

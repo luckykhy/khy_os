@@ -6,7 +6,7 @@ const path = require('node:path');
 
 const HANDLER = path.resolve(__dirname, '../../../src/cli/handlers/subscribePr.js');
 const FORMATTERS = path.resolve(__dirname, '../../../src/cli/formatters.js');
-const STORE = path.resolve(__dirname, '../../../src/services/subscribePr/subscribePrStore.js');
+const STORE = path.resolve(__dirname, '../../../src/services/domain/deploy/subscribePr/subscribePrStore.js');
 const CI = path.resolve(__dirname, '../../../src/services/ciStatusService.js');
 const PUSHCFG = path.resolve(__dirname, '../../../src/services/pushConfigStore.js');
 const PUSHTOOL = path.resolve(__dirname, '../../../src/tools/PushNotify.js');

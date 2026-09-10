@@ -669,6 +669,289 @@ const TOOLS = [
       }
     },
   },
+  // ===== 文件操作（免 root，Shizuku 优先 + Capacitor Filesystem 兜底）=====
+  // 智能路径解析：支持绝对路径（/storage/emulated/0/...）和相对路径（Documents/...）
+  {
+    name: 'khy.local.fileList',
+    description: '列出目录下的文件和子目录。免 root。Shizuku 可用时访问任意路径（/storage/emulated/0/...），否则仅限 App 私有目录。',
+    parameters: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: '目录路径。绝对路径如 "/storage/emulated/0/Download" 或相对路径如 "notes"', default: '/storage/emulated/0' },
+      },
+    },
+    async execute({ path = '/storage/emulated/0' }) {
+      try {
+        // Shizuku 优先：完整 shell 能力
+        const { isShizukuReady, execShell } = await import('./deviceControl.js');
+        const shizuku = await isShizukuReady();
+        if (shizuku.ready) {
+          const r = await execShell(`ls -la "${path}" 2>/dev/null || echo "DIR_NOT_FOUND"`);
+          if (r.stdout.includes('DIR_NOT_FOUND')) return `错误：目录不存在 ${path}`;
+          return `[Shizuku] ${path}\n${r.stdout}`;
+        }
+      } catch { /* 回退 */ }
+      // 兜底：Capacitor Filesystem
+      try {
+        const { Filesystem, Directory } = await import('@capacitor/filesystem');
+        const dirPath = path.replace(/^\/storage\/emulated\/0\//, 'Documents/').replace(/^\//, '');
+        const result = await Filesystem.readdir({ path: dirPath || 'Documents', directory: Directory.Documents });
+        const items = (result.files || []).map((f) => `${f.type === 'directory' ? 'd' : '-'} ${f.name}`);
+        return `[App目录] ${dirPath || 'Documents'}\n${items.join('\n')}`;
+      } catch (cause) {
+        return `错误：列出目录失败：${cause.message || cause}`;
+      }
+    },
+  },
+  {
+    name: 'khy.local.fileRead',
+    description: '读取文本文件内容。免 root。Shizuku 可用时读取任意路径，否则仅限 App 私有目录。',
+    parameters: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: '文件路径。绝对路径如 "/storage/emulated/0/Download/note.txt" 或相对路径' },
+      },
+      required: ['path'],
+    },
+    async execute({ path }) {
+      try {
+        const { isShizukuReady, execShell } = await import('./deviceControl.js');
+        const shizuku = await isShizukuReady();
+        if (shizuku.ready) {
+          const r = await execShell(`cat "${path}" 2>/dev/null || echo "FILE_NOT_FOUND"`);
+          if (r.stdout.includes('FILE_NOT_FOUND')) return `错误：文件不存在 ${path}`;
+          return r.stdout;
+        }
+      } catch { /* 回退 */ }
+      try {
+        const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem');
+        const dirPath = path.replace(/^\/storage\/emulated\/0\//, 'Documents/').replace(/^\//, '');
+        const result = await Filesystem.readFile({ path: dirPath, directory: Directory.Documents, encoding: Encoding.UTF8 });
+        return result.data || '（文件为空）';
+      } catch (cause) {
+        return `错误：读取文件失败：${cause.message || cause}`;
+      }
+    },
+  },
+  {
+    name: 'khy.local.fileWrite',
+    description: '写入/创建文本文件。免 root。Shizuku 可用时写入任意路径，否则仅限 App 私有目录。自动创建父目录。',
+    parameters: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: '文件路径。绝对路径或相对路径' },
+        content: { type: 'string', description: '要写入的文本内容' },
+        append: { type: 'boolean', description: '是否追加模式（默认 false = 覆盖）', default: false },
+      },
+      required: ['path', 'content'],
+    },
+    async execute({ path, content, append = false }) {
+      try {
+        const { isShizukuReady, execShell } = await import('./deviceControl.js');
+        const shizuku = await isShizukuReady();
+        if (shizuku.ready) {
+          // 自动创建父目录
+          const parentDir = path.split('/').slice(0, -1).join('/');
+          if (parentDir) await execShell(`mkdir -p "${parentDir}" 2>/dev/null`);
+          // 使用 printf 避免 echo 的转义问题
+          const escaped = content.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\$/g, '\\$');
+          const cmd = append ? `printf '%s' "${escaped}" >> "${path}"` : `printf '%s' "${escaped}" > "${path}"`;
+          const r = await execShell(cmd);
+          if (r.exitCode === 0) return `已${append ? '追加' : '写入'}文件：${path}（${content.length} 字符）[Shizuku]`;
+        }
+      } catch { /* 回退 */ }
+      try {
+        const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem');
+        const dirPath = path.replace(/^\/storage\/emulated\/0\//, 'Documents/').replace(/^\//, '');
+        const parentDir = dirPath.split('/').slice(0, -1).join('/');
+        if (parentDir) {
+          try { await Filesystem.mkdir({ path: parentDir, directory: Directory.Documents, recursive: true }); } catch { /* 已存在 */ }
+        }
+        const data = append
+          ? (await Filesystem.readFile({ path: dirPath, directory: Directory.Documents, encoding: Encoding.UTF8 }).catch(() => ({ data: '' }))).data + content
+          : content;
+        await Filesystem.writeFile({ path: dirPath, data, directory: Directory.Documents, encoding: Encoding.UTF8, recursive: true });
+        return `已${append ? '追加' : '写入'}文件：${dirPath}（${content.length} 字符）`;
+      } catch (cause) {
+        return `错误：写入文件失败：${cause.message || cause}`;
+      }
+    },
+  },
+  {
+    name: 'khy.local.fileDelete',
+    description: '删除文件或目录。免 root。Shizuku 可用时删除任意路径，否则仅限 App 私有目录。',
+    parameters: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: '文件或目录路径' },
+        recursive: { type: 'boolean', description: '是否递归删除目录（默认 false）', default: false },
+      },
+      required: ['path'],
+    },
+    async execute({ path, recursive = false }) {
+      try {
+        const { isShizukuReady, execShell } = await import('./deviceControl.js');
+        const shizuku = await isShizukuReady();
+        if (shizuku.ready) {
+          const cmd = recursive ? `rm -rf "${path}"` : `rm "${path}" 2>/dev/null || rmdir "${path}" 2>/dev/null`;
+          const r = await execShell(cmd);
+          if (r.exitCode === 0) return `已删除：${path}${recursive ? '（递归）' : ''} [Shizuku]`;
+        }
+      } catch { /* 回退 */ }
+      try {
+        const { Filesystem, Directory } = await import('@capacitor/filesystem');
+        const dirPath = path.replace(/^\/storage\/emulated\/0\//, 'Documents/').replace(/^\//, '');
+        await Filesystem.deleteFile({ path: dirPath, directory: Directory.Documents });
+        return `已删除文件：${dirPath}`;
+      } catch (cause) {
+        try {
+          const { Filesystem, Directory } = await import('@capacitor/filesystem');
+          await Filesystem.rmdir({ path: path.replace(/^\/storage\/emulated\/0\//, 'Documents/').replace(/^\//, ''), directory: Directory.Documents, recursive });
+          return `已删除目录：${path}`;
+        } catch (dirCause) {
+          return `错误：删除失败：${cause.message || cause}`;
+        }
+      }
+    },
+  },
+  {
+    name: 'khy.local.fileInfo',
+    description: '查看文件信息（大小、修改时间、权限）。免 root。',
+    parameters: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: '文件或目录路径' },
+      },
+      required: ['path'],
+    },
+    async execute({ path }) {
+      try {
+        const { isShizukuReady, execShell } = await import('./deviceControl.js');
+        const shizuku = await isShizukuReady();
+        if (shizuku.ready) {
+          const r = await execShell(`stat -c '%s %Y %F %a %U' "${path}" 2>/dev/null || echo "NOT_FOUND"`);
+          if (r.stdout.includes('NOT_FOUND')) return `错误：文件不存在 ${path}`;
+          return `[Shizuku] ${path}\n${r.stdout}`;
+        }
+      } catch { /* 回退 */ }
+      try {
+        const { Filesystem, Directory } = await import('@capacitor/filesystem');
+        const dirPath = path.replace(/^\/storage\/emulated\/0\//, 'Documents/').replace(/^\//, '');
+        const stat = await Filesystem.stat({ path: dirPath, directory: Directory.Documents });
+        return JSON.stringify({ path, type: stat.type, size: stat.size, modificationTime: stat.modificationTime, uri: stat.uri }, null, 2);
+      } catch (cause) {
+        return `错误：获取文件信息失败：${cause.message || cause}`;
+      }
+    },
+  },
+  {
+    name: 'khy.local.fileSearch',
+    description: '搜索文件（按名称模式或内容关键字）。免 root。Shizuku 可用时搜索整个用户存储。',
+    parameters: {
+      type: 'object',
+      properties: {
+        dir: { type: 'string', description: '搜索起始目录', default: '/storage/emulated/0' },
+        name: { type: 'string', description: '文件名模式（如 "*.txt"、"*.jpg"）', default: '' },
+        content: { type: 'string', description: '文件内容关键字（grep）', default: '' },
+        maxResults: { type: 'integer', description: '最大结果数', default: 20 },
+      },
+    },
+    async execute({ dir = '/storage/emulated/0', name = '', content = '', maxResults = 20 }) {
+      try {
+        const { isShizukuReady, execShell } = await import('./deviceControl.js');
+        const shizuku = await isShizukuReady();
+        if (shizuku.ready) {
+          let cmd;
+          if (content) {
+            // 按内容搜索（grep）
+            cmd = `find "${dir}" -type f -name "${name || '*'}" -exec grep -l "${content}" {} \\; 2>/dev/null | head -${maxResults}`;
+          } else {
+            // 按名称搜索
+            cmd = `find "${dir}" -type f -name "${name || '*'}" 2>/dev/null | head -${maxResults}`;
+          }
+          const r = await execShell(cmd);
+          const results = (r.stdout || '').split('\n').filter(Boolean);
+          return JSON.stringify({ dir, name, content, count: results.length, results }, null, 2);
+        }
+      } catch { /* 回退 */ }
+      return `错误：文件搜索需要 Shizuku 授权。请在 Shizuku App 中授权本应用。`;
+    },
+  },
+  {
+    name: 'khy.local.fileCopy',
+    description: '复制文件或目录。免 root。Shizuku 可用时操作任意路径。',
+    parameters: {
+      type: 'object',
+      properties: {
+        from: { type: 'string', description: '源路径' },
+        to: { type: 'string', description: '目标路径' },
+      },
+      required: ['from', 'to'],
+    },
+    async execute({ from, to }) {
+      try {
+        const { isShizukuReady, execShell } = await import('./deviceControl.js');
+        const shizuku = await isShizukuReady();
+        if (shizuku.ready) {
+          const parentDir = to.split('/').slice(0, -1).join('/');
+          if (parentDir) await execShell(`mkdir -p "${parentDir}" 2>/dev/null`);
+          const r = await execShell(`cp -r "${from}" "${to}" 2>/dev/null && echo "OK" || echo "FAIL"`);
+          if (r.stdout.includes('OK')) return `已复制：${from} → ${to} [Shizuku]`;
+        }
+      } catch { /* 回退 */ }
+      return `错误：文件复制需要 Shizuku 授权。`;
+    },
+  },
+  // ===== 嵌入式 Linux 环境（Alpine + PRoot）=====
+  {
+    name: 'khy.local.linuxExec',
+    description: '在嵌入式 Linux 环境（Alpine）中执行 shell 命令。支持任意 Linux 命令（ls、cat、grep、find、python3、node 等）。首次使用会自动初始化环境。',
+    parameters: {
+      type: 'object',
+      properties: {
+        command: { type: 'string', description: '要执行的 Linux shell 命令' },
+      },
+      required: ['command'],
+    },
+    async execute({ command }) {
+      try {
+        const { ensureLinuxReady, execLinuxCommand } = await import('./linux.js');
+        await ensureLinuxReady();
+        const result = await execLinuxCommand(command);
+        return result.output || '（无输出）';
+      } catch (cause) {
+        return `错误：Linux 命令执行失败：${cause.message || cause}`;
+      }
+    },
+  },
+  {
+    name: 'khy.local.linuxStatus',
+    description: '检查嵌入式 Linux 环境状态（是否已解压、是否可用）。',
+    parameters: { type: 'object', properties: {} },
+    async execute() {
+      try {
+        const { getLinuxStatus } = await import('./linux.js');
+        const status = await getLinuxStatus();
+        return JSON.stringify(status, null, 2);
+      } catch (cause) {
+        return `错误：${cause.message || cause}`;
+      }
+    },
+  },
+  {
+    name: 'khy.local.linuxSetup',
+    description: '初始化嵌入式 Linux 环境（解压 rootfs）。首次使用时调用。',
+    parameters: { type: 'object', properties: {} },
+    async execute() {
+      try {
+        const { extractLinuxRootfs } = await import('./linux.js');
+        const result = await extractLinuxRootfs();
+        return JSON.stringify(result, null, 2);
+      } catch (cause) {
+        return `错误：${cause.message || cause}`;
+      }
+    },
+  },
   {
     // 屏幕观察器：连续 N 帧描述 + 让 VLM 对比时间序列变化。
     // 与 lookScreen / recordScreen 的区别：本工具额外让 VLM 输出"差异"，直接给 Agent 用。
@@ -755,6 +1038,178 @@ const TOOLS = [
         frames: perFrame,
         analysis: final,
       }, null, 2);
+    },
+  },
+  // ===== 鸿蒙 HDB 调试工具 =====
+  {
+    name: 'khy.local.hdbDevices',
+    description: '列出已连接的鸿蒙设备（HDB）。适用于鸿蒙系统调试。',
+    parameters: { type: 'object', properties: {} },
+    async execute() {
+      try {
+        const { getHDBDebugger } = await import('./hdbDebug.js');
+        const hdb = getHDBDebugger();
+        const devices = await hdb.listDevices();
+        return JSON.stringify({ devices }, null, 2);
+      } catch (cause) {
+        return `错误：${cause.message || cause}`;
+      }
+    },
+  },
+  {
+    name: 'khy.local.hdbShell',
+    description: '在鸿蒙设备上执行 Shell 命令（HDB）。需要先连接设备。',
+    parameters: {
+      type: 'object',
+      properties: {
+        command: { type: 'string', description: '要执行的 Shell 命令' },
+      },
+      required: ['command'],
+    },
+    async execute({ command }) {
+      try {
+        const { getHDBDebugger } = await import('./hdbDebug.js');
+        const hdb = getHDBDebugger();
+        const output = await hdb.shell(command);
+        return output;
+      } catch (cause) {
+        return `错误：${cause.message || cause}`;
+      }
+    },
+  },
+  {
+    name: 'khy.local.hdbInfo',
+    description: '获取鸿蒙设备信息（HDB）。',
+    parameters: { type: 'object', properties: {} },
+    async execute() {
+      try {
+        const { getHDBDebugger } = await import('./hdbDebug.js');
+        const hdb = getHDBDebugger();
+        const info = await hdb.getDeviceInfo();
+        return JSON.stringify(info, null, 2);
+      } catch (cause) {
+        return `错误：${cause.message || cause}`;
+      }
+    },
+  },
+  {
+    name: 'khy.local.hdbLogcat',
+    description: '获取鸿蒙设备日志（HDB hilog）。',
+    parameters: {
+      type: 'object',
+      properties: {
+        lines: { type: 'integer', description: '日志行数', default: 50 },
+        filter: { type: 'string', description: '过滤关键字', default: '' },
+      },
+    },
+    async execute({ lines = 50, filter = '' }) {
+      try {
+        const { getHDBDebugger } = await import('./hdbDebug.js');
+        const hdb = getHDBDebugger();
+        const logs = await hdb.getLogcat({ lines, filter });
+        return logs;
+      } catch (cause) {
+        return `错误：${cause.message || cause}`;
+      }
+    },
+  },
+  // ===== 平台检测工具 =====
+  {
+    name: 'khy.local.platformInfo',
+    description: '获取当前平台信息（Android / HarmonyOS / HarmonyOS NEXT）和能力。',
+    parameters: { type: 'object', properties: {} },
+    async execute() {
+      try {
+        const { detectPlatform, getPlatformCapabilities, getPlatformConfig } = await import('./platform.js');
+        const platform = detectPlatform();
+        const capabilities = await getPlatformCapabilities();
+        const config = getPlatformConfig();
+        return JSON.stringify({ platform, capabilities, config }, null, 2);
+      } catch (cause) {
+        return `错误：${cause.message || cause}`;
+      }
+    },
+  },
+  // ===== Skills 层工具 =====
+  {
+    name: 'khy.local.skillList',
+    description: '列出所有可用的 Skills（用户意图技能）。包括点外卖、导航、打车等。',
+    parameters: { type: 'object', properties: {} },
+    async execute() {
+      try {
+        const { getSkillManager } = await import('./skills.js');
+        const manager = getSkillManager();
+        const skills = manager.getSkillList();
+        return JSON.stringify({ count: skills.length, skills }, null, 2);
+      } catch (cause) {
+        return `错误：${cause.message || cause}`;
+      }
+    },
+  },
+  {
+    name: 'khy.local.skillMatch',
+    description: '根据用户输入匹配最合适的 Skill。返回匹配的 Skill 和置信度。',
+    parameters: {
+      type: 'object',
+      properties: {
+        input: { type: 'string', description: '用户输入的自然语言' },
+      },
+      required: ['input'],
+    },
+    async execute({ input }) {
+      try {
+        const { getSkillManager } = await import('./skills.js');
+        const manager = getSkillManager();
+        const match = manager.matchIntent(input);
+        if (match) {
+          return JSON.stringify({ matched: true, skill: match.skill, score: match.score }, null, 2);
+        }
+        return JSON.stringify({ matched: false, message: '未找到匹配的 Skill' });
+      } catch (cause) {
+        return `错误：${cause.message || cause}`;
+      }
+    },
+  },
+  {
+    name: 'khy.local.skillExecute',
+    description: '执行指定的 Skill。支持 Delegation（DeepLink 直达）和 GUI 自动化两种模式。',
+    parameters: {
+      type: 'object',
+      properties: {
+        skillName: { type: 'string', description: 'Skill 名称' },
+        input: { type: 'string', description: '用户原始输入', default: '' },
+      },
+      required: ['skillName'],
+    },
+    async execute({ skillName, input = '' }) {
+      try {
+        const { getSkillManager } = await import('./skills.js');
+        const manager = getSkillManager();
+        const result = await manager.execute(skillName, input);
+        return JSON.stringify(result, null, 2);
+      } catch (cause) {
+        return `错误：${cause.message || cause}`;
+      }
+    },
+  },
+  {
+    name: 'khy.local.searchApps',
+    description: '智能搜索已安装应用（支持拼音、语义匹配）。如"微信"、"waimai"、"视频"等。',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: '搜索关键字' },
+      },
+      required: ['query'],
+    },
+    async execute({ query }) {
+      try {
+        const { searchApps } = await import('./deviceControl.js');
+        const result = await searchApps(query);
+        return JSON.stringify(result, null, 2);
+      } catch (cause) {
+        return `错误：${cause.message || cause}`;
+      }
     },
   },
 ];

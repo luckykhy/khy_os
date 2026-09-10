@@ -38,7 +38,7 @@ const sep = (label = '────────────') => ({
  * for ANSI rendering (non-TUI Select path) and ink Text color prop (TUI path).
  */
 const catSep = (label, colorName) => ({
-  name: chalk.dim(chalk[colorName](_lw ? `-- ${label} --` : `── ${label} ──`)),
+  name: chalk.dim(chalk[colorName](`  ${label}`)),
   value: `__sep_${Date.now()}_${Math.random()}`,
   disabled: true,
   color: colorName,

@@ -286,7 +286,7 @@ describe('端到端:evoLedger(进化黑历史,fsync 强制开)', () => {
 });
 
 describe('端到端:msgConfigStore(凭据文件 0600 + .bak)', () => {
-  const store = require('../src/services/messaging/msgConfigStore');
+  const store = require('../src/services/domain/messaging/messaging/msgConfigStore.js');
   const file = path.join(process.env.KHYOS_HOME, 'msg.json');
 
   test('setPlatform 落盘字节 = pretty-2 无尾换行,权限 0600,.bak 在二次写时生成', (t) => {

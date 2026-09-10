@@ -14,6 +14,7 @@
   "//": "任务入口按域分组，命名规约 <域>:<动作>[:<变体>] 见 docs/03_DESIGN_设计/[DESIGN-ARCH-068] 仓库层级板块规范.md 第五节；逐条说明见 docs/07_OPS_运维/[OPS-MAN-174] 任务入口总表.md。每个入口都指向一个已存在的脚本文件——check:layout 的 dangling-task 规则会守住这条。",
   "scripts": {
     "preinstall": "node scripts/install/link-shared-dev.js",
+    "electron:dev": "node scripts/electron-dev.js",
     "//check": "── CI 守卫：会亮红灯的检查（scripts/ci/*）──",
     "check:layout": "node scripts/ci/check-repo-layout.js",
     "check:gov-rules": "node scripts/ci/check-gov-rules.js",
@@ -129,6 +130,10 @@
     "//install": "── 安装与自检（extensions/scripts/khy-installer/*，经 ext-run 派发）──",
     "hooks:install": "node scripts/lib/ext-run.js khy-installer hooks",
     "verify:install": "node scripts/lib/ext-run.js khy-installer verify",
+    "//installer": "── Windows NSIS 安装包构建（packaging/installer/*）──",
+    "build:installer": "node packaging/installer/build_installer.js",
+    "build:installer:setup": "makensis /V4 /DVERSION=$(node -p \"require('./pyproject.toml').match(/version\\s*=\\s*\\\"([^\\\"]+)\\\"/)[1]\") packaging/installer/khyos_setup.nsi",
+    "build:installer:uninstall": "makensis /V4 /DVERSION=$(node -p \"require('./pyproject.toml').match(/version\\s*=\\s*\\\"([^\\\"]+)\\\"/)[1]\") packaging/installer/khyos_uninstall.nsi",
     "//sync": "── 双仓镜像同步（scripts/sync/*）。断网或令牌失效时推送失败会记入 .khy/sync/mirror-queue.json，恢复后由下一次提交或 sync:mirrors:retry 补推 ──",
     "sync:mirrors": "node scripts/sync/mirror-sync.js push",
     "sync:mirrors:retry": "node scripts/sync/mirror-sync.js retry",
@@ -169,7 +174,12 @@
   "devDependencies": {
     "ajv": "^6.15.0",
     "c8": "^10.1.3",
-    "esbuild": "^0.25.12"
+    "electron": "32.3.3",
+    "electron-builder": "^25.1.8",
+    "electron-rebuild": "^3.2.9",
+    "esbuild": "^0.25.12",
+    "node-pty": "^1.0.0",
+    "ws": "^8.18.0"
   },
   "//overrides": "iconv-lite 收敛成单份：发布 bundle 由 esbuild 按解析路径内联，同一个包装在几个 node_modules 下就被打进去几遍。0.6.3 是 whatwg-encoding/encoding-sniffer 点名要的版本；body-parser/raw-body（~0.4.24）与 @inquirer/external-editor（^0.7.0）只用 decode/encodingExists，三个版本签名一致。",
   "overrides": {

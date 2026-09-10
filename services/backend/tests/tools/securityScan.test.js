@@ -1,5 +1,5 @@
 /**
- * securityScan.test.js â€” unit tests for security_scan tool.
+ * securityScan.test.js â€?unit tests for security_scan tool.
  *
  * Tests run against temp-dir fixture files that intentionally contain insecure
  * patterns, asserting the regex engine flags them with the right severity and
@@ -70,7 +70,7 @@ describe('security_scan tool', () => {
 
     const res = await securityScan.execute({ cwd: tmpDir, minSeverity: 'high' });
     expect(res.success).toBe(true);
-    // md5 is low severity â†’ filtered out at minSeverity:high
+    // md5 is low severity â†?filtered out at minSeverity:high
     expect(res.content.toLowerCase()).not.toContain('md5 (cryptographically');
   });
 
@@ -130,3 +130,4 @@ describe('security_scan tool', () => {
     expect(badSeverity.valid).toBe(false);
   });
 });
+

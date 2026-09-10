@@ -11,7 +11,7 @@ const {
   _VERDICT_CAUTION,
   _VERDICT_DANGEROUS,
   _THREAT_PATTERNS,
-} = require('../../../src/services/skills/skillThreatScanner');
+} = require('../../../src/services/domain/skills/skills/skillThreatScanner.js');
 
 test('clean benign source → safe verdict, no findings, allowed', () => {
   const text = '# My Skill\nRun `npm test` to verify.\nReads a port via os.environ.get("PORT").';

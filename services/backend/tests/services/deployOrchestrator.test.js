@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * deployOrchestrator.test.js â€” unit locks for the deploy pipeline orchestration.
+ * deployOrchestrator.test.js â€?unit locks for the deploy pipeline orchestration.
  *
  * All heavy deps are faked. A real RemoteApprovalBridge is used for realistic
  * ticket lifecycle. Asserts the security contract: default dry-run never touches
@@ -179,3 +179,4 @@ describe('DeployOrchestrator', () => {
     expect(deps.buildDockerBundle).not.toHaveBeenCalled();
   });
 });
+

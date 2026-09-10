@@ -22,7 +22,7 @@ const {
   _normalizeDeps,
   _extractResultText,
   _truncateDepText,
-} = require('../../../src/services/orchestrator/dependencyWaveScheduler');
+} = require('../../../src/services/domain/state/orchestrator/dependencyWaveScheduler.js');
 
 // Helper: subtasks in the taskDecomposer shape.
 function st(prompt, role, dependencies, extra = {}) {

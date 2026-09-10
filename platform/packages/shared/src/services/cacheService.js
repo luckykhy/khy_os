@@ -18,8 +18,9 @@ const memoryCache = new Map();
 async function initRedis() {
   try {
     const { createClient } = require('redis');
+    const { REDIS_URL } = require('../constants/serviceDefaults');
     const client = createClient({
-      url: process.env.REDIS_URL || 'redis://localhost:6379',
+      url: REDIS_URL,
       socket: { connectTimeout: 3000, reconnectStrategy: false }
     });
 

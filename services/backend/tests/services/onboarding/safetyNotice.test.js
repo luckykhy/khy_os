@@ -15,7 +15,7 @@ const {
   safetyNoticeEnabled,
   buildSafetyNoticeLines,
   SECURITY_URL,
-} = require('../../../src/services/onboarding/safetyNotice');
+} = require('../../../src/services/domain/onboarding/onboarding/safetyNotice.js');
 
 test('safetyNoticeEnabled: 默认开(unset / 空 / on),{0,false,off,no} 关', () => {
   assert.equal(safetyNoticeEnabled(undefined), true);

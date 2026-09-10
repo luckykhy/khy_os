@@ -68,3 +68,4 @@ describe('knowledgeTeachingService self-awareness profile', () => {
     expect(promptBlock).toContain('教学协议');
   });
 });
+

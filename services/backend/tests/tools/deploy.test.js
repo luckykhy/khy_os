@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * deploy.test.js â€” unit locks for the `deploy` tool (src/tools/deploy.js).
+ * deploy.test.js â€?unit locks for the `deploy` tool (src/tools/deploy.js).
  *
  * The tool is a thin wrapper over the singleton deployOrchestrator. The remote
  * subsystem is mocked so the tests assert the tool contract: schema, default
@@ -116,3 +116,4 @@ describe('deploy tool', () => {
     expect(res.content).toContain('boom');
   });
 });
+

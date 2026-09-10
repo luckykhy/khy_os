@@ -424,6 +424,101 @@ function observeTurn(input) {
   }
 }
 
+// ── Command Code 项目级 taste 文件监听 ──────────────────────────────
+// 当 .commandcode/taste/ 被外部修改（Command Code 写入新 taste）时，
+// 自动同步到 khy-os 的 ~/.khyos/taste/，保证双向实时一致。
+
+let _projectWatcher = null;
+let _syncDebounce = null;
+const SYNC_DEBOUNCE_MS = 2000; // 2 秒去抖
+const SYNC_COOLDOWN_MS = 30000; // 30 秒最小同步间隔
+let _lastSyncAt = 0;
+
+/**
+ * 启动 .commandcode/taste/ 目录监听。
+ * 当 Command Code 写入新 taste 时，自动触发同步。
+ * @returns {boolean} 是否成功启动
+ */
+function startProjectTasteWatcher() {
+  if (_projectWatcher) return true; // 已启动
+  try {
+    const taste = require('./tasteService');
+    const projDir = taste._projectTasteDir();
+    if (!projDir) return false; // 无 .commandcode/taste/
+
+    _projectWatcher = fs.watch(projDir, { recursive: true }, (eventType, filename) => {
+      if (!filename || !filename.endsWith('.md')) return;
+      // 去抖：短时间内多次修改只触发一次同步
+      if (_syncDebounce) clearTimeout(_syncDebounce);
+      _syncDebounce = setTimeout(() => {
+        const now = Date.now();
+        if (now - _lastSyncAt < SYNC_COOLDOWN_MS) return; // 冷却期
+        _lastSyncAt = now;
+        try {
+          const result = taste.syncFromCommandCode();
+          if (result.synced > 0) {
+            // 清除 dedup 缓存，让新同步的条目可以被 observeTurn 感知
+            _resetSeenCache();
+          }
+        } catch {
+          /* best-effort: 同步失败不影响主流程 */
+        }
+      }, SYNC_DEBOUNCE_MS);
+    });
+
+    _projectWatcher.on('error', () => {
+      // 监听器出错 → 清理，下次调用会重新创建
+      try { _projectWatcher.close(); } catch { /* ignore */ }
+      _projectWatcher = null;
+    });
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 停止 .commandcode/taste/ 目录监听。
+ */
+function stopProjectTasteWatcher() {
+  if (_syncDebounce) {
+    clearTimeout(_syncDebounce);
+    _syncDebounce = null;
+  }
+  if (_projectWatcher) {
+    try { _projectWatcher.close(); } catch { /* ignore */ }
+    _projectWatcher = null;
+  }
+}
+
+/**
+ * 手动触发一次从 Command Code 的同步（绕过冷却期）。
+ * @returns {{ synced: number, skipped: number, error?: string }}
+ */
+function syncNow() {
+  try {
+    const taste = require('./tasteService');
+    const result = taste.syncFromCommandCode();
+    _lastSyncAt = Date.now();
+    if (result.synced > 0) _resetSeenCache();
+    return result;
+  } catch (e) {
+    return { synced: 0, skipped: 0, error: (e && e.message) || 'sync_failed' };
+  }
+}
+
+/**
+ * 获取同步状态。
+ */
+function getSyncStatus() {
+  return {
+    watcherActive: !!_projectWatcher,
+    lastSyncAt: _lastSyncAt > 0 ? new Date(_lastSyncAt).toISOString() : null,
+    cooldownMs: SYNC_COOLDOWN_MS,
+  };
+}
+
 module.exports = {
   observeTurn,
   observePermission,
@@ -432,6 +527,10 @@ module.exports = {
   getStatus,
   resetSeenCache,
   resetStats,
+  startProjectTasteWatcher,
+  stopProjectTasteWatcher,
+  syncNow,
+  getSyncStatus,
   // exposed for tests
   _dedupKey,
   _resetSeenCache,

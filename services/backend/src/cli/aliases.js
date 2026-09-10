@@ -627,6 +627,16 @@ const ALIAS_MAP = {
   工具生成: { command: 'app', subCommand: 'cli-gen' },
   agent工具: { command: 'app', subCommand: 'cli-list' },
 
+  // ── 四端跨设备同步 ──
+  cross: { command: 'cross' },
+  跨端: { command: 'cross' },
+  跨设备: { command: 'cross' },
+  同步设备: { command: 'cross', subCommand: 'devices' },
+  设备列表: { command: 'cross', subCommand: 'devices' },
+  连接同步: { command: 'cross', subCommand: 'connect' },
+  断开同步: { command: 'cross', subCommand: 'disconnect' },
+  同步状态: { command: 'cross', subCommand: 'status' },
+
   // ── KHYanything (即时代理接入；保留上方旧 cli-* 别名) ──
   接入: { command: 'app', subCommand: 'khy-add' },
   代理接入: { command: 'app', subCommand: 'khy-add' },
@@ -749,6 +759,19 @@ const ALIAS_MAP = {
   飞书: { command: 'feishu' },
   飞书状态: { command: 'feishu', subCommand: 'status' },
   飞书连接: { command: 'feishu', subCommand: 'connect' }, // 直达 `khy feishu connect`(开长连接门 + 拉起守护进程)
+
+  // ── 磁盘清理 (cleandisk；C 盘大规模清理方法论) ──
+  // 与 clean(仓库树三档) / cleanup(khy 数据保留)互不重叠。bare「清理」也归这里:
+  // 用户敲「清理」时的意图几乎总是「清磁盘」,而非另外两条内部清理。
+  cleandisk: { command: 'cleandisk' },
+  diskclean: { command: 'cleandisk' },
+  qingli: { command: 'cleandisk' },
+  qinglipan: { command: 'cleandisk' },
+  清理: { command: 'cleandisk' },
+  磁盘清理: { command: 'cleandisk' },
+  清理磁盘: { command: 'cleandisk' },
+  清理c盘: { command: 'cleandisk' },
+  c盘清理: { command: 'cleandisk' },
 };
 
 /**
@@ -772,23 +795,63 @@ function resolveAlias(input) {
     /* best-effort;守卫不可用则照常解析 */
   }
   const key = input.toLowerCase();
-  return ALIAS_MAP[key] || ALIAS_MAP[input] || null;
+  const staticResult = ALIAS_MAP[key] || ALIAS_MAP[input];
+  if (staticResult) {
+    return staticResult;
+  }
+  // Fall back to auto-registered aliases from command manifests.
+  // Handlers that export a manifest with `aliases` don't need entries here.
+  try {
+    const autoAliases = require('./commandAutoRegistry').getAliases();
+    const autoMatch = autoAliases[key] || autoAliases[input];
+    if (autoMatch) {
+      return { command: autoMatch };
+    }
+  } catch {
+    /* best-effort; auto-registry unavailable → behave as before */
+  }
+  return null;
 }
 
 /**
  * Get all aliases for a canonical command (for help display).
+ * Includes both static aliases and auto-registered manifest aliases.
  */
 function getAliasesForCommand(canonicalCmd) {
-  return Object.entries(ALIAS_MAP)
+  const staticAliases = Object.entries(ALIAS_MAP)
     .filter(([, v]) => v.command === canonicalCmd)
     .map(([k]) => k);
+  // Merge auto-registered aliases from command manifests.
+  try {
+    const autoAliases = require('./commandAutoRegistry').getAliases();
+    for (const [alias, cmd] of Object.entries(autoAliases)) {
+      if (cmd === canonicalCmd && !staticAliases.includes(alias)) {
+        staticAliases.push(alias);
+      }
+    }
+  } catch {
+    /* best-effort */
+  }
+  return staticAliases;
 }
 
 /**
  * Get all alias keys for auto-complete.
+ * Includes both static aliases and auto-registered manifest aliases.
  */
 function getAllAliasKeys() {
-  return Object.keys(ALIAS_MAP);
+  const staticKeys = Object.keys(ALIAS_MAP);
+  try {
+    const autoAliases = require('./commandAutoRegistry').getAliases();
+    for (const key of Object.keys(autoAliases)) {
+      if (!staticKeys.includes(key)) {
+        staticKeys.push(key);
+      }
+    }
+  } catch {
+    /* best-effort */
+  }
+  return staticKeys;
 }
 
 module.exports = { resolveAlias, getAliasesForCommand, getAllAliasKeys, ALIAS_MAP };

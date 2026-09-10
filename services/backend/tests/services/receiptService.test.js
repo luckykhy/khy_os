@@ -15,7 +15,7 @@ afterAll(() => {
   try { fs.rmSync(TMP, { recursive: true, force: true }); } catch { /* ignore */ }
 });
 
-describe('receiptService — turn aggregation', () => {
+describe('receiptService �?turn aggregation', () => {
   test('aggregates a tool chain into a six-field receipt and persists it', () => {
     receipts.startReceipt({ sessionId: 'sess-A', goal: 'fix login and run tests' });
     receipts.appendToolCall({
@@ -94,3 +94,4 @@ describe('receiptService — turn aggregation', () => {
     expect(receipts.searchReceipts('nonexistent-xyz')).toHaveLength(0);
   });
 });
+

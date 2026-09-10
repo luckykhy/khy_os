@@ -70,7 +70,7 @@ describe('lightweight conversation tool curation', () => {
     expect(calls.length).toBeGreaterThan(0);
     // 裁剪到「核心集」还不够:核心集里留着 Bash/Read/搜索,模型拿到就会把一句「你好」
     // 当成「先了解一下仓库」的开场并真的去跑命令。招呼要的只是一句自然回复。
-    expect(toolNamesOf(calls[0])).toEqual([]);
+    expect(toolNamesOf(calls[0])).toBe([]);
   });
 
   // 首次全量注入要跑一遍注册表的 isEnabled() 探测(where/git rev-parse… 实测 ~1.4s),

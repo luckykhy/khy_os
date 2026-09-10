@@ -16,7 +16,7 @@
  *                            (unified default)
  *   agnes-image-2.1-flash    text-to-image +       imageGenService (upgraded,
  *                            image-to-image        selectable via model override)
- *   agnes-video-v2.0         text/image-to-video   videoGenService
+ *   agnes-video-2.5         text/image-to-video   videoGenService
  *                                                  (KHY_VIDEO_GEN_AGNES_*)
  *
  * The chat model is the ONLY one that goes through the gateway proxy
@@ -192,7 +192,7 @@ function formatProvisionSummary(summary) {
     lines.push(`  ✗ 图像置备失败: ${summary.image.error}`);
   }
   if (summary.video.wired) {
-    lines.push('  ✓ 文生视频/图生视频/关键帧 → agnes-video-v2.0');
+    lines.push('  ✓ 文生视频/图生视频/关键帧 → agnes-video-2.5');
   } else if (summary.video.error) {
     lines.push(`  ✗ 视频置备失败: ${summary.video.error}`);
   }

@@ -1143,9 +1143,14 @@ def _proxy_data_home_candidates() -> list[Path]:
         candidates.append(Path(env_home))
 
     if os.name == "nt":
-        d_khy = Path("D:/.khy")
-        if _path_exists_safe(d_khy):
-            candidates.append(d_khy)
+        # Portable-layout convention: prefer a data home on the same drive as
+        # the installed runtime (e.g. <drive>/.khy next to a portable checkout)
+        # instead of hardcoding a machine-specific drive letter.
+        drive_root = Path(__file__).anchor
+        if drive_root:
+            d_khy = Path(drive_root) / ".khy"
+            if _path_exists_safe(d_khy):
+                candidates.append(d_khy)
 
     candidates.append(Path.home() / ".khy")
     candidates.append(Path.home() / ".khyquant")

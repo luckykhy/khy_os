@@ -16,12 +16,12 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const appTarget = require('../../../src/services/computerUse/appTarget');
+const appTarget = require('../../../src/services/domain/desktop/computerUse/appTarget.js');
 const {
   ComputerUseAgent,
   SYSTEM_PROMPT,
   _internals,
-} = require('../../../src/services/computerUse/computerUseAgent');
+} = require('../../../src/services/domain/desktop/computerUse/computerUseAgent.js');
 
 // ── 测试夹具 ──────────────────────────────────────────────────────────────
 

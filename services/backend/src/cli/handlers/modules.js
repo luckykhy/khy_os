@@ -7,6 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 
 const chalk = require('chalk');
 
@@ -152,4 +153,13 @@ async function buildModule(moduleId) {
   });
 }
 
-module.exports = handleModules;
+const _wrapper = (parsed) => handleModules((parsed && parsed.args) || []);
+_wrapper[MANIFEST_EXPORT_KEY] = {
+  name: 'modules',
+  aliases: ['mod', '模块'],
+  description: '模块打包管理：列表/信息/构建独立可执行文件',
+  usage: 'modules <subcommand> [args]',
+  category: 'dev',
+  handler: _wrapper,
+};
+module.exports = _wrapper;

@@ -9,19 +9,24 @@
     "commands",
     "iso-build"
   ],
+  "provides": [
+    "iso-build"
+  ],
   "commands": [
     {
       "name": "build-iso-docker",
       "description": "使用 Docker 构建 Alpine ISO",
       "type": "shell",
+      "script": "build-iso-docker.sh",
       "entry": "build-iso-docker.sh"
     },
     {
       "name": "build-iso-windows",
       "description": "使用 Windows PowerShell 构建 Alpine ISO",
       "type": "shell",
+      "script": "build-iso-windows.ps1",
       "entry": "build-iso-windows.ps1"
     }
   ],
-  "_note": "2026-08-19 由 scripts/alpine/ + 顶层 alpine/ 迁入。顶层 alpine/ 是**随 ISO 分发的 rootfs 片段**（openrc init 脚本 / logrotate 配置），它与构建脚本是同一交付物的两半，分居两处只会让「改一处忘另一处」。构建入口是 shell / PowerShell 而非 node，commands 字段列出这些入口脚本。"
+  "_note": "2026-08-19 由 scripts/alpine/ + 顶层 alpine/ 迁入。顶层 alpine/ 是**随 ISO 分发的 rootfs 片段**（openrc init 脚本 / logrotate 配置），它与构建脚本是同一交付物的两半，分居两处只会让「改一处忘另一处」。构建入口是 shell / PowerShell 而非 node，commands 字段列出这些入口脚本。\n\n2026-09-08 补齐 v2.0 契约两处必填：provides（能力定位，扩展按服务名发现）、commands[].script（toolchain 入口真源，check-repo-layout 会核对磁盘存在性）。命令此前只写了 entry 没写 script，守卫报「没声明 script」——entry 保留为冗余别名，避免仍在读它的消费方断掉。"
 }

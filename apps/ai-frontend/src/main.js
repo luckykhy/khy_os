@@ -18,30 +18,22 @@ import { notifyError, deriveErrorMessage } from '@/api/notify';
 import { TOKEN_KEY } from '@/utils/safeStorage';
 
 const USER_STORAGE_KEY = 'khy_ai_user';
-const WORKSPACE_STORAGE_KEY = 'khy_ai_workspace';
-
-function clearLocalAuthState() {
-  try {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_STORAGE_KEY);
-    localStorage.removeItem(WORKSPACE_STORAGE_KEY);
-  } catch {
-    // ignore
-  }
-}
 
 async function syncAuthFromManageControl(controlBase, token) {
   const endpoint = `${controlBase}/auth/bootstrap?token=${encodeURIComponent(token)}`;
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3500);
+    const timeout = setTimeout(() => controller.abort(), 2000);
     const res = await fetch(endpoint, {
       method: 'GET',
       signal: controller.signal,
     });
     clearTimeout(timeout);
     if (!res.ok) {
-      clearLocalAuthState();
+      // Bootstrap endpoint unavailable (e.g. manage service not running that
+      // path). Do NOT wipe local auth — the session may still be valid. Just
+      // skip the bootstrap upgrade and let the app mount normally.
+      console.warn('[manage] bootstrap endpoint returned', res.status, '- skipping');
       return false;
     }
     const payload = await res.json().catch(() => ({}));
@@ -49,16 +41,19 @@ async function syncAuthFromManageControl(controlBase, token) {
       payload && payload.data && typeof payload.data === 'object' ? payload.data : null;
     const bootstrapToken = String(bootstrap?.token || '').trim();
     if (!bootstrapToken) {
-      clearLocalAuthState();
+      console.warn('[manage] bootstrap response missing token - skipping');
       return false;
     }
     localStorage.setItem(TOKEN_KEY, bootstrapToken);
-    // Force user/profile refresh from /api/auth/me to avoid stale role/workspace.
+    // Drop the cached profile so /api/auth/me re-fetches it: the bootstrap may
+    // have been promoted to a different role than the one on this device.
     localStorage.removeItem(USER_STORAGE_KEY);
-    localStorage.removeItem(WORKSPACE_STORAGE_KEY);
     return true;
   } catch {
-    clearLocalAuthState();
+    // Network error / timeout / abort: do not wipe local auth. The manage
+    // control endpoint may be on a different port that is not currently
+    // reachable; that is not grounds to invalidate an existing session.
+    console.warn('[manage] bootstrap fetch failed - skipping');
     return false;
   }
 }
@@ -88,13 +83,17 @@ async function initManageLifecycleBridge() {
     return;
   }
 
-  await syncAuthFromManageControl(controlBase, token);
+  // If the manage-control endpoint is unreachable, skip fast and mount the
+  // app as-is rather than blocking the whole UI behind the bootstrap call.
+  syncAuthFromManageControl(controlBase, token).catch(() => {});
 
   const sid = `tab-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-  const endpointWithToken = (path) => {
-    const joiner = path.includes('?') ? '&' : '?';
-    return `${controlBase}${path}${joiner}token=${encodeURIComponent(token)}`;
-  };
+  // The daemon checks the token BEFORE path dispatch, so every control endpoint —
+  // including the tab-lifecycle /open /ping /close used below — requires it.
+  // The query parameter is also the only viable channel here: the daemon accepts
+  // X-Khy-Token, but a custom header would trigger a CORS preflight that the
+  // browser cannot send without that header whitelisted. Keep it as a URL query.
+  const endpoint = (path) => `${controlBase}${path}?token=${encodeURIComponent(token)}`;
 
   let heartbeatTimer = null;
   let bridgeEnabled = true;
@@ -126,7 +125,7 @@ async function initManageLifecycleBridge() {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 2500);
-      return fetch(endpointWithToken(path), {
+      return fetch(endpoint(path), {
         method: 'POST',
         // Keep it a simple request (no custom headers / no preflight).
         body: JSON.stringify({ sid, ...payload }),
@@ -165,7 +164,7 @@ async function initManageLifecycleBridge() {
     if (navigator.sendBeacon) {
       try {
         const blob = new Blob([JSON.stringify({ sid })], { type: 'application/json' });
-        const closeUrl = endpointWithToken('/close');
+        const closeUrl = endpoint('/close');
         navigator.sendBeacon(closeUrl, blob);
         return;
       } catch {

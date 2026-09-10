@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 /**
  * mouseButtons — 终端按钮的鼠标层核心(纯叶子 + 极薄运行时 dispatcher)。
@@ -63,13 +63,6 @@ const OFF_VALUES = ['0', 'false', 'off', 'no'];
 /** SGR 鼠标序列(ink 剥掉 ESC 后的形态)。`M`=按下,`m`=松开。 */
 const SGR_MOUSE_RE = /^\[<(\d+);(\d+);(\d+)([Mm])$/;
 
-function _on(env, name) {
-  const v = String((env && env[name]) || '')
-    .trim()
-    .toLowerCase();
-  return ['1', 'true', 'on', 'yes'].includes(v);
-}
-
 /**
  * 该输入串是否为 SGR 鼠标序列。文本消费方(useTextInput、各 overlay 的 useInput)
  * 用它做守卫,防止 `[<0;20;10M` 被当字面文本插入。
@@ -122,17 +115,56 @@ function parseSgrMouse(input) {
  * @param {string} [_platform] 保留形参:平台已不参与判定,仅为不破坏既有调用点签名
  * @returns {boolean}
  */
+/**
+ * 终端能力自动检测:当 KHY_MOUSE_BUTTONS 未显式设置时,根据环境变量推断终端是否支持
+ * SGR 鼠标协议。默认认为现代终端支持（保守回退 true,因为不开比开更安全——关是用户显式选择）。
+ *
+ * 检测顺序:
+ *  1. Windows Terminal (WT_SESSION 非空)
+ *  2. 已知 GUI 终端 (TERM_PROGRAM)
+ *  3. 已知 TUI 终端 (TERM 包含)
+ *  4. 兜底 true（现代终端大概率支持，不支持时用户可显式 KHY_MOUSE_BUTTONS=0 关闭）
+ *
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {boolean}
+ */
+function autoDetectTerminal(env = process.env) {
+  const wtSession = String(env.WT_SESSION || '').trim();
+  if (wtSession) return true;
+
+  const termProgram = String(env.TERM_PROGRAM || '').trim();
+  const knownGui = new Set([
+    'Apple_Terminal', 'iTerm.app', 'vscode', 'WezTerm',
+    'Alacritty', 'kitty', 'WindowsTerminal', 'Ghostty',
+  ]);
+  if (knownGui.has(termProgram)) return true;
+
+  const term = String(env.TERM || '').trim().toLowerCase();
+  const knownTui = ['xterm', 'screen', 'tmux', 'linux', 'rxvt', 'alacritty', 'kitty', 'wezterm'];
+  for (const t of knownTui) {
+    if (term.includes(t)) return true;
+  }
+
+  return true; // 默认开启（现代终端大概率支持）
+}
+
 function mouseButtonsEnabled(env = process.env, _platform = process.platform) {
-  return _on(env, 'KHY_MOUSE_BUTTONS');
+  const v = String((env && env.KHY_MOUSE_BUTTONS) || '').trim().toLowerCase();
+  if (v === '1' || v === 'true' || v === 'on' || v === 'yes') return true;
+  if (v === '0' || v === 'false' || v === 'off' || v === 'no') return false;
+  return autoDetectTerminal(env);
 }
 
 /**
- * 悬停追踪(1003)门控:默认关，仅显式 truthy 开启。
+ * 悬停追踪(1003)门控:默认关，显式开启后生效；未设置时 auto-detect。
  * @param {NodeJS.ProcessEnv} [env]
  * @returns {boolean}
  */
 function mouseHoverEnabled(env = process.env) {
-  return _on(env, 'KHY_MOUSE_HOVER');
+  const v = String((env && env.KHY_MOUSE_HOVER) || '').trim().toLowerCase();
+  if (v === '1' || v === 'true' || v === 'on' || v === 'yes') return true;
+  if (v === '0' || v === 'false' || v === 'off' || v === 'no') return false;
+  return false; // hover 默认关（事件洪流），auto-detect 不适用
 }
 
 /**
@@ -429,6 +461,7 @@ module.exports = {
   SGR_MOUSE_RE,
   isMouseSequence,
   parseSgrMouse,
+  autoDetectTerminal,
   mouseButtonsEnabled,
   mouseHoverEnabled,
   enableBytes,

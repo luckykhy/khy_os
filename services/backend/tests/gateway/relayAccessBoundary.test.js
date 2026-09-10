@@ -67,3 +67,4 @@ describe('relay adapter feature access boundary', () => {
     expect(result.errorType).toBe('auth');
   });
 });
+

@@ -584,7 +584,7 @@ def escape_properties_path(path: Path) -> str:
     """按 Java ``.properties`` 规则转义路径。
 
     先转义反斜杠、再转义冒号，顺序不能反（反了会把刚生成的反斜杠再转一次）。
-    ``C:\\Users\\x`` -> ``C\\:\\\\Users\\\\x``。
+    ``C:\\\\Users\\\\<name>`` -> ``C\\\\:\\\\\\\\Users\\\\\\\\<name>``。
     """
     return str(path).replace("\\", "\\\\").replace(":", "\\:")
 

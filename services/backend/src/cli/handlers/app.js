@@ -12,6 +12,7 @@
 const chalk = require('chalk').default || require('chalk');
 const { SUPPORTED_ABIS, DEFAULT_ABI } = require('../../constants/wasmDefaults');
 const { printSuccess, printError, printInfo, printTable } = require('../formatters');
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 
 const SUPPORTED_WASM_IMPORTS = Object.freeze({
   khy_sys: new Set([
@@ -690,7 +691,7 @@ async function handleRun(name, args = [], options = {}) {
     printSuccess(`WASM 执行成功: ${result.app}.${result.exportName}`);
     console.log('');
     console.log(chalk.cyan.bold('  结果'));
-    console.log(chalk.dim('  ─────────────────────────'));
+    console.log("");
     console.log(`  args:   ${JSON.stringify(result.args)}`);
     console.log(`  result: ${JSON.stringify(result.result)}`);
     const currentMs = Math.round(elapsedMs);
@@ -776,7 +777,7 @@ async function handleIpc(name, args = [], options = {}) {
     printSuccess(`IPC 调用成功: ${name} -> ${service}.${method}`);
     console.log('');
     console.log(chalk.cyan.bold('  IPC Result'));
-    console.log(chalk.dim('  ─────────────────────────'));
+    console.log("");
     console.log(`  requestId: ${String(result.requestId)}`);
     console.log(`  status:    ${result.status}`);
     console.log(`  ok:        ${result.ok}`);
@@ -1247,4 +1248,15 @@ function _handleCLIGen(args, options) {
   return { aiForward: prompt };
 }
 
-module.exports = { handleApp };
+module.exports = {
+  handleApp,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'app',
+    aliases: ['apps'],
+    description: '管理平台应用：列表/安装/卸载/启动/停止/状态',
+    usage: 'app [list|install <name>|uninstall <name>|start <name>|stop <name>|status]',
+    subCommands: ['list', 'install', 'uninstall', 'start', 'stop', 'status', 'register', 'run', 'ipc', 'exports'],
+    category: 'system',
+    handler: async (parsed) => handleApp(parsed.subCommand, parsed.args, parsed.options),
+  },
+};
