@@ -1,5 +1,5 @@
 /**
- * providerPresets â€” single source of built-in common providers.
+ * providerPresets â€?single source of built-in common providers.
  *
  * Asserts: the seed carries the expected ids with valid, key-less metadata;
  * env KHY_PROVIDER_PRESETS overrides by id (partial merge) and appends new ids;
@@ -17,7 +17,7 @@ afterEach(() => {
   else process.env.KHY_PROVIDER_PRESETS = ORIGINAL_ENV;
 });
 
-describe('getProviderPresets â€” seed', () => {
+describe('getProviderPresets â€?seed', () => {
   test('contains the expected common providers', () => {
     delete process.env.KHY_PROVIDER_PRESETS;
     const ids = presets.getProviderPresets().map((p) => p.id);
@@ -46,7 +46,7 @@ describe('getProviderPresets â€” seed', () => {
   });
 });
 
-describe('getProviderPresets â€” provider links', () => {
+describe('getProviderPresets â€?provider links', () => {
   test('seed carries http(s) links so the UI can show "where to get a key"', () => {
     delete process.env.KHY_PROVIDER_PRESETS;
     const byId = Object.fromEntries(presets.getProviderPresets().map((p) => [p.id, p]));
@@ -71,8 +71,8 @@ describe('getProviderPresets â€” provider links', () => {
         apiFormat: 'openai',
         links: {
           home: 'https://acme.example',
-          console: 'javascript:alert(1)', // dropped â€” unsafe scheme
-          evil: 'https://acme.example/evil', // dropped â€” unknown key
+          console: 'javascript:alert(1)', // dropped â€?unsafe scheme
+          evil: 'https://acme.example/evil', // dropped â€?unknown key
         },
       },
     ]);
@@ -91,7 +91,7 @@ describe('getProviderPresets â€” provider links', () => {
   });
 });
 
-describe('getProviderPresets â€” env overrides (KHY_PROVIDER_PRESETS)', () => {
+describe('getProviderPresets â€?env overrides (KHY_PROVIDER_PRESETS)', () => {
   test('partial override by id keeps other built-in fields', () => {
     process.env.KHY_PROVIDER_PRESETS = JSON.stringify([{ id: 'deepseek', baseUrl: 'https://my-relay.local/v1' }]);
     const ds = presets.getProviderPresets().find((p) => p.id === 'deepseek');
@@ -132,7 +132,7 @@ describe('getProviderPresets â€” env overrides (KHY_PROVIDER_PRESETS)', () => {
   });
 });
 
-describe('getProviderPresets â€” isolation', () => {
+describe('getProviderPresets â€?isolation', () => {
   test('mutating the result does not corrupt the next call', () => {
     delete process.env.KHY_PROVIDER_PRESETS;
     const first = presets.getProviderPresets();
@@ -143,3 +143,4 @@ describe('getProviderPresets â€” isolation', () => {
     expect(second[0].models).not.toContain('garbage');
   });
 });
+

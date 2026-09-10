@@ -12,7 +12,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const r = require('../src/services/config/nlConfigResolver');
+const r = require('../src/services/domain/config/config/nlConfigResolver.js');
 
 test('isEnabled: default on; {0,false,off,no} disable', () => {
   assert.equal(r.isEnabled({}), true);

@@ -1,7 +1,7 @@
 # Targeted driver install for the specific errored HDB device
 $ErrorActionPreference = "Continue"
 
-$infPath = "C:\Users\25789\.khyos\android_sdk\extras\google\usb_driver\android_winusb.inf"
+$infPath = "$env:USERPROFILE\.khyos\android_sdk\extras\google\usb_driver\android_winusb.inf"
 $hdbInstanceId = "USB\VID_339B&PID_107D&MI_02\6&2694CB9C&0&0002"
 
 # Use SetupDi APIs to install the driver specifically for this device
@@ -77,7 +77,7 @@ $dev = Get-PnpDevice | Where-Object { $_.InstanceId -eq $hwid }
 if ($dev) {
   Write-Host "Before: Status=$($dev.Status)"
   # Use devcon if available
-  $devcon = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter "devcon.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+  $devcon = Get-ChildItem -Path "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter "devcon.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
   if ($devcon) {
     Write-Host "Found devcon: $($devcon.FullName)"
     & $devcon.FullName disable "@USB\VID_339B&PID_107D&MI_02*" 2>&1

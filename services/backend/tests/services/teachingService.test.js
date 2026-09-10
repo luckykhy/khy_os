@@ -13,7 +13,7 @@ describe('teachingService.captureTeaching', () => {
     tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-teach-'));
     process.env.KHY_DATA_HOME = tmp;
     jest.resetModules();
-    svc = require('../../src/services/agentFs/agentFsService');
+    svc = require('../../src/services/domain/agents/agentFs/agentFsService.js');
     teaching = require('../../src/services/teachingService');
   });
 
@@ -22,7 +22,7 @@ describe('teachingService.captureTeaching', () => {
     try { fs.rmSync(tmp, { recursive: true, force: true }); } catch {}
   });
 
-  test('no active companion → captured:false with reason', () => {
+  test('no active companion �?captured:false with reason', () => {
     const res = teaching.captureTeaching({
       text: '以后回答都用中文',
       detection: { target: 'memory', content: '以后回答都用中文' },
@@ -72,9 +72,10 @@ describe('teachingService.captureTeaching', () => {
     expect(md).toContain('你是一个严谨的法务助手');
   });
 
-  test('unknown target → captured:false', () => {
+  test('unknown target �?captured:false', () => {
     const res = teaching.captureTeaching({ text: 'x', detection: { target: 'bogus' } });
     expect(res.captured).toBe(false);
     expect(res.reason).toBe('no-target');
   });
 });
+

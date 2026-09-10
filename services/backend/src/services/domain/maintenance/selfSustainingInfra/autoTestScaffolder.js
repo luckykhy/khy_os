@@ -299,14 +299,14 @@ function generateCoverageReport(sourceFile) {
     });
     const coverage = scaffolder.calculateCoverage(testCode);
     console.log(`\n测试覆盖率报告: ${sourceFile}`);
-    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    console.log(`--------------------------------`);
     console.log(`函数数量:     ${signatures.length}`);
     console.log(`行为测试总数: ${coverage.total}`);
     console.log(`已补全:       ${coverage.completed}`);
     console.log(`待补全:       ${coverage.placeholder}`);
     console.log(`覆盖率:       ${coverage.coverage}%`);
     console.log(`状态:         ${coverage.coverage >= 50 ? '✅ PASS' : '⚠️  WARNING (< 50%)'}`);
-    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+    console.log(`--------------------------------\n`);
     return coverage;
   } catch (err) {
     console.error(`错误: ${err.message}`);

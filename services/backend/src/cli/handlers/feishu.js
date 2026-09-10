@@ -28,6 +28,7 @@
  */
 
 const { printInfo, printError, printWarn, printSuccess, printTable, printErrorPanel } = require('../formatters');
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 
 const CHANNEL = 'feishu';
 const GATE = 'KHY_IM_ADAPTERS';
@@ -466,4 +467,17 @@ async function handleFeishu(subCommand, args = [], options = {}, deps = {}) {
   return 1;
 }
 
-module.exports = { handleFeishu, _webhookKeys, _longLinkKeys, _gateList };
+module.exports = {
+  handleFeishu,
+  _webhookKeys,
+  _longLinkKeys,
+  _gateList,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'feishu',
+    aliases: ['fs', '飞书'],
+    description: '飞书接入：群机器人+事件订阅 / 长连接（两种传输方式）',
+    usage: 'feishu <subcommand> [args]',
+    category: 'workflow',
+    handler: async (parsed) => handleFeishu(parsed.subCommand, parsed.args, parsed.options),
+  },
+};

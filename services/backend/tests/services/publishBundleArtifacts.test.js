@@ -12,7 +12,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const a = require('../../src/services/publish/bundleArtifacts');
+const a = require('../../src/services/domain/deploy/publish/bundleArtifacts.js');
 
 describe('publish/bundleArtifacts', () => {
   let tmp;

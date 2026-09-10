@@ -15,6 +15,7 @@
  */
 
 const { printSuccess, printError, printInfo, printTable } = require('../formatters');
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 
 /**
  * @param {string} subCommand
@@ -281,4 +282,15 @@ async function _handleDownload(args, options, env) {
   }
 }
 
-module.exports = { handleDevice };
+module.exports = {
+  handleDevice,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'device',
+    aliases: ['dev', '设备'],
+    description: '设备管理：列出/搜索/安装/卸载当前设备的应用（系统包管理器桥接）',
+    usage: 'device [list|search <kw>|install <pkg>|uninstall <pkg>]',
+    subCommands: ['list', 'search', 'install', 'uninstall', 'download'],
+    category: 'system',
+    handler: async (parsed) => handleDevice(parsed.subCommand, parsed.args, parsed.options),
+  },
+};

@@ -108,3 +108,4 @@ describe('toolUseLoop shell->web_search recovery', () => {
     expect(executeTool).toHaveBeenCalledWith('search', { keyword: '搜一下今天的热点新闻' }, expect.any(Object));
   });
 });
+

@@ -13,7 +13,7 @@ const os = require('os');
 const path = require('path');
 const zlib = require('zlib');
 
-const sd = require('../../../src/services/computerUse/stateDetector');
+const sd = require('../../../src/services/domain/desktop/computerUse/stateDetector.js');
 
 // ── 测试用最小 PNG 编码器（RGB、8-bit、非隔行）─────────────────────────────
 

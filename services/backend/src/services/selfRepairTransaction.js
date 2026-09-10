@@ -271,7 +271,7 @@ function summarizeTransaction(state = {}) {
     if (n === 0 && (!decision.warnings || decision.warnings.length === 0)) {
       return '';
     }
-    let line = `\n\n---\n🛡️ **自修复事务** — 修复改动已通过校验(${n} 个文件:语法/守卫)并保留`;
+    let line = `\n\n🛡️ **自修复事务** — 修复改动已通过校验(${n} 个文件:语法/守卫)并保留`;
     if (decision.warnings && decision.warnings.length) {
       line += `,另有 ${decision.warnings.length} 条非阻断告警`;
     }
@@ -283,7 +283,7 @@ function summarizeTransaction(state = {}) {
 
   // 回滚。
   const lines = [];
-  lines.push(`\n\n---\n↩️ **自修复事务** — 修复改动未通过校验,已自动回滚到改前状态,原因:`);
+  lines.push(`\n\n↩️ **自修复事务** — 修复改动未通过校验,已自动回滚到改前状态,原因:`);
   for (const f of (decision.failures || []).slice(0, 6)) {
     lines.push(`  - ${f}`);
   }

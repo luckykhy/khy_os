@@ -126,3 +126,4 @@ describe('kiro adapter auto-login trigger', () => {
     expect(openDefault).not.toHaveBeenCalled();
   });
 });
+

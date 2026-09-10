@@ -86,7 +86,8 @@ describe('comprehensiveDataService', () => {
     if (comprehensiveDataService) {
       expect(typeof comprehensiveDataService).toBe('object');
     }
-    // Test passes either way â€” some CI environments may lack deps
+    // Test passes either way â€?some CI environments may lack deps
     expect(true).toBe(true);
   });
 });
+

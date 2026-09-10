@@ -191,7 +191,9 @@ const levelBreakdown = computed(() => {
   const counts = { L1: 0, L2: 0, L3: 0 };
   for (const r of recentRuns.value) {
     const lv = r.task?.level;
-    if (lv && counts.hasOwnProperty(lv)) counts[lv]++;
+    // 用 hasOwnProperty.call：直接 counts.hasOwnProperty(lv) 既被 lint 拦下，
+    // 也会在 lv 取到 "constructor" / "__proto__" 这类自有键之外时误判。
+    if (lv && Object.prototype.hasOwnProperty.call(counts, lv)) counts[lv]++;
   }
   return `${counts.L1}/${counts.L2}/${counts.L3}`;
 });

@@ -6,10 +6,10 @@
  *   - a tool declaring maxResultSizeChars=1000 with a 1500-char result gets
  *     its content truncated to a preview + persisted temp file path;
  *   - a tool WITHOUT the declaration keeps a 1500-char result intact
- *     (global 50K default â†’ untouched, byte-identical legacy behavior).
+ *     (global 50K default â†?untouched, byte-identical legacy behavior).
  *
  * C2: executeTool() records per-call metrics into toolMetricsAggregator,
- * gated by KHY_TOOL_METRICS (default on; =0 â†’ zero recording).
+ * gated by KHY_TOOL_METRICS (default on; =0 â†?zero recording).
  */
 const fs = require('fs');
 
@@ -75,7 +75,7 @@ describe('toolCalling tool-level maxResultSizeChars + execution metrics', () => 
     jest.resetModules();
   });
 
-  test('declared maxResultSizeChars=1000 â†’ 1500-char result truncated + persisted', async () => {
+  test('declared maxResultSizeChars=1000 â†?1500-char result truncated + persisted', async () => {
     const result = await toolCalling.executeTool('mock_capped_result_tool', {});
     expect(result.success).toBe(true);
     expect(result._persistedPath).toBeTruthy();
@@ -87,7 +87,7 @@ describe('toolCalling tool-level maxResultSizeChars + execution metrics', () => 
     expect(fs.readFileSync(result._persistedPath, 'utf-8')).toBe(BIG);
   });
 
-  test('no declaration â†’ 1500-char result stays intact (global 50K default)', async () => {
+  test('no declaration â†?1500-char result stays intact (global 50K default)', async () => {
     const result = await toolCalling.executeTool('mock_uncapped_result_tool', {});
     expect(result.success).toBe(true);
     expect(result._persistedPath).toBeUndefined();
@@ -104,9 +104,10 @@ describe('toolCalling tool-level maxResultSizeChars + execution metrics', () => 
     expect(entry.totalResultChars).toBe(1500);
   });
 
-  test('metrics: KHY_TOOL_METRICS=0 â†’ nothing recorded', async () => {
+  test('metrics: KHY_TOOL_METRICS=0 â†?nothing recorded', async () => {
     process.env.KHY_TOOL_METRICS = '0';
     await toolCalling.executeTool('mock_uncapped_result_tool', {});
     expect(aggregator.getSummary().totalCalls).toBe(0);
   });
 });
+

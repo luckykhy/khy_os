@@ -3,23 +3,36 @@
 const _withTimeout = require('../../src/utils/withTimeout');
 
 describe('withTimeout', () => {
-  test('resolves with value when promise resolves before timeout', async () => {
-    const result = await _withTimeout(Promise.resolve('success'), 1000);
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  test('resolves with value if promise settles first', async () => {
+    const promise = Promise.resolve('success');
+    const resultPromise = _withTimeout(promise, 1000);
+    jest.advanceTimersByTime(500);
+    const result = await resultPromise;
     expect(result).toBe('success');
   });
 
-  test('resolves with __timeout when timeout expires', async () => {
-    const slowPromise = new Promise((resolve) => setTimeout(resolve, 5000));
-    const result = await _withTimeout(slowPromise, 50);
+  test('resolves with timeout sentinel if not settled', async () => {
+    const promise = new Promise(() => {}); // never settles
+    const resultPromise = _withTimeout(promise, 1000);
+    jest.advanceTimersByTime(1000);
+    const result = await resultPromise;
     expect(result).toEqual({ __timeout: true });
   });
 
-  test('resolves with __error when promise rejects', async () => {
-    const result = await _withTimeout(Promise.reject(new Error('fail')), 1000);
+  test('resolves with error sentinel if rejected', async () => {
+    const promise = Promise.reject(new Error('fail'));
+    const resultPromise = _withTimeout(promise, 1000);
+    jest.advanceTimersByTime(500);
+    const result = await resultPromise;
     expect(result).toEqual({ __error: true });
   });
-
-  test('does not reject', async () => {
-    await expect(_withTimeout(Promise.reject(new Error('fail')), 100)).resolves.toBeDefined();
-  });
 });
+

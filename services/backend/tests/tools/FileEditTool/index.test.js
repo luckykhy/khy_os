@@ -1,7 +1,6 @@
 'use strict';
-
 /**
- * FileEditTool (Edit) â€” occurrence count must match the actual replacement.
+ * FileEditTool (Edit) â€?occurrence count must match the actual replacement.
  *
  * Regression: the count loop advanced the search cursor by `idx + 1`, counting
  * OVERLAPPING matches, while the replace path uses `original.split(old_string)
@@ -12,16 +11,11 @@
  * `count === original.split(old_string).length - 1`. Non-self-overlapping needles
  * (normal code identifiers) are byte-identical.
  */
-
-const test = require('node:test');
-const assert = require('node:assert');
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
-
 const FileEditTool = require('../../../src/tools/FileEditTool/index.js');
 const tracker = require('../../../src/tools/_readTracker');
-
 function withTempFile(content, fn) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fileedit-'));
   const prevCwd = process.env.KHYQUANT_CWD;
@@ -35,48 +29,51 @@ function withTempFile(content, fn) {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 }
-
-test('replace_all reports the non-overlapping count for a self-overlapping needle', async () => {
-  await withTempFile('------', async (f) => {
-    const res = await FileEditTool.execute({ file_path: f, old_string: '--', new_string: '=', replace_all: true });
-    assert.strictEqual(res.success, true);
-    assert.strictEqual(res.replacements, 3); // was 5 (overlapping)
-    assert.strictEqual(fs.readFileSync(f, 'utf-8'), '===');
-  });
-});
-
 test('blank-line run: "\\n\\n" counted non-overlapping', async () => {
   await withTempFile('x\n\n\ny', async (f) => {
     const res = await FileEditTool.execute({ file_path: f, old_string: '\n\n', new_string: '\n', replace_all: true });
-    assert.strictEqual(res.success, true);
-    assert.strictEqual(res.replacements, 1); // was 2 (overlapping)
-    assert.strictEqual(fs.readFileSync(f, 'utf-8'), 'x\n\ny');
+    expect(res.success).toBe(true);
+    expect(res.replacements).toBe(1); // was 2 (overlapping)
+    expect(fs.readFileSync(f, 'utf-8')).toBe('x\n\ny');
   });
 });
 
-test('non-unique refusal reports the true (non-overlapping) count', async () => {
-  await withTempFile('----', async (f) => {
-    const res = await FileEditTool.execute({ file_path: f, old_string: '--', new_string: '=' });
-    assert.strictEqual(res.success, false);
-    assert.strictEqual(res.occurrences, 2); // was 3 (overlapping)
-    assert.match(res.error, /appears 2 times/);
+describe('Index', () => {
+  test('replace_all reports the non-overlapping count for a self-overlapping needle', async () => {
+      await withTempFile('------', async (f) => {
+        const res = await FileEditTool.execute({ file_path: f, old_string: '--', new_string: '=', replace_all: true });
+        expect(res.success).toBe(true);
+        expect(res.replacements).toBe(3); // was 5 (overlapping)
+        expect(fs.readFileSync(f, 'utf-8')).toBe('===');
+      });
   });
+
+  test('non-unique refusal reports the true (non-overlapping) count', async () => {
+      await withTempFile('----', async (f) => {
+        const res = await FileEditTool.execute({ file_path: f, old_string: '--', new_string: '=' });
+        expect(res.success).toBe(false);
+        expect(res.occurrences).toBe(2); // was 3 (overlapping)
+        expect(res.error).toMatch(/appears 2 times/);
+      });
+  });
+
+  test('non-self-overlapping needle is byte-identical (count unchanged)', async () => {
+      await withTempFile('foo bar foo baz foo', async (f) => {
+        const res = await FileEditTool.execute({ file_path: f, old_string: 'foo', new_string: 'X', replace_all: true });
+        expect(res.success).toBe(true);
+        expect(res.replacements).toBe(3);
+        expect(fs.readFileSync(f, 'utf-8')).toBe('X bar X baz X');
+      });
+  });
+
+  test('single unique replace unaffected', async () => {
+      await withTempFile('alpha beta gamma', async (f) => {
+        const res = await FileEditTool.execute({ file_path: f, old_string: 'beta', new_string: 'BETA' });
+        expect(res.success).toBe(true);
+        expect(res.replacements).toBe(1);
+        expect(fs.readFileSync(f, 'utf-8')).toBe('alpha BETA gamma');
+      });
+  });
+
 });
 
-test('non-self-overlapping needle is byte-identical (count unchanged)', async () => {
-  await withTempFile('foo bar foo baz foo', async (f) => {
-    const res = await FileEditTool.execute({ file_path: f, old_string: 'foo', new_string: 'X', replace_all: true });
-    assert.strictEqual(res.success, true);
-    assert.strictEqual(res.replacements, 3);
-    assert.strictEqual(fs.readFileSync(f, 'utf-8'), 'X bar X baz X');
-  });
-});
-
-test('single unique replace unaffected', async () => {
-  await withTempFile('alpha beta gamma', async (f) => {
-    const res = await FileEditTool.execute({ file_path: f, old_string: 'beta', new_string: 'BETA' });
-    assert.strictEqual(res.success, true);
-    assert.strictEqual(res.replacements, 1);
-    assert.strictEqual(fs.readFileSync(f, 'utf-8'), 'alpha BETA gamma');
-  });
-});

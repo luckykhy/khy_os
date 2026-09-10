@@ -6,7 +6,7 @@
  * The gateway's parallel init (`_doInit`) prefers `adapter.detectAsync(true)`
  * over the synchronous `detect(true)`, and races each probe against a timeout.
  * But that protection is defeated if `detectAsync` internally calls the
- * synchronous `spawnSync('<cmd> --version')` â€” a blocking spawn cannot be
+ * synchronous `spawnSync('<cmd> --version')` â€?a blocking spawn cannot be
  * interrupted by the timeout, and three of them back-to-back freeze the Ink
  * TUI for the sum of their latencies (the "press Enter, wait tens of seconds
  * before the workspace responds" stall, pronounced on macOS where first-run
@@ -14,7 +14,7 @@
  *
  * These tests pin the contract: every CLI adapter exposes `detectAsync`, and it
  * resolves CLI existence through the shared cache's ASYNC probe (`checkAsync` /
- * `isAvailableAsync`, backed by execFile) â€” never the synchronous spawnSync.
+ * `isAvailableAsync`, backed by execFile) â€?never the synchronous spawnSync.
  */
 
 const AVAIL_PATH = '../src/services/gateway/adapters/_commandAvailability';
@@ -25,7 +25,7 @@ describe('CLI adapter detectAsync is non-blocking (no spawnSync storm)', () => {
 
   beforeEach(() => {
     jest.resetModules();
-    // Mocked CLI presence carries no real codex credentials â€” disable the
+    // Mocked CLI presence carries no real codex credentials â€?disable the
     // strict credential gate so detectAsync reflects CLI existence, which is
     // the async-probe contract under test here.
     prevCodexStrict = process.env.KHY_CODEX_STRICT_DETECT;
@@ -93,3 +93,4 @@ describe('CLI adapter detectAsync is non-blocking (no spawnSync storm)', () => {
     expect(avail.isAvailable).not.toHaveBeenCalled();
   });
 });
+

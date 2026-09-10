@@ -23,9 +23,9 @@ process.env.KHY_MSG = 'true';           // ilinkCore.isEnabled 门:显式开,避
 delete process.env.SLACK_BOT_TOKEN;     // 避免 Slack 段抢注一路无关通道
 
 const { MessageRouter, _bootstrapChannels } =
-  require('../../../src/services/channels/messageRouter');
-const { IlinkChannel } = require('../../../src/services/channels/ilinkChannel');
-const store = require('../../../src/services/messaging/ilinkAccountStore');
+  require('../../../src/services/domain/messaging/channels/messageRouter.js');
+const { IlinkChannel } = require('../../../src/services/domain/messaging/channels/ilinkChannel.js');
+const store = require('../../../src/services/domain/messaging/messaging/ilinkAccountStore.js');
 const log = require('../../../src/utils/logger');
 
 // connect() 会起真实长轮询;测的是注册接线,故打成 no-op 保持离线。

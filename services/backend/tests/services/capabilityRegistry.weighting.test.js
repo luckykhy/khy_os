@@ -2,7 +2,7 @@
 
 const { CapabilityRegistry } = require('../../src/services/gateway/capabilityRegistry');
 
-describe('capabilityRegistry â€” capability-weighted selection (B3)', () => {
+describe('capabilityRegistry â€?capability-weighted selection (B3)', () => {
   const reqs = { text: 2, code: 3, tool_use: 2 };
 
   test('no weighting leaves the legacy capability ranking unchanged', () => {
@@ -22,8 +22,8 @@ describe('capabilityRegistry â€” capability-weighted selection (B3)', () => {
     const reg = new CapabilityRegistry();
     const weighting = {
       stats: {
-        claude: { reworkRate: 0.9, activeCount: 5 }, // flaky + busy â†’ penalized
-        codex:  { reworkRate: 0.0, activeCount: 0 }, // reliable + idle â†’ boosted
+        claude: { reworkRate: 0.9, activeCount: 5 }, // flaky + busy â†?penalized
+        codex:  { reworkRate: 0.0, activeCount: 0 }, // reliable + idle â†?boosted
       },
     };
     const ranked = reg.bestAdaptersFor(reqs, { onlyAvailable: false, limit: 5, weighting });
@@ -39,8 +39,8 @@ describe('capabilityRegistry â€” capability-weighted selection (B3)', () => {
     const weighting = {
       skills: ['python', 'async'],
       profiles: {
-        codex: { skills: ['python', 'async', 'rust'] }, // 2 matches â†’ +1.0
-        claude: { skills: ['go'] },                      // 0 matches â†’ +0
+        codex: { skills: ['python', 'async', 'rust'] }, // 2 matches â†?+1.0
+        claude: { skills: ['go'] },                      // 0 matches â†?+0
       },
     };
     const ranked = reg.bestAdaptersFor(reqs, { onlyAvailable: false, limit: 5, weighting });
@@ -52,9 +52,10 @@ describe('capabilityRegistry â€” capability-weighted selection (B3)', () => {
     const reg = new CapabilityRegistry();
     const weighting = {
       skills: ['a', 'b', 'c', 'd', 'e'],
-      profiles: { codex: { skills: ['a', 'b', 'c', 'd', 'e'] } }, // 5 matches â†’ cap 1.5
+      profiles: { codex: { skills: ['a', 'b', 'c', 'd', 'e'] } }, // 5 matches â†?cap 1.5
     };
     const ranked = reg.bestAdaptersFor(reqs, { onlyAvailable: false, limit: 5, weighting });
     expect(ranked.find(r => r.key === 'codex').weight).toBeCloseTo(1.5, 5);
   });
 });
+

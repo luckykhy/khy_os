@@ -16,7 +16,7 @@
 const assert = require('assert');
 
 const FLAG = 'KHY_INERTIAL_CONTINUATION';
-const MODULE_PATH = '../src/services/query/inertialContinuation';
+const MODULE_PATH = '../src/services/domain/query/query/inertialContinuation.js';
 
 // Reload the module under a chosen flag value so isEnabled() reflects env at the
 // time of the call (it reads process.env each call, but reloading keeps tests

@@ -497,7 +497,7 @@ function mergeResults(subtasks, aggregated) {
 
   // Summary footer
   const total = subtasks.length;
-  const footer = [`\n---\n## 汇总`, `- 完成: ${successCount}/${total} 项`];
+  const footer = [`\n## 汇总`, `- 完成: ${successCount}/${total} 项`];
   if (failCount > 0) {
     footer.push(`- 失败: ${failCount} 项`);
   }
@@ -539,7 +539,7 @@ function mergeResults(subtasks, aggregated) {
     footer.push(`- ${roleFailureSummary}`);
   }
 
-  return sections.join('\n\n---\n\n') + footer.join('\n');
+  return sections.join('\n\n') + footer.join('\n');
 }
 
 module.exports = { decompose, mergeResults, _splitSequentialChain };

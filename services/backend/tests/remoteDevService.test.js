@@ -15,7 +15,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const svc = require('../src/services/remotedev/remoteDevService');
+const svc = require('../src/services/domain/network/remotedev/remoteDevService.js');
 
 // ── in-memory durable pointer ──────────────────────────────────────────────
 function makeStore() {

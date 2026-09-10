@@ -2,7 +2,7 @@
 
 /**
  * Builtin-source tools must receive the same up-front input-schema validation
- * that registry-source tools already get — Claude Code alignment: an invalid
+ * that registry-source tools already get �?Claude Code alignment: an invalid
  * tool input returns a structured error the model can recover from, instead of
  * surfacing as a deeper handler-time crash.
  *
@@ -43,8 +43,8 @@ describe('toolCalling builtin-source schema validation', () => {
     jest.resetModules();
   });
 
-  // 门控 KHY_CC_VALIDATION_ERROR 默认开:校验失败消息对齐 CC `formatZodValidationError` 的
-  // 「<tool> failed due to the following issue(s):」分组,缺失必填用「The required parameter `x` is missing」。
+  // 门控 KHY_CC_VALIDATION_ERROR 默认开:校验失败消息对齐 CC `formatZodValidationError` �?
+  // �?tool> failed due to the following issue(s):」分�?缺失必填用「The required parameter `x` is missing」�?
   test('rejects a builtin call missing a single required field with a structured error', async () => {
     const result = await toolCalling.executeTool('export_ollama_model', {});
     expect(result.success).toBe(false);
@@ -73,10 +73,11 @@ describe('toolCalling builtin-source schema validation', () => {
     );
   });
 
-  test('门控关 KHY_CC_VALIDATION_ERROR=off → 逐字节回退历史 `Validation failed: …`', async () => {
+  test('门控�?KHY_CC_VALIDATION_ERROR=off �?逐字节回退历史 `Validation failed: …`', async () => {
     process.env.KHY_CC_VALIDATION_ERROR = 'off';
     const result = await toolCalling.executeTool('export_ollama_model', { dest: '/tmp/x' });
     expect(result.success).toBe(false);
     expect(result.error).toBe('Validation failed: model is required');
   });
 });
+

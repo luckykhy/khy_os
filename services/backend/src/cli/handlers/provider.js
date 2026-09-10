@@ -109,7 +109,7 @@ function _mergeRouterOpts(parsed, opts) {
 async function _listProviders() {
   console.log('');
   console.log(chalk.bold('  khy provider — 可选 provider 列表'));
-  console.log(chalk.dim('  ' + '─'.repeat(60)));
+  console.log("");
 
   // 1) HTTP / OpenAI-wire providers (走 providerPresets)
   try {
@@ -152,7 +152,7 @@ async function _providerStatus() {
   const strict = String(process.env.GATEWAY_PREFERRED_STRICT || '').trim();
   console.log('');
   console.log(chalk.bold('  khy provider status'));
-  console.log(chalk.dim('  ' + '─'.repeat(40)));
+  console.log("");
   if (adapter) {
     console.log(`  ${chalk.cyan('adapter'.padEnd(14))}  ${chalk.bold(adapter)}`);
   } else {

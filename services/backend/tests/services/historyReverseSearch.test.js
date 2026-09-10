@@ -12,7 +12,7 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { isEnabled, search, nextMatch } = require('../../src/services/keybindings/historyReverseSearch');
+const { isEnabled, search, nextMatch } = require('../../src/services/domain/config/keybindings/historyReverseSearch.js');
 
 const HIST = ['git status', 'npm test', 'git commit -m x', 'node --test foo', 'git push']; // 旧→新
 

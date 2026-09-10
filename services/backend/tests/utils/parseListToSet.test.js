@@ -45,3 +45,4 @@ describe('parseListToSet', () => {
     expect(parseListToSet('').size).toBe(0);
   });
 });
+

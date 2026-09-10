@@ -1,5 +1,4 @@
 'use strict';
-
 /**
  * toolUseLoop.intentTextWiring.test.js — 意图裁决「生产侧」接线集成([DESIGN-ARCH-041])。
  *
@@ -13,20 +12,13 @@
  * 用 fake chat 发一次结构化 toolUseBlocks 触发一次工具执行,断言桩收到的
  * traceContext.intentText === 原始 userMessage。
  */
-
-const { describe, test, beforeEach, afterEach } = require('node:test');
-const assert = require('node:assert/strict');
-
 const toolCalling = require('../../src/services/toolCalling');
 const toolUseLoop = require('../../src/services/toolUseLoop');
-
 const PROBE = '__producer_probe__';
-
 describe('toolUseLoop — intentText 生产侧接线', () => {
   let _origExec;
   let _savedGate;
   let captured;
-
   beforeEach(() => {
     captured = [];
     _savedGate = process.env.KHY_TASK_CAPABILITY_GATE;
@@ -46,34 +38,36 @@ describe('toolUseLoop — intentText 生产侧接线', () => {
       return { success: true, output: 'stub' };
     };
   });
-
   afterEach(() => {
     toolCalling.executeTool = _origExec;
     if (_savedGate === undefined) delete process.env.KHY_TASK_CAPABILITY_GATE;
     else process.env.KHY_TASK_CAPABILITY_GATE = _savedGate;
   });
+});
 
+describe('Tool Use Loop intent Text Wiring', () => {
   test('executeTool 收到的 traceContext.intentText === 原始 userMessage', async () => {
-    const USER_MSG = '请运行检查工具处理这个任务';
-    let turn = 0;
-    const chat = async () => {
-      turn += 1;
-      if (turn === 1) {
-        return {
-          toolUseBlocks: [{ name: PROBE, input: {}, id: 'tu_producer_1' }],
-          stopReason: 'tool_use',
-          reply: '',
-          provider: 'mock',
+        const USER_MSG = '请运行检查工具处理这个任务';
+        let turn = 0;
+        const chat = async () => {
+          turn += 1;
+          if (turn === 1) {
+            return {
+              toolUseBlocks: [{ name: PROBE, input: {}, id: 'tu_producer_1' }],
+              stopReason: 'tool_use',
+              reply: '',
+              provider: 'mock',
+            };
+          }
+          return { reply: '完成。', stopReason: 'stop', provider: 'mock' };
         };
-      }
-      return { reply: '完成。', stopReason: 'stop', provider: 'mock' };
-    };
-
-    await toolUseLoop.runToolUseLoop(USER_MSG, { chat, maxIterations: 4 });
-
-    const probeCalls = captured.filter((c) => c.name === PROBE);
-    assert.ok(probeCalls.length >= 1, `合成工具应至少被执行一次,实得 ${JSON.stringify(captured)}`);
-    assert.equal(probeCalls[0].intentText, USER_MSG,
-      `executeTool 应收到原始 NL 作为 intentText,实得 ${JSON.stringify(probeCalls[0].intentText)}`);
+    
+        await toolUseLoop.runToolUseLoop(USER_MSG, { chat, maxIterations: 4 });
+    
+        const probeCalls = captured.filter((c) => c.name === PROBE);
+        expect(probeCalls.length >= 1).toBeTruthy();
+        assert.equal(probeCalls[0].intentText, USER_MSG,
+          `executeTool 应收到原始 NL 作为 intentText,实得 ${JSON.stringify(probeCalls[0].intentText)}`);
   });
+
 });

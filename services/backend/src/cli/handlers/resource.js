@@ -1,5 +1,6 @@
 'use strict';
 
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const { createResourceManager } = require('../../services/domain/data/resources/resourceManager.js');
 const { printSuccess, printError, printInfo, printWarn, printTable } = require('../formatters');
 
@@ -61,4 +62,12 @@ async function handleResource(subCommand, args = [], options = {}) {
   } catch (err) { printError(err.message || String(err)); }
 }
 
-module.exports = { handleResource };
+module.exports = {
+  handleResource,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'resource',
+    description: 'resource command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleResource(parsed.subCommand, parsed.args, parsed.options),
+  },
+};

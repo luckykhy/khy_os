@@ -176,7 +176,7 @@
           <template #header>
             <div class="block-head">
               <span class="block-title">OAuth 提供商</span>
-              <el-button size="small" link type="primary" @click="$router.push('/accounts')"
+              <el-button size="small" link type="primary" @click="$router.push('/admin/accounts')"
                 >前往账号池</el-button
               >
             </div>
@@ -220,7 +220,7 @@
         <el-card shadow="never" class="block-card">
           <template #header><span class="block-title">配置入口</span></template>
           <div class="quick-links">
-            <el-button @click="$router.push('/gateway')">
+            <el-button @click="$router.push('/admin/models')">
               <el-icon><Connection /></el-icon> 网关管理
             </el-button>
             <el-button @click="$router.push('/pricing')">
@@ -282,6 +282,112 @@
         </el-card>
       </el-tab-pane>
 
+      <!-- ── Cross-Platform ── -->
+      <el-tab-pane name="crossPlatform">
+        <template #label>
+          <span class="tab-label"
+            ><el-icon><Connection /></el-icon> 跨设备</span
+          >
+        </template>
+        <el-card shadow="never" class="block-card">
+          <template #header>
+            <div class="block-head">
+              <span class="block-title">跨设备同步</span>
+              <el-tag :type="cp.isConnected ? 'success' : 'info'" effect="plain" size="small">
+                {{ cp.isConnected ? '已连接' : '未连接' }}
+              </el-tag>
+            </div>
+          </template>
+          <el-descriptions :column="2" border size="small" class="meta-desc">
+            <el-descriptions-item label="设备ID">{{ cp.deviceId || '—' }}</el-descriptions-item>
+            <el-descriptions-item label="用户ID">{{ cp.userId || '—' }}</el-descriptions-item>
+            <el-descriptions-item label="在线设备">{{ cp.onlineDevices.length }}</el-descriptions-item>
+            <el-descriptions-item label="状态">{{ cp.connectionState }}</el-descriptions-item>
+          </el-descriptions>
+          <div style="margin-top: 12px; display: flex; gap: 8px;">
+            <el-button v-if="!cp.isConnected" type="primary" size="small" @click="handleConnect">
+              <el-icon><Connection /></el-icon> 连接
+            </el-button>
+            <el-button v-else size="small" @click="handleDisconnect">
+              <el-icon><Close /></el-icon> 断开
+            </el-button>
+            <el-button size="small" @click="cp.listDevices()">
+              <el-icon><Refresh /></el-icon> 刷新
+            </el-button>
+          </div>
+        </el-card>
+
+        <el-card shadow="never" class="block-card">
+          <template #header><span class="block-title">在线设备</span></template>
+          <el-table :data="cp.onlineDevices" stripe size="small" empty-text="暂无其他设备在线">
+            <el-table-column prop="deviceId" label="设备ID" min-width="180" />
+            <el-table-column label="平台" width="100">
+              <template #default="{ row }">
+                <el-tag :type="platformTagType(row.platform)" effect="plain" size="small">
+                  {{ platformLabel(row.platform) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="deviceName" label="名称" min-width="150" />
+            <el-table-column label="操作" width="120">
+              <template #default="{ row }">
+                <el-button link type="primary" size="small" @click="handleSendMessage(row)">
+                  发消息
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+
+        <el-card shadow="never" class="block-card">
+          <template #header><span class="block-title">通知</span></template>
+          <el-table :data="cp.notifications" stripe size="small" empty-text="暂无通知">
+            <el-table-column prop="title" label="标题" min-width="120" />
+            <el-table-column prop="body" label="内容" min-width="200" />
+            <el-table-column label="时间" width="160">
+              <template #default="{ row }">
+                {{ formatTime(row.timestamp) }}
+              </template>
+            </el-table-column>
+            <el-table-column label="已读" width="80">
+              <template #default="{ row }">
+                <el-tag :type="row.read ? 'info' : 'warning'" size="small">
+                  {{ row.read ? '已读' : '未读' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+
+        <!-- 跨端启动 -->
+        <el-card shadow="never" class="block-card">
+          <template #header><span class="block-title">跨端启动</span></template>
+          <p class="form-hint">从网页端启动其他平台（需后端服务已运行）</p>
+          <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+            <el-button type="primary" size="small" @click="handleStartPlatform('backend')" :loading="starting.backend">
+              <el-icon><VideoPlay /></el-icon> 启动后端
+            </el-button>
+            <el-button type="success" size="small" @click="handleStartPlatform('web')" :loading="starting.web">
+              <el-icon><Monitor /></el-icon> 启动网页
+            </el-button>
+            <el-button type="warning" size="small" @click="handleStartPlatform('desktop')" :loading="starting.desktop">
+              <el-icon><Platform /></el-icon> 启动桌面
+            </el-button>
+            <el-button type="info" size="small" @click="handleStartPlatform('mobile')" :loading="starting.mobile">
+              <el-icon><Iphone /></el-icon> 启动手机
+            </el-button>
+            <el-button size="small" @click="handleStartAll" :loading="starting.all">
+              <el-icon><SwitchButton /></el-icon> 启动全部
+            </el-button>
+          </div>
+          <div v-if="startResult" style="margin-top: 12px;">
+            <el-alert :type="startResult.success ? 'success' : 'error'" :closable="true" @close="startResult = null">
+              {{ startResult.message }}
+            </el-alert>
+          </div>
+        </el-card>
+      </el-tab-pane>
+
       <!-- ── About ── -->
       <el-tab-pane name="about">
         <template #label>
@@ -297,9 +403,7 @@
             <el-descriptions-item label="当前用户">{{
               userStore.user?.username || '—'
             }}</el-descriptions-item>
-            <el-descriptions-item label="角色">{{
-              userStore.isAdmin ? '管理员' : '普通用户'
-            }}</el-descriptions-item>
+            <el-descriptions-item label="角色">{{ userStore.roleLabel }}</el-descriptions-item>
           </el-descriptions>
         </el-card>
         <el-card shadow="never" class="block-card">
@@ -337,20 +441,100 @@ import {
   PriceTag,
   Tickets,
   Monitor,
+  Close,
+  VideoPlay,
+  Platform,
+  Iphone,
+  SwitchButton,
 } from '@element-plus/icons-vue';
+import request from '@/api/request';
 import { useUserStore } from '@/stores/user';
 import { safeSet, safeRemove } from '@/utils/safeStorage';
 import { useTheme } from '@/composables/useTheme';
 import { useGateway } from '@/composables/useGateway';
 import { useGatewayBilling } from '@/composables/useGatewayBilling';
+import { useCrossPlatform } from '@/services/crossPlatform/crossPlatformClient';
 import KhyPageHeader from '@/components/KhyPageHeader.vue';
 
 defineOptions({ name: 'Settings' });
 
+// ── Cross-platform state ──
+const cp = useCrossPlatform();
+const starting = reactive({ backend: false, web: false, desktop: false, mobile: false, all: false });
+const startResult = ref(null);
+
+function handleConnect() {
+  cp.connect();
+}
+
+function handleDisconnect() {
+  cp.disconnect();
+}
+
+function handleSendMessage(row) {
+  const text = prompt('发送消息给 ' + row.deviceId);
+  if (text) {
+    cp.sendMessage({ targetDeviceId: row.deviceId, payload: { text } });
+  }
+}
+
+// These two endpoints spawn child processes, so they are auth-gated on the
+// backend. Always go through the shared axios client (which attaches the Bearer
+// token) — a bare fetch() would get 401 and show a misleading failure.
+async function handleStartPlatform(platform) {
+  starting[platform] = true;
+  startResult.value = null;
+  try {
+    const { data } = await request.post('/api/cross-platform/start-platform', { platform }, { silent: true });
+    startResult.value = { success: !!data.success, message: data.message || `${platform} 已启动` };
+  } catch (err) {
+    startResult.value = { success: false, message: err.message || `启动 ${platform} 失败` };
+  } finally {
+    starting[platform] = false;
+  }
+}
+
+async function handleStartAll() {
+  starting.all = true;
+  startResult.value = null;
+  try {
+    const { data } = await request.post('/api/cross-platform/start-all', null, { silent: true });
+    const results = Array.isArray(data.data) ? data.data : [];
+    const failed = results.filter((r) => !r.success);
+    if (!results.length) {
+      startResult.value = { success: true, message: '所有平台已启动' };
+    } else if (failed.length) {
+      const detail = failed.map((r) => `${r.platform}: ${r.error || '失败'}`).join('；');
+      startResult.value = { success: false, message: `${failed.length}/${results.length} 个平台启动失败 — ${detail}` };
+    } else {
+      startResult.value = { success: true, message: `所有 ${results.length} 个平台已启动` };
+    }
+  } catch (err) {
+    startResult.value = { success: false, message: err.message || '批量启动失败' };
+  } finally {
+    starting.all = false;
+  }
+}
+
+function platformTagType(platform) {
+  const map = { terminal: 'info', web: 'primary', desktop: 'success', mobile: 'warning' };
+  return map[platform] || 'info';
+}
+
+function platformLabel(platform) {
+  const map = { terminal: '终端', web: '网页', desktop: '桌面', mobile: '手机' };
+  return map[platform] || platform;
+}
+
+function formatTime(ts) {
+  if (!ts) return '—';
+  try { return new Date(ts).toLocaleTimeString(); } catch { return '—'; }
+}
+
 const TAB_STORAGE_KEY = 'khy_ai_settings_tab';
 const THEME_STORAGE_KEY = 'khy_ai_theme';
 const SIDEBAR_STORAGE_KEY = 'khy_ai_sidebar_collapsed';
-const VALID_TABS = ['general', 'proxy', 'auth', 'advanced', 'usage', 'about'];
+const VALID_TABS = ['general', 'proxy', 'auth', 'advanced', 'usage', 'crossPlatform', 'about'];
 
 const userStore = useUserStore();
 const { theme, setTheme } = useTheme();

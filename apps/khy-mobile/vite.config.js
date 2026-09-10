@@ -4,6 +4,6 @@ import path from 'node:path';
 
 export default defineConfig({
   plugins: [vue()],
-  resolve: { alias: { '@': path.resolve(import.meta.dirname, 'src') } },
+  resolve: { alias: { '@': path.resolve(import.meta.dirname, 'src') }, extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json', '.cjs'] },
   test: { environment: 'node', include: ['test/**/*.test.js'] },
 });

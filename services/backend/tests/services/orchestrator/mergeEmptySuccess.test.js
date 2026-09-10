@@ -6,7 +6,7 @@ const assert = require('node:assert');
 const {
   isEmptySuccess,
   formatEmptySuccessWarning,
-} = require('../../../src/services/orchestrator/mergeEmptySuccess');
+} = require('../../../src/services/domain/state/orchestrator/mergeEmptySuccess.js');
 
 // 切门辅助：保存/恢复 KHY_MERGE_EMPTY_SUCCESS。
 function withGate(value, fn) {

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tests for the s08 L3 "budget" preservation pass — persistOversizedToolResults.
+ * Tests for the s08 L3 "budget" preservation pass �?persistOversizedToolResults.
  *
  * The live cli/ai.js context path used to TRUNCATE or drop oversized tool
  * results, losing anything past the cap. This pass instead persists the full
@@ -11,7 +11,7 @@
  *     full original is recoverable from the on-disk file;
  *   - oversized structured tool_result blocks (content array) are persisted;
  *   - sub-threshold results and non-tool text are left untouched;
- *   - the pass is idempotent — a marker is skipped on re-run, no double persist;
+ *   - the pass is idempotent �?a marker is skipped on re-run, no double persist;
  *   - it never throws on malformed input.
  */
 
@@ -21,7 +21,7 @@ const fs = require('fs');
 const {
   persistOversizedToolResults,
   PERSIST_THRESHOLD_CHARS,
-} = require('../src/services/query/compactPipeline');
+} = require('../src/services/domain/query/query/compactPipeline.js');
 
 // A payload comfortably above the persistence threshold.
 const BIG = 'X'.repeat(PERSIST_THRESHOLD_CHARS + 1000);
@@ -32,7 +32,7 @@ function markerPath(content) {
   return m ? m[1] : null;
 }
 
-describe('persistOversizedToolResults — string-form tool results', () => {
+describe('persistOversizedToolResults �?string-form tool results', () => {
   test('persists an oversized [Tool execution results] message to disk', () => {
     const big = `[Tool execution results]\n${BIG}`;
     const messages = [
@@ -41,47 +41,47 @@ describe('persistOversizedToolResults — string-form tool results', () => {
     ];
     const res = persistOversizedToolResults(messages);
 
-    assert.strictEqual(res.persistedCount, 1);
-    assert.ok(res.freedChars > 0, 'reports freed characters');
+    expect(res.persistedCount).toBe(1);
+    expect(res.freedChars > 0).toBeTruthy();
 
     const replaced = messages[1].content;
-    assert.ok(replaced.includes('<persisted-output '), 'marker injected');
-    assert.ok(replaced.length < big.length, 'in-context content shrank');
+    expect(replaced).toContain('<persisted-output ');
+    expect(replaced.length < big.length).toBeTruthy();
 
     // Full original is recoverable from disk (preservation, not truncation).
     const p = markerPath(replaced);
-    assert.ok(p && fs.existsSync(p), 'persisted file exists on disk');
-    assert.strictEqual(fs.readFileSync(p, 'utf8'), big, 'full original preserved');
+    expect(p && fs.existsSync(p)).toBeTruthy();
+    expect(fs.readFileSync(p, 'utf8')).toBe(big);
 
     // original-length attribute reflects the true size.
-    assert.ok(replaced.includes(`original-length="${big.length}"`));
+    expect(replaced).toContain(`original-length="${big.length}"`);
   });
 
   test('recognizes the "Result:" prefix form', () => {
     const big = `Result: ${BIG}`;
     const messages = [{ role: 'user', content: big }];
     const res = persistOversizedToolResults(messages);
-    assert.strictEqual(res.persistedCount, 1);
-    assert.ok(messages[0].content.includes('<persisted-output '));
+    expect(res.persistedCount).toBe(1);
+    expect(messages[0].content).toContain('<persisted-output ');
   });
 
   test('leaves sub-threshold tool results untouched', () => {
     const small = `[Tool execution results]\n${SMALL}`;
     const messages = [{ role: 'user', content: small }];
     const res = persistOversizedToolResults(messages);
-    assert.strictEqual(res.persistedCount, 0);
-    assert.strictEqual(messages[0].content, small, 'unchanged');
+    expect(res.persistedCount).toBe(0);
+    expect(messages[0].content).toBe(small);
   });
 
   test('leaves oversized NON-tool text untouched', () => {
     const messages = [{ role: 'assistant', content: BIG }]; // no tool marker
     const res = persistOversizedToolResults(messages);
-    assert.strictEqual(res.persistedCount, 0);
-    assert.strictEqual(messages[0].content, BIG);
+    expect(res.persistedCount).toBe(0);
+    expect(messages[0].content).toBe(BIG);
   });
 });
 
-describe('persistOversizedToolResults — structured tool_result blocks', () => {
+describe('persistOversizedToolResults �?structured tool_result blocks', () => {
   test('persists an oversized tool_result block content', () => {
     const messages = [{
       role: 'user',
@@ -92,35 +92,36 @@ describe('persistOversizedToolResults — structured tool_result blocks', () => 
     }];
     const res = persistOversizedToolResults(messages);
 
-    assert.strictEqual(res.persistedCount, 1, 'only the oversized block persisted');
+    expect(res.persistedCount).toBe(1);
     const blocks = messages[0].content;
-    assert.ok(blocks[0].content.includes('<persisted-output '), 'big block replaced');
-    assert.strictEqual(blocks[1].content, SMALL, 'small block untouched');
+    expect(blocks[0].content).toContain('<persisted-output ');
+    expect(blocks[1].content).toBe(SMALL);
 
     const p = markerPath(blocks[0].content);
-    assert.ok(p && fs.existsSync(p));
-    assert.strictEqual(fs.readFileSync(p, 'utf8'), BIG);
+    expect(p && fs.existsSync(p)).toBeTruthy();
+    expect(fs.readFileSync(p, 'utf8')).toBe(BIG);
   });
 });
 
-describe('persistOversizedToolResults — idempotence & robustness', () => {
+describe('persistOversizedToolResults �?idempotence & robustness', () => {
   test('re-running does not persist an already-persisted marker again', () => {
     const messages = [{ role: 'user', content: `[Tool execution results]\n${BIG}` }];
     const first = persistOversizedToolResults(messages);
-    assert.strictEqual(first.persistedCount, 1);
+    expect(first.persistedCount).toBe(1);
     const afterFirst = messages[0].content;
 
     const second = persistOversizedToolResults(messages);
-    assert.strictEqual(second.persistedCount, 0, 'no double persist');
-    assert.strictEqual(messages[0].content, afterFirst, 'content unchanged on re-run');
+    expect(second.persistedCount).toBe(0);
+    expect(messages[0].content).toBe(afterFirst);
   });
 
   test('does not throw on non-array / empty / malformed input', () => {
-    assert.doesNotThrow(() => persistOversizedToolResults(null));
-    assert.doesNotThrow(() => persistOversizedToolResults(undefined));
-    assert.doesNotThrow(() => persistOversizedToolResults([]));
-    assert.doesNotThrow(() => persistOversizedToolResults([null, { role: 'user' }, {}]));
+    expect(() => persistOversizedToolResults(null)).not.toThrow();
+    expect(() => persistOversizedToolResults(undefined)).not.toThrow();
+    expect(() => persistOversizedToolResults([])).not.toThrow();
+    expect(() => persistOversizedToolResults([null, { role: 'user' }, {}])).not.toThrow();
     const r = persistOversizedToolResults(null);
-    assert.strictEqual(r.persistedCount, 0);
+    expect(r.persistedCount).toBe(0);
   });
 });
+

@@ -14,7 +14,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const aria = require('../../../src/services/browser/ariaSnapshot');
+const aria = require('../../../src/services/domain/desktop/browser/ariaSnapshot.js');
 
 // ── 门控 ────────────────────────────────────────────────────────────
 test('isEnabled: 默认开;0/false/off/no 关', () => {

@@ -48,7 +48,7 @@ function shouldSuppress(key) {
  * @param {{ dedupe?: boolean, duration?: number, action?: string, target?: string }} [opts]
  */
 export function notifyError(input, opts = {}) {
-  const env = _ensureKhy(input, opts);
+  const env = _ensureKhy(input);
   if (!env) return;
   // silent：连去重 map 都不写，避免污染。
   if (env.severity === 'silent') return;
@@ -80,7 +80,7 @@ export function notifyError(input, opts = {}) {
  * 把任意输入规整成 KhyErrorShape —— 后端 envelope / 原生 Error / 字符串皆可。
  * 没匹配上任何已知 shape 的就走兜底 UNKNOWN。
  */
-function _ensureKhy(input, opts) {
+function _ensureKhy(input) {
   if (!input) return null;
   // 已是 KhyError
   if (input && input.isKhyError === true && typeof input.code === 'string') return input;

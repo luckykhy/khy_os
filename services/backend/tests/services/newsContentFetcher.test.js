@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * newsContentFetcher.test.js â€” locks for the article-body enrichment helper.
+ * newsContentFetcher.test.js â€?locks for the article-body enrichment helper.
  *
  * Network is never touched: enrichArticles accepts an injected `fetchText`, and
  * the pure helpers (_condense/_runPool/_truthyDisabled) are exercised directly.
@@ -16,7 +16,7 @@ describe('newsContentFetcher.enrichArticles', () => {
       { title: 'A', content: '', url: 'https://news.example/a' },
       { title: 'B', content: 'short', url: 'https://news.example/b' },
     ];
-    const fetchText = jest.fn(async (url) => `FULL BODY for ${url} â€” long enough to replace the snippet.`);
+    const fetchText = jest.fn(async (url) => `FULL BODY for ${url} â€?long enough to replace the snippet.`);
 
     const { articles: out, meta } = await fetcher.enrichArticles(articles, { fetchText, minSnippet: 80, max: 5 });
 
@@ -51,7 +51,7 @@ describe('newsContentFetcher.enrichArticles', () => {
 
   test('never overwrites when fetch returns empty or shorter text (fail-soft)', async () => {
     const articles = [{ title: 'A', content: 'keep', url: 'https://news.example/a' }];
-    const fetchText = jest.fn(async () => ''); // fetch failed â†’ empty
+    const fetchText = jest.fn(async () => ''); // fetch failed â†?empty
 
     const { articles: out, meta } = await fetcher.enrichArticles(articles, { fetchText, minSnippet: 80 });
 
@@ -134,3 +134,4 @@ describe('newsContentFetcher internals', () => {
     expect(maxActive).toBeLessThanOrEqual(2);
   });
 });
+

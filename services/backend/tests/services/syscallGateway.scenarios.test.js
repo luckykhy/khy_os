@@ -22,7 +22,7 @@ const gateway = require('../../src/services/syscallGateway');
 const { classify, LEVELS, isExemptible } = require('../../src/services/syscallGateway/resourceClassifier');
 const { buildIntent, detectBypassMarkers, ACTIONS, SCOPES } = require('../../src/services/syscallGateway/intentSchema');
 const { route, DECISIONS } = require('../../src/services/syscallGateway/approvalRouter');
-const { PermissionCache } = require('../../src/services/syscallGateway/permissionCache');
+const { PermissionCache } = require('../../src/services/domain/system/syscallGateway/permissionCache');
 const { BreachBreaker } = require('../../src/services/syscallGateway/breachBreaker');
 
 const CWD = path.sep === '\\' ? 'C:\\proj' : '/proj';

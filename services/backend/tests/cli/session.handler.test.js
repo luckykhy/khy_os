@@ -93,7 +93,7 @@ describe('session handler', () => {
 
     const payload = JSON.parse(consoleLogSpy.mock.calls[0][0]);
     expect(payload).toMatchObject({ ok: true, action: 'list', scope: 'project', count: 2 });
-    expect(payload.sessions.map(s => s.sessionId)).toEqual(['sess-newest', 'sess-mid']);
+    expect(payload.sessions.map(s => s.sessionId)).toBe(['sess-newest', 'sess-mid']);
     expect(payload.sessions[0].index).toBe(1);
   });
 
@@ -136,7 +136,7 @@ describe('session handler', () => {
     seedSessions();
     expect(_resolveSessionRef('sess-mid', {}).session.sessionId).toBe('sess-mid');
     expect(_resolveSessionRef('sess-new', {}).session.sessionId).toBe('sess-newest');
-    // "sess-" is a prefix of two scoped sessions â†’ ambiguous
+    // "sess-" is a prefix of two scoped sessions â†?ambiguous
     expect(_resolveSessionRef('sess-', {}).error).toBe('ambiguous');
     expect(_resolveSessionRef('zzz', {}).error).toBe('not_found');
   });
@@ -230,3 +230,4 @@ describe('session handler', () => {
     expect(printSuccess).not.toHaveBeenCalled();
   });
 });
+

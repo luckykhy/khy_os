@@ -67,6 +67,9 @@ function QuestionPrompt({ request, onResolve }) {
   const input = (request && request.input) || {};
   const questions = Array.isArray(input.questions) ? input.questions.slice(0, 4) : [];
   const cardCount = questions.length;
+  // 提问上下文注记(toolUseLoop 经 questionQuality 兜底注入,确定性一行):把当前任务目标
+  // 显示在问题卡上方,让用户对照目标准确作答;为空时不渲染(逐字节保持今日版面)。
+  const contextNote = String(input.contextNote || '').trim();
 
   const [qIdx, setQIdx] = React.useState(0);
   // Per-card persistent state — left/right switching never loses a card's picks.
@@ -439,6 +442,10 @@ function QuestionPrompt({ request, onResolve }) {
     );
   };
 
+  const contextLine = contextNote
+    ? h(Text, { dimColor: true }, `  ${contextNote.replace(/\n/g, ' ')}`)
+    : null;
+
   // Build question header with chip/tag if present.
   const headerLine = qHeader
     ? h(
@@ -463,6 +470,7 @@ function QuestionPrompt({ request, onResolve }) {
       { flexDirection: 'column', width: '50%', marginRight: 2 },
       progressLine,
       headerLine,
+      contextLine,
       h(Box, { flexDirection: 'column' }, rows),
       renderTyping(),
       h(Text, { dimColor: true }, `  ${footer}`)
@@ -495,6 +503,7 @@ function QuestionPrompt({ request, onResolve }) {
     { flexDirection: 'column', borderStyle: 'round', borderColor: 'yellow', paddingX: 1 },
     progressLine,
     headerLine,
+    contextLine,
     h(Box, { flexDirection: 'column' }, rows),
     renderTyping(),
     h(Text, { dimColor: true }, `  ${footer}`)

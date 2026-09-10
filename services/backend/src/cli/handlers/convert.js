@@ -23,6 +23,7 @@
  */
 const { spawn } = require('child_process');
 const fs = require('fs');
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const os = require('os');
 const path = require('path');
 
@@ -377,4 +378,15 @@ async function handleConvert(parsed = {}) {
   return true;
 }
 
-module.exports = { handleConvert, runConvert };
+module.exports = {
+  handleConvert,
+  runConvert,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'convert',
+    aliases: ['conv', '转换'],
+    description: '文件格式转换：image↔PDF / PDF↔TXT / Word↔TXT 等（Capability 实例）',
+    usage: 'convert <subcommand> [args]',
+    category: 'dev',
+    handler: handleConvert,
+  },
+};

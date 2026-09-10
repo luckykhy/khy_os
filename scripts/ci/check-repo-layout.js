@@ -92,15 +92,20 @@ const LAYERS = {
   extensions: 'L5 内置拓展（随主包分发，契约见 [DESIGN-ARCH-069]）',
   tools: 'L6 独立开发者工具',
 };
-// 横切层：服务于所有层，不参与依赖判定（真源同上 第 1.2 节）。
+// 横切层：服务于所有层，不参与依赖判定（真源同上 第 1.2/1.4 节）。
 const CROSSCUTTING = {
   docs: '全部文档',
   scripts: '工程任务脚本',
   packaging: '打包清单与板块切分',
   _source: '加密源码快照与恢复说明',
+  // 根级例外目录（真源 [DESIGN-ARCH-068] 第 1.4 节）：不属 L0-L6，也不属
+  // scripts/packaging/docs 这类工程横切，是历史遗留的根级实体，登记在册以免
+  // 每次都被 layer-registry 判违规。
+  electron: '根级 Electron 桌面壳（根 package.json 的 electron:dev 入口）',
+  tests: '根级测试债务登记（DEBT.md，内容属文档性质，待迁 docs/05_TEST_测试/）',
 };
 // 构建/打包工具在仓库根生成的目录，不是源码层。保持封闭集合，新增项须有对应忽略规则。
-const GENERATED_TOP_LEVEL_DIRS = new Set(['build', 'dist', 'khy_os.egg-info']);
+const GENERATED_TOP_LEVEL_DIRS = new Set(['build', 'dist', 'dist-electron', 'khy_os.egg-info']);
 
 // ── 根目录白名单（真源 [MGMT-STD-001] 第 1.3 条，封闭、严禁扩张）──────────────
 // 说明性文件白名单：README 及其语言变体 + 平台/工具链按根路径强制加载的文件。

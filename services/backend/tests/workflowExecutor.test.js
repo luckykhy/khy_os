@@ -1,7 +1,7 @@
 /**
  * Unit tests for the native workflow DAG interpreter (workflowExecutor).
  *
- * Pure interpreter coverage with MOCKED primitives — no LLM / tools / DB / agent
+ * Pure interpreter coverage with MOCKED primitives �?no LLM / tools / DB / agent
  * engine booted. Verifies: pure helpers (interpolate / evalCondition / resolveArgs),
  * linear control flow, ifElse true/false branch selection, count loop iteration,
  * the askUserQuestion placeholder (auto-answer + skipped), node failure wrapping,
@@ -17,7 +17,7 @@ const {
   resolveArgs,
   getPath,
   MAX_STEPS,
-} = require('../src/services/workflow/workflowExecutor');
+} = require('../src/services/domain/project/workflow/workflowExecutor.js');
 
 // ── Graph builder helpers ────────────────────────────────────────────────────
 
@@ -265,7 +265,7 @@ describe('runGraph pause / resume (askUserQuestion)', () => {
       answerVar: 'choice',
       loopState: {},
     });
-    // Halts BEFORE the downstream prompt — no chat call yet.
+    // Halts BEFORE the downstream prompt �?no chat call yet.
     expect(calls.find((c) => c[0] === 'chat')).toBeUndefined();
     // Trailing log entry is the parked ask, marked awaiting_input.
     const last = res.log[res.log.length - 1];
@@ -310,7 +310,7 @@ describe('runGraph pause / resume (askUserQuestion)', () => {
     expect(first.status).toBe('paused');
     expect(first.pause.loopState).toEqual({ lp: { i: 1 } });
 
-    // Resume with the captured loopState — the loop must NOT restart from 0.
+    // Resume with the captured loopState �?the loop must NOT restart from 0.
     const second = await runGraph(graph, {
       primitives,
       pauseOnAsk: true,
@@ -389,7 +389,7 @@ describe('runGraph loops (forEach / nested / resume)', () => {
     });
     const res = await runGraph(graph, { primitives });
     expect(res.status).toBe('completed');
-    expect(bodyRuns).toBe(6); // 2 outer * 3 inner — inner counter reset each outer pass
+    expect(bodyRuns).toBe(6); // 2 outer * 3 inner �?inner counter reset each outer pass
   });
 
   test('forEach pause/resume: vars + loopState round-trip continues iteration', async () => {
@@ -431,7 +431,7 @@ describe('runGraph loops (forEach / nested / resume)', () => {
     expect(r2.pause.question).toBe('keep q?');
     expect(r2.pause.loopState).toEqual({ lp: { i: 2 } });
 
-    // Resume pass 2 — answers item 'q', loop drains, runs to completion.
+    // Resume pass 2 �?answers item 'q', loop drains, runs to completion.
     const r3 = await runGraph(graph, {
       primitives,
       vars: r2.vars,
@@ -444,7 +444,7 @@ describe('runGraph loops (forEach / nested / resume)', () => {
 
   test('nested loop pause/resume restores BOTH counters', async () => {
     let bodyRuns = 0;
-    // outer(2){ inner(2){ ask } } — pause fires inside the inner body.
+    // outer(2){ inner(2){ ask } } �?pause fires inside the inner body.
     const graph = {
       nodes: [
         node('s', 'start'),
@@ -464,7 +464,7 @@ describe('runGraph loops (forEach / nested / resume)', () => {
     };
     const { primitives } = mockPrimitives();
 
-    // First pause: outer i=1, inner i=1 — both active, both in the snapshot.
+    // First pause: outer i=1, inner i=1 �?both active, both in the snapshot.
     const first = await runGraph(graph, { primitives, pauseOnAsk: true });
     expect(first.status).toBe('paused');
     expect(first.pause.loopState).toEqual({ outer: { i: 1 }, inner: { i: 1 } });
@@ -489,3 +489,4 @@ describe('runGraph loops (forEach / nested / resume)', () => {
     expect(answers).toBe(4);
   });
 });
+

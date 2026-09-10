@@ -64,3 +64,4 @@ describe('backend AI provider native HTTP transport', () => {
     expect(options.headers['x-goog-api-key']).toBe('TOKEN');
   });
 });
+

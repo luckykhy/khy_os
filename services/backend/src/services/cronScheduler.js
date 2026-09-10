@@ -402,7 +402,7 @@ async function _executeJob(id, job, data) {
   if (job.contextFrom) {
     const sourceJob = data.jobs[job.contextFrom];
     if (sourceJob && sourceJob.lastResult) {
-      prompt = `Context from previous job:\n${sourceJob.lastResult}\n\n---\n\n${prompt}`;
+      prompt = `Context from previous job:\n${sourceJob.lastResult}\n\n${prompt}`;
     }
   }
 

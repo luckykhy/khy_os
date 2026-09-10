@@ -20,13 +20,19 @@ const catalog = require('./junkCatalog');
 
 /**
  * @param {object} scanResult - scanner.scan() 返回
- * @param {object} [opts] - {includeReview:boolean, categories?:string[]}
+ * @param {object} [opts] - {includeReview:boolean, categories?:string[], includeIds?:string[]}
  * @returns {object} plan
  */
 function buildPlan(scanResult, opts = {}) {
   const includeReview = !!opts.includeReview;
   const categoryFilter =
     Array.isArray(opts.categories) && opts.categories.length ? new Set(opts.categories) : null;
+  // includeIds：按稳定 id 精确点名若干 review 条目纳入本次计划。与 includeReview 的区别：
+  // includeReview 是「全部 review 一起放行」（会把回收站这类不可逆项也带进来），
+  // includeIds 让调用方只点名确实想要的条目（如 cleandisk 方法论的自动档：
+  // Windows Temp + 更新下载缓存），回收站仍留在 review 列。白名单之外的 id 无效。
+  const idFilter =
+    Array.isArray(opts.includeIds) && opts.includeIds.length ? new Set(opts.includeIds) : null;
 
   const selected = [];
   const review = [];
@@ -44,7 +50,7 @@ function buildPlan(scanResult, opts = {}) {
       }
       continue;
     }
-    if (c.safety === catalog.REVIEW && !includeReview) {
+    if (c.safety === catalog.REVIEW && !includeReview && !(idFilter && idFilter.has(c.id))) {
       review.push(c);
     } else {
       selected.push(c);

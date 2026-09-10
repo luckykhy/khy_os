@@ -3,7 +3,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 
-const core = require('../../../src/services/messaging/ilinkCore');
+const core = require('../../../src/services/domain/messaging/messaging/ilinkCore.js');
 
 // ── 门控与脱敏 ────────────────────────────────────────────────────────────────
 
@@ -28,7 +28,7 @@ test('maskToken: 绝不回显完整 token', () => {
 
 test('平台键是 ilink,不是 wechat/weixin(否则会串到企业微信配置)', () => {
   assert.strictEqual(core.PLATFORM, 'ilink');
-  const msgCore = require('../../../src/services/messaging/msgChannelCore');
+  const msgCore = require('../../../src/services/domain/messaging/messaging/msgChannelCore.js');
   // 前提校验:wechat/weixin 确实已被别名到 wecom,所以我们不能用这两个名字。
   assert.strictEqual(msgCore.normalizePlatform('wechat'), 'wecom');
   assert.strictEqual(msgCore.normalizePlatform('ilink'), null, 'ilink 不应撞上既有平台键');

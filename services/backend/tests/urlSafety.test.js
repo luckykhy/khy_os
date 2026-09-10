@@ -105,3 +105,4 @@ describe('assertPublicHttpUrlResolved', () => {
     await expect(assertPublicHttpUrlResolved('https://proxied.example/')).resolves.toBeUndefined();
   });
 });
+

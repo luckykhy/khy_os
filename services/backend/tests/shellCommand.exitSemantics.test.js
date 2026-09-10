@@ -1,7 +1,7 @@
 'use strict';
 
-// 端到端验证 shellCommand 主路径(默认 spawn path)对齐 CC 退出码语义:
-// grep 无匹配(exit 1)→ success:true + _exitNote「No matches found」,而非命令失败。
+// 端到端验�?shellCommand 主路�?默认 spawn path)对齐 CC 退出码语义:
+// grep 无匹�?exit 1)�?success:true + _exitNote「No matches found�?而非命令失败�?
 const shellCommandTool = require('../src/tools/shellCommand');
 
 const HAS_GREP = process.platform !== 'win32';
@@ -11,7 +11,7 @@ d('shellCommand exit-code semantics (CC commandSemantics parity)', () => {
   const originalEnv = { ...process.env };
   afterEach(() => { process.env = { ...originalEnv }; });
 
-  test('grep 无匹配(exit 1)默认门控开 → success:true + No matches found', async () => {
+  test('grep 无匹�?exit 1)默认门控开 �?success:true + No matches found', async () => {
     const result = await shellCommandTool.execute(
       { command: "printf 'hello\\nworld\\n' | grep zzz_no_such_pattern" },
       {}
@@ -24,7 +24,7 @@ d('shellCommand exit-code semantics (CC commandSemantics parity)', () => {
     expect(result.error).toBeUndefined();
   });
 
-  test('grep 有匹配(exit 0)→ success:true,输出含匹配行,无 note', async () => {
+  test('grep 有匹�?exit 0)�?success:true,输出含匹配行,�?note', async () => {
     const result = await shellCommandTool.execute(
       { command: "printf 'hello\\nworld\\n' | grep world" },
       {}
@@ -35,7 +35,7 @@ d('shellCommand exit-code semantics (CC commandSemantics parity)', () => {
     expect(result._exitNote).toBeUndefined();
   });
 
-  test('门控关 KHY_SHELL_EXIT_SEMANTICS=0 → grep 无匹配逐字节回退 success:false', async () => {
+  test('门控�?KHY_SHELL_EXIT_SEMANTICS=0 �?grep 无匹配逐字节回退 success:false', async () => {
     process.env.KHY_SHELL_EXIT_SEMANTICS = '0';
     const result = await shellCommandTool.execute(
       { command: "printf 'hi\\n' | grep zzz_no_such_pattern" },
@@ -47,7 +47,7 @@ d('shellCommand exit-code semantics (CC commandSemantics parity)', () => {
     expect(result.error).toBeDefined();
   });
 
-  test('未知命令真失败(exit≠0)仍 success:false(语义不放宽真错误)', async () => {
+  test('未知命令真失�?exit�?)�?success:false(语义不放宽真错误)', async () => {
     const result = await shellCommandTool.execute(
       { command: "sh -c 'exit 3'" },
       {}
@@ -56,3 +56,4 @@ d('shellCommand exit-code semantics (CC commandSemantics parity)', () => {
     expect(result.exitCode).toBe(3);
   });
 });
+

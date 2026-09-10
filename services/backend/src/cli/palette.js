@@ -7,47 +7,34 @@
  * 1. 检测终端色深 (TrueColor / 256色 / 16色)
  * 2. 根据色深降级 hex 颜色
  * 3. 为主题系统提供色彩转换工具
+ *
+ * 单一真源: 色深检测统一委托给 terminalCapabilities.js (CLI + TUI 共享)。
+ * 本模块保留 adaptColor / hexToRgb / rgbToAnsi256 / rgbToAnsi16 等纯转换函数。
  */
 
 /**
  * 检测当前终端的色深能力
- * 检测链: COLORTERM → WT_SESSION → TERM_PROGRAM → TERM
+ * 委托给 terminalCapabilities.js 单一真源,避免 CLI/TUI 检测口径分叉。
  *
  * @returns {'truecolor'|'ansi256'|'ansi16'}
  */
 function detectColorDepth() {
-  // Respect NO_COLOR (https://no-color.org/)
-  if (process.env.NO_COLOR != null) {
-    return 'ansi16';
-  }
-
-  const ct = (process.env.COLORTERM || '').toLowerCase();
-  if (ct.includes('truecolor') || ct.includes('24bit')) {
-    return 'truecolor';
-  }
-
-  // Windows Terminal 支持 TrueColor
-  if (process.env.WT_SESSION) {
-    return 'truecolor';
-  }
-
-  // 已知支持 TrueColor 的终端
-  const tp = (process.env.TERM_PROGRAM || '').toLowerCase();
-  if (/iterm|wezterm|vscode|warp|ghostty|kitty|alacritty|hyper/.test(tp)) {
-    return 'truecolor';
-  }
-
-  // TERM 环境变量
-  const term = (process.env.TERM || '').toLowerCase();
-  if (term.includes('256') || term.includes('xterm-256color')) {
+  try {
+    const caps = require('./tui/runtime/terminalCapabilities').detectCapabilities();
+    return caps.colorDepthString || 'ansi16';
+  } catch {
+    // terminalCapabilities 不可用时逐字节回退(保持历史行为)
+    if (process.env.NO_COLOR != null) return 'ansi16';
+    const ct = (process.env.COLORTERM || '').toLowerCase();
+    if (ct.includes('truecolor') || ct.includes('24bit')) return 'truecolor';
+    if (process.env.WT_SESSION) return 'truecolor';
+    const tp = (process.env.TERM_PROGRAM || '').toLowerCase();
+    if (/iterm|wezterm|vscode|warp|ghostty|kitty|alacritty|hyper/.test(tp)) return 'truecolor';
+    const term = (process.env.TERM || '').toLowerCase();
+    if (term.includes('256') || term.includes('xterm-256color')) return 'ansi256';
+    if (!term || term === 'dumb') return 'ansi16';
     return 'ansi256';
   }
-  if (!term || term === 'dumb') {
-    return 'ansi16';
-  }
-
-  // 默认 256 色
-  return 'ansi256';
 }
 
 /**

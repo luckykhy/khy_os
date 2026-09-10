@@ -180,7 +180,7 @@ test('decideOutcome: 门控关时进化字段被忽略(字节回退)', () => {
 
 // ── transactionRunner 集成:不可变改动 → 回滚(即使无可校验源)──────────
 test('transactionRunner: fix 改了不可变内核文件 → 回滚,filesModified 不计', async () => {
-  const { runRepairTransaction } = require('../src/services/selfRepair/transactionRunner');
+  const { runRepairTransaction } = require('../src/services/domain/maintenance/selfRepair/transactionRunner.js');
   let restored = false;
   const res = await runRepairTransaction({
     env: { ...ON, KHY_SELF_REPAIR_TRANSACTION: '1' },
@@ -195,7 +195,7 @@ test('transactionRunner: fix 改了不可变内核文件 → 回滚,filesModifie
 });
 
 test('transactionRunner: fix 只改可进化源 → 保留(不回滚)', async () => {
-  const { runRepairTransaction } = require('../src/services/selfRepair/transactionRunner');
+  const { runRepairTransaction } = require('../src/services/domain/maintenance/selfRepair/transactionRunner.js');
   let restored = false;
   const res = await runRepairTransaction({
     env: { ...ON, KHY_SELF_REPAIR_TRANSACTION: '1' },
@@ -295,7 +295,7 @@ test('decideOutcome: 非可越权(safety-machinery)即便列入白名单仍 keep
 });
 
 test('transactionRunner: 授权越权改内核 → 保留(不回滚)+ 审计留痕', async () => {
-  const { runRepairTransaction } = require('../src/services/selfRepair/transactionRunner');
+  const { runRepairTransaction } = require('../src/services/domain/maintenance/selfRepair/transactionRunner.js');
   let restored = false;
   const res = await runRepairTransaction({
     env: { ...OVR('kernel-abi'), KHY_SELF_REPAIR_TRANSACTION: '1' },

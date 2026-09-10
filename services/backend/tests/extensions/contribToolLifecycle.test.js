@@ -110,7 +110,7 @@ function ask(root, script, extraEnv = {}) {
   return JSON.parse(res.stdout.trim().split('\n').pop());
 }
 
-const R = "const r=require('./src/services/plugins/pluginContribResolver');";
+const R = "const r=require('../../src/services/domain/extensions/plugins/pluginContribResolver.js');";
 const E = "const e=require('./src/services/extensions/extensionRoots');";
 const MARK = "require('fs').writeFileSync(process.env.KHY_TEST_MARK,'ran');";
 const RAN = "ran:require('fs').existsSync(process.env.KHY_TEST_MARK)";

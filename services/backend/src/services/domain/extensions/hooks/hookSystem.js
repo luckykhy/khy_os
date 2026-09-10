@@ -2,7 +2,7 @@
  * Hook System — unified facade for the hooks subsystem.
  *
  * Usage:
- *   const hookSystem = require('../../../../cli/hooks/hookSystem');
+ *   const hookSystem = require('.../services/domain/extensions/hooks/hookSystem');
  *   hookSystem.init(projectDir);
  *
  *   // Before tool execution:
@@ -12,8 +12,11 @@
  *   // After tool execution:
  *   await hookSystem.trigger('PostToolUse', { toolName, result });
  */
-const registry = require('../../../../cli/hooks/hookRegistry');
-const { runHooks } = require('../../../../cli/hooks/hookRunner');
+// Sibling requires within the same layer — the implementation must not depend on
+// the cli/hooks back-compat shims (that would be a services→cli layering inversion
+// plus a shim↔impl require cycle).
+const registry = require('./hookRegistry');
+const { runHooks } = require('./hookRunner');
 
 let _initialized = false;
 

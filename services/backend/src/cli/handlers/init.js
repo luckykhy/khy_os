@@ -11,6 +11,7 @@
 
 // ── Imports ──
 
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const { execFileSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
@@ -1921,4 +1922,10 @@ module.exports = {
   runDoctorChecks,
   inspectClaudeSettingsConflict,
   fixClaudeSettingsConflict,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'init',
+    description: 'init command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleInit(parsed.options),
+  },
 };

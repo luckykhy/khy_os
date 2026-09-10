@@ -19,6 +19,7 @@
  *   companion heartbeat [status|run|reset]   (declarative HEARTBEAT.md patrol)
  */
 
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const chalk = require('chalk').default || require('chalk');
 const { printSuccess, printError, printInfo, printTable, displayWidth } = require('../formatters');
 
@@ -333,4 +334,13 @@ async function handleCompanion(subCommand, args, options = {}) {
   }
 }
 
-module.exports = { handleCompanion };
+module.exports = {
+  handleCompanion
+,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'companion',
+    description: 'companion command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => { const sub = parsed.subCommand || (parsed.args && parsed.args[0]) || null; const rest = parsed.subCommand ? parsed.args : (parsed.args || []).slice(1); return await handleCompanion(sub, rest, parsed.options); },
+  },
+};

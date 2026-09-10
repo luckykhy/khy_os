@@ -1,14 +1,14 @@
 'use strict';
 
 /**
- * Unit tests for memoryTier.js â€” the memory layering model (pure leaf).
+ * Unit tests for memoryTier.js â€?the memory layering model (pure leaf).
  *
  * Covers the five-part user goal:
  *   1/2/3) tier classification (short_term / cross_session / permanent), from an
  *          explicit `tier`, derived from `type`, or the default;
- *   4)     decideUpdate â€” same-name supersede vs unchanged-body skip vs insert;
- *   5)     forget policy + isForgetEligible â€” permanent is immune, others age out;
- *          plus promote() and the KHY_MEMORY_TIERS env gate (off â‡’ eligible=true,
+ *   4)     decideUpdate â€?same-name supersede vs unchanged-body skip vs insert;
+ *   5)     forget policy + isForgetEligible â€?permanent is immune, others age out;
+ *          plus promote() and the KHY_MEMORY_TIERS env gate (off â‡?eligible=true,
  *          byte-identical fallback behavior).
  *
  * Pure module: no disk, no module reset needed; we only toggle one env var.
@@ -121,7 +121,7 @@ describe('memoryTier.decideUpdate', () => {
     expect(d.action).toBe('skip');
   });
 
-  test('supersede when same name but different body â€” keeps the more durable tier', () => {
+  test('supersede when same name but different body â€?keeps the more durable tier', () => {
     const d = T.decideUpdate(
       { name: 'pref', body: 'old', type: 'user' },          // permanent
       { name: 'pref', body: 'new info', type: 'feedback' }, // cross_session
@@ -148,12 +148,13 @@ describe('memoryTier.decideUpdate', () => {
 });
 
 describe('memoryTier.promote', () => {
-  test('walks short_term â†’ cross_session â†’ permanent, saturating at top', () => {
+  test('walks short_term â†?cross_session â†?permanent, saturating at top', () => {
     expect(T.promote('short_term')).toBe(T.TIERS.CROSS_SESSION);
     expect(T.promote('cross_session')).toBe(T.TIERS.PERMANENT);
     expect(T.promote('permanent')).toBe(T.TIERS.PERMANENT);
   });
   test('invalid input promotes from the default tier', () => {
-    expect(T.promote('garbage')).toBe(T.TIERS.PERMANENT); // default cross_session â†’ permanent
+    expect(T.promote('garbage')).toBe(T.TIERS.PERMANENT); // default cross_session â†?permanent
   });
 });
+

@@ -17,6 +17,7 @@ function fmt() {
   return require('../formatters');
 }
 
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const registry = () => require('../../services/management');
 
 /** 解析 `key=value` 形式的位置参数为 args 对象；数字串转 number。 */
@@ -163,4 +164,15 @@ function _renderResult(resourceId, op, result, f) {
   console.log(JSON.stringify(result, null, 2));
 }
 
-module.exports = { handleManage, _parseKvArgs };
+module.exports = {
+  handleManage,
+  _parseKvArgs,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'manage',
+    aliases: ['mgmt', '管理'],
+    description: '统一管理平面：AI 网关/对话/项目/代理/提示词等运维操作',
+    usage: 'manage <resource> <action> [args]',
+    category: 'system',
+    handler: handleManage,
+  },
+};

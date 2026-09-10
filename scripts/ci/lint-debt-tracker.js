@@ -78,13 +78,13 @@ function main() {
   
   // Output summary
   console.log(`\n[lint-debt-tracker] Lint Debt Report`);
-  console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  console.log(`--------------------------------`);
   console.log(`Total issues:    ${debt.total}`);
   console.log(`Errors:          ${debt.errors}`);
   console.log(`Warnings:        ${debt.warnings}`);
   console.log(`Affected files:  ${debt.files}`);
   console.log(`Timestamp:       ${debt.timestamp}`);
-  console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+  console.log(`--------------------------------\n`);
   
   // Check if debt increased from last run
   try {

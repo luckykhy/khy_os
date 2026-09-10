@@ -15,7 +15,7 @@ const assert = require('node:assert');
 const {
   detectFileConflicts,
   formatConflictWarning,
-} = require('../../../src/services/orchestrator/mergeFileConflicts');
+} = require('../../../src/services/domain/state/orchestrator/mergeFileConflicts.js');
 
 // 切门 helper：设定 KHY_MERGE_FILE_CONFLICT，跑 fn，恢复原值。
 function withGate(value, fn) {

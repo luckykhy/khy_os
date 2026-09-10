@@ -205,7 +205,7 @@ function detectMojibake(text) {
   return { type: 'mojibake', replacement: repl, misdecode: mis, length: s.length };
 }
 
-// ── 输出不全 / 结构性截断检测 ────────────────────────────────────────────────
+  // ── 输出不全 / 结构性截断检测 ────────────────────────────────────────────────
 // 代码围栏奇数个 ``` = 恰有一个开围栏没闭合(结构性不完整,可修)。已知的截断尾注
 // (salvage 兜底加的「内容较长，已截断」)是预期行为,不算 bug。
 const _TRUNCATION_MARKERS = /内容较长，已截断|\[输出可能不完整\]/;
@@ -223,6 +223,40 @@ function detectIncomplete(text) {
   return { type: 'incomplete', reason: 'unbalanced-fence', knownTruncation };
 }
 
+// ── 下划线滥用检测(对抗式自愈信号) ──────────────────────────────────────────────
+// 当下划线密度高且绝大多数是词内用法(snake_case/路径)而非 Markdown 强调时,标记为滥用。
+// 此信号为 info 级(渲染层已通过 adaptiveUnderscorePolicy 自动修复),仅用于 health/doctor
+// 被动呈现,让用户知道「为什么某段下划线没被渲染成强调」。
+const _ABUSE_MIN_TOTAL = 5;
+const _ABUSE_SNAKE_RATIO = 0.6;
+const _SNAKE_UNDERSCORE_RE = /\w(?:_+\w)+/g;
+
+function detectUnderscoreAbuse(text) {
+  const s = String(text || '');
+  if (!s) {
+    return null;
+  }
+  const total = (s.match(/_/g) || []).length;
+  if (total < _ABUSE_MIN_TOTAL) {
+    return null;
+  }
+  const snakeMatches = s.match(_SNAKE_UNDERSCORE_RE) || [];
+  let snake = 0;
+  for (const m of snakeMatches) {
+    snake += (m.match(/_/g) || []).length;
+  }
+  const ratio = total > 0 ? snake / total : 0;
+  if (ratio < _ABUSE_SNAKE_RATIO) {
+    return null;
+  }
+  return {
+    type: 'underscore-abuse',
+    total,
+    snake,
+    ratio: Math.round(ratio * 100) / 100,
+  };
+}
+
 /** 纯检测:返回软 bug 信号数组(不修改、不落盘)。 */
 function inspectText(text) {
   const signals = [];
@@ -234,6 +268,10 @@ function inspectText(text) {
   if (inc) {
     signals.push(inc);
   }
+  const abuse = detectUnderscoreAbuse(text);
+  if (abuse) {
+    signals.push(abuse);
+  }
   return signals;
 }
 
@@ -241,6 +279,7 @@ function inspectText(text) {
  * 纯修复尝试:对每个信号尝试「简单修复」。返回 { text, repaired:[], unrepaired:[] }。
  *   - mojibake:零星替换符(占比 < 阈值)→ 直接 strip,判为已修;整段误解码/高占比 → 不可修。
  *   - incomplete(未闭合围栏)→ 末尾补一行 ``` 闭合,判为已修。
+ *   - underscore-abuse:渲染层已通过 adaptiveUnderscorePolicy 自动抑制,此处仅记录,不修文本。
  */
 function repairText(text, signals, env = process.env) {
   let out = String(text || '');
@@ -264,6 +303,9 @@ function repairText(text, signals, env = process.env) {
     } else if (sig.type === 'incomplete') {
       out = out.replace(/\s*$/, '') + '\n```';
       repaired.push({ ...sig, fix: 'closed-fence' });
+    } else if (sig.type === 'underscore-abuse') {
+      // 渲染层已通过 adaptiveUnderscorePolicy 自动抑制下划线强调,无需再修文本。
+      repaired.push({ ...sig, fix: 'adaptive-underscore-suppressed' });
     } else {
       unrepaired.push(sig);
     }
@@ -480,6 +522,7 @@ module.exports = {
   isEnabled,
   detectMojibake,
   detectIncomplete,
+  detectUnderscoreAbuse,
   inspectText,
   repairText,
   guardText,

@@ -1,5 +1,4 @@
 'use strict';
-
 /**
  * Round-16 regression: truncateToWidth ANSI-branch DoS + correctness guard.
  *
@@ -26,99 +25,95 @@
  * For any ANSI-free input it is byte-identical to the legacy branch (the ESC
  * branch is never taken). Off -> legacy quadratic/leaky branch (load-bearing).
  */
-
-const test = require('node:test');
-const assert = require('node:assert');
 const path = require('node:path');
-
 const MOD = path.join(__dirname, '..', 'src', 'cli', 'formatters.js');
-
 function load(gate) {
   delete require.cache[require.resolve(MOD)];
   if (gate === undefined) delete process.env.KHY_TRUNCATE_ANSI_LINEAR;
   else process.env.KHY_TRUNCATE_ANSI_LINEAR = gate;
   return require(MOD);
 }
-
 test.afterEach(() => { delete process.env.KHY_TRUNCATE_ANSI_LINEAR; });
-
 function escRun(n) {
   return '\x1b'.repeat(n) + 'hello world this text is definitely wider than the cap';
 }
 
-test('a huge leading run of raw ESC bytes no longer freezes (was ~55s at 80k)', () => {
-  const F = load(undefined);
-  const t0 = process.hrtime.bigint();
-  const out = F.truncateToWidth(escRun(200000), 25);
-  const ms = Number(process.hrtime.bigint() - t0) / 1e6;
-  assert.ok(ms < 1500, `should stay linear, took ${ms}ms`);
-  // Still truncates the width-bearing tail to the cap.
-  assert.ok(F.displayWidth(out) <= 25);
-  assert.ok(out.endsWith('...'), 'ellipsis appended past the cap');
-});
+describe('Truncate To Width Ansi Guard', () => {
+  test('a huge leading run of raw ESC bytes no longer freezes (was ~55s at 80k)', () => {
+      const F = load(undefined);
+      const t0 = process.hrtime.bigint();
+      const out = F.truncateToWidth(escRun(200000), 25);
+      const ms = Number(process.hrtime.bigint() - t0) / 1e6;
+      expect(ms < 1500).toBeTruthy();
+      // Still truncates the width-bearing tail to the cap.
+      expect(F.displayWidth(out).toBeTruthy() <= 25);
+      expect(out.endsWith('...')).toBeTruthy();
+  });
 
-test('ANSI-free inputs are byte-identical gate on vs off (real-caller case)', () => {
-  const on = load(undefined);
-  const off = load('0');
-  const samples = [
-    'short',
-    'a'.repeat(200),
-    '中文测试很长很长的一段文字需要被截断处理掉尾巴',
-    'mixed 中英 abc def ghijklmnop qrstuvwxyz 0123456789',
-    'path/to/some/really/deeply/nested/file/name.tsx',
-    'emoji 😀😁😂 and text that overflows the small width budget here',
-    '',
-    '组合字符 test',
-  ];
-  for (const s of samples) {
-    for (const w of [5, 10, 25, 30, 36, 119]) {
-      assert.strictEqual(
-        on.truncateToWidth(s, w),
-        off.truncateToWidth(s, w),
-        `mismatch for ${JSON.stringify(s.slice(0, 24))} @ ${w}`);
-    }
-  }
-});
+  test('ANSI-free inputs are byte-identical gate on vs off (real-caller case)', () => {
+      const on = load(undefined);
+      const off = load('0');
+      const samples = [
+        'short',
+        'a'.repeat(200),
+        '中文测试很长很长的一段文字需要被截断处理掉尾巴',
+        'mixed 中英 abc def ghijklmnop qrstuvwxyz 0123456789',
+        'path/to/some/really/deeply/nested/file/name.tsx',
+        'emoji 😀😁😂 and text that overflows the small width budget here',
+        '',
+        '组合字符 test',
+      ];
+      for (const s of samples) {
+        for (const w of [5, 10, 25, 30, 36, 119]) {
+          assert.strictEqual(
+            on.truncateToWidth(s, w),
+            off.truncateToWidth(s, w),
+            `mismatch for ${JSON.stringify(s.slice(0, 24))} @ ${w}`);
+        }
+      }
+  });
 
-test('CSI-SGR colour sequences are preserved verbatim at zero width', () => {
-  const F = load(undefined);
-  const colored = '\x1b[31mRED\x1b[0m plus a long tail that must be truncated for sure';
-  const out = F.truncateToWidth(colored, 10);
-  // Colour codes kept, only visible glyphs count toward the width budget.
-  assert.ok(out.includes('\x1b[31m'), 'opening SGR preserved');
-  assert.ok(out.includes('RED'), 'visible glyphs preserved');
-  assert.ok(out.endsWith('...'), 'ellipsis appended past the visible cap');
-  assert.ok(F.displayWidth(out) <= 10, `visible width bounded, got ${F.displayWidth(out)}`);
-});
+  test('CSI-SGR colour sequences are preserved verbatim at zero width', () => {
+      const F = load(undefined);
+      const colored = '\x1b[31mRED\x1b[0m plus a long tail that must be truncated for sure';
+      const out = F.truncateToWidth(colored, 10);
+      // Colour codes kept, only visible glyphs count toward the width budget.
+      expect(out.includes('\x1b[31m')).toBeTruthy();
+      expect(out.includes('RED')).toBeTruthy();
+      expect(out.endsWith('...')).toBeTruthy();
+      expect(F.displayWidth(out) <= 10).toBeTruthy();
+  });
 
-test('the second and later ESC no longer mis-resolves to the first ESC offset', () => {
-  const F = load(undefined);
-  // Two separate colour spans; legacy indexOf would always slice from the FIRST
-  // ESC, so the second span was mis-handled. Correct path keeps both verbatim.
-  const s = '\x1b[31mAA\x1b[0m BB \x1b[32mCC\x1b[0m and a tail wide enough to truncate';
-  const out = F.truncateToWidth(s, 20);
-  assert.ok(out.includes('\x1b[31m') && out.includes('\x1b[32m'), 'both SGR spans handled');
-});
+  test('the second and later ESC no longer mis-resolves to the first ESC offset', () => {
+      const F = load(undefined);
+      // Two separate colour spans; legacy indexOf would always slice from the FIRST
+      // ESC, so the second span was mis-handled. Correct path keeps both verbatim.
+      const s = '\x1b[31mAA\x1b[0m BB \x1b[32mCC\x1b[0m and a tail wide enough to truncate';
+      const out = F.truncateToWidth(s, 20);
+      expect(out.includes('\x1b[31m') && out.includes('\x1b[32m')).toBeTruthy();
+  });
 
-test('gate disabled reproduces the legacy quadratic cost (load-bearing)', () => {
-  const off = load('0');
-  const t0 = process.hrtime.bigint();
-  off.truncateToWidth(escRun(20000), 25);
-  const offMs = Number(process.hrtime.bigint() - t0) / 1e6;
+  test('gate disabled reproduces the legacy quadratic cost (load-bearing)', () => {
+      const off = load('0');
+      const t0 = process.hrtime.bigint();
+      off.truncateToWidth(escRun(20000), 25);
+      const offMs = Number(process.hrtime.bigint() - t0) / 1e6;
+    
+      const on = load(undefined);
+      const t1 = process.hrtime.bigint();
+      on.truncateToWidth(escRun(20000), 25);
+      const onMs = Number(process.hrtime.bigint() - t1) / 1e6;
+    
+      assert.ok(onMs * 10 < offMs || offMs > 200,
+        `expected quadratic OFF (${offMs}ms) >> linear ON (${onMs}ms)`);
+  });
 
-  const on = load(undefined);
-  const t1 = process.hrtime.bigint();
-  on.truncateToWidth(escRun(20000), 25);
-  const onMs = Number(process.hrtime.bigint() - t1) / 1e6;
+  test('disable-token variants all select the legacy branch', () => {
+      for (const tok of ['0', 'false', 'off', 'no', 'OFF']) {
+        expect(load(tok)._truncateAnsiLinearEnabled()).toBe(false, `token ${tok}`);
+      }
+      expect(load(undefined)._truncateAnsiLinearEnabled()).toBe(true);
+      expect(load('1')._truncateAnsiLinearEnabled()).toBe(true);
+  });
 
-  assert.ok(onMs * 10 < offMs || offMs > 200,
-    `expected quadratic OFF (${offMs}ms) >> linear ON (${onMs}ms)`);
-});
-
-test('disable-token variants all select the legacy branch', () => {
-  for (const tok of ['0', 'false', 'off', 'no', 'OFF']) {
-    assert.strictEqual(load(tok)._truncateAnsiLinearEnabled(), false, `token ${tok}`);
-  }
-  assert.strictEqual(load(undefined)._truncateAnsiLinearEnabled(), true);
-  assert.strictEqual(load('1')._truncateAnsiLinearEnabled(), true);
 });

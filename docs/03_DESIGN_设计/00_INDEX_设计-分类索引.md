@@ -77,6 +77,7 @@
 | [DESIGN-ARCH-072] 任务最小闭环-裁决接线与交付台账.md | 收尾仲裁门三态裁决+交付台账（任务最小闭环单一真源） | 定稿 |
 | [DESIGN-ARCH-073] khyos 核心任务循环-稳定交付总纲.md | 受理→交付核心循环运行时契约（072 上位总纲） | 定稿 |
 | [DESIGN-ARCH-074] khyos 账号体系收口-用户名唯一键 alias 软冲突 密码必填 局域网登录.md | 账号=用户名；alias 软冲突；密码必填；ai-backend LAN 暴露（账号体系单一真源） | 定稿 |
+| [DESIGN-ARCH-078] khyos桌面端与CLI-TUI互联共享方案.md | 桌面端↔CLI/TUI 互联：发现链(backend_runtime.json)+会话/供应商真源归一+bridge(9222) 实时共享，P0-P4 分期落地 | 方案 |
 | [DESIGN-OTHER-001] Khyos-数学重塑-实施提示词链.md | 数学重塑提示词链 | 定稿 |
 | [DESIGN-OTHER-002] _cbssp_分阶段防闪退提示词.md | 分阶段防闪退提示 | 草稿 |
 | [DESIGN-OTHER-003] khy-系统提示词结构图.md | 系统提示词结构图 | 定稿 |

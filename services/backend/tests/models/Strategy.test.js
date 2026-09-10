@@ -52,3 +52,4 @@ describe('Strategy model', () => {
     expect(Strategy.rawAttributes.language).toBeDefined();
   });
 });
+

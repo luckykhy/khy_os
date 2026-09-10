@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * news.test.js — unit locks for the `news` tool (src/tools/news.js).
+ * news.test.js �?unit locks for the `news` tool (src/tools/news.js).
  *
  * The tool is a thin orchestrator over webSearchService (always-on backbone)
  * and finlightNewsService (optional financial enrichment, gated on
@@ -94,7 +94,7 @@ describe('news tool', () => {
     expect(res.meta.finlightAvailable).toBe(true);
   });
 
-  // ── 3. Financial query but NO key → graceful degrade ──────────────────
+  // ── 3. Financial query but NO key �?graceful degrade ──────────────────
   test('does not call Finlight when key absent, even for explicit financial query', async () => {
     mockSearch.mockResolvedValue({
       success: true,
@@ -187,3 +187,4 @@ describe('news tool', () => {
     expect(res.meta.contentFetch).toBeUndefined();
   });
 });
+

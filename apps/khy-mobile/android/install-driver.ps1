@@ -1,7 +1,8 @@
 $ErrorActionPreference = "Stop"
 
 # Install Google USB driver to driver store (needs admin)
-$infPath = "C:\Users\25789\.khyos\android_sdk\extras\google\usb_driver\android_winusb.inf"
+$driverBase = "$env:USERPROFILE\.khyos\android_sdk\extras\google\usb_driver"
+$infPath = "$driverBase\android_winusb.inf"
 Write-Host "=== Installing Google USB driver to driver store ==="
 Write-Host "INF: $infPath"
 
@@ -29,9 +30,9 @@ $store = "$env:TEMP\googledriver"
 if (Test-Path $store) { Remove-Item -Recurse -Force $store }
 New-Item -ItemType Directory -Path $store | Out-Null
 Copy-Item "$infPath" "$store\android_winusb.inf" -Force
-Copy-Item "C:\Users\25789\.khyos\android_sdk\extras\google\usb_driver\amd64" "$store\amd64" -Recurse -Force
-Copy-Item "C:\Users\25789\.khyos\android_sdk\extras\google\usb_driver\i386" "$store\i386" -Recurse -Force
-Copy-Item "C:\Users\25789\.khyos\android_sdk\extras\google\usb_driver\*.cat" "$store" -Force
+Copy-Item "$driverBase\amd64" "$store\amd64" -Recurse -Force
+Copy-Item "$driverBase\i386" "$store\i386" -Recurse -Force
+Copy-Item "$driverBase\*.cat" "$store" -Force
 
 # Use pnputil to add to driver store
 $output = pnputil /add-driver "$store\android_winusb.inf" /install 2>&1

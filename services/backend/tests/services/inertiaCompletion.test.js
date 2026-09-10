@@ -19,7 +19,7 @@
 const { describe, test, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
 
-const inertia = require('../../src/services/query/inertiaCompletion');
+const inertia = require('../../src/services/domain/query/query/inertiaCompletion.js');
 
 const ENV_KEY = 'KHY_INERTIA_COMPLETION';
 afterEach(() => { delete process.env[ENV_KEY]; });

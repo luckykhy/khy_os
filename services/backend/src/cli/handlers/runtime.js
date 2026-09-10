@@ -17,6 +17,7 @@
  */
 'use strict';
 
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const fs = require('fs');
 const path = require('path');
 
@@ -230,4 +231,12 @@ async function handleRuntime(subCommand, args = [], options = {}) {
   runtimeStatus();
 }
 
-module.exports = { handleRuntime };
+module.exports = {
+  handleRuntime,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'runtime',
+    description: 'runtime command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleRuntime(parsed.subCommand, parsed.args, parsed.options),
+  },
+};

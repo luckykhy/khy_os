@@ -1,43 +1,22 @@
 'use strict';
 
 /**
- * diskCleanupClarify.js — 「清理 C/D 盘前,把扫描深度与颗粒细度交给用户决定」纯叶子。
+ * diskCleanupClarify.js — 磁盘清理「选项单一真源」：方式/深度/颗粒三组档位定义 +
+ * 「选项 → 真实工具参数」归一 + scan 结果整形。纯叶子:无 I/O、无随机、绝不抛。
  *
- * 诉求(goal 2026-07-03「让我清理 c,d 盘时扫描深度与颗粒细度应给出用户多个选项由用户决定」):
- *   DiskCleanup 工具已存在(scan/plan/clean),但「清理C盘/D盘」是**清晰**指令 → 既有
- *   clarificationCards(只在提示词**模糊**时触发)不会弹卡,于是 khy 直接按固定全局阈值扫,
- *   用户对「扫多深、结果多细」毫无选择。本叶子补一条**话题定向**的澄清指令:检测到清盘意图时,
- *   提示模型**先用 AskUserQuestion** 把「扫描深度」「颗粒细度」作为选项卡交给用户选,再据选择跑。
+ * 触发模型（为什么这里没有意图检测）：
+ *   「交互式分组清理」等选项由 DiskCleanupTool 的工具面自然承载——工具描述常驻模型
+ *   上下文，任何措辞的清理请求（自然语言/命令/追问）进入清理情景时模型都能看到选项
+ *   并用 AskUserQuestion 交给用户选。早期版本用「清理动词+磁盘目标」正则检测意图、
+ *   把选项卡文案经 directiveComposer 注入系统提示词——那是关键词硬编码：换个措辞
+ *   （如「C盘快满了」）就漏触发。已拆除，选项文案只从本模块渲染（DiskCleanupTool.prompt
+ *   消费 CLEANUP_MODE_OPTIONS / SCAN_DEPTH_OPTIONS / GRANULARITY_OPTIONS）。
  *
- * 与 clarificationCards 正交互补:那条治「提示词模糊」,这条治「清盘这类具体动作缺参数选择」。
- * 复用同款注入路径(directiveComposer → 系统提示词),门控 KHY_DISK_CLEANUP_CLARIFY 默认开。
- *
- * 本叶子还是「选项 → 真实工具参数」的**单一真源**:
- *   - SCAN_DEPTH_OPTIONS：扫描深度档 → scanner.measure 的递归深度上限(maxDepth)。
- *   - GRANULARITY_OPTIONS：颗粒细度档 → DiskCleanupTool scan 输出的聚合粒度。
- *   - resolveScanDepth / resolveGranularity：把工具收到的参数归一到上述档位(缺省→null 字节回退)。
- *   - shapeScanCandidates：按颗粒度聚合 scan 候选(coarse 按大类汇总 / fine 逐项按体积明细)。
- * 让「弹卡」与「兑现」共用一份定义,选项文案和参数映射绝不各写一套而漂移。
- *
- * 纯叶子:无 I/O、无随机、绝不抛。
+ * 诉求溯源(goal 2026-07-03「让我清理 c,d 盘时扫描深度与颗粒细度应给出用户多个选项由用户决定」):
+ *   深度/颗粒两维度的选项卡说明同样渲染进工具说明;resolveScanDepth / resolveGranularity
+ *   把工具收到的参数归一到档位(缺省→null/standard 字节回退);shapeScanCandidates 按颗粒度
+ *   聚合 scan 候选。让「弹卡」与「兑现」共用一份定义,选项文案和参数映射绝不各写一套而漂移。
  */
-
-const OFF_VALUES = ['0', 'false', 'off', 'no'];
-
-function _flagOn(raw, dflt = true) {
-  const v = String(raw == null ? '' : raw)
-    .trim()
-    .toLowerCase();
-  if (v === '') {
-    return dflt;
-  }
-  return !OFF_VALUES.includes(v);
-}
-
-/** 门控:清盘澄清指令(默认开;仅显式 falsy 关 → 不注入,系统提示字节不变)。 */
-function isEnabled(env = process.env) {
-  return _flagOn(env && env.KHY_DISK_CLEANUP_CLARIFY, true);
-}
 
 // ── 选项 SSOT:扫描深度档(→ scanner.measure 递归深度上限) ─────────────────
 // depth 值对齐 junkCatalog.thresholds.maxScanDepth 默认 6:standard 即默认档。
@@ -67,82 +46,28 @@ const GRANULARITY_OPTIONS = Object.freeze([
   { value: 'fine', label: '逐项明细', description: '按体积从大到小排序,并保留被保护/跳过原因' },
 ]);
 
-// ── 意图检测:清理动作 + 磁盘/盘符目标(两者都出现才触发,零假阳性偏向) ─────
-const _CLEAN_VERB_RE =
-  /清理|清空|清一?下|清盘|清垃圾|腾(?:出)?空间|释放空间|清干净|clean(?:\s*up)?|free\s*(?:up\s*)?space/i;
-const _DISK_TARGET_RE =
-  /[A-Za-z]\s*盘|磁盘|硬盘|系统盘|盘符|回收站|缓存|垃圾文件|drive|disk|\b[A-Za-z]:\b/i;
-
-/**
- * 是否为「清理磁盘」意图。要求同时出现清理动作与磁盘目标,保守偏向不误触。
- * @param {string} text
- * @returns {boolean}
- */
-function detectDiskCleanupIntent(text) {
-  const t = String(text || '');
-  if (!t) {
-    return false;
-  }
-  try {
-    return _CLEAN_VERB_RE.test(t) && _DISK_TARGET_RE.test(t);
-  } catch {
-    return false;
-  }
-}
-
-/**
- * 构建「清盘前先让用户选扫描深度与颗粒细度」的中文系统指令(确定性,无随机)。
- * @returns {string}
- */
-function buildDiskCleanupDirective() {
-  const depthLines = SCAN_DEPTH_OPTIONS.map(
-    (o) => `     · ${o.label} → DiskCleanup 传 maxDepth:${o.depth}(${o.description})`
-  );
-  const granLines = GRANULARITY_OPTIONS.map(
-    (o) => `     · ${o.label} → DiskCleanup 传 granularity:"${o.value}"(${o.description})`
-  );
-  const lines = [];
-  lines.push('## 清理 C/D 盘 —— 扫描深度与颗粒细度交给用户决定');
-  lines.push(
-    '用户想清理磁盘(C盘/D盘等)。**在真正扫描/清理之前**,先用 AskUserQuestion 把两个关键维度作为选项卡交给用户选择,别擅自用默认档一扫了事:'
-  );
-  lines.push(
-    '1. 「扫描深度」卡(header 如「扫描深度」):至少给下面这几档,**把推荐档放第一并标「(推荐)」**,description 里说清各档的取舍:'
-  );
-  lines.push(...depthLines);
-  lines.push('2. 「颗粒细度」卡(header 如「颗粒细度」):至少给下面这几档,同样推荐档放第一:');
-  lines.push(...granLines);
-  lines.push(
-    '3. 两张卡可放进同一次 AskUserQuestion 调用(questions 数组);系统会自动为每张卡补「可讨论」与自由输入,你无需自己加。'
-  );
-  lines.push(
-    '4. 拿到用户选择后,据其选的档把对应的 `maxDepth` 与 `granularity` 传进 DiskCleanup(先 mode:"scan" 或 "plan" 看清单,确认后再 mode:"clean" apply:true)。用户若已在消息里明确指定了深度/粒度,则**不必再问**,直接照其意思传参。'
-  );
-  return lines.join('\n');
-}
-
-/**
- * 清盘澄清路由主入口(单一真源)。仅在门控开且检测到清盘意图时给出指令。
- * @param {object} input
- * @param {string} input.text
- * @param {object} [input.options]  env 覆盖({diskCleanupClarify})
- * @returns {{enabled:boolean, intentDetected:boolean, need:boolean, directive:(string|null)}}
- */
-function routeDiskCleanupClarify(input = {}) {
-  const options = input.options || {};
-  const enabled =
-    options.diskCleanupClarify !== undefined
-      ? _flagOn(options.diskCleanupClarify, true)
-      : isEnabled(input.env || process.env);
-  const intentDetected = detectDiskCleanupIntent(input.text);
-  const need = enabled && intentDetected;
-  return {
-    enabled,
-    intentDetected,
-    need,
-    directive: need ? buildDiskCleanupDirective() : null,
-  };
-}
+// ── 选项 SSOT:清理方式档(第一张卡;决定走 khy cleandisk 还是 DiskCleanup 工具) ──
+// interactive 不是 DiskCleanupTool 的参数,而是「整条流程换轨」:经 SlashCommand 在
+// REPL 同一进程内跑 khy cleandisk(stdin/stdout 仍是 TTY),交互式分组确认才跑得起来。
+const CLEANUP_MODE_OPTIONS = Object.freeze([
+  {
+    value: 'interactive',
+    label: '交互式分组清理(推荐)',
+    description:
+      '调 SlashCommand 工具传 command:"cleandisk"：先自动清引擎白名单垃圾(Temp/浏览器缓存/包管理缓存,两道否决),再把下载/桌面/AppData\\Local 大文件 4-5 个一组逐组请用户确认删除;交互问答在用户终端内完成,不要再问扫描深度/颗粒细度',
+  },
+  {
+    value: 'engine',
+    label: 'AI 引擎清理',
+    description:
+      '继续选扫描深度/颗粒细度,再走 DiskCleanup scan→plan→clean(clean+apply 前必须把清单给用户过目)',
+  },
+  {
+    value: 'report',
+    label: '只出报告先不删',
+    description: '直接 DiskCleanup mode:"plan",把清单报告给用户,不动磁盘',
+  },
+]);
 
 // ── 选项 → 真实工具参数 ───────────────────────────────────────────────────
 
@@ -249,16 +174,12 @@ function shapeScanCandidates(candidates, granularity) {
 }
 
 module.exports = {
-  OFF_VALUES,
   DEPTH_MIN,
   DEPTH_MAX,
   SCAN_DEPTH_OPTIONS,
   GRANULARITY_VALUES,
   GRANULARITY_OPTIONS,
-  isEnabled,
-  detectDiskCleanupIntent,
-  buildDiskCleanupDirective,
-  routeDiskCleanupClarify,
+  CLEANUP_MODE_OPTIONS,
   resolveScanDepth,
   resolveGranularity,
   shapeScanCandidates,

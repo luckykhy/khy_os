@@ -3,10 +3,10 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 
-const sender = require('../../../src/services/messaging/msgSender');
-const { DingTalkChannel } = require('../../../src/services/channels/dingtalkChannel');
-const { FeishuChannel } = require('../../../src/services/channels/feishuChannel');
-const { WecomChannel } = require('../../../src/services/channels/wecomChannel');
+const sender = require('../../../src/services/domain/messaging/messaging/msgSender.js');
+const { DingTalkChannel } = require('../../../src/services/domain/messaging/channels/dingtalkChannel.js');
+const { FeishuChannel } = require('../../../src/services/domain/messaging/channels/feishuChannel.js');
+const { WecomChannel } = require('../../../src/services/domain/messaging/channels/wecomChannel.js');
 const crypto = require('crypto');
 
 // deps 注入:assertUrl 恒放行,post 记录并返回可控应答

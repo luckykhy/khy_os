@@ -60,15 +60,26 @@ function _runText2Docx(pythonPath, text, outputPath) {
 
     let stdout = '';
     let stderr = '';
+    // Activity-based idle timeout (never a fixed wall-clock kill): the timer is
+    // reset on every stdout/stderr chunk, so a progressing document build is
+    // never torn down — only a child that produced nothing for IDLE_LIMIT ms.
+    const IDLE_LIMIT = 60000;
     let _timer = setTimeout(() => {
       safeKill(child);
-      reject(new Error('Document creation timed out (60s)'));
-    }, 60000);
+      reject(new Error(`文档生成超时：docHelper.py ${IDLE_LIMIT / 1000}s 无任何输出，请重试或检查 pythonPath/依赖`));
+    }, IDLE_LIMIT);
+    const _touch = () => {
+      clearTimeout(_timer);
+      _timer = setTimeout(() => {
+        safeKill(child);
+        reject(new Error(`文档生成超时：docHelper.py ${IDLE_LIMIT / 1000}s 无任何输出，请重试或检查 pythonPath/依赖`));
+      }, IDLE_LIMIT);
+    };
 
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');
-    child.stdout.on('data', d => { stdout += d; });
-    child.stderr.on('data', d => { stderr += d; });
+    child.stdout.on('data', d => { stdout += d; _touch(); });
+    child.stderr.on('data', d => { stderr += d; _touch(); });
 
     child.on('error', err => {
       clearTimeout(_timer);

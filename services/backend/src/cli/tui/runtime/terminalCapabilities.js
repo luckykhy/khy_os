@@ -5,6 +5,9 @@
  *
  * Detects: color depth, background mode, alternate screen, unicode,
  * synchronized output, hyperlinks, italic, strikethrough, bracketed paste.
+ *
+ * Single source of truth for terminal capability detection across ALL surfaces
+ * (CLI, TUI). Both palette.js and platformUtils.js delegate here.
  */
 
 // Singleton cache — avoid re-detection on every render cycle

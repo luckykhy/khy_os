@@ -31,7 +31,7 @@ describe('build_project idle timeout behavior', () => {
     expect(result.success).toBe(true);
     expect(result.data.exitCode).toBe(0);
     expect(result.data.idleTimeoutMs).toBe(500);
-    expect(String(result.data.outputTail || '')).toContain('build-tick-8');
+    expect(String(result.data.outputTail || '')).toBe('build-tick-8');
     expect(progressEvents.some((s) => s.includes('build_project stdout'))).toBe(true);
     expect(activityEvents.some((evt) => evt && evt.phase === 'stdout')).toBe(true);
   });
@@ -50,3 +50,4 @@ describe('build_project idle timeout behavior', () => {
     expect(String(result.data.outputTail || '').length).toBeGreaterThan(0);
   });
 });
+

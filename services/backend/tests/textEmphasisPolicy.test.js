@@ -21,7 +21,7 @@ const {
   headingDescriptor,
   shouldBoldHeading,
   bigHeadingPrefix,
-} = require('../src/services/typeset/textEmphasisPolicy');
+} = require('../src/services/domain/structured/typeset/textEmphasisPolicy.js');
 
 const ON = { KHY_TYPESET_EMPHASIS: '1' };
 const OFF = { KHY_TYPESET_EMPHASIS: 'off' };

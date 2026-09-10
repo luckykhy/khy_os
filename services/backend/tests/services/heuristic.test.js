@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Phase B (§4.B) — cost-to-goal heuristic h(s) over the acceptance pack.
+ * Phase B (§4.B) �?cost-to-goal heuristic h(s) over the acceptance pack.
  *
  * These suites assert the MATHEMATICAL PROPERTIES the design relies on:
  *   - Admissibility: hAdmissible never over-estimates true remaining cost.
@@ -181,3 +181,4 @@ describe('shouldCalibrate: stagnation detection', () => {
     expect(shouldCalibrate(undefined, 1)).toBe(false);
   });
 });
+

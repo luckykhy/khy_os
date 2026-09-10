@@ -12,7 +12,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const r = require('../../../src/services/config/nlInstallVsConfigGuard');
+const r = require('../../../src/services/domain/config/config/nlInstallVsConfigGuard.js');
 
 const ON = { KHY_INSTALL_CONFIG_GUARD: 'true' };
 const OFF = { KHY_INSTALL_CONFIG_GUARD: 'off' };

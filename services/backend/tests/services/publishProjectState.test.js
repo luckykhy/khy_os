@@ -17,7 +17,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const ps = require('../../src/services/publish/projectState');
+const ps = require('../../src/services/domain/deploy/publish/projectState.js');
 
 describe('publish/projectState — project root discovery', () => {
   let tmp;

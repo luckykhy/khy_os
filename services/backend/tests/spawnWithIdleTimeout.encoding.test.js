@@ -6,7 +6,7 @@
  * On a Chinese Windows the cmd.exe console emits command output and error text
  * in the OEM code page (GBK/CP936). The previous implementation forced
  * stdout/stderr to UTF-8, turning that text into mojibake and hiding the real
- * error (e.g. "系统找不到指定的路径。") from the agent. These tests lock in that
+ * error (e.g. "系统找不到指定的路径�?) from the agent. These tests lock in that
  * the GBK bytes are now stream-decoded on the Windows path while the Unix /
  * UTF-8 fast path stays byte-for-byte unchanged.
  *
@@ -116,10 +116,10 @@ describe('spawnWithIdleTimeout output decoding', () => {
   });
 });
 
-describe('smartDecodeWinOutput — multi-candidate OEM fallback', () => {
+describe('smartDecodeWinOutput �?multi-candidate OEM fallback', () => {
   // These exercise the pure decoder directly so they run identically on any host.
   // The real-world trigger: `chcp 65001` self-blinds getSystemEncoding() to
-  // 'utf-8' (or the probe fails → null), yet cmd built-ins (dir/ver) still emit
+  // 'utf-8' (or the probe fails �?null), yet cmd built-ins (dir/ver) still emit
   // raw OEM bytes. The fallback must recover them WITHOUT a usable detected page.
   const iconv = require('iconv-lite');
 
@@ -140,7 +140,7 @@ describe('smartDecodeWinOutput — multi-candidate OEM fallback', () => {
     };
   }
 
-  test('detected page utf-8 (chcp self-blind) but bytes are GBK → recovered via candidates', () => {
+  test('detected page utf-8 (chcp self-blind) but bytes are GBK �?recovered via candidates', () => {
     const { smartDecodeWinOutput, restore } = load('utf-8');
     try {
       const gbkBuf = iconv.encode('C 盘的卷标', 'gbk');
@@ -150,7 +150,7 @@ describe('smartDecodeWinOutput — multi-candidate OEM fallback', () => {
     }
   });
 
-  test('undetectable page (null) but bytes are GBK → recovered via candidates', () => {
+  test('undetectable page (null) but bytes are GBK �?recovered via candidates', () => {
     const { smartDecodeWinOutput, restore } = load(null);
     try {
       const gbkBuf = iconv.encode('目录 测试', 'gbk');
@@ -180,7 +180,7 @@ describe('smartDecodeWinOutput — multi-candidate OEM fallback', () => {
     }
   });
 
-  test('empty buffer → empty string', () => {
+  test('empty buffer �?empty string', () => {
     const { smartDecodeWinOutput, restore } = load(null);
     try {
       expect(smartDecodeWinOutput(Buffer.alloc(0))).toBe('');
@@ -189,3 +189,4 @@ describe('smartDecodeWinOutput — multi-candidate OEM fallback', () => {
     }
   });
 });
+

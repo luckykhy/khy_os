@@ -1,15 +1,15 @@
 'use strict';
 
 /**
- * Stage 6 — hard verification gate.
+ * Stage 6 �?hard verification gate.
  *
  * When the model concludes after successful edits, the loop must run a
  * syntax + adversarial verification pass and, on FAIL, force another
  * iteration (bounded by KHY_VERIFY_MAX_ROUNDS) instead of ending silently.
  *
  * The PreToolUse "prior-read" guard is disabled here by mocking the hook
- * system to register zero hooks — this test exercises the gate, not the
- * guards — so edits run straight through the mocked executeTool.
+ * system to register zero hooks �?this test exercises the gate, not the
+ * guards �?so edits run straight through the mocked executeTool.
  */
 const fs = require('fs');
 const os = require('os');
@@ -27,10 +27,10 @@ function tmpJs() {
 
 function disableHooks() {
   process.env.KHY_AUDIT_FIX_LOOP = 'false';
-  jest.doMock('../src/services/hooks/hookSystem', () => ({
+  jest.doMock('../src/services/domain/extensions/hooks/hookSystem.js', () => ({
     isInitialized: () => true,
     init: () => {},
-    registry: { count: 0 }, // → _getHookSystem() returns null, no PreToolUse guard
+    registry: { count: 0 }, // �?_getHookSystem() returns null, no PreToolUse guard
     trigger: async () => ({ blocked: false }),
   }));
 }
@@ -80,9 +80,9 @@ describe('toolUseLoop hard verification gate', () => {
       }
       turn++;
       if (turn === 1) return { reply: 'editing', stopReason: 'tool_use', provider: 'mock', toolUseBlocks: [editBlock(file, 'e1')] };
-      if (turn === 2) return { reply: 'done', provider: 'mock' };  // conclude #1 → syntax FAIL → forced continue
+      if (turn === 2) return { reply: 'done', provider: 'mock' };  // conclude #1 �?syntax FAIL �?forced continue
       if (turn === 3) return { reply: 'fixing', stopReason: 'tool_use', provider: 'mock', toolUseBlocks: [editBlock(file, 'e2')] };
-      return { reply: 'all done', provider: 'mock' };              // conclude #2 → syntax PASS + adversarial PASS
+      return { reply: 'all done', provider: 'mock' };              // conclude #2 �?syntax PASS + adversarial PASS
     });
 
     const result = await toolUseLoop.runToolUseLoop('fix the module', {
@@ -127,3 +127,4 @@ describe('toolUseLoop hard verification gate', () => {
     expect(result.finalResponse).toContain('验证未通过'); // ceiling annotation present
   }, 30000);
 });
+

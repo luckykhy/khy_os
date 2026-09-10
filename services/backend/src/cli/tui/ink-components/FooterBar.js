@@ -70,12 +70,10 @@ function FooterBar({
   contextPct,
   contextTokens,
   contextLimit,
-  topic,
   localMode,
   fastMode,
   voiceMode,
   autoRedPass,
-  bridge,
   goalActive,
   contextPlan,
   cooldownUntilMs,
@@ -83,24 +81,6 @@ function FooterBar({
 }) {
   const { Box, Text } = inkRuntime.get();
   const h = React.createElement;
-
-  // Persistent LAN-collaboration line. Stays pinned in the footer for the whole
-  // session so the pairing URL / PIN / live client count never scroll away after
-  // the startup banner. Only the non-sensitive token PREFIX is shown. Rendered
-  // only when a bridge is actually running (bridge.running).
-  const bridgeLine =
-    bridge && bridge.running
-      ? h(
-          Box,
-          null,
-          h(Text, { color: 'magenta' }, '🔗 协作 '),
-          h(Text, { color: 'green' }, bridge.url || ''),
-          bridge.pin ? h(Text, { dimColor: true }, '  PIN ') : null,
-          bridge.pin ? h(Text, { color: 'cyan', bold: true }, bridge.pin) : null,
-          h(Text, { dimColor: true }, `  ${bridge.clientCount || 0} 端`),
-          bridge.tokenShort ? h(Text, { dimColor: true }, `  ${bridge.tokenShort}…`) : null
-        )
-      : null;
 
   // 语言偏好感知标签——对齐项目已有策略(renderTheme.js:64-68):默认中文,仅当 KHY_UI_LANG
   // 或 KHY_LANGUAGE 显式为 en/en-us/english 时走英文。Ink TUI 页脚此前硬编码英文标签,
@@ -201,13 +181,14 @@ function FooterBar({
     /* footer memory segment is optional; never let it break footer render */
   }
 
+  // 布局对齐 layout-preview.html:2 行页脚。
+  //   行1:权限 + 模式徽标(local/fast/voice) + goal + 冷却
+  //   行2:模型/强度 + 内存/pid + 上下文用量
+  //   bridgeLine 已迁移至 WelcomeBanner,topic 已迁移至 topicBar,页脚不再重复。
   return h(
     Box,
     { flexDirection: 'column' },
-    // Persistent LAN-collaboration status (pinned so it survives a conversation).
-    bridgeLine,
-    // Topic fallback line (块3): only shown when the pinned topicBar can't run.
-    topic ? h(Box, null, h(Text, { dimColor: true }, '🍀 ' + topic)) : null,
+    // ── 行1:权限 + 模式徽标 + goal ──
     h(
       Box,
       null,
@@ -216,9 +197,6 @@ function FooterBar({
       fastMode ? h(Text, { color: 'yellow' }, '  ◆ 快速模式 (/fast)') : null,
       voiceMode ? h(Text, { color: 'magenta' }, '  ◆ 语音模式 (/voice)') : null,
       autoRedPass ? h(Text, { color: 'red' }, '  🔴 自动破甲 (拒绝时切换 RedPass)') : null,
-      // CC 对齐:设有活动持久目标时,页脚常驻 `◎ /goal 进行中 (Nm)` 指示器(elapsedLabel
-      // 由纯叶子 goalKickoff.formatGoalElapsed 产出)。goalActive 为 null(门控关/无目标/异常)→
-      // 不渲该段(逐字节回退今日页脚)。中英文状态词尊重语言偏好(preferEnglishUi)。
       goalActive && goalActive.elapsedLabel != null
         ? h(
             Text,
@@ -230,7 +208,6 @@ function FooterBar({
               ')'
           )
         : null,
-      // Cooldown countdown: show remaining seconds when security guard is throttling
       cooldownUntilMs > 0
         ? h(
             Text,
@@ -239,15 +216,22 @@ function FooterBar({
           )
         : null
     ),
+    // ── 行2:模型/强度 + 内存/pid + 上下文用量 ──
     h(
       Box,
       { justifyContent: 'space-between' },
-      memSeg
-        ? h(Box, null, h(Text, { dimColor: true }, '[' + leftParts + ']'), memSeg)
-        : h(Text, { dimColor: true }, '[' + leftParts + ']'),
-      compactSeg
-        ? h(Box, null, h(Text, { dimColor: true }, ctxStr), compactSeg)
-        : h(Text, { dimColor: true }, ctxStr)
+      h(
+        Box,
+        null,
+        h(Text, { dimColor: true }, '[' + leftParts + ']'),
+        memSeg
+      ),
+      h(
+        Box,
+        null,
+        h(Text, { dimColor: true }, ctxStr),
+        compactSeg
+      )
     )
   );
 }

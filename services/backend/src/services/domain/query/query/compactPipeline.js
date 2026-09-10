@@ -522,7 +522,7 @@ async function autocompact(messages, deps, config, options = {}) {
   // Call AI for summary (use low effort to minimize cost)
   let summary;
   try {
-    const result = await deps.callModel(`${COMPACT_PROMPT}\n\n---\n${textForSummary}`, {
+    const result = await deps.callModel(`${COMPACT_PROMPT}\n\n${textForSummary}`, {
       effort: 'low',
       _isFollowUp: true,
     });

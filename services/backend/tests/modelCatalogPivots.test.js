@@ -11,7 +11,7 @@ const { pivot, VIEWS } = require('../src/services/gateway/modelCatalogPivots');
 const EDGES = [
   { provider: 'agnes', providerLabel: 'Agnes', model: 'agnes-2.0-flash', keyIds: ['k1'], keyCount: 1, capability: 'text', tier: 'T1', status: 'active', connectionMode: 'account-pool', isDefault: true, source: 'chat' },
   { provider: 'agnes', providerLabel: 'Agnes', model: 'agnes-image-2.1-flash', keyIds: [], keyCount: 0, capability: 'image', tier: 'T3', status: 'active', connectionMode: 'direct', isDefault: false, source: 'image' },
-  { provider: 'agnes', providerLabel: 'Agnes', model: 'agnes-video-v2.0', keyIds: [], keyCount: 0, capability: 'video', tier: 'T3', status: 'active', connectionMode: 'direct', isDefault: false, source: 'video' },
+  { provider: 'agnes', providerLabel: 'Agnes', model: 'agnes-video-2.5', keyIds: [], keyCount: 0, capability: 'video', tier: 'T3', status: 'active', connectionMode: 'direct', isDefault: false, source: 'video' },
   { provider: 'deepseek', providerLabel: 'DeepSeek', model: 'deepseek-chat', keyIds: ['k2', 'k3'], keyCount: 2, capability: 'text', tier: 'T1', status: 'cooldown', connectionMode: 'account-pool', isDefault: true, source: 'chat' },
   { provider: 'openai', providerLabel: 'OpenAI', model: 'agnes-2.0-flash', keyIds: ['k4'], keyCount: 1, capability: 'text', tier: 'T1', status: 'active', connectionMode: 'proxy', isDefault: false, source: 'chat' },
 ];
@@ -58,7 +58,7 @@ describe('by-key', () => {
     expect(findGroup(g, 'k3').edges[0].model).toBe('deepseek-chat');
     // image+video are keyless
     expect(findGroup(g, '(no key)').edges.map(e => e.model).sort())
-      .toEqual(['agnes-image-2.1-flash', 'agnes-video-v2.0']);
+      .toEqual(['agnes-image-2.1-flash', 'agnes-video-2.5']);
   });
 
   test('a system edge (key hidden for isolation) groups under (system key), not (no key)', () => {

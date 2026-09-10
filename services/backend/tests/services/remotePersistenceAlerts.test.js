@@ -127,3 +127,4 @@ describe('remote persistence alerts acknowledgement', () => {
     expect(remainingUnacked.some((item) => item.alert_id === targetId)).toBe(false);
   });
 });
+

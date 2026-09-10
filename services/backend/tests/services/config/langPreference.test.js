@@ -14,7 +14,7 @@
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const leaf = require('../../../src/services/config/langPreference');
+const leaf = require('../../../src/services/domain/config/config/langPreference.js');
 
 describe('normalizeLanguage', () => {
   test('中文别名 → Chinese', () => {

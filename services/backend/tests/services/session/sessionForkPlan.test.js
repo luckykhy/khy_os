@@ -18,7 +18,7 @@ const {
   isEnabled,
   _FORK_SUFFIX,
   _DEFAULT_FORK_TITLE,
-} = require('../../../src/services/session/sessionForkPlan');
+} = require('../../../src/services/domain/session/session/sessionForkPlan.js');
 
 describe('parseForkArgs', () => {
   test('空参 → 无标题无 leaf,valid', () => {

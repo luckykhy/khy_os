@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * remoteFileTransferService.test.js â€” unit locks for the scp upload service.
+ * remoteFileTransferService.test.js â€?unit locks for the scp upload service.
  *
  * Mirrors the mock pattern of remoteExecService.liveExec.test.js: child_process
  * is mocked so scp never actually runs; a fake child emits stdout/stderr/close.
@@ -148,3 +148,4 @@ describe('RemoteFileTransferService', () => {
     expect(spawn).toHaveBeenCalledTimes(1);
   });
 });
+

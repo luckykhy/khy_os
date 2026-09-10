@@ -16,14 +16,14 @@ const AES_KEY_43 = crypto.randomBytes(32).toString('base64').replace(/=+$/, '').
 const DING_SECRET = 'ding-inbound-secret';
 const WECOM_TOKEN = 'wecom-token';
 
-const store = require('../../../src/services/messaging/msgConfigStore');
+const store = require('../../../src/services/domain/messaging/messaging/msgConfigStore.js');
 store.setPlatform('dingtalk', { webhook: 'https://oapi.dingtalk.com/robot/send?access_token=t', secret: DING_SECRET });
 store.setPlatform('feishu', { webhook: 'https://open.feishu.cn/open-apis/bot/v2/hook/x' });
 store.setPlatform('wecom', { webhook: 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=k', token: WECOM_TOKEN, encodingAesKey: AES_KEY_43 });
 
 const express = require('express');
 const request = require('supertest');
-const { getMessageRouter } = require('../../../src/services/channels/messageRouter');
+const { getMessageRouter } = require('../../../src/services/domain/messaging/channels/messageRouter.js');
 
 let app;
 

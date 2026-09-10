@@ -11,7 +11,7 @@
 
 const assert = require('assert');
 
-const G = require('../src/services/query/streamRepetitionGuard');
+const G = require('../src/services/domain/query/query/streamRepetitionGuard.js');
 
 describe('streamRepetitionGuard', () => {
   describe('findRepetition — degenerate tails', () => {

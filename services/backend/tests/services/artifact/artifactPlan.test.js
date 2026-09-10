@@ -3,7 +3,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 
-const leaf = require('../../../src/services/artifact/artifactPlan');
+const leaf = require('../../../src/services/domain/quality/artifact/artifactPlan.js');
 
 // ── 门控梯 ────────────────────────────────────────────────────────────────
 test('isEnabled: 默认开', () => {

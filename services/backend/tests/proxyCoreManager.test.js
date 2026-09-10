@@ -11,7 +11,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('events');
 
-const mgr = require('../src/services/proxy/proxyCoreManager');
+const mgr = require('../src/services/domain/network/proxy/proxyCoreManager.js');
 
 const VMESS_NODE = {
   name: '🇭🇰 HK-01', type: 'vmess', server: 'a.example.com', port: 443,

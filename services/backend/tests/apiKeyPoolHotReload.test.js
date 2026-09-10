@@ -1,5 +1,5 @@
 /**
- * apiKeyPool.reload() + apiKeyPoolWatcher â€” hot-reload without a restart.
+ * apiKeyPool.reload() + apiKeyPoolWatcher â€?hot-reload without a restart.
  *
  * The pool reads its three sources (api_keys.json + env + builtins) once at
  * init(). reload() re-derives the desired set and reconciles it by key id,
@@ -18,7 +18,7 @@ const path = require('path');
 
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-keypool-'));
 process.env.KHY_DATA_HOME = TMP;
-// Deterministic env baseline â€” clear any inherited provider keys so the test
+// Deterministic env baseline â€?clear any inherited provider keys so the test
 // controls the env source entirely.
 for (const k of Object.keys(process.env)) {
   if (/_API_KEY(S)?(_\d+)?$/i.test(k) || /_API_ENDPOINT$/i.test(k)) delete process.env[k];
@@ -47,7 +47,7 @@ describe('apiKeyPool.reload()', () => {
   });
 
   test('init loaded the persisted key as active', () => {
-    expect(findKey('deepseek', 'file')).toBeDefined();
+    expect(findKey('deepseek', 'file')).toBe();
   });
 
   test('reload preserves runtime state (cooldown/stats) on a surviving key', () => {
@@ -61,7 +61,7 @@ describe('apiKeyPool.reload()', () => {
     expect(before.status).toBe('cooldown');
     expect(before.cooldownRemaining).toBeGreaterThan(0);
 
-    // Reload with the SAME on-disk content â†’ same id â†’ state must survive.
+    // Reload with the SAME on-disk content â†?same id â†?state must survive.
     const r = pool.reload();
     expect(r.added).toBe(0);
     expect(r.removed).toBe(0);
@@ -80,7 +80,7 @@ describe('apiKeyPool.reload()', () => {
     });
     const r = pool.reload();
     expect(r.added).toBe(1);
-    expect(pool.getProviders()).toContain('openai');
+    expect(pool.getProviders()).toBe('openai');
     const picked = pool.pick('openai');
     expect(picked.keyId).toBeTruthy();
     expect(picked.endpoint).toBe('https://api.openai.com/v1');
@@ -102,7 +102,7 @@ describe('apiKeyPool.reload()', () => {
     process.env.QWEN_API_KEY = 'sk-qwen-from-env';
     const r = pool.reload();
     expect(r.added).toBe(1);
-    expect(findKey('qwen', 'env')).toBeDefined();
+    expect(findKey('qwen', 'env')).toBe();
   });
 
   test('reload never persists env keys back to api_keys.json', () => {
@@ -122,7 +122,7 @@ describe('apiKeyPool.reload()', () => {
     expect(pool.getProviders()).not.toContain('openai');
     expect(pool.getPoolStatus('openai').find(e => e.keyId === oaId)).toBeUndefined();
     // qwen (env) survives because it is still in process.env.
-    expect(findKey('qwen', 'env')).toBeDefined();
+    expect(findKey('qwen', 'env')).toBe();
   });
 });
 
@@ -167,9 +167,10 @@ describe('apiKeyPoolWatcher', () => {
     watcher.start();
     const target = pool.getPoolFilePath();
     const before = watcher.getStatus().stats.reloads;
-    // Hash was seeded with current content at start() â†’ unchanged â†’ no reload.
+    // Hash was seeded with current content at start() â†?unchanged â†?no reload.
     const did = watcher.__testHooks.reloadFrom(target);
     expect(did).toBe(false);
     expect(watcher.getStatus().stats.reloads).toBe(before);
   });
 });
+

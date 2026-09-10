@@ -16,7 +16,7 @@
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const sd = require('../../src/services/search/searchSourceDiscovery');
+const sd = require('../../src/services/domain/query/search/searchSourceDiscovery.js');
 const { normalizeEngine, host, isKnownHost, scoreSource } = sd.__internal;
 
 describe('1. 门控', () => {

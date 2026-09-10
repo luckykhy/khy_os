@@ -67,6 +67,20 @@
           @click="sidebarCollapsed = false"
         />
         <h2 class="khy-page-title">AI 对话</h2>
+        <div class="chat-header-actions">
+          <el-dropdown trigger="click" @command="handleExportCommand">
+            <el-button size="small" plain title="导出对话">
+              <el-icon><Download /></el-icon> 导出
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="md">导出为 Markdown</el-dropdown-item>
+                <el-dropdown-item command="html">导出为 HTML</el-dropdown-item>
+                <el-dropdown-item command="json">导出为 JSON</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </div>
         <div class="chat-config">
           <div class="model-selector">
             <el-select
@@ -180,6 +194,25 @@
                   :style="{ width: Math.min(100, Math.round(contextStats.percentage)) + '%' }"
                 ></div>
               </div>
+              <!-- 缓存命中率（ZCode 对齐） -->
+              <div
+                v-if="contextStats.cacheHitRate != null && contextStats.cacheHitRate > 0"
+                class="ctx-usage-cache"
+              >
+                <span class="ctx-usage-cache-label">缓存命中</span>
+                <span
+                  :class="[
+                    'ctx-usage-cache-value',
+                    contextStats.cacheHitRate >= 70
+                      ? 'is-high'
+                      : contextStats.cacheHitRate >= 40
+                        ? 'is-mid'
+                        : 'is-low',
+                  ]"
+                >
+                  ⚡ {{ Math.round(contextStats.cacheHitRate) }}%
+                </span>
+              </div>
               <ul
                 v-if="contextStats.categories && contextStats.categories.length"
                 class="ctx-usage-cats"
@@ -270,6 +303,51 @@
                   msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-assistant',
                 ]"
               >
+                <!-- Parts-based 渲染器（Generative UI / Vercel AI SDK 对齐） -->
+                <div
+                  v-if="msg.role === 'assistant' && deriveParts(msg).length"
+                  class="chat-parts-view"
+                >
+                  <div class="chat-parts-toolbar">
+                    <button
+                      type="button"
+                      class="chat-parts-toggle"
+                      @click="togglePartsView(msg)"
+                    >
+                      {{ msg.usePartsView ? '◨ 经典视图' : '◧ 结构化视图' }}
+                    </button>
+                  </div>
+                  <ChatPartsRenderer v-if="msg.usePartsView" :parts="deriveParts(msg)" />
+                </div>
+
+                <!-- 经典视图（默认） -->
+                <template v-if="msg.role !== 'assistant' || !msg.usePartsView">
+                <!-- 思考折叠块（ZCode / Claude Code 对齐） -->
+                <div
+                  v-if="msg.thinking && msg.thinking.length"
+                  class="chat-thinking-block"
+                >
+                  <button
+                    type="button"
+                    class="chat-thinking-toggle"
+                    :aria-expanded="msg.thinkingExpanded ? 'true' : 'false'"
+                    @click="toggleThinking(msg)"
+                  >
+                    <span class="chat-thinking-icon">{{
+                      msg.thinkingExpanded ? '▾' : '▸'
+                    }}</span>
+                    <span class="chat-thinking-label">{{
+                      msg.thinkingExpanded ? '收起思考过程' : '查看思考过程'
+                    }}</span>
+                  </button>
+                  <div v-if="msg.thinkingExpanded" class="chat-thinking-content">
+                    <pre
+                      v-for="(t, ti) in msg.thinking"
+                      :key="ti"
+                      class="chat-thinking-line"
+                    >{{ t }}</pre>
+                  </div>
+                </div>
                 <div
                   v-if="msg.steps && msg.steps.length"
                   class="chat-tool-steps"
@@ -483,6 +561,8 @@
                     <el-icon><Collection /></el-icon> 存提示词
                   </el-button>
                 </div>
+                </template>
+                <!-- /经典视图 -->
               </div>
             </div>
             <div v-if="loading" class="chat-loading-row" role="status">
@@ -701,10 +781,13 @@ import {
   Refresh,
   View,
   Collection,
+  Download,
 } from '@element-plus/icons-vue';
 import request from '@/api/request';
+import { resolveWsUrl } from '@/utils/ws';
 import { authedFetch } from '@/api/authedFetch';
 import { useUserStore } from '@/stores/user';
+import ChatPartsRenderer from './components/ChatPartsRenderer.vue';
 // 输入栏子组件：把输入文本的 ref 内聚到子组件，打字时只重渲染子组件，
 // 不再触发本组件消息列表的 patch。同步引入（输入区需首屏立即可用）。
 import ChatInputBar from './components/ChatInputBar.vue';
@@ -1247,7 +1330,6 @@ async function loadPersonaCard() {
 const selectedModel = ref('');
 const modelGroups = ref([]);
 const modelsLoading = ref(false);
-const modelLoadPercent = ref(0);
 const transportMode = ref('stream');
 const modelSelectRef = ref(null);
 const searchQuery = ref('');
@@ -1375,13 +1457,12 @@ function normalizeModelEntry(m, groupKind) {
 async function loadModels() {
   if (modelsLoaded) return;
   modelsLoading.value = true;
-  modelLoadPercent.value = 0;
   try {
-    // Use streaming endpoint for progress feedback
-    const data = await gw.fetchModelCatalogStream((prog) => {
-      modelLoadPercent.value = prog.percent || 0;
-    });
-    modelGroups.value = (Array.isArray(data) ? data : [])
+    // 模型列表是一次性读取，走普通 REST 即可；流式端点需要 SSE 解析与 gw 实例，
+    // 本页刻意不引入 useGateway composable。
+    const { data } = await request.get('/api/ai-gateway/models');
+    const payload = data?.data || data || [];
+    modelGroups.value = (Array.isArray(payload) ? payload : [])
       .filter((a) => a.available !== false)
       .map((a) => ({
         adapter: a.adapter || a.name,
@@ -1395,28 +1476,9 @@ async function loadModels() {
       }));
     modelsLoaded = true;
   } catch {
-    try {
-      const { data } = await request.get('/api/ai-gateway/models');
-      const payload = data?.data || data || [];
-      modelGroups.value = (Array.isArray(payload) ? payload : [])
-        .filter((a) => a.available !== false)
-        .map((a) => ({
-          adapter: a.adapter || a.name,
-          name: a.name || a.adapter,
-          kind: a.kind || null,
-          source: a.source || '',
-          protocol: a.protocol || '',
-          models: (a.models || [{ id: a.adapter || a.name, name: a.name }]).map((m) =>
-            normalizeModelEntry(m, a.kind)
-          ),
-        }));
-      modelsLoaded = true;
-    } catch {
-      /* no models available */
-    }
+    /* no models available */
   } finally {
     modelsLoading.value = false;
-    modelLoadPercent.value = 100;
   }
 }
 
@@ -1651,20 +1713,6 @@ function resolveApiUrl(path) {
   if (!base) return path;
   if (/^https?:\/\//i.test(base)) return `${base.replace(/\/+$/, '')}${path}`;
   return `${base.replace(/\/+$/, '')}${path}`;
-}
-
-function resolveWsUrl(path) {
-  const normalizedPath = `/${String(path || '/ws').replace(/^\/+/, '')}`;
-  if (typeof window === 'undefined') return normalizedPath;
-
-  const origin = String(window.location.origin || '').trim();
-  const base = String(request.defaults.baseURL || '').trim();
-  const url = base ? new URL(base, origin) : new URL(origin);
-  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-  url.pathname = normalizedPath;
-  url.search = '';
-  url.hash = '';
-  return url.toString();
 }
 
 // WebSocket watchdog windows (env-tunable, no magic constants). The auth phase
@@ -1907,6 +1955,173 @@ function toggleStepExpand(step) {
   _bumpMsgContentVersion();
 }
 
+// 展开/收起思考折叠块（ZCode / Claude Code 对齐：▸/▾ 折叠）。
+function toggleThinking(msg) {
+  if (!msg) return;
+  msg.thinkingExpanded = !msg.thinkingExpanded;
+  _bumpMsgContentVersion();
+}
+
+// 切换 Parts-based 结构化视图（Generative UI 入口）
+function togglePartsView(msg) {
+  if (!msg) return;
+  msg.usePartsView = !msg.usePartsView;
+  _bumpMsgContentVersion();
+}
+
+// ── Parts-based 消息模型（Vercel AI SDK 对齐 / Generative UI 基础） ─────────
+
+/**
+ * 将消息转换为类型化 parts 数组（Parts-based 消息模型）。
+ * 兼容现有 content/steps/thinking 字段，同时支持原生 parts 数据。
+ * 这是 Generative UI 的基础：每种 part 类型由专用组件渲染。
+ */
+function deriveParts(msg) {
+  // 如果消息已有原生 parts 数组，直接使用
+  if (Array.isArray(msg.parts) && msg.parts.length) {
+    return msg.parts;
+  }
+
+  const parts = [];
+
+  // 思考过程 → thinking part
+  if (msg.thinking && msg.thinking.length) {
+    parts.push({
+      type: 'thinking',
+      text: msg.thinking.join('\n'),
+      expanded: msg.thinkingExpanded || false,
+    });
+  }
+
+  // 工具步骤 → tool-call + tool-result parts
+  if (msg.steps && msg.steps.length) {
+    for (const step of msg.steps) {
+      parts.push({
+        type: 'tool-call',
+        toolName: step.tool,
+        args: step.inputFull ? safeParse(step.inputFull) : { command: step.input },
+      });
+      if (step.result || step.error) {
+        parts.push({
+          type: 'tool-result',
+          toolName: step.tool,
+          result: step.result || step.error,
+          error: step.status === 'error',
+        });
+      }
+    }
+  }
+
+  // 文本内容 → text part
+  if (msg.content) {
+    parts.push({ type: 'text', text: msg.content });
+  }
+
+  return parts;
+}
+
+function safeParse(s) {
+  try {
+    return JSON.parse(s);
+  } catch {
+    return { raw: s };
+  }
+}
+
+// ── 会话导出（ZCode 对齐：MD/HTML/JSON 导出） ──────────────────────────────
+function handleExportCommand(format) {
+  const msgs = messages.value;
+  if (!msgs.length) {
+    ElMessage.warning('暂无对话内容可导出');
+    return;
+  }
+  switch (format) {
+    case 'md':
+      exportAsMarkdown(msgs);
+      break;
+    case 'html':
+      exportAsHtml(msgs);
+      break;
+    case 'json':
+      exportAsJson(msgs);
+      break;
+  }
+}
+
+function exportAsMarkdown(msgs) {
+  const lines = ['# AI 对话记录\n'];
+  const now = new Date().toLocaleString('zh-CN');
+  lines.push(`> 导出时间：${now}\n`);
+  for (const msg of msgs) {
+    if (msg.role === 'user') {
+      lines.push(`## 用户\n${msg.content}\n`);
+    } else {
+      lines.push(`## 小K\n${msg.content || ''}\n`);
+      if (msg.thinking && msg.thinking.length) {
+        lines.push('<details>\n<summary>思考过程</summary>\n');
+        for (const t of msg.thinking) lines.push(t);
+        lines.push('\n</details>\n');
+      }
+    }
+  }
+  downloadFile(lines.join('\n'), 'chat-export.md', 'text/markdown');
+}
+
+function exportAsHtml(msgs) {
+  const escape = (s) =>
+    String(s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const now = new Date().toLocaleString('zh-CN');
+  const body = msgs
+    .map((msg) => {
+      if (msg.role === 'user') {
+        return `<div class="msg user"><div class="role">用户</div><div class="content">${escape(msg.content)}</div></div>`;
+      }
+      let html = `<div class="msg assistant"><div class="role">小K</div><div class="content">${escape(msg.content)}</div>`;
+      if (msg.thinking && msg.thinking.length) {
+        html += `<details class="thinking"><summary>思考过程</summary><pre>${msg.thinking.map(escape).join('\n')}</pre></details>`;
+      }
+      html += '</div>';
+      return html;
+    })
+    .join('\n');
+  const html = `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>AI 对话记录</title>
+<style>body{font-family:sans-serif;max-width:800px;margin:20px auto;padding:0 16px;color:#333}
+.msg{margin:12px 0;padding:10px 14px;border-radius:8px}
+.user{background:#eaf2ff}.assistant{background:#f5f5f5}
+.role{font-weight:600;font-size:12px;color:#666;margin-bottom:4px}
+.thinking{margin-top:8px;font-size:12px;color:#888}
+pre{white-space:pre-wrap;font-family:monospace}</style></head>
+<body><h1>AI 对话记录</h1><p>导出时间：${now}</p>${body}</body></html>`;
+  downloadFile(html, 'chat-export.html', 'text/html');
+}
+
+function exportAsJson(msgs) {
+  const data = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    messages: msgs.map((m) => ({
+      role: m.role,
+      content: m.content || '',
+      thinking: m.thinking || [],
+      steps: m.steps || [],
+    })),
+  };
+  downloadFile(JSON.stringify(data, null, 2), 'chat-export.json', 'application/json');
+}
+
+function downloadFile(content, filename, mime) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  ElMessage.success(`已导出：${filename}`);
+}
+
 // Compact a tool input object to a short single-line preview for the step chip.
 function summarizeStepInput(input) {
   if (input == null) return '';
@@ -1995,6 +2210,11 @@ function handleStreamEvent(rawEvent, assistantMessage) {
     const text = String(payload.text || '').trim();
     if (text) {
       addThinkingLog('thinking', text);
+      // 同时填充到消息的 thinking 数组（行内折叠块）
+      if (assistantMessage && Array.isArray(assistantMessage.thinking)) {
+        assistantMessage.thinking.push(text);
+        _bumpMsgContentVersion();
+      }
       setOrbState('stream', { type: 'thinking' });
     }
     return;
@@ -2125,6 +2345,11 @@ function handleWsEvent(payload, assistantMessage, done) {
     const text = String(payload.text || '').trim();
     if (text) {
       addThinkingLog('thinking', text);
+      // 同时填充到消息的 thinking 数组（行内折叠块）
+      if (assistantMessage && Array.isArray(assistantMessage.thinking)) {
+        assistantMessage.thinking.push(text);
+        _bumpMsgContentVersion();
+      }
       setOrbState('ws', { type: 'thinking' });
     }
     return;
@@ -2528,11 +2753,15 @@ async function sendMessageByStream(text, assistantMessage, attachmentIds = []) {
   const decoder = new TextDecoder('utf-8');
   let buffer = '';
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+  // 读流直到服务端关闭响应体。done 用显式标志承载，避免 `while (true)` 触发
+  // no-constant-condition。
+  let streamDone = false;
+  while (!streamDone) {
+    const chunk = await reader.read();
+    streamDone = chunk.done;
+    if (streamDone) break;
 
-    buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n');
+    buffer += decoder.decode(chunk.value, { stream: true }).replace(/\r\n/g, '\n');
     const events = buffer.split('\n\n');
     buffer = events.pop() || '';
 
@@ -2707,6 +2936,10 @@ async function sendMessage(rawText) {
     content: '',
     model: '',
     steps: [],
+    thinking: [],
+    thinkingExpanded: false,
+    usePartsView: false,
+    parts: [],
     error: null,
   });
   messages.value.push(assistantMessage);
@@ -3219,6 +3452,12 @@ onBeforeUnmount(() => {
   margin: 0;
 }
 
+.chat-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 12px;
+}
 .chat-config {
   display: flex;
   align-items: center;
@@ -3310,6 +3549,32 @@ onBeforeUnmount(() => {
 }
 .ctx-usage-fill.ctx-critical {
   background: var(--khy-danger);
+}
+.ctx-usage-cache {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--el-border-color-lighter, #ebeef5);
+}
+.ctx-usage-cache-label {
+  font-size: 12px;
+  color: var(--el-text-color-regular, #606266);
+}
+.ctx-usage-cache-value {
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.ctx-usage-cache-value.is-high {
+  color: var(--el-color-success, #67c23a);
+}
+.ctx-usage-cache-value.is-mid {
+  color: var(--el-color-warning, #e6a23c);
+}
+.ctx-usage-cache-value.is-low {
+  color: var(--el-color-danger, #f56c6c);
 }
 .ctx-usage-cats {
   list-style: none;
@@ -4053,6 +4318,76 @@ html.dark .chat-bubble-user {
   font-size: 11px;
 }
 
+/* ── Parts-based 视图（Generative UI） ────────────────────────────────────── */
+.chat-parts-view {
+  margin-bottom: 8px;
+}
+.chat-parts-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 6px;
+}
+.chat-parts-toggle {
+  background: none;
+  border: 1px solid var(--el-border-color-lighter, #ebeef5);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: var(--el-text-color-secondary, #909399);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.chat-parts-toggle:hover {
+  color: var(--el-color-primary, #409eff);
+  border-color: var(--el-color-primary, #409eff);
+}
+
+/* ── 思考折叠块（ZCode / Claude Code 对齐：▸/▾ 折叠） ─────────────────────── */
+.chat-thinking-block {
+  margin-bottom: 8px;
+  border-left: 2px solid var(--el-color-primary-light-5, #c6e2ff);
+  padding-left: 8px;
+}
+.chat-thinking-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 2px 0;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--el-text-color-secondary, #909399);
+  transition: color 0.15s;
+}
+.chat-thinking-toggle:hover {
+  color: var(--el-color-primary, #409eff);
+}
+.chat-thinking-icon {
+  font-size: 10px;
+  width: 12px;
+  text-align: center;
+}
+.chat-thinking-label {
+  font-weight: 500;
+}
+.chat-thinking-content {
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: var(--el-fill-color-lighter, #f5f7fa);
+  border-radius: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.chat-thinking-line {
+  margin: 0;
+  font-family: var(--khy-font-mono, monospace);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--el-text-color-regular, #606266);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 .chat-bubble-text {
   white-space: pre-wrap;
 }

@@ -10,7 +10,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const client = require('../../../src/services/forge/forgeClient');
+const client = require('../../../src/services/domain/build/forge/forgeClient.js');
 
 test('searchRepos: 用注入 axios,返回归一结果且不回显 token', async () => {
   process.env.GITHUB_TOKEN = 'SECRET-TOKEN';

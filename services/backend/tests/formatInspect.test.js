@@ -7,8 +7,8 @@
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const det = require('../src/services/formatInspect/fileFormatDetector');
-const ta = require('../src/services/formatInspect/textAddress');
+const det = require('../src/services/domain/structured/formatInspect/fileFormatDetector.js');
+const ta = require('../src/services/domain/structured/formatInspect/textAddress.js');
 
 describe('fileFormatDetector — 扩展名画像', () => {
   test('代码扩展名映射正确（含 .moon/.mbt/.java/.c/.cpp）', () => {

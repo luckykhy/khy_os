@@ -36,7 +36,7 @@ const { createInitialPersistentState, createInitialVimState } = require('../vim/
 const { useTextInput } = require('./useTextInput');
 
 function useVimInput(props = {}) {
-  const { enabled = false, onModeChange, onUndo, inputFilter, mouseModule } = props;
+  const { enabled = false, onModeChange, onUndo, inputFilter, mouseModule, onShellModeChange } = props;
 
   const vimStateRef = useRef(createInitialVimState());
   const [mode, setMode] = useState('INSERT');
@@ -50,6 +50,7 @@ function useVimInput(props = {}) {
     onChange: props.onChange,
     onHistoryEmpty: props.onHistoryEmpty,
     mouseModule,
+    onShellModeChange,
   });
 
   // Keep a live mirror of value/offset so operator context reads the latest

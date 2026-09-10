@@ -36,7 +36,8 @@ async function main() {
   function loginReq(username, password) {
     return new Promise((resolve) => {
       const body = JSON.stringify({ username, password });
-      const r = http.request('http://127.0.0.1:3000/api/auth/login', {
+      const port = parseInt(process.env.PORT || process.env.BACKEND_PORT || '3000', 10);
+      const r = http.request('http://127.0.0.1:' + port + '/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
       }, (res) => {
@@ -52,7 +53,8 @@ async function main() {
   console.log('Login result:', result.status, result.data?.message || result.data?.success || result.data?.token);
 
   // Save credentials file
-  const credsDir = 'D:\\Portable\\khy-os\\.khy\\credentials';
+  // Repo root = two levels up from scripts/admin/.
+  const credsDir = path.join(__dirname, '..', '..', '.khy', 'credentials');
   try {
     fs.mkdirSync(credsDir, { recursive: true });
     fs.writeFileSync(path.join(credsDir, 'default-admin.json'), JSON.stringify({ username: 'qiqiaoban', password: 'testpass123', note: 'Test admin for vision testing' }, null, 2));

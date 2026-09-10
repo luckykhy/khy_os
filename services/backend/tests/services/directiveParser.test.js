@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tests for directiveParser.js â€” directive extraction, stripping,
+ * Tests for directiveParser.js â€?directive extraction, stripping,
  * whitespace normalization, and reply ID sanitization.
  */
 
@@ -131,3 +131,4 @@ describe('sanitizeReplyId', () => {
     expect(sanitizeReplyId('abc-def-123')).toBe('abc-def-123');
   });
 });
+

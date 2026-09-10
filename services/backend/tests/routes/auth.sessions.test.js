@@ -125,3 +125,4 @@ describe('auth routes session endpoints', () => {
     expect(res.body.data.sessions).toHaveLength(2);
   });
 });
+

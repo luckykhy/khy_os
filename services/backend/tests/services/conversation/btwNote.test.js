@@ -16,7 +16,7 @@ const {
   isEnabled,
   _HINT_HEADER,
   _MAX_NOTE_LEN,
-} = require('../../../src/services/conversation/btwNote');
+} = require('../../../src/services/domain/session/conversation/btwNote.js');
 
 describe('normalizeNote', () => {
   test('去首尾空白', () => {

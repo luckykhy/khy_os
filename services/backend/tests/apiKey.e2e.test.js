@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * API Key E2E Tests â€” verify unified hash contract.
+ * API Key E2E Tests â€?verify unified hash contract.
  */
 
 const { hashApiKey, extractPrefix, generateKey } = require('@khy/shared/utils/apiKeyHash');
@@ -16,9 +16,9 @@ describe('API Key Hash Contract', () => {
   });
 
   test('hashApiKey handles empty/null input', () => {
-    expect(hashApiKey('')).toHaveLength(64);
-    expect(hashApiKey(null)).toHaveLength(64);
-    expect(hashApiKey(undefined)).toHaveLength(64);
+    expect(hashApiKey('')).toBe(64);
+    expect(hashApiKey(null)).toBe(64);
+    expect(hashApiKey(undefined)).toBe(64);
     // All should hash the empty string consistently
     expect(hashApiKey('')).toBe(hashApiKey(null));
   });
@@ -43,3 +43,4 @@ describe('API Key Hash Contract', () => {
     expect(hashApiKey(k1)).not.toBe(hashApiKey(k2));
   });
 });
+

@@ -129,6 +129,11 @@ const CATEGORIES = {
   optimization: 'Configuration optimization & code proposals',
   coordinator: 'Multi-agent coordination & orchestration',
   mcp: 'MCP protocol tools',
+  multimodal: 'Multimodal content generation (image/audio/video)',
+  storage: 'Data persistence & vector storage',
+  ai: 'AI model management (import/export/list/download)',
+  training: 'Model training & fine-tuning',
+  realtime: 'Real-time streaming & WebSocket APIs',
   custom: 'User-defined custom tools',
 };
 
@@ -419,6 +424,47 @@ function validateParams(schema, params) {
   return result;
 }
 
+// ── Tool Self-Healing ───────────────────────────────────────────────
+// Unified repair layer — classifies each invalid value into a HEAL_CLASS
+// and repairs it via the _toolHealer leaf. Repairs are logged for audit.
+//
+// Heal classes:
+//   E1  static-field-colon        file-level syntax heal (_toolSyntaxHealer)
+//   E2  invalid-category          fuzzy-match against CATEGORIES
+//   E3  invalid-risk              fuzzy-match against RISK_LEVELS
+//   E4  invalid-enum              fuzzy-match against VALID_INTERRUPT_BEHAVIORS
+//   E5  type-mismatch             coerce literal to target type (string↔bool↔number)
+//   E6  invalid-array             wrap single string into array
+
+const {
+  healCategory: healCategoryWithLearning,
+  healRisk: healRiskWithLearning,
+  healEnum: healEnumWithLearning,
+  healType,
+  learnPattern,
+} = require('./_toolHealer');
+
+// Global repair log — tracks all repairs for audit/telemetry.
+// Non-enumerable on the module so it doesn't pollute Object.keys(exports).
+// Stores an array of repairs per tool (a tool can have multiple repairs).
+const _repairLog = new Map(); // toolName → Array<{ field, original, repaired, confidence, at }>
+
+function _logRepair(toolName, field, original, repaired, confidence) {
+  const entry = {
+    field,
+    original,
+    repaired,
+    confidence,
+    at: new Date().toISOString(),
+  };
+  const existing = _repairLog.get(toolName) || [];
+  existing.push(entry);
+  _repairLog.set(toolName, existing);
+  console.warn(
+    `[ToolRegistry] Self-healed tool "${toolName}": ${field} "${original}" → "${repaired}" (${confidence})`
+  );
+}
+
 // ── Tool Definition Factory ─────────────────────────────────────────
 
 /**
@@ -452,27 +498,62 @@ function defineTool(config) {
     throw new Error(`Tool "${config.name}": execute function is required`);
   }
 
-  const category = config.category || 'custom';
-  if (!(category in CATEGORIES)) {
-    throw new Error(
-      `Tool "${config.name}": invalid category "${category}". Valid: ${Object.keys(CATEGORIES).join(', ')}`
-    );
+  // ── Self-healing: repair + warn instead of throw ─────────────────
+  // E2: category
+  const rawCategory = config.category || 'custom';
+  let category = rawCategory;
+  const catHeal = healCategoryWithLearning(rawCategory);
+  if (catHeal.repaired) {
+    category = catHeal.value;
+    _logRepair(config.name, 'category', rawCategory, catHeal.value, catHeal.confidence);
   }
 
-  const risk = config.risk || 'medium';
-  if (!RISK_LEVELS.includes(risk)) {
-    throw new Error(
-      `Tool "${config.name}": invalid risk "${risk}". Valid: ${RISK_LEVELS.join(', ')}`
-    );
+  // E3: risk
+  const rawRisk = config.risk || 'medium';
+  let risk = rawRisk;
+  const riskHeal = healRiskWithLearning(rawRisk);
+  if (riskHeal.repaired) {
+    risk = riskHeal.value;
+    _logRepair(config.name, 'risk', rawRisk, riskHeal.value, riskHeal.confidence);
   }
 
-  // ── Resolve behavioral declarations ──────────────────────────────
-  const interruptBehavior = config.interruptBehavior || BEHAVIOR_DEFAULTS.interruptBehavior;
-  if (!VALID_INTERRUPT_BEHAVIORS.includes(interruptBehavior)) {
-    throw new Error(
-      `Tool "${config.name}": invalid interruptBehavior "${interruptBehavior}". Valid: ${VALID_INTERRUPT_BEHAVIORS.join(', ')}`
-    );
+  // E4: interruptBehavior
+  const rawInterrupt = config.interruptBehavior || BEHAVIOR_DEFAULTS.interruptBehavior;
+  let interruptBehavior = rawInterrupt;
+  const interruptHeal = healEnumWithLearning(rawInterrupt, VALID_INTERRUPT_BEHAVIORS, BEHAVIOR_DEFAULTS.interruptBehavior, 'interruptBehavior');
+  if (interruptHeal.repaired) {
+    interruptBehavior = interruptHeal.value;
+    _logRepair(config.name, 'interruptBehavior', rawInterrupt, interruptHeal.value, interruptHeal.confidence);
   }
+
+  // ── E5: Type-mismatch healing ────────────────────────────────────
+  // Coerce string/number literals to their target types before use.
+  // e.g. shouldDefer='true' → true, maxResultSizeChars='20000' → 20000
+  const _healBool = (val, field) => {
+    const h = healType(val, 'boolean');
+    if (h.repaired) {
+      _logRepair(config.name, field, val, h.value, 'type-coerce');
+    }
+    return h.value;
+  };
+
+  const _healNumber = (val, field) => {
+    const h = healType(val, 'number');
+    if (h.repaired) {
+      _logRepair(config.name, field, val, h.value, 'type-coerce');
+    }
+    return h.value;
+  };
+
+  const _healArray = (val, field) => {
+    if (Array.isArray(val)) return val;
+    // Single string → wrap in array
+    if (typeof val === 'string') {
+      _logRepair(config.name, field, val, [val], 'type-coerce');
+      return [val];
+    }
+    return EXTENDED_DEFAULTS[field];
+  };
 
   // Normalize boolean-or-function fields into callable methods
   const _wrapBehavior = (val, fallback) => {
@@ -485,23 +566,23 @@ function defineTool(config) {
     return fallback;
   };
 
-  const _isReadOnly = _wrapBehavior(config.isReadOnly, () => BEHAVIOR_DEFAULTS.isReadOnly);
-  const _isDestructive = _wrapBehavior(config.isDestructive, () => BEHAVIOR_DEFAULTS.isDestructive);
+  const _isReadOnly = _wrapBehavior(_healBool(config.isReadOnly, 'isReadOnly'), () => BEHAVIOR_DEFAULTS.isReadOnly);
+  const _isDestructive = _wrapBehavior(_healBool(config.isDestructive, 'isDestructive'), () => BEHAVIOR_DEFAULTS.isDestructive);
   const _isConcurrencySafe = _wrapBehavior(
-    config.isConcurrencySafe,
+    _healBool(config.isConcurrencySafe, 'isConcurrencySafe'),
     () => BEHAVIOR_DEFAULTS.isConcurrencySafe
   );
   const _isEnabled =
     typeof config.isEnabled === 'function' ? config.isEnabled : BEHAVIOR_DEFAULTS.isEnabled;
 
   // ── Resolve extended fields ────────────────────────────────────
-  const aliases = Array.isArray(config.aliases) ? config.aliases : EXTENDED_DEFAULTS.aliases;
+  const aliases = _healArray(config.aliases, 'aliases');
   const searchHint = config.searchHint || EXTENDED_DEFAULTS.searchHint;
-  const shouldDefer = config.shouldDefer || EXTENDED_DEFAULTS.shouldDefer;
-  const alwaysLoad = config.alwaysLoad || EXTENDED_DEFAULTS.alwaysLoad;
+  const shouldDefer = _healBool(config.shouldDefer, 'shouldDefer');
+  const alwaysLoad = _healBool(config.alwaysLoad, 'alwaysLoad');
   const maxResultSizeChars =
     config.maxResultSizeChars !== undefined
-      ? config.maxResultSizeChars
+      ? _healNumber(config.maxResultSizeChars, 'maxResultSizeChars')
       : EXTENDED_DEFAULTS.maxResultSizeChars;
 
   // Optional extended methods (undefined = not provided)
@@ -1025,6 +1106,55 @@ class BaseTool {
   }
 }
 
+// ── Repair Log Access ───────────────────────────────────────────────
+
+/**
+ * Get a snapshot of all category repairs performed during this session.
+ * @returns {Array<{ tool: string, original: string, repaired: string, confidence: string, at: string }>}
+ */
+function getCategoryRepairs() {
+  const result = [];
+  for (const [tool, entries] of _repairLog) {
+    for (const entry of entries) {
+      result.push({ tool, ...entry });
+    }
+  }
+  return result;
+}
+
+/**
+ * Clear the category repair log (e.g. after reporting).
+ */
+function clearCategoryRepairs() {
+  _repairLog.clear();
+}
+
+/**
+ * Get repair statistics for monitoring/alerting.
+ * @returns {{ total: number, byTool: object, byField: object, byConfidence: number, failures: number }}
+ */
+function getRepairStats() {
+  const stats = {
+    total: 0,
+    byTool: {},
+    byField: {},
+    byConfidence: {},
+    failures: 0,
+  };
+  for (const [tool, entries] of _repairLog) {
+    for (const entry of entries) {
+      stats.total++;
+      stats.byTool[tool] = (stats.byTool[tool] || 0) + 1;
+      stats.byField[entry.field] = (stats.byField[entry.field] || 0) + 1;
+      stats.byConfidence[entry.confidence] = (stats.byConfidence[entry.confidence] || 0) + 1;
+      if (entry.confidence === 'fallback') {
+        stats.failures++;
+      }
+    }
+  }
+  return stats;
+}
+
 // ── Exports ─────────────────────────────────────────────────────────
 
 module.exports = {
@@ -1033,8 +1163,16 @@ module.exports = {
   wrapResult,
   isGitRepo,
   BaseTool,
+  getCategoryRepairs,
+  clearCategoryRepairs,
+  getRepairStats,
   RISK_LEVELS,
   CATEGORIES,
   BEHAVIOR_DEFAULTS,
   EXTENDED_DEFAULTS,
+  // Re-export _toolHealer for direct access (e.g., testing, external callers)
+  healCategory: require('./_toolHealer').healCategory,
+  healRisk: require('./_toolHealer').healRisk,
+  healEnum: require('./_toolHealer').healEnum,
+  healType: require('./_toolHealer').healType,
 };

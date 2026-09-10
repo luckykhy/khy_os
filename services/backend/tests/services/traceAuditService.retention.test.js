@@ -51,7 +51,7 @@ describe('traceAuditService bounded retention', () => {
     expect(stats.sessions).toBe(2);
     expect(stats.traceMap).toBe(2);
 
-    // Sweep with a clock far past the TTL â†’ both idle sessions evicted.
+    // Sweep with a clock far past the TTL â†?both idle sessions evicted.
     const future = Date.now() + 10_000;
     const after = traceAudit._sweepStale(future);
     expect(after.sessions).toBe(0);
@@ -98,3 +98,4 @@ describe('traceAuditService bounded retention', () => {
     expect(traceAudit._retentionStats().traceMap).toBe(0);
   });
 });
+

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tests for diagnosticEvents.js â€” DiagnosticEventEmitter,
+ * Tests for diagnosticEvents.js â€?DiagnosticEventEmitter,
  * event emission, listener management, and attention tracking.
  */
 
@@ -39,7 +39,7 @@ describe('generateTraceId / generateSpanId', () => {
   });
 });
 
-describe('DiagnosticEventEmitter â€” emit', () => {
+describe('DiagnosticEventEmitter â€?emit', () => {
   test('emits event with correct structure', () => {
     const emitter = new DiagnosticEventEmitter({ flushIntervalMs: 999999 });
     const event = emitter.emit('test_type', { key: 'value' });
@@ -80,7 +80,7 @@ describe('DiagnosticEventEmitter â€” emit', () => {
   });
 });
 
-describe('DiagnosticEventEmitter â€” listeners', () => {
+describe('DiagnosticEventEmitter â€?listeners', () => {
   test('notifies type-specific listeners', () => {
     const emitter = new DiagnosticEventEmitter({ flushIntervalMs: 999999 });
     const handler = jest.fn();
@@ -117,7 +117,7 @@ describe('DiagnosticEventEmitter â€” listeners', () => {
   });
 });
 
-describe('DiagnosticEventEmitter â€” tool call/result', () => {
+describe('DiagnosticEventEmitter â€?tool call/result', () => {
   test('emitToolCall returns spanId and tracks active span', () => {
     const emitter = new DiagnosticEventEmitter({ flushIntervalMs: 999999 });
     const spanId = emitter.emitToolCall('bash', { command: 'ls' });
@@ -146,7 +146,7 @@ describe('DiagnosticEventEmitter â€” tool call/result', () => {
   });
 });
 
-describe('DiagnosticEventEmitter â€” flush and buffer', () => {
+describe('DiagnosticEventEmitter â€?flush and buffer', () => {
   test('flush clears buffer and returns events', () => {
     const onFlush = jest.fn();
     const emitter = new DiagnosticEventEmitter({ onFlush, flushIntervalMs: 999999 });
@@ -178,7 +178,7 @@ describe('DiagnosticEventEmitter â€” flush and buffer', () => {
   });
 });
 
-describe('DiagnosticEventEmitter â€” getSummary', () => {
+describe('DiagnosticEventEmitter â€?getSummary', () => {
   test('returns summary statistics', () => {
     const emitter = new DiagnosticEventEmitter({ flushIntervalMs: 999999 });
     emitter.emit('tool_call', {});
@@ -211,3 +211,4 @@ describe('constants', () => {
     expect(MAX_EVENT_BUFFER).toBe(500);
   });
 });
+

@@ -116,7 +116,7 @@ const parsers = svc.__parsersForTests;
       <div id="content_left">
         <div class="result c-container">
           <h3 class="t"><a href="https://www.baidu.com/link?url=stubOnly">Stub Only</a></h3>
-          <div class="c-abstract">No mu, no cite — wrapper must be preserved.</div>
+          <div class="c-abstract">No mu, no cite �?wrapper must be preserved.</div>
         </div>
       </div>`;
     const r = parsers.parseBaiduHtml(html);
@@ -341,14 +341,14 @@ const parsers = svc.__parsersForTests;
   const KEY = 'KHY_SEARCH_ENGINES';
   const orig = process.env[KEY];
   const origMojeek = process.env.KHY_SEARCH_MOJEEK;
-  // Mojeek 引擎默认开(KHY_SEARCH_MOJEEK):固定为开态以让默认扇出断言确定,不受宿主 env 影响。
+  // Mojeek 引擎默认开(KHY_SEARCH_MOJEEK):固定为开态以让默认扇出断言确定,不受宿主 env 影响�?
   beforeEach(() => { delete process.env.KHY_SEARCH_MOJEEK; });
   afterEach(() => {
     if (orig === undefined) delete process.env[KEY]; else process.env[KEY] = orig;
     if (origMojeek === undefined) delete process.env.KHY_SEARCH_MOJEEK; else process.env.KHY_SEARCH_MOJEEK = origMojeek;
   });
 
-  test('unset → full default engine set', () => {
+  test('unset �?full default engine set', () => {
     delete process.env[KEY];
     const names = resolveFanout().map(e => e.engine);
     expect(names).toEqual(['baidu', 'bing-cn', 'duckduckgo', 'mojeek', 'sogou', 'so360']);
@@ -381,7 +381,7 @@ const parsers = svc.__parsersForTests;
   const orig = process.env[KEY];
   afterEach(() => { if (orig === undefined) delete process.env[KEY]; else process.env[KEY] = orig; });
 
-  test('no opts → default 5', () => {
+  test('no opts �?default 5', () => {
     delete process.env[KEY];
     expect(resolveLimit()).toBe(5);
     expect(resolveLimit({})).toBe(5);
@@ -427,42 +427,42 @@ const parsers = svc.__parsersForTests;
 (parsers ? describe : describe.skip)('adaptive limit inference (_inferAdaptiveLimit)', () => {
   const { inferAdaptiveLimit } = parsers || {};
 
-  test('empty / short query → DEFAULT_RESULTS (5)', () => {
+  test('empty / short query �?DEFAULT_RESULTS (5)', () => {
     if (!inferAdaptiveLimit) return;
     expect(inferAdaptiveLimit('')).toBe(5);
     expect(inferAdaptiveLimit('hello')).toBe(5);
   });
 
-  test('single simple question → 7', () => {
+  test('single simple question �?7', () => {
     if (!inferAdaptiveLimit) return;
     expect(inferAdaptiveLimit('What is the capital of France?')).toBe(7);
   });
 
-  test('long query → more results', () => {
+  test('long query �?more results', () => {
     if (!inferAdaptiveLimit) return;
     const long = 'I want to understand the differences between React and Vue in terms of performance ecosystem learning curve and community support for building large scale applications';
     expect(inferAdaptiveLimit(long)).toBeGreaterThanOrEqual(10);
   });
 
-  test('multiple questions → more results', () => {
+  test('multiple questions �?more results', () => {
     if (!inferAdaptiveLimit) return;
     expect(inferAdaptiveLimit('What is AI? How does it work? What are its applications?')).toBeGreaterThanOrEqual(10);
   });
 
-  test('comparison keywords → more results', () => {
+  test('comparison keywords �?more results', () => {
     if (!inferAdaptiveLimit) return;
     expect(inferAdaptiveLimit('iPhone 15 vs Samsung S24 comparison pros and cons')).toBeGreaterThanOrEqual(7);
   });
 
-  test('breadth keywords (overview/list) → more results', () => {
+  test('breadth keywords (overview/list) �?more results', () => {
     if (!inferAdaptiveLimit) return;
     expect(inferAdaptiveLimit('有哪些流行的 JavaScript 框架')).toBeGreaterThanOrEqual(7);
     expect(inferAdaptiveLimit('Overview of machine learning types')).toBeGreaterThanOrEqual(7);
   });
 
-  test('time-sensitive keywords → slightly more', () => {
+  test('time-sensitive keywords �?slightly more', () => {
     if (!inferAdaptiveLimit) return;
-    expect(inferAdaptiveLimit('最新 AI 新闻')).toBeGreaterThanOrEqual(7);
+    expect(inferAdaptiveLimit('最�?AI 新闻')).toBeGreaterThanOrEqual(7);
   });
 
   test('result is clamped to ceiling (30)', () => {
@@ -472,3 +472,4 @@ const parsers = svc.__parsersForTests;
     expect(inferAdaptiveLimit(extreme)).toBeLessThanOrEqual(30);
   });
 });
+

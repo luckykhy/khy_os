@@ -6,7 +6,7 @@
  * auto-resume bound (env-overridable), and continueHintFor on attributions.
  */
 
-const cont = require('../../../src/services/query/continuation');
+const cont = require('../../../src/services/domain/query/query/continuation.js');
 
 describe('isContinuationCommand', () => {
   test.each(['继续', '接着', '继续执行', '往下', 'go on', 'continue', 'KEEP GOING', '继续。', 'continue!'])(

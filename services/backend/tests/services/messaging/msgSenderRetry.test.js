@@ -10,7 +10,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 
-const sender = require('../../../src/services/messaging/msgSender');
+const sender = require('../../../src/services/domain/messaging/messaging/msgSender.js');
 const {
   sendText, _isRetryable, _backoffMs, _resolveMaxRetries,
   DEFAULT_MAX_RETRIES, DEFAULT_RETRY_BASE_MS,

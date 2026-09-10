@@ -11,7 +11,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 
-const bridge = require('../../../src/services/messaging/msgReplyBridge');
+const bridge = require('../../../src/services/domain/messaging/messaging/msgReplyBridge.js');
 const { buildAiReplyHandler, wireReplyBridge, isAutoReplyEnabled, _normalizeReply } = bridge;
 
 // 静音 log:注入无副作用的 stub。

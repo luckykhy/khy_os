@@ -12,8 +12,8 @@ const TMP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'khyos-ilinklogin-'));
 process.env.KHYOS_HOME = TMP_HOME;
 process.env.KHY_ILINK_QR_POLL_INTERVAL_MS = '1';
 
-const login = require('../../../src/services/messaging/ilinkLogin');
-const store = require('../../../src/services/messaging/ilinkAccountStore');
+const login = require('../../../src/services/domain/messaging/messaging/ilinkLogin.js');
+const store = require('../../../src/services/domain/messaging/messaging/ilinkAccountStore.js');
 
 const QR_OK = { ret: 0, qrcode: 'qr-123', qrcode_img_content: 'https://liteapp.weixin.qq.com/q/7GiQu1' };
 const CONFIRMED = {

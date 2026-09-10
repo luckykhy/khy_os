@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Key-findings reporter — loop-side wiring (关键节点主动汇报).
+ * Key-findings reporter �?loop-side wiring (关键节点主动汇报).
  *
  * The deterministic test-parsing and model-<finding> parse/strip/compose logic
  * is fully unit-tested in tests/cli/keyFindings.test.js. These tests pin the
@@ -43,7 +43,7 @@ describe('toolUseLoop key-findings wiring', () => {
     const raw = [
       'before',
       '<execution_plan>1. do</execution_plan>',
-      '<finding type="root_cause">未初始化的 config</finding>',
+      '<finding type="root_cause">未初始化�?config</finding>',
       'after',
     ].join('\n');
     const stripped = loop._stripExecutionPlan(raw);
@@ -54,3 +54,4 @@ describe('toolUseLoop key-findings wiring', () => {
     expect(stripped).toContain('after');
   });
 });
+

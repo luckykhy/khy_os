@@ -2,6 +2,7 @@ const express = require('express');
 
 const router = express.Router();
 const os = require('os');
+const apiResponse = require('../utils/apiResponse');
 
 /**
  * 获取网络信息（局域网IP）
@@ -79,26 +80,19 @@ router.get('/network-info', (req, res) => {
       );
     }
 
-    res.json({
-      success: true,
-      data: {
-        lanIp: lanIp,
-        hostname: os.hostname(),
-        platform: os.platform(),
-        allCandidates: candidateIps.map((c) => ({
-          ip: c.ip,
-          interface: c.name,
-          priority: c.priority,
-        })),
-      },
+    return apiResponse.success(res, {
+      lanIp: lanIp,
+      hostname: os.hostname(),
+      platform: os.platform(),
+      allCandidates: candidateIps.map((c) => ({
+        ip: c.ip,
+        interface: c.name,
+        priority: c.priority,
+      })),
     });
   } catch (error) {
     console.error('获取网络信息失败:', error);
-    res.status(500).json({
-      success: false,
-      message: '获取网络信息失败',
-      error: error.message,
-    });
+    return apiResponse.fail(res, 'INTERNAL', '获取网络信息失败', { status: 500 });
   }
 });
 
@@ -128,23 +122,20 @@ router.get('/data-status', async (req, res) => {
       /* ignore */
     }
 
-    res.json({
-      success: true,
-      data: {
-        networkMode: networkDetector.getDataMode(),
-        isOnline: networkDetector.isOnline(),
-        networkDetail: networkDetector.getStatus(),
-        database: {
-          postgres: dbConnected ? 'connected' : 'disconnected',
-          sqlite: sqliteBackupService.isAvailable() ? 'available' : 'unavailable',
-          primaryMode: process.env.DB_TYPE === 'sqlite' ? 'sqlite' : 'postgres',
-        },
-        cache: cacheStats,
-        timestamp: new Date().toISOString(),
+    return apiResponse.success(res, {
+      networkMode: networkDetector.getDataMode(),
+      isOnline: networkDetector.isOnline(),
+      networkDetail: networkDetector.getStatus(),
+      database: {
+        postgres: dbConnected ? 'connected' : 'disconnected',
+        sqlite: sqliteBackupService.isAvailable() ? 'available' : 'unavailable',
+        primaryMode: process.env.DB_TYPE === 'sqlite' ? 'sqlite' : 'postgres',
       },
+      cache: cacheStats,
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    return apiResponse.fail(res, 'INTERNAL', '获取数据状态失败', { status: 500 });
   }
 });
 
@@ -160,18 +151,15 @@ router.get('/data-sources/test', async (req, res) => {
       .filter(([, v]) => v.accessible)
       .map(([k]) => k);
 
-    res.json({
-      success: true,
-      data: {
-        results,
-        accessibleSources: accessible,
-        totalTested: Object.keys(results).length,
-        totalAccessible: accessible.length,
-        timestamp: new Date().toISOString(),
-      },
+    return apiResponse.success(res, {
+      results,
+      accessibleSources: accessible,
+      totalTested: Object.keys(results).length,
+      totalAccessible: accessible.length,
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    return apiResponse.fail(res, 'INTERNAL', '测试数据源连接失败', { status: 500 });
   }
 });
 
@@ -184,12 +172,11 @@ router.post('/trigger-voice-input', async (req, res) => {
     const voiceInputService = require('../services/voiceInputService');
     const result = await voiceInputService.triggerWinH();
     if (result.success) {
-      res.json({ success: true });
-    } else {
-      res.status(500).json({ success: false, error: result.error });
+      return apiResponse.success(res, { triggered: true });
     }
+    return apiResponse.fail(res, 'INTERNAL', result.error || '语音输入触发失败', { status: 500 });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    return apiResponse.fail(res, 'INTERNAL', '语音输入触发失败', { status: 500 });
   }
 });
 

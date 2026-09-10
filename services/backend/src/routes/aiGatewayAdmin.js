@@ -36,6 +36,7 @@ const maskSecret = require('../utils/maskSecret');
 const normalizeCompatibility = require('../utils/normalizeCompatibility');
 const patchEnvContent = require('../utils/patchEnvContent');
 const { resolveAnthropicBaseUrl } = require('../utils/proxyBaseUrl');
+const apiResponse = require('../utils/apiResponse');
 const router = express.Router();
 
 // All routes require admin authentication
@@ -132,12 +133,12 @@ router.get('/status', async (req, res) => {
     }
     const statuses = gateway.getStatus();
     const active = gateway.getActiveAdapter();
-    res.json({
+    return apiResponse.success(res, {
       adapters: statuses,
       active: active ? { name: active.name, type: active.type } : null,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -147,9 +148,9 @@ router.get('/pool', (req, res) => {
   try {
     const pool = require('../services/apiKeyPool');
     pool.init();
-    res.json(pool.getAllStatus());
+    return apiResponse.success(res, pool.getAllStatus());
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -159,7 +160,7 @@ router.post('/pool/:provider/keys', (req, res) => {
     pool.init();
     const { key, endpoint, priority, label } = req.body;
     if (!key) {
-      return res.status(400).json({ error: 'key is required' });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', 'key is required', { status: 400 });
     }
     pool.addKey(req.params.provider, {
       key,
@@ -167,9 +168,9 @@ router.post('/pool/:provider/keys', (req, res) => {
       priority: priority || 10,
       label: label || '',
     });
-    res.json({ success: true });
+    return apiResponse.success(res, null);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -178,9 +179,9 @@ router.delete('/pool/:provider/keys/:keyId', (req, res) => {
     const pool = require('../services/apiKeyPool');
     pool.init();
     pool.removeKey(req.params.provider, req.params.keyId);
-    res.json({ success: true });
+    return apiResponse.success(res, null);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -191,7 +192,7 @@ router.put('/pool/:provider/keys/:keyId', (req, res) => {
     const entries = pool.getPoolStatus(req.params.provider) || [];
     const entry = entries.find((e) => e.id === req.params.keyId || e.keyId === req.params.keyId);
     if (!entry) {
-      return res.status(404).json({ error: `Key ${req.params.keyId} not found` });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', `Key ${req.params.keyId} not found`, { status: 404 });
     }
     if (req.body.endpoint !== undefined) {
       entry.endpoint = String(req.body.endpoint || '').trim();
@@ -203,9 +204,9 @@ router.put('/pool/:provider/keys/:keyId', (req, res) => {
       entry.priority = Number(req.body.priority) || 0;
     }
     pool.save();
-    res.json({ success: true });
+    return apiResponse.success(res, null);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -213,9 +214,9 @@ router.put('/pool/:provider/keys/:keyId', (req, res) => {
 
 router.get('/model-config', (req, res) => {
   try {
-    res.json({ success: true, data: getModelConfigSnapshot() });
+    return apiResponse.success(res, getModelConfigSnapshot());
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -228,19 +229,19 @@ router.put('/model-config', (req, res) => {
     const clearApiKey = req.body?.clearApiKey === true;
 
     if (!baseUrlRaw) {
-      return res.status(400).json({ error: 'baseUrl is required' });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', 'baseUrl is required', { status: 400 });
     }
     if (!modelId) {
-      return res.status(400).json({ error: 'modelId is required' });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', 'modelId is required', { status: 400 });
     }
 
     const normalizedUrl = normalizeOpenAiLikeBaseUrl(baseUrlRaw);
     if (!normalizedUrl.ok) {
-      return res.status(400).json({ error: 'baseUrl must be a valid http(s) URL' });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', 'baseUrl must be a valid http(s) URL', { status: 400 });
     }
     const compatibility = normalizeCompatibility(compatibilityRaw);
     if (!compatibility) {
-      return res.status(400).json({ error: 'compatibility must be openai|anthropic|unknown' });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', 'compatibility must be openai|anthropic|unknown', { status: 400 });
     }
 
     const envMap = {
@@ -268,17 +269,14 @@ router.put('/model-config', (req, res) => {
     }
 
     const envPath = writeGatewayEnvPatch(envMap, unsetKeys);
-    res.json({
-      success: true,
-      data: {
-        updated: true,
-        appendedV1: normalizedUrl.appendedV1,
-        envPath,
-        config: getModelConfigSnapshot(),
-      },
+    return apiResponse.success(res, {
+      updated: true,
+      appendedV1: normalizedUrl.appendedV1,
+      envPath,
+      config: getModelConfigSnapshot(),
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -293,12 +291,13 @@ router.get('/codex-config', (req, res) => {
     const snapshot =
       typeof codex.getCodexUpstreamSnapshot === 'function' ? codex.getCodexUpstreamSnapshot() : {};
     const preferredAdapter = String(process.env.GATEWAY_PREFERRED_ADAPTER || '').trim();
-    res.json({
-      success: true,
-      data: { ...snapshot, active: preferredAdapter.toLowerCase() === 'codex', preferredAdapter },
+    return apiResponse.success(res, {
+      ...snapshot,
+      active: preferredAdapter.toLowerCase() === 'codex',
+      preferredAdapter,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -308,20 +307,18 @@ router.put('/codex-config', (req, res) => {
     const baseUrl = String(req.body?.baseUrl || '').trim();
     const model = String(req.body?.model || '').trim();
     if (!providerName) {
-      return res.status(400).json({ error: 'providerName is required' });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', 'providerName is required', { status: 400 });
     }
     if (!baseUrl) {
-      return res.status(400).json({ error: 'baseUrl is required' });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', 'baseUrl is required', { status: 400 });
     }
     if (!model) {
-      return res.status(400).json({ error: 'model is required' });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', 'model is required', { status: 400 });
     }
 
     const codex = require('../services/gateway/adapters/codexAdapter');
     if (typeof codex.setCodexUpstream !== 'function') {
-      return res
-        .status(500)
-        .json({ error: 'codex adapter does not support upstream configuration' });
+      return apiResponse.fail(res, 'INTERNAL', 'codex adapter does not support upstream configuration', { status: 500 });
     }
     const apiKeyInput = String(req.body?.apiKey || '').trim();
     const written = codex.setCodexUpstream({
@@ -344,29 +341,26 @@ router.put('/codex-config', (req, res) => {
 
     const snapshot =
       typeof codex.getCodexUpstreamSnapshot === 'function' ? codex.getCodexUpstreamSnapshot() : {};
-    res.json({
-      success: true,
-      data: {
-        updated: true,
-        activated,
-        written: {
-          provider: written.provider,
-          baseUrl: written.baseUrl,
-          model: written.model,
-          wireApi: written.wireApi,
-          configPath: written.configPath,
-        },
-        config: {
-          ...snapshot,
-          active:
-            String(process.env.GATEWAY_PREFERRED_ADAPTER || '')
-              .trim()
-              .toLowerCase() === 'codex',
-        },
+    return apiResponse.success(res, {
+      updated: true,
+      activated,
+      written: {
+        provider: written.provider,
+        baseUrl: written.baseUrl,
+        model: written.model,
+        wireApi: written.wireApi,
+        configPath: written.configPath,
+      },
+      config: {
+        ...snapshot,
+        active:
+          String(process.env.GATEWAY_PREFERRED_ADAPTER || '')
+            .trim()
+            .toLowerCase() === 'codex',
       },
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -392,18 +386,18 @@ router.get('/monitor/traces', (req, res) => {
     if (since) {
       filter.since = since;
     }
-    res.json(monitor.getTraces(filter));
+    return apiResponse.success(res, monitor.getTraces(filter));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
 router.get('/monitor/stats', (req, res) => {
   try {
     const monitor = require('../services/aiMonitor');
-    res.json(monitor.getStats());
+    return apiResponse.success(res, monitor.getStats());
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -438,9 +432,9 @@ router.get('/oauth/status', (req, res) => {
   try {
     const oauth = require('../services/gateway/oauthManager');
     oauth.init();
-    res.json(oauth.getAllStatus());
+    return apiResponse.success(res, oauth.getAllStatus());
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -449,9 +443,9 @@ router.post('/oauth/:provider/refresh', async (req, res) => {
     const oauth = require('../services/gateway/oauthManager');
     oauth.init();
     const token = await oauth.refreshToken(req.params.provider);
-    res.json({ success: !!token, token: token ? '***' : null });
+    return apiResponse.success(res, { success: !!token, token: token ? '***' : null });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -460,9 +454,9 @@ router.post('/oauth/:provider/refresh', async (req, res) => {
 router.get('/plugins', (req, res) => {
   try {
     const chain = require('../services/gateway/pluginChain');
-    res.json(chain.list());
+    return apiResponse.success(res, chain.list());
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -471,9 +465,9 @@ router.post('/plugins/:name/toggle', (req, res) => {
     const chain = require('../services/gateway/pluginChain');
     const { enabled } = req.body;
     const success = chain.toggle(req.params.name, enabled !== false);
-    res.json({ success });
+    return apiResponse.success(res, { success });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -482,9 +476,9 @@ router.post('/plugins/:name/toggle', (req, res) => {
 router.get('/tls/status', (req, res) => {
   try {
     const sidecar = require('../services/gateway/tlsSidecar');
-    res.json(sidecar.getStatus());
+    return apiResponse.success(res, sidecar.getStatus());
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -492,9 +486,9 @@ router.post('/tls/start', async (req, res) => {
   try {
     const sidecar = require('../services/gateway/tlsSidecar');
     const result = await sidecar.start(req.body || {});
-    res.json({ success: true, ...result });
+    return apiResponse.success(res, result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -502,9 +496,9 @@ router.post('/tls/stop', async (req, res) => {
   try {
     const sidecar = require('../services/gateway/tlsSidecar');
     await sidecar.stop();
-    res.json({ success: true });
+    return apiResponse.success(res, null);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -513,9 +507,9 @@ router.post('/tls/stop', async (req, res) => {
 router.get('/protocols', (req, res) => {
   try {
     const converter = require('../services/gateway/protocolConverter');
-    res.json({ protocols: converter.getSupportedProtocols() });
+    return apiResponse.success(res, { protocols: converter.getSupportedProtocols() });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -553,12 +547,12 @@ router.get('/model-slots', (req, res) => {
     for (const [slot, envKey] of Object.entries(MODEL_SLOT_DEFS)) {
       slots[slot] = { envKey, model: process.env[envKey] || env[envKey] || '' };
     }
-    res.json({
-      success: true,
-      data: { slots, baseUrl: resolveAnthropicBaseUrl({ settingsEnv: env }) },
+    return apiResponse.success(res, {
+      slots,
+      baseUrl: resolveAnthropicBaseUrl({ settingsEnv: env }),
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -572,7 +566,7 @@ router.put('/model-slots', (req, res) => {
       }
     }
     if (Object.keys(updates).length === 0) {
-      return res.status(400).json({ error: '至少需要提供一个槽位更新' });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '至少需要提供一个槽位更新', { status: 400 });
     }
     const canWriteClaudeSettings = shouldWriteClaudeSettings();
     // 1) ~/.claude/settings.json (explicit opt-in only)
@@ -610,16 +604,16 @@ router.put('/model-slots', (req, res) => {
     for (const [slot, envKey] of Object.entries(MODEL_SLOT_DEFS)) {
       slots[slot] = { envKey, model: process.env[envKey] || settings.env[envKey] || '' };
     }
-    res.json({
-      success: true,
-      data: { slots, baseUrl: resolveAnthropicBaseUrl({ settingsEnv: settings.env || {} }) },
+    return apiResponse.success(res, {
+      slots,
+      baseUrl: resolveAnthropicBaseUrl({ settingsEnv: settings.env || {} }),
       meta: {
         claudeSettingsWriteEnabled: canWriteClaudeSettings,
         wroteClaudeSettings: canWriteClaudeSettings,
       },
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -628,9 +622,9 @@ router.put('/model-slots', (req, res) => {
 router.get('/slots', (req, res) => {
   try {
     const slots = require('../services/concurrencySlots');
-    res.json(slots.getAllStatus());
+    return apiResponse.success(res, slots.getAllStatus());
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -644,13 +638,13 @@ router.get('/health', async (req, res) => {
     }
     const broadcaster = gateway._healthBroadcaster;
     if (!broadcaster) {
-      return res.json({ adapters: [], activity: [], timestamp: Date.now() });
+      return apiResponse.success(res, { adapters: [], activity: [], timestamp: Date.now() });
     }
     const snapshot = await broadcaster.getSnapshot();
     snapshot.activity = broadcaster.getRecentActivity();
-    res.json(snapshot);
+    return apiResponse.success(res, snapshot);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -713,9 +707,9 @@ router.get('/health/stream', async (req, res) => {
 router.get('/credential-watcher/status', (req, res) => {
   try {
     const watcher = require('../services/credentialWatcherService');
-    res.json(watcher.getStatus());
+    return apiResponse.success(res, watcher.getStatus());
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -723,9 +717,9 @@ router.post('/credential-watcher/scan', async (req, res) => {
   try {
     const watcher = require('../services/credentialWatcherService');
     const results = await watcher.triggerScanNow();
-    res.json({ ok: true, results });
+    return apiResponse.success(res, { ok: true, results });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -733,9 +727,9 @@ router.post('/credential-watcher/start', async (req, res) => {
   try {
     const watcher = require('../services/credentialWatcherService');
     await watcher.start();
-    res.json({ ok: true, status: watcher.getStatus() });
+    return apiResponse.success(res, { ok: true, status: watcher.getStatus() });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -743,9 +737,9 @@ router.post('/credential-watcher/stop', (req, res) => {
   try {
     const watcher = require('../services/credentialWatcherService');
     watcher.stop();
-    res.json({ ok: true });
+    return apiResponse.success(res, { ok: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -755,9 +749,9 @@ router.get('/agents/dashboard', async (_req, res) => {
   try {
     const { getAgentDashboard } = require('../coordinator/workerAgent');
     const dashboard = getAgentDashboard();
-    res.json(dashboard);
+    return apiResponse.success(res, dashboard);
   } catch (err) {
-    res.json({
+    return apiResponse.success(res, {
       agents: [],
       tree: [],
       stats: { total: 0, running: 0, completed: 0, failed: 0, maxDepth: 0 },
@@ -772,12 +766,12 @@ router.get('/capabilities', (_req, res) => {
   try {
     const { getCapabilityRegistry } = require('../services/gateway/capabilityRegistry');
     const registry = getCapabilityRegistry();
-    res.json({
+    return apiResponse.success(res, {
       matrix: registry.getMatrix(),
       taskRequirements: registry.getTaskRequirements(),
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -789,12 +783,12 @@ router.get('/capabilities/match', (req, res) => {
     try {
       requirements = JSON.parse(String(req.query.requirements || '{}'));
     } catch {
-      return res.status(400).json({ error: 'Invalid requirements JSON' });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', 'Invalid requirements JSON', { status: 400 });
     }
     const ranked = registry.bestAdaptersFor(requirements, { onlyAvailable: false, limit: 10 });
-    res.json({ requirements, ranked });
+    return apiResponse.success(res, { requirements, ranked });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -806,9 +800,9 @@ router.get('/accounts', async (req, res) => {
     await pool.init();
     const provider = String(req.query.provider || '').trim();
     const accounts = await pool.getAllAccounts(provider || undefined);
-    res.json({ success: true, accounts });
+    return apiResponse.success(res, { accounts });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -817,9 +811,9 @@ router.post('/accounts/:provider/use/:id', async (req, res) => {
     const pool = require('../services/accountPool');
     await pool.init();
     const result = await pool.useAccount(req.params.provider, req.params.id);
-    res.json({ success: true, account: result });
+    return apiResponse.success(res, { account: result });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -828,9 +822,9 @@ router.post('/accounts/:provider/import', async (req, res) => {
     const pool = require('../services/accountPool');
     await pool.init();
     const result = await pool.importProviderTokens(req.params.provider);
-    res.json({ success: true, ...result });
+    return apiResponse.success(res, result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -839,9 +833,9 @@ router.delete('/accounts/:id', async (req, res) => {
     const pool = require('../services/accountPool');
     await pool.init();
     await pool.removeAccount(Number(req.params.id));
-    res.json({ success: true });
+    return apiResponse.success(res, null);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -856,16 +850,16 @@ router.post('/accounts/batch-delete', async (req, res) => {
     if (body.all === true) {
       const provider = String(body.provider || '').trim();
       const result = await pool.removeAllAccounts(provider || undefined);
-      return res.json({ success: true, ...result });
+      return apiResponse.success(res, result);
     }
     const ids = Array.isArray(body.ids) ? body.ids : [];
     if (ids.length === 0) {
-      return res.status(400).json({ error: 'ids must be a non-empty array (or pass all:true)' });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', 'ids must be a non-empty array (or pass all:true)', { status: 400 });
     }
     const result = await pool.removeAccounts(ids);
-    res.json({ success: true, ...result });
+    return apiResponse.success(res, result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -874,9 +868,9 @@ router.post('/accounts/:id/enable', async (req, res) => {
     const pool = require('../services/accountPool');
     await pool.init();
     await pool.enableAccount(Number(req.params.id));
-    res.json({ success: true });
+    return apiResponse.success(res, null);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -885,9 +879,9 @@ router.post('/accounts/:id/disable', async (req, res) => {
     const pool = require('../services/accountPool');
     await pool.init();
     await pool.disableAccount(Number(req.params.id));
-    res.json({ success: true });
+    return apiResponse.success(res, null);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 
@@ -896,9 +890,9 @@ router.post('/accounts/:id/unban', async (req, res) => {
     const pool = require('../services/accountPool');
     await pool.init();
     await pool.updateAccount(Number(req.params.id), { status: 'available' });
-    res.json({ success: true });
+    return apiResponse.success(res, null);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 });
   }
 });
 

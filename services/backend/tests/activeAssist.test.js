@@ -13,7 +13,7 @@ const SUMMARY = 'KHY_ACTIVE_ASSIST_SUMMARY';
 const AGENT = 'KHY_ACTIVE_ASSIST_AGENT';
 const IDLE = 'KHY_ACTIVE_ASSIST_IDLE';
 const ALL_FLAGS = [MASTER, SUMMARY, AGENT, IDLE];
-const MODULE_PATH = '../src/services/query/activeAssist';
+const MODULE_PATH = '../src/services/domain/query/query/activeAssist.js';
 
 function load(env = {}) {
   for (const f of ALL_FLAGS) delete process.env[f];

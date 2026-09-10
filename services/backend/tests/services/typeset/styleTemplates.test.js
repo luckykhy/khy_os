@@ -1,5 +1,5 @@
 /**
- * styleTemplates.test.js — template loader / resolver.
+ * styleTemplates.test.js �?template loader / resolver.
  *
  * Confirms built-ins load, that non-default templates inherit the full default
  * baseline (every font key present even if the template file omits it), and that
@@ -12,9 +12,9 @@ const {
   listTemplates,
   resolveTemplate,
   _deepMerge,
-} = require('../../../src/services/typeset/styleTemplates');
+} = require('../../../src/services/domain/structured/typeset/styleTemplates.js');
 
-describe('styleTemplates — discovery', () => {
+describe('styleTemplates �?discovery', () => {
   test('lists the three built-in templates', () => {
     const names = listTemplates().map((t) => t.name).sort();
     expect(names).toEqual(['default', 'gbt7714', 'ieee']);
@@ -25,7 +25,7 @@ describe('styleTemplates — discovery', () => {
   });
 });
 
-describe('styleTemplates — resolution', () => {
+describe('styleTemplates �?resolution', () => {
   test('no spec resolves to the default baseline', () => {
     const { template, source, error } = resolveTemplate();
     expect(error).toBeUndefined();
@@ -71,7 +71,7 @@ describe('styleTemplates — resolution', () => {
   });
 });
 
-describe('styleTemplates — _deepMerge', () => {
+describe('styleTemplates �?_deepMerge', () => {
   test('objects merge, scalars and arrays replace', () => {
     expect(_deepMerge({ a: { x: 1, y: 2 } }, { a: { y: 3 } })).toEqual({ a: { x: 1, y: 3 } });
     expect(_deepMerge({ a: [1, 2] }, { a: [9] })).toEqual({ a: [9] });
@@ -82,3 +82,4 @@ describe('styleTemplates — _deepMerge', () => {
     expect(_deepMerge({ a: 1 }, null)).toEqual({ a: 1 });
   });
 });
+

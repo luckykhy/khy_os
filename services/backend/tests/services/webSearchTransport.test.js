@@ -1,5 +1,4 @@
 'use strict';
-
 /**
  * webSearchTransport.test.js (node:test)
  *
@@ -12,41 +11,42 @@
  * the transport module from the URL's actual scheme so http:// redirects use
  * node:http and never throw ERR_INVALID_PROTOCOL. Pure (no network).
  */
-const test = require('node:test');
-const assert = require('node:assert');
-
 const http = require('http');
 const https = require('https');
 const ws = require('../../src/services/webSearchService');
 const { httpClientFor } = ws.__parsersForTests;
 
-test('http:// URL selects the node:http module', () => {
-  assert.strictEqual(httpClientFor('http://example.com/path'), http);
-});
-
-test('https:// URL selects the node:https module', () => {
-  assert.strictEqual(httpClientFor('https://example.com/path'), https);
-});
-
-test('scheme-relative / unparseable input defaults to https (conservative)', () => {
-  assert.strictEqual(httpClientFor('//example.com/path'), https);
-  assert.strictEqual(httpClientFor('not a url'), https);
-  assert.strictEqual(httpClientFor(''), https);
-  assert.strictEqual(httpClientFor(undefined), https);
-});
-
-test('uppercase HTTP:// scheme is still routed to node:http', () => {
-  assert.strictEqual(httpClientFor('HTTP://example.com'), http);
-});
-
-test('selecting the client for an http:// redirect never throws ERR_INVALID_PROTOCOL', () => {
-  // The real bug: https.get('http://...') throws synchronously. Prove the
-  // chosen client accepts the http:// URL up to the point of dispatch.
-  const client = httpClientFor('http://127.0.0.1:0/redirect-target');
-  assert.strictEqual(client, http);
-  assert.doesNotThrow(() => {
-    const req = client.get('http://127.0.0.1:0/redirect-target', { timeout: 1 }, () => {});
-    req.on('error', () => {}); // swallow the inevitable connrefused/timeout
-    req.destroy();
+describe('Web Search Transport', () => {
+  test('http:// URL selects the node:http module', () => {
+      expect(httpClientFor('http://example.com/path')).toBe(http);
   });
+
+  test('https:// URL selects the node:https module', () => {
+      expect(httpClientFor('https://example.com/path')).toBe(https);
+  });
+
+  test('scheme-relative / unparseable input defaults to https (conservative)', () => {
+      expect(httpClientFor('//example.com/path')).toBe(https);
+      expect(httpClientFor('not a url')).toBe(https);
+      expect(httpClientFor('')).toBe(https);
+      expect(httpClientFor(undefined)).toBe(https);
+  });
+
+  test('uppercase HTTP:// scheme is still routed to node:http', () => {
+      expect(httpClientFor('HTTP://example.com')).toBe(http);
+  });
+
+  test('selecting the client for an http:// redirect never throws ERR_INVALID_PROTOCOL', () => {
+      // The real bug: https.get('http://...') throws synchronously. Prove the
+      // chosen client accepts the http:// URL up to the point of dispatch.
+      const client = httpClientFor('http://127.0.0.1:0/redirect-target');
+      expect(client).toBe(http);
+      assert.doesNotThrow(() => {
+        const req = client.get('http://127.0.0.1:0/redirect-target', { timeout: 1 }, () => {});
+        req.on('error', () => {}); // swallow the inevitable connrefused/timeout
+        req.destroy();
+      });
+  });
+
 });
+

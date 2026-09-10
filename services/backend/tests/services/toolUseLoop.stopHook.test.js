@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * s04 — main-loop Stop hook + stopHookActive anti-runaway.
+ * s04 �?main-loop Stop hook + stopHookActive anti-runaway.
  *
  * When the turn reaches its natural stopping point (model produced no tool
  * calls), a registered Stop hook may veto the stop by returning `blocked`,
@@ -10,13 +10,13 @@
  * loop can never be driven indefinitely by the hook.
  */
 
-const LONG = 'This is a complete and substantive final answer. '.repeat(12); // > 400 non-ws chars → concludeNow shortcut
+const LONG = 'This is a complete and substantive final answer. '.repeat(12); // > 400 non-ws chars �?concludeNow shortcut
 
 function mockHookSystem(triggerImpl) {
-  jest.doMock('../../src/services/hooks/hookSystem', () => ({
+  jest.doMock('../../src/services/domain/extensions/hooks/hookSystem.js', () => ({
     isInitialized: () => true,
     init: () => {},
-    registry: { count: 1 }, // non-zero → _getHookSystem() returns this system
+    registry: { count: 1 }, // non-zero �?_getHookSystem() returns this system
     trigger: triggerImpl,
   }));
 }
@@ -52,7 +52,7 @@ describe('toolUseLoop main-loop Stop hook', () => {
     let turn = 0;
     const chat = jest.fn(async () => {
       turn++;
-      return { reply: LONG, provider: 'mock' }; // no tool calls → natural stop each turn
+      return { reply: LONG, provider: 'mock' }; // no tool calls �?natural stop each turn
     });
 
     const result = await toolUseLoop.runToolUseLoop('do the task', {
@@ -63,16 +63,16 @@ describe('toolUseLoop main-loop Stop hook', () => {
       requestId: 'stop-r1',
     });
 
-    // Turn 1 concludes → Stop veto honored → forced continue → Turn 2 concludes
-    // → Stop hook still RUNS (telemetry) but its veto is ignored by the latch →
-    // clean return. The latch — not maxIterations — is what stops the loop.
+    // Turn 1 concludes �?Stop veto honored �?forced continue �?Turn 2 concludes
+    // �?Stop hook still RUNS (telemetry) but its veto is ignored by the latch �?
+    // clean return. The latch �?not maxIterations �?is what stops the loop.
     expect(turn).toBe(2);
     expect(stopCalls).toBe(2);
     expect(result.maxIterationsReached).toBeUndefined();
     expect(result.finalResponse).toContain('substantive final answer');
   }, 30000);
 
-  test('no Stop veto → single conclusion, no forced continuation', async () => {
+  test('no Stop veto �?single conclusion, no forced continuation', async () => {
     let stopCalls = 0;
     mockToolCalling();
     mockHookSystem(async (event) => {
@@ -97,3 +97,4 @@ describe('toolUseLoop main-loop Stop hook', () => {
     expect(stopCalls).toBe(1);
   }, 30000);
 });
+

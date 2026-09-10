@@ -9,7 +9,7 @@ const path = require('path');
 process.env.KHYOS_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'khyos-wxqr-'));
 
 const { _printQrArt } = require('../../src/cli/handlers/wx');
-const login = require('../../src/services/messaging/ilinkLogin');
+const login = require('../../src/services/domain/messaging/messaging/ilinkLogin.js');
 
 /** 用指定终端宽度跑一次打印,收集 stdout。 */
 function withWidth(cols, art) {

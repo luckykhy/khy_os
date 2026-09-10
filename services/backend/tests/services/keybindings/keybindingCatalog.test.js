@@ -18,7 +18,7 @@ const {
   selectCatalog,
   formatCatalog,
   isEnabled,
-} = require('../../../src/services/keybindings/keybindingCatalog');
+} = require('../../../src/services/domain/config/keybindings/keybindingCatalog.js');
 
 describe('完整目录结构', () => {
   test('每组有 context/label/非空 bindings,每条有 keys/desc', () => {

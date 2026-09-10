@@ -19,6 +19,7 @@
  */
 
 const { printInfo, printError, printTable, printSuccess } = require('../formatters');
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 
 function _store() {
   return require('../../services/vaultStore');
@@ -190,4 +191,15 @@ function handleVault(subCommand, args = [], options = {}, deps = {}) {
   return 1;
 }
 
-module.exports = { handleVault };
+module.exports = {
+  handleVault,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'vault',
+    aliases: ['vault-secret', '保险库'],
+    description: '密钥保险库：机密存本地 (0600)，模型用 {{vault:NAME}} 占位符引用',
+    usage: 'vault [list|get <name>|set <name> <value>|del <name>|on|off|--reveal]',
+    subCommands: ['list', 'get', 'set', 'del', 'on', 'off'],
+    category: 'system',
+    handler: async (parsed) => handleVault(parsed.subCommand, parsed.args, parsed.options),
+  },
+};

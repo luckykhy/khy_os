@@ -17,6 +17,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 
 const chalk = require('chalk').default || require('chalk');
 const cl = require('../../services/codeLaziness');
@@ -222,4 +223,15 @@ function handleLazy(subCommand, args = [], options = {}, deps = {}) {
   return 1;
 }
 
-module.exports = { handleLazy };
+module.exports = {
+  handleLazy,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'lazy',
+    aliases: ['lz', '懒人'],
+    description: '懒人方法论：阶梯/债务台账/强度/开关（学自 ponytail）',
+    usage: 'lazy [ladder|debt|level <lite|full|ultra>|on|off]',
+    subCommands: ['ladder', 'debt', 'level', 'on', 'off'],
+    category: 'dev',
+    handler: async (parsed) => handleLazy(parsed.subCommand, parsed.args, parsed.options),
+  },
+};

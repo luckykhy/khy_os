@@ -4,12 +4,12 @@
  * assembleToolPool stability regressions (prompt-cache-order protection).
  *
  * Guards three invariants of src/tools/index.js#assembleToolPool:
- *   1. Sequence stability â€” under identical conditions, repeated calls yield
+ *   1. Sequence stability â€?under identical conditions, repeated calls yield
  *      an element-wise identical tool-name sequence (not just set equality).
- *   2. Built-in wins â€” an MCP tool colliding with a built-in name never
+ *   2. Built-in wins â€?an MCP tool colliding with a built-in name never
  *      shadows the built-in, and the built-in partition's relative order is
  *      unaffected by MCP tool registration/removal.
- *   3. Memoization equivalence â€” KHY_TOOL_ASSEMBLE_POOL_MEMO on/off produce
+ *   3. Memoization equivalence â€?KHY_TOOL_ASSEMBLE_POOL_MEMO on/off produce
  *      equivalent name sequences, and the memo invalidates on _toolsVersion
  *      bumps (e.g. after registering a new tool).
  *
@@ -38,7 +38,7 @@ afterEach(() => {
   else process.env[MEMO_ENV] = savedMemoEnv;
 });
 
-/** Fresh registry instance â€” resets the module-level singleton per scenario. */
+/** Fresh registry instance â€?resets the module-level singleton per scenario. */
 function freshRegistry() {
   jest.resetModules();
   // eslint-disable-next-line global-require
@@ -50,7 +50,7 @@ function setMemo(value) {
   else process.env[MEMO_ENV] = value;
 }
 
-/** Tool-name sequence in pool iteration order (order matters â€” no sorting). */
+/** Tool-name sequence in pool iteration order (order matters â€?no sorting). */
 function poolNames(reg, profileId) {
   return [...reg.assembleToolPool(undefined, profileId).keys()];
 }
@@ -121,7 +121,7 @@ describe('assembleToolPool built-in priority over same-name MCP tools', () => {
     // The unique MCP stub is present.
     expect(pool.has(uniqueMcpName)).toBe(true);
 
-    // Partitioned ordering: the built-in prefix is byte-identical to baseline â€”
+    // Partitioned ordering: the built-in prefix is byte-identical to baseline â€?
     // MCP additions never reorder or interleave with the built-in partition.
     const namesWithMcp = [...pool.keys()];
     expect(namesWithMcp.slice(0, baseline.length)).toEqual(baseline);
@@ -162,7 +162,7 @@ describe('assembleToolPool memoization equivalence and invalidation', () => {
     const stubName = 'zzz_pool_memo_invalidation_stub';
     expect(before.has(stubName)).toBe(false);
 
-    // Registering a tool bumps _toolsVersion â†’ the cache key must change.
+    // Registering a tool bumps _toolsVersion â†?the cache key must change.
     registerMcpStub(reg, stubName);
     const keyAfter = reg._assemblePoolCacheKey(undefined);
     expect(keyAfter).not.toBe(keyBefore);
@@ -178,3 +178,4 @@ describe('assembleToolPool memoization equivalence and invalidation', () => {
     expect(poolNames(reg)).toEqual(afterNames);
   });
 });
+

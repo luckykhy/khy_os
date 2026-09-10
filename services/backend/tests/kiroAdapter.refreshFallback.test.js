@@ -113,3 +113,4 @@ describe('kiro adapter refresh fallback', () => {
     expect(warnSpy).toHaveBeenCalled();
   });
 });
+

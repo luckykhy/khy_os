@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * liveSealThresholdChars â€” pure resolver for the KHY_TUI_LIVE_SEAL_KB gate
+ * liveSealThresholdChars â€?pure resolver for the KHY_TUI_LIVE_SEAL_KB gate
  * behind the live-region capacity seal guard (useQueryBridge onChunk text
  * branch). Contract pinned here: default 64KB, explicit opt-out values return
  * 0 (guard disabled), invalid input falls back to the default, never throws.
@@ -11,7 +11,7 @@ const { liveSealThresholdChars, DEFAULT_KB } = require('../../src/cli/tui/hooks/
 
 const DEFAULT_CHARS = DEFAULT_KB * 1024;
 
-describe('liveSealThresholdChars â€” KHY_TUI_LIVE_SEAL_KB parsing', () => {
+describe('liveSealThresholdChars â€?KHY_TUI_LIVE_SEAL_KB parsing', () => {
   test('default is 64KB (65536 chars) when the var is unset or empty', () => {
     expect(DEFAULT_CHARS).toBe(65536);
     expect(liveSealThresholdChars({})).toBe(DEFAULT_CHARS);
@@ -46,3 +46,4 @@ describe('liveSealThresholdChars â€” KHY_TUI_LIVE_SEAL_KB parsing', () => {
     expect(liveSealThresholdChars({ KHY_TUI_LIVE_SEAL_KB: { bad: true } })).toBe(DEFAULT_CHARS);
   });
 });
+

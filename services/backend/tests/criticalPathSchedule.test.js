@@ -19,7 +19,7 @@ const assert = require('node:assert');
 const {
   scheduleEnabled,
   analyzeSchedule,
-} = require('../src/services/orchestrator/criticalPathSchedule');
+} = require('../src/services/domain/state/orchestrator/criticalPathSchedule.js');
 
 // ── gate ladder ──────────────────────────────────────────────────────────────
 test('scheduleEnabled: default on (unset)', () => {

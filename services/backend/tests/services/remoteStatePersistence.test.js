@@ -76,3 +76,4 @@ describe('RemoteStatePersistence', () => {
     expect(persistence.load()).toBeNull();
   });
 });
+

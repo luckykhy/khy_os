@@ -19,6 +19,7 @@
 
 const marketplace = require('../../services/extensionMarketplace');
 const { printSuccess, printError, printInfo, printWarn, printTable } = require('../formatters');
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 
 async function handleExtension(input, deps) {
   const parts = (input || '').trim().split(/\s+/);
@@ -349,4 +350,19 @@ function _printHelp() {
   console.log(lines.join('\n'));
 }
 
-module.exports = { handleExtension };
+module.exports = {
+  handleExtension,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'extension',
+    aliases: ['ext'],
+    description: '拓展市场：列表/搜索/安装/卸载/启用/禁用/更新/信息/链接/新建',
+    usage: 'extension <list|search|install|uninstall|enable|disable|update|info|link|unlink|new>',
+    subCommands: ['list', 'search', 'install', 'uninstall', 'enable', 'disable', 'update', 'info', 'link', 'unlink', 'new'],
+    category: 'system',
+    handler: async (parsed) => {
+      const input = [parsed.subCommand, ...(parsed.args || [])].filter(Boolean).join(' ');
+      await handleExtension(input, { options: parsed.options });
+      return true;
+    },
+  },
+};

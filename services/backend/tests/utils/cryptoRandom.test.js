@@ -66,3 +66,4 @@ describe('cryptoRandom', () => {
     expect(result).toMatch(/^[0-9a-f]{16}$/);
   });
 });
+

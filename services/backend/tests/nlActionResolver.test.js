@@ -12,7 +12,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const r = require('../src/services/config/nlActionResolver');
+const r = require('../src/services/domain/config/config/nlActionResolver.js');
 
 const ON = { KHY_NL_ACTION: 'true' };
 const OFF = { KHY_NL_ACTION: 'off' };

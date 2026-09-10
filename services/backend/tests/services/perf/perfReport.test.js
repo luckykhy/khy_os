@@ -14,7 +14,7 @@ const {
   analyzePerf,
   formatPerfReport,
   isEnabled,
-} = require('../../../src/services/perf/perfReport');
+} = require('../../../src/services/domain/quality/perf/perfReport.js');
 
 function sampleUsage() {
   return {

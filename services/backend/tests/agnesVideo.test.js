@@ -104,8 +104,16 @@ describe('videoGenService.generate lifecycle (mocked fetch)', () => {
       if (init && init.method === 'POST') {
         expect(url).toBe('https://apihub.agnes-ai.com/v1/videos');
         const body = JSON.parse(init.body);
-        expect(body.model).toBe('agnes-video-v2.0');
-        expect(body.num_frames).toBe(121);
+        expect(body.model).toBe('agnes-video-2.5');
+        // 2.5 payload schema is strict — forbidden fields must NOT be sent
+        expect(body.num_frames).toBeUndefined();
+        expect(body.frame_rate).toBeUndefined();
+        expect(body.width).toBeUndefined();
+        expect(body.height).toBeUndefined();
+        expect(body.num_inference_steps).toBeUndefined();
+        expect(body.seed).toBeUndefined();
+        expect(body.negative_prompt).toBeUndefined();
+        expect(body.prompt).toBe('a cat on a beach');
         return okJson({ video_id: 'video_1', task_id: 'task_1', status: 'queued', progress: 0 });
       }
       // GET poll

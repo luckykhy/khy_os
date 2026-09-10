@@ -185,3 +185,4 @@ describe('D4: _lastActivity tracking', () => {
     expect(worker._lastActivity).toBeGreaterThanOrEqual(before || 0);
   });
 });
+

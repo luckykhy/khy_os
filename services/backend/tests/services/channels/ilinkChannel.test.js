@@ -16,10 +16,10 @@ process.env.KHY_ILINK_TYPING_KEEPALIVE_MS = '5';
 // 让注入的假 chat 直接被调 —— 工具循环的接线由 ilinkToolLoop.test.js 覆盖。
 process.env.KHY_ILINK_DISABLE_TOOL_LOOP = '1';
 
-const { IlinkChannel } = require('../../../src/services/channels/ilinkChannel');
-const { IlinkDispatcher } = require('../../../src/services/channels/ilinkDispatcher');
-const { MessageRouter } = require('../../../src/services/channels/messageRouter');
-const store = require('../../../src/services/messaging/ilinkAccountStore');
+const { IlinkChannel } = require('../../../src/services/domain/messaging/channels/ilinkChannel.js');
+const { IlinkDispatcher } = require('../../../src/services/domain/messaging/channels/ilinkDispatcher.js');
+const { MessageRouter } = require('../../../src/services/domain/messaging/channels/messageRouter.js');
+const store = require('../../../src/services/domain/messaging/messaging/ilinkAccountStore.js');
 
 /** 可编排的假 api,记录全部出站调用。 */
 function fakeApi(updatesScript = []) {
@@ -391,7 +391,7 @@ test('router: unregisterChannel 同时清掉 per-channel handler', async () => {
 });
 
 test('dispatcher: 微信这条路默认放开首选通道严格模式(全局 .env 不受影响)', async () => {
-  const { _ilinkStrictRoute } = require('../../../src/services/channels/ilinkDispatcher');
+  const { _ilinkStrictRoute } = require('../../../src/services/domain/messaging/channels/ilinkDispatcher.js');
   assert.strictEqual(_ilinkStrictRoute({}), false, '默认允许回落');
   assert.strictEqual(_ilinkStrictRoute({ KHY_ILINK_STRICT_ROUTE: '1' }), true);
   assert.strictEqual(_ilinkStrictRoute({ KHY_ILINK_STRICT_ROUTE: 'true' }), true);

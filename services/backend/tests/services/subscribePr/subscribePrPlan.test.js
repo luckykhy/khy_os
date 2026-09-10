@@ -3,7 +3,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 
-const leaf = require('../../../src/services/subscribePr/subscribePrPlan');
+const leaf = require('../../../src/services/domain/deploy/subscribePr/subscribePrPlan.js');
 
 // ── 语法解析 ──────────────────────────────────────────────────────────────
 test('parseSubscribeArgs: 空参 = list', () => {

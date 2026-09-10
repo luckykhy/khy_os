@@ -847,7 +847,7 @@ function _maybeProvisionAgnesMedia(result, doMedia, asJson) {
         printError(`图像接通失败: ${summary.image.error}`);
       }
       if (summary.video.wired) {
-        printSuccess('视频能力已接通: 文生视频 / 图生视频 / 关键帧 (agnes-video-v2.0)');
+        printSuccess('视频能力已接通: 文生视频 / 图生视频 / 关键帧 (agnes-video-2.5)');
       } else if (summary.video.error) {
         printError(`视频接通失败: ${summary.video.error}`);
       }

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tests for services/errorClassifier.js â€” structured error classification.
+ * Tests for services/errorClassifier.js â€?structured error classification.
  */
 
 const errorClassifier = require('../../src/services/errorClassifier');
@@ -151,3 +151,4 @@ describe('formatErrorMessage', () => {
     expect(msg).toContain('root cause');
   });
 });
+

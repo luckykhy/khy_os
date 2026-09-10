@@ -33,3 +33,4 @@ describe('webSearch cheerio lazy degradation', () => {
     expect(svc.__parsersForTests.parseDuckDuckGoHtml('<div></div>')).toEqual([]);
   });
 });
+

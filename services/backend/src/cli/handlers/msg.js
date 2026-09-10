@@ -21,6 +21,7 @@
  */
 
 const { printInfo, printError, printTable, printSuccess } = require('../formatters');
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 
 function _core() {
   return require('../../services/domain/messaging/messaging/msgChannelCore.js');
@@ -232,4 +233,14 @@ function handleMsg(subCommand, args = [], options = {}, deps = {}) {
   return 1;
 }
 
-module.exports = { handleMsg };
+module.exports = {
+  handleMsg,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'msg',
+    aliases: ['message', '消息'],
+    description: '多平台消息收发：钉钉/飞书/企业微信（报文/验签在纯叶子）',
+    usage: 'msg <subcommand> [args]',
+    category: 'workflow',
+    handler: async (parsed) => handleMsg(parsed.subCommand, parsed.args, parsed.options),
+  },
+};

@@ -77,7 +77,7 @@ describe('resolveFallbackWindow', () => {
 
 describe('消费方口径一致性(防漂移)', () => {
   test('ctxWindowStats 的 env-fallback 上限 === UNKNOWN_MODEL_CONTEXT_WINDOW', () => {
-    const { computeContextStats } = require('../../src/services/context/ctxWindowStats');
+    const { computeContextStats } = require('../../src/services/domain/session/context/ctxWindowStats.js');
     const stats = computeContextStats({ used: 0, limit: 0 }, {});
     assert.strictEqual(stats.limitSource, 'env-fallback');
     assert.strictEqual(stats.limit, leaf.UNKNOWN_MODEL_CONTEXT_WINDOW);

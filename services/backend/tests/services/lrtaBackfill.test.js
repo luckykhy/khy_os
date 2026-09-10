@@ -1,12 +1,12 @@
 'use strict';
 
 /**
- * lrtaBackfill.test.js — Phase A of the CB-SSP redesign (design doc §4.A).
+ * lrtaBackfill.test.js �?Phase A of the CB-SSP redesign (design doc §4.A).
  *
  * Asserts the mathematical properties the design doc requires of the value
  * backfill:
- *   1. Monotone non-increasing across trials (H_{k+1} <= H_k) — the doc's
- *      "跨 trial 价值回填使 h 单调不增" property.
+ *   1. Monotone non-increasing across trials (H_{k+1} <= H_k) �?the doc's
+ *      "�?trial 价值回填使 h 单调不增" property.
  *   2. Correct backfill rule  H <- min(prevStoredH, g + h_k).
  *   3. Non-negative step cost g_k (resource delta) so monotonicity cannot break.
  *   4. Persistence round-trips and never poisons a future warm start.
@@ -59,7 +59,7 @@ describe('backfill: H <- min(prevStoredH, g + h_k)', () => {
 
 describe('monotonicity: running backfill is non-increasing across trials', () => {
   test('H_{k+1} <= H_k for an arbitrary sequence of trials', () => {
-    // (stepCost, h_k) per trial — deliberately noisy, including a worse trial.
+    // (stepCost, h_k) per trial �?deliberately noisy, including a worse trial.
     const trials = [
       [1, 9], [0, 6], [2, 6], [1, 3], [0, 3], [5, 1], [0, 0],
     ];
@@ -148,3 +148,4 @@ describe('persistence: warm start round-trip', () => {
     }
   });
 });
+

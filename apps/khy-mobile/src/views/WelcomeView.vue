@@ -152,7 +152,7 @@ async function choose(mode) {
   color: var(--m-text-strong);
   letter-spacing: -0.01em;
 }
-.hero p { margin: 0; color: var(--m-text-mid); font-size: 14px; line-height: 1.6; }
+.hero p { margin: 0; color: var(--m-text); font-size: 14px; line-height: 1.6; }
 
 .cottage-grid { display: grid; gap: 14px; }
 @media (min-width: 640px) {
@@ -162,11 +162,11 @@ async function choose(mode) {
 .card {
   position: relative;
   text-align: left;
-  background: var(--m-surface);
+  background: var(--m-bg-card);
   border: 2px solid var(--m-border);
   border-radius: var(--m-radius-lg);
   padding: 20px;
-  color: inherit;
+  color: var(--m-text);
   font: inherit;
   cursor: pointer;
   transition: transform .2s, border-color .2s, box-shadow .2s;
@@ -188,12 +188,12 @@ async function choose(mode) {
   padding: 3px 10px;
   border-radius: var(--m-radius-pill);
   background: var(--m-accent);
-  color: var(--m-accent-on);
+  color: var(--m-text-inverse);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: .04em;
 }
-.card-tag.lake { background: var(--m-lake); color: var(--m-surface); }
+.card-tag.lake { background: var(--m-lake); color: var(--m-text-inverse); }
 .card-icon { font-size: 30px; line-height: 1; }
 .card-icon.lake { color: var(--m-lake); }
 
@@ -203,7 +203,7 @@ async function choose(mode) {
   font-size: 22px;
   color: var(--m-text-strong);
 }
-.card-lead { margin: 0 0 14px; color: var(--m-text-mid); font-size: 14px; line-height: 1.6; }
+.card-lead { margin: 0 0 14px; color: var(--m-text); font-size: 14px; line-height: 1.6; }
 .card-lead strong { color: var(--m-accent-strong); font-weight: 700; }
 .card.lake .card-lead strong { color: var(--m-lake); }
 

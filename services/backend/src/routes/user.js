@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 const { User } = require('../models');
+const apiResponse = require('../utils/apiResponse');
 
 // 获取用户列表（需要管理员权限）
 router.get('/', authMiddleware, adminMiddleware, async (req, res) => {
@@ -12,17 +13,10 @@ router.get('/', authMiddleware, adminMiddleware, async (req, res) => {
       order: [['createdAt', 'DESC']],
     });
 
-    res.json({
-      success: true,
-      data: users,
-    });
+    return apiResponse.success(res, users);
   } catch (error) {
     console.error('获取用户列表错误:', error);
-    res.status(500).json({
-      success: false,
-      message: '获取用户列表失败',
-      error: error.message,
-    });
+    return apiResponse.fail(res, 'INTERNAL', '获取用户列表失败', { status: 500 });
   }
 });
 
@@ -37,13 +31,10 @@ router.put('/sendkey', authMiddleware, async (req, res) => {
 
     await User.update({ sendKey: value }, { where: { id: req.user.id } });
 
-    res.json({
-      success: true,
-      message: value ? 'SendKey saved' : 'SendKey unbound',
-    });
+    return apiResponse.success(res, null, { message: value ? 'SendKey saved' : 'SendKey unbound' });
   } catch (error) {
     console.error('SendKey update error:', error);
-    res.status(500).json({ success: false, message: 'Failed to update SendKey' });
+    return apiResponse.fail(res, 'INTERNAL', 'Failed to update SendKey', { status: 500 });
   }
 });
 
@@ -54,13 +45,10 @@ router.get('/sendkey-status', authMiddleware, async (req, res) => {
       attributes: ['sendKey'],
     });
 
-    res.json({
-      success: true,
-      data: { bound: !!user?.sendKey },
-    });
+    return apiResponse.success(res, { bound: !!user?.sendKey });
   } catch (error) {
     console.error('SendKey status error:', error);
-    res.status(500).json({ success: false, message: 'Failed to check SendKey status' });
+    return apiResponse.fail(res, 'INTERNAL', 'Failed to check SendKey status', { status: 500 });
   }
 });
 
@@ -74,31 +62,18 @@ router.get('/:id', authMiddleware, async (req, res) => {
     });
 
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: '用户不存在',
-      });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', '用户不存在', { status: 404 });
     }
 
     // 非管理员只能查看自己的信息
     if (req.user.role !== 'admin' && req.user.id !== parseInt(id)) {
-      return res.status(403).json({
-        success: false,
-        message: '无权访问该用户信息',
-      });
+      return apiResponse.fail(res, 'PERMISSION_DENIED', '无权访问该用户信息', { status: 403 });
     }
 
-    res.json({
-      success: true,
-      data: user,
-    });
+    return apiResponse.success(res, user);
   } catch (error) {
     console.error('获取用户详情错误:', error);
-    res.status(500).json({
-      success: false,
-      message: '获取用户详情失败',
-      error: error.message,
-    });
+    return apiResponse.fail(res, 'INTERNAL', '获取用户详情失败', { status: 500 });
   }
 });
 

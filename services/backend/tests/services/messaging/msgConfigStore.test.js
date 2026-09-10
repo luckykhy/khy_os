@@ -10,7 +10,7 @@ const path = require('path');
 const TMP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'khyos-msgcfg-'));
 process.env.KHYOS_HOME = TMP_HOME;
 
-const store = require('../../../src/services/messaging/msgConfigStore');
+const store = require('../../../src/services/domain/messaging/messaging/msgConfigStore.js');
 
 // KHYOS_HOME 覆盖时,getBaseDataDir('.') 直接解析到 KHYOS_HOME 本身。
 function msgFile() { return path.join(TMP_HOME, 'msg.json'); }

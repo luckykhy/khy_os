@@ -11,6 +11,7 @@
 
 // ── Imports ──
 
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const fs = require('fs');
 const path = require('path');
 
@@ -284,4 +285,13 @@ async function handleDeploy(parsed = {}) {
   return runDeploy(deployArgs, options);
 }
 
-module.exports = { handleDeploy, SUB_COMMANDS };
+module.exports = {
+  handleDeploy,
+  SUB_COMMANDS,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'deploy',
+    description: 'deploy command (auto-migrated)',
+    category: 'system',
+    handler: handleDeploy,
+  },
+};

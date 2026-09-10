@@ -17,7 +17,7 @@ const {
   getNativeUninstaller,
   _parseRegQuery,
   _UNINSTALL_ROOTS,
-} = require('../../../src/services/deviceApps/nativeUninstaller');
+} = require('../../../src/services/domain/desktop/deviceApps/nativeUninstaller.js');
 
 // 一段仿真 reg query /s 输出:含一个 Inno 应用(有卸载器)与一个「无卸载器」幽灵条目。
 const FAKE_REG = [

@@ -23,7 +23,7 @@ const {
   isoWithOffset,
 } = require('../../../src/services/auditTrajectory/recorder');
 const wire = require('../../../src/services/auditTrajectory/wire');
-const hookSystem = require('../../../src/services/hooks/hookSystem');
+const hookSystem = require('../../../src/services/domain/extensions/hooks/hookSystem.js');
 
 let _tmpRoots = [];
 

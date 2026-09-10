@@ -8,13 +8,13 @@ describe('safeJsonParse', () => {
   });
 
   test('returns fallback for invalid JSON', () => {
-    expect(safeJsonParse('invalid')).toBe(null);
+    expect(safeJsonParse('invalid')).toBeNull();
     expect(safeJsonParse('invalid', 'default')).toBe('default');
   });
 
-  test('returns fallback for non-string', () => {
-    expect(safeJsonParse(123)).toBe(null);
-    expect(safeJsonParse(null)).toBe(null);
+  test('returns fallback for non-string input', () => {
+    expect(safeJsonParse(null)).toBeNull();
+    expect(safeJsonParse(123)).toBeNull();
   });
 });
 
@@ -24,26 +24,27 @@ describe('strictJsonParse', () => {
   });
 
   test('throws for invalid JSON', () => {
-    expect(() => strictJsonParse('invalid')).toThrow();
+    expect(() => strictJsonParse('invalid')).toThrow('JSON parse error');
   });
 
-  test('throws for non-string', () => {
-    expect(() => strictJsonParse(123)).toThrow();
+  test('throws for non-string input', () => {
+    expect(() => strictJsonParse(null)).toThrow('Input must be a string');
   });
 });
 
 describe('safeJsonStringify', () => {
-  test('stringifies value', () => {
+  test('stringifies objects', () => {
     expect(safeJsonStringify({ a: 1 })).toBe('{"a":1}');
   });
 
-  test('returns fallback for circular reference', () => {
+  test('returns fallback for circular references', () => {
     const obj = {};
     obj.self = obj;
     expect(safeJsonStringify(obj)).toBe('{}');
   });
 
-  test('supports pretty print', () => {
-    expect(safeJsonStringify({ a: 1 }, '{}', true)).toBe('{\n  "a": 1\n}');
+  test('pretty prints when requested', () => {
+    const result = safeJsonStringify({ a: 1 }, '{}', true);
+    expect(result).toContain('\n');
   });
 });

@@ -24,6 +24,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 
 function fmt() {
   return require('../formatters');
@@ -252,4 +253,15 @@ function handleHook(args, { printInfo, printSuccess, printError, printWarn }) {
   return true;
 }
 
-module.exports = { handleMetadata };
+module.exports = {
+  handleMetadata,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'metadata',
+    aliases: ['meta', '元数据'],
+    description: '项目可维护性元数据（.ai/ 种子文档）：生成/刷新/检查/展示/链接',
+    usage: 'metadata [gen|refresh|check|show|link|hook|help]',
+    subCommands: ['gen', 'refresh', 'check', 'show', 'link', 'hook', 'help'],
+    category: 'dev',
+    handler: handleMetadata,
+  },
+};

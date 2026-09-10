@@ -199,19 +199,64 @@ function buildSidebarLines(props = {}) {
       }
     }
 
-    // 2. Tool activity: running = tools without a result yet (ToolLines.js
-    //    contract: `done = !!t.result`).
+    // 2. Tool activity: per-tool list rows (● 运行中 / ✓ 已完成 / ✗ 错误) with
+    //    optional highlight for the selected error tool.
     const tools =
       props.streaming && Array.isArray(props.streaming.tools) ? props.streaming.tools : [];
+    const selectedTool = props.selectedTool; // { toolIndex, tool } | null
     if (tools.length > 0) {
-      const running = tools.filter((x) => !(x && x.result)).length;
       if (lines.length > 0) {
         lines.push({ ...divider });
       }
+      // Header: tool count summary
+      const running = tools.filter((x) => !(x && x.result)).length;
       lines.push({
         text: t(`工具 · 运行中 ${running}/共 ${tools.length}`),
         color: running > 0 ? TOOLS_COLOR.running : TOOLS_COLOR.idle,
+        bold: true,
       });
+      // Per-tool lines: ● name(args) / ✓ name(args) / ✗ name(args)
+      for (let ti = 0; ti < tools.length; ti++) {
+        const t2 = tools[ti];
+        const done = !!t2.result;
+        const isErr =
+          done &&
+          (t2.result.isError || t2.result.is_error || t2.result.error || t2.result.success === false);
+        const icon = !done ? '●' : isErr ? '✗' : '✓';
+        const color = !done ? TOOLS_COLOR.running : isErr ? 'red' : 'green';
+        // Tool name
+        let nm = t2.name || t2.toolName || t2.tool || 'tool';
+        try {
+          nm = require('../../toolHeaderDisplayName').resolveToolHeaderName(
+            nm,
+            process.env,
+            () => nm
+          );
+        } catch {
+          /* keep raw name on failure */
+        }
+        // Arg summary
+        let argStr = '';
+        try {
+          const raw = t2.input ?? t2.args ?? t2.parameters ?? t2.arguments;
+          if (raw != null) {
+            const obj = typeof raw === 'string' ? JSON.parse(raw) : raw;
+            const keys = Object.keys(obj || {});
+            if (keys.length > 0) {
+              argStr = '(' + keys.slice(0, 3).map((k) => `${k}=${String(obj[k]).slice(0, 20)}`).join(', ') + ')';
+            }
+          }
+        } catch {
+          argStr = '';
+        }
+        const isSelected = selectedTool && selectedTool.toolIndex === ti;
+        lines.push({
+          text: t(`  ${icon} ${nm}${argStr ? ' ' + argStr : ''}`),
+          color,
+          selected: isSelected,
+          dim: !isSelected && done && !isErr,
+        });
+      }
     }
 
     // 3. Message queue.
@@ -523,8 +568,9 @@ function SidebarPanel(props = {}) {
           {
             key: `sb-${i}`,
             color: ln.color,
-            dimColor: !!ln.dim,
+            dimColor: !!ln.dim && !ln.selected,
             bold: !!ln.bold,
+            backgroundColor: ln.selected ? '#333333' : undefined,
           },
           bg ? padLineToWidth(ln.text, innerW, measure) : ln.text || ' '
         )

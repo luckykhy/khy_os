@@ -11,6 +11,7 @@
  * @module handlers/selfHeal
  */
 
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const chalk = require('chalk').default || require('chalk');
 const { printInfo, printWarn, printError } = require('../formatters');
 
@@ -26,7 +27,7 @@ async function handleSelfHeal(subCommand, args = [], options = {}) {
   if (options.status || subCommand === 'status') {
     const stats = selfHeal.getStats();
     console.log(chalk.bold('\n  📊 自愈服务统计'));
-    console.log(chalk.dim('  ' + '─'.repeat(40));
+    console.log('');
     console.log(`    尝试修复: ${stats.attempts}`);
     console.log(`    成功修复: ${chalk.green(stats.successes)}`);
     console.log(`    修复失败: ${chalk.red(stats.failures)}`);
@@ -39,7 +40,7 @@ async function handleSelfHeal(subCommand, args = [], options = {}) {
   if (options.index || subCommand === 'index') {
     const map = selfHeal.getModuleMap();
     console.log(chalk.bold('\n  📦 模块索引'));
-    console.log(chalk.dim('  ' + '─'.repeat(40)));
+    console.log("");
     console.log(`    总文件数: ${map.size}`);
     const multiMatch = [];
     for (const [name, paths] of map) {
@@ -84,4 +85,12 @@ async function handleSelfHeal(subCommand, args = [], options = {}) {
   return true;
 }
 
-module.exports = { handleSelfHeal };
+module.exports = {
+  handleSelfHeal,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'selfheal',
+    description: 'selfheal command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleSelfHeal(parsed.subCommand, parsed.args, parsed.options),
+  },
+};

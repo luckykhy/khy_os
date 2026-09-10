@@ -25,6 +25,7 @@
  *
  * @module handlers/heal
  */
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const chalk = require('chalk').default || require('chalk');
 const { printInfo, printWarn, printError } = require('../formatters');
 
@@ -70,7 +71,7 @@ async function handleHeal(subCommand, args = [], options = {}) {
         chalk.bold('目标                          ') +
         chalk.bold('结果')
     );
-    console.log(chalk.dim('  ' + '─'.repeat(100)));
+    console.log("");
 
     for (const evt of events) {
       const ts = (evt.timestamp || '').slice(0, 19).replace('T', ' ');
@@ -271,4 +272,10 @@ async function handleHeal(subCommand, args = [], options = {}) {
 
 module.exports = {
   handleHeal,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'heal',
+    description: 'heal command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleHeal(parsed.subCommand, parsed.args, parsed.options),
+  },
 };

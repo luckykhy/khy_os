@@ -18,6 +18,7 @@
  */
 const express = require('express');
 const router = express.Router();
+const apiResponse = require('../utils/apiResponse');
 
 /**
  * GET /api/commands
@@ -49,15 +50,10 @@ router.get('/', (req, res) => {
       catalog = { ...catalog, categories, total };
     }
 
-    res.json({ success: true, data: catalog });
+    return apiResponse.success(res, catalog);
   } catch (error) {
     // Fail-soft：目录失败绝不 500 掉整体，返回空目录让前端优雅隐藏入口。
-    res.json({
-      success: true,
-      data: { categories: [], total: 0, generatedBy: 'commandSchema' },
-      degraded: true,
-      error: error && error.message ? error.message : String(error),
-    });
+    return apiResponse.success(res, { categories: [], total: 0, generatedBy: 'commandSchema' }, { message: 'degraded' });
   }
 });
 

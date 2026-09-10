@@ -7,8 +7,8 @@ const path = require('path');
 
 const { createLargeTaskRuntimeStore } = require('../../../src/tasks/largeTaskRuntimeStore');
 const { createLargeTaskOrchestrator } = require('../../../src/tasks/largeTaskOrchestrator');
-const { createResourceManager } = require('../../../src/services/resources/resourceManager');
-const { createResourceTaskAdapter } = require('../../../src/services/resources/resourceTask');
+const { createResourceManager } = require('../../../src/services/domain/data/resources/resourceManager.js');
+const { createResourceTaskAdapter } = require('../../../src/services/domain/data/resources/resourceTask.js');
 
 function manifestFor(hash) {
   return { schemaVersion: 1, resources: [{
@@ -62,3 +62,4 @@ describe('resource task adapter', () => {
     expect(second.task.payload_json.downloaded_bytes).toBe(payload.length);
   });
 });
+

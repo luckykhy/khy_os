@@ -2,39 +2,27 @@ import { defineStore } from 'pinia';
 import { hasAuthToken, parseStoredJson } from '@khy/ui-shared/auth/state';
 import request from '@/api/request';
 import { TOKEN_KEY } from '@/utils/safeStorage';
+import { normalizeRole, isAdmin, roleLabel } from '@/auth/permissions';
 
 const USER_STORAGE_KEY = 'khy_ai_user';
-const WORKSPACE_STORAGE_KEY = 'khy_ai_workspace';
 
-function normalizeRole(user) {
-  const role = String(user?.role || '')
-    .trim()
-    .toLowerCase();
-  return role === 'admin' ? 'admin' : 'user';
-}
-
-function normalizeWorkspace(next, isAdmin) {
-  if (!isAdmin) return 'user';
-  return next === 'admin' ? 'admin' : 'user';
-}
+// Admins land on the console, everyone else on the user home. There is no
+// per-session "view" switch: which menu you see follows the route you are on,
+// and the admin routes are guarded separately.
+const ADMIN_HOME = '/admin/overview';
+const USER_HOME = '/home';
 
 export const useUserStore = defineStore('user', {
-  state: () => {
-    const storedUser = parseStoredJson(localStorage.getItem(USER_STORAGE_KEY), null);
-    const role = normalizeRole(storedUser);
-    const storedWorkspace = String(localStorage.getItem(WORKSPACE_STORAGE_KEY) || '').trim();
-    return {
-      token: localStorage.getItem(TOKEN_KEY) || '',
-      user: storedUser,
-      workspace: normalizeWorkspace(storedWorkspace || 'user', role === 'admin'),
-    };
-  },
+  state: () => ({
+    token: localStorage.getItem(TOKEN_KEY) || '',
+    user: parseStoredJson(localStorage.getItem(USER_STORAGE_KEY), null),
+  }),
   getters: {
     role: (state) => normalizeRole(state.user),
-    isAdmin: (state) => normalizeRole(state.user) === 'admin',
-    preferredHome(state) {
-      if (normalizeRole(state.user) === 'admin' && state.workspace === 'admin') return '/dashboard';
-      return '/home';
+    isAdmin: (state) => isAdmin(state.user),
+    roleLabel: (state) => roleLabel(state.user),
+    preferredHome() {
+      return this.isAdmin ? ADMIN_HOME : USER_HOME;
     },
   },
   actions: {
@@ -46,12 +34,9 @@ export const useUserStore = defineStore('user', {
 
       this.token = token;
       this.user = payload?.user || null;
-      // Requirement: login starts in user view, even for admins.
-      this.workspace = 'user';
 
       localStorage.setItem(TOKEN_KEY, token);
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(this.user || null));
-      localStorage.setItem(WORKSPACE_STORAGE_KEY, this.workspace);
       return payload;
     },
     async fetchProfile() {
@@ -59,9 +44,6 @@ export const useUserStore = defineStore('user', {
       const payload = data && typeof data.data === 'object' && data.data ? data.data : data;
       this.user = payload?.user || null;
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(this.user || null));
-      // Keep workspace legal for current role.
-      this.workspace = normalizeWorkspace(this.workspace, this.isAdmin);
-      localStorage.setItem(WORKSPACE_STORAGE_KEY, this.workspace);
       return this.user;
     },
     async ensureSession() {
@@ -75,23 +57,11 @@ export const useUserStore = defineStore('user', {
         return false;
       }
     },
-    setWorkspace(next) {
-      const target = normalizeWorkspace(String(next || '').trim(), this.isAdmin);
-      this.workspace = target;
-      localStorage.setItem(WORKSPACE_STORAGE_KEY, target);
-      return target;
-    },
-    toggleWorkspace() {
-      if (!this.isAdmin) return this.setWorkspace('user');
-      return this.setWorkspace(this.workspace === 'admin' ? 'user' : 'admin');
-    },
     logout() {
       this.token = '';
       this.user = null;
-      this.workspace = 'user';
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(USER_STORAGE_KEY);
-      localStorage.removeItem(WORKSPACE_STORAGE_KEY);
     },
     isAuthenticated() {
       return hasAuthToken(this.token);

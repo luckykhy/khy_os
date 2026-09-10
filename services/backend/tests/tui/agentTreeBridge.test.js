@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * agentTreeBridge â€” the ink bridge's pure wiring for the parallel sub-agent tree.
+ * agentTreeBridge â€?the ink bridge's pure wiring for the parallel sub-agent tree.
  *
  * The fan-out tree lives ON the agent tool row (`_agentTree`), attached by
  * useQueryBridge.reduceAgentTree as the orchestrator's per-child lifecycle events
@@ -87,3 +87,4 @@ describe('isAgentFamilyTool (re-exported single source)', () => {
     expect(isAgentFamilyTool('Read')).toBe(false);
   });
 });
+

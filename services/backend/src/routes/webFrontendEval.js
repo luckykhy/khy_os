@@ -11,6 +11,7 @@ const router = express.Router();
 const { Op } = require('sequelize');
 
 const service = require('../services/webFrontendEval');
+const apiResponse = require('../utils/apiResponse');
 
 const { WebFrontendEvalTask, WebFrontendEvalRun } = require('@khy/shared/models');
 
@@ -52,11 +53,11 @@ router.get('/tasks', (req, res) => {
     .listTasks(opts)
     .then((result) => {
       if (!result.success) {
-        return res.status(400).json(result);
+        return apiResponse.fail(res, 'INVALID_ARGUMENT', result.message || '获取任务列表失败', { status: 400 });
       }
-      res.json({ success: true, data: result.data });
+      return apiResponse.success(res, result.data);
     })
-    .catch((err) => res.status(500).json({ success: false, message: err.message }));
+    .catch((err) => apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 }));
 });
 
 router.get('/tasks/:id', (req, res) => {
@@ -64,11 +65,11 @@ router.get('/tasks/:id', (req, res) => {
     .getTask(Number(req.params.id))
     .then((result) => {
       if (!result.success) {
-        return res.status(404).json(result);
+        return apiResponse.fail(res, 'MODEL_NOT_FOUND', result.message || '任务不存在', { status: 404 });
       }
-      res.json({ success: true, data: serializeTask(result.data) });
+      return apiResponse.success(res, serializeTask(result.data));
     })
-    .catch((err) => res.status(500).json({ success: false, message: err.message }));
+    .catch((err) => apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 }));
 });
 
 router.post('/tasks', (req, res) => {
@@ -89,18 +90,18 @@ router.post('/tasks', (req, res) => {
     created_by: req.body?.createdBy || 0,
   };
   if (!data.name) {
-    return res.status(400).json({ success: false, message: 'name is required' });
+    return apiResponse.fail(res, 'INVALID_ARGUMENT', 'name is required', { status: 400 });
   }
 
   service
     .createTask(data)
     .then((result) => {
       if (!result.success) {
-        return res.status(400).json(result);
+        return apiResponse.fail(res, 'INVALID_ARGUMENT', result.message || '创建任务失败', { status: 400 });
       }
-      res.status(201).json({ success: true, data: serializeTask(result.data) });
+      return apiResponse.created(res, serializeTask(result.data));
     })
-    .catch((err) => res.status(500).json({ success: false, message: err.message }));
+    .catch((err) => apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 }));
 });
 
 router.put('/tasks/:id', (req, res) => {
@@ -133,11 +134,11 @@ router.put('/tasks/:id', (req, res) => {
     .updateTask(Number(req.params.id), data)
     .then((result) => {
       if (!result.success) {
-        return res.status(400).json(result);
+        return apiResponse.fail(res, 'INVALID_ARGUMENT', result.message || '更新任务失败', { status: 400 });
       }
-      res.json({ success: true, data: serializeTask(result.data) });
+      return apiResponse.success(res, serializeTask(result.data));
     })
-    .catch((err) => res.status(500).json({ success: false, message: err.message }));
+    .catch((err) => apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 }));
 });
 
 router.delete('/tasks/:id', (req, res) => {
@@ -145,11 +146,11 @@ router.delete('/tasks/:id', (req, res) => {
     .deleteTask(Number(req.params.id))
     .then((result) => {
       if (!result.success) {
-        return res.status(400).json(result);
+        return apiResponse.fail(res, 'INVALID_ARGUMENT', result.message || '删除任务失败', { status: 400 });
       }
-      res.json({ success: true, message: 'Deleted' });
+      return apiResponse.success(res, null, { message: 'Deleted' });
     })
-    .catch((err) => res.status(500).json({ success: false, message: err.message }));
+    .catch((err) => apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 }));
 });
 
 // ── Run Lifecycle ────────────────────────────────────────────────
@@ -162,11 +163,11 @@ router.post('/tasks/:id/runs', (req, res) => {
     })
     .then((result) => {
       if (!result.success) {
-        return res.status(400).json(result);
+        return apiResponse.fail(res, 'INVALID_ARGUMENT', result.message || '启动运行失败', { status: 400 });
       }
-      res.status(201).json({ success: true, data: serializeRun(result.data) });
+      return apiResponse.created(res, serializeRun(result.data));
     })
-    .catch((err) => res.status(500).json({ success: false, message: err.message }));
+    .catch((err) => apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 }));
 });
 
 router.get('/runs', (req, res) => {
@@ -180,11 +181,11 @@ router.get('/runs', (req, res) => {
     .listRuns(opts)
     .then((result) => {
       if (!result.success) {
-        return res.status(400).json(result);
+        return apiResponse.fail(res, 'INVALID_ARGUMENT', result.message || '获取运行列表失败', { status: 400 });
       }
-      res.json({ success: true, data: result.data });
+      return apiResponse.success(res, result.data);
     })
-    .catch((err) => res.status(500).json({ success: false, message: err.message }));
+    .catch((err) => apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 }));
 });
 
 router.get('/runs/:id', (req, res) => {
@@ -192,11 +193,11 @@ router.get('/runs/:id', (req, res) => {
     .getRun(Number(req.params.id))
     .then((result) => {
       if (!result.success) {
-        return res.status(404).json(result);
+        return apiResponse.fail(res, 'MODEL_NOT_FOUND', result.message || '运行记录不存在', { status: 404 });
       }
-      res.json({ success: true, data: serializeRun(result.data) });
+      return apiResponse.success(res, serializeRun(result.data));
     })
-    .catch((err) => res.status(500).json({ success: false, message: err.message }));
+    .catch((err) => apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 }));
 });
 
 router.put('/runs/:id', (req, res) => {
@@ -227,7 +228,7 @@ router.put('/runs/:id', (req, res) => {
   RunModel.findByPk(Number(req.params.id))
     .then((run) => {
       if (!run) {
-        return res.status(404).json({ success: false, message: 'Run not found' });
+        return apiResponse.fail(res, 'MODEL_NOT_FOUND', 'Run not found', { status: 404 });
       }
       return run.update(data).then(() => run);
     })
@@ -235,9 +236,9 @@ router.put('/runs/:id', (req, res) => {
       if (!run || run instanceof Response) {
         return;
       }
-      res.json({ success: true, data: serializeRun(run) });
+      return apiResponse.success(res, serializeRun(run));
     })
-    .catch((err) => res.status(500).json({ success: false, message: err.message }));
+    .catch((err) => apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 }));
 });
 
 // ── Package Assembly & QC ────────────────────────────────────────
@@ -248,11 +249,11 @@ router.post('/runs/:id/assemble', (req, res) => {
     .assemblePackage(runId, req.body || {})
     .then((result) => {
       if (!result.success) {
-        return res.status(400).json(result);
+        return apiResponse.fail(res, 'INVALID_ARGUMENT', result.message || '组装包失败', { status: 400 });
       }
-      res.json({ success: true, data: result.data });
+      return apiResponse.success(res, result.data);
     })
-    .catch((err) => res.status(500).json({ success: false, message: err.message }));
+    .catch((err) => apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 }));
 });
 
 router.post('/runs/:id/complete', (req, res) => {
@@ -260,11 +261,11 @@ router.post('/runs/:id/complete', (req, res) => {
     .completeRun(Number(req.params.id), req.body || {})
     .then((result) => {
       if (!result.success) {
-        return res.status(400).json(result);
+        return apiResponse.fail(res, 'INVALID_ARGUMENT', result.message || '完成运行失败', { status: 400 });
       }
-      res.json({ success: true, message: 'Run completed' });
+      return apiResponse.success(res, null, { message: 'Run completed' });
     })
-    .catch((err) => res.status(500).json({ success: false, message: err.message }));
+    .catch((err) => apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 }));
 });
 
 router.post('/runs/:id/reject', (req, res) => {
@@ -273,27 +274,27 @@ router.post('/runs/:id/reject', (req, res) => {
     .rejectRun(Number(req.params.id), reason)
     .then((result) => {
       if (!result.success) {
-        return res.status(400).json(result);
+        return apiResponse.fail(res, 'INVALID_ARGUMENT', result.message || '驳回运行失败', { status: 400 });
       }
-      res.json({ success: true, message: 'Run rejected' });
+      return apiResponse.success(res, null, { message: 'Run rejected' });
     })
-    .catch((err) => res.status(500).json({ success: false, message: err.message }));
+    .catch((err) => apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 }));
 });
 
 router.post('/runs/:id/self-check', (req, res) => {
   const selfCheck = req.body?.selfCheck || req.body?.self_check;
   if (!selfCheck) {
-    return res.status(400).json({ success: false, message: 'selfCheck is required' });
+    return apiResponse.fail(res, 'INVALID_ARGUMENT', 'selfCheck is required', { status: 400 });
   }
   service
     .submitSelfCheck(Number(req.params.id), selfCheck)
     .then((result) => {
       if (!result.success) {
-        return res.status(400).json(result);
+        return apiResponse.fail(res, 'INVALID_ARGUMENT', result.message || '提交自检失败', { status: 400 });
       }
-      res.json({ success: true, message: 'Self-check submitted' });
+      return apiResponse.success(res, null, { message: 'Self-check submitted' });
     })
-    .catch((err) => res.status(500).json({ success: false, message: err.message }));
+    .catch((err) => apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 }));
 });
 
 // ── Stats ────────────────────────────────────────────────────────
@@ -303,42 +304,36 @@ router.get('/stats', (req, res) => {
     .getStats()
     .then((result) => {
       if (!result.success) {
-        return res.status(400).json(result);
+        return apiResponse.fail(res, 'INVALID_ARGUMENT', result.message || '获取统计失败', { status: 400 });
       }
-      res.json({ success: true, data: result.data });
+      return apiResponse.success(res, result.data);
     })
-    .catch((err) => res.status(500).json({ success: false, message: err.message }));
+    .catch((err) => apiResponse.fail(res, 'INTERNAL', err.message, { status: 500 }));
 });
 
 // ── Levels & Categories (reference data) ────────────────────────
 
 router.get('/reference/levels', (req, res) => {
-  res.json({
-    success: true,
-    data: [
-      { value: 'L1', label: 'L1 — 静态展示', description: 'HTML/CSS 静态页面，基础布局与样式' },
-      {
-        value: 'L2',
-        label: 'L2 — 交互响应',
-        description: '含用户交互、状态切换、表单验证等动态行为',
-      },
-      {
-        value: 'L3',
-        label: 'L3 — 复杂 3D/物理/动画',
-        description: 'Three.js/WebGL 3D 场景、物理引擎、复杂动画',
-      },
-    ],
-  });
+  return apiResponse.success(res, [
+    { value: 'L1', label: 'L1 — 静态展示', description: 'HTML/CSS 静态页面，基础布局与样式' },
+    {
+      value: 'L2',
+      label: 'L2 — 交互响应',
+      description: '含用户交互、状态切换、表单验证等动态行为',
+    },
+    {
+      value: 'L3',
+      label: 'L3 — 复杂 3D/物理/动画',
+      description: 'Three.js/WebGL 3D 场景、物理引擎、复杂动画',
+    },
+  ]);
 });
 
 router.get('/reference/categories', (req, res) => {
-  res.json({
-    success: true,
-    data: [
-      { value: '2d', label: '2D Web 前端', description: 'HTML/CSS/JS 二维页面' },
-      { value: '3d', label: '3D Web 前端', description: 'Three.js / WebGL / WebGPU 三维页面' },
-    ],
-  });
+  return apiResponse.success(res, [
+    { value: '2d', label: '2D Web 前端', description: 'HTML/CSS/JS 二维页面' },
+    { value: '3d', label: '3D Web 前端', description: 'Three.js / WebGL / WebGPU 三维页面' },
+  ]);
 });
 
 module.exports = router;

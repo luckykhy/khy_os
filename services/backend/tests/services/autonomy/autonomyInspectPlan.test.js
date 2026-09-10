@@ -9,7 +9,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const leaf = require('../../../src/services/autonomy/autonomyInspectPlan');
+const leaf = require('../../../src/services/domain/agents/autonomy/autonomyInspectPlan.js');
 
 test('parseAutonomyArgs: 空参 → status 概览(deep=false)', () => {
   const p = leaf.parseAutonomyArgs([]);

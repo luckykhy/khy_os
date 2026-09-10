@@ -2162,6 +2162,14 @@ require('./aiManagementOpenaiCompat').setOpenaiCompatDeps({
   sendJson,
 });
 
+// Anthropic translation proxy (for Claude Code -> LongCat via Command Code API)
+const anthropicProxy = require('./anthropicProxyService');
+anthropicProxy.setAnthropicProxyDeps({
+  authenticateRequest,
+  sendJson,
+  sendError,
+});
+
 // ── Route Dispatcher ──────────────────────────────────────────
 
 async function routeRequest(req, res, pathname, searchParams) {
@@ -2500,6 +2508,13 @@ async function routeRequest(req, res, pathname, searchParams) {
   }
   if (method === 'GET' && pathname === '/v1/models') {
     return handleV1ListModels(req, res);
+  }
+  // Anthropic Messages API (translation proxy for Claude Code)
+  if (method === 'POST' && pathname === '/v1/messages') {
+    return anthropicProxy.handleAnthropicMessages(req, res);
+  }
+  if (method === 'GET' && pathname === '/v1/anthropic-proxy/status') {
+    return anthropicProxy.handleAnthropicProxyStatus(req, res);
   }
 
   sendError(res, 404, 'Not found');

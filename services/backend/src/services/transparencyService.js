@@ -221,9 +221,8 @@ function formatSessionRecap(session) {
   };
 
   lines.push('');
-  lines.push(chalk.dim('─'.repeat(50)));
   lines.push(chalk.bold(' Session Summary'));
-  lines.push(chalk.dim('─'.repeat(50)));
+  lines.push('');
 
   // Duration + requests
   const dur = session.durationMs > 0 ? fmtDur(session.durationMs) : 'N/A';
@@ -265,7 +264,7 @@ function formatSessionRecap(session) {
     lines.push(`  Top tools:   ${chalk.dim(toolStrs.join(', '))}`);
   }
 
-  lines.push(chalk.dim('─'.repeat(50)));
+  lines.push('');
   lines.push('');
 
   return lines.join('\n');

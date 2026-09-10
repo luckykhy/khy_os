@@ -12,6 +12,7 @@ const express = require('express');
 const router = express.Router();
 const SystemSettingService = require('../services/systemSettingService');
 const { isAllowedSettingKey } = require('../config/settingsWhitelist');
+const apiResponse = require('../utils/apiResponse');
 
 // ---------- 公开设置（无需登录） ----------
 // GET /public —— 获取所有标记为公开的系统设置，支持按 category 过滤
@@ -23,18 +24,10 @@ router.get('/public', async (req, res) => {
       isPublic: true,
     });
 
-    res.json({
-      success: true,
-      data: settings,
-      message: '获取公开设置成功',
-    });
+    return apiResponse.success(res, settings, { message: '获取公开设置成功' });
   } catch (error) {
     console.error('获取公开设置失败:', error);
-    res.status(500).json({
-      success: false,
-      message: '获取公开设置失败',
-      error: error.message,
-    });
+    return apiResponse.fail(res, 'INTERNAL', '获取公开设置失败', { status: 500 });
   }
 });
 
@@ -51,30 +44,15 @@ router.get('/public/:key', async (req, res) => {
       // Backward compatibility for old frontend clients.
       // Legacy endpoint: /settings/public/kline.enabled_periods
       if (key === 'kline.enabled_periods') {
-        return res.json({
-          success: true,
-          data: { key, value: ['daily'] },
-          message: '获取设置成功(默认值)',
-        });
+        return apiResponse.success(res, { key, value: ['daily'] }, { message: '获取设置成功(默认值)' });
       }
-      return res.status(404).json({
-        success: false,
-        message: '设置项不存在或非公开设置',
-      });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', '设置项不存在或非公开设置', { status: 404 });
     }
 
-    res.json({
-      success: true,
-      data: { key, value: setting.getParsedValue() },
-      message: '获取设置成功',
-    });
+    return apiResponse.success(res, { key, value: setting.getParsedValue() }, { message: '获取设置成功' });
   } catch (error) {
     console.error('获取设置失败:', error);
-    res.status(500).json({
-      success: false,
-      message: '获取设置失败',
-      error: error.message,
-    });
+    return apiResponse.fail(res, 'INTERNAL', '获取设置失败', { status: 500 });
   }
 });
 
@@ -88,12 +66,12 @@ router.put('/:key', authenticateToken, requireAdmin, async (req, res) => {
     const { value, type, category, description } = req.body;
 
     if (value === undefined) {
-      return res.status(400).json({ success: false, message: 'Missing value' });
+      return apiResponse.fail(res, 'MISSING_REQUIRED', 'Missing value', { status: 400 });
     }
 
     // Validate key against allowed prefixes
     if (!isAllowedSettingKey(key)) {
-      return res.status(400).json({ success: false, message: `Not allowed setting key: ${key}` });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', `Not allowed setting key: ${key}`, { status: 400 });
     }
 
     const { isPublic } = req.body;
@@ -104,12 +82,10 @@ router.put('/:key', authenticateToken, requireAdmin, async (req, res) => {
       isPublic: isPublic !== undefined ? !!isPublic : false,
     });
 
-    res.json({ success: true, data: { key, value: result }, message: 'Setting updated' });
+    return apiResponse.success(res, { key, value: result }, { message: 'Setting updated' });
   } catch (error) {
     console.error('Update setting failed:', error);
-    res
-      .status(500)
-      .json({ success: false, message: 'Update setting failed', error: error.message });
+    return apiResponse.fail(res, 'INTERNAL', 'Update setting failed', { status: 500 });
   }
 });
 

@@ -13,6 +13,7 @@
  */
 'use strict';
 
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const chalk = require('chalk').default || require('chalk');
 const { printSuccess, printError, printWarn, printInfo, printTable } = require('../formatters');
 
@@ -231,4 +232,12 @@ async function handleChannels(subCommand, args = [], options = {}) {
   }
 }
 
-module.exports = { handleChannels };
+module.exports = {
+  handleChannels,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'channels',
+    description: 'channels command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleChannels(parsed.subCommand, parsed.args, parsed.options),
+  },
+};

@@ -108,3 +108,101 @@ test('normalizeQuestions: 绝不抛(畸形输入 fail-soft)', () => {
   assert.doesNotThrow(() => normalizeQuestions([{ options: 'nope' }], { env: {} }));
   assert.strictEqual(normalizeQuestions([], { env: {} }).length, 0);
 });
+
+// ── buildQuestionContextNote:任务执行中提问卡的确定性上下文兜底 ──────────────
+
+const {
+  buildQuestionContextNote,
+  isQuestionContextNoteEnabled,
+  _cjkRatio,
+} = require('../../src/services/questionQuality');
+
+const ZH_TASK = 'khyos在做任务时无法准确的提出问题和理解用户的意图需要修复';
+const EN_CARD = {
+  question: 'Which approach do you prefer?',
+  header: 'Approach',
+  options: [
+    { label: 'Option A', description: 'fast' },
+    { label: 'Option B', description: 'safe' },
+  ],
+  multiSelect: false,
+};
+const ZH_GROUNDED_CARD = {
+  question: '优先修复提问质量还是意图理解?',
+  header: '范围',
+  options: [
+    { label: '提问质量', description: '先改提问' },
+    { label: '意图理解', description: '先改理解' },
+  ],
+  multiSelect: false,
+};
+
+test('isQuestionContextNoteEnabled: 默认开,仅显式 falsy 关', () => {
+  assert.equal(isQuestionContextNoteEnabled({}), true);
+  assert.equal(isQuestionContextNoteEnabled({ KHY_QUESTION_CONTEXT_NOTE: '1' }), true);
+  for (const off of ['0', 'false', 'off', 'no']) {
+    assert.equal(isQuestionContextNoteEnabled({ KHY_QUESTION_CONTEXT_NOTE: off }), false, off);
+  }
+});
+
+test('_cjkRatio: 中英文混排占比;空文本为 0', () => {
+  assert.ok(_cjkRatio(ZH_TASK) > 0.3);
+  assert.equal(_cjkRatio('plain english text'), 0);
+  assert.equal(_cjkRatio(''), 0);
+});
+
+test('buildQuestionContextNote: 英文卡 + 中文任务 → 任务上下文 + 语言提示', () => {
+  const { note, signals } = buildQuestionContextNote([EN_CARD], {
+    originalMessage: ZH_TASK,
+    intentSummary: '修复提问与意图理解质量',
+  });
+  assert.ok(signals.includes('lang-mismatch'));
+  assert.ok(note.includes('【任务上下文】'));
+  assert.ok(note.includes('修复提问与意图理解质量'));
+  assert.ok(note.includes('【语言提示】'));
+});
+
+test('buildQuestionContextNote: 贴合原始诉求的中文卡 → 零注记(零假阳性)', () => {
+  const { note, signals } = buildQuestionContextNote([ZH_GROUNDED_CARD], {
+    originalMessage: ZH_TASK,
+    intentSummary: '修复提问与意图理解质量',
+  });
+  assert.equal(note, '');
+  assert.deepEqual(signals, []);
+});
+
+test('buildQuestionContextNote: 短消息只触发语言信号,不触发 context-free', () => {
+  const { note, signals } = buildQuestionContextNote([EN_CARD], {
+    originalMessage: '继续',
+    intentSummary: '',
+  });
+  assert.deepEqual(signals, ['lang-mismatch']);
+  assert.ok(note.includes('【语言提示】'));
+  assert.ok(!note.includes('【任务上下文】'));
+});
+
+test('buildQuestionContextNote: 无任务摘要时的回退措辞', () => {
+  const { note } = buildQuestionContextNote([EN_CARD], {
+    originalMessage: ZH_TASK,
+    intentSummary: '',
+  });
+  assert.ok(note.includes('以上问题属于当前任务的一部分'));
+});
+
+test('buildQuestionContextNote: 门控关 / 空问题 → 空注记', () => {
+  assert.equal(
+    buildQuestionContextNote([EN_CARD], {
+      originalMessage: ZH_TASK,
+      env: { KHY_QUESTION_CONTEXT_NOTE: '0' },
+    }).note,
+    ''
+  );
+  assert.equal(buildQuestionContextNote([], { originalMessage: ZH_TASK }).note, '');
+});
+
+test('buildQuestionContextNote: 绝不抛(畸形输入 fail-soft)', () => {
+  assert.doesNotThrow(() => buildQuestionContextNote(null, {}));
+  assert.doesNotThrow(() => buildQuestionContextNote([{ options: 'nope' }], { originalMessage: ZH_TASK }));
+  assert.doesNotThrow(() => buildQuestionContextNote([EN_CARD], null));
+  assert.deepEqual(buildQuestionContextNote([EN_CARD], { originalMessage: 123 }).signals.length >= 0, true);
+});

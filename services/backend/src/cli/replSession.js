@@ -337,6 +337,13 @@ async function startRepl(options = {}) {
     } catch {
       /* availability cache is optional */
     }
+    // 启动 Command Code taste 文件监听（双向共享同步）
+    // 当 .commandcode/taste/ 被外部修改时自动同步到 khy-os
+    try {
+      require('../services/tasteWatchService').startProjectTasteWatcher();
+    } catch {
+      /* best-effort: 监听器失败不影响启动 */
+    }
     // git context is collected synchronously (execSync); defer it off the mount
     // path so it warms its own 60s cache without blocking startup.
     setImmediate(() => {
@@ -1480,12 +1487,15 @@ async function startRepl(options = {}) {
     _slashRenderPending = true;
     setImmediate(() => {
       _slashRenderPending = false;
-      _renderSlashPickerNow();
+      // Guard: ESC may have been pressed during debounce — don't render residual menu
+      if (_slashPickerActive) {
+        _renderSlashPickerNow();
+      }
     });
   }
 
   function _renderSlashPickerNow() {
-    if (!process.stdout.isTTY) {
+    if (!process.stdout.isTTY || !_slashPickerActive) {
       return;
     }
     _slashMatches = _filterSlashCommands(_slashFilter);
@@ -1550,11 +1560,14 @@ async function startRepl(options = {}) {
       }
     }
 
+    const currentPage = Math.floor(_slashSelectedIdx / maxVisible) + 1;
+    const totalPages = Math.ceil(totalMatches / maxVisible);
+    const pageInfo = totalPages > 1 ? ` · Page ${currentPage}/${totalPages}` : '';
     const positionText =
       totalMatches > maxVisible
-        ? `  ${_slashSelectedIdx + 1}/${totalMatches} · showing ${windowStart + 1}-${windowEnd}`
+        ? `  ${_slashSelectedIdx + 1}/${totalMatches}${pageInfo}`
         : `  ${_slashSelectedIdx + 1}/${totalMatches}`;
-    lines.push(`\x1b[2m${positionText} · ↑/↓ move · Enter select\x1b[22m`);
+    lines.push(`\x1b[2m${positionText} · ↑/↓ move · PgUp/PgDn page · Enter select · Esc 取消\x1b[22m`);
 
     // Single write: move down, clear, content, move back up, restore col
     const promptLen = fmt().stripAnsi(rl._prompt || '> ').length;
@@ -1591,6 +1604,7 @@ async function startRepl(options = {}) {
   }
 
   function _cancelSlashPicker() {
+    _slashRenderPending = false; // Prevent any pending debounced render from firing
     _clearSlashPicker();
     _slashPickerActive = false;
     if (process.stdout.isTTY) {
@@ -2171,6 +2185,23 @@ async function startRepl(options = {}) {
         if (k.name === 'down' || k.name === 'j') {
           if (_slashMatches.length > 0) {
             _slashSelectedIdx = (_slashSelectedIdx + 1) % _slashMatches.length;
+          }
+          _renderSlashPicker();
+          return;
+        }
+        // PageUp/PageDown — navigate between pages
+        if (k.name === 'pageup') {
+          const maxVisible = Math.max(4, SLASH_PICKER_MAX);
+          if (_slashMatches.length > 0) {
+            _slashSelectedIdx = Math.max(0, _slashSelectedIdx - maxVisible);
+          }
+          _renderSlashPicker();
+          return;
+        }
+        if (k.name === 'pagedown') {
+          const maxVisible = Math.max(4, SLASH_PICKER_MAX);
+          if (_slashMatches.length > 0) {
+            _slashSelectedIdx = Math.min(_slashMatches.length - 1, _slashSelectedIdx + maxVisible);
           }
           _renderSlashPicker();
           return;
@@ -6167,7 +6198,52 @@ async function startRepl(options = {}) {
               } catch (e) {
                 printError(`/worktree 执行失败: ${e.message}`);
               }
+            } else if (selected.flag === 'snip') {
+              // /snip — 手动裁剪近期消息以省上下文(与 /force-snip 同效果)。
+              try {
+                const aiMod = ai();
+                if (typeof aiMod.snipConversation !== 'function') {
+                  printError('snip 不可用');
+                } else {
+                  const snipResult = aiMod.snipConversation({});
+                  if (!snipResult || snipResult.success === false) {
+                    printError(snipResult?.error || 'snip 失败');
+                  } else if (snipResult.changed === false) {
+                    printInfo(`无可裁剪内容：当前消息 ${snipResult.previousCount}`);
+                  } else {
+                    printSuccess(
+                      `已裁剪 ${snipResult.removedCount} 条消息：${snipResult.previousCount} -> ${snipResult.nextCount}`
+                    );
+                  }
+                }
+              } catch (e) {
+                printError(`snip 失败: ${e.message}`);
+              }
+            } else if (selected.flag === 'desktop') {
+              // /desktop — 开关鼠标/键盘/窗口自动化。
+              try {
+                const { handleDesktop } = require('./handlers/desktop');
+                await handleDesktop('', [], {});
+              } catch (e) {
+                printError(`桌面操控操作失败: ${e.message}`);
+              }
             }
+          } else if (selected.cmd === '/new' || selected.cmd === '/reset') {
+            // ── /new · /reset — 新建/重置会话(清后端历史 + 复位网关熔断 + 清可见 transcript) ──
+            try {
+              require('../../ai').clearHistory();
+            } catch {
+              /* best-effort */
+            }
+            try {
+              require('../../sessionClear').resetGatewayBreakerOnSessionClear(process.env);
+            } catch {
+              /* best-effort */
+            }
+            printInfo('会话已清空，开始新的对话');
+            recoverReadlineInput();
+            rl.prompt();
+            return;
           } else if (selected.cmd === '/study') {
             // ── /study — study mode toggle (no password required) ──
             try {
@@ -6214,6 +6290,87 @@ async function startRepl(options = {}) {
               }
             } catch (e) {
               printError(`学习模式操作失败: ${e.message}`);
+            }
+          } else if (selected.cmd === '/role') {
+            // ── /role — 角色扮演(本次对话生效) ──
+            try {
+              const { handleRole } = require('./handlers/role');
+              await handleRole('', [], {});
+            } catch (e) {
+              printError(`角色扮演操作失败: ${e.message}`);
+            }
+          } else if (selected.cmd === '/hud') {
+            // ── /hud — HUD 仪表盘 ──
+            try {
+              const { handleHud } = require('./handlers/hud');
+              await handleHud('', [], {});
+            } catch (e) {
+              printError(`HUD 面板操作失败: ${e.message}`);
+            }
+          } else if (selected.cmd === '/intent') {
+            // ── /intent — 意图保护调试开关 ──
+            try {
+              const { handleIntent } = require('./handlers/intent');
+              await handleIntent('', [], {});
+            } catch (e) {
+              printError(`意图保护操作失败: ${e.message}`);
+            }
+          } else if (selected.cmd === '/think') {
+            // ── /think — 思考强度设置 ──
+            try {
+              const { handleThink } = require('./handlers/think');
+              await handleThink('', [], {});
+            } catch (e) {
+              printError(`思考强度操作失败: ${e.message}`);
+            }
+          } else if (selected.cmd === '/trace') {
+            // ── /trace — 调试追踪开关 ──
+            try {
+              const { handleTrace } = require('./handlers/trace');
+              await handleTrace('', [], {});
+            } catch (e) {
+              printError(`追踪开关操作失败: ${e.message}`);
+            }
+          } else if (selected.cmd === '/pool') {
+            // ── /pool — API Key 池状态 ──
+            try {
+              const { handlePool } = require('./handlers/pool');
+              await handlePool('status', [], {});
+            } catch (e) {
+              printError(`Key 池操作失败: ${e.message}`);
+            }
+          } else if (selected.cmd === '/push') {
+            // ── /push — 推送备份 ──
+            try {
+              const { handlePush } = require('./handlers/push');
+              await handlePush('', [], {});
+            } catch (e) {
+              printError(`推送备份操作失败: ${e.message}`);
+            }
+          } else if (selected.cmd === '/optimize') {
+            // ── /optimize — AI 自我优化 ──
+            try {
+              const { handleOptimize } = require('./handlers/optimize');
+              await handleOptimize('', [], {});
+            } catch (e) {
+              printError(`自优化操作失败: ${e.message}`);
+            }
+          } else if (selected.cmd === '/mind' || selected.flag === 'mind') {
+            // ── /mind — 思维导图(认知双图) ──
+            try {
+              _renderTaskMindMap('manual');
+            } catch (e) {
+              printError(`思维导图操作失败: ${e.message}`);
+            }
+          } else if (selected.cmd === '/folded') {
+            // ── /folded — 折叠明细 ──
+            try {
+              const shown = _printFoldedStatusDetails();
+              if (!shown) {
+                printInfo('暂无折叠状态明细');
+              }
+            } catch (e) {
+              printError(`折叠明细操作失败: ${e.message}`);
             }
           } else if (selected.route) {
             recoverReadlineInput();
@@ -8266,6 +8423,14 @@ async function startRepl(options = {}) {
           if (normalizedTool === 'askuserquestion') {
             const questions = Array.isArray(input.questions) ? input.questions : [];
             const answers = {};
+
+            // Question context note (injected by toolUseLoop via questionQuality fallback):
+            // print one line of task context above the card so the user can answer against
+            // the goal. Empty note → print nothing (byte-identical to today's output).
+            const _contextNote = String(input.contextNote || '').trim();
+            if (_contextNote) {
+              console.log(c.dim(`  ${_contextNote.replace(/\n/g, ' ')}`));
+            }
 
             for (const q of questions.slice(0, 4)) {
               const questionText = String(q?.question || '').trim() || 'Please choose an option';
@@ -10580,7 +10745,7 @@ async function startRepl(options = {}) {
             const _originalInput = finalAiInput;
             finalAiInput =
               `[KHY 本地能力已获取以下实时数据/分析结果，请基于此数据用自然语言回答用户问题，不要重复原始数据格式]\n\n` +
-              `--- ${_dataLabel} 数据 ---\n${quickText}\n---\n\n` +
+              `【${_dataLabel}】\n${quickText}\n\n` +
               `用户原始问题: ${_originalInput}`;
             renderer.printStepLine(
               'success',

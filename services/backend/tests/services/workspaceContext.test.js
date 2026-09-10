@@ -15,7 +15,7 @@ const {
   formatSummary,
   redactRemote,
   _countDirty,
-} = require('../../src/services/workspace/workspaceContext');
+} = require('../../src/services/domain/workspace/workspace/workspaceContext.js');
 
 describe('redactRemote — 远端 URL 凭据脱敏', () => {
   test('剥离 oauth2 token', () => {

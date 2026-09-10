@@ -15,7 +15,7 @@ const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
 
-const { buildJourneyTimeline, formatJourneyTimeline } = require('../../../src/services/skills/journeyTimeline');
+const { buildJourneyTimeline, formatJourneyTimeline } = require('../../../src/services/domain/skills/skills/journeyTimeline.js');
 
 const SKILLS = [
   { id: 's1', name: 'arxiv-tool', description: 'search papers', category: 'reference', source: 'dir', learnedAt: '2026-03-01T10:00:00.000Z' },

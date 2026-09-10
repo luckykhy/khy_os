@@ -84,6 +84,17 @@ function getAiBackendUrl(env = process.env) {
 const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://localhost:11434';
 const INFERENCE_SERVER_PORT = parseInt(process.env.INFERENCE_SERVER_PORT || '8765', 10);
 const BACKEND_PORT = parseInt(process.env.PORT || '3000', 10);
+// 后端监听 host(Express bind address)。默认 '127.0.0.1'(仅本机), LAN 开放设 '0.0.0.0'。
+// 四端配置同步客户端用此值拼接后端 URL, 避免硬编码。
+const BACKEND_HOST = process.env.BACKEND_HOST || '127.0.0.1';
+
+// ── Cross-platform launcher (crossLauncher.js) local dev ports ───────────────
+// Web/mobile frontend dev-server ports. Env-overridable so a port conflict is a
+// single env change, not a code edit. crossLauncher.js is the ONLY consumer that
+// should reference these — no other module may re-hardcode 8090/5173.
+// AI_FRONTEND_PORT mirrors apps/ai-frontend/vite.config.js (same env, same default).
+const WEB_FRONTEND_PORT = parseInt(process.env.AI_FRONTEND_PORT || '8090', 10);
+const MOBILE_FRONTEND_PORT = parseInt(process.env.KHY_MOBILE_PORT || '5173', 10);
 
 // ARCH-074: ai-backend listen 绑定的 host。默认 '0.0.0.0'（Node express 默认行为），
 // 让 LAN 上其他机器可以访问 /api/auth/login 等公开鉴权端点。
@@ -459,6 +470,7 @@ const exported = {
   INFERENCE_SERVER_PORT,
   getAiBackendUrl,
   BACKEND_PORT,
+  BACKEND_HOST,
   // ARCH-074
   AI_MGMT_HOST,
   REDIS_KEY_PREFIX,
@@ -477,6 +489,9 @@ const exported = {
   // Local AI backend default
   AI_BACKEND_DEFAULT_PORT,
   AI_BACKEND_DEFAULT_URL,
+  // Cross-platform launcher local dev ports (crossLauncher.js)
+  WEB_FRONTEND_PORT,
+  MOBILE_FRONTEND_PORT,
   // Portable copy root single source of truth (khy portable sync)
   PORTABLE_ROOT_DEFAULT,
   // Geolocation single source of truth (GetLocation tool)

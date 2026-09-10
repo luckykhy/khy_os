@@ -33,7 +33,7 @@ describe('sendWeChatNotification', () => {
     expect(options.method).toBe('POST');
     expect(options.headers).toEqual({ 'content-type': 'application/json' });
     expect(JSON.parse(options.body)).toMatchObject({
-      title: 'New Trading Signal — 买入 TEST',
+      title: 'New Trading Signal �?买入 TEST',
     });
     expect(options.signal).toBeDefined();
   });
@@ -52,3 +52,4 @@ describe('sendWeChatNotification', () => {
     await expect(sendWeChatNotification('TOKEN', { signal: 'SELL', symbol: 'TEST' })).resolves.toBe(false);
   });
 });
+

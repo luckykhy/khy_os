@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tests for retryWithBackoff.js â€” retry logic, backoff delays,
+ * Tests for retryWithBackoff.js â€?retry logic, backoff delays,
  * error classification, and Retry-After parsing.
  */
 
@@ -45,7 +45,7 @@ describe('retryWithBackoff', () => {
     expect(fn).toHaveBeenCalledTimes(3);
   });
 
-  test('respects shouldRetry predicate â€” stops on non-retryable error', async () => {
+  test('respects shouldRetry predicate â€?stops on non-retryable error', async () => {
     const fn = jest.fn().mockRejectedValue(new Error('auth failure'));
     const shouldRetry = jest.fn().mockReturnValue(false);
 
@@ -153,7 +153,7 @@ describe('isRetryableError', () => {
 
   test('returns true for codeless "socket hang up" (OpenAI/undici transient)', () => {
     // The real-world failure users hit: an Error whose ONLY signal is the message
-    // string, with no err.code â€” must still be retryable so the turn auto-resumes.
+    // string, with no err.code â€?must still be retryable so the turn auto-resumes.
     expect(isRetryableError(new Error('socket hang up'))).toBe(true);
     expect(isRetryableError({ message: 'request to https://api failed, reason: socket hang up' })).toBe(true);
   });
@@ -184,3 +184,4 @@ describe('constants', () => {
     expect(DEFAULT_MIN_DELAY).toBe(300);
   });
 });
+

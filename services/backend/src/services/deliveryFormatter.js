@@ -534,13 +534,13 @@ function buildDeliverySummary(toolCallLog) {
   }
 
   if (!hasWriteActions) {
-    return `\n\n---\n### 完成摘要\n\n**统计**  ${statsItems.join(' · ')}\n未修改任何文件。`;
+    return `\n\n### 完成摘要\n\n**统计**  ${statsItems.join(' · ')}\n未修改任何文件。`;
   }
 
   sections.push('');
   sections.push(`**统计**  ${statsItems.join(' · ')}`);
 
-  return `\n\n---\n### 完成摘要\n\n${sections.join('\n')}`;
+  return `\n\n### 完成摘要\n\n${sections.join('\n')}`;
 }
 
 // ── Trace audit ──────────────────────────────────────────────────────

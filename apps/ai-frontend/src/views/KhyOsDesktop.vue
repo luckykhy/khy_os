@@ -45,7 +45,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
-import request from '@/api/request';
+import { resolveWsUrl } from '@/utils/ws';
 import { useUserStore } from '@/stores/user';
 import { Monitor, Loading } from '@element-plus/icons-vue';
 
@@ -89,20 +89,6 @@ const overlayText = computed(() => {
   if (status.value === 'stopped') return '桌面已停止';
   return '等待画面…';
 });
-
-// Mirror KhyOsTerminal.vue's resolveWsUrl so both views share the /ws endpoint.
-function resolveWsUrl(path) {
-  const normalizedPath = `/${String(path || '/ws').replace(/^\/+/, '')}`;
-  if (typeof window === 'undefined') return normalizedPath;
-  const origin = String(window.location.origin || '').trim();
-  const base = String(request.defaults.baseURL || '').trim();
-  const url = base ? new URL(base, origin) : new URL(origin);
-  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-  url.pathname = normalizedPath;
-  url.search = '';
-  url.hash = '';
-  return url.toString();
-}
 
 function drawFrame(b64, width, height) {
   const canvas = canvasEl.value;

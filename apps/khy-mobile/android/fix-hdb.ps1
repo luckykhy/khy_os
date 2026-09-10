@@ -1,7 +1,8 @@
 # Try to use Win32_DeviceInstall API to install the driver (works without UAC in some configs)
 $ErrorActionPreference = "Continue"
 
-$infPath = "C:\Users\25789\.khyos\android_sdk\extras\google\usb_driver\android_winusb.inf"
+$driverBase = "$env:USERPROFILE\.khyos\android_sdk\extras\google\usb_driver"
+$infPath = "$driverBase\android_winusb.inf"
 
 # Create a temporary copy to ensure file is accessible
 $tmpInf = "$env:TEMP\android_winusb.inf"
@@ -9,9 +10,9 @@ $tmpDriverDir = "$env:TEMP\android_driver"
 if (Test-Path $tmpDriverDir) { Remove-Item -Recurse -Force $tmpDriverDir }
 New-Item -ItemType Directory -Path $tmpDriverDir | Out-Null
 Copy-Item $infPath "$tmpDriverDir\android_winusb.inf"
-Copy-Item "C:\Users\25789\.khyos\android_sdk\extras\google\usb_driver\amd64" "$tmpDriverDir\amd64" -Recurse
-Copy-Item "C:\Users\25789\.khyos\android_sdk\extras\google\usb_driver\i386" "$tmpDriverDir\i386" -Recurse
-Copy-Item "C:\Users\25789\.khyos\android_sdk\extras\google\usb_driver\*.cat" "$tmpDriverDir"
+Copy-Item "$driverBase\amd64" "$tmpDriverDir\amd64" -Recurse
+Copy-Item "$driverBase\i386" "$tmpDriverDir\i386" -Recurse
+Copy-Item "$driverBase\*.cat" "$tmpDriverDir"
 
 Write-Host "=== Try DiShowDeviceTree ==="
 $dev = Get-PnpDevice -ErrorAction SilentlyContinue | Where-Object { $_.InstanceId -match 'VID_339B&PID_107D&MI_02' }

@@ -113,13 +113,13 @@
             </div>
           </template>
           <div class="quick-actions">
-            <el-button @click="go('/gateway')"
+            <el-button @click="go('/admin/models')"
               ><KhyIcon kind="settings" size="sm" /> 网关管理</el-button
             >
             <el-button @click="go('/bridge-channels')"
               ><KhyIcon kind="link" size="sm" /> 桥接渠道</el-button
             >
-            <el-button @click="go('/accounts')"><KhyIcon kind="user" size="md" /> 账号池</el-button>
+            <el-button @click="go('/admin/accounts')"><KhyIcon kind="user" size="md" /> 账号池</el-button>
             <el-button @click="go('/assets-customers')"
               ><KhyIcon kind="wallet" size="sm" /> 资产与客户</el-button
             >

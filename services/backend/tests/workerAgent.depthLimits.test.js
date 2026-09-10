@@ -93,7 +93,7 @@ describe('workerAgent depth/concurrency limits', () => {
       children.push(w);
     }
 
-    // Stop one child â€” it becomes 'stopped', freeing a slot
+    // Stop one child â€?it becomes 'stopped', freeing a slot
     workerAgent.shutdownWorker(children[0].id);
 
     const extra = await workerAgent.spawnWorker('after-free', {
@@ -119,7 +119,7 @@ describe('workerAgent depth/concurrency limits', () => {
       parentContext: { depth: 1, id: parentResult.id },
     });
 
-    // Shutdown parent â€” should cascade
+    // Shutdown parent â€?should cascade
     workerAgent.shutdownWorker(parentResult.id);
 
     expect(workerAgent.getWorkerStatus(child1.id).status).toBe('stopped');
@@ -146,3 +146,4 @@ describe('workerAgent depth/concurrency limits', () => {
     workerAgent.shutdownWorker(result.id);
   });
 });
+

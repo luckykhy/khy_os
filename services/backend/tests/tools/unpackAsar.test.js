@@ -1,10 +1,10 @@
 'use strict';
 
 /**
- * unpackTool â€” Electron ASAR support (jest).
+ * unpackTool â€?Electron ASAR support (jest).
  *
  * Regression for the "Unsupported archive format: .asar" rejection when analyzing
- * an Electron app's resources/app.asar. asar is NOT zip (no PK magic) â€” it's a
+ * an Electron app's resources/app.asar. asar is NOT zip (no PK magic) â€?it's a
  * custom container (size pickle + header pickle JSON tree + concatenated data),
  * handled by the native asarArchive leaf. These tests build a real synthetic asar
  * on disk (mirroring @electron/asar's on-disk layout) and exercise the public
@@ -59,7 +59,7 @@ function buildAsar(files) {
 beforeAll(() => {
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-unpack-asar-'));
   // Extraction is confined to the project tree / trusted user roots. Point the
-  // confinement base at tmpDir so a /tmp output_dir counts as "within base" â€”
+  // confinement base at tmpDir so a /tmp output_dir counts as "within base" â€?
   // this leaves the per-entry _isSafePath traversal guard as the thing under test.
   _prevCwd = process.env.KHYQUANT_CWD;
   process.env.KHYQUANT_CWD = tmpDir;
@@ -71,7 +71,7 @@ afterAll(() => {
   try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch { /* ignore */ }
 });
 
-describe('unpack â€” asar detection via validateInput', () => {
+describe('unpack â€?asar detection via validateInput', () => {
   test('accepts app.asar as a valid archive (no longer "Unsupported")', async () => {
     const p = path.join(tmpDir, 'app.asar');
     fs.writeFileSync(p, buildAsar({ 'main.js': Buffer.from('console.log(1)\n') }));
@@ -88,7 +88,7 @@ describe('unpack â€” asar detection via validateInput', () => {
   });
 });
 
-describe('unpack â€” reads a real .asar end-to-end', () => {
+describe('unpack â€?reads a real .asar end-to-end', () => {
   test('list_only enumerates nested entries', async () => {
     const p = path.join(tmpDir, 'list.asar');
     fs.writeFileSync(p, buildAsar({
@@ -125,3 +125,4 @@ describe('unpack â€” reads a real .asar end-to-end', () => {
     expect(res.error).toMatch(/traversal/i);
   });
 });
+

@@ -315,37 +315,19 @@ const TASK_COMPLETED = '✔';
 // ── Tool Family Icons ─────────────────────────────────────────────────
 // 不同工具类别用不同图标，一眼区分操作类型
 // 旧版 Windows 终端 (Consolas) 缺少 ⌕⊙◐☐，降级为 ASCII
+// 四端统一图标映射来自 constants/toolIcons 单一真源
 const { isLegacyWinTerminal: _isLegacyWinTerm } = require('../tools/platformUtils');
+const { TOOL_ICON_MAP, DEFAULT_ICON } = require('../constants/toolIcons');
 const _lwt = _isLegacyWinTerm();
 
-const TOOL_FAMILY_ICONS = {
-  bash: _lwt ? '>' : '▶', // 执行
-  shell: _lwt ? '>' : '▶',
-  shellcommand: _lwt ? '>' : '▶',
-  command: _lwt ? '>' : '▶',
-  read: _lwt ? '>' : '▷', // 读取
-  readfile: _lwt ? '>' : '▷',
-  notebookread: _lwt ? '>' : '▷',
-  write: _lwt ? '+' : '◆', // 写入
-  writefile: _lwt ? '+' : '◆',
-  createfile: _lwt ? '+' : '◆',
-  edit: _lwt ? '~' : '◇', // 编辑
-  editfile: _lwt ? '~' : '◇',
-  multiedit: _lwt ? '~' : '◇',
-  notebookedit: _lwt ? '~' : '◇',
-  glob: _lwt ? '?' : '⌕', // 搜索
-  grep: _lwt ? '?' : '⌕',
-  find: _lwt ? '?' : '⌕',
-  findfiles: _lwt ? '?' : '⌕',
-  search: _lwt ? '?' : '⌕',
-  searchcontent: _lwt ? '?' : '⌕',
-  ls: _lwt ? '?' : '⌕',
-  websearch: _lwt ? '@' : '⊙', // 网络
-  webfetch: _lwt ? '@' : '⊙',
-  agent: _lwt ? '*' : '◐', // 代理
-  task: _lwt ? '*' : '◐',
-  todowrite: _lwt ? '#' : '☐', // 任务
-};
+// CLI 用: 按 legacy Windows 标志选择字形
+const TOOL_FAMILY_ICONS = (() => {
+  const map = {};
+  for (const [name, icon] of Object.entries(TOOL_ICON_MAP)) {
+    map[name] = _lwt ? icon.ascii : icon.unicode;
+  }
+  return map;
+})();
 
 /**
  * 获取工具家族图标，未匹配的返回默认 ●
@@ -357,8 +339,9 @@ function getToolFamilyIcon(toolName) {
   return TOOL_FAMILY_ICONS[name] || DOT_INDICATOR;
 }
 
-const TREE_LAST = _lwt ? '`-' : '⎿'; // Claude Code uses ⎿ for tree branches
-const TREE_MID = _lwt ? '|-' : '├';
+// Tree glyphs — 与 agentTreeView.js 单一真源对齐(CLI/TUI 共享)。
+const TREE_LAST = _lwt ? '`-' : '└'; // agentTreeView.BRANCH_END
+const TREE_MID = _lwt ? '|-' : '├'; // agentTreeView.BRANCH_MID
 
 module.exports = {
   // Lazy chalk accessor

@@ -18,6 +18,7 @@
  * @module handlers/state
  */
 'use strict';
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 
 // ── Constants ──
 
@@ -250,4 +251,14 @@ async function handleState(options = {}, args = []) {
   return true;
 }
 
-module.exports = { handleState };
+module.exports = {
+  handleState,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'state',
+    aliases: ['fsm', '状态'],
+    description: '状态诊断：影子 FSM 状态 + 最近转换（CLI/服务器/REPL/工具循环）',
+    usage: 'state',
+    category: 'system',
+    handler: async (parsed) => handleState(parsed.options, parsed.args),
+  },
+};

@@ -48,3 +48,4 @@ describe('ApiKey model', () => {
     expect(ApiKey.rawAttributes.isActive).toBeDefined();
   });
 });
+

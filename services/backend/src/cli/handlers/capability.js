@@ -18,6 +18,7 @@
  */
 const chalk = require('chalk').default || require('chalk');
 const cap = require('../../services/capabilityRegistry');
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const nlConfig = require('../../services/domain/config/config/nlConfigResolver.js');
 const { printInfo, printError, printTable, printSuccess, printWarn } = require('../formatters');
 
@@ -210,4 +211,15 @@ function handleCapability(parsed = {}) {
   return true;
 }
 
-module.exports = { handleCapability };
+module.exports = {
+  handleCapability,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'capability',
+    aliases: ['cap', '能力'],
+    description: '展示已学习的能力（capability-as-code）及其测试覆盖',
+    usage: 'capability [list|show <name>|toggles|on <name>|off <name>|set <KHY_键> <值>]',
+    subCommands: ['list', 'show', 'toggles', 'on', 'off', 'set'],
+    category: 'system',
+    handler: handleCapability,
+  },
+};

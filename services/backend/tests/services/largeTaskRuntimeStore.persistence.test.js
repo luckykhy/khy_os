@@ -13,7 +13,7 @@ const path = require('path');
 
 const { createLargeTaskRuntimeStore } = require('../../src/tasks/largeTaskRuntimeStore');
 
-describe('largeTaskRuntimeStore — persistence hardening', () => {
+describe('largeTaskRuntimeStore �?persistence hardening', () => {
   let tempDir;
   let storePath;
 
@@ -28,7 +28,7 @@ describe('largeTaskRuntimeStore — persistence hardening', () => {
     }
   });
 
-  describe('createTask → state file exists and is readable', () => {
+  describe('createTask �?state file exists and is readable', () => {
     test('creates a task and persists it to disk as valid JSON', () => {
       const store = createLargeTaskRuntimeStore({ storePath });
       const task = store.createTask({ type: 'persist-test' });
@@ -98,7 +98,7 @@ describe('largeTaskRuntimeStore — persistence hardening', () => {
       });
 
       try {
-        // This triggers _persist → _atomicWriteWithRetry
+        // This triggers _persist �?_atomicWriteWithRetry
         const task = store.createTask({ type: 'retry-test' });
         expect(task.id).toBeTruthy();
 
@@ -118,7 +118,7 @@ describe('largeTaskRuntimeStore — persistence hardening', () => {
       }
     });
 
-    test('all rename attempts fail → _persist throws, tmp file is cleaned up', () => {
+    test('all rename attempts fail �?_persist throws, tmp file is cleaned up', () => {
       const store = createLargeTaskRuntimeStore({ storePath });
 
       // First, create the store file so _ensureLoaded works
@@ -173,3 +173,4 @@ describe('largeTaskRuntimeStore — persistence hardening', () => {
     });
   });
 });
+

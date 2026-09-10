@@ -48,3 +48,4 @@ describe('toolUseLoop progress preface defaults', () => {
     expect(chat.mock.calls[0][1].routeToolPrefaceToNarration).toBe(false);
   });
 });
+

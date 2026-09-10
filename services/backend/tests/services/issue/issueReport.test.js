@@ -18,7 +18,7 @@ const {
   buildIssueUrl,
   isEnabled,
   DEFAULT_MAX_URL_BODY,
-} = require('../../../src/services/issue/issueReport');
+} = require('../../../src/services/domain/project/issue/issueReport.js');
 
 describe('parseIssueArgs', () => {
   test('纯标题', () => {

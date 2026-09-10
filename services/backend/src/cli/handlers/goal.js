@@ -19,6 +19,7 @@
  * @module handlers/goal
  */
 
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const { printInfo, printError, printTable, printSuccess } = require('../formatters');
 
 function _store() {
@@ -322,4 +323,13 @@ function handleGoal(subCommand, args = [], options = {}, deps = {}) {
   return _handleSet([subCommand, ...(Array.isArray(args) ? args : [])], options);
 }
 
-module.exports = { handleGoal };
+module.exports = {
+  handleGoal
+,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'goal',
+    description: 'goal command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => { const r = await handleGoal(parsed.subCommand, parsed.args, parsed.options); if (r && typeof r === 'object' && r.aiForward) return { aiForward: r.aiForward }; return r; },
+  },
+};

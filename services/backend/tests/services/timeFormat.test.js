@@ -178,3 +178,4 @@ describe('timeFormat', () => {
     });
   });
 });
+

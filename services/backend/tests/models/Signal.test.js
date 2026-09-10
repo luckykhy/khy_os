@@ -48,3 +48,4 @@ describe('Signal model', () => {
     expect(Signal.rawAttributes.source).toBeDefined();
   });
 });
+

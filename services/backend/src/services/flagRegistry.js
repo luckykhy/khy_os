@@ -2296,6 +2296,20 @@ const FLAGS = {
   // 不变复用上帧 rows;关 → 每帧重算,逐字节回退今日行为。重排是纯函数,逐字节等价。
   KHY_PROMPT_LAYOUT_MEMO: { mode: 'default-on', off: 'CANON', default: true },
 
+  // ── 长粘贴折叠为占位符(promptPasteSummary;「大段粘贴撑爆输入框」)──────────────────
+  // useTextInput 的 flushPaste 在 accumulated paste 超过门限(150 字符或 3 行)时不把全文
+  // 插入 buffer,而是替换为一行 `[Pasted ~N lines]` 占位符。短粘贴(< 150 字符且 < 3 行)
+  // 仍原样插入(逐字节回退今日行为)。关(0/false/off/no) → flushPaste 不检查门限,全文直接
+  // 插入 = 逐字节回退。仅影响粘贴路径,手动输入/历史回览/其他编辑不受影响。
+  KHY_PROMPT_PASTE_SUMMARY: { mode: 'opt-in', off: 'CANON', default: false },
+
+  // ── Shell 模式:! 前缀切换 + Escape/Backspace 退出(promptShellMode)────────────────
+  // 输入框检测到 `!` 前缀时切换 shell 模式:占位符变为 "Run a command…"、Escape 或光标在
+  // 首位时 Backspace 退出 shell 模式回普通输入。关 → useTextInput 不检测 `!` 前缀、不切换
+  // 占位符、不拦截 Escape/Backspace = 逐字节回退今日行为。提交时 `!` 路由到 shellCommand
+  // 仍由 App.js handleSubmit 处理(与本门控无关)。
+  KHY_PROMPT_SHELL_MODE: { mode: 'opt-in', off: 'CANON', default: false },
+
   // ── live spinner token 懒估算(spinnerTokenLazy;「动画/输入体验卡顿,无法做真正的软件项目」)──
   // App._spinnerProgress 在渲染体内被调(忙碌时每帧 + 1s nowTick),每次对整条累积
   // streaming.text 逐字符跑 _estimateTok 重估 token 数 = O(len)/帧 → O(len²)/turn。但该
@@ -3294,7 +3308,7 @@ const FLAGS = {
   // 同文件的 patternRules 命名空间)。**opt-in 默认关**:门关 → check() 完全跳过模式分支、
   // API 明确 no-op(approvePattern/denyPattern 返 {ok:false,disabled:true}、listPatternRules
   // 返 [])。关 → 行为与现状逐字节一致。
-  KHY_PERMISSION_PATTERN_RULES: { mode: 'opt-in', off: 'CANON', default: false },
+  KHY_PERMISSION_PATTERN_RULES: { mode: 'opt-in', off: 'CANON', default: true },
   // patternMatcher 编译后 RegExp 的模块级 Map 缓存容量上界;超界淘汰最旧条目(插入序)。
   // clamp[1, 65536]。parent=KHY_PERMISSION_PATTERN_RULES:父关则模式匹配整体不运行,本阈值无意义。
   KHY_PERMISSION_PATTERN_CACHE_CAP: {

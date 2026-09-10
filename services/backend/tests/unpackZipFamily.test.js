@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * unpackTool â€” zip-family format support (jest).
+ * unpackTool â€?zip-family format support (jest).
  *
  * Regression for the Windows pip failure where `unpack` refused a Python wheel
  * ("Unsupported archive format: .whl"). A .whl (and .jar/.egg/.nupkg/.xpi/.vsix)
@@ -47,7 +47,7 @@ afterAll(() => {
   try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch { /* ignore */ }
 });
 
-describe('unpack â€” zip-family detection via validateInput', () => {
+describe('unpack â€?zip-family detection via validateInput', () => {
   test.each(['pkg-1.0.whl', 'lib.jar', 'thing.egg', 'tool.nupkg', 'ext.xpi', 'plugin.vsix'])(
     'accepts %s as a valid (zip-family) archive',
     async (name) => {
@@ -69,7 +69,7 @@ describe('unpack â€” zip-family detection via validateInput', () => {
   });
 });
 
-describe('unpack â€” reads a real .whl end-to-end (list_only)', () => {
+describe('unpack â€?reads a real .whl end-to-end (list_only)', () => {
   test('lists wheel contents without error', async () => {
     if (!hasPython) return;
     const p = path.join(tmpDir, 'wheel-2.3.whl');
@@ -80,3 +80,4 @@ describe('unpack â€” reads a real .whl end-to-end (list_only)', () => {
     expect(res.output).toMatch(/METADATA/);
   });
 });
+

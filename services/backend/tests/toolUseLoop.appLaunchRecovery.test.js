@@ -56,3 +56,4 @@ describe('toolUseLoop shell->open_app recovery', () => {
     expect(executeTool).toHaveBeenCalledWith('open_app', { name: 'gimp' }, expect.any(Object));
   });
 });
+

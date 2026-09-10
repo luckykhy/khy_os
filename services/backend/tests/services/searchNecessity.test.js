@@ -16,7 +16,7 @@ const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
 
 // 门控经函数入参 { env } 注入,无需重载模块缓存。
-const sn = require('../../src/services/search/searchNecessity');
+const sn = require('../../src/services/domain/query/search/searchNecessity.js');
 
 describe('1. 门控', () => {
   test('默认开', () => {

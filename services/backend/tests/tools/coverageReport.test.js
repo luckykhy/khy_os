@@ -1,9 +1,9 @@
 /**
- * coverageReport.test.js â€” unit tests for coverage_report tool.
+ * coverageReport.test.js â€?unit tests for coverage_report tool.
  *
  * Tests: lcov parsing, coverage-summary.json parsing, cobertura XML parsing,
  * auto-detection (path given / auto-find), threshold gating, missing report,
- * unknown format â€” all without real FS side effects via temp dir fixtures.
+ * unknown format â€?all without real FS side effects via temp dir fixtures.
  */
 'use strict';
 
@@ -67,7 +67,7 @@ describe('coverage_report tool', () => {
     expect(res2.success).toBe(true);
     expect(res2.meta.format).toBe('lcov');
     expect(res2.meta.files).toBe(2);
-    // foo.js 2h/3l = 66.67%, bar.js 0h/1l = 0% â†’ overall 2h/4l = 50%
+    // foo.js 2h/3l = 66.67%, bar.js 0h/1l = 0% â†?overall 2h/4l = 50%
     expect(res2.meta.lineCoverage).toBeCloseTo(50, 0);
     expect(res2.content).toContain('lcov');
     expect(res2.content).toContain('2 files');
@@ -200,3 +200,4 @@ describe('coverage_report tool', () => {
     expect(withPath.valid).toBe(true);
   });
 });
+

@@ -15,29 +15,31 @@
           router
           class="aside-menu"
         >
-          <el-menu-item-group>
-            <template #title v-if="!collapsed">
-              <span class="aside-group-title">{{ menuGroupTitle }}</span>
-            </template>
-            <el-tooltip
-              v-for="item in visibleMenuItems"
-              :key="item.path"
-              :content="item.desc || item.label"
-              placement="right"
-              :disabled="collapsed || !item.desc"
-              :show-after="360"
-              :offset="8"
-            >
-              <el-menu-item
-                :index="item.path"
-                @mouseenter="prefetchView(item.path)"
-                @focus="prefetchView(item.path)"
+          <template v-for="group in navGroups" :key="group.label">
+            <el-menu-item-group>
+              <template #title v-if="!collapsed">
+                <span class="aside-group-title">{{ group.label }}</span>
+              </template>
+              <el-tooltip
+                v-for="item in group.items"
+                :key="group.label + item.path"
+                :content="item.desc || item.label"
+                placement="right"
+                :disabled="collapsed || !item.desc"
+                :show-after="360"
+                :offset="8"
               >
-                <el-icon><component :is="item.icon" /></el-icon>
-                <template #title>{{ item.label }}</template>
-              </el-menu-item>
-            </el-tooltip>
-          </el-menu-item-group>
+                <el-menu-item
+                  :index="item.path"
+                  @mouseenter="prefetchView(item.path)"
+                  @focus="prefetchView(item.path)"
+                >
+                  <el-icon><component :is="item.icon" /></el-icon>
+                  <template #title>{{ item.label }}</template>
+                </el-menu-item>
+              </el-tooltip>
+            </el-menu-item-group>
+          </template>
         </el-menu>
       </el-scrollbar>
 
@@ -46,7 +48,7 @@
           <el-avatar :size="30" class="aside-avatar">{{ userInitial }}</el-avatar>
           <div v-show="!collapsed" class="aside-user-meta">
             <span class="aside-user-name">{{ userStore.user?.username || 'user' }}</span>
-            <span class="aside-user-role">{{ userStore.isAdmin ? 'admin' : 'user' }}</span>
+            <span class="aside-user-role">{{ userStore.roleLabel }}</span>
           </div>
         </div>
       </div>
@@ -80,15 +82,6 @@
             </el-icon>
           </el-button>
 
-          <el-switch
-            v-if="userStore.isAdmin"
-            :model-value="userStore.workspace === 'admin'"
-            inline-prompt
-            active-text="管理"
-            inactive-text="用户"
-            @change="handleWorkspaceChange"
-          />
-
           <el-dropdown trigger="click" @command="handleUserCommand">
             <span class="header-user-trigger">
               <el-avatar :size="28" class="aside-avatar">{{ userInitial }}</el-avatar>
@@ -97,9 +90,7 @@
             </span>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item disabled>
-                  {{ userStore.isAdmin ? '管理员' : '普通用户' }}
-                </el-dropdown-item>
+                <el-dropdown-item disabled>{{ userStore.roleLabel }}</el-dropdown-item>
                 <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -119,39 +110,13 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import {
-  HomeFilled,
-  ChatDotSquare,
-  DataAnalysis,
-  Connection,
-  Link,
-  User,
-  Wallet,
-  Monitor,
-  Fold,
-  Expand,
-  Sunny,
-  Moon,
-  ArrowDown,
-  Tickets,
-  PriceTag,
-  Setting,
-  Share,
-  Cpu,
-  Shop,
-  Collection,
-  Guide,
-  Document,
-  Folder,
-  Money,
-  ChatDotRound,
-  Aim,
-  DataLine,
-} from '@element-plus/icons-vue';
+import { Fold, Expand, Sunny, Moon, ArrowDown } from '@element-plus/icons-vue';
 import { useUserStore } from '@/stores/user';
+import { visibleNavGroups, navLabelFor } from '@/nav';
 import { safeSet } from '@/utils/safeStorage';
+import { probeDaemonNamespaces } from '@/api/daemonProbe';
 import { useTheme } from '@/composables/useTheme';
 import { prefetchView, prefetchViewsIdle } from '@/composables/useRoutePrefetch';
 
@@ -178,57 +143,6 @@ const CACHED_VIEWS = [
 
 const SIDEBAR_STORAGE_KEY = 'khy_ai_sidebar_collapsed';
 
-const USER_MENU = [
-  { path: '/home', label: '用户首页', icon: HomeFilled, desc: '工作台总览与快速开始' },
-  { path: '/chat', label: 'AI 对话', icon: ChatDotSquare, desc: '与小K对话：写代码、读图、查资料' },
-  { path: '/features', label: '功能索引', icon: Guide, desc: '按类别浏览 khy 的全部能力' },
-  { path: '/prompts', label: '提示词库', icon: Collection, desc: '保存与复用常用提示词' },
-  { path: '/khyos', label: 'KHY OS 内核', icon: Cpu, desc: '内核终端与系统级操作' },
-  { path: '/my-gateway', label: '我的网关', icon: Connection, desc: '查看我的模型接入与密钥' },
-  { path: '/workflows', label: '工作流', icon: Share, desc: '可视化编排多步自动化流程' },
-  {
-    path: '/projects',
-    label: '项目工作区',
-    icon: Folder,
-    desc: '命名的多文件夹编码工作区（对齐 Hermes coding projects）',
-  },
-  { path: '/marketplace', label: '插件市场', icon: Shop, desc: '导入 OpenAPI 插件扩展能力' },
-  { path: '/proxies', label: '代理管理', icon: Link, desc: '粘贴订阅链接，导入代理节点订阅组' },
-  {
-    path: '/markdown',
-    label: 'Markdown',
-    icon: Document,
-    desc: '所见即所得 Markdown 编辑（无需登录）',
-  },
-];
-
-const ADMIN_MENU = [
-  { path: '/dashboard', label: '总览', icon: DataAnalysis, desc: '系统全局指标与健康状态' },
-  { path: '/gui-eval', label: 'GUI 评测', icon: Aim, desc: 'GUI Agent 任务定义、执行与自动评分' },
-  {
-    path: '/web-frontend-eval',
-    label: '前端标注',
-    icon: DataLine,
-    desc: '2D/3D Web 前端轨迹数据标注与 QC',
-  },
-  { path: '/gateway', label: '网关管理', icon: Connection, desc: '模型编排、密钥池与供应商' },
-  { path: '/bridge-channels', label: '桥接渠道', icon: Link, desc: '桥接 Token 与 OAuth 渠道' },
-  {
-    path: '/wx-binding',
-    label: '微信绑定',
-    icon: ChatDotRound,
-    desc: '微信个人号扫码绑定与账号→工作空间/Agent 路由',
-  },
-  { path: '/accounts', label: '账号池', icon: User, desc: '统一调度的账号与负载均衡' },
-  { path: '/assets-customers', label: '资产与客户', icon: Wallet, desc: '客户、令牌与资产管理' },
-  { path: '/payments', label: '支付订单', icon: Money, desc: '额度充值下单、扫码支付与到账' },
-  { path: '/usage', label: '用量日志', icon: Tickets, desc: '调用明细与用量审计' },
-  { path: '/pricing', label: '计费定价', icon: PriceTag, desc: '模型计费与定价策略' },
-  { path: '/monitor', label: '监控中心', icon: Monitor, desc: '实时监控与归因追溯' },
-  { path: '/settings', label: '统一设置', icon: Setting, desc: '平台级配置与开关' },
-  { path: '/chat', label: 'AI 对话', icon: ChatDotSquare, desc: '与小K对话' },
-];
-
 function readCollapsed() {
   try {
     return localStorage.getItem(SIDEBAR_STORAGE_KEY) === '1';
@@ -239,35 +153,41 @@ function readCollapsed() {
 
 const collapsed = ref(readCollapsed());
 
-const isAdminWorkspace = computed(() => userStore.isAdmin && userStore.workspace === 'admin');
-const brandText = computed(() => (isAdminWorkspace.value ? 'KHY 管理平台' : 'KHY 用户中心'));
-const menuGroupTitle = computed(() => (isAdminWorkspace.value ? '管理控制台' : '用户中心'));
-const visibleMenuItems = computed(() => (isAdminWorkspace.value ? ADMIN_MENU : USER_MENU));
+// Sidebar shape comes from NAV and depends only on the role — there is no
+// user/admin view switch, so an admin simply gets the console group appended.
+const brandText = computed(() => 'KHY 管理平台');
+
+// Daemon-only namespaces (DESIGN-ARCH-080 §6.2, 方案 Y). Empty until the probe
+// settles, which keeps the sidebar fail-open: nothing is hidden on the first
+// paint, and only a definite 404 removes an entry.
+const daemonCaps = reactive({});
+
+const navGroups = computed(() => visibleNavGroups(userStore.user, daemonCaps));
+const visibleMenuItems = computed(() =>
+  navGroups.value.flatMap((group) => group.items)
+);
+
 const userInitial = computed(() => (userStore.user?.username || 'U').charAt(0).toUpperCase());
 
-const currentPageTitle = computed(() => {
-  const match = visibleMenuItems.value.find((item) => item.path === route.path);
-  return match?.label || brandText.value;
-});
+const currentPageTitle = computed(() => navLabelFor(route.path) || brandText.value);
 
 // Warm every sidebar destination during idle time after first paint, so a click
 // switches instantly instead of waiting on a first-visit chunk download. Re-runs
-// when the menu set changes (admin/user workspace toggle exposes new routes).
+// when the visible set changes (an admin gains the console group).
 function warmVisibleRoutes() {
   prefetchViewsIdle(visibleMenuItems.value.map((item) => item.path));
 }
-onMounted(warmVisibleRoutes);
+onMounted(async () => {
+  warmVisibleRoutes();
+  // Resolving this changes visibleMenuItems, which re-triggers the warm-up
+  // through the watcher below — the probe itself never touches the sidebar.
+  Object.assign(daemonCaps, await probeDaemonNamespaces());
+});
 watch(visibleMenuItems, warmVisibleRoutes);
 
 function toggleCollapse() {
   collapsed.value = !collapsed.value;
   safeSet(SIDEBAR_STORAGE_KEY, collapsed.value ? '1' : '0');
-}
-
-function handleWorkspaceChange(enabled) {
-  const target = enabled ? 'admin' : 'user';
-  userStore.setWorkspace(target);
-  router.push(target === 'admin' ? '/dashboard' : '/home');
 }
 
 function handleUserCommand(command) {

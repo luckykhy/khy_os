@@ -13,7 +13,7 @@ function responseRecorder() {
 }
 
 describe('modelAdaptationHttp', () => {
-  it('未命中路径 → false,不写响应', async () => {
+  it('未命中路�?�?false,不写响应', async () => {
     const rec = responseRecorder();
     const handler = http.createModelAdaptationHttpHandler({
       registry: { getStatus: () => ({}) },
@@ -24,7 +24,7 @@ describe('modelAdaptationHttp', () => {
     expect(rec.calls).toEqual([]);
   });
 
-  it('未认证 → 401,不读取状态也不 reload', async () => {
+  it('未认�?�?401,不读取状态也�?reload', async () => {
     const rec = responseRecorder();
     let touched = 0;
     const handler = http.createModelAdaptationHttpHandler({
@@ -82,7 +82,7 @@ describe('modelAdaptationHttp', () => {
     });
   });
 
-  it('已知路径的错误 method → 405', async () => {
+  it('已知路径的错�?method �?405', async () => {
     const rec = responseRecorder();
     const handler = http.createModelAdaptationHttpHandler({
       registry: { getStatus: () => ({}) },
@@ -93,3 +93,4 @@ describe('modelAdaptationHttp', () => {
     expect(rec.calls[0].status).toBe(405);
   });
 });
+

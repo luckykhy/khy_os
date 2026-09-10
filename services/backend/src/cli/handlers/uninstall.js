@@ -26,6 +26,7 @@
  *
  * @module handlers/uninstall
  */
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -691,4 +692,10 @@ module.exports = {
   _executeRollbackStep,
   _rollbackLedger,
   _stopResidentProcesses,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'uninstall',
+    description: 'uninstall command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleUninstall(parsed.subCommand, parsed.args, parsed.options),
+  },
 };

@@ -149,7 +149,7 @@ function _hasUpstreamModel() {
 function _buildAugmentedPrompt(originalPrompt, localFormatted, label) {
   return (
     `[KHY 本地能力已获取以下实时数据/分析结果，请基于此数据用自然语言回答用户问题，不要重复原始数据格式]\n\n` +
-    `--- ${label} 数据 ---\n${localFormatted}\n---\n\n` +
+    `【${label}】\n${localFormatted}\n\n` +
     `用户原始问题: ${originalPrompt}`
   );
 }

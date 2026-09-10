@@ -23,8 +23,8 @@ class IFindService:
     """iFinD HTTP API服务类"""
     
     def __init__(self):
-        # iFinD API配置
-        self.base_url = os.getenv('IFIND_API_URL', 'http://localhost:8001')  # iFinD HTTP API地址
+        # iFinD API配置：IFIND_API_URL 整串优先；否则由 IFIND_API_PORT 动态拼装（默认 8001）
+        self.base_url = os.getenv('IFIND_API_URL') or ('http://127.0.0.1:' + (os.getenv('IFIND_API_PORT') or '8001'))  # iFinD HTTP API地址
         self.token = os.getenv('IFIND_TOKEN', '')  # iFinD访问令牌
         self.timeout = 30
         

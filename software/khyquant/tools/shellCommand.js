@@ -257,7 +257,7 @@ ${_multiCommandBlock()}
   },
 
   // Chapter 5 additions
-  maxResultSizeChars: 50000,
+  maxResultSizeChars: 20000,
 
   // Clamp an over-max timeout/idleTimeout to the cap BEFORE schema validation
   // instead of hard-rejecting it. A weak model that sets timeout=600000 (e.g.

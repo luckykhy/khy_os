@@ -20,7 +20,7 @@ const {
   TURN_PHASES,
   createTurnPhaseTracker,
   _internals,
-} = require('../../src/services/stateMachine/turnPhaseTracker');
+} = require('../../src/services/domain/state/stateMachine/turnPhaseTracker.js');
 
 test('阶段枚举覆盖用户命名的全部截断点', () => {
   const codes = Object.values(TURN_PHASES).map((p) => p.code);
@@ -161,7 +161,7 @@ test('formatLine 产出「动作+进度」人话行', () => {
 
 test('映射表与真源逐字对齐（防漂移）', () => {
   // MIRRORS toolLoopPhases.js:TOOL_LOOP_PHASES —— 表里每个状态都必须有映射
-  const { TOOL_LOOP_PHASES } = require('../../src/services/stateMachine/toolLoopPhases');
+  const { TOOL_LOOP_PHASES } = require('../../src/services/domain/state/stateMachine/toolLoopPhases.js');
   for (const state of Object.values(TOOL_LOOP_PHASES)) {
     assert.ok(
       Object.prototype.hasOwnProperty.call(_internals._LOOP_STATE_MAP, state),

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tests for usageFormatter.js â€” token formatting, USD formatting,
+ * Tests for usageFormatter.js â€?token formatting, USD formatting,
  * tiered pricing, cost estimation, and usage line formatting.
  */
 
@@ -206,3 +206,4 @@ describe('formatUsageLine', () => {
     expect(line).toContain('cached');
   });
 });
+

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tests for sequentialQueue.js â€” per-key sequential execution
+ * Tests for sequentialQueue.js â€?per-key sequential execution
  * with task timeout eviction.
  */
 
@@ -10,7 +10,7 @@ const {
   DEFAULT_TASK_TIMEOUT_MS,
 } = require('../../src/services/sequentialQueue');
 
-describe('createSequentialQueue â€” serial execution', () => {
+describe('createSequentialQueue â€?serial execution', () => {
   test('tasks for same key execute in order', async () => {
     const order = [];
     const enqueue = createSequentialQueue({ taskTimeoutMs: 5000 });
@@ -79,7 +79,7 @@ describe('createSequentialQueue â€” serial execution', () => {
   });
 });
 
-describe('createSequentialQueue â€” getPending', () => {
+describe('createSequentialQueue â€?getPending', () => {
   test('tracks pending count per key', async () => {
     const enqueue = createSequentialQueue({ taskTimeoutMs: 5000 });
     let resolve1;
@@ -88,7 +88,7 @@ describe('createSequentialQueue â€” getPending', () => {
 
     expect(enqueue.getPending('key')).toBe(2);
     // The first task's Promise executor only runs once the queue dispatches it
-    // on a microtask, so resolve1 is assigned asynchronously â€” wait for it.
+    // on a microtask, so resolve1 is assigned asynchronously â€?wait for it.
     await new Promise((r) => setTimeout(r, 0));
     resolve1();
     await p1;
@@ -99,7 +99,7 @@ describe('createSequentialQueue â€” getPending', () => {
   });
 });
 
-describe('createSequentialQueue â€” task timeout', () => {
+describe('createSequentialQueue â€?task timeout', () => {
   test('advances queue when task exceeds timeout', async () => {
     const onTaskTimeout = jest.fn();
     const enqueue = createSequentialQueue({
@@ -123,3 +123,4 @@ describe('constants', () => {
     expect(DEFAULT_TASK_TIMEOUT_MS).toBe(300000);
   });
 });
+

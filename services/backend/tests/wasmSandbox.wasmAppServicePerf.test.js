@@ -131,3 +131,4 @@ describe('wasmAppService performance and cache behavior', () => {
     }
   });
 });
+

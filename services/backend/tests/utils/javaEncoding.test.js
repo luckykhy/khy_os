@@ -1,5 +1,5 @@
 /**
- * Unit tests for javaEncoding â€” the UTF-8 pinning helper that fixes Java
+ * Unit tests for javaEncoding â€?the UTF-8 pinning helper that fixes Java
  * environment mojibake on legacy-locale (GBK) Windows hosts.
  *
  * The helper has a single behavioural axis: enabled (default) vs disabled via
@@ -89,3 +89,4 @@ describe('javaEncoding', () => {
     });
   });
 });
+

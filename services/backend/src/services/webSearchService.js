@@ -13,6 +13,193 @@ const crypto = require('crypto');
 // is absent.
 const playwrightSearch = require('./playwrightSearch');
 
+// ── 质量增强(goal 2026-09-05「提高有效信息获取效率」)─────────────────────
+// 单一真源 searchQualityEnhancer 纯叶子,fail-soft require:缺失则降级为「仅 RRF 融合,
+// 不做质量评分/重排」,搜索路径照常工作。对 RRF 融合后的结果做:
+//   (1) 分层域名权威评估 (Tier1 官方/学术 → Tier4 未知)
+//   (2) 摘要质量评分 (完整性 / 关键词关联度 / 内容密度)
+//   (3) 时效性评分 (从 snippet 提取日期信号 + 时间衰减)
+//   (4) 点击诱饵 / 链接农场 / 过薄内容检测 + 降权
+//   (5) 质量感知重排 (RRF 分为主,质量分为调节因子)
+let _quality = null;
+try {
+  _quality = require('./domain/query/search/searchQualityEnhancer');
+} catch {
+  /* optional */
+}
+
+/** 对融合后结果做质量感知重排 + 标注。fail-soft:缺失/出错 → 原样返回。 */
+function _applyQualityRerank(results, query) {
+  if (!_quality || !Array.isArray(results) || results.length === 0) {
+    return results;
+  }
+  try {
+    return _quality.rerankWithQuality(results, { query, now: Date.now() });
+  } catch {
+    return results;
+  }
+}
+
+/** 生成质量概览页脚。fail-soft:缺失/无结果 → ''。 */
+function _qualityFooter(results) {
+  if (!_quality || !Array.isArray(results) || results.length === 0) {
+    return '';
+  }
+  try {
+    return _quality.formatQualityFooter(results);
+  } catch {
+    return '';
+  }
+}
+
+// ── 对抗式核验(goal 2026-09-05「对抗式核验」)──────────────────────────
+// 单一真源 searchAdversarialVerifier 纯叶子,fail-soft require:缺失则降级为「仅质量重排,
+// 不做对抗核验」,搜索路径照常工作。对质量重排后的结果做:
+//   (1) 跨引擎一致性核验(共识度 / 来源多样性 / 信息茧房检测)
+//   (2) 付费推广 / SEO 操纵检测(推广信号 / CTA 密度 / 关键词堆砌)
+//   (3) 置信度评分(综合质量 + 共识 + 多样性 - 推广/操纵惩罚)
+let _adversarial = null;
+try {
+  _adversarial = require('./domain/query/search/searchAdversarialVerifier');
+} catch {
+  /* optional */
+}
+
+/** 对质量重排后结果做对抗式核验 + 置信度标注。fail-soft:缺失/出错 → 原样返回。 */
+function _applyAdversarialVerify(results) {
+  if (!_adversarial || !Array.isArray(results) || results.length === 0) {
+    return results;
+  }
+  try {
+    return _adversarial.verifyResults(results);
+  } catch {
+    return results;
+  }
+}
+
+/** 生成对抗式核验页脚。fail-soft:缺失/无结果 → ''。 */
+function _adversarialFooter(results) {
+  if (!_adversarial || !Array.isArray(results) || results.length === 0) {
+    return '';
+  }
+  try {
+    return _adversarial.formatVerificationFooter(results);
+  } catch {
+    return '';
+  }
+}
+
+// ── 声明核验(goal 2026-09-05「对抗式核验:声明级核验」)──────────────────
+// 单一真源 searchClaimVerifier 纯叶子,fail-soft require:缺失则降级为「仅对抗核验,
+// 不做声明级核验」,搜索路径照常工作。对对抗核验后的结果做:
+//   (1) 事实声明提取(数值 / 实体-属性 / 比较 / 因果)
+//   (2) 声明级交叉核验(多源佐证 / 孤证 / 数值冲突)
+//   (3) 声明共识度评分(单条结果中佐证声明占比)
+let _claimVerifier = null;
+try {
+  _claimVerifier = require('./domain/query/search/searchClaimVerifier');
+} catch {
+  /* optional */
+}
+
+/** 对对抗核验后结果做声明级核验 + 共识度标注。fail-soft:缺失/出错 → 原样返回。 */
+function _applyClaimVerify(results) {
+  if (!_claimVerifier || !Array.isArray(results) || results.length === 0) {
+    return results;
+  }
+  try {
+    return _claimVerifier.verifyClaims(results);
+  } catch {
+    return results;
+  }
+}
+
+/** 生成声明核验页脚。fail-soft:缺失/无结果 → ''。 */
+function _claimFooter(results) {
+  if (!_claimVerifier || !Array.isArray(results) || results.length === 0) {
+    return '';
+  }
+  try {
+    return _claimVerifier.formatClaimFooter(results);
+  } catch {
+    return '';
+  }
+}
+
+// ── 溯源分析(goal 2026-09-05「对抗式核验:溯源链分析」)──────────────────
+// 单一真源 searchSourceChainResolver 纯叶子,fail-soft require:缺失则降级为「仅声明核验,
+// 不做溯源分析」,搜索路径照常工作。对声明核验后的结果做:
+//   (1) 来源层级识别(一手 / 二手 / 三手)
+//   (2) 引用链分析(引用信号 / 原始出处实体)
+//   (3) 溯源可信度评分(来源层级 + 引用链 + 原始出处权威性)
+let _sourceChain = null;
+try {
+  _sourceChain = require('./domain/query/search/searchSourceChainResolver');
+} catch {
+  /* optional */
+}
+
+/** 对声明核验后结果做溯源分析 + 溯源标注。fail-soft:缺失/出错 → 原样返回。 */
+function _applySourceChain(results) {
+  if (!_sourceChain || !Array.isArray(results) || results.length === 0) {
+    return results;
+  }
+  try {
+    return _sourceChain.resolveProvenance(results);
+  } catch {
+    return results;
+  }
+}
+
+/** 生成溯源分析页脚。fail-soft:缺失/无结果 → ''。 */
+function _sourceChainFooter(results) {
+  if (!_sourceChain || !Array.isArray(results) || results.length === 0) {
+    return '';
+  }
+  try {
+    return _sourceChain.formatProvenanceFooter(results);
+  } catch {
+    return '';
+  }
+}
+
+// ── 矛盾检测(goal 2026-09-05「对抗式核验:矛盾检测」)────────────────────
+// 单一真源 searchContradictionDetector 纯叶子,fail-soft require:缺失则降级为「仅溯源分析,
+// 不做矛盾检测」,搜索路径照常工作。对溯源分析后的结果做:
+//   (1) 数值矛盾检测(同一指标不同数值)
+//   (2) 极性矛盾检测(同一主题正反观点)
+//   (3) 因果方向矛盾检测(X→Y vs Y→X)
+let _contradiction = null;
+try {
+  _contradiction = require('./domain/query/search/searchContradictionDetector');
+} catch {
+  /* optional */
+}
+
+/** 对溯源分析后结果做矛盾检测 + 矛盾标注。fail-soft:缺失/出错 → 原样返回。 */
+function _applyContradictionDetect(results, query) {
+  if (!_contradiction || !Array.isArray(results) || results.length === 0) {
+    return results;
+  }
+  try {
+    return _contradiction.detectContradictions(results, query);
+  } catch {
+    return results;
+  }
+}
+
+/** 生成矛盾检测页脚。fail-soft:缺失/无结果 → ''。 */
+function _contradictionFooter(results) {
+  if (!_contradiction || !Array.isArray(results) || results.length === 0) {
+    return '';
+  }
+  try {
+    return _contradiction.formatContradictionFooter(results);
+  } catch {
+    return '';
+  }
+}
+
 // ── 时间维度 / 新鲜度(goal 2026-06-25「怎么搜才能拿到最新数据」)──────────
 // 单一真源 searchFreshness 纯叶子,fail-soft require:缺失则全程降级为「不限时」,
 // 搜索路径照常工作。把窗口拼进各引擎结果页 URL(按时间过滤),并对结果按日期重排
@@ -1127,10 +1314,10 @@ function _formatResultsMarkdown(results) {
       }
       return parts.join('\n');
     })
-    .join('\n\n---\n\n');
+    .join('\n\n');
 
   return (
-    lines + '\n\n---\nTo read the full content of any result, use WebFetch with the URL above.'
+    lines + '\n\nTo read the full content of any result, use WebFetch with the URL above.'
   );
 }
 
@@ -2126,6 +2313,51 @@ async function _playwrightFanout(query, limit = DEFAULT_RESULTS, freshWindow = n
 }
 
 /**
+ * 五阶段搜索流水线:从原始融合到最终核验的完整链路。
+ *
+ *   RRF 融合(跨引擎共识)
+ *     → 质量重排(searchQualityEnhancer):权威 / 摘要 / 时效 / 点击诱饵
+ *     → 对抗核验(searchAdversarialVerifier):置信度 / 推广 / SEO / 信息茧房
+ *     → 声明核验(searchClaimVerifier):多源佐证 / 孤证 / 数值冲突
+ *     → 溯源分析(searchSourceChainResolver):一手 / 二手 / 三手 / 引用链
+ *     → 矛盾检测(searchContradictionDetector):数值 / 极性 / 因果方向
+ *
+ * 每个阶段都是 fail-soft 的:缺失 / 出错时跳过该阶段,不影响后续。
+ *
+ * @param {object[]} merged  已 RRF 融合的结果
+ * @param {string} query     原始查询
+ * @returns {object[]} 五阶段处理后的结果
+ */
+function _applyFullPipeline(merged, query) {
+  // Stage 1: 质量重排
+  const qualityRanked = _applyQualityRerank(merged, query);
+  // Stage 2: 对抗核验
+  const verified = _applyAdversarialVerify(qualityRanked);
+  // Stage 3: 声明核验
+  const claimVerified = _applyClaimVerify(verified);
+  // Stage 4: 溯源分析
+  const provenanceResolved = _applySourceChain(claimVerified);
+  // Stage 5: 矛盾检测
+  const contradictionDetected = _applyContradictionDetect(provenanceResolved, query);
+  return contradictionDetected;
+}
+
+/**
+ * 生成五阶段流水线所有页脚。
+ * @param {object[]} results
+ * @returns {string}
+ */
+function _pipelineFooters(results) {
+  return (
+    _qualityFooter(results) +
+    _adversarialFooter(results) +
+    _claimFooter(results) +
+    _sourceChainFooter(results) +
+    _contradictionFooter(results)
+  );
+}
+
+/**
  * Unified search — parallel fan-out across the keyless scrapers (百度 / Bing 中国 /
  * DuckDuckGo), merged + deduped by normalized URL. Wall-clock is the slowest
  * single engine rather than the sum of a serial fallback chain, and a partial
@@ -2151,12 +2383,12 @@ async function searchUnified(query, opts = {}) {
       playwrightUnavailable = true;
     }
     if (pw.success && pw.results.length) {
-      const ranked = _applyRecency(pw.results, freshWindow);
+      const pipelined = _applyFullPipeline(pw.results, query);
       return _withDiscovery(
         {
           success: true,
-          results: ranked,
-          formatted: _formatResultsMarkdown(ranked),
+          results: pipelined,
+          formatted: _formatResultsMarkdown(pipelined) + _pipelineFooters(pipelined),
           partialFailures,
           freshness: freshWindow || undefined,
         },
@@ -2173,13 +2405,14 @@ async function searchUnified(query, opts = {}) {
   partialFailures.push(...fanoutFailures);
 
   if (merged.length > 0) {
-    const ranked = _applyRecency(merged, freshWindow);
-    const top = ranked.slice(0, limit);
+    // 五阶段流水线:RRF 融合 → 质量重排 → 对抗核验 → 声明核验 → 溯源分析 → 矛盾检测
+    const pipelined = _applyFullPipeline(merged, query);
+    const top = pipelined.slice(0, limit);
     return _withDiscovery(
       {
         success: true,
         results: top,
-        formatted: _formatResultsMarkdown(top),
+        formatted: _formatResultsMarkdown(top) + _pipelineFooters(top),
         partialFailures,
         freshness: freshWindow || undefined,
       },
@@ -2198,12 +2431,12 @@ async function searchUnified(query, opts = {}) {
       playwrightUnavailable = true;
     }
     if (pw.success && pw.results.length) {
-      const ranked = _applyRecency(pw.results, freshWindow);
+      const pipelined = _applyFullPipeline(pw.results, query);
       return _withDiscovery(
         {
           success: true,
-          results: ranked,
-          formatted: _formatResultsMarkdown(ranked),
+          results: pipelined,
+          formatted: _formatResultsMarkdown(pipelined) + _pipelineFooters(pipelined),
           partialFailures,
           freshness: freshWindow || undefined,
         },
@@ -2216,12 +2449,12 @@ async function searchUnified(query, opts = {}) {
   if (isAvailable()) {
     const result = await search(query, { ...opts, freshness: freshWindow });
     if (result.success) {
-      const ranked = _applyRecency(result.results, freshWindow);
+      const pipelined = _applyFullPipeline(result.results, query);
       return _withDiscovery(
         {
           ...result,
-          results: ranked,
-          formatted: _formatResultsMarkdown(ranked),
+          results: pipelined,
+          formatted: _formatResultsMarkdown(pipelined) + _pipelineFooters(pipelined),
           partialFailures,
           freshness: freshWindow || undefined,
         },
@@ -2307,4 +2540,16 @@ module.exports.__parsersForTests = {
   httpClientFor: _httpClientFor,
   resolveLimit: _resolveLimit,
   inferAdaptiveLimit: _inferAdaptiveLimit,
+  applyQualityRerank: _applyQualityRerank,
+  qualityFooter: _qualityFooter,
+  applyAdversarialVerify: _applyAdversarialVerify,
+  adversarialFooter: _adversarialFooter,
+  applyClaimVerify: _applyClaimVerify,
+  claimFooter: _claimFooter,
+  applySourceChain: _applySourceChain,
+  sourceChainFooter: _sourceChainFooter,
+  applyContradictionDetect: _applyContradictionDetect,
+  contradictionFooter: _contradictionFooter,
+  applyFullPipeline: _applyFullPipeline,
+  pipelineFooters: _pipelineFooters,
 };

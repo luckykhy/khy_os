@@ -11,7 +11,7 @@
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { parseChangelog, splitHighlight, selectReleaseNotes } = require('../../../src/services/changelog/changelogParse');
+const { parseChangelog, splitHighlight, selectReleaseNotes } = require('../../../src/services/domain/docs/changelog/changelogParse.js');
 
 const SAMPLE = [
   '# Changelog',

@@ -39,3 +39,4 @@ describe('patchEnvContent', () => {
     expect(result).toBe('\nKEY=value\n');
   });
 });
+

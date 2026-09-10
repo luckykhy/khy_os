@@ -6,7 +6,7 @@ const path = require('node:path');
 
 const HANDLER = path.resolve(__dirname, '../../../src/cli/handlers/claimMain.js');
 const FORMATTERS = path.resolve(__dirname, '../../../src/cli/formatters.js');
-const STORE = path.resolve(__dirname, '../../../src/services/claimMain/claimMainStore.js');
+const STORE = path.resolve(__dirname, '../../../src/services/domain/maintenance/claimMain/claimMainStore.js');
 
 let infoLog, errLog, storeState;
 

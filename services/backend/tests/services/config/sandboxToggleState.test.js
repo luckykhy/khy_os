@@ -16,7 +16,7 @@ const {
   resolveSandboxState,
   planSandboxAction,
   isEnabled,
-} = require('../../../src/services/config/sandboxToggleState');
+} = require('../../../src/services/domain/config/config/sandboxToggleState.js');
 
 describe('normalizeSandboxFlag', () => {
   test('true 别名', () => {

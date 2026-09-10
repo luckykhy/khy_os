@@ -67,6 +67,20 @@ function _maybePrewarmToolUseLoop() {
   });
 }
 
+const OFF_VALUES = ['0', 'false', 'off', 'no'];
+const PASTE_CHAR_THRESHOLD = 150;
+const PASTE_LINE_THRESHOLD = 3;
+
+function isPasteSummaryEnabled(env = process.env) {
+  const v = String(env && env.KHY_PROMPT_PASTE_SUMMARY || '').trim().toLowerCase();
+  return !OFF_VALUES.includes(v);
+}
+
+function isShellModeEnabled(env = process.env) {
+  const v = String(env && env.KHY_PROMPT_SHELL_MODE || '').trim().toLowerCase();
+  return !OFF_VALUES.includes(v);
+}
+
 let _mouseModule = null;
 function getMouseModule() {
   if (_mouseModule !== undefined) {
@@ -80,7 +94,7 @@ function getMouseModule() {
   return _mouseModule;
 }
 
-function useTextInput({ onSubmit, onChange, onHistoryEmpty, mouseModule } = {}) {
+function useTextInput({ onSubmit, onChange, onHistoryEmpty, mouseModule, onShellModeChange } = {}) {
   const [cursor, setCursor] = useState(() => new Cursor('', 0));
   const killRing = useRef([]);
   const history = useRef([]);
@@ -94,6 +108,9 @@ function useTextInput({ onSubmit, onChange, onHistoryEmpty, mouseModule } = {}) 
   // flush within the same input tick operates on the post-flush value (the
   // `cursor` state closure is stale until React commits).
   const cursorRef = useRef(cursor);
+  // Shell mode state: true when the input text starts with `!`. Gated by
+  // KHY_PROMPT_SHELL_MODE; off → shellModeRef stays false → byte-identical legacy.
+  const shellModeRef = useRef(false);
 
   // Single funnel for every cursor mutation: updates the ref synchronously and
   // schedules the state/onChange update.
@@ -111,8 +128,13 @@ function useTextInput({ onSubmit, onChange, onHistoryEmpty, mouseModule } = {}) 
       if (fireChange && next && next.text && next.text.length >= PREFETCH_TEXT_THRESHOLD) {
         _maybePrewarmToolUseLoop();
       }
+      // Sync shell mode: if the text no longer starts with `!`, exit shell mode.
+      if (isShellModeEnabled(process.env) && shellModeRef.current && !next.text.startsWith('!')) {
+        shellModeRef.current = false;
+        if (onShellModeChange) onShellModeChange(false);
+      }
     },
-    [onChange]
+    [onChange, onShellModeChange]
   );
 
   const move = useCallback((next) => commit(next, false), [commit]);
@@ -139,6 +161,20 @@ function useTextInput({ onSubmit, onChange, onHistoryEmpty, mouseModule } = {}) 
     }
     const trimmed = clean.replace(/\n$/, '');
     pasteAt.current = Date.now();
+    const lineCount = (trimmed.match(/\n/g) || []).length + 1;
+    // Paste summary: if the pasted text exceeds the length/line thresholds and
+    // the gate is on, replace with a single placeholder line instead of
+    // inserting the full content into the buffer. Short pastes and gate-off
+    // both fall through to the legacy insert path.
+    if (
+      isPasteSummaryEnabled(process.env) &&
+      (trimmed.length >= PASTE_CHAR_THRESHOLD || lineCount >= PASTE_LINE_THRESHOLD)
+    ) {
+      const placeholder = `[Pasted ~${lineCount} lines]`;
+      const next = cursorRef.current.insert(placeholder);
+      commit(next, true);
+      return next;
+    }
     const next = cursorRef.current.insert(trimmed);
     commit(next, true);
     return next;
@@ -242,6 +278,37 @@ function useTextInput({ onSubmit, onChange, onHistoryEmpty, mouseModule } = {}) 
       let cur = cursorRef.current;
       if (pasteBuf.current && !(input && input.length > 1)) {
         cur = flushPaste();
+      }
+
+      // ── Shell mode (gated by KHY_PROMPT_SHELL_MODE) ──────────────────────
+      // When shell mode is active, Escape or Backspace at position 0 exits it
+      // (clears the `!` prefix). All other keys fall through to normal editing.
+      const _shellOn = isShellModeEnabled(process.env);
+      if (_shellOn && shellModeRef.current) {
+        if (key.escape) {
+          // Exit shell mode: clear the `!` prefix, keep any command text after it.
+          const text = cur.text;
+          if (text.startsWith('!')) {
+            const rest = text.slice(1);
+            const next = new Cursor(rest, Math.max(0, cur.offset - 1));
+            shellModeRef.current = false;
+            if (onShellModeChange) onShellModeChange(false);
+            commit(next, true);
+          } else {
+            shellModeRef.current = false;
+            if (onShellModeChange) onShellModeChange(false);
+          }
+          return;
+        }
+        // Backspace at position 0: if there's a `!` prefix, delete it and exit
+        // shell mode; otherwise fall through to normal backspace.
+        if ((key.backspace || key.delete) && cur.offset === 0 && cur.text.startsWith('!')) {
+          const next = new Cursor(cur.text.slice(1), 0);
+          shellModeRef.current = false;
+          if (onShellModeChange) onShellModeChange(false);
+          commit(next, true);
+          return;
+        }
       }
 
       // ── Submit / newline ────────────────────────────────────────────────
@@ -424,6 +491,13 @@ function useTextInput({ onSubmit, onChange, onHistoryEmpty, mouseModule } = {}) 
           clearTimeout(pasteTimer.current);
         }
         pasteTimer.current = setTimeout(() => flushPaste(), PASTE_FLUSH_MS);
+        // If the pasted chunk starts with `!` and shell mode is gated on, enter
+        // shell mode immediately (the `!` prefix will appear in the buffer once
+        // flushPaste commits).
+        if (_shellOn && !shellModeRef.current && input.startsWith('!')) {
+          shellModeRef.current = true;
+          if (onShellModeChange) onShellModeChange(true);
+        }
         return;
       }
 
@@ -431,7 +505,13 @@ function useTextInput({ onSubmit, onChange, onHistoryEmpty, mouseModule } = {}) 
       if (input.charCodeAt(0) < 0x20) {
         return undefined;
       }
-      edit(cur.insert(input));
+      const next = cur.insert(input);
+      // Enter shell mode when the buffer transitions to starting with `!`.
+      if (_shellOn && !shellModeRef.current && next.text.startsWith('!')) {
+        shellModeRef.current = true;
+        if (onShellModeChange) onShellModeChange(true);
+      }
+      edit(next);
       return undefined;
 
       function historyPrev() {
@@ -474,7 +554,17 @@ function useTextInput({ onSubmit, onChange, onHistoryEmpty, mouseModule } = {}) 
     onInput,
     setText,
     setOffset,
-    clear: () => setText(''),
+    clear: () => {
+      shellModeRef.current = false;
+      if (onShellModeChange) onShellModeChange(false);
+      setText('');
+    },
+    // Shell mode active: true when the buffer text starts with `!` and the
+    // KHY_PROMPT_SHELL_MODE gate is on. Consumers (PromptFrame/App) use this to
+    // switch the placeholder and visual indicator.
+    get shellMode() {
+      return shellModeRef.current;
+    },
     // Read-only snapshot of the merged (persisted + session) command history,
     // oldest→newest, for consumers like the Ctrl+R reverse-search overlay. Never
     // mutate the returned array; it is the live ref's backing store.

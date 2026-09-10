@@ -52,3 +52,4 @@ describe('Trade model', () => {
     expect(Trade.rawAttributes.status).toBeDefined();
   });
 });
+

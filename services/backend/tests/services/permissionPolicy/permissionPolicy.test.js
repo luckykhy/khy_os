@@ -4,7 +4,7 @@
  * Unit tests for the fine-grained permission policy middleware
  * (services/permissionPolicy). Covers:
  *   - strict no-op when no policy file exists (existing behavior preserved);
- *   - auto-mode whitelist in/out → allow/deny;
+ *   - auto-mode whitelist in/out �?allow/deny;
  *   - confirm / deny strategies and per-tool overrides;
  *   - sensitive-operation forced二次确认;
  *   - code-execution language gate + resource-limit surfacing;
@@ -51,13 +51,13 @@ describe('permissionPolicy', () => {
     fs.writeFileSync(path.join(tmp, 'permissions.json'), JSON.stringify(policy), 'utf8');
   }
 
-  test('no policy file ⇒ evaluate() returns null (strict no-op)', () => {
+  test('no policy file �?evaluate() returns null (strict no-op)', () => {
     const policy = freshModules();
     expect(policy.evaluate('Write', { file_path: '/etc/hosts' })).toBeNull();
     expect(policy.summarize().exists).toBe(false);
   });
 
-  test('kill switch KHY_PERMISSION_POLICY=off ⇒ null even with a file', () => {
+  test('kill switch KHY_PERMISSION_POLICY=off �?null even with a file', () => {
     writePolicy({ defaultPolicy: 'deny' });
     process.env.KHY_PERMISSION_POLICY = 'off';
     const policy = freshModules();
@@ -186,7 +186,7 @@ describe('permissionPolicy/matchers', () => {
     expect(matchers.globToRegExp('/a/?.js').test('/a/xy.js')).toBe(false);
   });
 
-  test('matchPath: ** covers nested, empty patterns ⇒ false', () => {
+  test('matchPath: ** covers nested, empty patterns �?false', () => {
     expect(matchers.matchPath('/work/src/deep/a.js', ['/work/**'])).toBe(true);
     expect(matchers.matchPath('/work/a.js', [])).toBe(false);
     expect(matchers.matchPath('/other/a.js', ['/work/**'])).toBe(false);
@@ -212,3 +212,4 @@ describe('permissionPolicy/matchers', () => {
     expect(matchers.isSensitiveOperation('x', {}, [])).toBe(false);
   });
 });
+

@@ -95,7 +95,7 @@ describe('repoMap.buildRepoMap', () => {
     const hit = repoMap.buildRepoMap({ cwd: fixture, tokenBudget: 4000 });
     expect(hit.cached).toBe(true);
 
-    // Mutate a source file â†’ structure changes â†’ fingerprint flips â†’ miss.
+    // Mutate a source file â†?structure changes â†?fingerprint flips â†?miss.
     fs.writeFileSync(
       path.join(fixture, 'src', 'util.js'),
       'function helper() { return 2; }\nfunction extra() { return 9; }\nconst factor = 3;\nmodule.exports = { helper, extra, factor };\n',
@@ -104,7 +104,7 @@ describe('repoMap.buildRepoMap', () => {
     expect(afterChange.cached).toBe(false);
   });
 
-  test('cache disabled (KHY_REPO_MAP_CACHE off) â†’ always uncached, still builds', () => {
+  test('cache disabled (KHY_REPO_MAP_CACHE off) â†?always uncached, still builds', () => {
     process.env.KHY_REPO_MAP_CACHE = 'false';
     const a = repoMap.buildRepoMap({ cwd: fixture, tokenBudget: 4000 });
     const b = repoMap.buildRepoMap({ cwd: fixture, tokenBudget: 4000 });
@@ -136,3 +136,4 @@ describe('repoMap.buildRepoMap', () => {
     expect(out.cached).toBe(false);
   });
 });
+

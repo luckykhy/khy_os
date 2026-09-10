@@ -52,3 +52,4 @@ describe('Backtest model', () => {
     expect(Backtest.rawAttributes.totalReturn).toBeDefined();
   });
 });
+

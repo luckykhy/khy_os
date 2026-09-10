@@ -51,12 +51,12 @@ describe('windowsClipboardImg2FileService', () => {
   test('isClipboardImageFresh: only fresh (within window) images count; stale ignored', () => {
     const svc = require('../../src/services/windowsClipboardImg2FileService');
     const now = 1_000_000_000;
-    // 默认新鲜窗口 8s。
-    expect(svc.isClipboardImageFresh(now - 1000, now)).toBe(true); // 1s ago → fresh
+    // 默认新鲜窗口 8s�?
+    expect(svc.isClipboardImageFresh(now - 1000, now)).toBe(true); // 1s ago �?fresh
     expect(svc.isClipboardImageFresh(now - 7999, now)).toBe(true); // just inside
-    expect(svc.isClipboardImageFresh(now - 8001, now)).toBe(false); // just outside → stale
-    expect(svc.isClipboardImageFresh(now - 60000, now)).toBe(false); // 1min ago → stale
-    // 未来时间戳 / 非法输入 → false(宁可漏抓不误抓)。
+    expect(svc.isClipboardImageFresh(now - 8001, now)).toBe(false); // just outside �?stale
+    expect(svc.isClipboardImageFresh(now - 60000, now)).toBe(false); // 1min ago �?stale
+    // 未来时间�?/ 非法输入 �?false(宁可漏抓不误�?�?
     expect(svc.isClipboardImageFresh(now + 5000, now)).toBe(false);
     expect(svc.isClipboardImageFresh(0, now)).toBe(false);
     expect(svc.isClipboardImageFresh(NaN, now)).toBe(false);
@@ -121,3 +121,4 @@ describe('windowsClipboardImg2FileService', () => {
     expect(child.kill).toHaveBeenCalled();
   });
 });
+

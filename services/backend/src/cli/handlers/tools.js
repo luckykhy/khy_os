@@ -12,6 +12,7 @@
  * 这是 ide.js 交互确认自动安装之外的显式入口——同一套注册表/解析器/安装器。
  */
 
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const installer = require('../../services/gateway/adapters/portableCliInstaller');
 const registry = require('../../services/gateway/adapters/portableCliRegistry');
 const resolver = require('../../services/gateway/adapters/portableCliResolver');
@@ -122,4 +123,12 @@ async function handleToolsCommand(subCommand, args = []) {
   );
 }
 
-module.exports = { handleToolsCommand };
+module.exports = {
+  handleToolsCommand,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'tools',
+    description: 'tools command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleToolsCommand(parsed.subCommand, parsed.args),
+  },
+};

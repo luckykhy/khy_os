@@ -17,6 +17,7 @@
  *
  * @module handlers/features
  */
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const chalk = require('chalk').default || require('chalk');
 const { printInfo, printWarn } = require('../formatters');
 
@@ -104,4 +105,10 @@ async function handleFeatures(subCommand, args = [], options = {}) {
 module.exports = {
   handleFeatures,
   _filterCatalog,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'features',
+    description: 'features command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleFeatures(parsed.subCommand, parsed.args, parsed.options),
+  },
 };

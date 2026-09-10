@@ -29,7 +29,7 @@ describe('agentFsService (AgentFS)', () => {
     tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-agentfs-'));
     process.env.KHY_DATA_HOME = tmpHome;
     jest.resetModules();
-    svc = require('../src/services/agentFs/agentFsService');
+    svc = require('../src/services/domain/agents/agentFs/agentFsService.js');
   });
 
   afterEach(() => {

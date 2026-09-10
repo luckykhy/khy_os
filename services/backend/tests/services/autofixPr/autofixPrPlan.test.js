@@ -3,7 +3,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 
-const leaf = require('../../../src/services/autofixPr/autofixPrPlan');
+const leaf = require('../../../src/services/domain/maintenance/autofixPr/autofixPrPlan.js');
 
 // ── 语法解析 ──────────────────────────────────────────────────────────────
 test('parseAutofixArgs: 空参 = run, target null', () => {

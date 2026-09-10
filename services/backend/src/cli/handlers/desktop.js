@@ -20,6 +20,7 @@
  * export KHY_DESKTOP_CONTROL in your shell profile.
  */
 
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const chalk = require('chalk');
 
 const { printError, printInfo, printSuccess, printWarn } = require('../formatters');
@@ -114,4 +115,13 @@ async function handleDesktop(subCommand, args /* , options */) {
   }
 }
 
-module.exports = { handleDesktop, _currentMode };
+module.exports = {
+  handleDesktop,
+  _currentMode,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'desktop',
+    description: 'desktop command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleDesktop(parsed.subCommand, parsed.args, parsed.options),
+  },
+};

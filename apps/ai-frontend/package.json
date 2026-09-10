@@ -9,6 +9,8 @@
     "dev": "vite",
     "prebuild": "node scripts/sync-md-vendor.mjs",
     "build": "vite build",
+    "lint": "node scripts/lint.mjs",
+    "check:env": "node scripts/check-env-example.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",

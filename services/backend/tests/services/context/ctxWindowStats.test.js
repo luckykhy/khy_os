@@ -14,7 +14,7 @@
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { computeContextStats } = require('../../../src/services/context/ctxWindowStats');
+const { computeContextStats } = require('../../../src/services/domain/session/context/ctxWindowStats.js');
 
 describe('上限来源', () => {
   test('适配器真值优先 → limitSource=adapter', () => {

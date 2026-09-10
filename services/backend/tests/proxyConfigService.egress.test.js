@@ -89,7 +89,7 @@ test('activateNode: core-required 门关 → 透传 disabled guidance,egressMode
 
 test('activateNode: core-required 门开但内核缺失 → core-missing 指引,不谎报生效', async () => {
   process.env.KHY_PROXY_CORE = '1';
-  const core = require('../src/services/proxy/proxyCoreManager');
+  const core = require('../src/services/domain/network/proxy/proxyCoreManager.js');
   const restore = core._setDeps({
     fs: { accessSync() { throw new Error('ENOENT'); }, constants: { X_OK: 1 } },
   });
@@ -109,7 +109,7 @@ test('activateNode: core-required 门开但内核缺失 → core-missing 指引,
 test('activateNode: core-required 门开 + fake spawn 握手 → 写 127.0.0.1:mixedPort env', async () => {
   process.env.KHY_PROXY_CORE = '1';
   const { EventEmitter } = require('events');
-  const core = require('../src/services/proxy/proxyCoreManager');
+  const core = require('../src/services/domain/network/proxy/proxyCoreManager.js');
   const child = new EventEmitter();
   child.pid = 7777;
   child.stdout = new EventEmitter();

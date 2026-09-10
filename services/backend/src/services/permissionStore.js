@@ -110,6 +110,10 @@ function _load() {
 
   // Migrate from legacy format
   _migrateLegacy();
+
+  // 首次运行（无配置文件或迁移后仍为空）→ 初始化默认 wildcard 规则
+  // 对标 Claude Code 首次信任工作区时的默认授权行为
+  _initDefaultPatternRules();
 }
 
 function _save() {
@@ -182,6 +186,55 @@ function _migrateLegacy() {
     _save();
   } catch {
     /* migration failure is non-critical */
+  }
+}
+
+// ── Default wildcard rules（ZCode / Claude Code 对齐） ─────────────────
+
+/**
+ * 默认 wildcard 规则：首次初始化时写入常用安全命令的免审规则。
+ * 对标 Claude Code 的 `Bash(npm test *)` 式 wildcard 授权。
+ * 仅在 permissions.json 不存在时写入（不覆盖用户已有配置）。
+ */
+const DEFAULT_PATTERN_RULES = Object.freeze([
+  { toolName: 'Bash', pattern: 'npm run *', decision: 'allow', scope: 'forever' },
+  { toolName: 'Bash', pattern: 'npm test *', decision: 'allow', scope: 'forever' },
+  { toolName: 'Bash', pattern: 'git status *', decision: 'allow', scope: 'forever' },
+  { toolName: 'Bash', pattern: 'git log *', decision: 'allow', scope: 'forever' },
+  { toolName: 'Bash', pattern: 'git diff *', decision: 'allow', scope: 'forever' },
+  { toolName: 'Bash', pattern: 'ls *', decision: 'allow', scope: 'forever' },
+  { toolName: 'Bash', pattern: 'cat *', decision: 'allow', scope: 'forever' },
+  { toolName: 'Bash', pattern: 'pwd *', decision: 'allow', scope: 'forever' },
+  { toolName: 'Bash', pattern: 'rm -rf *', decision: 'deny', scope: 'forever' },
+  { toolName: 'Bash', pattern: 'sudo *', decision: 'deny', scope: 'forever' },
+]);
+
+/**
+ * 初始化默认 wildcard 规则（仅首次：permissions.json 不存在时）。
+ * 对标 Claude Code 首次信任工作区时的默认授权行为。
+ */
+function _initDefaultPatternRules() {
+  try {
+    if (fs.existsSync(PERMISSIONS_FILE)) {
+      return; // 已有配置，不覆盖
+    }
+    if (!_patternRulesEnabled()) {
+      return;
+    }
+    _load();
+    // 仅在无任何规则时写入默认值
+    if (_patternRules.length === 0 && Object.keys(_rules).length === 0) {
+      for (const rule of DEFAULT_PATTERN_RULES) {
+        _patternRules.push({
+          ...rule,
+          since: new Date().toISOString(),
+          default: true,
+        });
+      }
+      _save();
+    }
+  } catch {
+    /* best effort — 默认规则写入失败不影响核心功能 */
   }
 }
 
@@ -611,4 +664,6 @@ module.exports = {
   reset,
   revoke,
   VALID_PROFILES,
+  DEFAULT_PATTERN_RULES,
+  _initDefaultPatternRules,
 };

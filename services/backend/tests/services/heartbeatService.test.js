@@ -12,7 +12,7 @@ describe('heartbeatService — declarative companion patrol (#9)', () => {
   function fresh() {
     jest.resetModules();
     hb = require('../../src/services/heartbeatService');
-    agentFs = require('../../src/services/agentFs/agentFsService');
+    agentFs = require('../../src/services/domain/agents/agentFs/agentFsService.js');
   }
 
   function makeActiveCompanion(id, heartbeatMd) {

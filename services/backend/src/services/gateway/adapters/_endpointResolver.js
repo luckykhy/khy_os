@@ -20,7 +20,9 @@ function resolveAdapterEndpoint(adapterKey) {
     claude: defaults.CLAUDE_API_ENDPOINT || process.env.CLAUDE_API_ENDPOINT || 'https://api.anthropic.com',
     openai: defaults.OPENAI_API_ENDPOINT || process.env.OPENAI_API_ENDPOINT || 'https://api.openai.com',
     deepseek: defaults.DEEPSEEK_API_ENDPOINT || process.env.DEEPSEEK_API_ENDPOINT || 'https://api.deepseek.com',
-    ollama: defaults.OLLAMA_ENDPOINT || process.env.OLLAMA_ENDPOINT || 'http://localhost:11434',
+    // defaults.OLLAMA_HOST already folds in env resolution (OLLAMA_HOST) inside
+    // serviceDefaults.js; OLLAMA_ENDPOINT stays supported as a legacy override.
+    ollama: process.env.OLLAMA_ENDPOINT || defaults.OLLAMA_HOST,
     localllm: defaults.LOCAL_LLM_ENDPOINT || process.env.LOCAL_LLM_ENDPOINT,
   };
 

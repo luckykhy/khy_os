@@ -92,7 +92,7 @@ describe('post-convergence delegates — output identical to the oracles', () =>
   });
 
   test('deviceAppsDownloader.formatBytes delegates without behavior change', () => {
-    const dl = require('../../src/services/deviceApps/deviceAppsDownloader');
+    const dl = require('../../src/services/domain/desktop/deviceApps/deviceAppsDownloader.js');
     for (const v of SAMPLES) {
       expect(dl.formatBytes(v)).toBe(oracleDownloaderFormatBytes(v));
     }

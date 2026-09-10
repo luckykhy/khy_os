@@ -285,6 +285,22 @@ const ECOSYSTEMS = Object.freeze(
         },
       ],
     },
+    {
+      id: 'opencode',
+      label: 'opencode',
+      gate: 'KHY_MCP_ECODE',
+      format: 'json5',
+      extract: 'mcp',
+      shape: 'standard',
+      remoteDefault: 'http',
+      evidence: 'doc',
+      sources: [
+        { base: 'home', segs: ['.config', 'opencode', 'config.json'], kind: 'user' },
+        { base: 'home', segs: ['.opencode', 'config.json'], kind: 'user-alt' },
+        { base: 'project', segs: ['.opencode', 'config.json'], kind: 'project' },
+        { base: 'project', segs: ['opencode.json'], kind: 'project-alt' },
+      ],
+    },
   ].map((e) => Object.freeze({ ...e, sources: Object.freeze(e.sources.map((s) => Object.freeze(s))) }))
 );
 
@@ -292,6 +308,7 @@ const ECOSYSTEMS = Object.freeze(
 const EXCLUDED = Object.freeze({
   'claude-code': '已有专用桥 ccMcpBridge(含 projects[dir] 特殊形状)',
   openclaw: '已有专用桥 ocMcpBridge(含 stateHome 覆盖链 + JSON5)',
+  opencode: '已登记在 ECOSYSTEMS 表(标准 mcp 提取路径)',
   warp: 'MCP 配置存在应用内部数据库,非可读 JSON 文件',
   trae: '未找到稳定的公开配置约定,不猜路径',
 });

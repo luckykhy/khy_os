@@ -16,7 +16,7 @@
 
 const assert = require('assert');
 
-const tn = require('../src/services/query/taskNotification');
+const tn = require('../src/services/domain/query/query/taskNotification.js');
 const AgentTool = require('../src/tools/AgentTool');
 
 describe('s13 — taskNotification.drainCompletedBackgroundAgents', () => {

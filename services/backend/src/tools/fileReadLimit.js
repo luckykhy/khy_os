@@ -101,7 +101,7 @@ function buildOversizeNotice({ totalBytes, maxBytes } = {}) {
   const mb = _posInt(maxBytes) || DEFAULT_MAX_BYTES;
   const tbStr = tb > 0 ? `${tb} 字节` : '较大';
   return (
-    `\n\n---\n[文件${tbStr},超过单次读取上限 ${mb} 字节,以上仅为前 ${mb} 字节按行返回的内容。` +
+    `\n\n[文件${tbStr},超过单次读取上限 ${mb} 字节,以上仅为前 ${mb} 字节按行返回的内容。` +
     `如需后续内容:用 offset/limit 在已读窗口内翻页,或提高 KHY_FILE_READ_MAX_BYTES 后重读,或用 shell 分段读取。]`
   );
 }

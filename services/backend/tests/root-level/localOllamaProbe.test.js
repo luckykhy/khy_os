@@ -1,9 +1,8 @@
 /**
- * localOllamaProbe â€” discover locally served models via ollamaModelManager.
+ * localOllamaProbe â€?discover locally served models via ollamaModelManager.
  *
- * Covers: not-running â†’ empty + no error; running â†’ mapped {id, source:'local'};
- * listModels failure â†’ empty + error (never throws); isOllamaRunning throw â†’
- * graceful failure.
+ * Covers: not-running â†?empty + no error; running â†?mapped {id, source:'local'};
+ * listModels failure â†?empty + error (never throws); isOllamaRunning throw â†? * graceful failure.
  */
 'use strict';
 
@@ -17,14 +16,14 @@ const { fetchLocalModels } = require('../src/services/gateway/localOllamaProbe')
 
 afterEach(() => jest.clearAllMocks());
 
-test('not running â†’ empty list, no error, listModels not called', async () => {
+test('not running â†?empty list, no error, listModels not called', async () => {
   ollama.isOllamaRunning.mockResolvedValue(false);
   const out = await fetchLocalModels();
   expect(out).toEqual({ running: false, models: [], error: null });
   expect(ollama.listModels).not.toHaveBeenCalled();
 });
 
-test('running â†’ maps model names to {id, source:local}', async () => {
+test('running â†?maps model names to {id, source:local}', async () => {
   ollama.isOllamaRunning.mockResolvedValue(true);
   ollama.listModels.mockResolvedValue([
     { name: 'qwen2.5:7b', size: 1 },
@@ -40,7 +39,7 @@ test('running â†’ maps model names to {id, source:local}', async () => {
   ]);
 });
 
-test('listModels rejects â†’ running:true, empty models, error set (no throw)', async () => {
+test('listModels rejects â†?running:true, empty models, error set (no throw)', async () => {
   ollama.isOllamaRunning.mockResolvedValue(true);
   ollama.listModels.mockRejectedValue(new Error('tags failed'));
   const out = await fetchLocalModels();
@@ -49,7 +48,8 @@ test('listModels rejects â†’ running:true, empty models, error set (no throw)', 
   expect(out.error).toBe('tags failed');
 });
 
-test('isOllamaRunning throws â†’ graceful failure, never throws', async () => {
+test('isOllamaRunning throws â†?graceful failure, never throws', async () => {
   ollama.isOllamaRunning.mockRejectedValue(new Error('boom'));
   await expect(fetchLocalModels()).resolves.toEqual({ running: false, models: [], error: 'boom' });
 });
+

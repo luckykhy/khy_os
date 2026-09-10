@@ -30,17 +30,17 @@
   --khy-border: #d6e0ef;
   --khy-border-light: #e5ebf5;
 
-  /* Brand / semantic */
-  --khy-primary: #2f7ef7;
-  --khy-primary-strong: #1f68df;
-  --khy-primary-soft: #eaf2ff;
-  --khy-success: #079455;
-  --khy-warning: #dc6803;
-  --khy-danger: #d92d20;
+  /* Brand / semantic（低饱和度，ZCode 对齐） */
+  --khy-primary: #2563eb;
+  --khy-primary-strong: #1d4ed8;
+  --khy-primary-soft: #dbeafe;
+  --khy-success: #059669;
+  --khy-warning: #d97706;
+  --khy-danger: #dc2626;
 
-  /* Geometry */
-  --khy-radius: 12px;
-  --khy-radius-sm: 8px;
+  /* Geometry（更精致的圆角） */
+  --khy-radius: 8px;
+  --khy-radius-sm: 6px;
   --khy-radius-lg: 16px;
   --khy-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
   --khy-shadow-lift: 0 14px 36px rgba(15, 23, 42, 0.10);
@@ -58,6 +58,66 @@
   /* Skeleton shimmer */
   --khy-skeleton-base: #e8eef7;
   --khy-skeleton-highlight: #f6f9ff;
+
+  /* Khy brand accent — the float ball's purple. Status aliases below reuse the
+   * --khy-* semantics so a theme change reaches every status dot at once. */
+  --khy-accent: #6d5efc;
+  --khy-accent-mid: #8b5cf6;
+  --khy-accent-end: #d946ef;
+  --khy-accent-soft: rgba(109, 94, 252, 0.18);
+  --khy-accent-soft-end: rgba(217, 70, 239, 0.16);
+  --khy-accent-tint: #c4b5fd;
+  --khy-accent-glow: rgba(109, 94, 252, 0.42);
+  --khy-accent-glow-strong: rgba(139, 92, 246, 0.6);
+  --khy-accent-glow-halo: rgba(139, 92, 246, 0.8);
+  --khy-accent-ring: rgba(139, 92, 246, 0.45);
+
+  --khy-ok: #22c55e;
+  --khy-ok-glow: rgba(34, 197, 94, 0.8);
+  --khy-busy: #eab308;
+  --khy-rest: #a78bfa;
+  --khy-off: #8b93a3;
+  --khy-off-strong: #6b7280;
+  --khy-fade: rgba(154, 162, 177, 0.5);
+  --khy-ink: #e7e9ee;
+  --khy-ink-dim: #9aa2b1;
+  --khy-ink-mute: #8b93a3;
+  --khy-panel: #1c2130;
+  --khy-cyan: #a5f3fc;
+  --khy-cyan-soft: rgba(34, 211, 238, 0.18);
+
+  /* Structural whites / shadows — alpha ramps, not palette entries */
+  --khy-highlight: rgba(255, 255, 255, 0.35);
+  --khy-highlight-strong: rgba(255, 255, 255, 0.45);
+  --khy-ripple: color-mix(in srgb, #fff 55%, transparent);
+  --khy-ripple-fade: color-mix(in srgb, #fff 0%, transparent);
+  --khy-overlay-shadow: 0 14px 40px rgba(0, 0, 0, 0.42);
+
+  /* Element Plus global mapping — kept in this same :root so the whole token
+   * surface lives in one place. EP's own vars come from
+   * element-plus/theme-chalk/dark/css-vars.css, which is imported before this
+   * file, so these still win by source order. */
+  --el-bg-color: var(--khy-bg-main);
+  --el-bg-color-page: var(--khy-bg-main);
+  --el-bg-color-overlay: var(--khy-bg-elevated);
+  --el-fill-color-light: var(--khy-bg-soft);
+  --el-fill-color-lighter: var(--khy-bg-soft);
+  --el-fill-color-blank: var(--khy-bg-card);
+  --el-border-color: var(--khy-border);
+  --el-border-color-light: var(--khy-border-light);
+  --el-border-color-lighter: var(--khy-border-light);
+  --el-text-color-primary: var(--khy-text-strong);
+  --el-text-color-regular: var(--khy-text-main);
+  --el-text-color-secondary: var(--khy-text-secondary);
+  --el-text-color-placeholder: var(--khy-text-muted);
+  --el-color-primary: var(--khy-primary);
+  --el-color-primary-light-3: #5f9af9;
+  --el-color-primary-light-5: #82b1fb;
+  --el-color-primary-light-7: #b7d4fd;
+  --el-color-primary-light-9: var(--khy-primary-soft);
+  --el-color-primary-dark-2: var(--khy-primary-strong);
+  --el-mask-color: rgba(12, 16, 26, 0.45);
+  --el-mask-color-extra-light: rgba(12, 16, 26, 0.2);
 }
 
 html.dark {
@@ -79,13 +139,13 @@ html.dark {
   --khy-border: #313c4f;
   --khy-border-light: #2a3445;
 
-  /* Brand / semantic (slightly brighter for contrast on dark) */
-  --khy-primary: #5fa0ff;
-  --khy-primary-strong: #7db4ff;
-  --khy-primary-soft: #21304a;
-  --khy-success: #34d399;
-  --khy-warning: #fbbf24;
-  --khy-danger: #f87171;
+  /* Brand / semantic（低饱和度，ZCode 对齐） */
+  --khy-primary: #3b82f6;
+  --khy-primary-strong: #60a5fa;
+  --khy-primary-soft: #1e2d4a;
+  --khy-success: #10b981;
+  --khy-warning: #f59e0b;
+  --khy-danger: #ef4444;
 
   --khy-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
   --khy-shadow-lift: 0 16px 40px rgba(0, 0, 0, 0.45);
@@ -96,6 +156,45 @@ html.dark {
 
   --khy-skeleton-base: #283142;
   --khy-skeleton-highlight: #36425a;
+
+  --khy-accent: #8b7cff;
+  --khy-accent-mid: #a78bfa;
+  --khy-accent-end: #e879f9;
+  --khy-accent-soft: rgba(139, 124, 255, 0.22);
+  --khy-accent-soft-end: rgba(232, 121, 249, 0.18);
+  --khy-accent-tint: #c4b5fd;
+  --khy-accent-glow: rgba(139, 124, 255, 0.42);
+  --khy-accent-glow-strong: rgba(167, 139, 250, 0.55);
+  --khy-accent-glow-halo: rgba(167, 139, 250, 0.75);
+  --khy-accent-ring: rgba(167, 139, 250, 0.45);
+
+  --khy-ok: #34d399;
+  --khy-ok-glow: rgba(52, 211, 153, 0.8);
+  --khy-busy: #fbbf24;
+  --khy-rest: #a78bfa;
+  --khy-off: #9aa2b1;
+  --khy-off-strong: #6b7280;
+  --khy-fade: rgba(154, 162, 177, 0.5);
+  --khy-ink: #eef2f8;
+  --khy-ink-dim: #9aa7bd;
+  --khy-ink-mute: #8b93a3;
+  --khy-panel: #1c2130;
+  --khy-cyan: #67e8f9;
+  --khy-cyan-soft: rgba(34, 211, 238, 0.18);
+
+  --khy-highlight: rgba(255, 255, 255, 0.28);
+  --khy-highlight-strong: rgba(255, 255, 255, 0.4);
+  --khy-ripple: color-mix(in srgb, #fff 55%, transparent);
+  --khy-ripple-fade: color-mix(in srgb, #fff 0%, transparent);
+  --khy-overlay-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
+
+  /* Dark-side half of the Element Plus mapping (see the :root block above). */
+  --el-color-primary-light-3: #4f86e0;
+  --el-color-primary-light-5: #3f6cb8;
+  --el-color-primary-light-7: #2f4f86;
+  --el-color-primary-light-9: var(--khy-primary-soft);
+  --el-mask-color: rgba(0, 0, 0, 0.6);
+  --el-mask-color-extra-light: rgba(0, 0, 0, 0.35);
 }
 
 html,
@@ -121,40 +220,6 @@ body {
     radial-gradient(circle at 88% 2%, var(--khy-bg-glow-2), transparent 34%),
     var(--khy-bg-base);
   transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-/* ── Element Plus global mapping (token-driven, reacts to html.dark) ── */
-:root {
-  --el-bg-color: var(--khy-bg-main);
-  --el-bg-color-page: var(--khy-bg-main);
-  --el-bg-color-overlay: var(--khy-bg-elevated);
-  --el-fill-color-light: var(--khy-bg-soft);
-  --el-fill-color-lighter: var(--khy-bg-soft);
-  --el-fill-color-blank: var(--khy-bg-card);
-  --el-border-color: var(--khy-border);
-  --el-border-color-light: var(--khy-border-light);
-  --el-border-color-lighter: var(--khy-border-light);
-  --el-text-color-primary: var(--khy-text-strong);
-  --el-text-color-regular: var(--khy-text-main);
-  --el-text-color-secondary: var(--khy-text-secondary);
-  --el-text-color-placeholder: var(--khy-text-muted);
-  --el-color-primary: var(--khy-primary);
-  --el-color-primary-light-3: #5f9af9;
-  --el-color-primary-light-5: #82b1fb;
-  --el-color-primary-light-7: #b7d4fd;
-  --el-color-primary-light-9: var(--khy-primary-soft);
-  --el-color-primary-dark-2: var(--khy-primary-strong);
-  --el-mask-color: rgba(12, 16, 26, 0.45);
-  --el-mask-color-extra-light: rgba(12, 16, 26, 0.2);
-}
-
-html.dark {
-  --el-color-primary-light-3: #4f86e0;
-  --el-color-primary-light-5: #3f6cb8;
-  --el-color-primary-light-7: #2f4f86;
-  --el-color-primary-light-9: var(--khy-primary-soft);
-  --el-mask-color: rgba(0, 0, 0, 0.6);
-  --el-mask-color-extra-light: rgba(0, 0, 0, 0.35);
 }
 
 .el-card {

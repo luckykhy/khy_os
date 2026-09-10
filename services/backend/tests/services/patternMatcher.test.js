@@ -1,16 +1,16 @@
 'use strict';
 
 /**
- * Tests for permissions/patternMatcher.js â€” pure-leaf pattern matching.
+ * Tests for permissions/patternMatcher.js â€?pure-leaf pattern matching.
  *
  * Covers:
  *   - extractCommandPrefix: env-assignment skipping, compound-command
- *     rejection (fail-closed â†’ null), whitespace normalization
+ *     rejection (fail-closed â†?null), whitespace normalization
  *   - matchPatternRule: three forms (exact tool / command-prefix glob /
  *     param glob), serialization priority alignment
  *   - compiled-RegExp cache capacity bound (KHY_PERMISSION_PATTERN_CACHE_CAP)
  *
- * Hermetic: pure functions only â€” no filesystem or data-home access.
+ * Hermetic: pure functions only â€?no filesystem or data-home access.
  */
 
 const ORIG_ENV = { ...process.env };
@@ -47,7 +47,7 @@ describe('extractCommandPrefix', () => {
     expect(m.extractCommandPrefix('FOO=1 BAR=x npm run dev')).toBe('npm run dev');
   });
 
-  test('only env assignments (no command) â†’ null', () => {
+  test('only env assignments (no command) â†?null', () => {
     const m = loadMatcher();
     expect(m.extractCommandPrefix('FOO=1')).toBeNull();
     expect(m.extractCommandPrefix('FOO=1 BAR=2')).toBeNull();
@@ -64,12 +64,12 @@ describe('extractCommandPrefix', () => {
     ['echo $(whoami)', 'command substitution'],
     ['a & b', 'background &'],
     ['a\nb', 'newline'],
-  ])('compound command %#(%s: %s) â†’ null (fail-closed)', (cmd) => {
+  ])('compound command %#(%s: %s) â†?null (fail-closed)', (cmd) => {
     const m = loadMatcher();
     expect(m.extractCommandPrefix(cmd)).toBeNull();
   });
 
-  test('empty / non-string input â†’ null', () => {
+  test('empty / non-string input â†?null', () => {
     const m = loadMatcher();
     expect(m.extractCommandPrefix('')).toBeNull();
     expect(m.extractCommandPrefix('   ')).toBeNull();
@@ -79,7 +79,7 @@ describe('extractCommandPrefix', () => {
   });
 });
 
-describe('matchPatternRule â€” form (a): exact tool name', () => {
+describe('matchPatternRule â€?form (a): exact tool name', () => {
   test('rule without pattern matches any params for the same tool', () => {
     const m = loadMatcher();
     const rule = { toolName: 'Bash', pattern: null, decision: 'allow' };
@@ -101,7 +101,7 @@ describe('matchPatternRule â€” form (a): exact tool name', () => {
   });
 });
 
-describe('matchPatternRule â€” form (b): command-prefix glob', () => {
+describe('matchPatternRule â€?form (b): command-prefix glob', () => {
   test('wildcard prefix matches simple commands', () => {
     const m = loadMatcher();
     const rule = { toolName: 'Bash', pattern: 'npm run *' };
@@ -137,7 +137,7 @@ describe('matchPatternRule â€” form (b): command-prefix glob', () => {
   });
 });
 
-describe('matchPatternRule â€” form (c): param glob', () => {
+describe('matchPatternRule â€?form (c): param glob', () => {
   test('file_path glob matching', () => {
     const m = loadMatcher();
     const rule = { toolName: 'Read', pattern: '/tmp/**' };
@@ -151,7 +151,7 @@ describe('matchPatternRule â€” form (c): param glob', () => {
     expect(m.matchPatternRule(rule, 'listDir', { path: '/home/user' })).toBe(true);
   });
 
-  test('empty params with a pattern â†’ no match', () => {
+  test('empty params with a pattern â†?no match', () => {
     const m = loadMatcher();
     const rule = { toolName: 'Read', pattern: '/tmp/**' };
     expect(m.matchPatternRule(rule, 'Read', {})).toBe(false);
@@ -159,7 +159,7 @@ describe('matchPatternRule â€” form (c): param glob', () => {
   });
 });
 
-describe('_serializeParams â€” priority aligned with legacy rules.js', () => {
+describe('_serializeParams â€?priority aligned with legacy rules.js', () => {
   test('command > cmd > file_path > path > JSON', () => {
     const m = loadMatcher();
     expect(m._serializeParams({ command: 'a', cmd: 'b', file_path: 'c', path: 'd' })).toBe('a');
@@ -203,8 +203,9 @@ describe('compiled-RegExp cache capacity', () => {
     delete process.env.KHY_PERMISSION_PATTERN_CACHE_CAP;
     jest.resetModules();
     const m = loadMatcher();
-    // Fill beyond a small number â€” all retained under the default cap (256).
+    // Fill beyond a small number â€?all retained under the default cap (256).
     for (let i = 0; i < 10; i++) m._compilePattern(`p${i}*`);
     expect(m._regexCache.size).toBe(10);
   });
 });
+

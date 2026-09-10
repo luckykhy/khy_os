@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * OS-dimension adaptation â€” verify osProfileService reads container/cgroup real
+ * OS-dimension adaptation â€?verify osProfileService reads container/cgroup real
  * limits, detects WSL, applies per-OS behavior modifiers, honors the
  * KHY_OS_PROFILE / KHY_EFFECTIVE_* overrides, and that hardwareProfileService
  * combines the effective (container-clamped) resources into classification.
@@ -28,7 +28,7 @@ function makeProbe(over = {}) {
   };
 }
 
-describe('osProfileService â€” container / cgroup / OS modifiers', () => {
+describe('osProfileService â€?container / cgroup / OS modifiers', () => {
   let osp;
 
   beforeEach(() => {
@@ -56,7 +56,7 @@ describe('osProfileService â€” container / cgroup / OS modifiers', () => {
     expect(r.container.runtime).toBe('cgroup');
   });
 
-  test('cgroup v2 cpu.max "200000 100000" â†’ 2 effective cpus', () => {
+  test('cgroup v2 cpu.max "200000 100000" â†?2 effective cpus', () => {
     const r = osp._detect(makeProbe({
       files: { '/sys/fs/cgroup/cpu.max': '200000 100000' },
     }));
@@ -96,7 +96,7 @@ describe('osProfileService â€” container / cgroup / OS modifiers', () => {
     expect(r.container.runtime).toBe('docker');
   });
 
-  test('WSL detected via /proc/version â†’ timeout floor 1.3', () => {
+  test('WSL detected via /proc/version â†?timeout floor 1.3', () => {
     const r = osp._detect(makeProbe({
       files: { '/proc/version': 'Linux version 5.15.0-microsoft-standard-WSL2' },
     }));
@@ -105,7 +105,7 @@ describe('osProfileService â€” container / cgroup / OS modifiers', () => {
     expect(r.capabilities).toContain('wsl');
   });
 
-  test('Windows kernel signature â†’ 1.5 multiplier + hideConsole', () => {
+  test('Windows kernel signature â†?1.5 multiplier + hideConsole', () => {
     const r = osp._detect(makeProbe({ nodePlatform: 'win32', osType: 'Windows_NT 10.0' }));
     expect(r.os).toBe(PLATFORM.WINDOWS);
     expect(r.modifiers.timeoutMultiplier).toBe(1.5);
@@ -136,7 +136,7 @@ describe('osProfileService â€” container / cgroup / OS modifiers', () => {
   });
 });
 
-describe('hardwareProfileService â€” combines effective resources', () => {
+describe('hardwareProfileService â€?combines effective resources', () => {
   let savedEnv;
   let hw;
 
@@ -157,7 +157,7 @@ describe('hardwareProfileService â€” combines effective resources', () => {
     jest.resetModules();
   });
 
-  test('container effective 2GB/2cpu â†’ server-minimal even on a big host', () => {
+  test('container effective 2GB/2cpu â†?server-minimal even on a big host', () => {
     process.env.KHY_EFFECTIVE_MEM_MB = '2048';
     process.env.KHY_EFFECTIVE_CPUS = '2';
     hw.resetCache();
@@ -175,8 +175,8 @@ describe('hardwareProfileService â€” combines effective resources', () => {
     hw.resetCache();
     require('../src/services/osProfileService').resetCache();
     const p = hw.detectProfile();
-    // Base shell timeout for non-minimal tiers is 30s â†’ Ã—1.5 = 45s.
-    // server-minimal base is 15s â†’ 22.5s â‰ˆ 22500. Assert it scaled up regardless.
+    // Base shell timeout for non-minimal tiers is 30s â†?Ã—1.5 = 45s.
+    // server-minimal base is 15s â†?22.5s â‰?22500. Assert it scaled up regardless.
     expect(p.os.os).toBe('Windows');
     expect(p.os.modifiers.timeoutMultiplier).toBe(1.5);
     expect(p.limits.shellTimeoutMs).toBeGreaterThan(15000);
@@ -206,3 +206,4 @@ describe('hardwareProfileService â€” combines effective resources', () => {
     expect(p.effective.ramMB).toBeLessThanOrEqual(p.memory.totalMB);
   });
 });
+

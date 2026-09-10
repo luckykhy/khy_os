@@ -1,12 +1,15 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import ConnectionView from '@/views/ConnectionView.vue';
 import LoginView from '@/views/LoginView.vue';
+import WelcomeView from '@/views/WelcomeView.vue';
 import MobileShell from '@/layouts/MobileShell.vue';
 import { loadRuntime } from '@/api/runtime';
 import { getSession } from '@/api/secureSession';
+import { getSetting } from '@/api/localDb';
 
 const routes = [
   { path: '/', redirect: '/home' },
+  { path: '/welcome', component: WelcomeView, meta: { public: true, title: '选择模式' } },
   { path: '/connect', component: ConnectionView, meta: { public: true, title: '连接后端' } },
   { path: '/login', component: LoginView, meta: { public: true, requiresRuntime: true, title: '登录' } },
   {
@@ -23,6 +26,7 @@ const routes = [
       { path: 'trades', component: () => import('@/views/TradesView.vue'), meta: { title: '流水' } },
       { path: 'strategies', component: () => import('@/views/StrategiesView.vue'), meta: { title: '策略' } },
       { path: 'backtests', component: () => import('@/views/BacktestsView.vue'), meta: { title: '回测' } },
+      { path: 'models', component: () => import('@/views/ModelsView.vue'), meta: { title: '模型与密钥' } },
       { path: 'settings', component: () => import('@/views/SettingsView.vue'), meta: { title: '设置' } },
     ],
   },
@@ -32,11 +36,34 @@ const routes = [
 const router = createRouter({ history: createWebHistory(), routes });
 
 router.beforeEach(async (to) => {
+  // 检查运行模式：standalone = 直连 API，remote = 通过 khy-os 网关
+  const mode = await getSetting('settings_mode');
+
+  // 独立模式：不需要后端地址和登录会话
+  if (mode === 'standalone') {
+    // 独立模式下不允许访问 connect/login（这些是远程模式专用）
+    if (to.path === '/connect' || to.path === '/login') {
+      return { path: '/home' };
+    }
+    return true;
+  }
+
+  // 远程模式或未设置：需要后端地址
   const runtime = await loadRuntime();
-  if (!runtime?.apiBaseUrl && to.path !== '/connect') return { path: '/connect', query: { next: to.fullPath } };
-  if (to.path === '/connect' || to.path === '/login') return true;
+  if (!runtime?.apiBaseUrl) {
+    // 首次启动：跳到 welcome 选模式
+    if (to.path !== '/welcome' && to.path !== '/connect') {
+      return { path: '/welcome', query: { next: to.fullPath } };
+    }
+    return true;
+  }
+
+  if (to.path === '/connect' || to.path === '/login' || to.path === '/welcome') return true;
+
+  // 远程模式需要登录会话
   const session = await getSession();
   if (!session?.accessToken) return { path: '/login', query: { next: to.fullPath } };
+
   return true;
 });
 

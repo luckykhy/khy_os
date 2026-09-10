@@ -12,7 +12,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const r = require('../src/services/config/philosophyDesignResolver');
+const r = require('../src/services/domain/config/config/philosophyDesignResolver.js');
 
 const ON = { KHY_PHILOSOPHY_DESIGN: 'true' };
 const OFF = { KHY_PHILOSOPHY_DESIGN: 'off' };

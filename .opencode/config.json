@@ -1,0 +1,24 @@
+{
+  "mcp": {
+    "deepseek-eyes": {
+      "type": "local",
+      "command": ["python", "-m", "deepseek_eyes"],
+      "enabled": true,
+      "environment": {
+        "MODELSCOPE_API_KEY": ""
+      }
+    }
+  },
+  "keybinds": {
+    "input_paste": "ctrl+v",
+    "input_paste_image": "alt+v"
+  },
+  "context": {
+    "rules": [
+      "AGENTS.md",
+      "docs/03_DESIGN_设计/[DESIGN-ARCH-081] Claude Code TUI 1复刻实施计划.md",
+      "services/backend/src/cli/tui/AGENTS.md"
+    ],
+    "description": "Khy OS CC TUI 复刻项目 - 实施时严格遵守设计约束"
+  }
+}

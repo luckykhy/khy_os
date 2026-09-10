@@ -1,11 +1,11 @@
 'use strict';
 
-// Workstream A â€” tier-aware system prompt.
+// Workstream A â€?tier-aware system prompt.
 // makeSystemPrompt must drop weak-model scaffolding (Doing tasks / Execution
 // discipline / Planning) for T0 (frontier, lean) models, keep it for T1+,
 // and honor the KHY_HARNESS_PROMPT_VERBOSITY escape hatch.
 //
-// æ‰¹4: makeSystemPrompt is now async (it routes the modular prompt through the
+// æ‰?: makeSystemPrompt is now async (it routes the modular prompt through the
 // single-source async builder constants/prompts.getSystemPrompt). Tests await it;
 // withCleanEnv awaits fn() so env restoration happens AFTER the async build, not
 // before it (otherwise the env override would be reverted mid-flight).
@@ -35,7 +35,7 @@ function hasAnyScaffold(prompt) {
   return SCAFFOLD_MARKERS.some(m => prompt.includes(m));
 }
 
-describe('makeSystemPrompt â€” tier-aware scaffolding', () => {
+describe('makeSystemPrompt â€?tier-aware scaffolding', () => {
   test('T0 frontier (opus-4.8) is lean: no weak-model scaffolding', async () => {
     await withCleanEnv(async () => {
       const prompt = await makeSystemPrompt('', { model: 'claude-opus-4-8', adapter: 'api' });
@@ -77,7 +77,7 @@ describe('makeSystemPrompt â€” tier-aware scaffolding', () => {
 
   test('cache key separates lean and full for the same call shape', async () => {
     await withCleanEnv(async () => {
-      // First produce lean (T0), then full via env override â€” if the cache key
+      // First produce lean (T0), then full via env override â€?if the cache key
       // did not include verbosity, the second call could return the stale lean
       // prompt. Assert they differ.
       const lean = await makeSystemPrompt('', { model: 'claude-opus-4-8', adapter: 'api' });
@@ -88,3 +88,4 @@ describe('makeSystemPrompt â€” tier-aware scaffolding', () => {
     });
   });
 });
+

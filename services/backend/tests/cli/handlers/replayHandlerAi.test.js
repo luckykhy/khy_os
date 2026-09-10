@@ -1,5 +1,4 @@
 'use strict';
-
 /**
  * replayHandlerAi.test.js — DESIGN-ARCH-049 G4 (AI replay CLI wiring).
  *
@@ -13,23 +12,17 @@
  *
  * KHY_PROJECT_DATA_HOME / write roots set before requiring funnel modules.
  */
-
-const test = require('node:test');
-const assert = require('node:assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-
 const TMP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-g4-home-'));
 process.env.KHY_PROJECT_DATA_HOME = TMP_HOME;
 process.env.KHY_DEP_HEALING = 'off';
 const WORK = fs.mkdtempSync(path.join(os.tmpdir(), 'khy-g4-work-'));
 process.env.KHY_WRITE_EXTRA_ROOTS = WORK;
 delete process.env.KHY_TRAJ_AI_REPLAY;
-
 const { handleReplay } = require('../../../src/cli/handlers/replay');
 const replayLedger = require('../../../src/services/trajectoryReplay/replayLedger');
-
 async function capture(fn) {
   const lines = [];
   const sinks = ['log', 'error', 'warn', 'info'];
@@ -38,7 +31,6 @@ async function capture(fn) {
   try { await fn(); } finally { for (const s of sinks) console[s] = orig[s]; }
   return lines.join('\n');
 }
-
 function recordWrite(sessionId, absPath, content) {
   replayLedger.recordToolTurn({
     sessionId,
@@ -48,7 +40,6 @@ function recordWrite(sessionId, absPath, content) {
     writeDiff: { filePath: absPath, beforeContent: '', afterContent: content },
   });
 }
-
 function seed(sessionId, name) {
   replayLedger._resetSeq(sessionId);
   const target = path.join(WORK, name);
@@ -56,41 +47,44 @@ function seed(sessionId, name) {
   return target;
 }
 
-test('without --ai (env off): no AI banner, deterministic reproduction', async () => {
-  delete process.env.KHY_TRAJ_AI_REPLAY;
-  const target = seed('g4-off', 'g4-off.txt');
-  await capture(() => handleReplay('export', ['g4-off'], {}));
-  if (fs.existsSync(target)) fs.unlinkSync(target);
+describe('Replay Handler Ai', () => {
+  test('without --ai (env off): no AI banner, deterministic reproduction', async () => {
+      delete process.env.KHY_TRAJ_AI_REPLAY;
+      const target = seed('g4-off', 'g4-off.txt');
+      await capture(() => handleReplay('export', ['g4-off'], {}));
+      if (fs.existsSync(target)) fs.unlinkSync(target);
+    
+      const out = await capture(() => handleReplay('run', ['g4-off'], { force: true }));
+      expect(out).not.toMatch(/AI 修桥已启用/);
+      expect(out).toMatch(/回放完成/);
+      expect(fs.existsSync(target).toBeTruthy());
+  });
 
-  const out = await capture(() => handleReplay('run', ['g4-off'], { force: true }));
-  assert.doesNotMatch(out, /AI 修桥已启用/);
-  assert.match(out, /回放完成/);
-  assert.ok(fs.existsSync(target));
-});
+  test('with --ai: AI banner shown, run still completes for a FILE step', async () => {
+      delete process.env.KHY_TRAJ_AI_REPLAY;
+      const target = seed('g4-flag', 'g4-flag.txt');
+      await capture(() => handleReplay('export', ['g4-flag'], {}));
+      if (fs.existsSync(target)) fs.unlinkSync(target);
+    
+      const out = await capture(() => handleReplay('run', ['g4-flag'], { force: true, ai: true }));
+      expect(out).toMatch(/AI 修桥已启用/);
+      expect(out).toMatch(/回放完成/);
+      expect(fs.existsSync(target).toBeTruthy());
+  });
 
-test('with --ai: AI banner shown, run still completes for a FILE step', async () => {
-  delete process.env.KHY_TRAJ_AI_REPLAY;
-  const target = seed('g4-flag', 'g4-flag.txt');
-  await capture(() => handleReplay('export', ['g4-flag'], {}));
-  if (fs.existsSync(target)) fs.unlinkSync(target);
+  test('KHY_TRAJ_AI_REPLAY=on enables the banner without the flag', async () => {
+      const target = seed('g4-env', 'g4-env.txt');
+      await capture(() => handleReplay('export', ['g4-env'], {}));
+      if (fs.existsSync(target)) fs.unlinkSync(target);
+    
+      process.env.KHY_TRAJ_AI_REPLAY = 'on';
+      try {
+        const out = await capture(() => handleReplay('run', ['g4-env'], { force: true }));
+        expect(out).toMatch(/AI 修桥已启用/);
+        expect(out).toMatch(/回放完成/);
+      } finally {
+        delete process.env.KHY_TRAJ_AI_REPLAY;
+      }
+  });
 
-  const out = await capture(() => handleReplay('run', ['g4-flag'], { force: true, ai: true }));
-  assert.match(out, /AI 修桥已启用/);
-  assert.match(out, /回放完成/);
-  assert.ok(fs.existsSync(target));
-});
-
-test('KHY_TRAJ_AI_REPLAY=on enables the banner without the flag', async () => {
-  const target = seed('g4-env', 'g4-env.txt');
-  await capture(() => handleReplay('export', ['g4-env'], {}));
-  if (fs.existsSync(target)) fs.unlinkSync(target);
-
-  process.env.KHY_TRAJ_AI_REPLAY = 'on';
-  try {
-    const out = await capture(() => handleReplay('run', ['g4-env'], { force: true }));
-    assert.match(out, /AI 修桥已启用/);
-    assert.match(out, /回放完成/);
-  } finally {
-    delete process.env.KHY_TRAJ_AI_REPLAY;
-  }
 });

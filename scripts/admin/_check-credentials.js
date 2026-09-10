@@ -1,5 +1,7 @@
 const fs = require('fs');
-const p = 'D:\\Portable\\khy-os\\.khy\\credentials\\default-admin.json';
+const path = require('path');
+// Repo root = two levels up from scripts/admin/.
+const p = path.join(__dirname, '..', '..', '.khy', 'credentials', 'default-admin.json');
 try {
   const d = JSON.parse(fs.readFileSync(p, 'utf-8'));
   console.log('user:', d.username);

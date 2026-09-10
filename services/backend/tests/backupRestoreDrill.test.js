@@ -20,9 +20,9 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const backupService = require('../src/services/backup/backupService');
-const restoreService = require('../src/services/backup/restoreService');
-const plan = require('../src/services/backup/backupAssetPlan');
+const backupService = require('../src/services/domain/backup/backup/backupService.js');
+const restoreService = require('../src/services/domain/backup/backup/restoreService.js');
+const plan = require('../src/services/domain/backup/backup/backupAssetPlan.js');
 const { BACKUP } = require('../src/constants/serviceDefaults');
 const Database = require('../src/config/sqlite-adapter');
 

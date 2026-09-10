@@ -16,6 +16,7 @@
  * regions (rule 4); the engine uses idle-based timeouts only (rule 3).
  */
 
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const path = require('path');
 const readline = require('readline');
 
@@ -322,4 +323,13 @@ async function handlePortable(subCommand, args = [], options = {}) {
   }
 }
 
-module.exports = { handlePortable };
+module.exports = {
+  handlePortable
+,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'portable',
+    description: 'portable command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handlePortable(parsed.subCommand, parsed.args, parsed.options),
+  },
+};

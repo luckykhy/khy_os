@@ -7,7 +7,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const gen = require('../src/services/proxy/proxyCoreConfigGen');
+const gen = require('../src/services/domain/network/proxy/proxyCoreConfigGen.js');
 
 test('classifyNodeEgress: http/https 型 → direct-connect', () => {
   assert.equal(gen.classifyNodeEgress({ type: 'http', server: 'h', port: 8080 }), 'direct-connect');

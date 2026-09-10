@@ -1,34 +1,55 @@
 'use strict';
 
-const readFileSyncSafe = require('../../src/utils/readFileSyncSafe');
 const fs = require('fs');
-const path = require('path');
-const os = require('os');
+
+jest.mock('fs');
+
+const readFileSyncSafe = require('../../src/utils/readFileSyncSafe');
 
 describe('readFileSyncSafe', () => {
-  const tmpDir = path.join(os.tmpdir(), `khy-test-${Date.now()}`);
-  const testFile = path.join(tmpDir, 'test.txt');
-
-  beforeAll(() => {
-    fs.mkdirSync(tmpDir, { recursive: true });
-    fs.writeFileSync(testFile, 'hello world', 'utf8');
+  beforeEach(() => {
+    jest.clearAllMocks();
   });
 
-  afterAll(() => {
-    try { fs.unlinkSync(testFile); } catch {}
-    try { fs.rmdirSync(tmpDir); } catch {}
-  });
-
-  test('reads existing file', () => {
-    expect(readFileSyncSafe(testFile)).toBe('hello world');
+  test('returns file content as string', () => {
+    fs.readFileSync.mockReturnValue('hello world');
+    const result = readFileSyncSafe('/path/to/file.txt');
+    expect(result).toBe('hello world');
+    expect(fs.readFileSync).toHaveBeenCalledWith('/path/to/file.txt', 'utf8');
   });
 
   test('returns empty string for non-existent file', () => {
-    expect(readFileSyncSafe('/non/existent/file.txt')).toBe('');
+    fs.readFileSync.mockImplementation(() => {
+      throw new Error('ENOENT');
+    });
+    expect(readFileSyncSafe('/nonexistent.txt')).toBe('');
   });
 
-  test('returns empty string for invalid path', () => {
-    expect(readFileSyncSafe(null)).toBe('');
-    expect(readFileSyncSafe(undefined)).toBe('');
+  test('returns empty string for permission error', () => {
+    fs.readFileSync.mockImplementation(() => {
+      throw new Error('EACCES');
+    });
+    expect(readFileSyncSafe('/restricted.txt')).toBe('');
+  });
+
+  test('returns empty string for any error', () => {
+    fs.readFileSync.mockImplementation(() => {
+      throw new Error('Unknown error');
+    });
+    expect(readFileSyncSafe('/some/file.txt')).toBe('');
+  });
+
+  test('handles Buffer input - returns Buffer as-is (no conversion)', () => {
+    const buf = Buffer.from('buffer content');
+    fs.readFileSync.mockReturnValue(buf);
+    const result = readFileSyncSafe('/buffer.txt');
+    expect(result).toBe(buf);
+    expect(Buffer.isBuffer(result)).toBe(true);
+  });
+
+  test('handles empty file', () => {
+    fs.readFileSync.mockReturnValue('');
+    expect(readFileSyncSafe('/empty.txt')).toBe('');
   });
 });
+

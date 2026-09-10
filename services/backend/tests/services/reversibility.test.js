@@ -1,13 +1,13 @@
 'use strict';
 
 /**
- * reversibility.test.js — Phase A of the CB-SSP redesign (design doc §1.3 / §4.A).
+ * reversibility.test.js �?Phase A of the CB-SSP redesign (design doc §1.3 / §4.A).
  *
  * Asserts the mathematical / structural properties the design doc requires of
  * the reversibility layering:
  *   1. Classification A_safe (read-only/reversible) vs A_commit (irreversible).
  *   2. Speculation guard: under a speculative context only A_safe may run; any
- *      A_commit action is refused — "任何不可逆动作绝不被投机执行".
+ *      A_commit action is refused �?"任何不可逆动作绝不被投机执行".
  *   3. Bounded read-only lookahead: beam width k clamped to <= 3, commits filtered.
  *   4. Budget conservation at executeTool: a speculative commit is blocked BEFORE
  *      the handler runs (no side effect, no irreversible-step budget consumed),
@@ -138,10 +138,10 @@ describe('executeTool integration: budget conservation under speculation', () =>
     const res = await toolCalling.executeTool(TOOL, { x: 1 }, { speculative: true });
     expect(res._speculativeBlocked).toBe(true);
     expect(res.success).toBe(false);
-    expect(handlerCalls).toBe(0); // never executed → no world change, no budget spent
+    expect(handlerCalls).toBe(0); // never executed �?no world change, no budget spent
   });
 
-  test('the normal (non-speculative) path is unaffected — handler runs', async () => {
+  test('the normal (non-speculative) path is unaffected �?handler runs', async () => {
     const res = await toolCalling.executeTool(TOOL, { x: 1 }, {});
     expect(res.success).toBe(true);
     expect(handlerCalls).toBe(1);
@@ -155,3 +155,4 @@ describe('executeTool integration: budget conservation under speculation', () =>
     try { fs.rmSync(path.dirname(tmp), { recursive: true, force: true }); } catch { /* ignore */ }
   });
 });
+

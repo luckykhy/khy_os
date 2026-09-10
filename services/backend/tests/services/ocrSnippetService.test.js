@@ -188,3 +188,4 @@ describe('ocrSnippetService', () => {
     try { fs.rmSync(tmp.dir, { recursive: true, force: true }); } catch { /* ignore */ }
   });
 });
+

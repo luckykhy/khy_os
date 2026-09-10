@@ -175,3 +175,4 @@ describe('themeRegistry', () => {
     expect(mono.colors.claude).not.toBe(def.colors.claude);
   });
 });
+

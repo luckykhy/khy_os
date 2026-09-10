@@ -34,6 +34,9 @@ function ccFormatEnabled(env = process.env) {
 
 /**
  * CC `formatDuration` 的忠实移植(src/utils/format.ts)。
+ * 返回完整的多单位格式(如 "1m 30s"、"2h 15m"),仅在 hideTrailingZeros 或
+ * mostSignificantOnly 选项开启时才省略零值尾段。
+ * 例:60000ms → "1m 0s"(非 hideTrailingZeros 模式) vs "1m"(hideTrailingZeros 模式)
  * @param {number} ms
  * @param {{hideTrailingZeros?:boolean, mostSignificantOnly?:boolean}} [options]
  * @returns {string}  非有限输入 → ''(绝不抛)。

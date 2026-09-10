@@ -1,7 +1,9 @@
 import sqlite3, sys
+from pathlib import Path
 
-db = r"D:\portable\khy-os\services\backend\data\khy-quant.db"
-con = sqlite3.connect(db)
+# Repo root = two levels up from scripts/admin/.
+db = Path(__file__).resolve().parents[2] / "services" / "backend" / "data" / "khy-quant.db"
+con = sqlite3.connect(str(db))
 cur = con.cursor()
 
 # Check what's in users table

@@ -200,7 +200,7 @@ function buildAnnotation(result) {
 
   if (outcome === 'fixed') {
     return (
-      `\n\n---\n🔍 **完成时审计** — 审计智能体发现问题，已自动派发修复智能体处理并通过重审` +
+      `\n\n🔍 **完成时审计** — 审计智能体发现问题，已自动派发修复智能体处理并通过重审` +
       (fixedTotal > 0 ? `（修复 ${fixedTotal} 项严重/高优先级问题）` : '') +
       '。'
     );
@@ -211,7 +211,7 @@ function buildAnnotation(result) {
     const remaining = counts ? counts.critical + counts.high : 0;
     const lines = [];
     lines.push(
-      `\n\n---\n🔍 **完成时审计** — 经过自动审计与修复后，仍有 ${remaining} 个严重/高优先级问题需人工关注：`
+      `\n\n🔍 **完成时审计** — 经过自动审计与修复后，仍有 ${remaining} 个严重/高优先级问题需人工关注：`
     );
     const leftover = finalReport ? actionableFindings(finalReport) : [];
     leftover.slice(0, 8).forEach((f) => {

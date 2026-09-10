@@ -172,6 +172,10 @@ export async function streamChatCompletion({
     body.tool_choice = 'auto';
   }
 
+  // 累积流式 tool_call 分片：OpenAI 流式返回时 tool_calls 是增量 delta，
+  // 需要把同一 index 的 delta 拼成完整 tool_call 再交给回调。
+  const toolCallAccumulator = new Map(); // index -> { id, type, function: { name, arguments } }
+
   await consumeSse(url, {
     auth: false,
     retryAuth: false,
@@ -191,10 +195,24 @@ export async function streamChatCompletion({
       if (choice?.delta?.content) {
         onChunk?.(choice.delta.content);
       }
+      // 累积 tool_call delta
       if (choice?.delta?.tool_calls?.length) {
-        onToolCall?.(choice.delta.tool_calls, choice.finish_reason);
+        for (const delta of choice.delta.tool_calls) {
+          const idx = delta.index ?? 0;
+          const existing = toolCallAccumulator.get(idx) || { id: '', type: 'function', function: { name: '', arguments: '' } };
+          if (delta.id) existing.id = delta.id;
+          if (delta.type) existing.type = delta.type;
+          if (delta.function?.name) existing.function.name += delta.function.name;
+          if (delta.function?.arguments) existing.function.arguments += delta.function.arguments;
+          toolCallAccumulator.set(idx, existing);
+        }
       }
+      // finish_reason === 'tool_calls' 时，提交累积的完整 tool_call
       if (choice?.finish_reason === 'tool_calls') {
+        const completeCalls = Array.from(toolCallAccumulator.entries())
+          .sort(([a], [b]) => a - b)
+          .map(([, tc]) => tc);
+        onToolCall?.(completeCalls, 'tool_calls');
         onDone?.({ finishReason: 'tool_calls', usage: event.usage || null });
       }
       if (event.usage && (event.choices?.length || 0) === 0) {

@@ -42,7 +42,7 @@ test('isRelayServableModel: relay/trae families → true', () => {
 test('isRelayServableModel: custom-provider (agnes-*) → false (the actual bug)', () => {
   assert.strictEqual(isRelayServableModel('agnes-2.0-flash'), false);
   assert.strictEqual(isRelayServableModel('agnes-image-2.1-flash'), false);
-  assert.strictEqual(isRelayServableModel('agnes-video-v2.0'), false);
+  assert.strictEqual(isRelayServableModel('agnes-video-2.5'), false);
 });
 
 test('isRelayServableModel: junk / empty / non-string → false (never throws)', () => {

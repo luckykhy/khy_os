@@ -46,6 +46,7 @@ const GuiEvalTask = require('./GuiEvalTask');
 const GuiEvalRun = require('./GuiEvalRun');
 const WebFrontendEvalTask = require('./WebFrontendEvalTask');
 const WebFrontendEvalRun = require('./WebFrontendEvalRun');
+const ChannelApi = require('./ChannelApi');
 
 // 定义关联关系
 User.hasMany(Strategy, { foreignKey: 'user_id', as: 'strategies' });
@@ -176,6 +177,10 @@ WebFrontendEvalTask.belongsTo(User, { foreignKey: 'created_by', as: 'author', co
 WebFrontendEvalTask.hasMany(WebFrontendEvalRun, { foreignKey: 'task_id', as: 'runs', constraints: false });
 WebFrontendEvalRun.belongsTo(WebFrontendEvalTask, { foreignKey: 'task_id', as: 'task', constraints: false });
 
+// ── 渠道 API 文档 ───────────────────────────────────────────────────
+// channel_apis 是系统级注册表（各 AI 渠道的端点 + 加密 Key + 配置方式），不是
+// 每用户资源，故刻意不建 User 关联——单机/可信网络旁路模式下没有稳定的归属用户。
+
 module.exports = {
   sequelize,
   User,
@@ -212,4 +217,5 @@ module.exports = {
   GuiEvalRun,
   WebFrontendEvalTask,
   WebFrontendEvalRun,
+  ChannelApi,
 };

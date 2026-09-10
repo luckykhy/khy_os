@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * guardApproval.test.js â€” soft-guard block â†’ user-approval bridge.
+ * guardApproval.test.js â€?soft-guard block â†?user-approval bridge.
  *
  * Verifies that requestGuardApproval:
  *  - allows when the host approves, and stamps EXEC_APPROVED onto params;
@@ -12,7 +12,7 @@
 const { requestGuardApproval } = require('../../src/services/guardApproval');
 const { EXEC_APPROVED } = require('../../src/services/execApproval');
 
-describe('guardApproval â€” soft block to user approval', () => {
+describe('guardApproval â€?soft block to user approval', () => {
   test('GA-1: approval allows and stamps EXEC_APPROVED onto params', async () => {
     const onControlRequest = async () => ({ behavior: 'allow' });
     const verdict = await requestGuardApproval({
@@ -87,7 +87,7 @@ describe('guardApproval â€” soft block to user approval', () => {
   });
 
   test('GA-8: a red-line source is refused even when the channel would approve (Â§4.D irreducibility)', async () => {
-    // A red line is a âŠ¥ fixed point of relaxation: relax(âŠ¥)=âŠ¥. Even an approving
+    // A red line is a âŠ?fixed point of relaxation: relax(âŠ?=âŠ? Even an approving
     // channel (and a mis-set approvable) must NOT lift it to an allow.
     let prompted = false;
     const verdict = await requestGuardApproval({
@@ -101,3 +101,4 @@ describe('guardApproval â€” soft block to user approval', () => {
     expect(prompted).toBe(false); // never even reached the prompt
   });
 });
+

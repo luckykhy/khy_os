@@ -13,8 +13,8 @@ afterAll(() => {
   try { fs.rmSync(TMP, { recursive: true, force: true }); } catch { /* ignore */ }
 });
 
-describe('rollbackService â€” four-level facade', () => {
-  test('patch: snapshot â†’ edit â†’ undo restores prior content', () => {
+describe('rollbackService â€?four-level facade', () => {
+  test('patch: snapshot â†?edit â†?undo restores prior content', () => {
     const f = path.join(TMP, 'sample.txt');
     fs.writeFileSync(f, 'v1');
     const s1 = rollback.snapshot({ granularity: 'patch', filePath: f });
@@ -77,3 +77,4 @@ describe('rollbackService â€” four-level facade', () => {
     expect(rollback.SLA_MS.version).toBe(Infinity);
   });
 });
+

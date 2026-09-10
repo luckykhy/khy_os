@@ -15,7 +15,7 @@ const {
   formatTokens,
   RESERVED_NAME,
   FREE_NAME,
-} = require('../../src/services/context/contextBreakdown');
+} = require('../../src/services/domain/session/context/contextBreakdown.js');
 
 // 简单确定性估算器:1 token / 4 字符(便于断言)。
 const est = (t) => Math.ceil(String(t || '').length / 4);

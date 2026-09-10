@@ -21,6 +21,8 @@ import { streamChatCompletion } from './standalone.js';
 import { localToolSchemas, executeLocalTool } from './localTools.js';
 import { listSkills, runSkill, saveSkill } from './programRuntime.js';
 import { operationStatus } from './status.js';
+import { mcpToolSchemas, executeMCPTool, isMCPTool } from './mcpTools.js';
+import { MultiAgentOrchestrator } from './multiAgent.js';
 
 // ---------- InfoPool（精简版：执行历史 + 笔记）----------
 
@@ -130,7 +132,46 @@ const SYSTEM_PROMPT = `你是手机上的 AI 自动化助手。你会按 4 个 A
 - **强制重 find（硬约束）**：每次用 findAndTap 之前，**必须**先调一次 khy.local.lookScreen 刷新 UI 树，再调 findAndTap。屏幕会变、UI 树会变，坐标会过期——这条不是建议，是规则。参数 forceRefresh 默认 true 是兜底，明知屏幕已变时建议显式 forceRefresh=true, settleMs=800。
 
 可用工具：khy.local.lookScreen / findAndClick / findAndTap / listClickable / tap / swipe / typeText / openAppByName / deepLinkByApp /
-openUrl / readClipboard / writeClipboard / http / listSkills / runSkill / appendNote / finishAgent / stopAgent。`;
+openUrl / readClipboard / writeClipboard / http / listSkills / runSkill / appendNote / finishAgent / stopAgent /
+fileList / fileRead / fileWrite / fileDelete / fileInfo / fileSearch / fileCopy /
+linuxExec / linuxStatus / linuxSetup。
+
+**免 root 文件操作（Shizuku 优先）：**
+- 当用户说"读取手机上的文件"、"查看下载目录"、"搜索照片"时，优先用 fileList/fileRead/fileSearch
+- Shizuku 可用时，fileList 可访问 /storage/emulated/0/ 下任意路径（Download、DCIM、Documents 等）
+- Shizuku 不可用时，fileList 仅限 App 私有目录（Documents/）
+- fileSearch 支持按文件名模式（*.txt）和内容关键字搜索
+- fileCopy 可复制任意路径文件
+
+**UI 自动化（AccessibilityService + Shizuku input）：**
+- tap/swipe/typeText 优先走 AccessibilityService，失败回退 Shizuku input
+- findAndTap 支持"元素索引 + 坐标兜底"双模式
+- 每次 findAndTap 前必须先 lookScreen 刷新 UI 树
+
+**嵌入式 Linux 环境（Alpine + PRoot）：**
+- 当用户说"运行 Python"、"用 grep 搜索"、"执行 shell 脚本"、"用 Linux 命令"时，使用 linuxExec
+- linuxExec 支持任意 Linux 命令（python3、node、grep、find、awk、sed 等）
+- 首次使用会自动解压 rootfs（~4MB），后续调用直接执行
+- 用 linuxStatus 检查环境是否就绪，用 linuxSetup 手动初始化
+- Linux 环境运行在 proot 沙盒中，不需要 root 权限
+
+**鸿蒙 HDB 调试：**
+- 当用户说"连接鸿蒙设备"、"查看鸿蒙日志"、"在鸿蒙设备上执行命令"时，使用 HDB 工具
+- hdbDevices：列出已连接的鸿蒙设备
+- hdbShell：在鸿蒙设备上执行 Shell 命令
+- hdbInfo：获取鸿蒙设备信息
+- hdbLogcat：获取鸿蒙设备日志（hilog）
+- 需要先通过 HDB 工具连接设备
+
+**Skills 层（意图识别）：**
+- 当用户说"点外卖"、"导航"、"打车"、"发微信"、"看视频"等，优先使用 skillMatch 匹配
+- skillList：列出所有可用 Skills
+- skillExecute：执行指定 Skill
+- 两种模式：Delegation（DeepLink 直达）和 GUI 自动化
+
+**智能应用搜索：**
+- searchApps：支持拼音、语义匹配（如"微信"匹配 weixin/com.tencent.mm）
+- 比 listApps 更智能，支持模糊匹配`;
 
 const MAX_STEPS = 30; // Manager→Executor→Reflector 一次循环内允许的最大步数
 
@@ -201,8 +242,8 @@ function stopToolSchema() {
 }
 
 function agentToolSchemas() {
-  // 全部 localTools + Notetaker/Finish/Stop
-  const all = localToolSchemas();
+  // 全部 localTools + MCP tools + Notetaker/Finish/Stop
+  const all = [...localToolSchemas(), ...mcpToolSchemas()];
   return [...all, noteToolSchema(), finishToolSchema(), stopToolSchema()];
 }
 
@@ -364,4 +405,89 @@ export async function ensureGuiSkillSample() {
   };
   await saveSkill(skill);
   return true;
+}
+
+// ---------- 多 Agent 支持 ----------
+
+/**
+ * 多 Agent 协作运行
+ * 支持 Manager → Executor → Reflector 工作流
+ *
+ * @param {Object} options
+ * @param {string} options.userInput - 用户任务
+ * @param {string} options.baseUrl - LLM API base URL
+ * @param {string} options.apiKey - LLM API key
+ * @param {string} options.model - LLM 模型名
+ * @param {AbortSignal} options.signal - 取消信号
+ * @param {Function} options.onProgress - 进度回调
+ * @returns {Promise<{plan: string, executorResults: Object, reflection: string}>}
+ */
+export async function runMultiAgent({ userInput, baseUrl, apiKey, model, signal, onProgress } = {}) {
+  if (!userInput) throw new Error('userInput 不能为空');
+  if (!baseUrl || !apiKey || !model) throw new Error('缺少 baseUrl / apiKey / model');
+
+  const orchestrator = new MultiAgentOrchestrator({
+    baseUrl,
+    apiKey,
+    model,
+    signal,
+    onProgress: onProgress || (() => {}),
+  });
+
+  return orchestrator.runWorkflow(userInput, {
+    managerPrompt: `你是任务规划师。分析用户任务，分解为 2-5 个子任务。
+
+输出 JSON 格式：
+{
+  "tasks": [
+    {"id": "task1", "task": "子任务描述", "strategy": "执行策略"},
+    {"id": "task2", "task": "子任务描述", "strategy": "执行策略"}
+  ]
+}
+
+规则：
+- 子任务应可并行执行（互不依赖）
+- 每个子任务目标明确、可验证
+- 策略说明如何完成该子任务`,
+
+    executorPrompt: `你是任务执行者。执行分配给你的子任务。
+
+规则：
+- 使用可用工具（fileRead、fileWrite、linuxExec、http 等）
+- 每个步骤记录关键发现
+- 完成后输出简洁的结果摘要`,
+
+    reflectorPrompt: `你是结果审查员。审查所有子任务的执行结果。
+
+输出：
+1. 整体评估（成功/部分成功/失败）
+2. 关键发现汇总
+3. 遗漏或改进建议
+4. 最终结论（面向用户的简洁回答）`,
+  });
+}
+
+/**
+ * 并行执行多个独立子任务
+ *
+ * @param {Object} options
+ * @param {Array} options.tasks - [{id, task, systemPrompt}]
+ * @param {string} options.baseUrl
+ * @param {string} options.apiKey
+ * @param {string} options.model
+ * @param {AbortSignal} options.signal
+ * @param {Function} options.onProgress
+ */
+export async function runParallelAgents({ tasks, baseUrl, apiKey, model, signal, onProgress } = {}) {
+  if (!tasks || !tasks.length) throw new Error('tasks 不能为空');
+
+  const orchestrator = new MultiAgentOrchestrator({
+    baseUrl,
+    apiKey,
+    model,
+    signal,
+    onProgress: onProgress || (() => {}),
+  });
+
+  return orchestrator.runParallel(tasks);
 }

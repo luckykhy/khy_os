@@ -29,7 +29,8 @@ const path = require('path');
 const chalk = require('chalk').default || require('chalk');
 
 // 拓展侧的产物按**服务名**解析而不是按拓展 id 点名：[DESIGN-ARCH-069] §1.3 第四条。
-const { findProvider } = require('../../services/extensions/extensionRoots');
+// 引擎迁移后 services/extensions 只剩 index shim，extensionRoots 挂在其命名空间下。
+const { findProvider } = require('../../services/extensions').extensionRoots;
 const dh = require('../../utils/dataHome');
 const { printInfo, printError, printSuccess, printWarn } = require('../formatters');
 

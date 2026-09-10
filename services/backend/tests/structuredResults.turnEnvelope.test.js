@@ -17,7 +17,7 @@
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { buildTurnEnvelope, _classify } = require('../src/services/structuredResults/turnEnvelope');
+const { buildTurnEnvelope, _classify } = require('../src/services/domain/structured/structuredResults/turnEnvelope.js');
 
 describe('turnEnvelope — tool classification (alias-insensitive)', () => {
   test('maps common aliases to canonical actions', () => {

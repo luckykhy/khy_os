@@ -92,7 +92,7 @@ describe('provisionAgnes — full lineup from one key', () => {
     expect(route['agnes-2.0-flash']).toBeDefined();
     expect(route['agnes-image-2.1-flash']).toBeUndefined();
     expect(route['agnes-image-2.0-flash']).toBeUndefined();
-    expect(route['agnes-video-v2.0']).toBeUndefined();
+    expect(route['agnes-video-2.5']).toBeUndefined();
 
     // persisted to temp .env
     const env = fs.readFileSync(tmpEnvPath, 'utf-8');

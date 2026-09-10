@@ -11,7 +11,7 @@ const FIXTURE = {
   edges: [
     { provider: 'agnes', providerLabel: 'Agnes', model: 'agnes-2.0-flash', keyIds: ['k1'], keyCount: 1, capability: 'text', tier: 'T1', status: 'active', connectionMode: 'account-pool', isDefault: true, source: 'chat' },
     { provider: 'agnes', providerLabel: 'Agnes', model: 'agnes-image-2.1-flash', keyIds: [], keyCount: 0, capability: 'image', tier: 'T3', status: 'active', connectionMode: 'direct', isDefault: false, source: 'image' },
-    { provider: 'agnes', providerLabel: 'Agnes', model: 'agnes-video-v2.0', keyIds: [], keyCount: 0, capability: 'video', tier: 'T3', status: 'active', connectionMode: 'direct', isDefault: false, source: 'video' },
+    { provider: 'agnes', providerLabel: 'Agnes', model: 'agnes-video-2.5', keyIds: [], keyCount: 0, capability: 'video', tier: 'T3', status: 'active', connectionMode: 'direct', isDefault: false, source: 'video' },
     { provider: 'deepseek', providerLabel: 'DeepSeek', model: 'deepseek-chat', keyIds: ['k2'], keyCount: 1, capability: 'text', tier: 'T1', status: 'cooldown', connectionMode: 'account-pool', isDefault: true, source: 'chat' },
   ],
   generatedAt: 123,
@@ -100,7 +100,7 @@ describe('gateway models --view --json', () => {
   });
 });
 
-describe('no --view/--search → legacy path (not catalog)', () => {
+describe('no --view/--search �?legacy path (not catalog)', () => {
   test('does not invoke the catalog graph', async () => {
     const graph = require('../src/services/gateway/modelCatalogGraph');
     graph.buildCatalogGraph.mockClear();
@@ -109,3 +109,4 @@ describe('no --view/--search → legacy path (not catalog)', () => {
     expect(graph.buildCatalogGraph).not.toHaveBeenCalled();
   });
 });
+

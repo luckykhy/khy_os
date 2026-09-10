@@ -3,7 +3,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 
-const leaf = require('../../../src/services/ide/idePlan');
+const leaf = require('../../../src/services/domain/collab/ide/idePlan.js');
 
 // ── 语法解析 ──────────────────────────────────────────────────────────────
 test('parseIdeArgs: 空参 = status', () => {

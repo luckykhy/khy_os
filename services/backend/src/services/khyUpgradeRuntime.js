@@ -2467,7 +2467,7 @@ async function makeSystemPrompt(
         if (injected.length > 0) {
           const contextParts = injected
             .filter((s) => s.injectedChars > 0)
-            .map((s) => `--- ${s.path} ---\n${s.injectedContent}`);
+            .map((s) => `【${s.path}】\n${s.injectedContent}`);
           if (contextParts.length > 0) {
             sections.push(`# Workspace context\n${contextParts.join('\n')}`);
           }
@@ -2567,7 +2567,7 @@ async function makeSystemPrompt(
           prompt += '\n<workspace-context>\n';
           for (const stat of injected) {
             if (stat.injectedChars > 0) {
-              prompt += `--- ${stat.path} ---\n${stat.injectedContent}\n`;
+              prompt += `【${stat.path}】\n${stat.injectedContent}\n`;
             }
           }
           prompt += '</workspace-context>\n';

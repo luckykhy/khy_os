@@ -10,6 +10,7 @@ const chalk = (() => {
   const m = require('chalk');
   return m.default || m;
 })();
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const { ccFormatDurationOr } = require('../ccFormat');
 const { printError, printInfo } = require('../formatters');
 
@@ -214,4 +215,12 @@ async function handleReceipts(subCommand, args, options) {
   return true;
 }
 
-module.exports = { handleReceipts };
+module.exports = {
+  handleReceipts,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'receipts',
+    description: 'receipts command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleReceipts(parsed.subCommand, parsed.args, parsed.options),
+  },
+};

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tests for services/usageTracker.js â€” cost and token usage tracking.
+ * Tests for services/usageTracker.js â€?cost and token usage tracking.
  */
 
 // Model names are single-sourced in constants/models.js. Reference PRIMARY.<role>
@@ -163,3 +163,4 @@ describe('UsageTracker instance', () => {
     expect(r.costUSD).toBe(20);
   });
 });
+

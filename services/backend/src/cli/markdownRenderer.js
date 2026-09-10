@@ -28,7 +28,7 @@ const { plainProcessTableEnabled, renderPlainTable } = require('./plainProcessTa
 const { c, THEME, themeRegistry } = require('./renderTheme');
 const { maxOf } = require('./safeArrayMinMax');
 const { italicStarRegex } = require('./starEmphasisFlanking');
-const { underscoreEmphasisEnabled, applyUnderscoreEmphasis } = require('./underscoreEmphasis');
+const { adaptiveUnderscorePolicy, applyUnderscoreEmphasis } = require('./underscoreEmphasis');
 // 行内斜体星号侧接守卫(修正文里带空格的成对星号被误当斜体/被剥星):单一真源。
 // 行内链接展示形态(mailto 剥 scheme 显裸邮箱、text===url 去重)收敛到单一真源
 // cli/markdownLink.js(对齐 CC markdown.ts link case;门控 KHY_MARKDOWN_LINK_DISPLAY
@@ -1306,9 +1306,13 @@ function _renderMarkdownLiteInner(text) {
   // emphasis which recognizes both `*` and `_`. Runs after the asterisk chain,
   // with a CommonMark intraword guard so snake_case stays literal. Inline code
   // is still placeholder-protected here (restored below), so `code_with_under`
-  // in backticks is untouched. Gate KHY_UNDERSCORE_EMPHASIS (default on); off →
-  // step is skipped → underscores byte-identical legacy (raw, unstyled).
-  if (underscoreEmphasisEnabled()) {
+  // in backticks is untouched.
+  //
+  // 对抗式自愈(2026-09-05):使用 adaptiveUnderscorePolicy(text) 而非简单门控。
+  // 当文本中下划线密度高且大多是词内用法(snake_case/路径)而非真正的 Markdown 强调
+  // 时,自动禁用本段的下划线渲染,避免滥用导致的裸露下划线洪水。真正的强调场景
+  // (_italic_ 少量出现)仍然正常渲染。
+  if (adaptiveUnderscorePolicy(rendered, process.env)) {
     rendered = applyUnderscoreEmphasis(rendered, {
       italic: (t) => c().italic(t),
       bold: (t) => c().bold.hex(_mdColor('mdBold'))(t),

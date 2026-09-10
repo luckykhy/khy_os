@@ -24,6 +24,7 @@
 
 const path = require('path');
 const fs = require('fs');
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 
 const chalk = require('chalk').default || require('chalk');
 const { printSuccess, printError, printInfo, printWarn, printTable } = require('../formatters');
@@ -69,7 +70,7 @@ async function handleProjectMap(args = [], options = {}) {
 
   console.log('');
   console.log(chalk.cyan.bold('  🗺️  项目地图'));
-  console.log(chalk.dim('  ' + '─'.repeat(40)));
+  console.log("");
   console.log('');
   console.log(map);
   console.log('');
@@ -134,7 +135,7 @@ async function handleProjectStructure(args = [], options = {}) {
 
   console.log('');
   console.log(chalk.cyan.bold('  🏗️  项目结构分析'));
-  console.log(chalk.dim('  ' + '─'.repeat(40)));
+  console.log("");
   console.log('');
   console.log(map);
   console.log('');
@@ -216,7 +217,7 @@ async function handleProjectScan(args = [], options = {}) {
   console.log('');
   console.log(chalk.cyan.bold(`  🔍 扫描结果: ${pattern}`));
   console.log(chalk.dim(`  共 ${files.length} 个文件`));
-  console.log(chalk.dim('  ' + '─'.repeat(40)));
+  console.log("");
   for (const file of files) {
     console.log(`  ${chalk.dim(file.dir)}/${chalk.white(file.name)}`);
   }
@@ -234,7 +235,7 @@ async function handleProjectScan(args = [], options = {}) {
 function _printHelp() {
   console.log('');
   console.log(chalk.cyan.bold('  📁 项目分析命令'));
-  console.log(chalk.dim('  ' + '─'.repeat(40)));
+  console.log("");
   console.log('');
   console.log(`  ${chalk.green('project map [path]')}`);
   console.log(`    显示项目结构地图（目录树 + 入口点 + 依赖）`);
@@ -531,4 +532,13 @@ module.exports = {
   handleProjectStructure,
   handleProjectIndex,
   handleProjectScan,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'project',
+    aliases: ['proj', '项目'],
+    description: '项目分析：轻量地图 + AI 按需工具探索（分层渐进式大项目分析）',
+    usage: 'project [map|analyze|structure|index|scan|help]',
+    subCommands: ['map', 'analyze', 'structure', 'index', 'scan', 'help'],
+    category: 'dev',
+    handler: async (parsed) => handleProjectCommand(parsed.subCommand, parsed.args, parsed.options),
+  },
 };

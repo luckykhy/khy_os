@@ -38,6 +38,7 @@ const { authenticateToken, requireAdmin } = require('../middleware/auth');
 const { User } = require('../models');
 const { sequelize, Strategy, Announcement, Feedback, Trade } = require('../models');
 const logger = require('../utils/logger');
+const apiResponse = require('../utils/apiResponse');
 
 /* ========== 系统概览 ========== */
 
@@ -49,17 +50,14 @@ router.get('/stats', authenticateToken, requireAdmin, async (req, res) => {
       Strategy.count().catch(() => 0),
       Announcement.count().catch(() => 0),
     ]);
-    res.json({
-      success: true,
-      data: {
-        totalUsers,
-        totalStrategies,
-        totalAnnouncements,
-        onlineUsers: 0,
-      },
+    apiResponse.success(res, {
+      totalUsers,
+      totalStrategies,
+      totalAnnouncements,
+      onlineUsers: 0,
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    apiResponse.fail(res, 'INTERNAL', '获取系统概览失败', { status: 500 });
   }
 });
 
@@ -77,9 +75,9 @@ router.get('/activities', authenticateToken, requireAdmin, async (req, res) => {
       description: `新用户 ${u.username} 注册成功`,
       createdAt: u.created_at,
     }));
-    res.json({ success: true, data: activities });
+    apiResponse.success(res, activities);
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    apiResponse.fail(res, 'INTERNAL', '获取最近活动失败', { status: 500 });
   }
 });
 
@@ -93,17 +91,14 @@ router.get('/system-status', authenticateToken, requireAdmin, async (req, res) =
     } catch (e) {
       logger.warn(`admin /system-status: database authenticate failed: ${e.message}`);
     }
-    res.json({
-      success: true,
-      data: {
-        database: dbOk,
-        websocket: true,
-        aiService: false,
-        load: '正常',
-      },
+    apiResponse.success(res, {
+      database: dbOk,
+      websocket: true,
+      aiService: false,
+      load: '正常',
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    apiResponse.fail(res, 'INTERNAL', '系统健康检查失败', { status: 500 });
   }
 });
 
@@ -113,7 +108,7 @@ router.get('/system-status', authenticateToken, requireAdmin, async (req, res) =
 // 如果管理员已存在则直接返回成功，避免重复创建
 router.post('/create-test-admin', authenticateToken, requireAdmin, async (req, res) => {
   if (process.env.NODE_ENV !== 'development') {
-    return res.status(403).json({ success: false, message: 'Only available in development mode' });
+    return apiResponse.fail(res, 'PERMISSION_DENIED', 'Only available in development mode', { status: 403 });
   }
 
   try {
@@ -121,10 +116,7 @@ router.post('/create-test-admin', authenticateToken, requireAdmin, async (req, r
     const existingAdmin = await User.findOne({ where: { role: 'admin' } });
 
     if (existingAdmin) {
-      return res.json({
-        success: true,
-        message: '管理员账号已存在',
-      });
+      return apiResponse.success(res, null, { message: '管理员账号已存在' });
     }
 
     // 创建测试管理员 — 密码来自环境变量，不回显硬编码值。
@@ -149,19 +141,17 @@ router.post('/create-test-admin', authenticateToken, requireAdmin, async (req, r
     // 通过响应头发送，仅当前请求可见
     res.set('X-Generated-Password', testPassword);
     console.log(`[DEV] 测试管理员密码（仅显示一次）: ${testPassword}`);
-    res.json({
-      success: true,
-      message: '测试管理员创建成功',
-      username: 'admin',
-      passwordHint: '密码已通过响应头 X-Generated-Password 返回（仅本次请求可见）',
-    });
+    apiResponse.success(
+      res,
+      {
+        username: 'admin',
+        passwordHint: '密码已通过响应头 X-Generated-Password 返回（仅本次请求可见）',
+      },
+      { message: '测试管理员创建成功' }
+    );
   } catch (error) {
     console.error('创建测试管理员失败:', error);
-    res.status(500).json({
-      success: false,
-      message: '创建测试管理员失败',
-      error: error.message,
-    });
+    apiResponse.fail(res, 'INTERNAL', '创建测试管理员失败', { status: 500 });
   }
 });
 
@@ -183,18 +173,10 @@ router.get('/user-logs', authenticateToken, requireAdmin, async (req, res) => {
       search,
     });
 
-    res.json({
-      success: true,
-      data: result,
-      message: '获取用户日志成功',
-    });
+    apiResponse.success(res, result, { message: '获取用户日志成功' });
   } catch (error) {
     console.error('获取用户日志失败:', error);
-    res.status(500).json({
-      success: false,
-      message: '获取用户日志失败',
-      error: error.message,
-    });
+    apiResponse.fail(res, 'INTERNAL', '获取用户日志失败', { status: 500 });
   }
 });
 
@@ -204,18 +186,10 @@ router.get('/user-activity-stats', authenticateToken, requireAdmin, async (req, 
     const { days = 30 } = req.query;
     const stats = await UserLogService.getUserActivityStats(parseInt(days));
 
-    res.json({
-      success: true,
-      data: stats,
-      message: '获取用户活动统计成功',
-    });
+    apiResponse.success(res, stats, { message: '获取用户活动统计成功' });
   } catch (error) {
     console.error('获取用户活动统计失败:', error);
-    res.status(500).json({
-      success: false,
-      message: '获取用户活动统计失败',
-      error: error.message,
-    });
+    apiResponse.fail(res, 'INTERNAL', '获取用户活动统计失败', { status: 500 });
   }
 });
 
@@ -225,18 +199,10 @@ router.delete('/user-logs/cleanup', authenticateToken, requireAdmin, async (req,
     const { daysToKeep = 90 } = req.body;
     const deletedCount = await UserLogService.cleanOldLogs(parseInt(daysToKeep));
 
-    res.json({
-      success: true,
-      data: { deletedCount },
-      message: `成功清理 ${deletedCount} 条旧日志记录`,
-    });
+    apiResponse.success(res, { deletedCount }, { message: `成功清理 ${deletedCount} 条旧日志记录` });
   } catch (error) {
     console.error('清理旧日志失败:', error);
-    res.status(500).json({
-      success: false,
-      message: '清理旧日志失败',
-      error: error.message,
-    });
+    apiResponse.fail(res, 'INTERNAL', '清理旧日志失败', { status: 500 });
   }
 });
 
@@ -287,11 +253,7 @@ router.get('/user-logs/export', authenticateToken, requireAdmin, async (req, res
     res.end();
   } catch (error) {
     console.error('导出用户日志失败:', error);
-    res.status(500).json({
-      success: false,
-      message: '导出用户日志失败',
-      error: error.message,
-    });
+    apiResponse.fail(res, 'INTERNAL', '导出用户日志失败', { status: 500 });
   }
 });
 
@@ -305,10 +267,7 @@ router.put('/users/:id', authenticateToken, requireAdmin, async (req, res) => {
 
     const user = await User.findByPk(id);
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: '用户不存在',
-      });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', '用户不存在', { status: 404 });
     }
 
     // 更新用户信息
@@ -331,9 +290,9 @@ router.put('/users/:id', authenticateToken, requireAdmin, async (req, res) => {
       details: { updatedBy: req.user.id, updatedFields: Object.keys(req.body) },
     });
 
-    res.json({
-      success: true,
-      data: {
+    apiResponse.success(
+      res,
+      {
         id: user.id,
         username: user.username,
         email: user.email,
@@ -343,15 +302,11 @@ router.put('/users/:id', authenticateToken, requireAdmin, async (req, res) => {
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },
-      message: '用户信息更新成功',
-    });
+      { message: '用户信息更新成功' }
+    );
   } catch (error) {
     console.error('更新用户信息失败:', error);
-    res.status(500).json({
-      success: false,
-      message: '更新用户信息失败',
-      error: error.message,
-    });
+    apiResponse.fail(res, 'INTERNAL', '更新用户信息失败', { status: 500 });
   }
 });
 
@@ -362,18 +317,12 @@ router.delete('/users/:id', authenticateToken, requireAdmin, async (req, res) =>
 
     // 不能删除自己
     if (parseInt(id) === req.user.id) {
-      return res.status(400).json({
-        success: false,
-        message: '不能删除自己的账号',
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '不能删除自己的账号', { status: 400 });
     }
 
     const user = await User.findByPk(id);
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: '用户不存在',
-      });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', '用户不存在', { status: 404 });
     }
 
     // 记录操作日志
@@ -390,17 +339,10 @@ router.delete('/users/:id', authenticateToken, requireAdmin, async (req, res) =>
 
     await user.destroy();
 
-    res.json({
-      success: true,
-      message: '用户删除成功',
-    });
+    apiResponse.success(res, null, { message: '用户删除成功' });
   } catch (error) {
     console.error('删除用户失败:', error);
-    res.status(500).json({
-      success: false,
-      message: '删除用户失败',
-      error: error.message,
-    });
+    apiResponse.fail(res, 'INTERNAL', '删除用户失败', { status: 500 });
   }
 });
 
@@ -412,18 +354,12 @@ router.post('/users/:id/reset-password', authenticateToken, requireAdmin, async 
     const { newPassword } = req.body;
 
     if (!newPassword || newPassword.length < 6) {
-      return res.status(400).json({
-        success: false,
-        message: '新密码长度至少6位',
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '新密码长度至少6位', { status: 400 });
     }
 
     const user = await User.findByPk(id);
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: '用户不存在',
-      });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', '用户不存在', { status: 404 });
     }
 
     // Assign plaintext — the beforeUpdate hook handles hashing
@@ -442,17 +378,10 @@ router.post('/users/:id/reset-password', authenticateToken, requireAdmin, async 
       details: { resetBy: req.user.id },
     });
 
-    res.json({
-      success: true,
-      message: '密码重置成功',
-    });
+    apiResponse.success(res, null, { message: '密码重置成功' });
   } catch (error) {
     console.error('重置密码失败:', error);
-    res.status(500).json({
-      success: false,
-      message: '重置密码失败',
-      error: error.message,
-    });
+    apiResponse.fail(res, 'INTERNAL', '重置密码失败', { status: 500 });
   }
 });
 
@@ -463,10 +392,7 @@ router.post('/users', authenticateToken, requireAdmin, async (req, res) => {
 
     // 验证必填字段
     if (!username || !email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: '用户名、邮箱和密码为必填项',
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '用户名、邮箱和密码为必填项', { status: 400 });
     }
 
     // 检查用户名和邮箱是否已存在
@@ -477,10 +403,7 @@ router.post('/users', authenticateToken, requireAdmin, async (req, res) => {
     });
 
     if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: '用户名或邮箱已存在',
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '用户名或邮箱已存在', { status: 400 });
     }
 
     // 创建用户
@@ -505,9 +428,9 @@ router.post('/users', authenticateToken, requireAdmin, async (req, res) => {
       details: { createdBy: req.user.id },
     });
 
-    res.status(201).json({
-      success: true,
-      data: {
+    apiResponse.created(
+      res,
+      {
         id: user.id,
         username: user.username,
         email: user.email,
@@ -515,15 +438,11 @@ router.post('/users', authenticateToken, requireAdmin, async (req, res) => {
         status: user.status,
         createdAt: user.createdAt,
       },
-      message: '用户创建成功',
-    });
+      { message: '用户创建成功' }
+    );
   } catch (error) {
     console.error('创建用户失败:', error);
-    res.status(500).json({
-      success: false,
-      message: '创建用户失败',
-      error: error.message,
-    });
+    apiResponse.fail(res, 'INTERNAL', '创建用户失败', { status: 500 });
   }
 });
 
@@ -545,7 +464,7 @@ router.get('/system/settings', authenticateToken, requireAdmin, async (req, res)
     }
 
     if (data && Object.keys(data).length > 0) {
-      return res.json({ success: true, data, message: '获取系统设置成功' });
+      return apiResponse.success(res, data, { message: '获取系统设置成功' });
     }
 
     // 降级方案：数据库不可用时返回预设的模拟配置，保证前端页面可正常展示
@@ -637,18 +556,10 @@ router.get('/system/settings', authenticateToken, requireAdmin, async (req, res)
       ],
     };
 
-    res.json({
-      success: true,
-      data: mockSettings,
-      message: '获取系统设置成功',
-    });
+    apiResponse.success(res, mockSettings, { message: '获取系统设置成功' });
   } catch (error) {
     console.error('获取系统设置失败:', error);
-    res.status(500).json({
-      success: false,
-      message: '获取系统设置失败',
-      error: error.message,
-    });
+    apiResponse.fail(res, 'INTERNAL', '获取系统设置失败', { status: 500 });
   }
 });
 
@@ -658,19 +569,13 @@ router.put('/system/settings', authenticateToken, requireAdmin, async (req, res)
     const { settings } = req.body;
 
     if (!settings || typeof settings !== 'object') {
-      return res.status(400).json({
-        success: false,
-        message: '设置数据格式错误',
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '设置数据格式错误', { status: 400 });
     }
 
     // 用白名单校验设置项的 key 前缀，防止恶意写入不允许的配置
     const invalidKeys = Object.keys(settings).filter((k) => !isAllowedSettingKey(k));
     if (invalidKeys.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `不允许的设置项: ${invalidKeys.join(', ')}`,
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', `不允许的设置项: ${invalidKeys.join(', ')}`, { status: 400 });
     }
 
     // 逐条调用 SystemSettingService 写入数据库
@@ -691,18 +596,10 @@ router.put('/system/settings', authenticateToken, requireAdmin, async (req, res)
       details: { updatedSettings: Object.keys(settings) },
     });
 
-    res.json({
-      success: true,
-      data: settings,
-      message: '系统设置更新成功',
-    });
+    apiResponse.success(res, settings, { message: '系统设置更新成功' });
   } catch (error) {
     console.error('更新系统设置失败:', error);
-    res.status(500).json({
-      success: false,
-      message: '更新系统设置失败',
-      error: error.message,
-    });
+    apiResponse.fail(res, 'INTERNAL', '更新系统设置失败', { status: 500 });
   }
 });
 
@@ -739,18 +636,10 @@ router.get('/system/info', authenticateToken, requireAdmin, async (req, res) => 
       },
     };
 
-    res.json({
-      success: true,
-      data: systemInfo,
-      message: '获取系统信息成功',
-    });
+    apiResponse.success(res, systemInfo, { message: '获取系统信息成功' });
   } catch (error) {
     console.error('获取系统信息失败:', error);
-    res.status(500).json({
-      success: false,
-      message: '获取系统信息失败',
-      error: error.message,
-    });
+    apiResponse.fail(res, 'INTERNAL', '获取系统信息失败', { status: 500 });
   }
 });
 
@@ -760,10 +649,7 @@ router.post('/system/settings/reset', authenticateToken, requireAdmin, async (re
     const { key } = req.body;
 
     if (!key) {
-      return res.status(400).json({
-        success: false,
-        message: '请指定要重置的设置项',
-      });
+      return apiResponse.fail(res, 'INVALID_ARGUMENT', '请指定要重置的设置项', { status: 400 });
     }
 
     // 暂时模拟重置成功
@@ -789,18 +675,10 @@ router.post('/system/settings/reset', authenticateToken, requireAdmin, async (re
       details: { resetKey: key },
     });
 
-    res.json({
-      success: true,
-      data: { key, value: defaultValue },
-      message: '设置重置成功',
-    });
+    apiResponse.success(res, { key, value: defaultValue }, { message: '设置重置成功' });
   } catch (error) {
     console.error('重置设置失败:', error);
-    res.status(500).json({
-      success: false,
-      message: '重置设置失败',
-      error: error.message,
-    });
+    apiResponse.fail(res, 'INTERNAL', '重置设置失败', { status: 500 });
   }
 });
 
@@ -821,17 +699,10 @@ router.post('/system/settings/initialize', authenticateToken, requireAdmin, asyn
       status: 'success',
     });
 
-    res.json({
-      success: true,
-      message: '默认设置初始化成功',
-    });
+    apiResponse.success(res, null, { message: '默认设置初始化成功' });
   } catch (error) {
     console.error('初始化默认设置失败:', error);
-    res.status(500).json({
-      success: false,
-      message: '初始化默认设置失败',
-      error: error.message,
-    });
+    apiResponse.fail(res, 'INTERNAL', '初始化默认设置失败', { status: 500 });
   }
 });
 
@@ -846,7 +717,7 @@ router.get('/users/:userId/account', authenticateToken, requireAdmin, async (req
     const { userId } = req.params;
     const user = await User.findByPk(userId);
     if (!user) {
-      return res.status(404).json({ success: false, message: '用户不存在' });
+      return apiResponse.fail(res, 'MODEL_NOT_FOUND', '用户不存在', { status: 404 });
     }
 
     const trades = await Trade.findAll({
@@ -879,22 +750,19 @@ router.get('/users/:userId/account', authenticateToken, requireAdmin, async (req
 
     // 可用资金 = 初始资金 + 累计盈亏 - 持仓占用金额
     const availableFunds = initialFunds + totalProfit - positionCost;
-    res.json({
-      success: true,
-      data: {
-        userId: parseInt(userId),
-        username: user.username,
-        initialFunds,
-        availableFunds: parseFloat(availableFunds.toFixed(2)),
-        totalAssets: parseFloat((availableFunds + positionValue).toFixed(2)),
-        totalProfit: parseFloat(totalProfit.toFixed(2)),
-        todayProfit: parseFloat(todayProfit.toFixed(2)),
-        positionValue: parseFloat(positionValue.toFixed(2)),
-        tradeCount: trades.length,
-      },
+    apiResponse.success(res, {
+      userId: parseInt(userId),
+      username: user.username,
+      initialFunds,
+      availableFunds: parseFloat(availableFunds.toFixed(2)),
+      totalAssets: parseFloat((availableFunds + positionValue).toFixed(2)),
+      totalProfit: parseFloat(totalProfit.toFixed(2)),
+      todayProfit: parseFloat(todayProfit.toFixed(2)),
+      positionValue: parseFloat(positionValue.toFixed(2)),
+      tradeCount: trades.length,
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    apiResponse.fail(res, 'INTERNAL', '查询资金账户失败', { status: 500 });
   }
 });
 
@@ -940,9 +808,9 @@ router.get('/funds', authenticateToken, requireAdmin, async (req, res) => {
       };
     });
 
-    res.json({ success: true, data: fundsData });
+    apiResponse.success(res, fundsData);
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    apiResponse.fail(res, 'INTERNAL', '查询资金概览失败', { status: 500 });
   }
 });
 
@@ -997,15 +865,14 @@ router.get('/trades', authenticateToken, requireAdmin, async (req, res) => {
       offset,
     });
 
-    res.json({
-      success: true,
-      data: rows,
-      total: count,
+    apiResponse.page(res, rows, {
       page: parseInt(page),
       pageSize: parseInt(pageSize),
+      total: count,
+      totalPages: Math.ceil(count / parseInt(pageSize)),
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    apiResponse.fail(res, 'INTERNAL', '查询交易记录失败', { status: 500 });
   }
 });
 
@@ -1023,9 +890,14 @@ router.get('/users/:userId/trades', authenticateToken, requireAdmin, async (req,
       offset,
     });
 
-    res.json({ success: true, data: rows, total: count });
+    apiResponse.page(res, rows, {
+      page: parseInt(page),
+      pageSize: parseInt(pageSize),
+      total: count,
+      totalPages: Math.ceil(count / parseInt(pageSize)),
+    });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    apiResponse.fail(res, 'INTERNAL', '查询用户交易记录失败', { status: 500 });
   }
 });
 
@@ -1039,9 +911,9 @@ const SystemSettingService = require('../services/systemSettingService');
 router.get('/akshare/status', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const status = akshareUpdater.getStatus();
-    res.json({ success: true, data: status });
+    apiResponse.success(res, status);
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    apiResponse.fail(res, 'INTERNAL', '查询 AKShare 状态失败', { status: 500 });
   }
 });
 
@@ -1050,9 +922,9 @@ router.post('/akshare/check', authenticateToken, requireAdmin, async (req, res) 
   try {
     console.log('🔧 Admin triggered AKShare version check');
     const result = await akshareUpdater.checkAndUpdate(true);
-    res.json({ success: true, data: result });
+    apiResponse.success(res, result);
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    apiResponse.fail(res, 'INTERNAL', 'AKShare 检查更新失败', { status: 500 });
   }
 });
 
@@ -1063,9 +935,9 @@ const trainingData = require('../services/trainingDataService');
 router.get('/training/stats', authenticateToken, requireAdmin, (req, res) => {
   try {
     const stats = trainingData.getStats();
-    res.json({ success: true, data: stats });
+    apiResponse.success(res, stats);
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    apiResponse.fail(res, 'INTERNAL', '获取训练数据统计失败', { status: 500 });
   }
 });
 
@@ -1079,7 +951,7 @@ router.get('/training/export', authenticateToken, requireAdmin, (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="training_data_${format}.json"`);
     res.json(conversations);
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    apiResponse.fail(res, 'INTERNAL', '导出训练数据失败', { status: 500 });
   }
 });
 
@@ -1087,9 +959,9 @@ router.get('/training/export', authenticateToken, requireAdmin, (req, res) => {
 router.post('/training/purge', authenticateToken, requireAdmin, (req, res) => {
   try {
     const result = trainingData.purgeExpired();
-    res.json({ success: true, data: result });
+    apiResponse.success(res, result);
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    apiResponse.fail(res, 'INTERNAL', '清除过期训练数据失败', { status: 500 });
   }
 });
 
@@ -1097,9 +969,9 @@ router.post('/training/purge', authenticateToken, requireAdmin, (req, res) => {
 router.post('/training/purge-all', authenticateToken, requireAdmin, (req, res) => {
   try {
     const result = trainingData.purgeAll();
-    res.json({ success: true, data: result });
+    apiResponse.success(res, result);
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    apiResponse.fail(res, 'INTERNAL', '清除全部训练数据失败', { status: 500 });
   }
 });
 
@@ -1107,9 +979,9 @@ router.post('/training/purge-all', authenticateToken, requireAdmin, (req, res) =
 router.post('/training/maintenance', authenticateToken, requireAdmin, (req, res) => {
   try {
     const result = trainingData.runMaintenance();
-    res.json({ success: true, data: result });
+    apiResponse.success(res, result);
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    apiResponse.fail(res, 'INTERNAL', '执行训练数据维护失败', { status: 500 });
   }
 });
 

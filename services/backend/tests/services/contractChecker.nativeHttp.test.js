@@ -1,7 +1,7 @@
 'use strict';
 
 const http = require('http');
-const { checkContract } = require('../../src/services/workflow/contractChecker');
+const { checkContract } = require('../../src/services/domain/project/workflow/contractChecker.js');
 
 describe('contractChecker native HTTP transport', () => {
   let server;

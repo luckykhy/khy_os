@@ -21,7 +21,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const A = require('../../../src/services/externalApps/opencodeAdapter');
+const A = require('../../../src/services/domain/network/externalApps/opencodeAdapter.js');
 
 function mkTmp(prefix) {
   return fs.mkdtempSync(path.join(os.tmpdir(), `khy-${prefix}-`));

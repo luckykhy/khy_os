@@ -165,4 +165,16 @@ async function handleRole(parsed = {}) {
   return true;
 }
 
-module.exports = { runRole, handleRole };
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
+module.exports = {
+  runRole,
+  handleRole,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'role',
+    aliases: ['r', '角色'],
+    description: '角色扮演：采用角色/人设（Capability 实例，会话级或持久化）',
+    usage: 'role <角色描述> [--save|--clear|--show]',
+    category: 'dev',
+    handler: handleRole,
+  },
+};

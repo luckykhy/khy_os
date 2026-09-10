@@ -20,6 +20,7 @@
  *
  * @module handlers/toolcheck
  */
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const chalk = require('chalk').default || require('chalk');
 const { printInfo, printWarn, printError } = require('../formatters');
 
@@ -90,4 +91,10 @@ async function handleToolCheck(subCommand, args = [], options = {}) {
 
 module.exports = {
   handleToolCheck,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'toolcheck',
+    description: 'toolcheck command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleToolCheck(parsed.subCommand, parsed.args, parsed.options),
+  },
 };

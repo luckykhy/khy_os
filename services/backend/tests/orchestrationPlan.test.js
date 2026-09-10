@@ -6,7 +6,7 @@ const {
   buildOrchestrationPlan,
   summarizePlanProgress,
   VALID_MODES,
-} = require('../src/services/orchestrator/orchestrationPlan');
+} = require('../src/services/domain/state/orchestrator/orchestrationPlan.js');
 
 test('sequential mode chains each step to the previous one', () => {
   const plan = buildOrchestrationPlan({

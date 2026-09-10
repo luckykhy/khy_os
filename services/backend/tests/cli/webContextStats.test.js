@@ -7,7 +7,7 @@ const {
   analyzeWebContextStats,
   webContextStatsEnabled,
   DEFAULT_CONTEXT_WINDOW,
-} = require('../../src/services/context/webContextStats');
+} = require('../../src/services/domain/session/context/webContextStats.js');
 
 // 简易确定性 token 估算器:1 token ≈ 4 字符(与真实 SSOT 无关,仅测算法)。
 const est = (s) => Math.ceil(String(s || '').length / 4);

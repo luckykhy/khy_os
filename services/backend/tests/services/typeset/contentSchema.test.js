@@ -14,7 +14,7 @@ const {
   validateBlock,
   validateDocument,
   DOCUMENT_JSON_SCHEMA,
-} = require('../../../src/services/typeset/contentSchema');
+} = require('../../../src/services/domain/structured/typeset/contentSchema.js');
 
 describe('contentSchema — block grammar', () => {
   test('accepts a well-formed document', () => {

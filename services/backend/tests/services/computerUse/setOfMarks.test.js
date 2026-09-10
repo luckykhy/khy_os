@@ -13,8 +13,8 @@ const os = require('os');
 const path = require('path');
 const zlib = require('zlib');
 
-const som = require('../../../src/services/computerUse/setOfMarks');
-const sd = require('../../../src/services/computerUse/stateDetector');
+const som = require('../../../src/services/domain/desktop/computerUse/setOfMarks.js');
+const sd = require('../../../src/services/domain/desktop/computerUse/stateDetector.js');
 
 // ── 测试用最小 PNG 编码器（生成原始截图）────────────────────────────────────
 

@@ -24,6 +24,7 @@
  * interfaces (0.0.0.0) — the AI management server does by default.
  */
 
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const os = require('os');
 
 const chalk = require('chalk');
@@ -306,4 +307,10 @@ module.exports = {
   resolveBackendPort,
   buildPairingPayload,
   handlePairing,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'mobile',
+    description: 'mobile command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleMobile(parsed.subCommand, parsed.args, parsed.options),
+  },
 };

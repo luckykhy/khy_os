@@ -1,6 +1,6 @@
 'use strict';
 
-// Workstream F â€” extended-thinking budget plumbing.
+// Workstream F â€?extended-thinking budget plumbing.
 //
 // Root cause: effortToParams emitted snake_case `budget_tokens`, but both
 // consumers (claudeAdapter, multiFreeService) read camelCase `budgetTokens`, so
@@ -10,7 +10,7 @@
 
 const { resolveEffort, effortToParams } = require('../src/services/autoReasoning');
 
-describe('effortToParams â€” anthropic camelCase budget', () => {
+describe('effortToParams â€?anthropic camelCase budget', () => {
   test('each tier maps to camelCase budgetTokens (not snake_case)', () => {
     expect(effortToParams('low', 'anthropic')).toEqual({ thinking: { budgetTokens: 1024 } });
     expect(effortToParams('high', 'anthropic')).toEqual({ thinking: { budgetTokens: 8192 } });
@@ -42,10 +42,11 @@ describe('effortToParams â€” anthropic camelCase budget', () => {
   });
 });
 
-describe('resolveEffort â€” floor interplay sanity', () => {
-  test('debugging keywords resolve to max (â†’ 32768 once mapped)', () => {
+describe('resolveEffort â€?floor interplay sanity', () => {
+  test('debugging keywords resolve to max (â†?32768 once mapped)', () => {
     expect(resolveEffort('please debug this crash and find the root cause')).toBe('max');
     expect(effortToParams(resolveEffort('debug this error'), 'anthropic'))
       .toEqual({ thinking: { budgetTokens: 32768 } });
   });
 });
+

@@ -14,8 +14,8 @@ const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
-const registry = require('../../../src/services/compile/registry');
-const { parseDiagnostics } = require('../../../src/services/compile/diagnostics');
+const registry = require('../../../src/cli/commands/registry.js');
+const { parseDiagnostics } = require('../../../src/services/domain/build/compile/diagnostics.js');
 const compileFile = require('../../../src/tools/compileFile');
 const buildProject = require('../../../src/tools/buildProject');
 

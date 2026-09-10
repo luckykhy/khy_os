@@ -11,7 +11,7 @@ const assert = require('assert');
 const MASTER = 'KHY_SEARCH_CONVERGENCE';
 const CAP = 'KHY_SEARCH_ROUND_CAP';
 const ALL_FLAGS = [MASTER, CAP];
-const MODULE_PATH = '../src/services/query/searchConvergence';
+const MODULE_PATH = '../src/services/domain/query/query/searchConvergence.js';
 
 function load(env = {}) {
   for (const f of ALL_FLAGS) delete process.env[f];

@@ -1,6 +1,6 @@
 'use strict';
 
-// Workstream C â€” extended-thinking cross-turn continuity.
+// Workstream C â€?extended-thinking cross-turn continuity.
 // 1. The SSE parser must capture structured thinking blocks (thinking+signature)
 //    and redacted_thinking (data), not just the flat thinking string.
 // 2. buildAssistantContent must PREPEND thinking blocks before text/tool_use,
@@ -25,7 +25,7 @@ function streamFrom(text) {
   return r;
 }
 
-describe('parseAnthropicSseStream â€” thinking blocks', () => {
+describe('parseAnthropicSseStream â€?thinking blocks', () => {
   test('captures thinking+signature and redacted_thinking', async () => {
     const payload = sse([
       { type: 'message_start', message: { model: 'claude-opus-4-8', usage: { input_tokens: 5 } } },
@@ -66,7 +66,7 @@ describe('parseAnthropicSseStream â€” thinking blocks', () => {
   });
 });
 
-describe('buildAssistantContent â€” thinking prepend', () => {
+describe('buildAssistantContent â€?thinking prepend', () => {
   const toolUse = [{ type: 'tool_use', id: 't1', name: 'Read', input: { file: 'a' } }];
   const thinking = [{ type: 'thinking', thinking: 'reasoning', signature: 'SIG' }];
 
@@ -86,12 +86,12 @@ describe('buildAssistantContent â€” thinking prepend', () => {
 
   test('drops thinking blocks lacking a signature (cannot be echoed back)', () => {
     const out = buildAssistantContent('x', toolUse, [{ type: 'thinking', thinking: 'unsigned', signature: '' }]);
-    // No valid thinking block â†’ first block is the text, then tool_use.
+    // No valid thinking block â†?first block is the text, then tool_use.
     expect(out[0]).toEqual({ type: 'text', text: 'x' });
     expect(out[1]).toMatchObject({ type: 'tool_use', id: 't1' });
   });
 
-  test('ZERO REGRESSION: no thinking blocks â†’ identical to old (text + tool_use)', () => {
+  test('ZERO REGRESSION: no thinking blocks â†?identical to old (text + tool_use)', () => {
     const withUndefined = buildAssistantContent('answer', toolUse);
     const withEmpty = buildAssistantContent('answer', toolUse, []);
     const expected = [
@@ -102,8 +102,9 @@ describe('buildAssistantContent â€” thinking prepend', () => {
     expect(withEmpty).toEqual(expected);
   });
 
-  test('ZERO REGRESSION: no tool_use and no thinking â†’ plain string', () => {
+  test('ZERO REGRESSION: no tool_use and no thinking â†?plain string', () => {
     expect(buildAssistantContent('just text')).toBe('just text');
     expect(buildAssistantContent('just text', [], [])).toBe('just text');
   });
 });
+

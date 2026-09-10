@@ -73,6 +73,39 @@ function _categoryFile(category) {
   return path.join(_categoryDir(category), 'taste.md');
 }
 
+// ── Command Code 项目级 taste 路径（双向共享）──────────────────────────
+// Command Code 存储在 .commandcode/taste/（项目级），khy-os 存储在 ~/.khyos/taste/（用户级）。
+// 两者格式完全相同（`- <text>. Confidence: 0.xx`），可互相读写。
+
+/**
+ * 获取 Command Code 项目级 taste 目录。
+ * 查找当前工作目录向上遍历的 .commandcode/taste/ 目录。
+ * @returns {string|null} 项目级 taste 目录路径，未找到返回 null
+ */
+function _projectTasteDir() {
+  let dir = process.cwd();
+  for (let i = 0; i < 10; i++) {
+    const candidate = path.join(dir, '.commandcode', 'taste');
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return null;
+}
+
+function _projectMainFile() {
+  const dir = _projectTasteDir();
+  return dir ? path.join(dir, 'taste.md') : null;
+}
+
+function _projectCategoryFile(category) {
+  const dir = _projectTasteDir();
+  return dir ? path.join(dir, _safeCategorySegment(category), 'taste.md') : null;
+}
+
 function _safeCategorySegment(category) {
   // Filenames only — no traversal, no separators, no unicode surprises.
   const cleaned = String(category || '')
@@ -412,6 +445,26 @@ function addPreference({ category, text, confidence } = {}) {
     return { ok: false, error: `main_write_failed: ${writeMain.error}` };
   }
 
+  // 双向共享：同时写入 .commandcode/taste/（Command Code 可读取）
+  try {
+    const projDir = _projectTasteDir();
+    if (projDir) {
+      const projMainPath = path.join(projDir, 'taste.md');
+      const projText = _readSafe(projMainPath);
+      const { items: projItems } = parseTasteText(projText);
+      const projNorm = (s) => s.toLowerCase().replace(/[\s\p{P}]+/gu, '').trim();
+      const existsInProj = projItems.some((it) => projNorm(it.text) === projNorm(cleanText));
+      if (!existsInProj) {
+        // 追加到项目级 taste
+        const newLine = `- ${cleanText}. Confidence: ${conf.toFixed(2)}`;
+        const updated = projText.trim() ? projText.trim() + '\n' + newLine + '\n' : newLine + '\n';
+        _atomicWrite(projMainPath, updated);
+      }
+    }
+  } catch {
+    /* best-effort: 项目级写入失败不影响主流程 */
+  }
+
   const location = list.length > INLINE_ITEMS_PER_CATEGORY ? 'overflow' : 'inline';
   return {
     ok: true,
@@ -603,31 +656,82 @@ function removePreference({ text, category } = {}) {
  */
 function readAll({ confidenceFloor = DEFAULT_CONFIDENCE_FLOOR } = {}) {
   const out = [];
-  const mainText = _readSafe(_mainFile());
-  if (!mainText) {
-    return out;
-  }
-  if (mainText.length > MAX_TASTE_FILE_CHARS) {
-    return out;
-  }
-  const { items: mainItems, refs } = parseTasteText(mainText);
-  for (const it of mainItems) {
-    if (it.confidence >= confidenceFloor) {
-      out.push({ category: it.category, text: it.text, confidence: it.confidence, source: 'main' });
+  const norm = (s) => s.toLowerCase().replace(/[\s\p{P}]+/gu, '').trim();
+  const seen = new Set(); // 去重：同一偏好只保留最高 confidence
+
+  /**
+   * 从一个 taste 目录读取所有条目，合并到 out（去重，保留最高 confidence）。
+   * overflow 文件（<category>/taste.md）不受 MAX_TASTE_FILE_CHARS 限制——
+   * 它们是 large-by-design 的溢出存储，限制会导致大部分条目被跳过。
+   */
+  function _mergeFromDir(mainPath, categoryDirFn, source) {
+    const mainText = _readSafe(mainPath);
+    if (!mainText) return;
+    // 主文件受大小限制（控制注入系统提示词的 token 预算）
+    const mainToParse = mainText.length <= MAX_TASTE_FILE_CHARS ? mainText : '';
+    const { items: mainItems, refs } = mainToParse
+      ? parseTasteText(mainToParse)
+      : { items: [], refs: [] };
+    for (const it of mainItems) {
+      if (it.confidence < confidenceFloor) continue;
+      const key = norm(it.text);
+      if (seen.has(key)) {
+        const existing = out.find((o) => norm(o.text) === key);
+        if (existing && it.confidence > existing.confidence) {
+          existing.confidence = it.confidence;
+          existing.source = `${existing.source}+${source}`;
+        }
+        continue;
+      }
+      seen.add(key);
+      out.push({ category: it.category, text: it.text, confidence: it.confidence, source });
     }
-  }
-  for (const ref of refs) {
-    const refText = _readSafe(_categoryFile(ref));
-    if (!refText || refText.length > MAX_TASTE_FILE_CHARS) {
-      continue;
+    // overflow 文件：无大小限制（它们是 large-by-design 的溢出存储）
+    for (const ref of refs) {
+      const refText = _readSafe(categoryDirFn(ref));
+      if (!refText) continue;
+      const { items: refItems } = parseTasteText(refText);
+      for (const it of refItems) {
+        if (it.confidence < confidenceFloor) continue;
+        const key = norm(it.text);
+        if (seen.has(key)) {
+          const existing = out.find((o) => norm(o.text) === key);
+          if (existing && it.confidence > existing.confidence) {
+            existing.confidence = it.confidence;
+          }
+          continue;
+        }
+        seen.add(key);
+        out.push({ category: ref, text: it.text, confidence: it.confidence, source: `${source}-overflow` });
+      }
     }
-    const { items: refItems } = parseTasteText(refText);
-    for (const it of refItems) {
-      if (it.confidence >= confidenceFloor) {
-        out.push({ category: ref, text: it.text, confidence: it.confidence, source: 'overflow' });
+    // 无 ref 的主文件：如果主文件超限，直接解析全部条目（不做系统提示词注入，仅合并）
+    if (refs.length === 0 && mainText.length > MAX_TASTE_FILE_CHARS) {
+      const { items: allItems } = parseTasteText(mainText);
+      for (const it of allItems) {
+        if (it.confidence < confidenceFloor) continue;
+        const key = norm(it.text);
+        if (seen.has(key)) {
+          const existing = out.find((o) => norm(o.text) === key);
+          if (existing && it.confidence > existing.confidence) {
+            existing.confidence = it.confidence;
+          }
+          continue;
+        }
+        seen.add(key);
+        out.push({ category: it.category, text: it.text, confidence: it.confidence, source });
       }
     }
   }
+
+  // Level 1: 用户级（~/.khyos/taste/）
+  _mergeFromDir(_mainFile(), _categoryFile, 'khyos');
+  // Level 2: 项目级（.commandcode/taste/）— Command Code 共享
+  const projMain = _projectMainFile();
+  if (projMain) {
+    _mergeFromDir(projMain, _projectCategoryFile, 'commandcode');
+  }
+
   // Sort by confidence desc — strongest preferences lead the prompt.
   out.sort((a, b) => b.confidence - a.confidence);
   return out;
@@ -643,17 +747,59 @@ function readAll({ confidenceFloor = DEFAULT_CONFIDENCE_FLOOR } = {}) {
  * @returns {string}
  */
 function renderTasteSection({ confidenceFloor = DEFAULT_CONFIDENCE_FLOOR } = {}) {
+  const budget = MAX_TASTE_FILE_CHARS;
+  // 预算分配：CC 原文 60% + khy-os 自有 40%（保证两边都有空间）
+  const ccBudget = Math.floor(budget * 0.6);
+  const khyBudget = budget - ccBudget;
+  const parts = [];
+  let used = 0;
+
+  // ── Part 1: Command Code 项目级 taste（原文注入，与 CC 消费方式对齐）──
+  const projMain = _projectMainFile();
+  if (projMain) {
+    const projText = _readSafe(projMain);
+    if (projText) {
+      const trimmed = projText.length <= ccBudget ? projText : projText.slice(0, ccBudget);
+      parts.push(trimmed);
+      used += trimmed.length;
+    }
+  }
+
+  // ── Part 2: khy-os 用户级 taste（readAll 合并去重，<user_taste> 标签）──
   const items = readAll({ confidenceFloor });
-  if (items.length === 0) {
-    return '';
+  if (items.length > 0) {
+    // 过滤掉已在 Part 1 中注入的 CC 条目（避免重复）
+    const projNorm = new Set();
+    if (projMain) {
+      const projText = _readSafe(projMain);
+      if (projText) {
+        const { items: projItems } = parseTasteText(projText);
+        const norm = (s) => s.toLowerCase().replace(/[\s\p{P}]+/gu, '').trim();
+        for (const it of projItems) projNorm.add(norm(it.text));
+      }
+    }
+    const khyOnly = items.filter((it) => {
+      const norm = (s) => s.toLowerCase().replace(/[\s\p{P}]+/gu, '').trim();
+      return !projNorm.has(norm(it.text));
+    });
+    if (khyOnly.length > 0) {
+      const header = '\n<user_taste>';
+      const footer = '</user_taste>';
+      const lines = [header];
+      let sectionUsed = header.length + 1;
+      for (const it of khyOnly) {
+        const tag = it.category === 'general' ? '' : ` [${it.category}]`;
+        const line = `-${tag} ${it.text}. (confidence ${it.confidence.toFixed(2)})`;
+        if (sectionUsed + line.length + 1 + footer.length + 5 > khyBudget) break;
+        lines.push(line);
+        sectionUsed += line.length + 1;
+      }
+      lines.push(footer);
+      parts.push(lines.join('\n'));
+    }
   }
-  const lines = ['<user_taste>'];
-  for (const it of items) {
-    const tag = it.category === 'general' ? '' : ` [${it.category}]`;
-    lines.push(`-${tag} ${it.text}. (confidence ${it.confidence.toFixed(2)})`);
-  }
-  lines.push('</user_taste>');
-  return lines.join('\n');
+
+  return parts.join('\n');
 }
 
 /**
@@ -773,6 +919,69 @@ function listCategories() {
   return out;
 }
 
+/**
+ * 从 Command Code 项目级 taste 同步到 khy-os 用户级 taste。
+ * 读取 .commandcode/taste/ 中的条目，合并到 ~/.khyos/taste/（去重，保留最高 confidence）。
+ *
+ * @returns {{ synced: number, skipped: number, error?: string }}
+ */
+function syncFromCommandCode() {
+  const projDir = _projectTasteDir();
+  if (!projDir) {
+    return { synced: 0, skipped: 0, error: 'no .commandcode/taste/ found' };
+  }
+  const projMainPath = path.join(projDir, 'taste.md');
+  const projText = _readSafe(projMainPath);
+  if (!projText) {
+    return { synced: 0, skipped: 0 };
+  }
+  const { items: projItems, refs: projRefs } = parseTasteText(projText);
+  const norm = (s) => s.toLowerCase().replace(/[\s\p{P}]+/gu, '').trim();
+
+  // 读取 khy-os 现有条目
+  const existing = readAll({ confidenceFloor: 0 });
+  const existingNorm = new Set(existing.map((it) => norm(it.text)));
+
+  let synced = 0;
+  let skipped = 0;
+
+  // 合并主文件条目
+  for (const it of projItems) {
+    if (existingNorm.has(norm(it.text))) {
+      skipped++;
+      continue;
+    }
+    const result = addPreference({
+      category: it.category,
+      text: it.text,
+      confidence: it.confidence,
+    });
+    if (result.ok) synced++;
+  }
+
+  // 合并 overflow 条目
+  for (const ref of projRefs) {
+    const refPath = path.join(projDir, ref, 'taste.md');
+    const refText = _readSafe(refPath);
+    if (!refText) continue;
+    const { items: refItems } = parseTasteText(refText);
+    for (const it of refItems) {
+      if (existingNorm.has(norm(it.text))) {
+        skipped++;
+        continue;
+      }
+      const result = addPreference({
+        category: ref,
+        text: it.text,
+        confidence: it.confidence,
+      });
+      if (result.ok) synced++;
+    }
+  }
+
+  return { synced, skipped };
+}
+
 module.exports = {
   TASTE_VERSION,
   MAX_TASTE_FILE_CHARS,
@@ -785,6 +994,7 @@ module.exports = {
   renderTasteSection,
   lint,
   listCategories,
+  syncFromCommandCode,
   // Exposed for tests / introspection
   parseTasteText,
   serializeTasteText,
@@ -792,6 +1002,8 @@ module.exports = {
   _tasteDir,
   _mainFile,
   _categoryFile,
+  _projectTasteDir,
+  _projectMainFile,
   _safeCategorySegment,
   _atomicWrite,
 };

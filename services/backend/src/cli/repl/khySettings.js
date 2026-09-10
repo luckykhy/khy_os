@@ -12,11 +12,18 @@
  *   3. project-local   <cwd>/.khy/settings.local.json    (gitignored, per-checkout)
  *   4. managed         /etc/khy/managed-settings.json  (POSIX)
  *                      %PROGRAMDATA%\khy\managed-settings.json  (Windows)
+ *   5. toml-overlay    ~/.khy/config.toml              (read-only override)
  *
  * The managed layer is HIGHEST precedence on purpose: an enterprise policy must
  * not be overridable by user or project files — same contract as Claude Code's
  * managed policy. Env override `KHY_MANAGED_SETTINGS` points the managed layer at
  * an explicit path (used by tests and bespoke deployments).
+ *
+ * The toml-overlay layer (config.toml) is READ-ONLY: it overrides all JSON layers
+ * but is never written by khy. This aligns with Y-code's config.toml > config.json
+ * contract and lets users / external tools (Codex CLI, etc.) inject settings via
+ * TOML without khy ever clobbering their file. Env override `KHY_CONFIG_TOML`
+ * points the toml-overlay at an explicit path.
  *
  * Backward compatibility: with only the user file present, the merged result is
  * byte-for-byte the user file — existing single-file deployments are unaffected.
@@ -252,6 +259,48 @@ function _persistObjectKhySetting(key, value) {
   return _writeKhySettings(settings);
 }
 
+/**
+ * Resolve effective settings INCLUDING the ~/.khy/config.toml read-only overlay.
+ * Drop-in replacement for resolveKhySettings() for callers that want TOML override.
+ *
+ * @param {object} [opts]
+ * @param {string} [opts.cwd] working directory used for project layers.
+ * @param {boolean} [opts.includeToml=true] set false to skip TOML overlay.
+ * @returns {object} merged settings (a fresh object).
+ */
+function resolveKhySettingsWithToml(opts = {}) {
+  const { includeToml = true, ...rest } = opts;
+  const base = resolveKhySettings(rest);
+
+  if (!includeToml) {
+    return base;
+  }
+
+  // Lazy-load the overlay module to avoid a hard dependency / require cycle at
+  // module-init time.
+  let overlay;
+  try {
+    overlay = require('./configTomlOverlay');
+  } catch {
+    return base; // overlay module unavailable → pure-JSON fallback
+  }
+
+  const { settings } = overlay.resolveSettingsWithToml(base);
+
+  // Surface parse errors to stderr (non-fatal: we already returned merged JSON).
+  const tomlOverlay = overlay.readConfigTomlOverlay();
+  if (tomlOverlay.error) {
+    try {
+      require('chalk');
+      console.warn(`  ⚠ ~/.khy/config.toml 解析失败，已忽略: ${tomlOverlay.error}`);
+    } catch {
+      console.warn(`  ⚠ ~/.khy/config.toml 解析失败，已忽略: ${tomlOverlay.error}`);
+    }
+  }
+
+  return settings;
+}
+
 module.exports = {
   KHY_SETTINGS_FILE,
   _readKhySettings,
@@ -263,6 +312,7 @@ module.exports = {
   // Layered-resolution API (Claude Code aligned).
   resolveKhySettings,
   resolveKhySettingsWithProvenance,
+  resolveKhySettingsWithToml,
   _managedSettingsPath,
   _deepMerge,
 };

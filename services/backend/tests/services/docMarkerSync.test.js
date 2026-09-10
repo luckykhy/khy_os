@@ -10,7 +10,7 @@ const {
   syncManagedRegions,
   buildValueMap,
   NOTICE,
-} = require('../../src/services/docsFreshness/docMarkerSync');
+} = require('../../src/services/domain/docs/docsFreshness/docMarkerSync.js');
 
 const B = (key, extra = '') => `<!-- khy-docs-sync:begin key=${key}${extra ? ' ' + extra : ''} -->`;
 const E = (key) => `<!-- khy-docs-sync:end key=${key} -->`;

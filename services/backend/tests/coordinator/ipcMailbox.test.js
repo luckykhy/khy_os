@@ -37,3 +37,4 @@ describe('IPC mailbox message types', () => {
     expect(MSG.QUEUE_STATUS).toBe('queue_status');
   });
 });
+

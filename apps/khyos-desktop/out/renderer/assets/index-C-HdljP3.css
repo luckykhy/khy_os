@@ -1,0 +1,601 @@
+/**
+ * Copyright (c) 2014 The xterm.js authors. All rights reserved.
+ * Copyright (c) 2012-2013, Christopher Jeffrey (MIT License)
+ * https://github.com/chjj/term.js
+ * @license MIT
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * Originally forked from (with the author's permission):
+ *   Fabrice Bellard's javascript vt100 for jslinux:
+ *   http://bellard.org/jslinux/
+ *   Copyright (c) 2011 Fabrice Bellard
+ *   The original design remains. The terminal itself
+ *   has been extended to include xterm CSI codes, among
+ *   other features.
+ */
+
+/**
+ *  Default styles for xterm.js
+ */
+
+.xterm {
+    cursor: text;
+    position: relative;
+    user-select: none;
+    -ms-user-select: none;
+    -webkit-user-select: none;
+}
+
+.xterm.focus,
+.xterm:focus {
+    outline: none;
+}
+
+.xterm .xterm-helpers {
+    position: absolute;
+    top: 0;
+    /**
+     * The z-index of the helpers must be higher than the canvases in order for
+     * IMEs to appear on top.
+     */
+    z-index: 5;
+}
+
+.xterm .xterm-helper-textarea {
+    padding: 0;
+    border: 0;
+    margin: 0;
+    /* Move textarea out of the screen to the far left, so that the cursor is not visible */
+    position: absolute;
+    opacity: 0;
+    left: -9999em;
+    top: 0;
+    width: 0;
+    height: 0;
+    z-index: -5;
+    /** Prevent wrapping so the IME appears against the textarea at the correct position */
+    white-space: nowrap;
+    overflow: hidden;
+    resize: none;
+}
+
+.xterm .composition-view {
+    /* TODO: Composition position got messed up somewhere */
+    background: #000;
+    color: #FFF;
+    display: none;
+    position: absolute;
+    white-space: nowrap;
+    z-index: 1;
+}
+
+.xterm .composition-view.active {
+    display: block;
+}
+
+.xterm .xterm-viewport {
+    /* On OS X this is required in order for the scroll bar to appear fully opaque */
+    background-color: #000;
+    overflow-y: scroll;
+    cursor: default;
+    position: absolute;
+    right: 0;
+    left: 0;
+    top: 0;
+    bottom: 0;
+}
+
+.xterm .xterm-screen {
+    position: relative;
+}
+
+.xterm .xterm-screen canvas {
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+.xterm-char-measure-element {
+    display: inline-block;
+    visibility: hidden;
+    position: absolute;
+    top: 0;
+    left: -9999em;
+    line-height: normal;
+}
+
+.xterm.enable-mouse-events {
+    /* When mouse events are enabled (eg. tmux), revert to the standard pointer cursor */
+    cursor: default;
+}
+
+.xterm.xterm-cursor-pointer,
+.xterm .xterm-cursor-pointer {
+    cursor: pointer;
+}
+
+.xterm.column-select.focus {
+    /* Column selection mode */
+    cursor: crosshair;
+}
+
+.xterm .xterm-accessibility:not(.debug),
+.xterm .xterm-message {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    z-index: 10;
+    color: transparent;
+    pointer-events: none;
+}
+
+.xterm .xterm-accessibility-tree:not(.debug) *::selection {
+  color: transparent;
+}
+
+.xterm .xterm-accessibility-tree {
+  font-family: monospace;
+  user-select: text;
+  white-space: pre;
+}
+
+.xterm .xterm-accessibility-tree > div {
+  transform-origin: left;
+  width: fit-content;
+}
+
+.xterm .live-region {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.xterm-dim {
+    /* Dim should not apply to background, so the opacity of the foreground color is applied
+     * explicitly in the generated class and reset to 1 here */
+    opacity: 1 !important;
+}
+
+.xterm-underline-1 { text-decoration: underline; }
+.xterm-underline-2 { text-decoration: double underline; }
+.xterm-underline-3 { text-decoration: wavy underline; }
+.xterm-underline-4 { text-decoration: dotted underline; }
+.xterm-underline-5 { text-decoration: dashed underline; }
+
+.xterm-overline {
+    text-decoration: overline;
+}
+
+.xterm-overline.xterm-underline-1 { text-decoration: overline underline; }
+.xterm-overline.xterm-underline-2 { text-decoration: overline double underline; }
+.xterm-overline.xterm-underline-3 { text-decoration: overline wavy underline; }
+.xterm-overline.xterm-underline-4 { text-decoration: overline dotted underline; }
+.xterm-overline.xterm-underline-5 { text-decoration: overline dashed underline; }
+
+.xterm-strikethrough {
+    text-decoration: line-through;
+}
+
+.xterm-screen .xterm-decoration-container .xterm-decoration {
+	z-index: 6;
+	position: absolute;
+}
+
+.xterm-screen .xterm-decoration-container .xterm-decoration.xterm-decoration-top-layer {
+	z-index: 7;
+}
+
+.xterm-decoration-overview-ruler {
+    z-index: 8;
+    position: absolute;
+    top: 0;
+    right: 0;
+    pointer-events: none;
+}
+
+.xterm-decoration-top {
+    z-index: 2;
+    position: relative;
+}
+
+
+
+/* Derived from vs/base/browser/ui/scrollbar/media/scrollbar.css */
+
+/* xterm.js customization: Override xterm's cursor style */
+.xterm .xterm-scrollable-element > .scrollbar {
+    cursor: default;
+}
+
+/* Arrows */
+.xterm .xterm-scrollable-element > .scrollbar > .scra {
+	cursor: pointer;
+	font-size: 11px !important;
+}
+
+.xterm .xterm-scrollable-element > .visible {
+	opacity: 1;
+
+	/* Background rule added for IE9 - to allow clicks on dom node */
+	background:rgba(0,0,0,0);
+
+	transition: opacity 100ms linear;
+	/* In front of peek view */
+	z-index: 11;
+}
+.xterm .xterm-scrollable-element > .invisible {
+	opacity: 0;
+	pointer-events: none;
+}
+.xterm .xterm-scrollable-element > .invisible.fade {
+	transition: opacity 800ms linear;
+}
+
+/* Scrollable Content Inset Shadow */
+.xterm .xterm-scrollable-element > .shadow {
+	position: absolute;
+	display: none;
+}
+.xterm .xterm-scrollable-element > .shadow.top {
+	display: block;
+	top: 0;
+	left: 3px;
+	height: 3px;
+	width: 100%;
+	box-shadow: var(--vscode-scrollbar-shadow, #000) 0 6px 6px -6px inset;
+}
+.xterm .xterm-scrollable-element > .shadow.left {
+	display: block;
+	top: 3px;
+	left: 0;
+	height: 100%;
+	width: 3px;
+	box-shadow: var(--vscode-scrollbar-shadow, #000) 6px 0 6px -6px inset;
+}
+.xterm .xterm-scrollable-element > .shadow.top-left-corner {
+	display: block;
+	top: 0;
+	left: 0;
+	height: 3px;
+	width: 3px;
+}
+.xterm .xterm-scrollable-element > .shadow.top.left {
+	box-shadow: var(--vscode-scrollbar-shadow, #000) 6px 0 6px -6px inset;
+}
+/* ===== KhyOS Desktop — 纯 CSS 方案 ===== */
+
+/* 基础重置 */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ===== 暗色主题（默认） ===== */
+:root, .dark, .theme-zai-dark {
+  --color-background: #161616;
+  --color-header: #202020;
+  --color-panel: #202020;
+  --color-sidebar: #161616;
+  --color-surface: #ffffff0d;
+  --color-surface-hover: #ffffff1a;
+  --color-card: #2b2b2b;
+  --color-card-selected: var(--color-input);
+  --color-card-border: var(--color-border);
+  --color-popover: #2b2b2b;
+  --color-popover-foreground: var(--color-foreground);
+  --color-input: #262626;
+  --color-input-focused: #1a1a1a;
+  --color-input-border: var(--color-border);
+  --color-input-border-hover: var(--color-border-hover);
+  --color-input-border-focused: var(--color-brand);
+  --color-tab: #202020;
+  --color-tab-active: #161616;
+  --color-tab-border: var(--color-border);
+  --color-menu: #2b2b2b;
+  --color-menu-hover: #363636;
+  --color-brand: #ffffff;
+  --color-primary: #ffffff;
+  --color-primary-foreground: #000000;
+  --color-secondary: #363636;
+  --color-foreground: #e5e5e5;
+  --color-foreground-inverse: #000000;
+  --color-accent: #001d3d;
+  --color-hover: #ffffff0d;
+  --color-selected: #ffffff1a;
+  --color-border: #ffffff1a;
+  --color-border-hover: #ffffff26;
+  --color-success: #46bf72;
+  --color-success-foreground: #000000;
+  --color-warning: #ff8a30;
+  --color-warning-foreground: #000000;
+  --color-destructive: #ff5c5c;
+  --color-destructive-foreground: #ffffff;
+  --color-idle-task: #7b5ce5;
+  --color-idle-task-surface: #160d38;
+  --color-find-highlight: #542500;
+  --color-find-highlight-active: #ff8a30;
+  --animated-gradient-text-strong: #ffffff;
+  --animated-gradient-text-soft: #ffffff38;
+  --color-toast: #2b2b2b;
+
+  --color-trajectory-user: #60a5fa;
+  --color-trajectory-assistant: #2dd4bf;
+  --color-trajectory-reasoning: #a78bfa;
+  --color-trajectory-tool-call: #f59e0b;
+  --color-trajectory-tool-result: #38bdf8;
+  --color-diff-added: #46bf72;
+  --color-diff-added-foreground: #000000;
+  --color-diff-removed: #ff5c5c;
+  --color-diff-removed-foreground: #000000;
+  --color-git-none: var(--color-foreground);
+  --color-git-modified: #ff8a30;
+  --color-git-added: #46bf72;
+  --color-git-deleted: #ff5c5c;
+  --color-git-renamed: #4099ff;
+  --color-git-untracked: #46bf72;
+  --color-git-ignored: var(--color-foreground);
+  --color-git-descendant: #ff8a30;
+  --color-interaction-ask-surface: #001d3d;
+  --color-interaction-ask-foreground: #80beff;
+  --color-interaction-ask-fill: #46bf723d;
+  --color-interaction-confirmation-surface: #46bf7229;
+  --color-interaction-confirmation-foreground: #87d9a4;
+
+  --color-terminal-bg: #0a0a0a;
+  --color-terminal-fg: #fafafa;
+  --color-terminal-cursor: #fafafa;
+  --color-terminal-cursor-accent: #0a0a0a;
+  --color-terminal-black: #262626;
+  --color-terminal-red: #f87171;
+  --color-terminal-green: #4ade80;
+  --color-terminal-yellow: #facc15;
+  --color-terminal-blue: #60a5fa;
+  --color-terminal-magenta: #c084fc;
+  --color-terminal-cyan: #22d3ee;
+  --color-terminal-white: #e5e5e5;
+  --color-terminal-bright-black: #737373;
+  --color-terminal-bright-red: #f87171;
+  --color-terminal-bright-green: #4ade80;
+  --color-terminal-bright-yellow: #facc15;
+  --color-terminal-bright-blue: #60a5fa;
+  --color-terminal-bright-magenta: #c084fc;
+  --color-terminal-bright-cyan: #22d3ee;
+  --color-terminal-bright-white: #fafafa;
+}
+
+/* ===== 浅色主题 ===== */
+.theme-zai-light {
+  --color-background: #f8f8f8;
+  --color-header: #ffffff;
+  --color-panel: #ffffff;
+  --color-sidebar: #f0f0f0;
+  --color-surface: #0d0d0d08;
+  --color-surface-hover: #0d0d0d0d;
+  --color-card: #ffffff;
+  --color-card-selected: var(--color-input);
+  --color-card-border: var(--color-border);
+  --color-popover: #ffffff;
+  --color-popover-foreground: var(--color-foreground);
+  --color-input: #f5f5f5;
+  --color-input-focused: #ffffff;
+  --color-input-border: var(--color-border);
+  --color-input-border-hover: var(--color-border-hover);
+  --color-input-border-focused: var(--color-brand);
+  --color-tab: #f0f0f0;
+  --color-tab-active: #ffffff;
+  --color-tab-border: var(--color-border);
+  --color-menu: #ffffff;
+  --color-menu-hover: #f0f0f0;
+  --color-brand: #000000;
+  --color-primary: #000000;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #e6e6e6;
+  --color-foreground: #171717;
+  --color-foreground-inverse: #ffffff;
+  --color-accent: #ebf4ff;
+  --color-hover: #0d0d0d0d;
+  --color-selected: #0d0d0d0d;
+  --color-border: #0d0d0d1a;
+  --color-border-hover: #0d0d0d26;
+  --color-success: #1e8a3e;
+  --color-success-foreground: #ffffff;
+  --color-warning: #e07b00;
+  --color-warning-foreground: #000000;
+  --color-destructive: #e03131;
+  --color-destructive-foreground: #ffffff;
+  --color-idle-task: #9e77ed;
+  --color-idle-task-surface: #f5f3ff;
+  --color-find-highlight: #fff4eb;
+  --color-find-highlight-active: #ffb26b;
+  --animated-gradient-text-strong: #0d0d0d;
+  --animated-gradient-text-soft: #0d0d0d38;
+  --color-toast: #ffffff;
+
+  --color-trajectory-user: #2563eb;
+  --color-trajectory-assistant: #0f766e;
+  --color-trajectory-reasoning: #7c3aed;
+  --color-trajectory-tool-call: #d97706;
+  --color-trajectory-tool-result: #0284c7;
+  --color-diff-added: #1e8a3e;
+  --color-diff-added-foreground: #ffffff;
+  --color-diff-removed: #e03131;
+  --color-diff-removed-foreground: #ffffff;
+  --color-git-none: var(--color-foreground);
+  --color-git-modified: #e07b00;
+  --color-git-added: #1e8a3e;
+  --color-git-deleted: #e03131;
+  --color-git-renamed: #0b7fff;
+  --color-git-untracked: #1e8a3e;
+  --color-git-ignored: var(--color-foreground);
+  --color-git-descendant: #e07b00;
+  --color-interaction-ask-surface: #ebf4ff;
+  --color-interaction-ask-foreground: #06d;
+  --color-interaction-ask-fill: #46bf7233;
+  --color-interaction-confirmation-surface: #eaf7ee;
+  --color-interaction-confirmation-foreground: #166b32;
+
+  --color-terminal-bg: #0a0a0a;
+  --color-terminal-fg: #fafafa;
+  --color-terminal-cursor: #fafafa;
+  --color-terminal-cursor-accent: #0a0a0a;
+  --color-terminal-black: #262626;
+  --color-terminal-red: #f87171;
+  --color-terminal-green: #4ade80;
+  --color-terminal-yellow: #facc15;
+  --color-terminal-blue: #60a5fa;
+  --color-terminal-magenta: #c084fc;
+  --color-terminal-cyan: #22d3ee;
+  --color-terminal-white: #e5e5e5;
+  --color-terminal-bright-black: #737373;
+  --color-terminal-bright-red: #f87171;
+  --color-terminal-bright-green: #4ade80;
+  --color-terminal-bright-yellow: #facc15;
+  --color-terminal-bright-blue: #60a5fa;
+  --color-terminal-bright-magenta: #c084fc;
+  --color-terminal-bright-cyan: #22d3ee;
+  --color-terminal-bright-white: #fafafa;
+}
+
+/* ===== 全局背景 ===== */
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+}
+
+/* ===== 语义工具类 ===== */
+.bg-background { background-color: var(--color-background); }
+.bg-header { background-color: var(--color-header); }
+.bg-sidebar { background-color: var(--color-sidebar); }
+.bg-panel { background-color: var(--color-panel); }
+.bg-card { background-color: var(--color-card); }
+.bg-input { background-color: var(--color-input); }
+.bg-menu { background-color: var(--color-menu); }
+.bg-tab { background-color: var(--color-tab); }
+.bg-tab-active { background-color: var(--color-tab-active); }
+.bg-popover { background-color: var(--color-popover); }
+.bg-terminal-bg { background-color: var(--color-terminal-bg); }
+.bg-toast { background-color: var(--color-toast); }
+.bg-accent { background-color: var(--color-accent); }
+.bg-success { background-color: var(--color-success); }
+.bg-warning { background-color: var(--color-warning); }
+.bg-destructive { background-color: var(--color-destructive); }
+.bg-idle-task-surface { background-color: var(--color-idle-task-surface); }
+.bg-diff-added { background-color: var(--color-diff-added); }
+.bg-diff-removed { background-color: var(--color-diff-removed); }
+.bg-interaction-ask-surface { background-color: var(--color-interaction-ask-surface); }
+.bg-interaction-confirmation-surface { background-color: var(--color-interaction-confirmation-surface); }
+.border-sidebar { border-color: var(--color-sidebar); }
+.border-border { border-color: var(--color-border); }
+.border-input-border { border-color: var(--color-input-border); }
+.text-foreground { color: var(--color-foreground); }
+.text-foreground-inverse { color: var(--color-foreground-inverse); }
+
+/* ===== 布局工具类 ===== */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.flex-1 { flex: 1; }
+.flex-wrap { flex-wrap: wrap; }
+.items-center { align-items: center; }
+.items-start { align-items: flex-start; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.gap-1 { gap: 0.25rem; }
+.gap-2 { gap: 0.5rem; }
+.gap-3 { gap: 0.75rem; }
+.gap-4 { gap: 1rem; }
+
+/* ===== 尺寸工具类 ===== */
+.h-full { height: 100%; }
+.h-screen { height: 100vh; }
+.h-6 { height: 1.5rem; }
+.h-10 { height: 2.5rem; }
+.w-full { width: 100%; }
+.w-10 { width: 2.5rem; }
+.w-12 { width: 3rem; }
+.w-48 { width: 12rem; }
+.w-80 { width: 20rem; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ===== 间距工具类 ===== */
+.p-2 { padding: 0.5rem; }
+.p-3 { padding: 0.75rem; }
+.p-4 { padding: 1rem; }
+.p-6 { padding: 1.5rem; }
+.px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+.px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+.px-4 { padding-left: 1rem; padding-right: 1rem; }
+.py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+.py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.py-8 { padding-top: 2rem; padding-bottom: 2rem; }
+.mt-1 { margin-top: 0.25rem; }
+.mt-2 { margin-top: 0.5rem; }
+.ml-auto { margin-left: auto; }
+.space-y-0\.5 > * + * { margin-top: 0.125rem; }
+.space-y-1 > * + * { margin-top: 0.25rem; }
+
+/* ===== 文本工具类 ===== */
+.text-xs { font-size: 0.75rem; }
+.text-sm { font-size: 0.875rem; }
+.text-lg { font-size: 1.125rem; }
+.text-2xl { font-size: 1.5rem; }
+.text-center { text-align: center; }
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.whitespace-pre-wrap { white-space: pre-wrap; }
+
+/* ===== 边框工具类 ===== */
+.border { border-width: 1px; border-style: solid; }
+.border-t { border-top-width: 1px; border-top-style: solid; }
+.border-r { border-right-width: 1px; border-right-style: solid; }
+.border-b { border-bottom-width: 1px; border-bottom-style: solid; }
+.border-l { border-left-width: 1px; border-left-style: solid; }
+.rounded-md { border-radius: 0.375rem; }
+.rounded-lg { border-radius: 0.5rem; }
+.rounded-full { border-radius: 9999px; }
+
+/* ===== 其他工具类 ===== */
+.overflow-auto { overflow: auto; }
+.overflow-hidden { overflow: hidden; }
+.select-none { user-select: none; }
+.cursor-pointer { cursor: pointer; }
+.opacity-0 { opacity: 0; }
+.opacity-50 { opacity: 0.5; }
+.group:hover .group-hover\:opacity-100 { opacity: 1; }
+.transition-colors { transition-property: color, background-color, border-color; transition-duration: 0.15s; }
+.disabled\:opacity-50:disabled { opacity: 0.5; }
+.hover\:bg-surface-hover:hover { background-color: var(--color-surface-hover); }
+.hover\:text-foreground:hover { color: var(--color-foreground); }

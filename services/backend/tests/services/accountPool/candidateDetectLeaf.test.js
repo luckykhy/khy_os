@@ -10,7 +10,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 
-const leaf = require('../../../src/services/accountPool/candidateDetect');
+const leaf = require('../../../src/services/domain/account/accountPool/candidateDetect.js');
 
 test('导出面:6 共享常量 + 6 叶子常量 + 14 函数俱在', () => {
   const consts = [
@@ -109,7 +109,7 @@ test('collectGenericCandidateFromRecord:非对象→null·含 token 记录→候
 });
 
 test('单例稳定:重复 require 同引用', () => {
-  const again = require('../../../src/services/accountPool/candidateDetect');
+  const again = require('../../../src/services/domain/account/accountPool/candidateDetect.js');
   assert.strictEqual(again, leaf);
   assert.strictEqual(again.KNOWN_NIRVANA_PROVIDER_SET, leaf.KNOWN_NIRVANA_PROVIDER_SET);
 });

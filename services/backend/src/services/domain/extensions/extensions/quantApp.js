@@ -42,9 +42,12 @@ const SERVICE = 'quant-app';
 
 /**
  * 迁移期兜底目录：khyquant 的 L4 现址。
- * 从 `<repo>/services/backend/src/services/extensions/` 上溯 5 层到仓库根。
+ * 从 `<repo>/services/backend/src/services/domain/extensions/extensions/` 上溯
+ * 7 层到仓库根（本文件从 `src/services/extensions/` 迁入此处时深了 2 层，
+ * 原先的 5 层计数曾把 L4_DIR 指到 services/backend/software/ 而整级判「未安装」，
+ * 2026-09-06 修正 —— [DESIGN-ARCH-078] §10.3）。
  */
-const L4_DIR = path.resolve(__dirname, '..', '..', '..', '..', '..', 'software', 'khyquant');
+const L4_DIR = path.resolve(__dirname, '..', '..', '..', '..', '..', '..', '..', 'software', 'khyquant');
 
 /** 目录解析缓存。`undefined` = 尚未解析；`null` = 解析过且没有。 */
 let _dirCache;

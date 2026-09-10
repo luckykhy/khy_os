@@ -122,7 +122,7 @@ async function handleTasteCommand(parsed) {
       }
       console.log('');
       console.log(chalk.bold('  Taste categories'));
-      console.log(chalk.dim('  ' + '─'.repeat(40)));
+      console.log("");
       for (const c of cats) {
         const total = c.inline + c.overflow;
         const where = c.overflow > 0 ? `${c.inline} inline + ${c.overflow} overflow` : `${c.inline} inline`;
@@ -238,7 +238,7 @@ async function handleTasteCommand(parsed) {
       const status = watch.getStatus();
       console.log('');
       console.log(chalk.bold('  taste watch 状态'));
-      console.log(chalk.dim('  ' + '─'.repeat(40)));
+      console.log("");
       console.log(`  ${chalk.cyan('enabled'.padEnd(12))}  ${status.enabled ? chalk.green('true') : chalk.dim('false')}`);
       console.log(`  ${chalk.cyan('observed'.padEnd(12))}  ${status.stats.observedTurns}`);
       console.log(`  ${chalk.cyan('committed'.padEnd(12))}  ${status.stats.committed}`);
@@ -331,7 +331,7 @@ async function handleTasteCommand(parsed) {
       const { scanned, candidates, committed, errors } = result;
       console.log('');
       console.log(chalk.bold('  Taste learn — 跨 agent session 扫描'));
-      console.log(chalk.dim('  ' + '─'.repeat(50)));
+      console.log("");
       const appsHit = Object.entries(scanned.byApp || {})
         .map(([a, n]) => `${a}=${n}`)
         .join(', ') || '(none)';

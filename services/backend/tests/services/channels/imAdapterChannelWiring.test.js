@@ -32,8 +32,8 @@ process.env.KHY_MSG = 'true'; // 消息能力门:显式开,避免宿主环境干
 delete process.env.SLACK_BOT_TOKEN; // 避免 Slack 段抢注一路无关通道
 
 const dataHome = require('../../../src/utils/dataHome');
-const { ImAdapterChannel } = require('../../../src/services/channels/imAdapterChannel');
-const { MessageRouter, _bootstrapChannels } = require('../../../src/services/channels/messageRouter');
+const { ImAdapterChannel } = require('../../../src/services/domain/messaging/channels/imAdapterChannel.js');
+const { MessageRouter, _bootstrapChannels } = require('../../../src/services/domain/messaging/channels/messageRouter.js');
 const { createFeishuAdapter } = require('../../../src/adapters/im/feishuAdapter');
 const imRegistry = require('../../../src/adapters/im/adapterRegistry');
 const runtimeConfig = require('../../../src/adapters/im/imRuntimeConfig');
@@ -428,7 +428,7 @@ test('bootstrap:门开时注册 im:feishu,且与 webhook 版 feishu 并存不互
   try {
     // 先占住 webhook 版的名字,再 bootstrap:若长连接用了同名,registerChannel 会打
     // 「already registered, replacing」并把 webhook 版顶掉——那就是回归。
-    const { FeishuChannel } = require('../../../src/services/channels/feishuChannel');
+    const { FeishuChannel } = require('../../../src/services/domain/messaging/channels/feishuChannel.js');
     router.registerChannel(
       new FeishuChannel({ webhook: 'https://open.feishu.cn/open-apis/bot/v2/hook/placeholder' })
     );
@@ -602,7 +602,7 @@ test('中文别名与 lark 都解析到 feishu', () => {
 
 test('CLI 字段白名单取自两侧真源,不在 handler 里抄一份', () => {
   const handler = require('../../../src/cli/handlers/feishu');
-  const store = require('../../../src/services/messaging/msgConfigStore');
+  const store = require('../../../src/services/domain/messaging/messaging/msgConfigStore.js');
   const { CONFIG_SPEC } = require('../../../src/adapters/im/feishuAdapter');
   assert.deepEqual(handler._webhookKeys(), store.FIELDS.feishu);
   assert.deepEqual(handler._longLinkKeys(), Object.keys(CONFIG_SPEC));
@@ -620,7 +620,7 @@ test('CLI _gateList:逗号/分号/空格分隔,小写归一', () => {
 
 test('CLI set:按键名分别落到两条路的存储,secret 不出现在 stdout', async () => {
   const { handleFeishu } = require('../../../src/cli/handlers/feishu');
-  const store = require('../../../src/services/messaging/msgConfigStore');
+  const store = require('../../../src/services/domain/messaging/messaging/msgConfigStore.js');
   const SECRET = 'app-secret-must-not-be-printed';
   const HOOK = 'https://open.feishu.cn/open-apis/bot/v2/hook/wire-test-token';
 

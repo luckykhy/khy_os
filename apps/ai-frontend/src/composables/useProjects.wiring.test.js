@@ -49,12 +49,20 @@ test('router mounts the Projects route (auth-only, no requiresAdmin)', () => {
 });
 
 test('sidebar menu exposes the 项目工作区 entry with the Folder icon', () => {
-  const src = read('views/Layout.vue');
-  assert.match(src, /Folder\b/, 'Layout must import the Folder icon');
+  const nav = read('nav/index.js');
+  assert.match(nav, /Folder\b/, 'NAV must import the Folder icon');
   assert.match(
-    src,
+    nav,
     /path:\s*'\/projects'.*icon:\s*Folder/s,
-    'USER_MENU must list /projects with the Folder icon'
+    'NAV must list /projects with the Folder icon'
+  );
+  // The sidebar must keep reading NAV; if Layout stops importing it, the menu
+  // silently goes blank without any assertion catching it.
+  const layout = read('views/Layout.vue');
+  assert.match(
+    layout,
+    /from\s+'@\/nav'/,
+    'Layout must render the sidebar from src/nav (single source of truth)'
   );
 });
 

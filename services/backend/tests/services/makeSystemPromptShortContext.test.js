@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * makeSystemPrompt short-context trimming â€” end-to-end proof that a small
+ * makeSystemPrompt short-context trimming â€?end-to-end proof that a small
  * context window drops the multi-KB hand-holding sections from the STATIC
  * system prompt, while a large window keeps today's full prompt byte-for-byte.
  *
@@ -21,7 +21,7 @@ const descFn = _skip ? describe.skip : describe;
 
 descFn('makeSystemPrompt short-context', () => {
   // A cloud model id (triggers the modular path) whose name also trips the weak
-  // heuristic â€” the realistic short-context case.
+  // heuristic â€?the realistic short-context case.
   const modelInfo = { model: 'claude-3-haiku', adapter: 'api' };
 
   function build(contextWindow) {
@@ -33,8 +33,8 @@ descFn('makeSystemPrompt short-context', () => {
   }
 
   test('short window yields a strictly shorter static prompt than a large window', async () => {
-    const full = await build(200000); // large â†’ full hand-holding
-    const short = await build(8000);  // short â†’ compact discipline only
+    const full = await build(200000); // large â†?full hand-holding
+    const short = await build(8000);  // short â†?compact discipline only
     expect(typeof full).toBe('string');
     expect(typeof short).toBe('string');
     expect(full.length).toBeGreaterThan(0);
@@ -53,3 +53,4 @@ descFn('makeSystemPrompt short-context', () => {
     expect(large.length).toBe(noWindow.length);
   });
 });
+

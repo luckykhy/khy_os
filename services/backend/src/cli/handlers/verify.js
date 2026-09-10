@@ -14,6 +14,7 @@
  */
 'use strict';
 
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const { spawnSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
@@ -956,4 +957,12 @@ function _scoreBar(score) {
   return color('█'.repeat(filled)) + chalk.dim('░'.repeat(empty));
 }
 
-module.exports = { handleVerify };
+module.exports = {
+  handleVerify,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'verify',
+    description: 'verify command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleVerify(parsed.subCommand, parsed.args, parsed.options),
+  },
+};

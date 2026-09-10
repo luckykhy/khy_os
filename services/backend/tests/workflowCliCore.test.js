@@ -9,7 +9,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const SUT = '../src/services/workflow/workflowCliCore';
+const SUT = '../src/services/domain/project/workflow/workflowCliCore.js';
 
 function fresh() {
   delete require.cache[require.resolve(SUT)];

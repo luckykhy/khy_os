@@ -21,6 +21,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 
 function fmt() {
   return require('../formatters');
@@ -289,4 +290,18 @@ async function handleMd(parsed = {}) {
   return await openEditor(file || '');
 }
 
-module.exports = { handleMd, resolveToolsDir, resolveLocalVendorDir, resolveVendorDir };
+module.exports = {
+  handleMd,
+  resolveToolsDir,
+  resolveLocalVendorDir,
+  resolveVendorDir,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'md',
+    aliases: ['markdown', 'mdeditor'],
+    description: 'Muya WYSIWYG Markdown 工作台：打开/注册/取消注册 .md 文件关联',
+    usage: 'md <file> | open <file> | register | unregister',
+    subCommands: ['open', 'register', 'unregister'],
+    category: 'dev',
+    handler: handleMd,
+  },
+};

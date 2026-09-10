@@ -1,5 +1,4 @@
 'use strict';
-
 /**
  * retryableLoopOutcomeHoist.test.js — Ch2「不要每轮重建可复用结构」
  *
@@ -10,36 +9,35 @@
  * NO `/g` flag (so no lastIndex leaks across shared calls). None escape (the
  * function returns a boolean). Repeated-call stability is asserted explicitly.
  */
-
-const test = require('node:test');
-const assert = require('node:assert');
-
 const { _internals } = require('../../src/services/agenticHarnessService');
 const isRetryable = _internals._isRetryableLoopOutcome;
 
-test('retryable error types with zero tool calls are retryable', () => {
-  for (const t of ['timeout', 'network', 'process', 'unknown', 'cancelled']) {
-    assert.strictEqual(isRetryable({ errorType: t, toolCallLog: [] }), true, `${t} should be retryable`);
-  }
-});
+describe('Retryable Loop Outcome Hoist', () => {
+  test('retryable error types with zero tool calls are retryable', () => {
+      for (const t of ['timeout', 'network', 'process', 'unknown', 'cancelled']) {
+        expect(isRetryable({ errorType: t, toolCallLog: [] })).toBe(true, `${t} should be retryable`);
+      }
+  });
 
-test('non-retryable error type or tool calls present → not retryable', () => {
-  assert.strictEqual(isRetryable({ errorType: 'auth', toolCallLog: [] }), false);
-  assert.strictEqual(isRetryable({ errorType: 'timeout', toolCallLog: [{}] }), false);
-  assert.strictEqual(isRetryable({ toolCallLog: [] }), false); // empty errorType
-  assert.strictEqual(isRetryable(null), false);
-});
+  test('non-retryable error type or tool calls present → not retryable', () => {
+      expect(isRetryable({ errorType: 'auth', toolCallLog: [] })).toBe(false);
+      expect(isRetryable({ errorType: 'timeout', toolCallLog: [{}] })).toBe(false);
+      expect(isRetryable({ toolCallLog: [] })).toBe(false); // empty errorType
+      expect(isRetryable(null)).toBe(false);
+  });
 
-test('cooldown / recent-failure-cached content blocks retry', () => {
-  assert.strictEqual(isRetryable({ errorType: 'network', content: 'model in cooldown', toolCallLog: [] }), false);
-  assert.strictEqual(isRetryable({ errorType: 'network', finalResponse: 'recent failure was cached', toolCallLog: [] }), false);
-});
+  test('cooldown / recent-failure-cached content blocks retry', () => {
+      expect(isRetryable({ errorType: 'network', content: 'model in cooldown', toolCallLog: [] })).toBe(false);
+      expect(isRetryable({ errorType: 'network', finalResponse: 'recent failure was cached', toolCallLog: [] })).toBe(false);
+  });
 
-test('shared regexes are stable across repeated calls (no /g lastIndex leak)', () => {
-  // A cooldown string must ALWAYS block, and a clean string must ALWAYS pass,
-  // regardless of call order — proving no leaked regex state.
-  for (let i = 0; i < 5; i++) {
-    assert.strictEqual(isRetryable({ errorType: 'network', content: 'cooldown', toolCallLog: [] }), false, `iter ${i} cooldown`);
-    assert.strictEqual(isRetryable({ errorType: 'network', content: '', toolCallLog: [] }), true, `iter ${i} clean`);
-  }
+  test('shared regexes are stable across repeated calls (no /g lastIndex leak)', () => {
+      // A cooldown string must ALWAYS block, and a clean string must ALWAYS pass,
+      // regardless of call order — proving no leaked regex state.
+      for (let i = 0; i < 5; i++) {
+        expect(isRetryable({ errorType: 'network', content: 'cooldown', toolCallLog: [] })).toBe(false, `iter ${i} cooldown`);
+        expect(isRetryable({ errorType: 'network', content: '', toolCallLog: [] })).toBe(true, `iter ${i} clean`);
+      }
+  });
+
 });

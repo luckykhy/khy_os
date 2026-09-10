@@ -2,10 +2,10 @@
 
 /**
  * Tests for the s13 gap-closure:
- *   (1) shellCommand `run_in_background` — slow shell commands dispatch detached
- *       and flow back through the same collectBackgroundResults() →
+ *   (1) shellCommand `run_in_background` �?slow shell commands dispatch detached
+ *       and flow back through the same collectBackgroundResults() �?
  *       <task_notification> keystone used by background sub-agents.
- *   (2) spawnWithIdleTimeout interactive-prompt watchdog — an idle stall that is
+ *   (2) spawnWithIdleTimeout interactive-prompt watchdog �?an idle stall that is
  *       actually a child waiting on (y/n)/password input is surfaced with a
  *       precise, actionable reason instead of a silent generic kill.
  */
@@ -25,34 +25,34 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-describe('s13 gap — detectInteractivePrompt', () => {
+describe('s13 gap �?detectInteractivePrompt', () => {
   test('detects common confirmation prompts', () => {
-    assert.ok(detectInteractivePrompt('Proceed? (y/n) '));
-    assert.ok(detectInteractivePrompt('Overwrite existing file? [Y/n]'));
-    assert.ok(detectInteractivePrompt('Are you sure you want to continue?'));
-    assert.ok(detectInteractivePrompt('Password: '));
-    assert.ok(detectInteractivePrompt('Do you want to remove it?'));
-    assert.ok(detectInteractivePrompt('Press any key to continue . . .'));
-    assert.ok(detectInteractivePrompt('Continue (yes/no)?'));
+    expect(detectInteractivePrompt('Proceed? (y/n) ')).toBe();
+    expect(detectInteractivePrompt('Overwrite existing file? [Y/n]')).toBe();
+    expect(detectInteractivePrompt('Are you sure you want to continue?')).toBe();
+    expect(detectInteractivePrompt('Password: ')).toBe();
+    expect(detectInteractivePrompt('Do you want to remove it?')).toBe();
+    expect(detectInteractivePrompt('Press any key to continue . . .')).toBe();
+    expect(detectInteractivePrompt('Continue (yes/no)?')).toBe();
   });
 
   test('detects the prompt even with leading log noise', () => {
     const log = 'Resolving deps...\nDownloading...\nThis will modify 12 files. Continue? (y/n) ';
-    assert.ok(detectInteractivePrompt(log));
+    expect(detectInteractivePrompt(log)).toBe();
   });
 
   test('does NOT fire on ordinary output', () => {
-    assert.ok(!detectInteractivePrompt('Build succeeded in 4.2s'));
-    assert.ok(!detectInteractivePrompt('Installed 120 packages'));
-    assert.ok(!detectInteractivePrompt('All tests passed'));
-    assert.ok(!detectInteractivePrompt(''));
-    assert.ok(!detectInteractivePrompt(null));
+    expect(!detectInteractivePrompt('Build succeeded in 4.2s')).toBe();
+    expect(!detectInteractivePrompt('Installed 120 packages')).toBe();
+    expect(!detectInteractivePrompt('All tests passed')).toBe();
+    expect(!detectInteractivePrompt('')).toBe();
+    expect(!detectInteractivePrompt(null)).toBe();
   });
 });
 
-describe('s13 gap — spawnWithIdleTimeout interactive watchdog', () => {
+describe('s13 gap �?spawnWithIdleTimeout interactive watchdog', () => {
   test('an interactive prompt followed by silence rejects with interactive=true', async () => {
-    // Print a prompt, then go silent forever — the watchdog must classify it.
+    // Print a prompt, then go silent forever �?the watchdog must classify it.
     const script = 'process.stdout.write("Continue? (y/n) "); setInterval(() => {}, 1000);';
     let err;
     try {
@@ -60,9 +60,9 @@ describe('s13 gap — spawnWithIdleTimeout interactive watchdog', () => {
     } catch (e) {
       err = e;
     }
-    assert.ok(err, 'expected the watchdog to reject');
-    assert.strictEqual(err.interactive, true);
-    assert.ok(/交互输入/.test(err.message), `message should mention interactive input: ${err.message}`);
+    expect(err).toBeTruthy();
+    expect(err.interactive).toBe(true);
+    expect(/交互输入/.test(err.message)).toBe();
   });
 
   test('a plain silent stall rejects with interactive=false', async () => {
@@ -73,34 +73,34 @@ describe('s13 gap — spawnWithIdleTimeout interactive watchdog', () => {
     } catch (e) {
       err = e;
     }
-    assert.ok(err, 'expected the watchdog to reject');
-    assert.strictEqual(err.interactive, false);
-    assert.ok(/空闲超时/.test(err.message), `message should be a generic idle timeout: ${err.message}`);
+    expect(err).toBeTruthy();
+    expect(err.interactive).toBe(false);
+    expect(/空闲超时/.test(err.message)).toBe();
   });
 
   test('a productive process that finishes is not killed', async () => {
     const script = 'process.stdout.write("hello"); process.exit(0);';
     const result = await spawnWithIdleTimeout(NODE, ['-e', script], { idleMs: 1000, label: 'oktest' });
-    assert.strictEqual(result.code, 0);
-    assert.ok(result.stdout.includes('hello'));
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain('hello');
   });
 });
 
-describe('s13 gap — shellCommand run_in_background', () => {
+describe('s13 gap �?shellCommand run_in_background', () => {
   afterEach(() => {
     try { backgroundShellRegistry.backgroundShells.clear(); } catch { /* ignore */ }
   });
 
   test('exposes the collectBackgroundResults contract', () => {
-    assert.strictEqual(typeof backgroundShellRegistry.collectBackgroundResults, 'function');
-    assert.ok(Array.isArray(backgroundShellRegistry.collectBackgroundResults()));
+    expect(typeof backgroundShellRegistry.collectBackgroundResults).toBe('function');
+    expect(Array.isArray(backgroundShellRegistry.collectBackgroundResults())).toBe();
   });
 
   test('returns immediately with a backgroundTaskId and does not block', async () => {
     const res = await shellCommand.execute({ command: 'echo bg-marker', run_in_background: true });
-    assert.strictEqual(res.success, true);
-    assert.ok(/^bgsh-/.test(res.backgroundTaskId), `expected a bgsh- id, got ${res.backgroundTaskId}`);
-    assert.ok(/task_notification/.test(res.output), 'output should explain the notification flow');
+    expect(res.success).toBe(true);
+    expect(/^bgsh-/.test(res.backgroundTaskId)).toBe();
+    expect(/task_notification/.test(res.output)).toBe();
   });
 
   test('a finished background command drains as a <task_notification> descriptor', async () => {
@@ -113,14 +113,14 @@ describe('s13 gap — shellCommand run_in_background', () => {
       await sleep(40);
       drained = backgroundShellRegistry.collectBackgroundResults();
     }
-    assert.strictEqual(drained.length, 1, 'expected exactly one drained completion');
-    assert.strictEqual(drained[0].taskId, id);
-    assert.strictEqual(drained[0].status, 'completed');
-    assert.strictEqual(drained[0].command, 'echo bg-done', 'descriptor must carry the shell command');
-    assert.ok(drained[0].summary.includes('bg-done'), `summary should include output: ${drained[0].summary}`);
+    expect(drained.length).toBe(1);
+    expect(drained[0].taskId).toBe(id);
+    expect(drained[0].status).toBe('completed');
+    expect(drained[0].command).toBe('echo bg-done');
+    expect(drained[0].summary).toContain('bg-done');
 
     // One-shot: a second drain must not re-emit the same completion.
-    assert.deepStrictEqual(backgroundShellRegistry.collectBackgroundResults(), []);
+    expect(backgroundShellRegistry.collectBackgroundResults()).toBe([]);
   });
 
   test('a failing background command drains as failed', async () => {
@@ -134,8 +134,9 @@ describe('s13 gap — shellCommand run_in_background', () => {
       await sleep(40);
       drained = backgroundShellRegistry.collectBackgroundResults();
     }
-    assert.strictEqual(drained.length, 1);
-    assert.strictEqual(drained[0].taskId, id);
-    assert.strictEqual(drained[0].status, 'failed');
+    expect(drained.length).toBe(1);
+    expect(drained[0].taskId).toBe(id);
+    expect(drained[0].status).toBe('failed');
   });
 });
+

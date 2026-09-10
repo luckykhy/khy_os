@@ -1,5 +1,4 @@
 import { ref, computed } from 'vue';
-import request from '@/api/request';
 
 /**
  * File-level realtime sync client ("共享开发实时更新") for the `file_*` WebSocket
@@ -44,20 +43,9 @@ export function isFileSyncMessage(msg) {
   return KNOWN_TYPES.includes(type);
 }
 
-// Mirror KhyOsTerminal.vue's resolveWsUrl so every view shares the /ws endpoint
-// and its origin/baseURL derivation instead of hardcoding a host or port.
-export function resolveWsUrl(path) {
-  const normalizedPath = `/${String(path || '/ws').replace(/^\/+/, '')}`;
-  if (typeof window === 'undefined') return normalizedPath;
-  const origin = String(window.location.origin || '').trim();
-  const base = String(request.defaults.baseURL || '').trim();
-  const url = base ? new URL(base, origin) : new URL(origin);
-  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-  url.pathname = normalizedPath;
-  url.search = '';
-  url.hash = '';
-  return url.toString();
-}
+// Kept as a re-export for existing import sites; the implementation lives in
+// src/utils/ws.js so every WebSocket consumer derives the endpoint the same way.
+export { resolveWsUrl } from '@/utils/ws';
 
 /**
  * Apply one text operation batch to a string. Mirrors the server's operation

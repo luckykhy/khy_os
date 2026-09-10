@@ -4,7 +4,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const crypto = require('crypto');
 
-const cryptoLeaf = require('../../../src/services/messaging/ilinkCrypto');
+const cryptoLeaf = require('../../../src/services/domain/messaging/messaging/ilinkCrypto.js');
 
 test('normalizeAesKey: 形态 1 —— base64 直接解出 16 字节', () => {
   const raw = crypto.randomBytes(16);

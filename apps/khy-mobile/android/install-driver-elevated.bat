@@ -10,12 +10,13 @@ if %errorlevel% neq 0 (
 
 echo === Running as Administrator ===
 echo === Adding Google USB driver to driver store ===
-pnputil /add-driver "C:\Users\25789\.khyos\android_sdk\extras\google\usb_driver\android_winusb.inf" /install
+set "KHY_SDK=%USERPROFILE%\.khyos\android_sdk"
+pnputil /add-driver "%KHY_SDK%\extras\google\usb_driver\android_winusb.inf" /install
 echo.
 echo === Force re-enumeration of HDB device (Android ADB Interface) ===
-"C:\Users\25789\.khyos\android_sdk\platform-tools\adb.exe" kill-server
-"C:\Users\25789\.khyos\android_sdk\platform-tools\adb.exe" start-server
-"C:\Users\25789\.khyos\android_sdk\platform-tools\adb.exe" devices
+"%KHY_SDK%\platform-tools\adb.exe" kill-server
+"%KHY_SDK%\platform-tools\adb.exe" start-server
+"%KHY_SDK%\platform-tools\adb.exe" devices
 echo.
 echo === After install, on the phone: ===
 echo 1. Pull notification panel ===

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Tests for services/featureFlags.js â€” unified feature toggle system.
+ * Tests for services/featureFlags.js â€?unified feature toggle system.
  */
 
 let featureFlags;
@@ -41,7 +41,7 @@ describe('featureFlags exports', () => {
   });
 });
 
-describe('isEnabled â€” default values', () => {
+describe('isEnabled â€?default values', () => {
   // Clear any env overrides for these tests
   const envKeysToRestore = {};
 
@@ -77,7 +77,7 @@ describe('isEnabled â€” default values', () => {
   });
 });
 
-describe('isEnabled â€” environment variable override', () => {
+describe('isEnabled â€?environment variable override', () => {
   afterEach(() => {
     delete process.env.KHY_FEATURE_BUDDY;
   });
@@ -125,3 +125,4 @@ describe('listFeatures', () => {
     }
   });
 });
+

@@ -7,8 +7,10 @@
  *
  * NOTE: TUI mode cannot use inquirer (it conflicts with Ink for stdin).
  * For confirm/list/form, we use simple stderr-based fallbacks that don't
- * block the Ink event loop. Full implementations would integrate with
- * PermissionsPrompt, ModelPicker, and FormFlow components.
+ * block the Ink event loop. Full implementations integrate with
+ * PermissionsPrompt, ModelPicker, and FormFlow components via uiBridge.
+ *
+ * 错误/信息渲染与 CLI formatters.js 对齐: 统一前缀 + 可选 title + 结构化输出。
  */
 
 /**
@@ -17,7 +19,7 @@
  */
 function showInfo(response) {
   const prefix = response.title ? response.title + ': ' : '';
-  process.stderr.write(`[INFO] ${prefix}${response.message}\n`);
+  process.stderr.write(`  i ${prefix}${response.message}\n`);
 }
 
 /**
@@ -25,16 +27,22 @@ function showInfo(response) {
  * @param {object} response
  */
 function showSuccess(response) {
-  process.stderr.write(`[SUCCESS] ${response.message}\n`);
+  process.stderr.write(`  ✓ ${response.message}\n`);
 }
 
 /**
  * Show error message in TUI.
+ * 与 CLI printErrorPanel 对齐: 显示 title + message + code(如有)。
  * @param {object} response
  */
 function showError(response) {
-  const prefix = response.title ? response.title + ': ' : '';
-  process.stderr.write(`[ERROR] ${prefix}${response.message}\n`);
+  const title = response.title || '';
+  const code = response.code ? ` (${response.code})` : '';
+  if (title) {
+    process.stderr.write(`  ✗ ${title}${code}: ${response.message}\n`);
+  } else {
+    process.stderr.write(`  ✗ ${response.message}${code}\n`);
+  }
 }
 
 /**

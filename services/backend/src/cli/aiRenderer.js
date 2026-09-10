@@ -749,28 +749,13 @@ function _decorateResponseWithUnicode(text) {
   }
 
   function buildCalloutBox(indent, icon, label, body) {
-    // Rail-aware width (see renderAiResponse): boxes wider than the effective
-    // container soft-wrap and break the border art.
     const cols = Math.max(40, _effectiveWrapCols() - 12);
     const maxInnerWidth = Math.max(18, Math.min(56, cols - 4));
     const title = `${icon} ${label}`;
     const bodyLines = wrapUnicodeText(body, maxInnerWidth);
-    const widestBody = bodyLines.reduce((max, line) => Math.max(max, displayWidth(line)), 0);
-    const innerWidth = Math.max(Math.min(maxInnerWidth, widestBody), displayWidth(title), 16);
-    const heavy = density === 'heavy';
-    const topLeft = heavy ? '┏' : '╭';
-    const topRight = heavy ? '┓' : '╮';
-    const bottomLeft = heavy ? '┗' : '╰';
-    const bottomRight = heavy ? '┛' : '╯';
-    const h = heavy ? '━' : '─';
-    const v = heavy ? '┃' : '│';
-    const top = `${indent}${topLeft}${h.repeat(innerWidth + 2)}${topRight}`;
-    const titleLine = `${indent}${v} ${padToWidth(title, innerWidth)} ${v}`;
-    const contentLines = bodyLines.map(
-      (line) => `${indent}${v} ${padToWidth(line, innerWidth)} ${v}`
-    );
-    const bottom = `${indent}${bottomLeft}${h.repeat(innerWidth + 2)}${bottomRight}`;
-    return [top, titleLine, ...contentLines, bottom].join('\n');
+    const titleLine = `${indent}  ${title}`;
+    const contentLines = bodyLines.map((line) => `${indent}  ${line}`);
+    return [titleLine, ...contentLines].join('\n');
   }
 
   return lines

@@ -237,7 +237,7 @@ function renderClassicBanner(data) {
 
   // Side-by-side layout: buddy left, info right
   const infoLines = [
-    `── khy OS v${version} ──`,
+    `khy OS v${version}`,
     '',
     `欢迎你，${green.bold(greetingName)}`,
     '',

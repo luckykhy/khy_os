@@ -47,3 +47,4 @@ describe('ollamaModelManager inferImportSource', () => {
     expect(result.sourceKind).toBe('gguf');
   });
 });
+

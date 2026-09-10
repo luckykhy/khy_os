@@ -11,6 +11,7 @@
 
 // ── Imports ──
 
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const path = require('path');
 
 const chalk = require('chalk').default || require('chalk');
@@ -283,4 +284,10 @@ module.exports = {
   handleWorkspaceDelete,
   handleWorkspaceCleanup,
   handleWorkspaceStats,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'workspace',
+    description: 'workspace command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleWorkspace(parsed.subCommand ? [parsed.subCommand, ...parsed.args] : parsed.args, parsed.options),
+  },
 };

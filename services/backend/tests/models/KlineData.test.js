@@ -52,3 +52,4 @@ describe('KlineData model', () => {
     expect(KlineData.rawAttributes.trade_date).toBeDefined();
   });
 });
+

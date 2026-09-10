@@ -1418,7 +1418,7 @@ async function _executeDocCreate(plan) {
     docText += `一、概述\n\n二、详细介绍\n\n三、总结\n`;
   }
 
-  docText += `\n\n---\n由 KHY OS 本地模式生成`;
+  docText += `\n\n由 KHY OS 本地模式生成`;
 
   // Step 3: Call docHelper.py text2docx
   try {

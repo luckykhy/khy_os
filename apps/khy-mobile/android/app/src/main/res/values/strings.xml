@@ -4,4 +4,5 @@
     <string name="title_activity_main">Khy-OS Companion</string>
     <string name="package_name">com.khyos.companion</string>
     <string name="custom_url_scheme">com.khyos.companion</string>
+    <string name="accessibility_service_description">Khy-OS Companion 无障碍服务，用于 AI 自动化操作手机界面</string>
 </resources>

@@ -281,6 +281,56 @@ async function migrate() {
     );
   }
 
+  // 4. 四端配置同步表 —— 用户级 key-value 配置, 加密存储 API Key 等敏感信息
+  if (isSQLite) {
+    await safeQuery(`
+      CREATE TABLE IF NOT EXISTS "user_settings" (
+        "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+        "user_id" INTEGER NOT NULL,
+        "setting_key" VARCHAR(255) NOT NULL,
+        "setting_value" TEXT,
+        "is_encrypted" BOOLEAN DEFAULT 0,
+        "device_id" VARCHAR(128),
+        "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY ("user_id") REFERENCES "users"("id"),
+        UNIQUE ("user_id", "setting_key")
+      )
+    `);
+    await safeQuery(
+      'CREATE INDEX IF NOT EXISTS "user_settings_user_id_idx" ON "user_settings" ("user_id")'
+    );
+    await safeQuery(
+      'CREATE INDEX IF NOT EXISTS "user_settings_key_idx" ON "user_settings" ("setting_key")'
+    );
+    await safeQuery(
+      'CREATE INDEX IF NOT EXISTS "user_settings_updated_at_idx" ON "user_settings" ("updated_at")'
+    );
+  } else {
+    await safeQuery(`
+      CREATE TABLE IF NOT EXISTS "user_settings" (
+        "id" SERIAL PRIMARY KEY,
+        "user_id" INTEGER NOT NULL REFERENCES "users"("id"),
+        "setting_key" VARCHAR(255) NOT NULL,
+        "setting_value" TEXT,
+        "is_encrypted" BOOLEAN DEFAULT FALSE,
+        "device_id" VARCHAR(128),
+        "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE ("user_id", "setting_key")
+      )
+    `);
+    await safeQuery(
+      'CREATE INDEX IF NOT EXISTS "user_settings_user_id_idx" ON "user_settings" ("user_id")'
+    );
+    await safeQuery(
+      'CREATE INDEX IF NOT EXISTS "user_settings_key_idx" ON "user_settings" ("setting_key")'
+    );
+    await safeQuery(
+      'CREATE INDEX IF NOT EXISTS "user_settings_updated_at_idx" ON "user_settings" ("updated_at")'
+    );
+  }
+
   console.log('Schema migrations applied');
 }
 

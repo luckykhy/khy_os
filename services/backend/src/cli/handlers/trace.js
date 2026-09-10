@@ -16,6 +16,7 @@
  */
 'use strict';
 
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const chalk = require('chalk').default || require('chalk');
 
 const sessionPersistence = require('../../services/sessionPersistence');
@@ -208,4 +209,12 @@ async function handleTrace(subCommand, args = [], _options = {}) {
   return traceShow(args[0]);
 }
 
-module.exports = { handleTrace };
+module.exports = {
+  handleTrace,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'trace',
+    description: 'trace command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleTrace(parsed.subCommand, parsed.args, parsed.options),
+  },
+};

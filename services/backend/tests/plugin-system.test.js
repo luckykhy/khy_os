@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Integration test — verifies the full plugin lifecycle:
+ * Integration test �?verifies the full plugin lifecycle:
  * 1. Discovery (from workspace node_modules)
  * 2. Manifest validation
  * 3. Activation (with timeout)
@@ -33,9 +33,9 @@ describe('plugin system integration', () => {
     fs.cpSync(path.join(__dirname, 'fixtures', 'khy-hello'), path.join(nm, 'khy-hello'), { recursive: true });
     process.env.KHY_DATA_HOME = tmpDataHome;
     process.env.KHYQUANT_ROOT = tmpRoot;
-    // 关掉仓库内置拓展根：本用例测的是 workspace 发现源，若不关，真实仓库的
-    // extensions/ 会被扫进候选集，用例的通过与否就取决于仓库里恰好装了什么
-    // （目前只因 khy-markdown 的 engines.khy 不匹配才没影响结论）。
+    // 关掉仓库内置拓展根：本用例测的是 workspace 发现源，若不关，真实仓库�?
+    // extensions/ 会被扫进候选集，用例的通过与否就取决于仓库里恰好装了什�?
+    // （目前只�?khy-markdown �?engines.khy 不匹配才没影响结论）�?
     process.env.KHY_EXTENSION_REPO_ROOT = '0';
     jest.resetModules();
 
@@ -72,7 +72,7 @@ describe('plugin system integration', () => {
 
     // ── Test 2: Manifest validation ────────────────────────────────
     // Validate with the loader's own validator (SDK when installed, built-in
-    // fallback otherwise) — the SDK package is optional and not always present.
+    // fallback otherwise) �?the SDK package is optional and not always present.
     const { validateManifest } = pluginLoader;
     const { valid, errors } = validateManifest(helloCandidate.manifestData);
     assert(valid, `Manifest should be valid, got errors: ${errors.join(', ')}`);
@@ -94,7 +94,7 @@ describe('plugin system integration', () => {
 
     const helloPlugin = pluginLoader.getPlugin('hello');
     assert(helloPlugin, 'hello plugin should be loaded');
-    assert.strictEqual(helloPlugin.state, 'active', 'hello plugin should be active');
+    expect(helloPlugin.state).toBe('active');
 
     // ── Test 4: Command registration ──────────────────────────────
     const allCmds = commandRegistry.getAll();
@@ -127,8 +127,8 @@ describe('plugin system integration', () => {
     const status = pluginLoader.getStatus();
     assert(status.length > 0, 'Should have at least one plugin in status');
     const helloStatus = status.find(s => s.namespace === 'hello');
-    assert.strictEqual(helloStatus.state, 'active');
-    assert.strictEqual(helloStatus.version, '1.0.0');
+    expect(helloStatus.state).toBe('active');
+    expect(helloStatus.version).toBe('1.0.0');
 
     // ── Test 8: Incompatible version handling ──────────────────────
     const fakeManifest = {
@@ -144,11 +144,12 @@ describe('plugin system integration', () => {
     // ── Test 9: Shutdown / deactivation ────────────────────────────
     await pluginLoader.shutdown();
     const afterShutdown = pluginLoader.getAllPlugins();
-    assert.strictEqual(afterShutdown.length, 0, 'All plugins should be cleared');
+    expect(afterShutdown.length).toBe(0);
 
     // ── Test 10: Host runs without plugins ─────────────────────────
     const remainingCmds = commandRegistry.getAll();
     const pluginCmds = remainingCmds.filter(c => c.source === 'plugin');
-    assert.strictEqual(pluginCmds.length, 0, 'Plugin commands should be unregistered');
+    expect(pluginCmds.length).toBe(0);
   });
 });
+

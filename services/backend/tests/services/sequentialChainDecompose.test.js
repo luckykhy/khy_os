@@ -19,7 +19,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 
 const td = require('../../src/services/taskDecomposer');
-const { planWaves } = require('../../src/services/orchestrator/dependencyWaveScheduler');
+const { planWaves } = require('../../src/services/domain/state/orchestrator/dependencyWaveScheduler.js');
 
 // Toggle the gate around a body, restoring the prior env value afterwards.
 function withGate(value, fn) {

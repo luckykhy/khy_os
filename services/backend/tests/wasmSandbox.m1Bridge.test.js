@@ -204,3 +204,4 @@ describe('wasm-sandbox moonbitHostBridge', () => {
     ).rejects.toBeInstanceOf(IpcProtocolError);
   });
 });
+

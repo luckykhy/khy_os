@@ -1,6 +1,6 @@
 # 📚 Khy-OS 文档索引
 
-> 本索引为文档总入口，按「阶段 → 类型 → 序号」归类，命名格式 `[阶段-类型-序号] 中文名`（更新于 2026-08-17）。
+> 本索引为文档总入口，按「阶段 → 类型 → 序号」归类，命名格式 `[阶段-类型-序号] 中文名`（更新于 2026-09-08）。
 > 各阶段目录另设 `00_INDEX_*` 分类索引作为该目录的就近导航入口。
 
 > 📈 **首次克隆后请跑一次 `npm run docs:build`**：图表引擎 `docs/_assets/mermaid.min.js`
@@ -12,18 +12,20 @@
 |---|---|---:|---:|
 | 01 | `01_INIT_立项/` | 2 | 2 |
 | 02 | `02_CONCEPTS_概念入门/` | 33 | 目录入口（见下） |
-| 03 | `03_DESIGN_设计/` | 78 | 78 |
-| 04 | `04_IMPL_实现/` | 38 | 38 |
+| 03 | `03_DESIGN_设计/` | 121 | 121 |
+| 04 | `04_IMPL_实现/` | 43 | 43 |
 | 05 | `05_TEST_测试/` | 9 | 9 |
-| 06 | `06_DEPLOY_部署/` | 22 | 22 |
+| 06 | `06_DEPLOY_部署/` | 23 | 23 |
 | 07 | `07_OPS_运维/` | 178 | 178 |
 | 08 | `08_MGMT_项目管理/` | 38 | 38 |
 | 09 | `09_STORY_修仙学AI/` | 29 | 目录入口（见下） |
 | — | `_AI协作预设包/`（跨阶段·分「给人看/给AI看」两线 + 可安装 skills/） | 12 文档 + 8 skill | — |
 
-> ✅ **本页与磁盘现实已对齐**（2026-08-17 实测）：「文档数」是各阶段目录下非索引 `.md` 的
-> 实际文件数，「本索引已列」是本页实际链到的文档份数。上一轮遗留的 **`07_OPS_运维/` 102 份
-> 漏链**已于本轮全部补齐（连同 `03_DESIGN_设计/` 的 1 份），`docs-index-complete` 实测为 **0**。
+> ✅ **本页与磁盘现实已对齐**（2026-09-08 实测）：「文档数」是各阶段目录下非索引 `.md` 的
+> 实际文件数，「本索引已列」是本页实际链到的文档份数。七个被扫描阶段目录全部 100% 覆盖，
+> `docs-index-complete` 实测为 **0**。上一轮遗留的 **`07_OPS_运维/` 102 份漏链**已在 2026-08-17
+> 全部补齐；2026-09-08 本轮又补齐 **44 份**（`03_DESIGN_设计/` 43 + `04_IMPL_实现/` 1）——
+> 这批是 2026-08-17 之后新增的设计文档没同步登记造成的，各分区末的「补登记」块即本轮补的。
 > 该状态不靠人工记忆维持：由 `npm run check:layout` 的 `docs-index-complete` 规则实测，
 > 计入 `scripts/ci/repo-layout-baseline.json` 基线（已下调至 0），只允许下降；
 > 全量漏链名单跑 `node scripts/ci/check-repo-layout.js --list=docs-index-complete`。
@@ -142,6 +144,7 @@
 - [`DESIGN-ARCH-072` 任务最小闭环-裁决接线与交付台账](03_DESIGN_设计/%5BDESIGN-ARCH-072%5D%20任务最小闭环-裁决接线与交付台账.md) — 普通任务从「模型想停」到「交付完成」的最小闭环单一真源：收尾仲裁门（close/redrive/close_partial 三态）+ 交付台账 `khy deliveries`
 - [`DESIGN-ARCH-073` khyos 核心任务循环-稳定交付总纲](03_DESIGN_设计/%5BDESIGN-ARCH-073%5D%20khyos%20核心任务循环-稳定交付总纲.md) — 任务从受理到交付的核心循环运行时契约（登记→执行→裁决→交付→台账 + 想停轮 20 道门序），`072` 的上位总纲
 - [`DESIGN-ARCH-074` khyos 账号体系收口-用户名唯一键 alias 软冲突 密码必填 局域网登录](03_DESIGN_设计/%5BDESIGN-ARCH-074%5D%20khyos%20账号体系收口-用户名唯一键%20alias%20软冲突%20密码必填%20局域网登录.md) — 账号=用户名；alias 全局唯一软冲突；强制密码；ai-backend 默认绑 0.0.0.0 让 LAN 上其他机器可用账号密码登录。承接用户反馈「khyos 欢迎语和登录账号不对」并扩大账号体系口径
+- [`DESIGN-ARCH-078` khyos桌面端与CLI-TUI互联共享方案](03_DESIGN_设计/%5BDESIGN-ARCH-078%5D%20khyos桌面端与CLI-TUI互联共享方案.md) — 桌面端（Electron）与 CLI/TUI 互联共享：发现链（backend_runtime.json / bridge 9222）、会话与供应商真源归一、实时共享（输出镜像/远程发消息/审批）与 P0-P4 分期
 - [`DESIGN-OTHER-001` Khyos-数学重塑-实施提示词链](03_DESIGN_设计/%5BDESIGN-OTHER-001%5D%20Khyos-数学重塑-实施提示词链.md)
 - [`DESIGN-OTHER-002` _cbssp_分阶段防闪退提示词](03_DESIGN_设计/%5BDESIGN-OTHER-002%5D%20_cbssp_分阶段防闪退提示词.md)
 - [`DESIGN-OTHER-003` khy-系统提示词结构图](03_DESIGN_设计/%5BDESIGN-OTHER-003%5D%20khy-系统提示词结构图.md)
@@ -157,6 +160,62 @@
 - [`FILE-FORMAT-PROTOCOL`（未编号）](03_DESIGN_设计/FILE-FORMAT-PROTOCOL.md) — 文件格式使用协议（JSON/YAML/JSONL/…各自的职责边界），由 `check-change-safety` 门控；2026-08-15 从 `02_CONCEPTS_概念入门/` 迁来（它是标准而非概念入门篇）
 - [`RELIABILITY-PROTOCOL`（未编号）](03_DESIGN_设计/RELIABILITY-PROTOCOL.md)
 - [`ycode-inspiration-plan`（未编号）](03_DESIGN_设计/ycode-inspiration-plan.md)
+
+2026-09-08 补登记（此前漏链，docs-index-complete 由此降为 0）：
+
+- [`DESIGN-A11Y-001` 可访问性规范](03_DESIGN_设计/%5BDESIGN-A11Y-001%5D%20可访问性规范.md)
+- [`DESIGN-A2A-001` A2A 协议规范](03_DESIGN_设计/%5BDESIGN-A2A-001%5D%20A2A%20协议规范.md)
+- [`DESIGN-API-001` API 设计规范](03_DESIGN_设计/%5BDESIGN-API-001%5D%20API%20设计规范.md)
+- [`DESIGN-ARCH-072` 模型上下文窗口探测规范](03_DESIGN_设计/%5BDESIGN-ARCH-072%5D%20模型上下文窗口探测规范.md)
+- [`DESIGN-ARCH-072` 项目规范化总纲](03_DESIGN_设计/%5BDESIGN-ARCH-072%5D%20项目规范化总纲.md)
+- [`DESIGN-ARCH-073` 规范快速参考卡](03_DESIGN_设计/%5BDESIGN-ARCH-073%5D%20规范快速参考卡.md)
+- [`DESIGN-ARCH-075` opencode高含金量功能教学与khy-os差距补齐路线](03_DESIGN_设计/%5BDESIGN-ARCH-075%5D%20opencode高含金量功能教学与khy-os差距补齐路线.md)
+- [`DESIGN-ARCH-076` 任务最小闭环-裁决接线与交付台账](03_DESIGN_设计/%5BDESIGN-ARCH-076%5D%20任务最小闭环-裁决接线与交付台账.md)
+- [`DESIGN-ARCH-077` khyos 核心任务循环-稳定交付总纲](03_DESIGN_设计/%5BDESIGN-ARCH-077%5D%20khyos%20核心任务循环-稳定交付总纲.md)
+- [`DESIGN-ARCH-079` TUI界面设计规范](03_DESIGN_设计/%5BDESIGN-ARCH-079%5D%20TUI界面设计规范.md)
+- [`DESIGN-ARCH-079` TUI组件实现提示词](03_DESIGN_设计/%5BDESIGN-ARCH-079%5D%20TUI组件实现提示词.md)
+- [`DESIGN-ARCH-080` 网页端信息架构与四页重设计-2026-09-08](03_DESIGN_设计/%5BDESIGN-ARCH-080%5D%20网页端信息架构与四页重设计-2026-09-08.md) — `apps/ai-frontend` IA 重构方案（Draft，冻结前不动 src）。调研 7 个同类项目实测源码（New API = `QuantumNous/new-api`、One API、1Panel、Nginx Proxy Manager、CLI Proxy API 管理中心、Chat2DB、AppFlowy Cloud）得出规范与例外：**7/7 无独立 admin 登录页、6/7 无独立 admin 前端、只有 2/7 有忘记密码页**。现状实测：42 处 API 调用指向不存在端点、`/usage` 与 `/pricing` 两整页空转、`/proxies` 菜单指向 NotFound、`routes/crossPlatform.js` 无鉴权且被裸 `fetch()` 调用、后端存在**两套并行的密码重置方案**而 CLI 调用的那套端点根本不存在、忘记密码前端 0 引用而后端已挂载、`workspace` 切换器是 7/7 项目里唯一的反模式
+- [`DESIGN-ARCH-081` Claude Code TUI 1复刻实施计划](03_DESIGN_设计/%5BDESIGN-ARCH-081%5D%20Claude%20Code%20TUI%201复刻实施计划.md) — CC TUI 1:1 复刻实施方案：品牌替换为 Khy，全面支持 OpenAI 协议
+- [`DESIGN-ARCH-082` CC模式输入框与光标设计](03_DESIGN_设计/%5BDESIGN-ARCH-082%5D%20CC模式输入框与光标设计.md) — 输入框布局、光标、多行输入、模式切换与占位符
+- [`DESIGN-ARCH-083` CC模式表格与折叠设计](03_DESIGN_设计/%5BDESIGN-ARCH-083%5D%20CC模式表格与折叠设计.md) — 表格显示与折叠/隐藏组件
+- [`DESIGN-ARCH-084` CC模式注意力与选择设计](03_DESIGN_设计/%5BDESIGN-ARCH-084%5D%20CC模式注意力与选择设计.md) — 强注意力引导、焦点管理与选择交互
+- [`DESIGN-ARCH-085` CC模式子视图子菜单卡片与滚动设计](03_DESIGN_设计/%5BDESIGN-ARCH-085%5D%20CC模式子视图子菜单卡片与滚动设计.md) — 子视图（Agent）、子菜单、卡片、滚动/复制/历史
+- [`DESIGN-ARCH-086` CC TUI 复刻总计划与子任务跟踪](03_DESIGN_设计/%5BDESIGN-ARCH-086%5D%20CC%20TUI%20复刻总计划与子任务跟踪.md) — CC TUI 复刻工程的总计划文档，汇总 081–089 各子设计并跟踪实施进度
+- [`DESIGN-ARCH-087` CC模式微交互与反馈设计](03_DESIGN_设计/%5BDESIGN-ARCH-087%5D%20CC模式微交互与反馈设计.md) — 微交互、瞬态反馈与状态提示
+- [`DESIGN-ARCH-088` CC快捷键系统RedoFork与执行偏差处理](03_DESIGN_设计/%5BDESIGN-ARCH-088%5D%20CC快捷键系统RedoFork与执行偏差处理.md) — 快捷键系统、撤销/重做、分叉与执行偏差处理
+- [`DESIGN-ARCH-089` TUI设计模式调研报告](03_DESIGN_设计/%5BDESIGN-ARCH-089%5D%20TUI设计模式调研报告.md) — 100+ 开源 TUI 项目综合调研，提炼最佳实践指导 CC TUI 复刻
+- [`DESIGN-BACKUP-001` 备份恢复规范](03_DESIGN_设计/%5BDESIGN-BACKUP-001%5D%20备份恢复规范.md)
+- [`DESIGN-CACHE-001` 缓存规范](03_DESIGN_设计/%5BDESIGN-CACHE-001%5D%20缓存规范.md)
+- [`DESIGN-COMM-001` 通信协议规范](03_DESIGN_设计/%5BDESIGN-COMM-001%5D%20通信协议规范.md)
+- [`DESIGN-DB-001` 数据库规范](03_DESIGN_设计/%5BDESIGN-DB-001%5D%20数据库规范.md)
+- [`DESIGN-DEP-001` 依赖管理规范](03_DESIGN_设计/%5BDESIGN-DEP-001%5D%20依赖管理规范.md)
+- [`DESIGN-DEPLOY-001` 部署规范](03_DESIGN_设计/%5BDESIGN-DEPLOY-001%5D%20部署规范.md)
+- [`DESIGN-DOC-001` 文档结构规范](03_DESIGN_设计/%5BDESIGN-DOC-001%5D%20文档结构规范.md)
+- [`DESIGN-ENV-001` 环境配置规范](03_DESIGN_设计/%5BDESIGN-ENV-001%5D%20环境配置规范.md)
+- [`DESIGN-ERR-001` 错误处理规范](03_DESIGN_设计/%5BDESIGN-ERR-001%5D%20错误处理规范.md)
+- [`DESIGN-FE-001` 前端页面规范](03_DESIGN_设计/%5BDESIGN-FE-001%5D%20前端页面规范.md)
+- [`DESIGN-FE-002` 前端组件库规范](03_DESIGN_设计/%5BDESIGN-FE-002%5D%20前端组件库规范.md)
+- [`DESIGN-FE-003` 前端快速参考卡](03_DESIGN_设计/%5BDESIGN-FE-003%5D%20前端快速参考卡.md)
+- [`DESIGN-GIT-001` Git 工作流规范](03_DESIGN_设计/%5BDESIGN-GIT-001%5D%20Git%20工作流规范.md)
+- [`DESIGN-I18N-001` 国际化规范](03_DESIGN_设计/%5BDESIGN-I18N-001%5D%20国际化规范.md)
+- [`DESIGN-INDEX-001` 规范索引](03_DESIGN_设计/%5BDESIGN-INDEX-001%5D%20规范索引.md)
+- [`DESIGN-LOG-001` 日志规范](03_DESIGN_设计/%5BDESIGN-LOG-001%5D%20日志规范.md)
+- [`DESIGN-MEM-000` 记忆系统总结](03_DESIGN_设计/%5BDESIGN-MEM-000%5D%20记忆系统总结.md)
+- [`DESIGN-MEM-001` 记忆系统标准规范](03_DESIGN_设计/%5BDESIGN-MEM-001%5D%20记忆系统标准规范.md)
+- [`DESIGN-MEM-002` 记忆时机指南](03_DESIGN_设计/%5BDESIGN-MEM-002%5D%20记忆时机指南.md)
+- [`DESIGN-MEM-003` 记忆模板库](03_DESIGN_设计/%5BDESIGN-MEM-003%5D%20记忆模板库.md)
+- [`DESIGN-MEM-004` 记忆快速参考卡](03_DESIGN_设计/%5BDESIGN-MEM-004%5D%20记忆快速参考卡.md)
+- [`DESIGN-MEM-005` 记忆系统使用指南](03_DESIGN_设计/%5BDESIGN-MEM-005%5D%20记忆系统使用指南.md)
+- [`DESIGN-MONITOR-001` 监控告警规范](03_DESIGN_设计/%5BDESIGN-MONITOR-001%5D%20监控告警规范.md)
+- [`DESIGN-MS-001` 微服务通信规范](03_DESIGN_设计/%5BDESIGN-MS-001%5D%20微服务通信规范.md)
+- [`DESIGN-OUT-001` 输出结构规范](03_DESIGN_设计/%5BDESIGN-OUT-001%5D%20输出结构规范.md)
+- [`DESIGN-PERF-001` 性能规范](03_DESIGN_设计/%5BDESIGN-PERF-001%5D%20性能规范.md)
+- [`DESIGN-PHILOSOPHY` 设计哲学总纲](03_DESIGN_设计/%5BDESIGN-PHILOSOPHY%5D%20设计哲学总纲.md)
+- [`DESIGN-PRIV-001` 数据隐私规范](03_DESIGN_设计/%5BDESIGN-PRIV-001%5D%20数据隐私规范.md)
+- [`DESIGN-QUICK-REF` 设计模式速查卡](03_DESIGN_设计/%5BDESIGN-QUICK-REF%5D%20设计模式速查卡.md)
+- [`DESIGN-REVIEW-001` 代码审查规范](03_DESIGN_设计/%5BDESIGN-REVIEW-001%5D%20代码审查规范.md)
+- [`DESIGN-SEC-001` 安全规范](03_DESIGN_设计/%5BDESIGN-SEC-001%5D%20安全规范.md)
+- [`DESIGN-TEST-001` 测试规范](03_DESIGN_设计/%5BDESIGN-TEST-001%5D%20测试规范.md)
 
 ## 04_IMPL_实现
 
@@ -199,8 +258,16 @@
 - [`IMPL-RPT-042` 交互过程与输出结构化-持久化与机器可读输出-2026-07-27](04_IMPL_实现/%5BIMPL-RPT-042%5D%20交互过程与输出结构化-持久化与机器可读输出-2026-07-27.md)
 - [`IMPL-RPT-043` 输出截断根治与无感接续-max_tokens元数据缺失与锚点续写-2026-08-07](04_IMPL_实现/%5BIMPL-RPT-043%5D%20输出截断根治与无感接续-max_tokens元数据缺失与锚点续写-2026-08-07.md)
 - [`IMPL-RPT-044` khyos 账号体系收口实施记录-ARCH-074-2026-09-02](04_IMPL_实现/%5BIMPL-RPT-044%5D%20khyos%20账号体系收口实施记录-ARCH-074-2026-09-02.md) — 承接 [DESIGN-ARCH-074]：User.aliases/displayName + loginKeyResolver + 默认账号密码自动补齐 + ai-backend 绑 0.0.0.0 让 LAN 端可登录
+- [`IMPL-RPT-045` TUI按钮点击调研与鼠标/历史回溯设计决策-2026-09-05](04_IMPL_实现/%5BIMPL-RPT-045%5D%20TUI按钮点击调研与鼠标历史回溯设计决策-2026-09-05.md) — 用户调研 ratatui GitHub 示例后询问 khyos 方案；结论：khyos 已有 mouseButtons.js（二态门控）+ arrowRouting.js（context 栈）+ scrollbackPreserve（无残影），无需引入 ratatui
+- [`IMPL-RPT-046` 渠道 API 文档板块-2026-09-08](04_IMPL_实现/%5BIMPL-RPT-046%5D%20渠道%20API%20文档板块-2026-09-08.md) — T-023：`/admin/channel-apis` 页管理各 AI 渠道端点与 AES-256-GCM 加密 Key（明文仅 `POST /reveal` 一次性返回并审计）+ 7 个 Agent 客户端配置指南（环境变量名/配置文件路径/可复制代码块）
+- [`IMPL-RPT-047` 六道治理债清理与密钥轮换-2026-09-08](04_IMPL_实现/%5BIMPL-RPT-047%5D%20六道治理债清理与密钥轮换-2026-09-08.md) — 承接 046 的 6 项建议后续：前端 lint 门禁显式覆盖 `.vue`（error 硬 0 + warning 预算只减不增）、`detectRouterBase` 去掉白名单改由已注册路由派生、6 个 error 级真 bug（最重是云端配置同步从未执行过）、`check:layout` 5 项预存 error 清零、jest 基线 501→465 套件的归因修正（**不是** moduleDirectories，是 domain 迁移删模块）、渠道 API Key 升级为 DEK/KEK 双层 envelope + 密钥环平滑轮换
+- [`IMPL-RPT-048` 网页端 Phase1 把坏暴露出来-落地记录-2026-09-08](04_IMPL_实现/%5BIMPL-RPT-048%5D%20网页端%20Phase1%20把坏暴露出来-落地记录-2026-09-08.md) — 承接 [DESIGN-ARCH-080] Phase 1 全部 8 步：`crossPlatform` 全线加鉴权并收口裸 `fetch`（顺带修掉 `/notify` 的请求体越权）、`GET /api/auth/capabilities` 让登录能力位单点可查、`loadError` 三件套 + `LoadErrorBanner` 把 137 处 `catch {}` 中会落成空默认值的那几处浮成错误态、`/proxies` 接通（菜单项此前指向 NotFound）、`.env.example` 重写 + `check:env` 只减不增门禁。**推翻计划 3 处事实错误**：第三控制面的 token 参数其实必需（守护进程先验 token 再分派路径）、`/api/proxy-egress` 一直有后端（在 9090 守护进程，不在 Express）、`useProxies.egress.wiring.test.js` 实测 11/11 通过；新增 proxy-egress 归属守卫
 
 > 编号 034–039 为历史断档（删除后不回收，见 [MGMT-STD-001] 第 2.4 条），非漏链。
+
+2026-09-08 补登记（此前漏链，docs-index-complete 由此降为 0）：
+
+- [`IMPL-MIG-001` 命令注册表迁移指南](04_IMPL_实现/%5BIMPL-MIG-001%5D%20命令注册表迁移指南.md)
 
 ## 05_TEST_测试
 

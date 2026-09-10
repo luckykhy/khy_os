@@ -10,7 +10,7 @@ const path = require('path');
 const TMP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'khyos-ilink-bind-'));
 process.env.KHYOS_HOME = TMP_HOME;
 
-const store = require('../../../src/services/messaging/ilinkBindingStore');
+const store = require('../../../src/services/domain/messaging/messaging/ilinkBindingStore.js');
 
 beforeEach(() => {
   for (const f of [store._bindingsFile(), `${store._bindingsFile().replace(/\.json$/, '')}.bak`]) {

@@ -70,3 +70,4 @@ describe('proxyConfigService subscription lookup', () => {
     expect(useByClash.active.id).toBe(added.subscription.id);
   });
 });
+

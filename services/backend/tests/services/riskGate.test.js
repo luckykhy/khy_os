@@ -2,8 +2,8 @@
 
 const riskGate = require('../../src/services/riskGate');
 
-describe('riskGate.assess â€” step type derivation', () => {
-  test('read-only tool â†’ hardened', () => {
+describe('riskGate.assess â€?step type derivation', () => {
+  test('read-only tool â†?hardened', () => {
     const r = riskGate.assess('read_file', { file_path: '/tmp/a.txt' }, {
       resolvedName: 'read_file',
       tool: { risk: 'low' },
@@ -12,7 +12,7 @@ describe('riskGate.assess â€” step type derivation', () => {
     expect(r.source).toBe('tool');
   });
 
-  test('safe static risk â†’ hardened', () => {
+  test('safe static risk â†?hardened', () => {
     const r = riskGate.assess('ask_user_question', {}, {
       resolvedName: 'ask_user_question',
       tool: { risk: 'safe' },
@@ -20,7 +20,7 @@ describe('riskGate.assess â€” step type derivation', () => {
     expect(r.stepType).toBe(riskGate.STEP_TYPES.HARDENED);
   });
 
-  test('medium-risk non-destructive tool â†’ flexible', () => {
+  test('medium-risk non-destructive tool â†?flexible', () => {
     const r = riskGate.assess('open_app', { name: 'docker' }, {
       resolvedName: 'open_app',
       tool: { risk: 'medium' },
@@ -28,7 +28,7 @@ describe('riskGate.assess â€” step type derivation', () => {
     expect(r.stepType).toBe(riskGate.STEP_TYPES.FLEXIBLE);
   });
 
-  test('high static risk â†’ human-gate', () => {
+  test('high static risk â†?human-gate', () => {
     const r = riskGate.assess('publish', {}, {
       resolvedName: 'publish',
       tool: { risk: 'high' },
@@ -43,7 +43,7 @@ describe('riskGate.assess â€” step type derivation', () => {
     expect(['hardened', 'flexible', 'human-gate']).toContain(r.stepType);
   });
 
-  test('destructive shell command â†’ human-gate', () => {
+  test('destructive shell command â†?human-gate', () => {
     const r = riskGate.assess('bash', { command: 'rm -rf /tmp/some-dir' });
     expect(r.source).toBe('shell');
     expect(r.stepType).toBe(riskGate.STEP_TYPES.HUMAN_GATE);
@@ -55,7 +55,7 @@ describe('riskGate.assess â€” step type derivation', () => {
   });
 });
 
-describe('riskGate.isUnbypassableGate â€” the bypass backstop predicate', () => {
+describe('riskGate.isUnbypassableGate â€?the bypass backstop predicate', () => {
   test('critical human-gate is unbypassable', () => {
     expect(riskGate.isUnbypassableGate({
       stepType: 'human-gate', riskLevel: 'critical', isDestructive: false,
@@ -85,7 +85,7 @@ describe('riskGate.isUnbypassableGate â€” the bypass backstop predicate', () => 
     })).toBe(false);
   });
 
-  test('null / malformed assessment â†’ false (fail to "not a gate", caller defaults safe elsewhere)', () => {
+  test('null / malformed assessment â†?false (fail to "not a gate", caller defaults safe elsewhere)', () => {
     expect(riskGate.isUnbypassableGate(null)).toBe(false);
     expect(riskGate.isUnbypassableGate(undefined)).toBe(false);
     expect(riskGate.isUnbypassableGate({})).toBe(false);
@@ -98,3 +98,4 @@ describe('riskGate.isUnbypassableGate â€” the bypass backstop predicate', () => 
     expect(riskGate.isUnbypassableGate(a)).toBe(true);
   });
 });
+

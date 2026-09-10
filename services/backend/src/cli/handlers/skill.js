@@ -11,6 +11,7 @@
 
 // ── Imports ──
 
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const chalk = require('chalk').default || require('chalk');
 
 const { printSuccess, printError, printInfo, printTable, withSpinner } = require('../formatters');
@@ -682,4 +683,12 @@ async function handleSkillExport(name, options) {
   }
 }
 
-module.exports = { handleSkillCommand };
+module.exports = {
+  handleSkillCommand,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'skill',
+    description: 'skill command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleSkillCommand(parsed.subCommand, parsed.args, parsed.options),
+  },
+};

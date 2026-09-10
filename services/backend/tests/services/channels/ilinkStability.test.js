@@ -17,9 +17,9 @@ process.env.KHY_ILINK_TYPING_KEEPALIVE_MS = '5';
 // 而不是管道本身。工具循环自身的接线由 ilinkToolLoop.test.js 覆盖。
 process.env.KHY_ILINK_DISABLE_TOOL_LOOP = '1';
 
-const core = require('../../../src/services/messaging/ilinkCore');
-const { IlinkChannel } = require('../../../src/services/channels/ilinkChannel');
-const { IlinkDispatcher } = require('../../../src/services/channels/ilinkDispatcher');
+const core = require('../../../src/services/domain/messaging/messaging/ilinkCore.js');
+const { IlinkChannel } = require('../../../src/services/domain/messaging/channels/ilinkChannel.js');
+const { IlinkDispatcher } = require('../../../src/services/domain/messaging/channels/ilinkDispatcher.js');
 
 function httpErr(status) { const e = new Error(`HTTP ${status}`); e.status = status; return e; }
 function timeoutErr() { const e = new Error('请求超时'); e.isTimeout = true; return e; }
@@ -172,7 +172,7 @@ test('看门狗: 上限设为 0 = 不限时(逃生开关,给确实需要跑很�
 // ── 心跳(跨进程「活着 vs 看起来活着」)────────────────────────────────────────
 
 test('心跳: 自带限流,不会变成每轮一次的写', () => {
-  const store = require('../../../src/services/messaging/ilinkAccountStore');
+  const store = require('../../../src/services/domain/messaging/messaging/ilinkAccountStore.js');
   store.saveAccount({ botToken: 't', accountId: 'hb-1', userId: 'u', baseUrl: '' });
   assert.strictEqual(store.touchHeartbeat('hb-1', 60000), true, '首次应落盘');
   for (let i = 0; i < 5; i++) {
@@ -185,7 +185,7 @@ test('心跳: 自带限流,不会变成每轮一次的写', () => {
 });
 
 test('心跳: 会话过期/恢复不得抹掉心跳(同住一个文件)', () => {
-  const store = require('../../../src/services/messaging/ilinkAccountStore');
+  const store = require('../../../src/services/domain/messaging/messaging/ilinkAccountStore.js');
   store.saveAccount({ botToken: 't', accountId: 'hb-2', userId: 'u', baseUrl: '' });
   store.touchHeartbeat('hb-2', 0);
   const before = store.getHeartbeat('hb-2').beatAt;
@@ -198,7 +198,7 @@ test('心跳: 会话过期/恢复不得抹掉心跳(同住一个文件)', () => 
 });
 
 test('心跳: 从未打过 / 非法 id → null,不抛', () => {
-  const store = require('../../../src/services/messaging/ilinkAccountStore');
+  const store = require('../../../src/services/domain/messaging/messaging/ilinkAccountStore.js');
   assert.strictEqual(store.getHeartbeat('never-beat'), null);
   assert.strictEqual(store.getHeartbeat('../evil'), null);
   assert.strictEqual(store.touchHeartbeat('../evil', 0), false);

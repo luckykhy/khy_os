@@ -13,6 +13,7 @@
  *
  * @module handlers/cron
  */
+const { MANIFEST_EXPORT_KEY } = require('../commandManifest');
 const chalk = require('chalk').default || require('chalk');
 const { printSuccess, printError, printInfo, printTable } = require('../formatters');
 
@@ -209,4 +210,12 @@ function _printHelp() {
   console.log('');
 }
 
-module.exports = { handleCronCommand };
+module.exports = {
+  handleCronCommand,
+  [MANIFEST_EXPORT_KEY]: {
+    name: 'cron',
+    description: 'cron command (auto-migrated)',
+    category: 'system',
+    handler: async (parsed) => handleCronCommand(parsed.subCommand, parsed.args, parsed.options),
+  },
+};

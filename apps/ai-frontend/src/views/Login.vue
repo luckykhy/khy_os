@@ -1,7 +1,7 @@
 <template>
   <div class="login-shell">
-    <div class="login-orb login-orb--1" aria-hidden="true"></div>
-    <div class="login-orb login-orb--2" aria-hidden="true"></div>
+    <div aria-hidden="true" class="login-orb login-orb--1"></div>
+    <div aria-hidden="true" class="login-orb login-orb--2"></div>
 
     <el-card class="login-card" shadow="always">
       <div class="login-brand">
@@ -12,74 +12,97 @@
         </div>
       </div>
 
-      <el-form @submit.prevent="handleLogin" :model="form" class="login-form">
+      <el-form class="login-form" :model="form" @submit.prevent="handleLogin">
         <el-form-item>
-          <el-input v-model="form.username" size="large" placeholder="用户名" prefix-icon="User" />
+          <el-input v-model="form.username" placeholder="用户名" prefix-icon="User" size="large" />
         </el-form-item>
         <el-form-item>
           <el-input
             v-model="form.password"
-            size="large"
             placeholder="密码"
-            type="password"
             prefix-icon="Lock"
             show-password
+            size="large"
+            type="password"
           />
         </el-form-item>
 
-        <div class="login-row">
+        <div v-if="caps.defaultAdminAvailable" class="login-row">
           <el-button
-            text
-            type="primary"
             class="login-fill-btn"
             :loading="filling"
+            text
+            type="primary"
             @click="fillDefaultAdmin"
           >
             填充默认管理员用户名
           </el-button>
         </div>
 
+        <div v-if="caps.passwordReset.mode !== 'none'" class="login-row">
+          <router-link class="login-fill-btn" to="/forgot-password">忘记密码?</router-link>
+        </div>
+
         <el-form-item v-if="fillHint" class="login-error-item">
-          <el-alert :title="fillHint" type="info" :closable="false">
+          <el-alert :closable="false" :title="fillHint" type="info">
             <template #icon><KhyIcon kind="user" size="sm" /></template>
           </el-alert>
         </el-form-item>
 
         <el-form-item v-if="error" class="login-error-item">
-          <el-alert :title="error" type="error" :closable="false" />
+          <el-alert :closable="false" :title="error" type="error" />
         </el-form-item>
 
         <el-button
-          type="primary"
+          class="login-submit"
+          :loading="loading"
           native-type="submit"
           size="large"
-          :loading="loading"
-          class="login-submit"
+          type="primary"
         >
           校验账号并进入用户首页
         </el-button>
       </el-form>
 
       <p class="login-hint">
-        登录后默认进入用户视图；若账号为管理员，可在顶部开关切换到管理员视图。
+        登录后可直接进入工作台；管理员账号会自动进入管理概览。
       </p>
     </el-card>
   </div>
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { onMounted, reactive, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/user';
+import { getAuthCapabilities } from '@/api/auth';
 import request from '@/api/request';
+import { safeRedirectPath } from '@/utils/safeRedirect';
 
 const router = useRouter();
+const route = useRoute();
 const userStore = useUserStore();
 const loading = ref(false);
 const error = ref('');
 const fillHint = ref('');
 const filling = ref(false);
 const form = reactive({ username: '', password: '' });
+
+// Optional login surfaces come from the server, not from this file. The
+// default-admin helper and the password-reset link were previously hardcoded
+// and always 404'd in a monolith install. The initial value is the conservative
+// shape, so nothing optional renders for the first frame — the server cannot
+// enable a surface we have not seen it advertise.
+const caps = reactive({
+  defaultAdminAvailable: false,
+  passwordReset: { mode: 'none' },
+});
+
+onMounted(async () => {
+  const discovered = await getAuthCapabilities();
+  caps.defaultAdminAvailable = !!discovered.defaultAdminAvailable;
+  caps.passwordReset = discovered.passwordReset || { mode: 'none' };
+});
 
 // Fill ONLY the username from the backend (the initial password is generated
 // per machine and never exposed via API — it lives in the credentials file).
@@ -133,12 +156,20 @@ async function handleLogin() {
   error.value = '';
   try {
     await userStore.login(form.username, form.password);
-    router.push('/home');
+    router.push(loginDestination());
   } catch (err) {
     error.value = mapLoginError(err);
   } finally {
     loading.value = false;
   }
+}
+
+// The guard sends unauthenticated visitors to /401 with the requested path in
+// ?redirect, which forwards it here. Only a same-origin relative path is
+// honoured — anything else falls back to the role's home, so a crafted URL
+// cannot bounce a fresh session off-site.
+function loginDestination() {
+  return safeRedirectPath(route.query.redirect, userStore.preferredHome);
 }
 </script>
 
@@ -245,12 +276,20 @@ async function handleLogin() {
 .login-row {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   margin: -6px 0 12px 0;
 }
 
 .login-fill-btn {
   padding: 0;
   font-size: 13px;
+  color: var(--khy-primary);
+  text-decoration: none;
+}
+
+.login-fill-btn:hover {
+  color: var(--khy-primary-strong);
+  text-decoration: underline;
 }
 
 .login-error-item {

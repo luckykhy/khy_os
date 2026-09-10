@@ -1895,7 +1895,7 @@ function _formatAggregatedResult(aggregated) {
     );
   }
 
-  return `## Subtask Results\n\n${sections.join('\n\n---\n\n')}`;
+  return `## Subtask Results\n\n${sections.join('\n\n')}`;
 }
 
 // ── Model candidate builder ──────────────────────────────────────────
