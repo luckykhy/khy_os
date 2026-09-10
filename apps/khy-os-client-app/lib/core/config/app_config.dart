@@ -1,18 +1,25 @@
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'built_in_keys.dart';
-
 class AppConfigData {
   final String baseUrl;
   final String apiKey; // User-entered key (may be empty)
   final String model;
   final String systemPrompt;
 
+  // ── Vision sub-model (for screenshot analysis) ──
+  final String visionBaseUrl;
+  final String visionApiKey;
+  final String visionModel;
+
   const AppConfigData({
     required this.baseUrl,
     required this.apiKey,
     required this.model,
     this.systemPrompt = '',
+    this.visionBaseUrl = '',
+    this.visionApiKey = '',
+    this.visionModel = '',
   });
 
   /// True if the user has entered their own API key
@@ -52,28 +59,54 @@ class AppConfigData {
     return '${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 4)}';
   }
 
+  // ── Vision model accessors ──
+
+  /// True if a vision model is configured
+  bool get hasVisionConfig =>
+      visionBaseUrl.isNotEmpty && visionModel.isNotEmpty;
+
+  /// Effective vision API key (user key or fallback to main key)
+  String get effectiveVisionKey {
+    if (visionApiKey.isNotEmpty) return visionApiKey;
+    return effectiveApiKey; // fallback to main provider's key
+  }
+
   Map<String, dynamic> toJson() => {
         'baseUrl': baseUrl,
         'apiKey': apiKey,
         'model': model,
         'systemPrompt': systemPrompt,
+        'visionBaseUrl': visionBaseUrl,
+        'visionApiKey': visionApiKey,
+        'visionModel': visionModel,
       };
 
-  factory AppConfigData.fromJson(Map<String, dynamic> json) =>
-      AppConfigData(
+  factory AppConfigData.fromJson(Map<String, dynamic> json) => AppConfigData(
         baseUrl: json['baseUrl'] ?? '',
         apiKey: json['apiKey'] ?? '',
         model: json['model'] ?? '',
         systemPrompt: json['systemPrompt'] ?? '',
+        visionBaseUrl: json['visionBaseUrl'] ?? '',
+        visionApiKey: json['visionApiKey'] ?? '',
+        visionModel: json['visionModel'] ?? '',
       );
 
   AppConfigData copyWith(
-      {String? baseUrl, String? apiKey, String? model, String? systemPrompt}) {
+      {String? baseUrl,
+      String? apiKey,
+      String? model,
+      String? systemPrompt,
+      String? visionBaseUrl,
+      String? visionApiKey,
+      String? visionModel}) {
     return AppConfigData(
       baseUrl: baseUrl ?? this.baseUrl,
       apiKey: apiKey ?? this.apiKey,
       model: model ?? this.model,
       systemPrompt: systemPrompt ?? this.systemPrompt,
+      visionBaseUrl: visionBaseUrl ?? this.visionBaseUrl,
+      visionApiKey: visionApiKey ?? this.visionApiKey,
+      visionModel: visionModel ?? this.visionModel,
     );
   }
 
@@ -92,12 +125,14 @@ class AppConfigData {
         apiKey: def.apiKey,
         model: def.defaultModel,
         systemPrompt: systemPrompt,
+        visionBaseUrl: visionBaseUrl,
+        visionApiKey: visionApiKey,
+        visionModel: visionModel,
       );
     }
     return this;
   }
 }
-
 class AppConfig {
   static const _storage = FlutterSecureStorage();
   static const _keyConfig = 'app_config';
@@ -116,13 +151,19 @@ class AppConfig {
       {String? baseUrl,
       String? apiKey,
       String? model,
-      String? systemPrompt}) async {
+      String? systemPrompt,
+      String? visionBaseUrl,
+      String? visionApiKey,
+      String? visionModel}) async {
     final current = await load();
     final updated = current.copyWith(
       baseUrl: baseUrl ?? current.baseUrl,
       apiKey: apiKey ?? current.apiKey,
       model: model ?? current.model,
       systemPrompt: systemPrompt ?? current.systemPrompt,
+      visionBaseUrl: visionBaseUrl ?? current.visionBaseUrl,
+      visionApiKey: visionApiKey ?? current.visionApiKey,
+      visionModel: visionModel ?? current.visionModel,
     );
     await _storage.write(key: _keyConfig, value: jsonEncode(updated.toJson()));
   }

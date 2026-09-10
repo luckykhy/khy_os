@@ -76,6 +76,12 @@ class MainActivity : FlutterActivity() {
                 "a11yTypeText" -> a11yTypeText(call.argument<String>("text") ?: "", result)
                 "a11yGlobalAction" -> a11yGlobalAction(call.argument<Int>("action") ?: 1, result)
 
+                // --- Permissions ---
+                "checkPermissions" -> checkPermissions(result)
+                "requestNotifications" -> requestNotifications(result)
+                "requestOverlay" -> requestOverlay(result)
+                "requestAccessibility" -> requestAccessibility(result)
+
                 // --- Screen Capture ---
                 "isScreenCaptureReady" -> result.success(mapOf("ready" to ScreenCaptureService.isReady()))
                 "startScreenCapture" -> startScreenCapture(result)
@@ -472,7 +478,85 @@ class MainActivity : FlutterActivity() {
         return false
     }
 
+    // --- Permissions ---
+
+    private fun checkPermissions(result: MethodChannel.Result) {
+        val ctx = this
+        val notifGranted = if (Build.VERSION.SDK_INT >= 33) {
+            ctx.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+        val overlayGranted = if (Build.VERSION.SDK_INT >= 23) {
+            Settings.canDrawOverlays(ctx)
+        } else {
+            true
+        }
+        val a11yGranted = KhyAccessibilityService.isReady()
+        result.success(mapOf(
+            "notifications" to notifGranted,
+            "overlay" to overlayGranted,
+            "accessibility" to a11yGranted
+        ))
+    }
+
+    private fun requestNotifications(result: MethodChannel.Result) {
+        if (Build.VERSION.SDK_INT >= 33) {
+            requestPermissions(
+                arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
+                REQ_NOTIF
+            )
+            result.success(mapOf("requested" to true))
+        } else {
+            result.success(mapOf("requested" to true, "message" to "Android < 13 无需请求"))
+        }
+    }
+
+    private fun requestOverlay(result: MethodChannel.Result) {
+        if (Build.VERSION.SDK_INT >= 23) {
+            try {
+                val intent = Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:$packageName")
+                )
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(intent)
+                result.success(mapOf("requested" to true))
+            } catch (e: Exception) {
+                result.success(mapOf("requested" to false, "message" to e.message))
+            }
+        } else {
+            result.success(mapOf("requested" to true, "message" to "Android < 6 自动授予"))
+        }
+    }
+
+    private fun requestAccessibility(result: MethodChannel.Result) {
+        try {
+            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
+            result.success(mapOf("requested" to true))
+        } catch (e: Exception) {
+            result.success(mapOf("requested" to false, "message" to e.message))
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQ_NOTIF) {
+            val granted = grantResults.isNotEmpty() &&
+                grantResults[0] == PackageManager.PERMISSION_GRANTED
+            // The checkPermissions method will reflect this on next call
+        }
+    }
+
     companion object {
         private const val SCREEN_CAPTURE_REQUEST = 1001
+        private const val REQ_NOTIF = 1002
     }
 }
