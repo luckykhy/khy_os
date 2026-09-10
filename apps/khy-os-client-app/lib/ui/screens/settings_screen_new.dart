@@ -4,6 +4,7 @@ import '../../core/config/app_config.dart';
 import '../../core/config/built_in_keys.dart';
 import '../../core/config/provider_presets.dart';
 import '../../core/gateway/khyos_api.dart';
+import '../../core/services/app_logger.dart';
 import '../../core/services/device_control.dart';
 import '../../ui/theme/app_colors.dart';
 import 'network_diagnostic_screen.dart';
@@ -26,6 +27,7 @@ class _SettingsScreenNewState extends State<SettingsScreenNew> {
   bool _showKey = false;
   bool _saving = false;
   String? _testResult;
+  final _logger = AppLogger();
 
   @override
   void initState() {
@@ -103,9 +105,26 @@ class _SettingsScreenNewState extends State<SettingsScreenNew> {
           ));
       setState(() => _testResult = '连接成功');
     } on DioException catch (e) {
+      final code = e.response?.statusCode;
+      final errorCode = code != null
+          ? ErrorCode.forHttpStatus(code)
+          : (e.type == DioExceptionType.connectionTimeout
+              ? ErrorCode.timeout
+              : ErrorCode.connection);
+      _logger.recordError(
+        code: errorCode,
+        message: '连接测试失败: ${_baseUrl.text}',
+        category: LogCategory.network,
+        context: {
+          'url': _baseUrl.text,
+          'type': e.type.name,
+          'status': code?.toString() ?? '',
+        },
+        exception: e,
+      );
       setState(() {
-        if (e.response != null) {
-          _testResult = 'HTTP ${e.response!.statusCode}：${_describeHttpStatus(e.response!.statusCode!)}';
+        if (code != null) {
+          _testResult = 'HTTP $code：${_describeHttpStatus(code)}';
         } else if (e.type == DioExceptionType.connectionTimeout) {
           _testResult = '连接超时：服务器无响应';
         } else if (e.type == DioExceptionType.connectionError) {
