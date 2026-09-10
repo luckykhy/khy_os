@@ -147,3 +147,7 @@ include software/khyquant/frontend/index.html
 include software/khyquant/frontend/ml-test.html
 include software/khyquant/frontend/public/offline.html
 include extensions/tools/khy-markdown/khyosMarkdown.html
+
+# KeyManager audit trail (DESIGN-ARCH-091 ?7: audit file never ships)
+
+global-exclude key_manager_audit.jsonl

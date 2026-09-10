@@ -2,10 +2,15 @@ import { app, BrowserWindow, ipcMain, dialog } from 'electron'
 import path from 'path'
 import { fork } from 'child_process'
 import { createMenu } from './menu'
+import { openKeyManagerWindow } from './keyManagerWindow'
+import { registerKeyManagerIpc } from './keyManager/ipc'
 
 // Phase 0a + 0b + 0c: 最小主进程 + IPC handler + host 进程
+// KeyManager (DESIGN-ARCH-091 P1): standalone key/endpoint manager window
 
 let hostProcess: ReturnType<typeof fork> | null = null
+
+const KEY_MANAGER_STANDALONE = process.argv.includes('--key-manager')
 
 function startHostProcess() {
   const hostPath = path.join(__dirname, '../host/index.js')
@@ -34,7 +39,10 @@ function createWindow() {
     }
   })
 
-  const devServerUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173/'
+  // dev-server URL from env (electron-vite injects VITE_DEV_SERVER_URL); the
+  // port falls back to a variable (zero-hardcoding exemption class)
+  const devPort = process.env.VITE_DEV_PORT || '5173'
+  const devServerUrl = process.env.VITE_DEV_SERVER_URL || `http://localhost:${devPort}/`
   if (process.env.VITE_DEV_SERVER_URL || process.env.NODE_ENV === 'development') {
     win.loadURL(devServerUrl)
   } else {
@@ -110,13 +118,26 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // Key/Endpoint Manager IPC (DESIGN-ARCH-091 §6) — global, registered once
+  registerKeyManagerIpc(ipcMain)
+
+  if (KEY_MANAGER_STANDALONE) {
+    // standalone entry: `npm run dev -- --key-manager` — only the manager
+    // window is created, no main window / host process (spec §5.1 入口③)
+    openKeyManagerWindow({ standalone: true })
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) openKeyManagerWindow({ standalone: true })
+    })
+    return
+  }
+
   startHostProcess()
   const win = createWindow()
-  createMenu(win)
+  createMenu(win, () => openKeyManagerWindow())
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       const newWin = createWindow()
-      createMenu(newWin)
+      createMenu(newWin, () => openKeyManagerWindow())
     }
   })
 })
