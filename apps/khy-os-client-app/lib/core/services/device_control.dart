@@ -1,8 +1,11 @@
 import 'package:flutter/services.dart';
 
 /// Device control service - bridges Dart to Android native code
+/// Supports: App/URL, Clipboard, Device info, Accessibility, Screen capture, Shell
 class DeviceControl {
   static const _channel = MethodChannel('com.khyos.khy_os_client/device');
+
+  // ==================== App / URL ====================
 
   /// Open an Android app by package name
   static Future<bool> openApp(String packageName) async {
@@ -56,6 +59,8 @@ class DeviceControl {
     }
   }
 
+  // ==================== Clipboard ====================
+
   /// Get clipboard text
   static Future<String> getClipboard() async {
     try {
@@ -75,6 +80,8 @@ class DeviceControl {
       return false;
     }
   }
+
+  // ==================== Device ====================
 
   /// Get device information
   static Future<Map<String, dynamic>> getDeviceInfo() async {
@@ -108,6 +115,198 @@ class DeviceControl {
       return [];
     }
   }
+
+  // ==================== Accessibility Service ====================
+
+  /// Check if accessibility service is ready
+  static Future<bool> isAccessibilityReady() async {
+    try {
+      final result = await _channel.invokeMethod('isAccessibilityReady');
+      return result['ready'] == true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Open accessibility settings to enable the service
+  static Future<void> openAccessibilitySettings() async {
+    try {
+      await _channel.invokeMethod('openAccessibilitySettings');
+    } catch (e) {}
+  }
+
+  /// Tap at coordinates via accessibility service
+  static Future<bool> a11yTap(int x, int y) async {
+    try {
+      final result = await _channel.invokeMethod('a11yTap', {'x': x, 'y': y});
+      return result['success'] == true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Swipe gesture via accessibility service
+  static Future<bool> a11ySwipe(int x1, int y1, int x2, int y2, {int durationMs = 300}) async {
+    try {
+      final result = await _channel.invokeMethod('a11ySwipe', {
+        'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2, 'durationMs': durationMs,
+      });
+      return result['success'] == true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Find and click element by text/id/class
+  static Future<bool> a11yFindAndClick(String query) async {
+    try {
+      final result = await _channel.invokeMethod('a11yFindAndClick', {'query': query});
+      return result['success'] == true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Find and long-click element
+  static Future<bool> a11yFindAndLongClick(String query) async {
+    try {
+      final result = await _channel.invokeMethod('a11yFindAndLongClick', {'query': query});
+      return result['success'] == true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Find element and return its center bounds
+  static Future<Map<String, int>?> a11yFindWithBounds(String query) async {
+    try {
+      final result = await _channel.invokeMethod('a11yFindWithBounds', {'query': query});
+      if (result['success'] == true) {
+        return {
+          'x': result['x'] as int,
+          'y': result['y'] as int,
+          'w': result['w'] as int,
+          'h': result['h'] as int,
+        };
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Dump the current UI tree (for VLM decision making)
+  static Future<String> a11yDumpUi() async {
+    try {
+      final result = await _channel.invokeMethod('a11yDumpUi');
+      return result['dump'] ?? '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  /// List all clickable elements with their bounds
+  static Future<List<Map<String, dynamic>>> a11yListClickable() async {
+    try {
+      final result = await _channel.invokeMethod('a11yListClickable');
+      if (result['success'] == true) {
+        return (result['items'] as List).cast<Map<String, dynamic>>();
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Type text into focused input field
+  static Future<bool> a11yTypeText(String text) async {
+    try {
+      final result = await _channel.invokeMethod('a11yTypeText', {'text': text});
+      return result['success'] == true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Perform global action: 1=BACK, 2=HOME, 3=RECENTS, 4=NOTIFICATIONS
+  static Future<bool> a11yGlobalAction(int action) async {
+    try {
+      final result = await _channel.invokeMethod('a11yGlobalAction', {'action': action});
+      return result['success'] == true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Global action constants
+  static const int globalActionBack = 1;
+  static const int globalActionHome = 2;
+  static const int globalActionRecents = 3;
+  static const int globalActionNotifications = 4;
+
+  // ==================== Screen Capture ====================
+
+  /// Check if screen capture service is ready
+  static Future<bool> isScreenCaptureReady() async {
+    try {
+      final result = await _channel.invokeMethod('isScreenCaptureReady');
+      return result['ready'] == true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Start screen capture (will prompt user for permission)
+  static Future<bool> startScreenCapture() async {
+    try {
+      final result = await _channel.invokeMethod('startScreenCapture');
+      return result['success'] == true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Capture a single frame, returns base64 JPEG data
+  static Future<String?> captureFrame() async {
+    try {
+      final result = await _channel.invokeMethod('captureFrame');
+      if (result['success'] == true) {
+        return result['data'] as String?;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Stop screen capture service
+  static Future<bool> stopScreenCapture() async {
+    try {
+      final result = await _channel.invokeMethod('stopScreenCapture');
+      return result['success'] == true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // ==================== Shell ====================
+
+  /// Execute a shell command (whitelist restricted)
+  static Future<ShellResult> execShell(String command) async {
+    try {
+      final result = await _channel.invokeMethod('execShell', {'command': command});
+      return ShellResult(
+        success: result['success'] == true,
+        stdout: result['stdout'] ?? '',
+        stderr: result['stderr'] ?? '',
+        exitCode: result['exitCode'] ?? -1,
+      );
+    } catch (e) {
+      return ShellResult(success: false, stdout: '', stderr: e.toString(), exitCode: -1);
+    }
+  }
+
+  // ==================== Smart Search ====================
 
   /// Smart search: try exact match, then fuzzy, then semantic
   static Future<AppInfo?> findApp(String query) async {
@@ -204,4 +403,18 @@ class AppInfo {
 
   @override
   String toString() => '$label ($packageName)';
+}
+
+class ShellResult {
+  final bool success;
+  final String stdout;
+  final String stderr;
+  final int exitCode;
+
+  const ShellResult({
+    required this.success,
+    required this.stdout,
+    required this.stderr,
+    required this.exitCode,
+  });
 }

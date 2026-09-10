@@ -5,33 +5,92 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.khyos.khy_os_client/device"
+    private val exec = Executors.newCachedThreadPool()
+
+    // Shell command whitelist
+    private val SHELL_ALLOW = arrayOf(
+        "am start ", "am force-stop ", "am kill ",
+        "wm size", "wm density",
+        "dumpsys ",
+        "pm list packages", "pm path ", "pm dump ",
+        "settings get ", "settings put ",
+        "input tap ", "input swipe ", "input text ", "input keyevent ",
+        "screencap ",
+        "ls ", "cat ", "echo ", "mkdir ", "rm ", "mv ", "cp ",
+        "ps ", "kill ",
+    )
+    private val SHELL_DENY = arrayOf(
+        "rm -rf /", "rm -rf /*", "rm /system", "rm /data",
+        "shutdown", "reboot", "stop", "restart",
+        "format", "mkfs", "dd if=",
+        "iptables", "mount ", "umount ",
+    )
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
+                // --- App / URL ---
                 "openApp" -> openApp(call.argument<String>("packageName") ?: "", result)
                 "openUrl" -> openUrl(call.argument<String>("url") ?: "", result)
                 "searchApps" -> searchApps(call.argument<String>("query") ?: "", result)
                 "listApps" -> listApps(result)
+
+                // --- Clipboard ---
                 "getClipboard" -> getClipboard(result)
                 "setClipboard" -> setClipboard(call.argument<String>("text") ?: "", result)
+
+                // --- Device ---
                 "getDeviceInfo" -> getDeviceInfo(result)
                 "vibrate" -> vibrate(call.argument<Int>("duration") ?: 200, result)
                 "getInstalledPackages" -> getInstalledPackages(result)
+
+                // --- Accessibility Service ---
+                "isAccessibilityReady" -> result.success(mapOf("ready" to KhyAccessibilityService.isReady()))
+                "openAccessibilitySettings" -> openAccessibilitySettings(result)
+                "a11yTap" -> a11yTap(call.argument<Int>("x") ?: 0, call.argument<Int>("y") ?: 0, result)
+                "a11ySwipe" -> a11ySwipe(
+                    call.argument<Int>("x1") ?: 0, call.argument<Int>("y1") ?: 0,
+                    call.argument<Int>("x2") ?: 0, call.argument<Int>("y2") ?: 0,
+                    call.argument<Int>("durationMs") ?: 300, result)
+                "a11yFindAndClick" -> a11yFindAndClick(call.argument<String>("query") ?: "", result)
+                "a11yFindAndLongClick" -> a11yFindAndLongClick(call.argument<String>("query") ?: "", result)
+                "a11yFindWithBounds" -> a11yFindWithBounds(call.argument<String>("query") ?: "", result)
+                "a11yDumpUi" -> a11yDumpUi(result)
+                "a11yListClickable" -> a11yListClickable(result)
+                "a11yTypeText" -> a11yTypeText(call.argument<String>("text") ?: "", result)
+                "a11yGlobalAction" -> a11yGlobalAction(call.argument<Int>("action") ?: 1, result)
+
+                // --- Screen Capture ---
+                "isScreenCaptureReady" -> result.success(mapOf("ready" to ScreenCaptureService.isReady()))
+                "startScreenCapture" -> startScreenCapture(result)
+                "captureFrame" -> captureFrame(result)
+                "stopScreenCapture" -> stopScreenCapture(result)
+
+                // --- Shell ---
+                "execShell" -> execShell(call.argument<String>("command") ?: "", result)
+
                 else -> result.notImplemented()
             }
         }
     }
+
+    // --- App / URL ---
 
     private fun openApp(packageName: String, result: MethodChannel.Result) {
         try {
@@ -102,6 +161,8 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    // --- Clipboard ---
+
     private fun getClipboard(result: MethodChannel.Result) {
         try {
             val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -123,6 +184,8 @@ class MainActivity : FlutterActivity() {
             result.success(mapOf("success" to false, "message" to e.message))
         }
     }
+
+    // --- Device ---
 
     private fun getDeviceInfo(result: MethodChannel.Result) {
         try {
@@ -175,5 +238,220 @@ class MainActivity : FlutterActivity() {
         } catch (e: Exception) {
             result.success(mapOf("success" to false, "packages" to emptyList<Any>(), "message" to e.message))
         }
+    }
+
+    // --- Accessibility Service ---
+
+    private fun openAccessibilitySettings(result: MethodChannel.Result) {
+        try {
+            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
+            result.success(mapOf("opened" to true))
+        } catch (e: Exception) {
+            result.error("ERROR", e.message, null)
+        }
+    }
+
+    private fun a11yTap(x: Int, y: Int, result: MethodChannel.Result) {
+        if (!KhyAccessibilityService.isReady()) {
+            result.success(mapOf("success" to false, "message" to "无障碍服务未启用"))
+            return
+        }
+        val ok = KhyAccessibilityService.instance?.tap(x, y) ?: false
+        result.success(mapOf("success" to ok, "message" to (if (ok) "已点击 ($x, $y)" else "点击失败")))
+    }
+
+    private fun a11ySwipe(x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Int, result: MethodChannel.Result) {
+        if (!KhyAccessibilityService.isReady()) {
+            result.success(mapOf("success" to false, "message" to "无障碍服务未启用"))
+            return
+        }
+        val ok = KhyAccessibilityService.instance?.swipe(x1, y1, x2, y2, durationMs) ?: false
+        result.success(mapOf("success" to ok, "message" to (if (ok) "已滑动" else "滑动失败")))
+    }
+
+    private fun a11yFindAndClick(query: String, result: MethodChannel.Result) {
+        if (!KhyAccessibilityService.isReady()) {
+            result.success(mapOf("success" to false, "message" to "无障碍服务未启用"))
+            return
+        }
+        val ok = KhyAccessibilityService.instance?.findAndClick(query) ?: false
+        result.success(mapOf("success" to ok, "message" to (if (ok) "已找到并点击" else "未找到匹配元素")))
+    }
+
+    private fun a11yFindAndLongClick(query: String, result: MethodChannel.Result) {
+        if (!KhyAccessibilityService.isReady()) {
+            result.success(mapOf("success" to false, "message" to "无障碍服务未启用"))
+            return
+        }
+        val ok = KhyAccessibilityService.instance?.findAndLongClick(query) ?: false
+        result.success(mapOf("success" to ok, "message" to (if (ok) "已长按" else "未找到或不可长按")))
+    }
+
+    private fun a11yFindWithBounds(query: String, result: MethodChannel.Result) {
+        if (!KhyAccessibilityService.isReady()) {
+            result.success(mapOf("success" to false, "message" to "无障碍服务未启用"))
+            return
+        }
+        val bounds = KhyAccessibilityService.instance?.findCenterBounds(query)
+        if (bounds != null) {
+            result.success(mapOf(
+                "success" to true,
+                "x" to bounds[0], "y" to bounds[1],
+                "w" to bounds[2], "h" to bounds[3]
+            ))
+        } else {
+            result.success(mapOf("success" to false, "message" to "未找到 \"$query\""))
+        }
+    }
+
+    private fun a11yDumpUi(result: MethodChannel.Result) {
+        if (!KhyAccessibilityService.isReady()) {
+            result.success(mapOf("success" to false, "dump" to "", "message" to "无障碍服务未启用"))
+            return
+        }
+        val dump = KhyAccessibilityService.instance?.dumpUi() ?: ""
+        result.success(mapOf("success" to true, "dump" to dump))
+    }
+
+    private fun a11yListClickable(result: MethodChannel.Result) {
+        if (!KhyAccessibilityService.isReady()) {
+            result.success(mapOf("success" to false, "items" to emptyList<Any>(), "message" to "无障碍服务未启用"))
+            return
+        }
+        val items = KhyAccessibilityService.instance?.listClickable()?.map { row ->
+            mapOf(
+                "text" to (row[0].ifEmpty { "" }),
+                "class" to (row[1].ifEmpty { "" }),
+                "clickable" to (row[2] == "true"),
+                "x" to (row[3].toIntOrNull() ?: 0),
+                "y" to (row[4].toIntOrNull() ?: 0),
+                "w" to (row[5].toIntOrNull() ?: 0),
+                "h" to (row[6].toIntOrNull() ?: 0)
+            )
+        } ?: emptyList()
+        result.success(mapOf("success" to true, "items" to items, "count" to items.size))
+    }
+
+    private fun a11yTypeText(text: String, result: MethodChannel.Result) {
+        if (!KhyAccessibilityService.isReady()) {
+            result.success(mapOf("success" to false, "message" to "无障碍服务未启用"))
+            return
+        }
+        val ok = KhyAccessibilityService.instance?.typeText(text) ?: false
+        result.success(mapOf("success" to ok, "message" to (if (ok) "已输入文字" else "输入失败")))
+    }
+
+    private fun a11yGlobalAction(action: Int, result: MethodChannel.Result) {
+        if (!KhyAccessibilityService.isReady()) {
+            result.success(mapOf("success" to false, "message" to "无障碍服务未启用"))
+            return
+        }
+        val ok = KhyAccessibilityService.instance?.performGlobal(action) ?: false
+        result.success(mapOf("success" to ok, "message" to (if (ok) "全局动作已执行" else "全局动作失败")))
+    }
+
+    // --- Screen Capture ---
+
+    private fun startScreenCapture(result: MethodChannel.Result) {
+        try {
+            val mpm = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+            val captureIntent = mpm.createScreenCaptureIntent()
+            startActivityForResult(captureIntent, SCREEN_CAPTURE_REQUEST)
+            // Note: result will be handled in onActivityResult
+            result.success(mapOf("success" to true, "message" to "请在弹窗中授权屏幕捕获"))
+        } catch (e: Exception) {
+            result.success(mapOf("success" to false, "message" to "启动屏幕捕获失败: ${e.message}"))
+        }
+    }
+
+    private fun captureFrame(result: MethodChannel.Result) {
+        if (!ScreenCaptureService.isReady()) {
+            result.success(mapOf("success" to false, "data" to "", "message" to "屏幕捕获服务未就绪"))
+            return
+        }
+        exec.execute {
+            val frame = ScreenCaptureService.instance?.captureFrame()
+            runOnUiThread {
+                if (frame != null) {
+                    result.success(mapOf("success" to true, "data" to frame))
+                } else {
+                    result.success(mapOf("success" to false, "data" to "", "message" to "截屏失败"))
+                }
+            }
+        }
+    }
+
+    private fun stopScreenCapture(result: MethodChannel.Result) {
+        val intent = Intent(this, ScreenCaptureService::class.java).apply {
+            action = ScreenCaptureService.ACTION_STOP
+        }
+        startService(intent)
+        result.success(mapOf("success" to true, "message" to "已停止屏幕捕获"))
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == SCREEN_CAPTURE_REQUEST) {
+            if (resultCode == RESULT_OK && data != null) {
+                val intent = Intent(this, ScreenCaptureService::class.java).apply {
+                    action = ScreenCaptureService.ACTION_START
+                    putExtra(ScreenCaptureService.EXTRA_RESULT_CODE, resultCode)
+                    putExtra(ScreenCaptureService.EXTRA_RESULT_DATA, data)
+                }
+                startForegroundService(intent)
+            }
+        }
+    }
+
+    // --- Shell ---
+
+    private fun execShell(command: String, result: MethodChannel.Result) {
+        if (!isCommandAllowed(command)) {
+            result.success(mapOf("success" to false, "stdout" to "", "stderr" to "命令被拒绝（白名单/黑名单）", "exitCode" to -1))
+            return
+        }
+        exec.execute {
+            try {
+                val p = Runtime.getRuntime().exec(arrayOf("sh", "-c", command))
+                val out = StringBuilder()
+                val err = StringBuilder()
+                val ro = BufferedReader(InputStreamReader(p.inputStream))
+                val re = BufferedReader(InputStreamReader(p.errorStream))
+                var line: String?
+                while (ro.readLine().also { line = it } != null) out.append(line).append("\n")
+                while (re.readLine().also { line = it } != null) err.append(line).append("\n")
+                if (!p.waitFor(15, TimeUnit.SECONDS)) p.destroyForcibly()
+                val code = p.exitValue()
+                runOnUiThread {
+                    result.success(mapOf(
+                        "success" to (code == 0),
+                        "stdout" to out.toString(),
+                        "stderr" to err.toString(),
+                        "exitCode" to code
+                    ))
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    result.success(mapOf("success" to false, "stdout" to "", "stderr" to e.message, "exitCode" to -1))
+                }
+            }
+        }
+    }
+
+    private fun isCommandAllowed(cmd: String): Boolean {
+        val lower = cmd.lowercase().trim()
+        for (deny in SHELL_DENY) {
+            if (lower.startsWith(deny) || lower.contains(" $deny")) return false
+        }
+        for (allow in SHELL_ALLOW) {
+            if (lower.startsWith(allow)) return true
+        }
+        return false
+    }
+
+    companion object {
+        private const val SCREEN_CAPTURE_REQUEST = 1001
     }
 }
