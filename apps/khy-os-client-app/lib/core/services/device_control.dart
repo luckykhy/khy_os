@@ -313,7 +313,7 @@ class DeviceControl {
     final apps = await searchApps(query);
     if (apps.isEmpty) return null;
 
-    final q = query.toLowerCase();
+    final q = query.toLowerCase().trim();
 
     // 1. Exact package match
     for (final app in apps) {
@@ -325,74 +325,121 @@ class DeviceControl {
       if (app.label.toLowerCase() == q) return app;
     }
 
-    // 3. Label starts with query
+    // 3. Label contains query (bidirectional)
     for (final app in apps) {
-      if (app.label.toLowerCase().startsWith(q)) return app;
+      final label = app.label.toLowerCase();
+      if (label.contains(q) || q.contains(label)) return app;
     }
 
-    // 4. Semantic map for common Chinese app names
-    final semanticMap = <String, List<String>>{
-      '浏览器': ['com.android.browser', 'com.UCMobile', 'org.mozilla.firefox', 'com.android.chrome', 'com.quark.browser'],
-      'chrome': ['com.android.chrome'],
-      '谷歌': ['com.android.chrome'],
-      '微信': ['com.tencent.mm'],
-      'qq': ['com.tencent.mobileqq'],
-      '淘宝': ['com.taobao.taobao'],
-      '支付宝': ['com.eg.android.AlipayGphone'],
-      '抖音': ['com.ss.android.ugc.aweme'],
-      'b站': ['tv.danmaku.bili', 'com.bilibili.app.in'],
-      '哔哩哔哩': ['tv.danmaku.bili'],
-      '高德': ['com.autonavi.minimap'],
-      '百度': ['com.baidu.searchbox'],
-      '设置': ['com.android.settings'],
-      '相机': ['com.android.camera', 'com.android.camera2'],
-      '相册': ['com.android.gallery3d', 'com.google.android.apps.photos'],
-      '电话': ['com.android.dialer', 'com.google.android.dialer'],
-      '短信': ['com.android.mms', 'com.google.android.apps.messaging'],
-      '音乐': ['com.netease.cloudmusic', 'com.kugou.android'],
-      '视频': ['com.youku.phone', 'com.tencent.qqlive'],
-      '应用商店': ['com.xiaomi.market', 'com.huawei.appmarket', 'com.android.vending'],
-      '日历': ['com.android.calendar'],
-      '时钟': ['com.android.deskclock'],
-      '文件管理': ['com.android.fileexplorer', 'com.google.android.apps.nbu.files'],
-      '计算器': ['com.android.calculator2'],
-      '天气': ['com.miui.weather2', 'cn.wildroid.weather'],
-      '便签': ['com.miui.notes', 'com.miui.notepad'],
-      '外卖': ['com.sankuai.meituan'],
-      '美团': ['com.sankuai.meituan'],
-      '拼多多': ['com.xunmeng.pinduoduo'],
-      '京东': ['com.jingdong.app.mall'],
-      '钉钉': ['com.alibaba.android.rimet'],
-      '飞书': ['com.ss.android.lark'],
-      '知乎': ['com.zhihu.android'],
-      '小红书': ['com.xingin.xhs'],
-      '微博': ['com.sina.weibo'],
-      'twitter': ['com.twitter.android'],
-      'x': ['com.twitter.android'],
-      'youtube': ['com.google.android.youtube'],
-      'telegram': ['org.telegram.messenger'],
-      'whatsapp': ['com.whatsapp'],
-      'instagram': ['com.instagram.android'],
-      'tiktok': ['com.zhiliaoapp.musically'],
-      'netflix': ['com.netflix.mediaclient'],
-      'spotify': ['com.spotify.music'],
-    };
+    // 4. Package name contains query
+    for (final app in apps) {
+      if (app.packageName.toLowerCase().contains(q)) return app;
+    }
 
+    // 5. Semantic map for common Chinese/English app names
+    final semanticMap = _semanticMap;
     for (final entry in semanticMap.entries) {
-      if (q.contains(entry.key.toLowerCase()) || entry.key.toLowerCase().contains(q)) {
+      final key = entry.key.toLowerCase();
+      if (q.contains(key) || key.contains(q)) {
         for (final pkg in entry.value) {
           final match = apps.firstWhere(
             (a) => a.packageName == pkg,
-            orElse: () => AppInfo(label: '', packageName: ''),
+            orElse: () => const AppInfo(label: '', packageName: ''),
           );
           if (match.packageName.isNotEmpty) return match;
         }
       }
     }
 
-    // 5. First result as fallback
+    // 6. First result as fallback
     return apps.first;
   }
+
+  /// Comprehensive semantic app name mapping (30+ common apps)
+  static const Map<String, List<String>> _semanticMap = {
+    // Communication
+    '微信': ['com.tencent.mm'],
+    'wechat': ['com.tencent.mm'],
+    'weixin': ['com.tencent.mm'],
+    'qq': ['com.tencent.mobileqq'],
+    '钉钉': ['com.alibaba.android.rimet'],
+    'dingtalk': ['com.alibaba.android.rimet'],
+    '飞书': ['com.ss.android.lark'],
+    'feishu': ['com.ss.android.lark'],
+    'lark': ['com.ss.android.lark'],
+    'telegram': ['org.telegram.messenger'],
+    'whatsapp': ['com.whatsapp'],
+    // Browser
+    '浏览器': ['com.android.chrome', 'com.UCMobile', 'org.mozilla.firefox', 'com.quark.browser'],
+    'chrome': ['com.android.chrome'],
+    '谷歌': ['com.android.chrome'],
+    'uc': ['com.UCMobile'],
+    '夸克': ['com.quark.browser'],
+    '百度': ['com.baidu.searchbox'],
+    'baidu': ['com.baidu.searchbox'],
+    // Social
+    '抖音': ['com.ss.android.ugc.aweme'],
+    'douyin': ['com.ss.android.ugc.aweme'],
+    'b站': ['tv.danmaku.bili', 'com.bilibili.app.in'],
+    'bilibili': ['tv.danmaku.bili'],
+    '哔哩哔哩': ['tv.danmaku.bili'],
+    '微博': ['com.sina.weibo'],
+    'weibo': ['com.sina.weibo'],
+    '小红书': ['com.xingin.xhs'],
+    '知乎': ['com.zhihu.android'],
+    'zhihu': ['com.zhihu.android'],
+    // Shopping
+    '淘宝': ['com.taobao.taobao'],
+    'taobao': ['com.taobao.taobao'],
+    '天猫': ['com.taobao.taobao'],
+    '京东': ['com.jingdong.app.mall'],
+    'jd': ['com.jingdong.app.mall'],
+    '拼多多': ['com.xunmeng.pinduoduo'],
+    'pinduoduo': ['com.xunmeng.pinduoduo'],
+    '美团': ['com.sankuai.meituan'],
+    'meituan': ['com.sankuai.meituan'],
+    '外卖': ['com.sankuai.meituan', 'ele.me'],
+    '饿了么': ['ele.me'],
+    // Payment
+    '支付宝': ['com.eg.android.AlipayGphone'],
+    'alipay': ['com.eg.android.AlipayGphone'],
+    // Maps
+    '地图': ['com.autonavi.minimap'],
+    '高德': ['com.autonavi.minimap'],
+    'amap': ['com.autonavi.minimap'],
+    '导航': ['com.autonavi.minimap'],
+    // System
+    '设置': ['com.android.settings'],
+    'settings': ['com.android.settings'],
+    '相机': ['com.android.camera', 'com.android.camera2'],
+    'camera': ['com.android.camera'],
+    '拍照': ['com.android.camera'],
+    '相册': ['com.android.gallery3d', 'com.google.android.apps.photos'],
+    '照片': ['com.android.gallery3d'],
+    '电话': ['com.android.dialer', 'com.google.android.dialer'],
+    '拨号': ['com.android.dialer'],
+    '短信': ['com.android.mms', 'com.google.android.apps.messaging'],
+    // Media
+    '音乐': ['com.netease.cloudmusic', 'com.kugou.android'],
+    '网易云': ['com.netease.cloudmusic'],
+    '酷狗': ['com.kugou.android'],
+    '视频': ['com.youku.phone', 'com.tencent.qqlive'],
+    'youtube': ['com.google.android.youtube'],
+    'tiktok': ['com.zhiliaoapp.musically'],
+    // Utility
+    '计算器': ['com.android.calculator2'],
+    '天气': ['com.miui.weather2', 'cn.wildroid.weather'],
+    '便签': ['com.miui.notes', 'com.miui.notepad'],
+    '日历': ['com.android.calendar'],
+    '时钟': ['com.android.deskclock'],
+    '文件': ['com.android.fileexplorer', 'com.google.android.apps.nbu.files'],
+    // International
+    'twitter': ['com.twitter.android'],
+    'x': ['com.twitter.android'],
+    'instagram': ['com.instagram.android'],
+    'netflix': ['com.netflix.mediaclient'],
+    'spotify': ['com.spotify.music'],
+  };
 }
 
 class AppInfo {

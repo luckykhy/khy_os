@@ -9,7 +9,7 @@ import '../../core/network/dns_resolver.dart';
 import '../../core/network/network_autofix.dart';
 import '../../core/network/smart_dns.dart';
 import '../../core/services/app_logger.dart';
-import '../../core/config/app_config.dart';
+import '../../core/config/built_in_keys.dart';
 import '../../data/models/models.dart' hide Conversation;
 import '../../core/tools/tool_engine.dart';
 import '../../core/tools/builtin_tools.dart';
@@ -54,6 +54,13 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
   String _currentTitle = '新对话';
   List<ConversationSummary> _conversations = [];
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  // Debounce: last connection test time
+  DateTime _lastTestTime = DateTime.fromMillisecondsSinceEpoch(0);
+  static const _testDebounce = Duration(seconds: 10);
+
+  // 429 backoff: track failures for auto-failover
+  int _consecutive429 = 0;
 
   @override
   void initState() {
@@ -1036,6 +1043,12 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
 
   Future<void> _testConn() async {
     if (_cfg == null) return;
+    // Debounce: 10s 内不重复测试
+    if (DateTime.now().difference(_lastTestTime) < _testDebounce) {
+      _logger.i(LogCategory.network, '测试冷却中，跳过');
+      return;
+    }
+    _lastTestTime = DateTime.now();
     setState(() => _connStatus = 'testing');
     try {
       final d = Dio(BaseOptions(
@@ -1061,6 +1074,30 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
   void _handleDioErr(DioException e, String id) {
     final url = e.requestOptions.path;
     final status = e.response?.statusCode;
+
+    // 429 限流：指数退避 + 自动切换备用 provider
+    if (status == 429) {
+      _consecutive429++;
+      final backoffSec = _consecutive429 * 5; // 5s, 10s, 15s...
+      _logger.recordError(
+        code: ErrorCode.rateLimit,
+        message: '限流 429：第 $_consecutive429 次，退避 ${backoffSec}s',
+        category: LogCategory.api,
+        context: {'url': url, 'attempt': _consecutive429},
+        exception: e,
+      );
+      if (_consecutive429 >= 2) {
+        // 自动切换到备用 provider
+        _autoFailover();
+        _setError(id, '当前 provider 限流，已自动切换。请重试。');
+      } else {
+        _setError(id, '请求过频 (429)：等待 ${backoffSec}s 后重试');
+      }
+      return;
+    }
+
+    // 非 429 错误重置计数器
+    _consecutive429 = 0;
 
     // 使用结构化错误码记录
     if (e.type == DioExceptionType.connectionError &&
@@ -1130,6 +1167,26 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
       case 504: return '网关超时：服务器响应过慢';
       default: return '未知错误';
     }
+  }
+
+  /// 自动切换到下一个可用 provider
+  void _autoFailover() {
+    _logger.i(LogCategory.api, '触发自动切换 provider');
+    final currentUrl = _cfg?.baseUrl ?? '';
+    final alternatives = BuiltInKeys.providers.values
+        .where((p) => p.hasKey && p.baseUrl != currentUrl)
+        .toList();
+    if (alternatives.isEmpty) return;
+
+    final next = alternatives.first;
+    setState(() {
+      _cfg = _cfg!.copyWith(baseUrl: next.baseUrl, model: next.defaultModel);
+      _connStatus = null;
+    });
+    AppConfig.save(baseUrl: next.baseUrl, model: next.defaultModel);
+    _logger.i(LogCategory.api, '已切换到: ${next.baseUrl}',
+        details: {'from': currentUrl, 'to': next.baseUrl});
+    _addSystemMsg('已自动切换到备用 provider（${next.baseUrl}），请重试。');
   }
 
   Color _statusColor() {

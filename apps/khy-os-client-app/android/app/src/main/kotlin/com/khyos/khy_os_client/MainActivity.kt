@@ -126,18 +126,39 @@ class MainActivity : FlutterActivity() {
                 addCategory(Intent.CATEGORY_LAUNCHER)
             }
             val apps = pm.queryIntentActivities(mainIntent, 0)
-            val q = query.lowercase()
-            val matched = apps.filter { info ->
-                val label = info.loadLabel(pm).toString().lowercase()
-                val pkg = info.activityInfo.packageName.lowercase()
-                label.contains(q) || pkg.contains(q)
-            }.take(20).map { info ->
-                mapOf(
-                    "label" to info.loadLabel(pm).toString(),
-                    "package" to info.activityInfo.packageName
-                )
+            val q = query.lowercase().trim()
+
+            // Score-based matching: exact > contains > semantic
+            data class ScoredApp(val score: Int, val label: String, val pkg: String)
+            val scored = mutableListOf<ScoredApp>()
+
+            for (info in apps) {
+                val label = info.loadLabel(pm).toString()
+                val pkg = info.activityInfo.packageName
+                val labelLc = label.lowercase()
+                val pkgLc = pkg.lowercase()
+
+                var score = 0
+                if (q.isNotEmpty()) {
+                    // Exact matches get highest score
+                    if (labelLc == q) score += 100
+                    if (pkgLc == q) score += 90
+                    // Contains matches
+                    if (labelLc.contains(q)) score += 30
+                    if (pkgLc.contains(q)) score += 20
+                } else {
+                    score = 10 // No query, just list all
+                }
+                if (score > 0) {
+                    scored.add(ScoredApp(score, label, pkg))
+                }
             }
-            result.success(mapOf("success" to true, "apps" to matched))
+
+            scored.sortByDescending { it.score }
+            val matched = scored.take(30).map {
+                mapOf("label" to it.label, "package" to it.pkg)
+            }
+            result.success(mapOf("success" to true, "apps" to matched, "total" to scored.size))
         } catch (e: Exception) {
             result.success(mapOf("success" to false, "apps" to emptyList<Any>(), "message" to e.message))
         }
