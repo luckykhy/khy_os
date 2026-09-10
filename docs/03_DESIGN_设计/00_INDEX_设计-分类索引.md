@@ -78,6 +78,8 @@
 | [DESIGN-ARCH-073] khyos 核心任务循环-稳定交付总纲.md | 受理→交付核心循环运行时契约（072 上位总纲） | 定稿 |
 | [DESIGN-ARCH-074] khyos 账号体系收口-用户名唯一键 alias 软冲突 密码必填 局域网登录.md | 账号=用户名；alias 软冲突；密码必填；ai-backend LAN 暴露（账号体系单一真源） | 定稿 |
 | [DESIGN-ARCH-078] khyos桌面端与CLI-TUI互联共享方案.md | 桌面端↔CLI/TUI 互联：发现链(backend_runtime.json)+会话/供应商真源归一+bridge(9222) 实时共享，P0-P4 分期落地 | 方案 |
+| [DESIGN-ARCH-090] TUI用户评价调研与痛点分析.md | TUI 痛点调研（081–089 上游输入） | 定稿 |
+| [DESIGN-ARCH-091] 密钥与端点中心管理（KeyManager）GUI设计规范.md | 一处配置全 Agent 密钥端点（GUI 门面+应用矩阵+测试规范） | 提案 |
 | [DESIGN-OTHER-001] Khyos-数学重塑-实施提示词链.md | 数学重塑提示词链 | 定稿 |
 | [DESIGN-OTHER-002] _cbssp_分阶段防闪退提示词.md | 分阶段防闪退提示 | 草稿 |
 | [DESIGN-OTHER-003] khy-系统提示词结构图.md | 系统提示词结构图 | 定稿 |
@@ -90,9 +92,18 @@
 
 | 文件名 | 核心职责(10字内) | 状态 |
 | --- | --- | --- |
-| FILE-FORMAT-PROTOCOL.md | 各文件格式的职责边界 | 定稿·未编号 |
-| RELIABILITY-PROTOCOL.md | 长任务交互可靠性保障 | 定稿·未编号 |
 | ycode-inspiration-plan.md | ycode 借鉴点与落地计划 | 草稿·未编号 |
+| EXECUTION_PROMPT.md | CC TUI 复刻执行提示词 | 定稿·未编号 |
+| [DESIGN-RESEARCH] 桌面端智能体UI调研与差距分析-2026-09-09.md | 桌面端 UI 调研差距分析 | 调研·未编号 |
+| [DESIGN-RESEARCH] 桌面端智能体UI每日调研-2026-09-10.md | 桌面端 UI 每日调研日志 | 调研·未编号 |
+
+**2026-09-10 规范族拆分**：全部独立编号规范族（`DESIGN-A11Y/API/ACP/BACKUP/CACHE/CICD/COMM/DB/DEP/
+DEPLOY/DOC/ENV/ERR/FE/GIT/I18N/INDEX/LOG/MEM/MONITOR/MS/OUT/PERF/PRIV/REVIEW/SEC/TEST/TOOL`，
+以及未编号协议件 `FILE-FORMAT-PROTOCOL.md`、`RELIABILITY-PROTOCOL.md`）已迁入
+[`docs/_规范/`](../_规范/00_INDEX_规范-总目录.md)（规范目录）。ARCH 编号的设计族与治理单一真源
+（068/069/070/071 等）留在本目录——拆分口径与台账见该目录 00_INDEX 第三节与
+`docs/04_IMPL_实现/[IMPL-RPT-049]`。`FILE-FORMAT-PROTOCOL` 于 2026-08-15 曾从 `02_CONCEPTS_概念入门/`
+迁入本目录，本次随规范族一并迁出。
 
 > `FILE-FORMAT-PROTOCOL.md` 于 2026-08-15 从 `docs/02_CONCEPTS_概念入门/` 迁入本目录：它是
 > **强制标准**（违反即过不了 `check-change-safety` 门控），不是给小白读的概念入门篇，此前落在
