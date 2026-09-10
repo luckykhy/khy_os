@@ -11,8 +11,16 @@ import { DiffSummary } from './components/message/DiffViewer'
 import { ToastContainer } from './components/ui/ToastContainer'
 import { ToolExecutionPanel } from './components/message/ToolExecutionPanel'
 import { LoginPage, WelcomePage } from './components/auth/LoginPage'
+import { KeyManagerPage } from './components/keyManager/KeyManagerPage'
 
 type AppView = 'login' | 'welcome' | 'main'
+
+// DESIGN-ARCH-091 §5.1 入口③: the standalone key-manager window loads
+// #/key-manager and renders the full-screen manager (no login gate — it is a
+// local tool, spec §12-Q4).
+function isKeyManagerHash(): boolean {
+  return window.location.hash.replace(/^#\/?/, '') === 'key-manager'
+}
 
 export default function App() {
   const [view, setView] = useState<AppView>('login')
@@ -23,12 +31,21 @@ export default function App() {
   const [thoughtLevel, setThoughtLevel] = useState('max')
   const [showContextUsage, setShowContextUsage] = useState(true)
 
-  // 全局快捷键
+  // 独立密钥管理窗口（#/key-manager）
+  const [keyManager, setKeyManager] = useState(isKeyManagerHash)
   useEffect(() => {
+    const onHash = () => setKeyManager(isKeyManagerHash())
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
+  // 全局快捷键（主界面）
+  useEffect(() => {
+    if (keyManager) return
     const handler = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === 'k') {
         e.preventDefault()
-        setCommandCenterOpen(v => !v)
+        setCommandCenterOpen((v) => !v)
       }
       if (e.ctrlKey && e.key === 't') {
         e.preventDefault()
@@ -42,11 +59,20 @@ export default function App() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [thoughtLevel])
+  }, [thoughtLevel, keyManager])
 
   const handleReload = useCallback(() => {
     console.log('[app] reload session')
   }, [])
+
+  if (keyManager) {
+    return (
+      <>
+        <KeyManagerPage standalone />
+        <ToastContainer />
+      </>
+    )
+  }
 
   // 登录页面
   if (view === 'login') {
@@ -88,10 +114,10 @@ export default function App() {
         {showContextUsage && <ContextUsagePanel />}
 
         {/* Diff 摘要 */}
-        <DiffSummary
+          <DiffSummary
           files={[
             { path: 'src/sort/quicksort.ts', status: 'modified', additions: 8, deletions: 2 },
-            { path: 'src/sort/quicksort.test.ts', status: 'added', additions: 45 },
+            { path: 'src/sort/quicksort.test.ts', status: 'added', additions: 45, deletions: 0 },
           ]}
         />
 

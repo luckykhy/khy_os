@@ -12,7 +12,8 @@
     "preview": "electron-vite preview",
     "electron:dev": "electron-vite dev",
     "electron:build": "electron-vite build && electron-builder",
-    "start": "electron-vite preview"
+    "start": "electron-vite preview",
+    "test": "node --experimental-strip-types --test tests/keyStore.test.mjs tests/agentWriters.test.mjs tests/health.test.mjs && node --test tests/keyManagerContract.test.cjs tests/desktopUiContract.test.cjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.23",

@@ -1,9 +1,20 @@
 import { Menu, BrowserWindow, app, shell } from 'electron'
 
-export function createMenu(mainWindow: BrowserWindow) {
+export function createMenu(mainWindow: BrowserWindow, onOpenKeyManager?: () => void) {
   const isMac = process.platform === 'darwin'
 
   const template: Electron.MenuItemConstructorOptions[] = [
+    // 工具菜单（DESIGN-ARCH-091 §5.1 入口①：密钥与端点管理）
+    {
+      label: '工具',
+      submenu: [
+        {
+          label: '密钥与端点管理',
+          accelerator: 'Ctrl+Shift+K',
+          click: () => onOpenKeyManager?.()
+        }
+      ]
+    },
     // 文件菜单
     {
       label: '文件',

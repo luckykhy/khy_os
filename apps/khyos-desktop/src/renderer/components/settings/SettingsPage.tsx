@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { KeyManagerPage } from '../keyManager/KeyManagerPage'
 
 interface SettingGroup {
   id: string
@@ -352,7 +353,18 @@ export function SettingsPage() {
           </div>
         )}
 
-        {activeGroup !== 'general' && activeGroup !== 'models' && activeGroup !== 'permissions' && (
+        {activeGroup === 'providers' && (
+          <div>
+            <p className="text-sm text-foreground/50 mb-4">
+              密钥与端点中心管理：一处配置，全 Agent 点击激活即用（DESIGN-ARCH-091）。
+            </p>
+            <div className="border border-card-border rounded-xl overflow-hidden">
+              <KeyManagerPage embedded />
+            </div>
+          </div>
+        )}
+
+        {activeGroup !== 'general' && activeGroup !== 'models' && activeGroup !== 'permissions' && activeGroup !== 'providers' && (
           <div className="bg-card border border-card-border rounded-xl p-12 text-center">
             <span className="text-5xl block mb-4">
               {SETTING_GROUPS.find(g => g.id === activeGroup)?.icon}
