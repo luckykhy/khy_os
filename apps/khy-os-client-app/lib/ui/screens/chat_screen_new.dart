@@ -16,6 +16,8 @@ import '../../core/tools/builtin_tools.dart';
 import '../../core/tools/skills.dart';
 import '../../core/services/conversation_db.dart';
 import '../../core/services/device_control.dart';
+import '../../core/config/built_in_keys.dart';
+import '../../core/agent/execution_log.dart';
 import '../../ui/theme/app_colors.dart';
 import 'settings_screen_new.dart';
 
@@ -125,7 +127,11 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
   }
 
   Future<void> _sendWithAgentLoop(String id) async {
-    final startTime = DateTime.now();
+    final execLog = ExecutionLog(
+      conversationId: _currentConvId,
+      userMessage: _msgs.isNotEmpty ? _msgs.last.content : '',
+    );
+
     try {
       final h = _msgs
           .where((m) => m.content.isNotEmpty && m.id != id)
@@ -179,11 +185,18 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
 
         if (toolCalls == null || toolCalls.isEmpty) {
           if (content.isEmpty) _setError(id, '无响应内容');
+          execLog.finish(content);
+          _logExecution(execLog);
           await _saveConversation();
           return;
         }
 
-        messages.add({'role': 'assistant', 'content': content, 'tool_calls': toolCalls});
+        messages.add({
+          'role': 'assistant',
+          'content': content,
+          'tool_calls': toolCalls,
+        });
+
         if (content.isEmpty) _setContent(id, '正在执行工具...');
 
         for (final tc in toolCalls) {
@@ -197,16 +210,32 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
             args = <String, dynamic>{};
           }
 
-          // Show tool card in UI
-          final card = _ToolCard(name: toolName, args: args);
-          setState(() => _toolCards.add(card));
-          _scrollToBottom();
+          // ── 记录执行步骤 ──
+          final stepIdx = execLog.addStep(toolName, args);
+          final step = execLog.steps[stepIdx];
+          step.start();
 
+          // 更新 UI 进度
+          final progress = '步骤 ${step.index}：${_getToolLabel(toolName, args)}';
+          _setContent(id, '$content\n\n$progress');
+
+          // 执行工具
           final result = await _toolEngine.execute(toolName, args);
-          card.result = result;
-          setState(() {});
-          _scrollToBottom();
 
+          // 记录结果
+          if (result.success) {
+            step.complete(result.output);
+          } else {
+            step.fail(result.output);
+          }
+
+          // 更新 UI
+          final icon = result.success ? '成功' : '失败';
+          _setContent(id,
+              '$content\n\n步骤 ${step.index}：${_getToolLabel(toolName, args)}\n'
+                  '$icon ${result.output}');
+
+          // 喂回 LLM（OpenAI 协议）
           messages.add({
             'tool_call_id': tc['id'] ?? '',
             'role': 'tool',
@@ -214,9 +243,14 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
           });
         }
       }
+
+      execLog.finish('达到最大步骤数');
+      _logExecution(execLog);
       await _saveConversation();
     } on DioException catch (e) {
       _handleDioErr(e, id);
+      execLog.fail('网络错误: ${e.message}');
+      _logExecution(execLog);
     } catch (e) {
       _logger.recordError(
         code: ErrorCode.unknown,
@@ -225,9 +259,46 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
         context: {'mode': _mode.name, 'model': _cfg?.model ?? ''},
         exception: e,
       );
+      execLog.fail('异常: $e');
+      _logExecution(execLog);
       _setError(id, '发生错误：$e');
     } finally {
       if (mounted) setState(() => _busy = false);
+      // 远程模式：上报执行日志到 khy-os 后端
+      if (_mode == AppMode.remote && _api != null) {
+        _reportToBackend(execLog);
+      }
+    }
+  }
+
+  /// 记录执行日志
+  void _logExecution(ExecutionLog log) {
+    _logger.i(LogCategory.api, '执行完成',
+        details: log.toJson());
+    // 写入本地日志文件
+    _logger.log(
+      LogLevel.info,
+      LogCategory.api,
+      '工具执行日志',
+      details: {
+        'conversation': log.conversationId,
+        'steps': log.steps.length,
+        'success': log.successCount,
+        'failed': log.failCount,
+        'total_ms': log.totalDurationMs,
+        'summary': log.toText(),
+      },
+    );
+  }
+
+  /// 上报到 khy-os 后端
+  Future<void> _reportToBackend(ExecutionLog log) async {
+    if (_api == null) return;
+    try {
+      await _api!.reportExecution(log.toJson());
+      _logger.i(LogCategory.api, '执行日志已上报到 khy-os 后端');
+    } catch (e) {
+      _logger.w(LogCategory.api, '上报失败（不影响本地执行）', error: e);
     }
   }
 
@@ -1215,6 +1286,47 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
         return '网络错误';
       default:
         return '未连接';
+    }
+  }
+
+  String _getToolLabel(String toolName, Map<String, dynamic> args) {
+    switch (toolName) {
+      case 'open_app':
+        return '打开应用: ${args['query'] ?? ''}';
+      case 'open_url':
+        return '打开网址: ${args['url'] ?? ''}';
+      case 'search_apps':
+        return '搜索应用: ${args['query'] ?? ''}';
+      case 'read_clipboard':
+        return '读取剪贴板';
+      case 'write_clipboard':
+        return '写入剪贴板';
+      case 'calculator':
+        return '计算: ${args['expression'] ?? ''}';
+      case 'device_info':
+        return '获取设备信息';
+      case 'execute_skill':
+        return '执行技能: ${args['skill_name'] ?? ''}';
+      case 'a11y_tap':
+        return '点击: (${args['x'] ?? 0}, ${args['y'] ?? 0})';
+      case 'a11y_find_and_click':
+        return '查找并点击: ${args['query'] ?? ''}';
+      case 'a11y_dump_ui':
+        return '获取屏幕 UI 树';
+      case 'a11y_list_clickable':
+        return '列出可点击元素';
+      case 'a11y_type_text':
+        return '输入文字: ${args['text'] ?? ''}';
+      case 'a11y_global_action':
+        return '全局操作: ${args['action'] ?? ''}';
+      case 'capture_screen':
+        return '截屏';
+      case 'analyze_screen':
+        return '视觉分析: ${args['prompt'] ?? ''}';
+      case 'exec_shell':
+        return '执行命令: ${args['command'] ?? ''}';
+      default:
+        return '执行: $toolName';
     }
   }
 

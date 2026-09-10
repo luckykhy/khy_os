@@ -251,6 +251,17 @@ class KhyOsApi {
     );
   }
 
+  /// 上报工具执行日志到 khy-os 后端
+  Future<void> reportExecution(Map<String, dynamic> log) async {
+    if (!isConnected) return;
+    try {
+      await apiFetch('/api/mobile/execution-log',
+          method: 'POST', data: log);
+    } catch (_) {
+      // 上报失败不影响本地执行
+    }
+  }
+
   void dispose() {
     _connectionController.close();
   }
