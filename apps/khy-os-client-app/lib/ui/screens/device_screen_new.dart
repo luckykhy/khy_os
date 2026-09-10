@@ -16,6 +16,8 @@ class _DeviceScreenNewState extends State<DeviceScreenNew> {
   bool _screenReady = false;
   String _deviceInfo = '';
   String _lastScreenshot = '';
+  PermissionStatus _perms = const PermissionStatus(
+      notifications: false, overlay: false, accessibility: false);
 
   @override
   void initState() {
@@ -26,13 +28,16 @@ class _DeviceScreenNewState extends State<DeviceScreenNew> {
   Future<void> _loadStatus() async {
     final a11y = await DeviceControl.isAccessibilityReady();
     final screen = await DeviceControl.isScreenCaptureReady();
+    final perms = await DeviceControl.checkPermissions();
     final info = await DeviceControl.getDeviceInfo();
     if (mounted) {
       setState(() {
         _a11yReady = a11y;
         _screenReady = screen;
+        _perms = perms;
         _deviceInfo = info.isNotEmpty
-            ? '${info['brand']} ${info['model']}\nAndroid ${info['releaseVersion']}\nAPI ${info['sdkVersion']}'
+            ? '${info['brand']} ${info['model']}\n'
+                'Android ${info['releaseVersion']} API ${info['sdkVersion']}'
             : '未知设备';
       });
     }
@@ -145,8 +150,24 @@ class _DeviceScreenNewState extends State<DeviceScreenNew> {
                     icon: Icons.terminal,
                     title: 'Shell 命令',
                     subtitle: '白名单命令：am, pm, dumpsys, input...',
-                    active: true,
-                  ),
+                     active: true,
+                   ),
+                   const SizedBox(height: 20),
+
+                  // ── Permission Section ──
+                  Text('权限状态',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: cs.onSurface.withValues(alpha: 0.6))),
+                  const SizedBox(height: 8),
+                  _permRow(cs, '通知权限', _perms.notifications,
+                      () => DeviceControl.requestNotifications()),
+                  _permRow(cs, '悬浮窗权限', _perms.overlay,
+                      () => DeviceControl.requestOverlay()),
+                  _permRow(cs, '无障碍服务', _perms.accessibility,
+                      () => DeviceControl.requestAccessibility()),
+
                   const SizedBox(height: 20),
 
                   // Quick actions
@@ -243,6 +264,46 @@ class _DeviceScreenNewState extends State<DeviceScreenNew> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _permRow(ColorScheme cs, String label, bool granted, VoidCallback onGrant) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Icon(
+            granted ? Icons.check_circle : Icons.remove_circle_outline,
+            size: 18,
+            color: granted ? AppColors.success : Colors.grey,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(label,
+                style: TextStyle(
+                    fontSize: 13,
+                    color:
+                        granted ? cs.onSurface : cs.onSurface.withValues(alpha: 0.6))),
+          ),
+          if (!granted)
+            GestureDetector(
+              onTap: onGrant,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: cs.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text('去授权',
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: cs.onPrimaryContainer,
+                        fontWeight: FontWeight.w500)),
+              ),
+            ),
+        ],
       ),
     );
   }

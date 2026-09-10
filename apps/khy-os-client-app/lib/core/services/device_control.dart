@@ -306,6 +306,47 @@ class DeviceControl {
     }
   }
 
+  // ==================== Permissions ====================
+
+  /// Check all permission statuses
+  static Future<PermissionStatus> checkPermissions() async {
+    try {
+      final result = await _channel.invokeMethod('checkPermissions');
+      return PermissionStatus(
+        notifications: result['notifications'] == true,
+        overlay: result['overlay'] == true,
+        accessibility: result['accessibility'] == true,
+      );
+    } catch (e) {
+      return const PermissionStatus(
+        notifications: false,
+        overlay: false,
+        accessibility: false,
+      );
+    }
+  }
+
+  /// Request notification permission (Android 13+)
+  static Future<void> requestNotifications() async {
+    try {
+      await _channel.invokeMethod('requestNotifications');
+    } catch (e) {}
+  }
+
+  /// Request overlay permission (display over other apps)
+  static Future<void> requestOverlay() async {
+    try {
+      await _channel.invokeMethod('requestOverlay');
+    } catch (e) {}
+  }
+
+  /// Open accessibility settings to enable the service
+  static Future<void> requestAccessibility() async {
+    try {
+      await _channel.invokeMethod('requestAccessibility');
+    } catch (e) {}
+  }
+
   // ==================== Smart Search ====================
 
   /// Smart search: try exact match, then fuzzy, then semantic
@@ -464,4 +505,34 @@ class ShellResult {
     required this.stderr,
     required this.exitCode,
   });
+}
+
+/// Permission status for all required permissions
+class PermissionStatus {
+  final bool notifications;
+  final bool overlay;
+  final bool accessibility;
+
+  const PermissionStatus({
+    required this.notifications,
+    required this.overlay,
+    required this.accessibility,
+  });
+
+  bool get allGranted => notifications && overlay && accessibility;
+  bool get anyMissing => !allGranted;
+
+  List<String> get missingList {
+    final list = <String>[];
+    if (!notifications) list.add('通知权限');
+    if (!overlay) list.add('悬浮窗权限');
+    if (!accessibility) list.add('无障碍服务');
+    return list;
+  }
+
+  String get summary {
+    if (allGranted) return '全部已授权';
+    if (missingList.isEmpty) return '未知';
+    return '缺少：${missingList.join('、')}';
+  }
 }

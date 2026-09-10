@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/services.dart';
+import 'package:dio/dio.dart';
 import 'tool_engine.dart';
 import '../services/device_control.dart';
 import 'skills.dart';
+import '../config/app_config.dart';
 
 /// All built-in tools for the Flutter client
 List<ToolDef> createBuiltinTools() => [
@@ -370,6 +372,87 @@ List<ToolDef> createBuiltinTools() => [
       return result.success
           ? ToolResult.ok(result.message)
           : ToolResult.fail(result.message);
+    },
+  ),
+
+  // ---- Vision / Screenshot Analysis ----
+  ToolDef(
+    name: 'analyze_screen',
+    description:
+        '截取当前屏幕并用视觉模型分析。返回屏幕内容的文字描述。',
+    inputSchema: {
+      'type': 'object',
+      'properties': {
+        'prompt': {
+          'type': 'string',
+          'description':
+              '分析指令，如"描述屏幕上有哪些按钮"、"找到搜索框的位置"',
+        },
+      },
+    },
+    execute: (args) async {
+      final prompt = args['prompt'] ?? '描述当前屏幕内容';
+      final cfg = await AppConfig.loadEffective();
+
+      if (!cfg.hasVisionConfig) {
+        return ToolResult.fail('未配置视觉模型。请在设置中填写。');
+      }
+
+      var ready = await DeviceControl.isScreenCaptureReady();
+      if (!ready) {
+        final started = await DeviceControl.startScreenCapture();
+        if (!started) return ToolResult.fail('无法启动屏幕捕获');
+        await Future.delayed(const Duration(seconds: 1));
+        ready = await DeviceControl.isScreenCaptureReady();
+        if (!ready) return ToolResult.fail('屏幕捕获未就绪');
+      }
+
+      final dataUrl = await DeviceControl.captureFrame();
+      if (dataUrl == null) return ToolResult.fail('截屏失败');
+
+      final base64Image = dataUrl.split(',').last;
+      final dio = Dio(BaseOptions(
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(minutes: 2),
+      ));
+
+      try {
+        final resp = await dio.post(
+          '${cfg.visionBaseUrl}/chat/completions',
+          data: {
+            'model': cfg.visionModel,
+            'messages': [
+              {
+                'role': 'user',
+                'content': [
+                  {'type': 'text', 'text': prompt},
+                  {
+                    'type': 'image_url',
+                    'image_url': {
+                      'url': 'data:image/jpeg;base64,$base64Image'
+                    },
+                  },
+                ],
+              },
+            ],
+            'max_tokens': 1024,
+          },
+          options: Options(
+            headers: {
+              'Authorization': 'Bearer ${cfg.effectiveVisionKey}',
+              'Content-Type': 'application/json',
+            },
+          ),
+        );
+
+        final data = resp.data as Map<String, dynamic>;
+        final content = data['choices']?[0]?['message']?['content'] ?? '';
+        return ToolResult.ok(content,
+            metadata: {'model': cfg.visionModel});
+      } on DioException catch (e) {
+        return ToolResult.fail(
+            '视觉模型请求失败 (HTTP ${e.response?.statusCode}): ${e.message}');
+      }
     },
   ),
 ];
