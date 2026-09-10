@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/services.dart';
 import 'tool_engine.dart';
 import '../services/device_control.dart';
+import 'skills.dart';
 
 /// All built-in tools for the Flutter client
 List<ToolDef> createBuiltinTools() => [
@@ -333,6 +334,42 @@ List<ToolDef> createBuiltinTools() => [
       } else {
         return ToolResult.fail('命令失败 (exit=${result.exitCode}): ${result.stderr}');
       }
+    },
+  ),
+
+  // ---- Skill Executor ----
+  ToolDef(
+    name: 'execute_skill',
+    description: '执行预定义技能（打开常用应用、截屏、回到主页等）。传入技能名称。',
+    inputSchema: {
+      'type': 'object',
+      'properties': {
+        'skill_name': {
+          'type': 'string',
+          'description': '技能名称，如 "open-wechat", "open-browser", "go-home", "go-back", "screenshot", "calculate"',
+          'enum': builtinSkills.map((s) => s.name).toList(),
+        },
+      },
+      'required': ['skill_name'],
+    },
+    execute: (args) async {
+      final name = args['skill_name'] ?? '';
+      if (name.isEmpty) return ToolResult.fail('请提供技能名称');
+
+      final skill = builtinSkills.firstWhere(
+        (s) => s.name == name,
+        orElse: () => const Skill(name: '', label: '', description: ''),
+      );
+      if (skill.name.isEmpty) return ToolResult.fail('未知技能: $name');
+
+      final result = await SkillExecutor.execute(skill);
+      if (result.isPrompt) {
+        // Prompt skills are handled by AI, return hint
+        return ToolResult.ok('[技能提示] ${skill.description}', metadata: {'skill': skill.name, 'type': 'prompt'});
+      }
+      return result.success
+          ? ToolResult.ok(result.message)
+          : ToolResult.fail(result.message);
     },
   ),
 ];
