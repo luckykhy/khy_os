@@ -182,7 +182,7 @@ class _KhyOsChatScreenState extends ConsumerState<KhyOsChatScreen>
       }
       setState(() => _connStatus = st);
     } catch (e) {
-      _logger.e(LogCategory.error, '未知连接错误', error: e);
+      _logger.e(LogCategory.system, '未知连接错误', error: e);
       if (mounted) setState(() => _connStatus = 'error');
     }
   }

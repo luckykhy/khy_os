@@ -9,6 +9,7 @@ import '../../core/network/dns_resolver.dart';
 import '../../core/network/network_autofix.dart';
 import '../../core/network/smart_dns.dart';
 import '../../core/services/app_logger.dart';
+import '../../core/config/app_config.dart';
 import '../../data/models/models.dart' hide Conversation;
 import '../../core/tools/tool_engine.dart';
 import '../../core/tools/builtin_tools.dart';
@@ -210,8 +211,14 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
     } on DioException catch (e) {
       _handleDioErr(e, id);
     } catch (e) {
-      _logger.e(LogCategory.api, '请求失败', error: e);
-      _setError(id, '错误: $e');
+      _logger.recordError(
+        code: ErrorCode.unknown,
+        message: '对话异常',
+        category: LogCategory.api,
+        context: {'mode': _mode.name, 'model': _cfg?.model ?? ''},
+        exception: e,
+      );
+      _setError(id, '发生错误：$e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -1052,35 +1059,62 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
   }
 
   void _handleDioErr(DioException e, String id) {
-    _logger.e(LogCategory.network, 'API 请求异常', details: {
-      'error_type': e.type.name,
-      'message': e.message ?? '',
-      'status': e.response?.statusCode?.toString() ?? '',
-      'url': e.requestOptions.path,
-    });
+    final url = e.requestOptions.path;
+    final status = e.response?.statusCode;
+
+    // 使用结构化错误码记录
     if (e.type == DioExceptionType.connectionError &&
         e.message?.contains('Failed host lookup') == true) {
+      _logger.recordError(
+        code: ErrorCode.dns,
+        message: 'DNS 解析失败：无法连接 $url',
+        category: LogCategory.network,
+        context: {'url': url, 'type': 'connection_error'},
+        exception: e,
+      );
       setState(() => _connStatus = 'dns_error');
-      _setError(id, 'DNS 解析失败：无法连接 ${_cfg?.baseUrl}。检查网络后重试，或点击「网络诊断」');
+      _setError(id, 'DNS 解析失败：无法连接。检查网络后重试');
       return;
     }
+
+    String errorCode;
+    String userMsg;
     switch (e.type) {
       case DioExceptionType.connectionError:
-        _setError(id, '网络连接失败：请检查 Wi-Fi 或移动数据');
+        errorCode = ErrorCode.connection;
+        userMsg = '网络连接失败：请检查 Wi-Fi 或移动数据';
         break;
       case DioExceptionType.connectionTimeout:
-        _setError(id, '连接超时：服务器响应慢，请稍后重试');
+        errorCode = ErrorCode.timeout;
+        userMsg = '连接超时：服务器响应慢，请稍后重试';
         break;
       case DioExceptionType.receiveTimeout:
-        _setError(id, '响应超时：服务器处理时间过长');
+        errorCode = ErrorCode.timeout;
+        userMsg = '响应超时：服务器处理时间过长';
         break;
       case DioExceptionType.badResponse:
-        final code = e.response?.statusCode ?? 0;
-        _setError(id, 'API 返回 $code 错误：${_describeHttpStatus(code)}');
+        final code = status ?? 0;
+        errorCode = ErrorCode.forHttpStatus(code);
+        userMsg = 'API 返回 $code：${_describeHttpStatus(code)}';
         break;
       default:
-        _setError(id, '请求失败：${e.message}');
+        errorCode = ErrorCode.unknown;
+        userMsg = '请求失败：${e.message}';
     }
+
+    _logger.recordError(
+      code: errorCode,
+      message: userMsg,
+      category: LogCategory.network,
+      context: {
+        'url': url,
+        'type': e.type.name,
+        'status': status?.toString() ?? '',
+        'mode': _mode.name,
+      },
+      exception: e,
+    );
+    _setError(id, userMsg);
   }
 
   String _describeHttpStatus(int code) {
