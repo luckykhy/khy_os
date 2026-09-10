@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_description">khy-os AI 助手需要无障碍权限来：模拟点击和滑动、读取屏幕上的 UI 元素、执行全局操作（返回/主页）。此权限仅用于执行您通过 AI 对话请求的操作。</string>
+</resources>

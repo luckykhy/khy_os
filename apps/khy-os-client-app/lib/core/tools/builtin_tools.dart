@@ -183,6 +183,158 @@ List<ToolDef> createBuiltinTools() => [
       return ToolResult.ok('(笔记功能将在后续版本完善)');
     },
   ),
+
+  // ---- Accessibility Service ----
+  ToolDef(
+    name: 'a11y_tap',
+    description: '通过无障碍服务模拟点击屏幕指定坐标。需要先在系统设置中启用无障碍服务。',
+    inputSchema: {
+      'type': 'object',
+      'properties': {
+        'x': {'type': 'integer', 'description': 'X 坐标'},
+        'y': {'type': 'integer', 'description': 'Y 坐标'},
+      },
+      'required': ['x', 'y'],
+    },
+    execute: (args) async {
+      final x = args['x'] ?? 0;
+      final y = args['y'] ?? 0;
+      final ready = await DeviceControl.isAccessibilityReady();
+      if (!ready) return ToolResult.fail('无障碍服务未启用，请先在设置中启用');
+      final ok = await DeviceControl.a11yTap(x, y);
+      return ok ? ToolResult.ok('已点击 ($x, $y)') : ToolResult.fail('点击失败');
+    },
+  ),
+
+  ToolDef(
+    name: 'a11y_find_and_click',
+    description: '通过无障碍服务查找并点击 UI 元素。支持 text=xxx / id=xxx / class=xxx 查询。',
+    inputSchema: {
+      'type': 'object',
+      'properties': {
+        'query': {'type': 'string', 'description': '查询条件，如 "text=确定"、"id=com.example:id/btn"'},
+      },
+      'required': ['query'],
+    },
+    execute: (args) async {
+      final query = args['query'] ?? '';
+      if (query.isEmpty) return ToolResult.fail('请提供查询条件');
+      final ready = await DeviceControl.isAccessibilityReady();
+      if (!ready) return ToolResult.fail('无障碍服务未启用');
+      final ok = await DeviceControl.a11yFindAndClick(query);
+      return ok ? ToolResult.ok('已找到并点击: $query') : ToolResult.fail('未找到匹配元素: $query');
+    },
+  ),
+
+  ToolDef(
+    name: 'a11y_dump_ui',
+    description: '通过无障碍服务获取当前屏幕的 UI 树结构（文本、ID、类名等）。用于了解屏幕内容。',
+    inputSchema: {'type': 'object', 'properties': {}},
+    execute: (args) async {
+      final ready = await DeviceControl.isAccessibilityReady();
+      if (!ready) return ToolResult.fail('无障碍服务未启用');
+      final dump = await DeviceControl.a11yDumpUi();
+      return dump.isEmpty ? ToolResult.ok('UI 树为空') : ToolResult.ok(dump);
+    },
+  ),
+
+  ToolDef(
+    name: 'a11y_list_clickable',
+    description: '列出当前屏幕上所有可点击的元素及其坐标。用于 Agent 决策。',
+    inputSchema: {'type': 'object', 'properties': {}},
+    execute: (args) async {
+      final ready = await DeviceControl.isAccessibilityReady();
+      if (!ready) return ToolResult.fail('无障碍服务未启用');
+      final items = await DeviceControl.a11yListClickable();
+      if (items.isEmpty) return ToolResult.ok('无可点击元素');
+      final list = items.take(20).map((item) =>
+        '${item['text']} (${item['class']}) @ (${item['x']},${item['y']})'
+      ).join('\n');
+      return ToolResult.ok('可点击元素 (${items.length} 个):\n$list');
+    },
+  ),
+
+  ToolDef(
+    name: 'a11y_type_text',
+    description: '通过无障碍服务在当前焦点输入框中输入文字。',
+    inputSchema: {
+      'type': 'object',
+      'properties': {
+        'text': {'type': 'string', 'description': '要输入的文字'},
+      },
+      'required': ['text'],
+    },
+    execute: (args) async {
+      final text = args['text'] ?? '';
+      if (text.isEmpty) return ToolResult.fail('请提供要输入的文字');
+      final ready = await DeviceControl.isAccessibilityReady();
+      if (!ready) return ToolResult.fail('无障碍服务未启用');
+      final ok = await DeviceControl.a11yTypeText(text);
+      return ok ? ToolResult.ok('已输入: $text') : ToolResult.fail('输入失败');
+    },
+  ),
+
+  ToolDef(
+    name: 'a11y_global_action',
+    description: '执行全局操作：返回(1)、主页(2)、最近任务(3)、通知栏(4)。',
+    inputSchema: {
+      'type': 'object',
+      'properties': {
+        'action': {'type': 'integer', 'description': '操作代码: 1=返回, 2=主页, 3=最近任务, 4=通知栏'},
+      },
+      'required': ['action'],
+    },
+    execute: (args) async {
+      final action = args['action'] ?? 2;
+      final ready = await DeviceControl.isAccessibilityReady();
+      if (!ready) return ToolResult.fail('无障碍服务未启用');
+      final ok = await DeviceControl.a11yGlobalAction(action);
+      final names = {1: '返回', 2: '主页', 3: '最近任务', 4: '通知栏'};
+      return ok ? ToolResult.ok('已执行: ${names[action] ?? "未知操作"}') : ToolResult.fail('操作失败');
+    },
+  ),
+
+  // ---- Screen Capture ----
+  ToolDef(
+    name: 'capture_screen',
+    description: '截取当前屏幕截图。需要先启动屏幕捕获服务。',
+    inputSchema: {'type': 'object', 'properties': {}},
+    execute: (args) async {
+      final ready = await DeviceControl.isScreenCaptureReady();
+      if (!ready) {
+        final started = await DeviceControl.startScreenCapture();
+        if (!started) return ToolResult.fail('启动屏幕捕获失败，请在弹窗中授权');
+        // Wait a moment for service to start
+        await Future.delayed(const Duration(seconds: 1));
+      }
+      final data = await DeviceControl.captureFrame();
+      if (data == null) return ToolResult.fail('截屏失败');
+      return ToolResult.ok('已截屏 (${data.length} bytes base64)', metadata: {'imageData': data});
+    },
+  ),
+
+  // ---- Shell Command ----
+  ToolDef(
+    name: 'exec_shell',
+    description: '执行 shell 命令。仅允许白名单命令（am, pm, dumpsys, settings, input 等）。',
+    inputSchema: {
+      'type': 'object',
+      'properties': {
+        'command': {'type': 'string', 'description': '要执行的 shell 命令'},
+      },
+      'required': ['command'],
+    },
+    execute: (args) async {
+      final command = args['command'] ?? '';
+      if (command.isEmpty) return ToolResult.fail('请提供命令');
+      final result = await DeviceControl.execShell(command);
+      if (result.success) {
+        return ToolResult.ok(result.stdout.isEmpty ? '(无输出)' : result.stdout);
+      } else {
+        return ToolResult.fail('命令失败 (exit=${result.exitCode}): ${result.stderr}');
+      }
+    },
+  ),
 ];
 
 /// Simple expression evaluator
