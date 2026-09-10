@@ -9,13 +9,14 @@ import '../../core/network/dns_resolver.dart';
 import '../../core/network/network_autofix.dart';
 import '../../core/network/smart_dns.dart';
 import '../../core/services/app_logger.dart';
-import '../../data/models/models.dart';
+import '../../data/models/models.dart' hide Conversation;
 import '../screens/settings_screen.dart';
 import '../screens/log_viewer_screen.dart';
 import '../screens/network_diagnostic_screen.dart';
 import '../../core/tools/tool_engine.dart';
 import '../../core/tools/builtin_tools.dart';
 import '../../core/tools/skills.dart';
+import '../../core/services/conversation_db.dart';
 
 enum AppMode { remote, standalone }
 
@@ -42,6 +43,12 @@ class _KhyOsChatScreenState extends ConsumerState<KhyOsChatScreen>
   final _smartDns = SmartDns();
   late final ToolEngine _toolEngine;
 
+  // Session management
+  String _currentConvId = 'default';
+  String _currentTitle = '新对话';
+  List<ConversationSummary> _conversations = [];
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   @override
   void initState() {
     super.initState();
@@ -54,6 +61,8 @@ class _KhyOsChatScreenState extends ConsumerState<KhyOsChatScreen>
     // Initialize tool engine with built-in tools
     _toolEngine = ToolEngine();
     _toolEngine.registerAll(createBuiltinTools());
+    // Load conversations
+    _loadConversations();
   }
 
   @override
@@ -70,6 +79,76 @@ class _KhyOsChatScreenState extends ConsumerState<KhyOsChatScreen>
     _logger.i(LogCategory.config, '配置加载完成', details: {'base_url': c.baseUrl, 'model': c.model});
     if (_mode == AppMode.standalone && c.isConfigured) _testConn();
   }
+
+  // ==================== Session Management ====================
+
+  Future<void> _loadConversations() async {
+    final list = await ConversationDB.listAll();
+    if (mounted) setState(() => _conversations = list);
+  }
+
+  Future<void> _saveCurrentConversation() async {
+    if (_msgs.isEmpty) return;
+    final conv = Conversation(
+      id: _currentConvId,
+      title: _currentTitle,
+      messages: _msgs.map((m) => ChatMsg(
+        role: m.role == MessageRole.user ? 'user' : 'assistant',
+        content: m.content,
+        timestamp: m.timestamp,
+      )).toList(),
+    );
+    await ConversationDB.save(conv);
+    await _loadConversations();
+  }
+
+  void _newConversation() {
+    setState(() {
+      _msgs.clear();
+      _currentConvId = 'conv_${DateTime.now().millisecondsSinceEpoch}';
+      _currentTitle = '新对话';
+    });
+    Navigator.pop(context); // close drawer
+  }
+
+  Future<void> _loadConversation(String id) async {
+    final conv = await ConversationDB.load(id);
+    if (conv == null) return;
+    setState(() {
+      _msgs.clear();
+      _currentConvId = conv.id;
+      _currentTitle = conv.title;
+      for (final msg in conv.messages) {
+        _msgs.add(ChatMessage(
+          id: '${msg.timestamp.millisecondsSinceEpoch}',
+          conversationId: conv.id,
+          role: msg.role == 'user' ? MessageRole.user : MessageRole.assistant,
+          content: msg.content,
+          timestamp: msg.timestamp,
+        ));
+      }
+    });
+    Navigator.pop(context); // close drawer
+  }
+
+  Future<void> _deleteConversation(String id) async {
+    await ConversationDB.delete(id);
+    if (_currentConvId == id) {
+      _newConversation();
+    } else {
+      await _loadConversations();
+    }
+  }
+
+  void _updateTitleFromFirstMessage(String text) {
+    if (_currentTitle == '新对话' && text.isNotEmpty) {
+      setState(() {
+        _currentTitle = text.length > 20 ? text.substring(0, 20) + '...' : text;
+      });
+    }
+  }
+
+  // ==================== Connection Test ====================
 
   Future<void> _testConn() async {
     if (_cfg == null) return;
@@ -130,19 +209,22 @@ class _KhyOsChatScreenState extends ConsumerState<KhyOsChatScreen>
       return;
     }
     _logger.i(LogCategory.ui, '用户发送消息', details: {'text_length': text.length, 'mode': _mode.name});
+    _updateTitleFromFirstMessage(text);
     setState(() {
-      _msgs.add(ChatMessage(id: DateTime.now().millisecondsSinceEpoch.toString(), conversationId: 'main', role: MessageRole.user, content: text, timestamp: DateTime.now()));
+      _msgs.add(ChatMessage(id: DateTime.now().millisecondsSinceEpoch.toString(), conversationId: _currentConvId, role: MessageRole.user, content: text, timestamp: DateTime.now()));
       _busy = true;
     });
     _input.clear();
     _scrollToBottom();
     final aid = 'a_${DateTime.now().millisecondsSinceEpoch}';
-    setState(() => _msgs.add(ChatMessage(id: aid, conversationId: 'main', role: MessageRole.assistant, content: '', timestamp: DateTime.now())));
+    setState(() => _msgs.add(ChatMessage(id: aid, conversationId: _currentConvId, role: MessageRole.assistant, content: '', timestamp: DateTime.now())));
     if (_mode == AppMode.remote) {
       await _sendRemote(text, aid);
     } else {
       await _sendStandalone(text, aid);
     }
+    // Save conversation after response
+    await _saveCurrentConversation();
   }
 
   Future<void> _sendRemote(String text, String id) async {
@@ -471,15 +553,98 @@ class _KhyOsChatScreenState extends ConsumerState<KhyOsChatScreen>
 
   Future<void> _openSettings() async { await Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen())); await _loadConfig(); }
 
+  Widget _buildDrawer(ColorScheme cs) {
+    return Drawer(
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Icon(Icons.android, color: cs.primary, size: 24),
+                  const SizedBox(width: 8),
+                  Text('khy-os 会话', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: cs.onSurface)),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+
+            // New conversation button
+            ListTile(
+              leading: Icon(Icons.add_comment, color: cs.primary),
+              title: const Text('新对话'),
+              onTap: _newConversation,
+            ),
+            const Divider(height: 1),
+
+            // Conversation list
+            Expanded(
+              child: _conversations.isEmpty
+                  ? const Center(child: Text('暂无历史会话', style: TextStyle(color: Colors.grey)))
+                  : ListView.builder(
+                      itemCount: _conversations.length,
+                      itemBuilder: (context, index) {
+                        final conv = _conversations[index];
+                        final isActive = conv.id == _currentConvId;
+                        return ListTile(
+                          leading: Icon(
+                            isActive ? Icons.chat_bubble : Icons.chat_bubble_outline,
+                            size: 18,
+                            color: isActive ? cs.primary : Colors.grey,
+                          ),
+                          title: Text(
+                            conv.title.isEmpty ? '新对话' : conv.title,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                              color: isActive ? cs.primary : cs.onSurface,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text(
+                            '${conv.messageCount} 条消息',
+                            style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                          ),
+                          trailing: IconButton(
+                            icon: Icon(Icons.delete, size: 16, color: Colors.grey[400]),
+                            onPressed: () => _deleteConversation(conv.id),
+                          ),
+                          onTap: () => _loadConversation(conv.id),
+                        );
+                      },
+                    ),
+            ),
+
+            const Divider(height: 1),
+
+            // Footer
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                '${_conversations.length} 个会话',
+                style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Color _statusColor() { switch (_connStatus) { case 'connected': return Colors.green; case 'testing': return Colors.orange; case 'dns_error': return Colors.red; default: return Colors.grey; } }
   String _statusText() { switch (_connStatus) { case 'connected': return '已连接'; case 'testing': return '测试中...'; case 'dns_error': return 'DNS 错误'; case 'network_error': return '网络错误'; case 'timeout': return '超时'; default: return '未测试'; } }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context); final cs = theme.colorScheme;
-    return Scaffold(backgroundColor: theme.scaffoldBackgroundColor, body: SafeArea(child: Column(children: [
+    return Scaffold(key: _scaffoldKey, backgroundColor: theme.scaffoldBackgroundColor, drawer: _buildDrawer(cs), body: SafeArea(child: Column(children: [
       Container(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), decoration: BoxDecoration(color: cs.surface, boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2))]),
         child: Row(children: [
+          IconButton(icon: const Icon(Icons.menu, size: 22), onPressed: () => _scaffoldKey.currentState?.openDrawer(), tooltip: '会话列表'),
           AnimatedBuilder(animation: _anim, builder: (_, _) => Opacity(opacity: 0.7 + _anim.value * 0.3, child: Icon(Icons.android, color: cs.primary, size: 28))),
           const SizedBox(width: 10),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
