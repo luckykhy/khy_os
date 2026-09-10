@@ -15,6 +15,7 @@ import '../screens/log_viewer_screen.dart';
 import '../screens/network_diagnostic_screen.dart';
 import '../../core/tools/tool_engine.dart';
 import '../../core/tools/builtin_tools.dart';
+import '../../core/tools/skills.dart';
 
 enum AppMode { remote, standalone }
 
@@ -165,9 +166,12 @@ class _KhyOsChatScreenState extends ConsumerState<KhyOsChatScreen>
     final startTime = DateTime.now();
     try {
       final h = _msgs.where((m) => m.content.isNotEmpty && m.id != id).map((m) => {'role': m.role == MessageRole.user ? 'user' : 'assistant', 'content': m.content}).toList();
-      final sysPrompt = _cfg!.systemPrompt.isNotEmpty
+      final basePrompt = _cfg!.systemPrompt.isNotEmpty
           ? _cfg!.systemPrompt
-          : '你是 khy-os AI 助手，运行在用户的 Android 手机上。你可以帮用户打开应用、管理剪贴板、计算数学表达式等。使用工具完成用户请求。';
+          : '你是 khy-os AI 助手，运行在用户的 Android 手机上。你可以帮用户打开应用、管理剪贴板、计算数学表达式、执行无障碍操作等。使用工具完成用户请求。';
+      // Append skills summary for AI awareness
+      final skillsSummary = _buildSkillsSummary();
+      final sysPrompt = '$basePrompt\n\n$skillsSummary';
       final tools = _toolEngine.toFunctionSchemas();
       final dio = Dio(BaseOptions(connectTimeout: const Duration(seconds: 30), receiveTimeout: const Duration(minutes: 5)));
 
@@ -278,8 +282,37 @@ class _KhyOsChatScreenState extends ConsumerState<KhyOsChatScreen>
       case 'write_clipboard': return '写入剪贴板';
       case 'calculator': return '计算: ${args['expression'] ?? ''}';
       case 'device_info': return '获取设备信息';
+      case 'execute_skill': return '执行技能: ${args['skill_name'] ?? ''}';
+      case 'a11y_tap': return '无障碍点击: (${args['x'] ?? 0}, ${args['y'] ?? 0})';
+      case 'a11y_find_and_click': return '查找并点击: ${args['query'] ?? ''}';
+      case 'a11y_dump_ui': return '获取屏幕UI树';
+      case 'a11y_list_clickable': return '列出可点击元素';
+      case 'a11y_type_text': return '输入文字: ${args['text'] ?? ''}';
+      case 'a11y_global_action': return '全局操作: ${args['action'] ?? ''}';
+      case 'capture_screen': return '截屏';
+      case 'exec_shell': return '执行命令: ${args['command'] ?? ''}';
       default: return '执行: $toolName';
     }
+  }
+
+  String _buildSkillsSummary() {
+    final delegationSkills = builtinSkills.where((s) => s.type == SkillType.delegation).toList();
+    final utilitySkills = builtinSkills.where((s) => s.type == SkillType.prompt).toList();
+
+    final buf = StringBuffer('## 可用技能\n');
+    buf.write('你可以通过 execute_skill 工具快速执行以下预定义技能：\n\n');
+    buf.write('### 应用启动类\n');
+    for (final s in delegationSkills) {
+      buf.write('- ${s.name}: ${s.description}\n');
+    }
+    buf.write('\n### 工具类\n');
+    for (final s in utilitySkills) {
+      buf.write('- ${s.name}: ${s.description}\n');
+    }
+    buf.write('\n### 使用方式\n');
+    buf.write('当用户请求匹配某个技能时，直接调用 execute_skill 工具，传入 skill_name 参数。\n');
+    buf.write('如果用户请求不匹配任何技能，使用 open_app/open_url/a11y_tap 等工具完成。\n');
+    return buf.toString();
   }
 
   Future<void> _sendWithIpDirect(String text, String id, DateTime startTime) async {
@@ -293,9 +326,11 @@ class _KhyOsChatScreenState extends ConsumerState<KhyOsChatScreen>
       _logger.i(LogCategory.dns, '使用 IP 直连: $ip');
 
       final h = _msgs.where((m) => m.content.isNotEmpty && m.id != id).map((m) => {'role': m.role == MessageRole.user ? 'user' : 'assistant', 'content': m.content}).toList();
-      final sysPrompt = _cfg!.systemPrompt.isNotEmpty
+      final basePrompt = _cfg!.systemPrompt.isNotEmpty
           ? _cfg!.systemPrompt
-          : '你是 khy-os AI 助手，运行在用户的 Android 手机上。你可以帮用户打开应用、管理剪贴板、计算数学表达式等。使用工具完成用户请求。';
+          : '你是 khy-os AI 助手，运行在用户的 Android 手机上。你可以帮用户打开应用、管理剪贴板、计算数学表达式、执行无障碍操作等。使用工具完成用户请求。';
+      final skillsSummary = _buildSkillsSummary();
+      final sysPrompt = '$basePrompt\n\n$skillsSummary';
       final tools = _toolEngine.toFunctionSchemas();
       final dio = Dio(BaseOptions(connectTimeout: const Duration(seconds: 30), receiveTimeout: const Duration(minutes: 5)));
 
