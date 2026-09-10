@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import '../../core/config/app_config.dart';
+import '../../core/config/built_in_keys.dart';
 import '../../core/config/provider_presets.dart';
 import '../../core/gateway/khyos_api.dart';
 import '../../core/services/device_control.dart';
@@ -85,6 +86,10 @@ class _SettingsScreenNewState extends State<SettingsScreenNew> {
 
   Future<void> _test() async {
     setState(() => _testResult = null);
+    // Use the effective key (user key or built-in)
+    final effectiveKey = _apiKey.text.trim().isNotEmpty
+        ? _apiKey.text.trim()
+        : BuiltInKeys.getBuiltInKey(_baseUrl.text.trim());
     try {
       final d = Dio(BaseOptions(
           connectTimeout: const Duration(seconds: 10),
@@ -92,7 +97,7 @@ class _SettingsScreenNewState extends State<SettingsScreenNew> {
       await d.get('$_baseUrl.text/models',
           options: Options(
             headers: {
-              'Authorization': 'Bearer $_apiKey.text'
+              'Authorization': 'Bearer $effectiveKey'
             },
             validateStatus: (s) => s != null && s < 500,
           ));
@@ -128,16 +133,78 @@ class _SettingsScreenNewState extends State<SettingsScreenNew> {
         padding: const EdgeInsets.all(16),
         children: [
           // ── Section: Provider Presets ──
-          _sectionHeader('提供商预设', Icons.router, cs),
+          _sectionHeader('内置提供商', Icons.router, cs),
+          const SizedBox(height: 4),
+          Text(
+            '以下提供商已内置密钥，选择即可使用，无需填写 API Key',
+            style: TextStyle(
+                fontSize: 12,
+                color: cs.onSurface.withValues(alpha: 0.5)),
+          ),
           const SizedBox(height: 8),
-          ...ProviderPresets.presets.map(
-            (p) => _presetTile(p, cs),
+          ...BuiltInKeys.providers.entries.map(
+            (entry) => _presetTile(entry.key, entry.value, cs),
           ),
           const SizedBox(height: 16),
 
           // ── Section: API Config ──
           _sectionHeader('API 配置', Icons.key, cs),
           const SizedBox(height: 8),
+          // Built-in key indicator
+          if (_config != null && !_config!.hasUserKey && _config!.hasBuiltInKey)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.success.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                    color: AppColors.success.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.lock, size: 16, color: AppColors.success),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '当前使用内置密钥（${_config!.maskedEffectiveKey}）',
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.success,
+                          height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (_config != null &&
+              !_config!.hasUserKey &&
+              !_config!.hasBuiltInKey &&
+              _config!.baseUrl.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                    color: AppColors.warning.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded,
+                      size: 16, color: AppColors.warning),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '未配置密钥：请填写 API Key 或选择上方提供商',
+                      style: TextStyle(
+                          fontSize: 12, color: AppColors.warning, height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           _card(cs, [
             _labeledField('Base URL', _baseUrl,
                 hint: 'https://api.example.com/v1', cs: cs),
@@ -302,16 +369,16 @@ class _SettingsScreenNewState extends State<SettingsScreenNew> {
     );
   }
 
-  Widget _presetTile(ProviderPreset p, ColorScheme cs) {
-    final name = p.name;
+  Widget _presetTile(String name, BuiltInProvider p, ColorScheme cs) {
     final isActive = _config?.baseUrl == p.baseUrl;
+    final hasKey = p.hasKey;
     return GestureDetector(
       onTap: () {
         setState(() {
           _baseUrl.text = p.baseUrl;
           _model.text = p.defaultModel;
-          if (p.apiKey.isNotEmpty && _apiKey.text.isEmpty) {
-            _apiKey.text = p.apiKey;
+          if (hasKey) {
+            _apiKey.text = ''; // Clear user key → use built-in
           }
         });
       },
@@ -333,19 +400,30 @@ class _SettingsScreenNewState extends State<SettingsScreenNew> {
               width: 10,
               height: 10,
               decoration: BoxDecoration(
-                color: isActive ? cs.primary : Colors.grey,
+                color: isActive ? cs.primary : (hasKey ? AppColors.success : Colors.grey),
                 shape: BoxShape.circle,
               ),
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(name.toString(),
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-                      color: isActive
-                          ? cs.onPrimaryContainer
-                          : cs.onSurface)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(name,
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                          color: isActive
+                              ? cs.onPrimaryContainer
+                              : cs.onSurface)),
+                  Text(
+                    hasKey ? '内置密钥 · ${p.models.length} 个模型' : '需填写密钥',
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: cs.onSurface.withValues(alpha: 0.45)),
+                  ),
+                ],
+              ),
             ),
             if (isActive)
               Icon(Icons.check, size: 16, color: cs.primary),

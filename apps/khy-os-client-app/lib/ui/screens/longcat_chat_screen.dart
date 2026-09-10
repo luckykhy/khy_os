@@ -157,7 +157,7 @@ class _KhyOsChatScreenState extends ConsumerState<KhyOsChatScreen>
     try {
       final d = Dio(BaseOptions(connectTimeout: const Duration(seconds: 10), receiveTimeout: const Duration(seconds: 10)));
       await d.get('${_cfg!.baseUrl}/models', options: Options(
-        headers: {'Authorization': 'Bearer ${_cfg!.apiKey}'},
+        headers: {'Authorization': 'Bearer ${_cfg!.effectiveApiKey}'},
         validateStatus: (s) => s != null && s < 500,
       ));
       if (mounted) setState(() => _connStatus = 'connected');
@@ -275,7 +275,7 @@ class _KhyOsChatScreenState extends ConsumerState<KhyOsChatScreen>
         final resp = await dio.post('${_cfg!.baseUrl}/chat/completions',
           data: requestData,
           options: Options(
-            headers: {'Authorization': 'Bearer ${_cfg!.apiKey}', 'Content-Type': 'application/json'},
+            headers: {'Authorization': 'Bearer ${_cfg!.effectiveApiKey}', 'Content-Type': 'application/json'},
           ),
         );
 
@@ -437,7 +437,7 @@ class _KhyOsChatScreenState extends ConsumerState<KhyOsChatScreen>
         final resp = await dio.post('https://$ip/chat/completions',
           data: requestData,
           options: Options(headers: {
-            'Authorization': 'Bearer ${_cfg!.apiKey}',
+            'Authorization': 'Bearer ${_cfg!.effectiveApiKey}',
             'Content-Type': 'application/json',
             'Host': hostname,
           }),
