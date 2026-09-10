@@ -320,12 +320,12 @@ class _KhyOsChatScreenState extends ConsumerState<KhyOsChatScreen>
 
           // Show tool execution in UI
           final toolLabel = _getToolLabel(toolName, args);
-          _setContent(id, '$content\n\n⏳ $toolLabel');
+          _setContent(id, '$content\n\n执行中：$toolLabel');
 
           final result = await _toolEngine.execute(toolName, args);
 
           // Show result
-          final resultIcon = result.success ? '✅' : '❌';
+          final resultIcon = result.success ? '成功' : '失败';
           _setContent(id, '$content\n\n$resultIcon $toolLabel: ${result.output}');
 
           // Add tool result to messages
@@ -470,10 +470,10 @@ class _KhyOsChatScreenState extends ConsumerState<KhyOsChatScreen>
           try { args = jsonDecode(argsStr) as Map<String, dynamic>; } catch (_) { args = {}; }
 
           final toolLabel = _getToolLabel(toolName, args);
-          _setContent(id, '$content\n\n⏳ $toolLabel');
+          _setContent(id, '$content\n\n执行中：$toolLabel');
 
           final result = await _toolEngine.execute(toolName, args);
-          final resultIcon = result.success ? '✅' : '❌';
+          final resultIcon = result.success ? '成功' : '失败';
           _setContent(id, '$content\n\n$resultIcon $toolLabel: ${result.output}');
 
           messages.add({'tool_call_id': tc['id'] ?? '', 'role': 'tool', 'content': result.jsonOutput});
@@ -495,7 +495,7 @@ class _KhyOsChatScreenState extends ConsumerState<KhyOsChatScreen>
     switch (e.type) {
       case DioExceptionType.connectionError:
         msg = e.message?.contains('Failed host lookup') == true
-            ? 'DNS 解析失败。\n\n无法解析 API 主机名。\n建议：点击📶网络诊断一键修复'
+            ? 'DNS 解析失败。\n\n无法解析 API 主机名。\n建议：点击网络诊断按钮修复'
             : '网络连接失败，请检查网络设置';
         break;
       case DioExceptionType.connectionTimeout: msg = '连接超时，服务器无响应'; break;
@@ -526,7 +526,7 @@ class _KhyOsChatScreenState extends ConsumerState<KhyOsChatScreen>
         const SizedBox(height: 16), const Text('无法连接到 API 服务器。可能原因：', style: TextStyle(fontWeight: FontWeight.w600)),
         const SizedBox(height: 8), const Text(' • 未连接 WiFi 或移动数据'), const Text(' • DNS 服务器异常'), const Text(' • 域名被运营商屏蔽'),
         const SizedBox(height: 16), const Text('解决建议：', style: TextStyle(fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8), const Text(' 1. 点击顶部📶按钮一键诊断修复'), const Text(' 2. 切换到以下可用节点：'),
+        const SizedBox(height: 8), const Text(' 1. 点击顶部网络诊断按钮一键修复'), const Text(' 2. 切换到以下可用节点：'),
         const SizedBox(height: 12),
         _endpointOption('DeepSeek', 'https://api.deepseek.com/v1', c), _endpointOption('智谱 GLM', 'https://open.bigmodel.cn/api/coding/paas/v4', c),
         _endpointOption('阿里通义', 'https://dashscope.aliyuncs.com/compatible-mode/v1', c), _endpointOption('Moonshot', 'https://api.moonshot.cn/v1', c),

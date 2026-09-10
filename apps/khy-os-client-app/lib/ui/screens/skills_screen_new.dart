@@ -174,7 +174,7 @@ class _SkillsScreenNewState extends State<SkillsScreenNew> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            result.success ? '✅ ${result.message}' : '❌ ${result.message}',
+            result.success ? result.message : '失败：${result.message}',
             style: const TextStyle(fontSize: 13),
           ),
           backgroundColor: result.success ? AppColors.success : AppColors.error,

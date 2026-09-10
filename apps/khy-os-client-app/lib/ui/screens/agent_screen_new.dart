@@ -56,7 +56,7 @@ class _AgentScreenNewState extends State<AgentScreenNew> {
                         const Text('Agent 模式',
                             style: TextStyle(
                                 fontSize: 15, fontWeight: FontWeight.bold)),
-                        Text(_running ? '执行中...' : '就绪',
+                        Text(_running ? '执行中' : '就绪',
                             style: TextStyle(
                                 fontSize: 11,
                                 color: cs.onSurface.withValues(alpha: 0.5))),
@@ -120,10 +120,10 @@ class _AgentScreenNewState extends State<AgentScreenNew> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _featureChip('📋 任务规划', cs),
-              _featureChip('⚙️ 工具调用', cs),
-              _featureChip('👁️ 屏幕理解', cs),
-              _featureChip('🔄 多步执行', cs),
+              _featureChip('任务规划', cs),
+              _featureChip('工具调用', cs),
+              _featureChip('屏幕理解', cs),
+              _featureChip('多步执行', cs),
             ],
           ),
         ],
@@ -355,7 +355,7 @@ class _AgentScreenNewState extends State<AgentScreenNew> {
                     Padding(
                       padding: const EdgeInsets.only(top: 4, left: 18),
                       child: Text(
-                        '${step.toolResult!.success ? "✅" : "❌"} ${step.toolResult!.output}',
+                        '${step.toolResult!.success ? '成功' : '失败'} ${step.toolResult!.output}',
                         style: TextStyle(
                             fontSize: 11,
                             color: step.toolResult!.success
