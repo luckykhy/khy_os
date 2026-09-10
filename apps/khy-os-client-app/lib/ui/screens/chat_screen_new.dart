@@ -76,7 +76,7 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
   }
 
   Future<void> _loadConfig() async {
-    final c = await AppConfig.load();
+    final c = await AppConfig.loadEffective();
     if (mounted) setState(() => _cfg = c);
   }
 
@@ -155,7 +155,7 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
           data: requestData,
           options: Options(
             headers: {
-              'Authorization': 'Bearer ${_cfg!.apiKey}',
+              'Authorization': 'Bearer ${_cfg!.effectiveApiKey}',
               'Content-Type': 'application/json',
             },
           ),
@@ -1037,7 +1037,7 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
       await d.get('${_cfg!.baseUrl}/models',
           options: Options(
               headers: {
-                'Authorization': 'Bearer ${_cfg!.apiKey}'
+                'Authorization': 'Bearer ${_cfg!.effectiveApiKey}'
               },
               validateStatus: (s) => s != null && s < 500));
       setState(() => _connStatus = 'connected');
