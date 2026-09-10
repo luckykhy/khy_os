@@ -91,7 +91,7 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
     final text = _input.text.trim();
     if (text.isEmpty || _busy) return;
     if (_cfg == null || !_cfg!.isConfigured) {
-      _showError('API 未配置', '请在设置中配置 API Key');
+      _showError('API 未配置', '请先到设置页填写 API Key 和模型');
       return;
     }
     _updateTitleFromFirstMessage(text);
@@ -636,7 +636,7 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
               await Future.delayed(const Duration(seconds: 1));
               final data = await DeviceControl.captureFrame();
               if (data != null) {
-                _addSystemMsg('📸 已截屏');
+                _addSystemMsg('已截屏');
               }
             }
           }, cs),
@@ -1002,15 +1002,17 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
   }
 
   void _setError(String id, String e) {
+    _logger.e(LogCategory.api, '对话出错', details: {'message': e});
     setState(() {
       final i = _msgs.indexWhere((m) => m.id == id);
-      if (i >= 0) _msgs[i] = _msgs[i].copyWith(content: '⚠️ $e');
+      if (i >= 0) _msgs[i] = _msgs[i].copyWith(content: '错误：$e');
       _busy = false;
     });
   }
 
   void _showError(String title, String msg) {
-    _addSystemMsg('⚠️ $title\n$msg');
+    _logger.w(LogCategory.ui, title, details: {'message': msg});
+    _addSystemMsg('$title\n$msg');
   }
 
   void _scrollToBottom() {
@@ -1050,25 +1052,49 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
   }
 
   void _handleDioErr(DioException e, String id) {
+    _logger.e(LogCategory.network, 'API 请求异常', details: {
+      'error_type': e.type.name,
+      'message': e.message ?? '',
+      'status': e.response?.statusCode?.toString() ?? '',
+      'url': e.requestOptions.path,
+    });
     if (e.type == DioExceptionType.connectionError &&
         e.message?.contains('Failed host lookup') == true) {
       setState(() => _connStatus = 'dns_error');
-      _setError(id, 'DNS 解析失败，请检查网络或点击诊断');
+      _setError(id, 'DNS 解析失败：无法连接 ${_cfg?.baseUrl}。检查网络后重试，或点击「网络诊断」');
       return;
     }
     switch (e.type) {
       case DioExceptionType.connectionError:
-        _setError(id, '网络连接失败');
+        _setError(id, '网络连接失败：请检查 Wi-Fi 或移动数据');
         break;
       case DioExceptionType.connectionTimeout:
-        _setError(id, '连接超时');
+        _setError(id, '连接超时：服务器响应慢，请稍后重试');
+        break;
+      case DioExceptionType.receiveTimeout:
+        _setError(id, '响应超时：服务器处理时间过长');
         break;
       case DioExceptionType.badResponse:
-        _setError(id,
-            'API 返回错误 (${e.response?.statusCode})');
+        final code = e.response?.statusCode ?? 0;
+        _setError(id, 'API 返回 $code 错误：${_describeHttpStatus(code)}');
         break;
       default:
-        _setError(id, '请求失败: ${e.message}');
+        _setError(id, '请求失败：${e.message}');
+    }
+  }
+
+  String _describeHttpStatus(int code) {
+    switch (code) {
+      case 400: return '请求参数错误，请检查模型名称';
+      case 401: return 'API Key 无效或过期，请在设置中更新';
+      case 403: return '权限不足：该 API Key 无权访问此模型';
+      case 404: return '模型不存在：请检查模型名称拼写';
+      case 429: return '请求过频：请等待片刻或降低请求频率';
+      case 500: return '服务器内部错误：请稍后重试';
+      case 502: return '网关错误：API 服务暂不可用';
+      case 503: return '服务不可用：请稍后重试';
+      case 504: return '网关超时：服务器响应过慢';
+      default: return '未知错误';
     }
   }
 

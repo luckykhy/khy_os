@@ -113,7 +113,7 @@ class _DeviceScreenNewState extends State<DeviceScreenNew> {
                     context: context,
                     icon: Icons.accessibility_new,
                     title: '无障碍服务',
-                    subtitle: _a11yReady ? '已启用 - 可模拟点击/滑动' : '未启用 - 需在系统设置中开启',
+                    subtitle: _a11yReady ? '已启用，可模拟点击和滑动' : '未启用，需在系统设置中开启',
                     active: _a11yReady,
                     action: _a11yReady ? null : () => DeviceControl.openAccessibilitySettings(),
                     actionLabel: _a11yReady ? null : '去开启',
@@ -123,7 +123,7 @@ class _DeviceScreenNewState extends State<DeviceScreenNew> {
                     context: context,
                     icon: Icons.screenshot,
                     title: '屏幕捕获',
-                    subtitle: _screenReady ? '运行中 - 可静默截屏' : '未运行 - 需授权后启动',
+                    subtitle: _screenReady ? '运行中，可静默截屏' : '未运行，需授权后启动',
                     active: _screenReady,
                     action: _screenReady
                         ? () async {

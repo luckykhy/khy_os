@@ -67,10 +67,10 @@ class _SettingsScreenNewState extends State<SettingsScreenNew> {
       );
       await _load();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('✅ 配置已保存'),
-            backgroundColor: AppColors.success,
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('配置已保存'),
+          backgroundColor: AppColors.success,
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
@@ -96,19 +96,21 @@ class _SettingsScreenNewState extends State<SettingsScreenNew> {
             },
             validateStatus: (s) => s != null && s < 500,
           ));
-      setState(() => _testResult = '✅ 连接成功');
+      setState(() => _testResult = '连接成功');
     } on DioException catch (e) {
       setState(() {
         if (e.response != null) {
-          _testResult = '❌ HTTP ${e.response!.statusCode}';
+          _testResult = 'HTTP ${e.response!.statusCode}：${_describeHttpStatus(e.response!.statusCode!)}';
         } else if (e.type == DioExceptionType.connectionTimeout) {
-          _testResult = '❌ 连接超时';
+          _testResult = '连接超时：服务器无响应';
+        } else if (e.type == DioExceptionType.connectionError) {
+          _testResult = '连接失败：请检查网络';
         } else {
-          _testResult = '❌ ${e.message}';
+          _testResult = '连接失败：${e.message}';
         }
       });
     } catch (e) {
-      setState(() => _testResult = '❌ $e');
+      setState(() => _testResult = '连接失败：$e');
     }
   }
 
@@ -180,7 +182,7 @@ class _SettingsScreenNewState extends State<SettingsScreenNew> {
               child: Text(_testResult!,
                   style: TextStyle(
                       fontSize: 13,
-                      color: _testResult!.startsWith('✅')
+                      color: _testResult!.startsWith('连接成功')
                           ? AppColors.success
                           : AppColors.error)),
             ),
@@ -271,6 +273,21 @@ class _SettingsScreenNewState extends State<SettingsScreenNew> {
                 color: cs.onSurface)),
       ],
     );
+  }
+
+  String _describeHttpStatus(int code) {
+    switch (code) {
+      case 400: return '请求参数错误';
+      case 401: return 'API Key 无效或过期';
+      case 403: return '权限不足';
+      case 404: return '模型或路径不存在';
+      case 429: return '请求过频，请稍后重试';
+      case 500: return '服务器内部错误';
+      case 502: return '网关错误';
+      case 503: return '服务不可用';
+      case 504: return '网关超时';
+      default: return '未知错误';
+    }
   }
 
   Widget _card(ColorScheme cs, List<Widget> children) {
