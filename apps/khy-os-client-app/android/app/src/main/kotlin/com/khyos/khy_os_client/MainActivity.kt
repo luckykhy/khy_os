@@ -89,7 +89,11 @@ class MainActivity : FlutterActivity() {
                 "stopScreenCapture" -> stopScreenCapture(result)
 
                 // --- Shell ---
-                "execShell" -> execShell(call.argument<String>("command") ?: "", result)
+                "shell" -> shell(
+                    call.argument<String>("command") ?: "",
+                    call.argument<Int>("timeout") ?: 30,
+                    result
+                )
 
                 else -> result.notImplemented()
             }
@@ -434,7 +438,11 @@ class MainActivity : FlutterActivity() {
 
     // --- Shell ---
 
-    private fun execShell(command: String, result: MethodChannel.Result) {
+    private fun shell(command: String, timeoutSec: Int, result: MethodChannel.Result) {
+        if (command.isEmpty()) {
+            result.success(mapOf("success" to false, "stdout" to "", "stderr" to "空命令", "exitCode" to -1))
+            return
+        }
         if (!isCommandAllowed(command)) {
             result.success(mapOf("success" to false, "stdout" to "", "stderr" to "命令被拒绝（白名单/黑名单）", "exitCode" to -1))
             return
@@ -449,19 +457,23 @@ class MainActivity : FlutterActivity() {
                 var line: String?
                 while (ro.readLine().also { line = it } != null) out.append(line).append("\n")
                 while (re.readLine().also { line = it } != null) err.append(line).append("\n")
-                if (!p.waitFor(15, TimeUnit.SECONDS)) p.destroyForcibly()
-                val code = p.exitValue()
+                val finished = p.waitFor(timeoutSec.toLong(), TimeUnit.SECONDS)
+                if (!finished) {
+                    p.destroyForcibly()
+                }
+                val code = try { p.exitValue() } catch (_: Exception) { -1 }
                 runOnUiThread {
                     result.success(mapOf(
-                        "success" to (code == 0),
+                        "success" to (finished && code == 0),
                         "stdout" to out.toString(),
                         "stderr" to err.toString(),
-                        "exitCode" to code
+                        "exitCode" to code,
+                        "timeout" to !finished
                     ))
                 }
             } catch (e: Exception) {
                 runOnUiThread {
-                    result.success(mapOf("success" to false, "stdout" to "", "stderr" to e.message, "exitCode" to -1))
+                    result.success(mapOf("success" to false, "stdout" to "", "stderr" to (e.message ?: "unknown error"), "exitCode" to -1))
                 }
             }
         }
