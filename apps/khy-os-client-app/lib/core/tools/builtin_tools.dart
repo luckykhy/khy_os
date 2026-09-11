@@ -13,7 +13,7 @@ List<ToolDef> createBuiltinTools() => [
   // ---- App Control ----
   ToolDef(
     name: 'open_app',
-    description: '打开手机上的应用。可以传入应用名称（中文/拼音）或包名。',
+    description: '打开手机上的任意应用（统一入口）。支持中文名、英文名、拼音、包名。如: "微信"、"Baidu"、"qq"、"com.android.chrome"。也支持直接传 URL 打开网页。',
     inputSchema: {
       'type': 'object',
       'properties': {
@@ -465,7 +465,7 @@ List<ToolDef> createBuiltinTools() => [
   // ---- Skill Executor ----
   ToolDef(
     name: 'execute_skill',
-    description: '执行预定义技能（打开常用应用、截屏、回到主页等）。传入技能名称。',
+    description: '执行辅助技能（截屏提示、回主页、返回、计算等）。注意: 打开应用请用 open_app 工具。',
     inputSchema: {
       'type': 'object',
       'properties': {

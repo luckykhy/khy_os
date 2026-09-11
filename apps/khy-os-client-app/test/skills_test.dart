@@ -3,19 +3,17 @@ import 'package:khy_os_client/core/tools/skills.dart';
 
 void main() {
   group('SkillMatcher', () {
-    test('exact label match gets highest score', () {
-      final matches = SkillMatcher.matchAll('open-wechat');
+    test('exact name match gets highest score', () {
+      final matches = SkillMatcher.matchAll('screenshot');
       expect(matches, isNotEmpty);
-      expect(matches.first.skill.label, isNotEmpty);
+      expect(matches.first.skill.name, 'screenshot');
       expect(matches.first.score, greaterThan(0));
     });
 
-    test('contains keyword in input matches', () {
-      // Input contains a keyword from a skill
-      final matches = SkillMatcher.matchAll('I want to use the browser');
-      // Should find open-browser (keyword 'browser')
+    test('keyword in input matches', () {
+      final matches = SkillMatcher.matchAll('take a screenshot please');
       final names = matches.map((m) => m.skill.name).toList();
-      expect(names, contains('open-browser'));
+      expect(names, contains('screenshot'));
     });
 
     test('no match below threshold returns empty', () {
@@ -29,9 +27,9 @@ void main() {
     });
 
     test('match returns single best or null', () {
-      final best = SkillMatcher.match('open-wechat');
+      final best = SkillMatcher.match('screenshot');
       expect(best, isNotNull);
-      expect(best!.name, 'open-wechat');
+      expect(best!.name, 'screenshot');
 
       final none = SkillMatcher.match('xyzcompletelyrandom');
       expect(none, isNull);
@@ -39,25 +37,25 @@ void main() {
   });
 
   group('Skill structure', () {
-    test('builtinSkills has 30+ entries', () {
-      expect(builtinSkills.length, greaterThanOrEqualTo(25));
-    });
-
-    test('delegation skills have appPackage', () {
-      final delegations = builtinSkills.where((s) => s.type == SkillType.delegation).toList();
-      expect(delegations, isNotEmpty);
-      for (final s in delegations) {
-        expect(s.appPackage, isNotNull);
-        expect(s.allPackages, isNotEmpty);
+    test('builtinSkills has exactly 5 prompt-type skills', () {
+      expect(builtinSkills.length, 5);
+      for (final s in builtinSkills) {
+        expect(s.type, SkillType.prompt);
       }
     });
 
-    test('prompt skills have no appPackage', () {
-      final prompts = builtinSkills.where((s) => s.type == SkillType.prompt).toList();
-      expect(prompts, isNotEmpty);
+    test('no delegation skills remain', () {
+      final delegations = builtinSkills.where((s) => s.type == SkillType.delegation).toList();
+      expect(delegations, isEmpty);
     });
 
-    test('allPackages includes alternates', () {
+    test('allPackages empty for prompt skills (no appPackage)', () {
+      for (final s in builtinSkills) {
+        expect(s.appPackage, isNull);
+      }
+    });
+
+    test('allPackages includes alternates when set', () {
       final skill = Skill(
         name: 'test',
         label: 'Test',
