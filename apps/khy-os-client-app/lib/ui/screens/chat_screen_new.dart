@@ -43,6 +43,7 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
   final List<ChatMessage> _msgs = [];
   final List<ToolCardData> _toolCards = [];
   bool _busy = false;
+  String _currentAction = '';
   AppConfigData? _cfg;
   KhyOsApi? _api;
   AppMode _mode = AppMode.standalone;
@@ -127,8 +128,9 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
         role: MessageRole.user, content: text,
         timestamp: DateTime.now(),
       ));
-      _toolCards.clear();
-      _busy = true;
+    _toolCards.clear();
+    _currentAction = '';
+    _busy = true;
     });
     _input.clear();
     _scrollToBottom();
@@ -177,6 +179,8 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
       ];
 
       for (var loop = 0; loop < 5; loop++) {
+        _currentAction = loop == 0 ? '分析请求' : '继续执行 ($loop/4)';
+        if (mounted) setState(() {});
         final requestData = {
           'model': _cfg!.model,
           'messages': messages,
@@ -266,6 +270,7 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
           );
           _toolCards.add(cardData);
           _setContent(id, '$content\n\n$label');
+          _currentAction = label;
           if (mounted) setState(() {});
 
           // 执行工具（危险命令需用户批准）
@@ -355,7 +360,10 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
       _logExecution(execLog);
       _setError(id, '发生错误：$e');
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) setState(() {
+        _busy = false;
+        _currentAction = '';
+      });
       // 远程模式：上报执行日志到 khy-os 后端
       if (_mode == AppMode.remote && _api != null) {
         _reportToBackend(execLog);
@@ -802,10 +810,14 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
                               strokeWidth: 2, color: cs.primary),
                         ),
                         const SizedBox(width: 8),
-                        Text('思考中...',
-                            style: TextStyle(
-                                color: cs.onSurface.withValues(alpha: 0.4),
-                                fontSize: 13)),
+                        Text(
+                          _currentAction.isNotEmpty ? _currentAction : '思考中',
+                          style: TextStyle(
+                              color: cs.onSurface.withValues(alpha: 0.5),
+                              fontSize: 13),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ],
                     )
                   : SelectableText(
@@ -1662,6 +1674,13 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
     buf.writeln('- 搜索代码/内容 → 用 grep_files(regex="关键词")');
     buf.writeln('- 打开应用 → 只用 open_app，不要试 execute_skill');
     buf.writeln('- 工具执行失败 → 直接告知用户结果，不要反复重试');
+    buf.writeln('');
+    buf.writeln('## 禁止捏造（严格遵守）');
+    buf.writeln('- 只使用工具返回的实际数据，绝不编造文件名、应用列表、文件内容');
+    buf.writeln('- 如果 list_files 返回空，就说"目录为空"，不要猜测里面有什么');
+    buf.writeln('- 如果 read_file 返回了内容，就引用实际内容，不要改写或总结成别的');
+    buf.writeln('- 如果工具报错，原样展示错误信息，不要假装成功');
+    buf.writeln('- 无法确定的信息 → 明确说"我无法确认"，不要编造');
     buf.writeln('');
     buf.writeln(ToolProtocol.textProtocolInstructions);
     return buf.toString();
