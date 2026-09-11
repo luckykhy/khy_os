@@ -173,7 +173,7 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
 
       final messages = <Map<String, dynamic>>[
         {'role': 'system', 'content': sysPrompt},
-        ...h,
+        ..._compactHistory(h),
       ];
 
       for (var loop = 0; loop < 5; loop++) {
@@ -1600,14 +1600,70 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
     }
   }
 
-  String _buildSkillsSummary() {
-    final delegationSkills =
-        builtinSkills.where((s) => s.type == SkillType.delegation).toList();
-    final buf = StringBuffer('## 可用技能\n');
-    buf.write('调用 execute_skill 工具可快速执行：\n');
-    for (final s in delegationSkills.take(15)) {
-      buf.write('- ${s.name}: ${s.description}\n');
+  /// Compress long conversations: keep last 6 messages full, summarize older ones
+  List<Map<String, dynamic>> _compactHistory(List<Map<String, dynamic>> history) {
+    if (history.length <= 8) return history;
+    // Keep last 6 messages, summarize the rest
+    final keep = history.sublist(history.length - 6);
+    final older = history.sublist(0, history.length - 6);
+    final summary = _summarizeOld(older);
+    return [
+      {'role': 'system', 'content': '[历史摘要] $summary'},
+      ...keep,
+    ];
+  }
+
+  String _summarizeOld(List<Map<String, dynamic>> msgs) {
+    final buf = StringBuffer();
+    for (final m in msgs.sublist(msgs.length - 4)) {
+      final role = m['role'] == 'user' ? '用户' : 'AI';
+      final content = (m['content'] ?? '').toString();
+      buf.writeln('$role: ${content.length > 100 ? content.substring(0, 100) + '...' : content}');
     }
+    return buf.toString().trim();
+  }
+
+  String _buildSkillsSummary() {
+    final buf = StringBuffer();
+    buf.writeln('## 可用工具');
+    buf.writeln('');
+    buf.writeln('### 应用操作');
+    buf.writeln('- open_app: 打开任意应用（中文名/包名/URL 均可）');
+    buf.writeln('- search_apps: 搜索已安装应用');
+    buf.writeln('');
+    buf.writeln('### 文件系统（工作目录 = 应用存储）');
+    buf.writeln('- list_files: 列出目录内容（path="" 为根目录）');
+    buf.writeln('- read_file: 读取文件内容');
+    buf.writeln('- write_file: 创建/覆盖文件');
+    buf.writeln('- edit_file: 精确替换文件中某段文字（oldText → newText）');
+    buf.writeln('- find_files: 按 glob 模式查找文件（如 *.dart, **/*.json）');
+    buf.writeln('- grep_files: 正则搜索文件内容（返回 file:line: 匹配行）');
+    buf.writeln('- create_dir: 创建文件夹');
+    buf.writeln('');
+    buf.writeln('### 屏幕/输入');
+    buf.writeln('- capture_screen: 截屏（返回 base64 图片）');
+    buf.writeln('- a11y_dump_ui: 获取当前屏幕 UI 树');
+    buf.writeln('- a11y_tap / a11y_swipe / a11y_type_text: 模拟操作');
+    buf.writeln('');
+    buf.writeln('### 系统/网络');
+    buf.writeln('- device_info: 设备信息');
+    buf.writeln('- exec_shell: 执行 shell 命令（getprop/dumpsys/am/pm 等）');
+    buf.writeln('- web_search: 联网搜索（DuckDuckGo）');
+    buf.writeln('- web_fetch: 抓取网页内容');
+    buf.writeln('');
+    buf.writeln('### 其他');
+    buf.writeln('- read_clipboard / write_clipboard: 剪贴板');
+    buf.writeln('- calculator: 数学计算');
+    buf.writeln('');
+    buf.writeln('## 规则');
+    buf.writeln('- 用户问"手机里有什么文件" → 用 list_files 列出，再 read_file 查看');
+    buf.writeln('- 用户问"某个文件夹有什么" → 用 list_files(path=文件夹名)');
+    buf.writeln('- 查找文件 → 用 find_files(pattern="**/*.扩展名")');
+    buf.writeln('- 搜索代码/内容 → 用 grep_files(regex="关键词")');
+    buf.writeln('- 打开应用 → 只用 open_app，不要试 execute_skill');
+    buf.writeln('- 工具执行失败 → 直接告知用户结果，不要反复重试');
+    buf.writeln('');
+    buf.writeln(ToolProtocol.textProtocolInstructions);
     return buf.toString();
   }
 }
