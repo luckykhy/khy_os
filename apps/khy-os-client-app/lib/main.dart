@@ -2,7 +2,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'ui/theme/app_theme.dart';
 import 'ui/screens/chat_screen_new.dart';
-import 'ui/screens/agent_screen_new.dart';
 import 'ui/screens/skills_screen_new.dart';
 import 'ui/screens/device_screen_new.dart';
 import 'ui/screens/settings_screen_new.dart';
@@ -46,17 +45,15 @@ class _KhyOsHomeState extends ConsumerState<KhyOsHome> {
   final KhyOsApi _api = KhyOsApi();
   bool _isLoading = true;
 
-  static const _tabTitles = ['聊天', 'Agent', '技能', '设备', '设置'];
+  static const _tabTitles = ['AI', '技能', '设备', '设置'];
   static const _tabIcons = [
     Icons.chat_bubble_outline,
-    Icons.smart_toy_outlined,
     Icons.bolt_outlined,
     Icons.devices_outlined,
     Icons.settings_outlined,
   ];
   static const _tabSelectedIcons = [
     Icons.chat_bubble,
-    Icons.smart_toy,
     Icons.bolt,
     Icons.devices,
     Icons.settings,
@@ -111,7 +108,6 @@ class _KhyOsHomeState extends ConsumerState<KhyOsHome> {
 
     final screens = [
       ChatScreenNew(api: _api),
-      AgentScreenNew(api: _api),
       SkillsScreenNew(),
       DeviceScreenNew(),
       SettingsScreenNew(),
@@ -126,7 +122,7 @@ class _KhyOsHomeState extends ConsumerState<KhyOsHome> {
         selectedIndex: _tabIndex,
         onDestinationSelected: (i) => setState(() => _tabIndex = i),
         destinations: [
-          for (var i = 0; i < 5; i++)
+          for (var i = 0; i < 4; i++)
             NavigationDestination(
               icon: Icon(_tabIcons[i]),
               selectedIcon: Icon(_tabSelectedIcons[i]),
