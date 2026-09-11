@@ -64,6 +64,8 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
 
   // 429 backoff: track failures for auto-failover
   int _consecutive429 = 0;
+  // Auto-failover: track tried providers to avoid cycles
+  final List<String> _triedProviders = [];
 
   @override
   void initState() {
@@ -1182,7 +1184,7 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
     // 429 限流：指数退避 + 自动切换备用 provider
     if (status == 429) {
       _consecutive429++;
-      final backoffSec = _consecutive429 * 5; // 5s, 10s, 15s...
+      final backoffSec = _consecutive429 * 5;
       _logger.recordError(
         code: ErrorCode.rateLimit,
         message: '限流 429：第 $_consecutive429 次，退避 ${backoffSec}s',
@@ -1191,9 +1193,8 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
         exception: e,
       );
       if (_consecutive429 >= 2) {
-        // 自动切换到备用 provider
         _autoFailover();
-        _setError(id, '当前 provider 限流，已自动切换。请重试。');
+        _setError(id, '当前 provider 限流，已自动切换到备用。请重试。');
       } else {
         _setError(id, '请求过频 (429)：等待 ${backoffSec}s 后重试');
       }
@@ -1203,7 +1204,7 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
     // 非 429 错误重置计数器
     _consecutive429 = 0;
 
-    // 使用结构化错误码记录
+    // DNS 失败
     if (e.type == DioExceptionType.connectionError &&
         e.message?.contains('Failed host lookup') == true) {
       _logger.recordError(
@@ -1236,6 +1237,7 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
       case DioExceptionType.badResponse:
         final code = status ?? 0;
         errorCode = ErrorCode.forHttpStatus(code);
+        // 403/404 等不切换 provider，直接给用户明确提示
         userMsg = 'API 返回 $code：${_describeHttpStatus(code)}';
         break;
       default:
@@ -1273,23 +1275,43 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
     }
   }
 
-  /// 自动切换到下一个可用 provider
+  /// 自动切换到下一个未尝试的可用 provider
   void _autoFailover() {
-    _logger.i(LogCategory.api, '触发自动切换 provider');
     final currentUrl = _cfg?.baseUrl ?? '';
-    final alternatives = BuiltInKeys.providers.values
-        .where((p) => p.hasKey && p.baseUrl != currentUrl)
-        .toList();
-    if (alternatives.isEmpty) return;
-
-    final next = alternatives.first;
+    
+    // 把当前 provider 加入已尝试列表
+    if (currentUrl.isNotEmpty && !_triedProviders.contains(currentUrl)) {
+      _triedProviders.add(currentUrl);
+    }
+    
+    _logger.i(LogCategory.api, '触发自动切换 provider',
+        details: {'tried': _triedProviders, 'current': currentUrl});
+    
+    // 找一个未尝试过的、有 key 的 provider
+    final next = BuiltInKeys.providers.values.firstWhere(
+      (p) => p.hasKey && 
+             p.baseUrl != currentUrl && 
+             !_triedProviders.contains(p.baseUrl),
+      orElse: () => const BuiltInProvider(
+          baseUrl: '', apiKey: '', defaultModel: '', models: []),
+    );
+    
+    if (next.baseUrl.isEmpty) {
+      // 所有 provider 都试过了，重置并提示用户
+      _triedProviders.clear();
+      _logger.w(LogCategory.api, '所有 provider 均已尝试，无法切换');
+      _addSystemMsg('所有可用 provider 均不可用，请检查网络或稍后再试。');
+      return;
+    }
+    
+    // 切换到新 provider
     setState(() {
       _cfg = _cfg!.copyWith(baseUrl: next.baseUrl, model: next.defaultModel);
       _connStatus = null;
     });
     AppConfig.save(baseUrl: next.baseUrl, model: next.defaultModel);
     _logger.i(LogCategory.api, '已切换到: ${next.baseUrl}',
-        details: {'from': currentUrl, 'to': next.baseUrl});
+        details: {'from': currentUrl, 'to': next.baseUrl, 'model': next.defaultModel});
     _addSystemMsg('已自动切换到备用 provider（${next.baseUrl}），请重试。');
   }
 

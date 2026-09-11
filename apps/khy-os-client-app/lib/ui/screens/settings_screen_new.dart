@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import '../../core/config/app_config.dart';
 import '../../core/config/built_in_keys.dart';
+import '../../core/config/model_registry.dart';
 import '../../core/config/provider_presets.dart';
 import '../../core/gateway/khyos_api.dart';
 import '../../core/services/app_logger.dart';
@@ -28,6 +29,8 @@ class _SettingsScreenNewState extends State<SettingsScreenNew> {
   bool _saving = false;
   String? _testResult;
   final _logger = AppLogger();
+  bool _loadingModels = false;
+  List<ModelInfo> _availableModels = [];
 
   @override
   void initState() {
@@ -232,8 +235,7 @@ class _SettingsScreenNewState extends State<SettingsScreenNew> {
                 hint: 'sk-...', cs: cs, visible: _showKey,
                 onToggle: () => setState(() => _showKey = !_showKey)),
             const SizedBox(height: 12),
-            _labeledField('Model', _model,
-                hint: 'gpt-4o / claude-sonnet / longcat...', cs: cs),
+            _modelSelector(cs),
             const SizedBox(height: 12),
             _labeledField('System Prompt', _sysPrompt,
                 hint: '可选 - 自定义系统提示词', cs: cs, multiline: true),
@@ -450,6 +452,177 @@ class _SettingsScreenNewState extends State<SettingsScreenNew> {
         ),
       ),
     );
+  }
+
+  Widget _modelSelector(ColorScheme cs) {
+    final currentModel = _model.text.isEmpty ? '选择模型' : _model.text;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Model',
+            style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: cs.onSurface.withValues(alpha: 0.6))),
+        const SizedBox(height: 4),
+        GestureDetector(
+          onTap: () => _showModelDialog(cs),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: cs.surfaceVariant.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.4)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    currentModel,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: _model.text.isEmpty
+                          ? cs.onSurface.withValues(alpha: 0.4)
+                          : cs.onSurface,
+                    ),
+                  ),
+                ),
+                if (_loadingModels)
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: cs.primary),
+                  )
+                else
+                  Icon(Icons.expand_more, size: 20, color: cs.onSurfaceVariant),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _showModelDialog(ColorScheme cs) async {
+    await _loadModels();
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Row(
+            children: [
+              const Text('选择模型'),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.refresh, size: 20),
+                onPressed: _loadingModels
+                    ? null
+                    : () async {
+                        setDialogState(() => _loadingModels = true);
+                        await _loadModels(forceRefresh: true);
+                        setDialogState(() => _loadingModels = false);
+                      },
+                tooltip: '刷新模型列表',
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 400,
+            child: _loadingModels
+                ? const Center(child: CircularProgressIndicator())
+                : _availableModels.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.cloud_off, size: 40, color: cs.outline),
+                            const SizedBox(height: 8),
+                            Text('无法加载模型列表',
+                                style: TextStyle(color: cs.outline)),
+                            const SizedBox(height: 4),
+                            Text('请检查网络后刷新',
+                                style: TextStyle(
+                                    fontSize: 11, color: cs.outline)),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: _availableModels.length,
+                        itemBuilder: (_, i) {
+                          final m = _availableModels[i];
+                          final isSelected = _model.text == m.id;
+                          return ListTile(
+                            dense: true,
+                            title: Text(m.name,
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: isSelected
+                                        ? FontWeight.w600
+                                        : FontWeight.normal)),
+                            subtitle: m.name != m.id
+                                ? Text(m.id,
+                                    style: const TextStyle(fontSize: 11))
+                                : null,
+                            trailing: isSelected
+                                ? Icon(Icons.check, size: 18, color: cs.primary)
+                                : null,
+                            onTap: () {
+                              setState(() => _model.text = m.id);
+                              Navigator.pop(ctx);
+                            },
+                          );
+                        },
+                      ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('取消'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _loadModels({bool forceRefresh = false}) async {
+    if (_loadingModels && !forceRefresh) return;
+    setState(() => _loadingModels = true);
+
+    final baseUrl = _baseUrl.text.trim();
+    final apiKey = _apiKey.text.trim().isEmpty
+        ? BuiltInKeys.getBuiltInKey(baseUrl)
+        : _apiKey.text.trim();
+
+    if (baseUrl.isNotEmpty && apiKey.isNotEmpty) {
+      final models = await ModelRegistry.fetchModels(baseUrl, apiKey);
+      if (models.isNotEmpty) {
+        setState(() {
+          _availableModels = models;
+          _loadingModels = false;
+        });
+        return;
+      }
+    }
+
+    // 降级：使用内置默认模型列表
+    final providerName = BuiltInKeys.matchBaseUrl(baseUrl);
+    if (providerName != null) {
+      setState(() {
+        _availableModels = ModelRegistry.getDefaultModels(providerName);
+        _loadingModels = false;
+      });
+    } else {
+      setState(() {
+        _availableModels = [];
+        _loadingModels = false;
+      });
+    }
   }
 
   Widget _labeledField(String label, TextEditingController ctrl,
