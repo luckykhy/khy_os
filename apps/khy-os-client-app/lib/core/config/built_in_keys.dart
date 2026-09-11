@@ -4,16 +4,13 @@
 /// XOR key: 0xA3, 0x5F, 0xC2, 0x1B (4-byte rotation)
 /// Decode:  s[i] = bytes[i] ^ KEY[i % 4]
 ///
-/// To regenerate encoded bytes from plaintext:
-///   python D:\Portable\khy-os\scripts\gen_keys.py
+/// Source: D:\Portable\Tools\opencode\xdg\opencode\opencode.json
+/// To regenerate: python D:\Portable\khy-os\scripts\gen_keys.py
 
 class BuiltInKeys {
-  // ── XOR key (split to avoid single-constant scan) ──
   static const _k0 = 0xA3, _k1 = 0x5F, _k2 = 0xC2, _k3 = 0x1B;
-
   static List<int> get _xorKey => [_k0, _k1, _k2, _k3];
 
-  /// Decode a byte array back to string
   static String _decode(List<int> bytes) {
     final key = _xorKey;
     final sb = StringBuffer();
@@ -23,7 +20,7 @@ class BuiltInKeys {
     return sb.toString();
   }
 
-  // ── Encoded keys (XOR with 0xA3 0x5F 0xC2 0x1B) ──
+  // ── Encoded keys ──
 
   static const List<int> _supxh = [
     208, 52, 239, 112, 219, 57, 134, 110, 146, 10, 183, 78,
@@ -75,12 +72,21 @@ class BuiltInKeys {
     196, 27, 133,
   ];
 
-  // ── Provider registry ──
+  static const List<int> _stepfun = [
+    198, 9, 145, 45, 147, 8, 242, 35, 145, 40, 163, 127,
+    246, 37, 141, 104, 144, 53, 163, 41, 154, 19, 142, 72,
+    232, 58, 137, 118, 194, 59, 186, 35, 233, 48, 131, 95,
+    200, 44, 243, 83, 235, 106, 187, 127, 147, 58, 138, 34,
+    236, 110, 187, 92, 213, 18, 183, 105, 215, 39, 151, 113,
+    214, 41, 168, 82,
+  ];
+
+  // ── Provider registry (complete model lists from opencode) ──
 
   static const Map<String, _KeyEntry> _registry = {
     'SupXH': _KeyEntry(
       baseUrl: 'https://speed44.toter.me/v1',
-      keyField: 0, // _supxh
+      keyField: 0,
       defaultModel: 'claude-sonnet-4-5',
       models: [
         'claude-sonnet-4-5', 'claude-opus-4-5',
@@ -89,40 +95,78 @@ class BuiltInKeys {
     ),
     'Command Code': _KeyEntry(
       baseUrl: 'https://api.commandcode.ai/provider/v1',
-      keyField: 1, // _commandcode
+      keyField: 1,
       defaultModel: 'claude-sonnet-5',
       models: [
-        'claude-sonnet-5', 'claude-sonnet-4-6',
-        'claude-opus-5', 'claude-opus-4-8',
-        'gpt-5.6-luna', 'gpt-5.6-sol', 'gpt-5.6-terra',
+        // Claude
+        'claude-sonnet-5', 'claude-sonnet-4-6', 'claude-opus-5', 'claude-opus-4-8',
+        'claude-fable-5', 'claude-fable-5-1', 'claude-haiku-4-5-20251001',
+        'claude-opus-4-7',
+        // GPT
+        'gpt-5.6-luna', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.5',
+        'gpt-5.4', 'gpt-5.4-mini', 'gpt-5.3-codex',
+        // DeepSeek
         'deepseek/deepseek-v4-pro', 'deepseek/deepseek-v4-flash',
-        'moonshotai/Kimi-K3', 'zai-org/GLM-5.3', 'zai-org/GLM-5.2',
-        'MiniMaxAI/MiniMax-M3', 'xiaomi/mimo-v2.5-pro',
-        'Qwen/Qwen3.8-Max', 'google/gemini-3.7-flash', 'xai/grok-4.5',
+        'deepseek/deepseek-v4-flash-fast', 'deepseek/deepseek-v4-flash-vision-exp',
+        // Kimi
+        'moonshotai/Kimi-K3', 'moonshotai/Kimi-K2.5', 'moonshotai/Kimi-K2.6',
+        'moonshotai/Kimi-K2.7-Code', 'moonshotai/Kimi-K2.7-Code-Highspeed',
+        // GLM
+        'zai-org/GLM-5.3', 'zai-org/GLM-5.2', 'zai-org/GLM-5',
+        'zai-org/GLM-5.1', 'zai-org/GLM-5.2-Fast', 'z-ai/glm-5.3-flash',
+        // MiniMax
+        'MiniMaxAI/MiniMax-M3', 'MiniMaxAI/MiniMax-M2.5', 'MiniMaxAI/MiniMax-M2.7',
+        'minimax/minimax-m3-free',
+        // Xiaomi
+        'xiaomi/mimo-v2.5-pro', 'xiaomi/mimo-v2.5',
+        // Qwen
+        'Qwen/Qwen3.8-Max', 'Qwen/Qwen3.7-Max', 'Qwen/Qwen3.7-Plus',
+        'Qwen/Qwen3.7-Flash', 'Qwen/Qwen3.6-Max-Preview', 'Qwen/Qwen3.6-Plus',
+        'Qwen/Qwen3.8-27B', 'Qwen/Qwen3.8-Flash', 'Qwen/Qwen3.8-Max-0902',
+        // Google
+        'google/gemini-3.7-flash', 'google/gemini-3.1-flash-lite',
+        'google/gemini-3.5-flash', 'google/gemini-3.5-flash-lite',
+        'google/gemini-3.6-flash', 'google/gemini-3.8-flash',
+        // xAI
+        'xai/grok-4.5', 'xai/grok-4.6',
+        // Meituan
+        'meituan/LongCat-2.0:free',
+        // Poolside
+        'poolside/laguna-s-2.1-free',
+        // Others
+        'inclusionai/ling-3.0-flash-sante:free',
+        'meta/muse-spark-1.1', 'meta/muse-spark-1.2',
+        'meta/muse-spark-1.2-contributor', 'meta/muse-spark-1.3',
+        'meta/muse-spark-1.3-contributor',
+        'nvidia/nemotron-3-ultra-550b-a55b',
+        'sakana/fugu-ultra',
+        'stepfun/Step-3.5-Flash', 'stepfun/Step-3.7-Flash',
+        'tencent/hy3-paid', 'tencent/hy4-preview',
+        'thinkingmachines/inkling', 'thinkingmachines/inkling-small',
       ],
     ),
     '智谱 GLM': _KeyEntry(
       baseUrl: 'https://open.bigmodel.cn/api/coding/paas/v4',
-      keyField: 2, // _glm
+      keyField: 2,
       defaultModel: 'glm-5.3',
       models: ['glm-5.3', 'glm-5.3-flash'],
     ),
     'OpenCode Go': _KeyEntry(
       baseUrl: 'https://opencode.ai/zen/go/v1',
-      keyField: 3, // _opencodego
+      keyField: 3,
       defaultModel: 'deepseek-v4-pro',
       models: [
         'grok-4.5', 'gpt-5.6-luna', 'glm-5.3', 'glm-5.2', 'glm-5.1',
         'kimi-k3', 'kimi-k2.7-code', 'kimi-k2.6',
         'mimo-v2.5', 'mimo-v2.5-pro',
         'minimax-m3', 'minimax-m2.7', 'minimax-m2.5',
-        'qwen3.8-max', 'qwen3.7-max',
+        'qwen3.8-max', 'qwen3.7-max', 'qwen3.7-plus', 'qwen3.6-plus',
         'deepseek-v4-pro', 'deepseek-v4-flash', 'hy3', 'ox-alpha-free',
       ],
     ),
     'OpenRouter': _KeyEntry(
       baseUrl: 'https://openrouter.ai/api/v1',
-      keyField: -1, // no built-in key
+      keyField: -1,
       defaultModel: 'z-ai/glm-5.2:free',
       models: [
         'z-ai/glm-5.2:free', 'cohere/north-mini-code:free',
@@ -140,23 +184,35 @@ class BuiltInKeys {
         'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
         'nvidia/nemotron-3.5-content-safety:free',
         'liquid/lfm-2.5-2.6b:free',
+        'openai/gpt-oss-20b:free',
       ],
     ),
     'Sense Nova': _KeyEntry(
       baseUrl: 'https://token.sensenova.cn/v1',
-      keyField: 4, // _sensenova
+      keyField: 4,
       defaultModel: 'sensenova-6.7-flash-lite',
       models: ['sensenova-6.7-flash-lite'],
     ),
     'Agnes': _KeyEntry(
       baseUrl: 'https://apihub.agnes-ai.com/v1',
-      keyField: 5, // _agnes
-      defaultModel: 'agnes-2.0-flash',
-      models: ['agnes-2.0-flash', 'agnes-2.5-flash', 'agnes-2.5-pro-alpha'],
+      keyField: 5,
+      defaultModel: 'agnes-2.5-flash',
+      models: [
+        'agnes-2.0-flash', 'agnes-2.5-flash', 'agnes-2.5-pro-alpha',
+        'agnes-2.5-pro-beta', 'agnes-2.5-pro', 'agnes-3.0-flash',
+        'agnes-image-2.0-flash', 'agnes-image-2.1-flash', 'agnes-image-2.5-flash',
+        'agnes-video-v2.0', 'agnes-video-2.5', 'agnes-video-2.5-flash',
+      ],
+    ),
+    'StepFun': _KeyEntry(
+      baseUrl: 'https://api.stepfun.com/step_plan/v1',
+      keyField: 6,
+      defaultModel: 'step-3.7-flash',
+      models: ['step-3.7-flash'],
     ),
     'OpenCode Zen': _KeyEntry(
       baseUrl: 'https://opencode.ai/zen/v1',
-      keyField: -1, // public, no key needed
+      keyField: -2,
       defaultModel: 'default',
       models: [
         'default', 'big-pickle', 'ling-3.0-flash-fin-free',
@@ -170,7 +226,6 @@ class BuiltInKeys {
 
   static const _publicKey = 'public';
 
-  /// Get decoded API key for a given keyField index
   static String _getKeyFor(int keyField) {
     switch (keyField) {
       case 0: return _decode(_supxh);
@@ -179,11 +234,11 @@ class BuiltInKeys {
       case 3: return _decode(_opencodego);
       case 4: return _decode(_sensenova);
       case 5: return _decode(_agnes);
+      case 6: return _decode(_stepfun);
       default: return '';
     }
   }
 
-  /// Build public-facing provider map (keys decoded lazily)
   static Map<String, BuiltInProvider> get providers {
     final out = <String, BuiltInProvider>{};
     for (final entry in _registry.entries) {
@@ -235,7 +290,7 @@ class BuiltInKeys {
 
 class _KeyEntry {
   final String baseUrl;
-  final int keyField; // index into encoded byte arrays, -1 = no key
+  final int keyField;
   final String defaultModel;
   final List<String> models;
 
@@ -247,10 +302,9 @@ class _KeyEntry {
   });
 }
 
-/// Public-facing provider info (safe to inspect; keys are decoded at runtime)
 class BuiltInProvider {
   final String baseUrl;
-  final String apiKey; // Decoded from XOR at access time
+  final String apiKey;
   final String defaultModel;
   final List<String> models;
 
