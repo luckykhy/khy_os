@@ -99,7 +99,7 @@ class _SettingsScreenNewState extends State<SettingsScreenNew> {
       final d = Dio(BaseOptions(
           connectTimeout: const Duration(seconds: 10),
           receiveTimeout: const Duration(seconds: 10)));
-      await d.get('$_baseUrl.text/models',
+      await d.get('${_baseUrl.text}/models',
           options: Options(
             headers: {
               'Authorization': 'Bearer $effectiveKey'
