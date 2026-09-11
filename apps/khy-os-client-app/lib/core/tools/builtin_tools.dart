@@ -73,7 +73,7 @@ List<ToolDef> createBuiltinTools() => [
       final apps = query.isEmpty
           ? await DeviceControl.listApps()
           : await DeviceControl.searchApps(query);
-      if (apps.isEmpty) return ToolResult.ok('未找到匹配的应用');
+      if (apps.isEmpty) return ToolResult.fail('手机未安装匹配 "" 的应用。建议: 让用户安装该应用，或改用其他已安装的应用。');
       final list = apps.take(10).map((a) => '${a.label} (${a.packageName})').join('\n');
       return ToolResult.ok('找到 ${apps.length} 个应用:\n$list');
     },
