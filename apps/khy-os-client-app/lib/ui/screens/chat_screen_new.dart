@@ -103,10 +103,21 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
   void _sendMessage() {
     final text = _input.text.trim();
     if (text.isEmpty || _busy) return;
-    if (_cfg == null || !_cfg!.isConfigured) {
-      _showError('API 未配置', '请先到设置页填写 API Key 和模型');
-      return;
+    
+    // 远程模式：检查后端连接
+    if (_mode == AppMode.remote) {
+      if (_api == null || !_api!.isConnected) {
+        _showError('未连接到 khy-os 后端', '请先连接远程后端，或切换到独立模式');
+        return;
+      }
+    } else {
+      // 独立模式：检查 API 配置
+      if (_cfg == null || !_cfg!.isConfigured) {
+        _showError('API 未配置', '请先到设置页选择提供商和模型');
+        return;
+      }
     }
+    
     _updateTitleFromFirstMessage(text);
     setState(() {
       _msgs.add(ChatMessage(
@@ -126,7 +137,12 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
       role: MessageRole.assistant, content: '',
       timestamp: DateTime.now(),
     )));
-    _sendWithAgentLoop(aid);
+    
+    if (_mode == AppMode.remote) {
+      _sendRemote(text, aid);
+    } else {
+      _sendWithAgentLoop(aid);
+    }
   }
 
   Future<void> _sendWithAgentLoop(String id) async {
@@ -337,6 +353,38 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
     }
   }
 
+  /// 远程模式：通过 khy-os 后端发送消息
+  Future<void> _sendRemote(String text, String id) async {
+    try {
+      final h = _msgs
+          .where((m) => m.content.isNotEmpty && m.id != id)
+          .map((m) => {
+                'role': m.role == MessageRole.user ? 'user' : 'assistant',
+                'content': m.content,
+              })
+          .toList();
+      
+      await for (final ev in _api!.streamChat(question: text, history: h)) {
+        final t = ev['type'];
+        if (t == 'chunk') {
+          _appendContent(id, (ev['content'] ?? '').toString());
+        } else if (t == 'done') {
+          final c = ev['content'];
+          if (c != null) _setContent(id, c.toString());
+        } else if (t == 'error') {
+          _setError(id, (ev['message'] ?? '远程请求失败').toString());
+          return;
+        }
+      }
+      await _saveConversation();
+    } catch (e) {
+      _logger.e(LogCategory.api, '远程请求失败', error: e);
+      _setError(id, 'khy-os 连接失败：$e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   // ==================== Session ====================
 
   void _updateTitleFromFirstMessage(String text) {
@@ -474,6 +522,9 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
           // Status dot
           _statusDot(cs),
           const SizedBox(width: 4),
+          // Mode toggle
+          _modeToggle(cs),
+          const SizedBox(width: 4),
           IconButton(
             icon: const Icon(Icons.settings_rounded, size: 20),
             onPressed: () => Navigator.push(context,
@@ -481,6 +532,60 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
             tooltip: '设置',
           ),
         ],
+      ),
+    );
+  }
+
+  /// Mode toggle: 独立 ↔ 远程
+  Widget _modeToggle(ColorScheme cs) {
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      padding: const EdgeInsets.all(2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _modeChip('独立', AppMode.standalone, Icons.phone_android, cs),
+          _modeChip('远程', AppMode.remote, Icons.dns, cs),
+        ],
+      ),
+    );
+  }
+
+  Widget _modeChip(String label, AppMode mode, IconData icon, ColorScheme cs) {
+    final sel = _mode == mode;
+    final canUse = mode == AppMode.standalone || (_api != null && _api!.isConnected);
+    return GestureDetector(
+      onTap: canUse
+          ? () {
+              setState(() => _mode = mode);
+              _logger.i(LogCategory.ui, '切换到${mode.name}模式');
+            }
+          : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: sel ? cs.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 12, color: sel ? Colors.white : cs.onSurface.withValues(alpha: canUse ? 0.6 : 0.3)),
+            const SizedBox(width: 3),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                color: sel ? Colors.white : cs.onSurface.withValues(alpha: canUse ? 0.6 : 0.3),
+                fontWeight: sel ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1121,6 +1226,16 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
     _scrollToBottom();
   }
 
+  void _appendContent(String id, String chunk) {
+    setState(() {
+      final i = _msgs.indexWhere((m) => m.id == id);
+      if (i >= 0) {
+        _msgs[i] = _msgs[i].copyWith(content: _msgs[i].content + chunk);
+      }
+    });
+    _scrollToBottom();
+  }
+
   void _setError(String id, String e) {
     _logger.e(LogCategory.api, '对话出错', details: {'message': e});
     setState(() {
@@ -1345,6 +1460,9 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
   }
 
   String _currentModelLabel() {
+    if (_mode == AppMode.remote) {
+      return '远程模式 · khy-os 后端';
+    }
     if (_cfg == null) return '未配置';
     final provider = BuiltInKeys.matchBaseUrl(_cfg!.baseUrl);
     final model = _cfg!.model.isEmpty ? '默认' : _cfg!.model;
