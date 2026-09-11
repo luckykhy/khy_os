@@ -111,7 +111,7 @@ class _KhyOsHomeState extends ConsumerState<KhyOsHome> {
 
     final screens = [
       ChatScreenNew(api: _api),
-      AgentScreenNew(),
+      AgentScreenNew(api: _api),
       SkillsScreenNew(),
       DeviceScreenNew(),
       SettingsScreenNew(),
