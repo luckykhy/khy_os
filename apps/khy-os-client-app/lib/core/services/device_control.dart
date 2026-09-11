@@ -292,9 +292,9 @@ class DeviceControl {
   // ==================== Shell ====================
 
   /// Execute a shell command (whitelist restricted)
-  static Future<ShellResult> execShell(String command) async {
+  static Future<ShellResult> execShell(String command, {int timeoutSeconds = 30}) async {
     try {
-      final result = await _channel.invokeMethod('execShell', {'command': command});
+      final result = await _channel.invokeMethod('shell', {'command': command, 'timeout': timeoutSeconds});
       return ShellResult(
         success: result['success'] == true,
         stdout: result['stdout'] ?? '',
