@@ -55,7 +55,7 @@ class ShellResult {
 /// 能力边界：以 app UID 执行，不能访问其他 app 私有目录，不能修改系统文件
 class ShellExecutor {
   static const _channel = MethodChannel('com.khyos.khy_os_client/device');
-  static const _logger = AppLogger();
+  static final _logger = AppLogger();
 
   /// 执行单条命令
   static Future<ShellResult> exec(
