@@ -761,10 +761,10 @@ class MainActivity : FlutterActivity() {
 
     private fun countOccurrences(text: String, sub: String): Int {
         var count = 0
-        var idx = 0
-        while ((idx = text.indexOf(sub, idx)) != -1) {
+        var idx = text.indexOf(sub)
+        while (idx != -1) {
             count++
-            idx += sub.length
+            idx = text.indexOf(sub, idx + sub.length)
         }
         return count
     }
