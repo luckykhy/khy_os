@@ -57,4 +57,62 @@ class FileService {
       return {'success': false, 'error': 'channel error'};
     }
   }
+
+  /// Edit a file (string replacement)
+  static Future<Map<String, dynamic>> editFile(
+    String path,
+    String oldText,
+    String newText, {
+    bool replaceAll = false,
+  }) async {
+    try {
+      final result = await _channel.invokeMethod('fileEdit', {
+        'path': path,
+        'oldText': oldText,
+        'newText': newText,
+        'replaceAll': replaceAll,
+      });
+      return Map<String, dynamic>.from(result as Map);
+    } catch (_) {
+      return {'success': false, 'error': 'channel error'};
+    }
+  }
+
+  /// Find files by glob pattern
+  static Future<Map<String, dynamic>> findFiles(
+    String dir,
+    String pattern, {
+    int maxResults = 50,
+  }) async {
+    try {
+      final result = await _channel.invokeMethod('fileFind', {
+        'dir': dir,
+        'pattern': pattern,
+        'maxResults': maxResults,
+      });
+      return Map<String, dynamic>.from(result as Map);
+    } catch (_) {
+      return {'success': false, 'error': 'channel error'};
+    }
+  }
+
+  /// Search file contents with regex
+  static Future<Map<String, dynamic>> grepFiles(
+    String dir,
+    String regex, {
+    String filePattern = '',
+    int maxResults = 30,
+  }) async {
+    try {
+      final result = await _channel.invokeMethod('fileGrep', {
+        'dir': dir,
+        'regex': regex,
+        'filePattern': filePattern,
+        'maxResults': maxResults,
+      });
+      return Map<String, dynamic>.from(result as Map);
+    } catch (_) {
+      return {'success': false, 'error': 'channel error'};
+    }
+  }
 }

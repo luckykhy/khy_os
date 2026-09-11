@@ -665,7 +665,91 @@ List<ToolDef> createBuiltinTools() => [
       return ToolResult.fail(result['error'] ?? 'mkdir failed');
     },
   ),
-];
+
+  // ---- Code Search (equivalent to Pi Agent: edit/find/grep) ----
+  ToolDef(
+    name: 'edit_file',
+    description: 'Precise string replacement in a file. Like Pi Agent edit tool.',
+    inputSchema: {
+      'type': 'object',
+      'properties': {
+        'path': {'type': 'string', 'description': 'file relative path'},
+        'oldText': {'type': 'string', 'description': 'exact text to find'},
+        'newText': {'type': 'string', 'description': 'replacement text'},
+        'replaceAll': {'type': 'boolean', 'description': 'replace all occurrences (default false)'},
+      },
+      'required': ['path', 'oldText', 'newText'],
+    },
+    execute: (args) async {
+      final path = (args['path'] ?? '').trim();
+      final oldText = args['oldText']?.toString() ?? '';
+      final newText = args['newText']?.toString() ?? '';
+      final replaceAll = args['replaceAll'] == true;
+      if (path.isEmpty || oldText.isEmpty) return ToolResult.fail('path and oldText required');
+      final r = await FileService.editFile(path, oldText, newText, replaceAll: replaceAll);
+      if (r['success'] == true) {
+        return ToolResult.ok('replaced  occurrence(s) in ');
+      }
+      return ToolResult.fail(r['error']?.toString() ?? 'edit failed');
+    },
+    tags: ['file', 'edit'],
+  ),
+  ToolDef(
+    name: 'find_files',
+    description: 'Find files by glob pattern in working directory. Like Pi Agent find tool.',
+    inputSchema: {
+      'type': 'object',
+      'properties': {
+        'dir': {'type': 'string', 'description': 'search directory (empty = root)'},
+        'pattern': {'type': 'string', 'description': 'glob pattern e.g. *.dart, **/*.json'},
+        'maxResults': {'type': 'integer', 'description': 'limit (default 50)'},
+      },
+      'required': ['pattern'],
+    },
+    execute: (args) async {
+      final dir = (args['dir'] ?? '').toString();
+      final pattern = (args['pattern'] ?? '*').toString();
+      final max = args['maxResults'] as int? ?? 50;
+      final r = await FileService.findFiles(dir, pattern, maxResults: max);
+      if (r['success'] == true) {
+        final files = (r['files'] as List? ?? []).cast<String>();
+        if (files.isEmpty) return ToolResult.ok('no files match ""');
+        return ToolResult.ok(files.join('\n') + (r['truncated'] == true ? '\n...(more)' : ''));
+      }
+      return ToolResult.fail(r['error']?.toString() ?? 'find failed');
+    },
+    tags: ['file', 'search'],
+  ),
+  ToolDef(
+    name: 'grep_files',
+    description: 'Search file contents with regex. Like Pi Agent grep tool. Returns file:line matches.',
+    inputSchema: {
+      'type': 'object',
+      'properties': {
+        'dir': {'type': 'string', 'description': 'search directory (empty = root)'},
+        'regex': {'type': 'string', 'description': 'regex pattern to search'},
+        'filePattern': {'type': 'string', 'description': 'optional regex to filter filenames'},
+        'maxResults': {'type': 'integer', 'description': 'limit (default 30)'},
+      },
+      'required': ['regex'],
+    },
+    execute: (args) async {
+      final dir = (args['dir'] ?? '').toString();
+      final regex = (args['regex'] ?? '').toString();
+      final filePattern = (args['filePattern'] ?? '').toString();
+      final max = args['maxResults'] as int? ?? 30;
+      if (regex.isEmpty) return ToolResult.fail('regex required');
+      final r = await FileService.grepFiles(dir, regex, filePattern: filePattern, maxResults: max);
+      if (r['success'] == true) {
+        final matches = (r['matches'] as List? ?? []).cast<Map<String, dynamic>>();
+        if (matches.isEmpty) return ToolResult.ok('no matches for //');
+        final lines = matches.map((m) => ':: ').join('\n');
+        return ToolResult.ok(lines, metadata: {'count': matches.length});
+      }
+      return ToolResult.fail(r['error']?.toString() ?? 'grep failed');
+    },
+    tags: ['file', 'search'],
+  ),];
 
 /// Simple expression evaluator
 double _evalExpression(String expr) {
