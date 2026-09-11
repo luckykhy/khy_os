@@ -20,6 +20,7 @@ import '../../core/services/device_control.dart';
 import '../../core/config/built_in_keys.dart';
 import '../../core/agent/execution_log.dart';
 import '../../ui/theme/app_colors.dart';
+import '../../ui/widgets/tool_card.dart';
 import 'settings_screen_new.dart';
 
 /// App mode: standalone (direct API) or remote (via khy-os backend)
@@ -40,7 +41,7 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
   final _inputFocus = FocusNode();
   final _scroll = ScrollController();
   final List<ChatMessage> _msgs = [];
-  final List<_ToolCard> _toolCards = [];
+  final List<ToolCardData> _toolCards = [];
   bool _busy = false;
   AppConfigData? _cfg;
   KhyOsApi? _api;
@@ -249,19 +250,27 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
         for (final tc in toolCalls) {
           final toolName = tc.name;
           final args = tc.args;
+          final label = _getToolLabel(toolName, args);
 
           // ── 记录执行步骤 ──
           final stepIdx = execLog.addStep(toolName, args);
           final step = execLog.steps[stepIdx];
           step.start();
 
-          // 更新 UI 进度
-          final progress =
-              '步骤 ${step.index}：${_getToolLabel(toolName, args)}';
-          _setContent(id, '$content\n\n$progress');
+          // ── 创建卡片（running 状态）──
+          final cardData = ToolCardData.running(
+            index: step.index,
+            toolName: toolName,
+            label: label,
+            args: args,
+          );
+          _toolCards.add(cardData);
+          _setContent(id, '$content\n\n$label');
+          if (mounted) setState(() {});
 
           // 执行工具
           final result = await _toolEngine.execute(toolName, args);
+          final elapsed = DateTime.now().difference(step.startTime).inMilliseconds;
 
           // 记录结果
           if (result.success) {
@@ -270,12 +279,30 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
             step.fail(result.output);
           }
 
-          // 更新 UI
-          final icon = result.success ? '成功' : '失败';
-          _setContent(
-              id,
-              '$content\n\n步骤 ${step.index}：${_getToolLabel(toolName, args)}\n'
-                  '$icon ${result.output}');
+          // ── 更新卡片（completed 状态）──
+          final updatedCard = result.success
+              ? ToolCardData.success(
+                  index: step.index,
+                  toolName: toolName,
+                  label: label,
+                  args: args,
+                  output: result.output,
+                  durationMs: elapsed,
+                )
+              : ToolCardData.failed(
+                  index: step.index,
+                  toolName: toolName,
+                  label: label,
+                  args: args,
+                  error: result.output,
+                  durationMs: elapsed,
+                );
+          _toolCards.last = updatedCard;
+          if (mounted) setState(() {});
+
+          // 更新消息内容
+          final statusText = result.success ? '成功' : '失败';
+          _setContent(id, '$content\n\n$statusText: $label');
 
           // 喂回 LLM
           if (useTextProtocol) {
@@ -673,20 +700,20 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
     return ListView.builder(
       controller: _scroll,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      itemCount: _msgs.length + _toolCards.length,
+      itemCount: _msgs.length + (_toolCards.isNotEmpty ? 1 : 0),
       itemBuilder: (_, i) {
         // Interleave tool cards before the last assistant message
         if (i < _msgs.length) {
           final msg = _msgs[i];
-          // Show tool cards before assistant messages that triggered them
-          if (msg.role == MessageRole.assistant && i == _msgs.length - 1 && _toolCards.isNotEmpty) {
+          final isLastAssistant =
+              msg.role == MessageRole.assistant && i == _msgs.length - 1;
+          if (isLastAssistant && _toolCards.isNotEmpty) {
             return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                ToolExecutionSummary(cards: _toolCards),
                 for (final card in _toolCards)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: _toolCardWidget(card, cs),
-                  ),
+                  ToolCard(data: card),
                 _bubble(msg, cs),
               ],
             );
@@ -775,77 +802,6 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
     );
   }
 
-  Widget _toolCardWidget(_ToolCard card, ColorScheme cs) {
-    final color = card.result?.success == true
-        ? AppColors.success
-        : (card.result != null ? AppColors.error : cs.primary);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: cs.surface,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                card.result?.success == true
-                    ? Icons.check_circle_outline
-                    : (card.result != null
-                        ? Icons.error_outline
-                        : Icons.hourglass_empty),
-                size: 16,
-                color: color,
-              ),
-              const SizedBox(width: 6),
-              Text(card.name,
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: cs.onSurface)),
-              const Spacer(),
-              if (card.result != null)
-                Icon(
-                  card.result!.success
-                      ? Icons.check_circle
-                      : Icons.cancel,
-                  size: 16,
-                  color: color,
-                ),
-            ],
-          ),
-          if (card.args.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 6, left: 22),
-              child: Text(
-                '参数: ${card.args}',
-                style: TextStyle(
-                    fontSize: 11, color: cs.onSurface.withValues(alpha: 0.4)),
-              ),
-            ),
-          if (card.result != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 6, left: 22),
-              child: Text(
-                card.result!.output,
-                style: TextStyle(
-                    fontSize: 12,
-                    color: card.result!.success
-                        ? cs.onSurface.withValues(alpha: 0.7)
-                        : AppColors.error,
-                    height: 1.4),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
 
   // ==================== Quick Actions ====================
 
@@ -1525,10 +1481,3 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
   }
 }
 
-/// Lightweight tool execution card
-class _ToolCard {
-  final String name;
-  final Map<String, dynamic> args;
-  ToolResult? result;
-  _ToolCard({required this.name, required this.args});
-}
