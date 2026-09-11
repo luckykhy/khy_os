@@ -108,6 +108,24 @@ class MainActivity : FlutterActivity() {
                     result
                 )
                 "fileCreateDir" -> result.success(fileCreateDir(call.argument<String>("path") ?: ""))
+                "fileEdit" -> fileEdit(
+                    call.argument<String>("path") ?: "",
+                    call.argument<String>("oldText") ?: "",
+                    call.argument<String>("newText") ?: "",
+                    call.argument<Boolean>("replaceAll") ?: false,
+                    result
+                )
+                "fileFind" -> result.success(fileFind(
+                    call.argument<String>("dir") ?: "",
+                    call.argument<String>("pattern") ?: "*",
+                    call.argument<Int>("maxResults") ?: 50
+                ))
+                "fileGrep" -> result.success(fileGrep(
+                    call.argument<String>("dir") ?: "",
+                    call.argument<String>("regex") ?: "",
+                    call.argument<String>("filePattern") ?: "",
+                    call.argument<Int>("maxResults") ?: 30
+                ))
 
                 else -> result.notImplemented()
             }
@@ -652,6 +670,122 @@ class MainActivity : FlutterActivity() {
         } catch (e: Exception) {
             mapOf("success" to false, "error" to (e.message ?: "unknown"))
         }
+    }
+
+    private fun fileEdit(path: String, oldText: String, newText: String, replaceAll: Boolean, result: MethodChannel.Result) {
+        exec.execute {
+            try {
+                val f = resolvePath(path)
+                if (!f.exists() || !f.isFile) {
+                    runOnUiThread { result.success(mapOf("success" to false, "error" to "file not found: $path")) }
+                    return@execute
+                }
+                val content = f.readText()
+                val count = countOccurrences(content, oldText)
+                if (count == 0) {
+                    runOnUiThread { result.success(mapOf("success" to false, "error" to "oldText not found in $path")) }
+                    return@execute
+                }
+                val updated = if (replaceAll) content.replace(oldText, newText)
+                else content.replaceFirst(oldText, newText)
+                f.writeText(updated)
+                runOnUiThread {
+                    result.success(mapOf("success" to true, "replacements" to (if (replaceAll) count else 1), "size" to updated.length))
+                }
+            } catch (e: Exception) {
+                runOnUiThread { result.success(mapOf("success" to false, "error" to (e.message ?: "unknown"))) }
+            }
+        }
+    }
+
+    private fun fileFind(dir: String, pattern: String, maxResults: Int): Map<String, Any> {
+        return try {
+            val base = if (dir.isEmpty() || dir == ".") resolvePath("") else resolvePath(dir)
+            if (!base.exists() || !base.isDirectory) {
+                return mapOf("success" to false, "error" to "directory not found: $dir")
+            }
+            val results = mutableListOf<String>()
+            base.walkTopDown().maxDepth(10).forEach { file ->
+                if (results.size >= maxResults) return@forEach
+                if (file.isFile) {
+                    val name = file.name
+                    val relPath = relativePath(base, file)
+                    // Simple glob: * matches within filename, ** matches across dirs
+                    val regex = globToRegex(pattern)
+                    if (regex.matches(relPath) || regex.matches(name)) {
+                        results.add(relPath)
+                    }
+                }
+            }
+            mapOf("success" to true, "files" to results, "count" to results.size, "truncated" to (results.size >= maxResults))
+        } catch (e: Exception) {
+            mapOf("success" to false, "error" to (e.message ?: "unknown"))
+        }
+    }
+
+    private fun fileGrep(dir: String, regex: String, filePattern: String, maxResults: Int): Map<String, Any> {
+        return try {
+            val base = if (dir.isEmpty() || dir == ".") resolvePath("") else resolvePath(dir)
+            if (!base.exists()) return mapOf("success" to false, "error" to "directory not found")
+            if (regex.isEmpty()) return mapOf("success" to false, "error" to "empty regex")
+            val pattern = try { Regex(regex) } catch (e: Exception) { return mapOf("success" to false, "error" to "invalid regex: ${e.message}") }
+            val results = mutableListOf<Map<String, Any>>()
+            base.walkTopDown().maxDepth(10).forEach { file ->
+                if (results.size >= maxResults) return@forEach
+                if (!file.isFile) return@forEach
+                if (file.length() > 500_000) return@forEach // skip large files
+                // If filePattern specified, filter
+                if (filePattern.isNotEmpty()) {
+                    val fRegex = try { Regex(filePattern) } catch (e: Exception) { null }
+                    if (fRegex != null && !fRegex.matches(file.name)) return@forEach
+                }
+                try {
+                    val lines = file.readLines()
+                    for ((i, line) in lines.withIndex()) {
+                        if (results.size >= maxResults) break
+                        if (pattern.containsMatchIn(line)) {
+                            results.add(mapOf(
+                                "file" to relativePath(base, file),
+                                "line" to (i + 1),
+                                "text" to line.take(200)
+                            ))
+                        }
+                    }
+                } catch (_: Exception) { /* skip binary/unreadable */ }
+            }
+            mapOf("success" to true, "matches" to results, "count" to results.size)
+        } catch (e: Exception) {
+            mapOf("success" to false, "error" to (e.message ?: "unknown"))
+        }
+    }
+
+    private fun countOccurrences(text: String, sub: String): Int {
+        var count = 0
+        var idx = 0
+        while ((idx = text.indexOf(sub, idx)) != -1) {
+            count++
+            idx += sub.length
+        }
+        return count
+    }
+
+    private fun relativePath(baseDir: java.io.File, file: java.io.File): String {
+        return file.absolutePath.removePrefix(baseDir.absolutePath + "/")
+    }
+
+    private fun globToRegex(glob: String): Regex {
+        val sb = StringBuilder("^")
+        for (c in glob) {
+            when (c) {
+                '*' -> sb.append(".*")
+                '?' -> sb.append(".")
+                '.' -> sb.append("\\.")
+                '/' -> sb.append("/")
+                else -> sb.append(c)
+            }
+        }
+        sb.append("\$")
+        return Regex(sb.toString())
     }
 
     companion object {
