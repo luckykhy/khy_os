@@ -95,6 +95,20 @@ class MainActivity : FlutterActivity() {
                     result
                 )
 
+                // --- File System ---
+                "getWorkDir" -> result.success(mapOf(
+                    "path" to (getExternalFilesDir(null)?.absolutePath ?: ""),
+                    "exists" to (getExternalFilesDir(null)?.exists() ?: false)
+                ))
+                "fileList" -> result.success(fileList(call.argument<String>("path") ?: ""))
+                "fileRead" -> result.success(fileRead(call.argument<String>("path") ?: ""))
+                "fileWrite" -> fileWrite(
+                    call.argument<String>("path") ?: "",
+                    call.argument<String>("content") ?: "",
+                    result
+                )
+                "fileCreateDir" -> result.success(fileCreateDir(call.argument<String>("path") ?: ""))
+
                 else -> result.notImplemented()
             }
         }
@@ -564,6 +578,79 @@ class MainActivity : FlutterActivity() {
             val granted = grantResults.isNotEmpty() &&
                 grantResults[0] == PackageManager.PERMISSION_GRANTED
             // The checkPermissions method will reflect this on next call
+        }
+    }
+
+    // --- File System ---
+
+    private fun resolvePath(relative: String): java.io.File {
+        val base = getExternalFilesDir(null) ?: filesDir
+        val target = base.resolve(relative).normalize()
+        // Security: ensure path stays within base
+        if (!target.absolutePath.startsWith(base.absolutePath)) {
+            throw SecurityException("Path escapes working directory: $relative")
+        }
+        return target
+    }
+
+    private fun fileList(relative: String): Map<String, Any> {
+        return try {
+            val dir = resolvePath(if (relative.isEmpty() || relative == ".") "" else relative)
+            if (!dir.exists() || !dir.isDirectory) {
+                mapOf("success" to false, "error" to "目录不存在: $relative")
+            } else {
+                val entries = dir.listFiles()?.map { f ->
+                    mapOf(
+                        "name" to f.name,
+                        "isDir" to f.isDirectory,
+                        "size" to (if (f.isFile) f.length() else 0L),
+                    )
+                } ?: emptyList()
+                mapOf("success" to true, "path" to relative, "files" to entries, "count" to entries.size)
+            }
+        } catch (e: Exception) {
+            mapOf("success" to false, "error" to (e.message ?: "unknown"))
+        }
+    }
+
+    private fun fileRead(relative: String): Map<String, Any> {
+        return try {
+            val f = resolvePath(relative)
+            if (!f.exists() || !f.isFile) {
+                mapOf("success" to false, "error" to "文件不存在: $relative")
+            } else {
+                val content = f.readText()
+                mapOf("success" to true, "content" to content, "size" to content.length)
+            }
+        } catch (e: Exception) {
+            mapOf("success" to false, "error" to (e.message ?: "unknown"))
+        }
+    }
+
+    private fun fileWrite(relative: String, content: String, result: MethodChannel.Result) {
+        exec.execute {
+            try {
+                val f = resolvePath(relative)
+                f.parentFile?.mkdirs()
+                f.writeText(content)
+                runOnUiThread {
+                    result.success(mapOf("success" to true, "path" to relative, "size" to content.length))
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    result.success(mapOf("success" to false, "error" to (e.message ?: "unknown")))
+                }
+            }
+        }
+    }
+
+    private fun fileCreateDir(relative: String): Map<String, Any> {
+        return try {
+            val dir = resolvePath(relative)
+            val ok = if (dir.exists()) true else dir.mkdirs()
+            mapOf("success" to ok, "path" to relative)
+        } catch (e: Exception) {
+            mapOf("success" to false, "error" to (e.message ?: "unknown"))
         }
     }
 
