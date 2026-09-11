@@ -268,9 +268,23 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
           _setContent(id, '$content\n\n$label');
           if (mounted) setState(() {});
 
-          // 执行工具
-          final result = await _toolEngine.execute(toolName, args);
-          final elapsed = DateTime.now().difference(step.startTime).inMilliseconds;
+          // 执行工具（危险命令需用户批准）
+          ToolResult result;
+          if (await _needsApproval(toolName, args)) {
+            final approved = await _showApprovalDialog(toolName, args, label);
+            if (!approved) {
+              result = ToolResult.fail('用户拒绝了该操作');
+              _toolCards.last = ToolCardData.failed(
+                index: step.index, toolName: toolName, label: label,
+                args: args, error: '用户拒绝', durationMs: 0);
+              if (mounted) setState(() {});
+              _feedBack(messages, result, useTextProtocol);
+              continue;
+            }
+          }
+          final startT = DateTime.now();
+          result = await _toolEngine.execute(toolName, args);
+          final elapsed = DateTime.now().difference(startT).inMilliseconds;
 
           // 记录结果
           if (result.success) {
@@ -740,15 +754,20 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [cs.primary, cs.tertiary],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                shape: BoxShape.circle,
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: cs.primary.withValues(alpha: 0.2),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: const Center(
-                child: Text('K',
-                    style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white)),
+                child: Icon(Icons.hub, size: 18, color: Colors.white),
               ),
             ),
             const SizedBox(width: 8),
@@ -1438,6 +1457,106 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
       return '$provider · $model';
     }
     return '${_cfg!.baseUrl} · $model';
+  }
+
+  // ── Approval for dangerous commands ─────────────────────────────
+
+  static const _dangerousPatterns = [
+    'rm -rf', 'mkfs', 'dd if=', 'format', 'wipe',
+    'reboot', 'shutdown', 'halt',
+    'chmod 777', 'chown root',
+    'systemctl', 'insmod', 'rmmod',
+  ];
+
+  bool _isDangerousCommand(Map<String, dynamic> args) {
+    if (args['cmd'] == 'shell' || args['name'] == 'exec_shell') {
+      final cmd = args['command']?.toString() ??
+          (args['args']?['command']?.toString()) ?? '';
+      final lower = cmd.toLowerCase();
+      for (final pattern in _dangerousPatterns) {
+        if (lower.contains(pattern)) return true;
+      }
+    }
+    if (args['name'] == 'exec_shell' && args['command'] != null) {
+      final cmd = args['command'].toString().toLowerCase();
+      for (final pattern in _dangerousPatterns) {
+        if (cmd.contains(pattern)) return true;
+      }
+    }
+    return false;
+  }
+
+  Future<bool> _needsApproval(String toolName, Map<String, dynamic> args) async {
+    if (toolName == 'exec_shell' || toolName == 'android') {
+      return _isDangerousCommand(args);
+    }
+    return false;
+  }
+
+  Future<bool> _showApprovalDialog(
+      String toolName, Map<String, dynamic> args, String label) async {
+    if (!mounted) return false;
+    final cmd = args['command']?.toString() ??
+        (args['args']?['command']?.toString()) ?? label;
+    final cs = Theme.of(context).colorScheme;
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: cs.error, size: 24),
+            const SizedBox(width: 8),
+            const Text('危险命令确认', style: TextStyle(fontSize: 16)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('即将执行以下命令：', style: TextStyle(fontSize: 13, color: cs.onSurface)),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: cs.error.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: cs.error.withValues(alpha: 0.3)),
+              ),
+              child: Text(
+                cmd.length > 200 ? cmd.substring(0, 200) + '...' : cmd,
+                style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text('此操作可能影响系统，请确认你了解风险。',
+                style: TextStyle(fontSize: 12, color: cs.onSurface.withValues(alpha: 0.6))),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: cs.error),
+            child: const Text('批准执行'),
+          ),
+        ],
+      ),
+    ).then((v) => v ?? false);
+  }
+
+  void _feedBack(List<Map<String, dynamic>> messages, ToolResult result, bool useTextProtocol) {
+    if (useTextProtocol) {
+      messages.add({'role': 'user', 'content': ToolProtocol.formatToolResult(result)});
+    } else {
+      messages.add({
+        'tool_call_id': '${DateTime.now().millisecondsSinceEpoch}',
+        'role': 'tool',
+        'content': result.jsonOutput,
+      });
+    }
   }
 
   String _getToolLabel(String toolName, Map<String, dynamic> args) {
