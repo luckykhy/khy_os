@@ -91,15 +91,20 @@ class _SettingsScreenNewState extends State<SettingsScreenNew> {
 
   Future<void> _test() async {
     setState(() => _testResult = null);
+    final url = _baseUrl.text.trim();
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      setState(() => _testResult = 'URL 无效：需以 http:// 或 https:// 开头');
+      return;
+    }
     // Use the effective key (user key or built-in)
     final effectiveKey = _apiKey.text.trim().isNotEmpty
         ? _apiKey.text.trim()
-        : BuiltInKeys.getBuiltInKey(_baseUrl.text.trim());
+        : BuiltInKeys.getBuiltInKey(url);
     try {
       final d = Dio(BaseOptions(
           connectTimeout: const Duration(seconds: 10),
           receiveTimeout: const Duration(seconds: 10)));
-      await d.get('${_baseUrl.text}/models',
+      await d.get('$url/models',
           options: Options(
             headers: {
               'Authorization': 'Bearer $effectiveKey'
@@ -116,10 +121,10 @@ class _SettingsScreenNewState extends State<SettingsScreenNew> {
               : ErrorCode.connection);
       _logger.recordError(
         code: errorCode,
-        message: '连接测试失败: ${_baseUrl.text}',
+        message: '连接测试失败: $url',
         category: LogCategory.network,
         context: {
-          'url': _baseUrl.text,
+          'url': url,
           'type': e.type.name,
           'status': code?.toString() ?? '',
         },

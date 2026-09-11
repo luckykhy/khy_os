@@ -556,10 +556,11 @@ class _AgentScreenNewState extends ConsumerState<AgentScreenNew> {
       buf.writeln('- ${tool.name}: ${tool.description}');
     }
     buf.writeln('');
-    buf.writeln('## 规则');
-    buf.writeln('- 打开应用用 open_app 工具（支持中文名/拼音/包名）');
-    buf.writeln('- 不要猜测，先截屏或 dump UI 再操作');
-    buf.writeln('- 任务完成后直接输出结果');
+    buf.writeln('## 规则（必须遵守）');
+    buf.writeln('- 打开应用/网址：只用 open_app（传中文名或包名），不要试 execute_skill');
+    buf.writeln('- 如果 open_app 返回"未安装"，直接告知用户，不要再调 search_apps 或重试');
+    buf.writeln('- 一个任务最多调 3 个工具，失败就告知结果，不要死循环');
+    buf.writeln('- 任务完成后直接输出简短结果');
     buf.writeln('');
     buf.writeln(ToolProtocol.textProtocolInstructions);
     return buf.toString();
