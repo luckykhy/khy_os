@@ -465,7 +465,7 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
               children: [
                 const Text('khy-os', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                 Text(
-                  _mode == AppMode.standalone ? '独立模式' : '远程模式',
+                  _currentModelLabel(),
                   style: TextStyle(fontSize: 10, color: cs.onSurface.withValues(alpha: 0.5)),
                 ),
               ],
@@ -1342,6 +1342,16 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
       default:
         return '未连接';
     }
+  }
+
+  String _currentModelLabel() {
+    if (_cfg == null) return '未配置';
+    final provider = BuiltInKeys.matchBaseUrl(_cfg!.baseUrl);
+    final model = _cfg!.model.isEmpty ? '默认' : _cfg!.model;
+    if (provider != null) {
+      return '$provider · $model';
+    }
+    return '${_cfg!.baseUrl} · $model';
   }
 
   String _getToolLabel(String toolName, Map<String, dynamic> args) {
