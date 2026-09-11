@@ -1308,12 +1308,24 @@ class _ChatScreenNewState extends ConsumerState<ChatScreenNew>
       case DioExceptionType.badResponse:
         final code = status ?? 0;
         errorCode = ErrorCode.forHttpStatus(code);
-        // 403/404 等不切换 provider，直接给用户明确提示
         userMsg = 'API 返回 $code：${_describeHttpStatus(code)}';
+        if (code == 404) {
+          userMsg = '404：模型 "$_cfg?.model" 在 $url 不存在。请检查模型名称或切换 provider';
+        }
+        break;
+      case DioExceptionType.unknown:
+        errorCode = ErrorCode.unknown;
+        final msg = e.message ?? '';
+        if (msg.contains('connection abort') ||
+            msg.contains('Software caused')) {
+          userMsg = '连接中断：服务器断开，正在自动重试...';
+        } else {
+          userMsg = '请求异常：${msg.isNotEmpty ? msg : "未知错误，请重试"}';
+        }
         break;
       default:
         errorCode = ErrorCode.unknown;
-        userMsg = '请求失败：${e.message}';
+        userMsg = '请求失败：请重试';
     }
 
     _logger.recordError(

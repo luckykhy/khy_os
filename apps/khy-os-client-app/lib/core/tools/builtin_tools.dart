@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 import 'tool_engine.dart';
 import '../services/device_control.dart';
+import '../services/file_service.dart';
 import 'skills.dart';
 import 'retry_engine.dart';
 import '../config/app_config.dart';
@@ -576,6 +577,92 @@ List<ToolDef> createBuiltinTools() => [
         return ToolResult.fail(
             '视觉模型请求失败 (HTTP ${e.response?.statusCode}): ${e.message}');
       }
+    },
+  ),
+
+  // ---- File System (working directory: app external storage) ----
+  ToolDef(
+    name: 'list_files',
+    description: '列出工作目录下的文件。path 为相对路径（空=根目录）。',
+    inputSchema: {
+      'type': 'object',
+      'properties': {
+        'path': {'type': 'string', 'description': '相对目录路径，空字符串表示根目录'},
+      },
+      'required': ['path'],
+    },
+    execute: (args) async {
+      final path = (args['path'] ?? '').trim();
+      final result = await FileService.listFiles(path);
+      if (result['success'] == true) {
+        final files = (result['files'] as List).cast<Map<String, dynamic>>();
+        if (files.isEmpty) return ToolResult.ok('目录为空: ');
+        final lines = files.map((f) => '  (B)').join('\n');
+        return ToolResult.ok("目录  ( 项):\n");
+      }
+      return ToolResult.fail(result['error'] ?? 'list failed');
+    },
+  ),
+  ToolDef(
+    name: 'read_file',
+    description: '读取工作目录中的文件内容。',
+    inputSchema: {
+      'type': 'object',
+      'properties': {
+        'path': {'type': 'string', 'description': '文件相对路径'},
+      },
+      'required': ['path'],
+    },
+    execute: (args) async {
+      final path = (args['path'] ?? '').trim();
+      if (path.isEmpty) return ToolResult.fail('请提供文件路径');
+      final result = await FileService.readFile(path);
+      if (result['success'] == true) {
+        final content = result['content'] as String;
+        final truncated = content.length > 5000 ? content.substring(0, 5000) + '\n... (截断)' : content;
+        return ToolResult.ok(truncated, metadata: {'path': path, 'size': result['size']});
+      }
+      return ToolResult.fail(result['error'] ?? 'read failed');
+    },
+  ),
+  ToolDef(
+    name: 'write_file',
+    description: '写入/创建工作目录中的文件。会覆盖已有文件。',
+    inputSchema: {
+      'type': 'object',
+      'properties': {
+        'path': {'type': 'string', 'description': '文件相对路径'},
+        'content': {'type': 'string', 'description': '要写入的完整内容'},
+      },
+      'required': ['path', 'content'],
+    },
+    execute: (args) async {
+      final path = (args['path'] ?? '').trim();
+      final content = args['content'] ?? '';
+      if (path.isEmpty) return ToolResult.fail('请提供文件路径');
+      final result = await FileService.writeFile(path, content);
+      if (result['success'] == true) {
+        return ToolResult.ok('已写入  ( 字符)');
+      }
+      return ToolResult.fail(result['error'] ?? 'write failed');
+    },
+  ),
+  ToolDef(
+    name: 'create_dir',
+    description: '在工作目录中创建文件夹。',
+    inputSchema: {
+      'type': 'object',
+      'properties': {
+        'path': {'type': 'string', 'description': '目录相对路径'},
+      },
+      'required': ['path'],
+    },
+    execute: (args) async {
+      final path = (args['path'] ?? '').trim();
+      if (path.isEmpty) return ToolResult.fail('请提供目录路径');
+      final result = await FileService.createDir(path);
+      if (result['success'] == true) return ToolResult.ok('已创建目录: ');
+      return ToolResult.fail(result['error'] ?? 'mkdir failed');
     },
   ),
 ];
