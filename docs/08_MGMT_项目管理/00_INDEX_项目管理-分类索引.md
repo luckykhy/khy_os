@@ -16,6 +16,9 @@
 | [MGMT-STD-004] 曼孚-vibecoding-交付方法论-流程铁律.md | 曼孚vibecoding交付方法论 | 定稿 |
 | [MGMT-STD-005] Khyos工作方法论-证据搜集与计划落地铁律.md | 证据→计划→落地方法论 | 定稿 |
 | [MGMT-STD-006] khy-vibecoding与speccoding能力对齐-可量化验收标准.md | vibe/spec-coding对齐验收标准 | 定稿 |
+| [MGMT-STD-007] 文档规则总纲.md | 文档命名/放置/登记/生命周期总纲 | 定稿 |
+| [MGMT-STD-008] 规则编写与管理规范（元规则）.md | 规则编写与管理总纲(元规则) | 定稿 |
+| [MGMT-STD-008] 规则编写与管理规范（元规则）.md | 规则本身的编写/登记/退役 | 定稿 |
 | [MGMT-PLAN-001] khy-os-体验改进计划-2026-05-26.md | 体验改进计划 | 定稿 |
 | [MGMT-PLAN-002] khy-librechat-差距修复路线图.md | LibreChat差距路线图 | 定稿 |
 | [MGMT-PLAN-003] khy-大任务框架蓝图.md | 大任务框架蓝图 | 定稿 |
@@ -23,6 +26,7 @@
 | [MGMT-PLAN-005] 自主生产计划-r2-2026-05-24.md | 自主生产计划r2 | 定稿 |
 | [MGMT-PLAN-006] 智能体-操作系统-路线图.md | 智能体OS路线图 | 定稿 |
 | [MGMT-PLAN-007] Khy-OS远景演进路线图-2026-06-12.md | 远景演进路线图 | 定稿 |
+| [MGMT-PLAN-008] replSession与toolUseLoopCore拆分分批计划.md | 双子星文件拆分作战地图 | 定稿 |
 | [MGMT-RPT-001] deepseek-tui-对标.md | DeepSeek TUI对标 | 定稿 |
 | [MGMT-RPT-002] khy-对比-desirecore-借鉴分析.md | DesireCore借鉴分析 | 定稿 |
 | [MGMT-RPT-003] khy-对比-hermes-成长架构.md | Hermes成长架构对比 | 定稿 |
@@ -44,6 +48,7 @@
 | [MGMT-RPT-019] 架构对比-cc-vs-khy.md | CC与KHY架构对比 | 定稿 |
 | [MGMT-RPT-020] 项目痛点诊断报告-2026-06-13.md | 全栈架构CT扫描诊断 | 定稿 |
 | [MGMT-RPT-021] 全量审查报告甄别-bundled路径与本仓源码对照-2026-07-14.md | 审查报告真伪甄别(bundled对照) | 定稿 |
+| [MGMT-RPT-022] 借鉴项目清单.md | 12个外部项目借鉴来源与深度 | 定稿 |
 | [MGMT-OTHER-001] RESTORE_WINDOWS.md | Windows环境还原 | 定稿 |
 | [MGMT-OTHER-002] 事后分析-终端崩溃-2026-05-09.md | 终端崩溃事后分析 | 定稿 |
 | [MGMT-OTHER-003] 索引.md | 旧版散索引待废 | 草稿 |

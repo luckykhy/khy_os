@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[FE-004] 前端 CSS 与样式架构规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[FE-004] 前端 CSS 与样式架构规范</div>
+      <header class="hero reveal"><h1>[FE-004] 前端 CSS 与样式架构规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#fe-004-前端-css-与样式架构规范">[FE-004] 前端 CSS 与样式架构规范</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: 前端 CSS 与样式架构规范<br>id: FE-004<br>domain: TOOLING<br>nature: 约束<br>scope: &quot;apps/ai-frontend/src/<strong>, software/khyquant/frontend/src/</strong>, platform/packages/ui-shared/**&quot;<br>priority: P2<br>trigger: &quot;新增或修改样式文件、CSS 变量、组件样式时&quot;<br>constraint: &quot;五原则：令牌优先（颜色/圆角/阴影全部走 var(--khy-<em>)，禁止硬编码值）、分层组织（Base → Tokens → Layout → Components → Utilities → Overrides）、就近原则（组件样式 scoped，全局样式仅放布局/令牌/动画）、无 !important（通过特异性顺序管理优先级）、移动优先（默认移动端样式，min-width 渐进增强）。令牌命名 --khy-{category}-{variant}，分类：--khy-bg-</em>、--khy-text-<em>、--khy-border-</em>、--khy-primary-<em>、--khy-{status}（success/warning/danger）、--khy-radius-</em>、--khy-shadow-<em>、--khy-font-</em>。双主题强制：任何颜色/阴影 token 必须同时定义浅色（:root）与深色（html.dark），仅定义浅色会在暗色下静默失效。BEM：.block__element--modifier，.is-state 状态类、.has-child 子元素指示。流式值优先 clamp() 而非媒体查询（padding: clamp(12px, 2vw, 32px)）。必须支持 prefers-reduced-motion: reduce 下关闭动画。硬编码 hex 收敛用 npm run frontend:fix-colors 扫描后替换为 var(--khy-*)。&quot;<br>grants: &quot;无新增权力：仅约束具体做法，不授予任何新权限。&quot;<br>benefit: 暗色模式不会静默失效，颜色/阴影收敛到统一令牌后可批量替换，响应式用流式值减少断点维护。<br>exception: 无<br>version: &quot;1.0.0 (2026-09-16)&quot;<br>status: active<br>ssot: &quot;docs/_规范/[DESIGN-FE-004] 前端 CSS 与样式架构规范.md&quot;<br>formerly: 无<br>owner: frontend-team</p>
+<hr>
+<h1 id="fe-004-前端-css-与样式架构规范">[FE-004] 前端 CSS 与样式架构规范<a class="anchor" href="#fe-004-前端-css-与样式架构规范" aria-label="锚点">#</a></h1>
+<p>&lt;!-- RULES-REGISTRY: FE-004 --&gt;</p>
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/_规范/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：docs/_规范/[DESIGN-FE-004] 前端 CSS 与样式架构规范.md。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>五原则：令牌优先（颜色/圆角/阴影全部走 var(--khy-<em>)，禁止硬编码值）、分层组织（Base → Tokens → Layout → Components → Utilities → Overrides）、就近原则（组件样式 scoped，全局样式仅放布局/令牌/动画）、无 !important（通过特异性顺序管理优先级）、移动优先（默认移动端样式，min-width 渐进增强）。令牌命名 --khy-{category}-{variant}，分类：--khy-bg-</em>、--khy-text-<em>、--khy-border-</em>、--khy-primary-<em>、--khy-{status}（success/warning/danger）、--khy-radius-</em>、--khy-shadow-<em>、--khy-font-</em>。双主题强制：任何颜色/阴影 token 必须同时定义浅色（:root）与深色（html.dark），仅定义浅色会在暗色下静默失效。BEM：.block__element--modifier，.is-state 状态类、.has-child 子元素指示。流式值优先 clamp() 而非媒体查询（padding: clamp(12px, 2vw, 32px)）。必须支持 prefers-reduced-motion: reduce 下关闭动画。硬编码 hex 收敛用 npm run frontend:fix-colors 扫描后替换为 var(--khy-*)。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>无新增权力：仅约束具体做法，不授予任何新权限。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>暗色模式不会静默失效，颜色/阴影收敛到统一令牌后可批量替换，响应式用流式值减少断点维护。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>见 <code>ssot</code> 指向的真源原文；本卡不复制反例，以免与真源漂移。</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p>人工评审（该规则暂无机械守卫）</p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>无</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0 (2026-09-16) 初版 / 迁移自 无</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/_规范/规则卡/[DR-001] 灾备规范.html"><div class="dir">← 上一篇</div><div class="ttl">[DR-001] 灾备规范</div></a><a class="next" href="../../../docs/_规范/规则卡/[FF-001] Feature Flag 功能开关规范.html"><div class="dir">下一篇 →</div><div class="ttl">[FF-001] Feature Flag 功能开关规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/_规范/规则卡/[FE-004] 前端 CSS 与样式架构规范.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

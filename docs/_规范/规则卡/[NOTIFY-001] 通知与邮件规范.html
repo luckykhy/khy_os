@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[NOTIFY-001] 通知与邮件规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[NOTIFY-001] 通知与邮件规范</div>
+      <header class="hero reveal"><h1>[NOTIFY-001] 通知与邮件规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#notify-001-通知与邮件规范">[NOTIFY-001] 通知与邮件规范</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: 通知与邮件规范<br>id: NOTIFY-001<br>domain: API<br>nature: 约束<br>scope: &quot;services/backend/src/services/notifications/<strong>, services/backend/src/routes/notifications/</strong>&quot;<br>priority: P2<br>trigger: &quot;新增或修改邮件、Webhook、站内通知投递逻辑时&quot;<br>constraint: &quot;邮件投递保障：超时 10 秒、重试 3 次（指数退避 1s/2s/4s）、最终失败退入 DLQ、批量限制 100/分钟（防被邮件服务商限流）。必须提供 List-Unsubscribe 头（同时给 URL 与 mailto: 形式）。Webhook 签名验证用 crypto.createHmac('sha256', secret).update(payload).digest('hex') 配合 crypto.timingSafeEqual 防时序攻击。Webhook 重试：5 次，间隔 1m/5m/30m/2h/6h，超时 10s，User-Agent Khy-Webhook/1.0；连续 5 次失败暂停 webhook 并通知用户，4xx 不重试（配置错误需人工处理），5xx/超时按退避重试。审计：投递记录保留 180 天，安全通知必须记录不可删除，投递失败超过 3 次触发告警。优先级：系统通知 P1、安全通知 P0、任务通知 P2、营销通知 P3、Webhook P2。&quot;<br>grants: &quot;无新增权力：仅约束具体做法，不授予任何新权限。&quot;<br>benefit: 投递失败有确定重试上限与死信路径，安全通知不可退订，合规要求（List-Unsubscribe）不遗漏。<br>exception: 4xx 错误不重试（配置错误需人工处理）。<br>version: &quot;1.0.0 (2026-09-16)&quot;<br>status: active<br>ssot: &quot;docs/_规范/[DESIGN-NOTIFY-001] 通知与邮件规范.md&quot;<br>formerly: 无<br>owner: ops-team</p>
+<hr>
+<h1 id="notify-001-通知与邮件规范">[NOTIFY-001] 通知与邮件规范<a class="anchor" href="#notify-001-通知与邮件规范" aria-label="锚点">#</a></h1>
+<p>&lt;!-- RULES-REGISTRY: NOTIFY-001 --&gt;</p>
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/_规范/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：docs/_规范/[DESIGN-NOTIFY-001] 通知与邮件规范.md。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>邮件投递保障：超时 10 秒、重试 3 次（指数退避 1s/2s/4s）、最终失败退入 DLQ、批量限制 100/分钟（防被邮件服务商限流）。必须提供 List-Unsubscribe 头（同时给 URL 与 mailto: 形式）。Webhook 签名验证用 crypto.createHmac('sha256', secret).update(payload).digest('hex') 配合 crypto.timingSafeEqual 防时序攻击。Webhook 重试：5 次，间隔 1m/5m/30m/2h/6h，超时 10s，User-Agent Khy-Webhook/1.0；连续 5 次失败暂停 webhook 并通知用户，4xx 不重试（配置错误需人工处理），5xx/超时按退避重试。审计：投递记录保留 180 天，安全通知必须记录不可删除，投递失败超过 3 次触发告警。优先级：系统通知 P1、安全通知 P0、任务通知 P2、营销通知 P3、Webhook P2。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>无新增权力：仅约束具体做法，不授予任何新权限。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>投递失败有确定重试上限与死信路径，安全通知不可退订，合规要求（List-Unsubscribe）不遗漏。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>见 <code>ssot</code> 指向的真源原文；本卡不复制反例，以免与真源漂移。</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p>人工评审（该规则暂无机械守卫）</p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>4xx 错误不重试（配置错误需人工处理）。</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0 (2026-09-16) 初版 / 迁移自 无</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/_规范/规则卡/[NAM-002] A2A 与 ACP 命名及术语规范.html"><div class="dir">← 上一篇</div><div class="ttl">[NAM-002] A2A 与 ACP 命名及术语规范</div></a><a class="next" href="../../../docs/_规范/规则卡/[OPS-002] Graceful Shutdown 规范.html"><div class="dir">下一篇 →</div><div class="ttl">[OPS-002] Graceful Shutdown 规范</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/_规范/规则卡/[NOTIFY-001] 通知与邮件规范.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

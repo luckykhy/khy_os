@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[RUNTIME-001] 零硬编码 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[RUNTIME-001] 零硬编码</div>
+      <header class="hero reveal"><h1>[RUNTIME-001] 零硬编码</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#runtime-001-零硬编码">[RUNTIME-001] 零硬编码</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: 零硬编码<br>id: RUNTIME-001<br>domain: RUNTIME<br>nature: 约束为主，兼权力与福利<br>scope: &quot;services/<strong>, apps/</strong>, platform/<strong>, software/</strong>, kernel/<strong>, tools/</strong>, scripts/**（非测试文件）&quot;<br>priority: P1<br>trigger: 源码中出现网络端点 / 文件系统路径 / 第一方生产域名的字面量时<br>constraint: &quot;禁止硬编码 IP、端口、绝对路径、第一方生产域名（清单即守卫 check-agent-rules.js 的 PRODUCTION_HOST_PATTERN）；端点必须从 constants/serviceDefaults.js 导入或由 env 覆盖；dev server 端口冲突必须自动探测下一个可用端口，不得以 EADDRINUSE 崩溃。&quot;<br>grants: 授权从 serviceDefaults 或 env 动态读取端点（合法配置来源资格）。<br>benefit: &quot;不必猜测端口/域名；切换部署目标只改 env 不改代码，降低联调与自托管部署成本。&quot;<br>exception: &quot;测试文件、serviceDefaults.js 本身、纯注释/品牌/示例、含 ${} 插值、new URL() 解析、纯主机探测比较、纯邮件地址、localhost+变量拼接。&quot;<br>version: &quot;1.0.0 (2026-09-15)&quot;<br>status: active<br>ssot: &quot;AGENTS.md#工程规则-规则1&quot;<br>formerly: 规则1/零硬编码<br>owner: backend-team<br>enforcement: &quot;scripts/ci/check-agent-rules.js&quot;</p>
+<hr>
+<h1 id="runtime-001-零硬编码">[RUNTIME-001] 零硬编码<a class="anchor" href="#runtime-001-零硬编码" aria-label="锚点">#</a></h1>
+<p>&lt;!-- RULES-REGISTRY: RUNTIME-001 --&gt;</p>
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/_规范/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：AGENTS.md#工程规则-规则1。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>禁止硬编码 IP、端口、绝对路径、第一方生产域名（清单即守卫 check-agent-rules.js 的 PRODUCTION_HOST_PATTERN）；端点必须从 constants/serviceDefaults.js 导入或由 env 覆盖；dev server 端口冲突必须自动探测下一个可用端口，不得以 EADDRINUSE 崩溃。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>授权从 serviceDefaults 或 env 动态读取端点（合法配置来源资格）。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>不必猜测端口/域名；切换部署目标只改 env 不改代码，降低联调与自托管部署成本。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>❌ 业务代码里写死后端端点 <code>fetch(&quot;http://&lt;host&gt;:&lt;port&gt;/api&quot;)</code> → ✅ 从 <code>VITE_BACKEND_HOST</code> / <code>VITE_BACKEND_PORT</code> 读取</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p><code>node scripts/ci/check-agent-rules.js --changed</code>；<code>grep -rn &quot;localhost:[0-9]&quot; --include=&quot;*.js&quot; --include=&quot;*.vue&quot; --include=&quot;*.ts&quot;</code></p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>测试文件、serviceDefaults.js 本身、纯注释/品牌/示例、含 ${} 插值、new URL() 解析、纯主机探测比较、纯邮件地址、localhost+变量拼接。</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0 (2026-09-15) 初版 / 迁移自 规则1/零硬编码</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/_规范/规则卡/[PROMPT-001] Prompt Engineering 规范.html"><div class="dir">← 上一篇</div><div class="ttl">[PROMPT-001] Prompt Engineering 规范</div></a><a class="next" href="../../../docs/_规范/规则卡/[RUNTIME-002] 状态透明.html"><div class="dir">下一篇 →</div><div class="ttl">[RUNTIME-002] 状态透明</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/_规范/规则卡/[RUNTIME-001] 零硬编码.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

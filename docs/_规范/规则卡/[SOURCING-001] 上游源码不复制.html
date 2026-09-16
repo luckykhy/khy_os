@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[SOURCING-001] 上游源码不复制 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[SOURCING-001] 上游源码不复制</div>
+      <header class="hero reveal"><h1>[SOURCING-001] 上游源码不复制</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#sourcing-001-上游源码不复制">[SOURCING-001] 上游源码不复制</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: 上游源码不复制<br>id: SOURCING-001<br>domain: SOURCING<br>nature: 约束为主<br>scope: &quot;services/<strong>, apps/</strong>, platform/<strong>, software/</strong>, kernel/<strong>, tools/</strong>, scripts/**&quot;<br>priority: P0<br>trigger: 从外部项目引入任一源码文件时<br>constraint: &quot;上游源码文件不得复制进 khyos 源码目录；唯一例外是 vendored 档且六条件全过。&quot;<br>grants: &quot;见约束边界：授权走 vendored 档引入（须六条件全过 + 许可证可复核）。&quot;<br>benefit: &quot;借鉴可以「学而不抄」，不必担心上游许可证或归属纠纷。&quot;<br>exception: vendored 档六条件全过为唯一例外。<br>version: &quot;1.0.0+ (2026-09-16)&quot;<br>status: active<br>ssot: &quot;docs/03_DESIGN_设计/[DESIGN-ARCH-104] 借鉴与实现统一规则.md §1 B-S3&quot;<br>formerly: GOV-BORROW-001<br>owner: architecture-team</p>
+<hr>
+<h1 id="sourcing-001-上游源码不复制">[SOURCING-001] 上游源码不复制<a class="anchor" href="#sourcing-001-上游源码不复制" aria-label="锚点">#</a></h1>
+<p>&lt;!-- RULES-REGISTRY: SOURCING-001 --&gt;</p>
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/_规范/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：docs/03_DESIGN_设计/[DESIGN-ARCH-104] 借鉴与实现统一规则.md §1 B-S3。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>上游源码文件不得复制进 khyos 源码目录；唯一例外是 vendored 档且六条件全过。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>见约束边界：授权走 vendored 档引入（须六条件全过 + 许可证可复核）。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>借鉴可以「学而不抄」，不必担心上游许可证或归属纠纷。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>把上游 <code>src/</code> 目录整体拷进本仓再改命名。</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p><code>[DESIGN-ARCH-104]</code> §1 B-S3；人工评审 + <code>check:duplication</code> 的克隆类信号</p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>vendored 档六条件全过为唯一例外。</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0+ (2026-09-16) 初版 / 迁移自 GOV-BORROW-001</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/_规范/规则卡/[SECURITY-004] 权限档 fail-closed.html"><div class="dir">← 上一篇</div><div class="ttl">[SECURITY-004] 权限档 fail-closed</div></a><a class="next" href="../../../docs/_规范/规则卡/[SOURCING-002] 许可证分级硬门槛.html"><div class="dir">下一篇 →</div><div class="ttl">[SOURCING-002] 许可证分级硬门槛</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/_规范/规则卡/[SOURCING-001] 上游源码不复制.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

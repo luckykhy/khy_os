@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[SOURCING-006] 决策只追加不改写 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[SOURCING-006] 决策只追加不改写</div>
+      <header class="hero reveal"><h1>[SOURCING-006] 决策只追加不改写</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#sourcing-006-决策只追加不改写">[SOURCING-006] 决策只追加不改写</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: 决策只追加不改写<br>id: SOURCING-006<br>domain: SOURCING<br>nature: 约束为主<br>scope: &quot;注册表 notes、设计文档、提案正文&quot;<br>priority: P1<br>trigger: 修订任一既有架构决策或能力域实现时<br>constraint: &quot;架构决策只能追加新决策，不得原地改写或删除旧决策；改已存在功能只走 canonical 扩展或三步迁移。&quot;<br>grants: &quot;见约束边界：授权以「追加新决策 + 标注替代关系」方式演进既有决策。&quot;<br>benefit: 决策历史可完整回溯，不会用改措辞掩盖曾经的决定。<br>exception: 三步迁移的分步回滚由评审逐 PR 确认。<br>version: &quot;1.0.0+ (2026-09-16)&quot;<br>status: active<br>ssot: &quot;docs/03_DESIGN_设计/[DESIGN-ARCH-104] 借鉴与实现统一规则.md §4 B-U5、§5 B-L2/B-L3&quot;<br>formerly: GOV-BORROW-006<br>owner: architecture-team</p>
+<hr>
+<h1 id="sourcing-006-决策只追加不改写">[SOURCING-006] 决策只追加不改写<a class="anchor" href="#sourcing-006-决策只追加不改写" aria-label="锚点">#</a></h1>
+<p>&lt;!-- RULES-REGISTRY: SOURCING-006 --&gt;</p>
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/_规范/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：docs/03_DESIGN_设计/[DESIGN-ARCH-104] 借鉴与实现统一规则.md §4 B-U5、§5 B-L2/B-L3。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>架构决策只能追加新决策，不得原地改写或删除旧决策；改已存在功能只走 canonical 扩展或三步迁移。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>见约束边界：授权以「追加新决策 + 标注替代关系」方式演进既有决策。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>决策历史可完整回溯，不会用改措辞掩盖曾经的决定。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>把既有决策措辞改掉以掩盖曾经的决定；以「旧实现有 bug」为由新开并行实现。</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p><code>[DESIGN-ARCH-104]</code> §4 B-U5、§5 B-L2/B-L3；<code>check:duplication</code> 挡新重复；迁移分步回滚由评审逐 PR 确认</p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>三步迁移的分步回滚由评审逐 PR 确认。</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0+ (2026-09-16) 初版 / 迁移自 GOV-BORROW-006</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/_规范/规则卡/[SOURCING-005] 实现唯一性与四步检索.html"><div class="dir">← 上一篇</div><div class="ttl">[SOURCING-005] 实现唯一性与四步检索</div></a><a class="next" href="../../../docs/_规范/规则卡/[TOOLING-001] 扩展一目录一 manifest.html"><div class="dir">下一篇 →</div><div class="ttl">[TOOLING-001] 扩展一目录一 manifest</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/_规范/规则卡/[SOURCING-006] 决策只追加不改写.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

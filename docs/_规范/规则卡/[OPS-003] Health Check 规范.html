@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[OPS-003] Health Check 规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[OPS-003] Health Check 规范</div>
+      <header class="hero reveal"><h1>[OPS-003] Health Check 规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#ops-003-health-check-规范">[OPS-003] Health Check 规范</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: Health Check 规范<br>id: OPS-003<br>domain: API<br>nature: 约束<br>scope: &quot;services/backend/src/routes/<strong>, services/ai-backend/src/routes/</strong>&quot;<br>priority: P2<br>trigger: &quot;新增或修改健康检查端点、依赖探测逻辑时&quot;<br>constraint: &quot;四原则：三端点分离（/health 存活、/ready 就绪、/live 依赖检查）、轻量快速、状态精确（不返回 \&quot;OK\&quot; 掩盖实际故障）、分级返回。/health 检查进程是否存活、内存是否可用，超时 &lt;100ms，响应码 200 始终（存活不代表就绪）；/ready 检查所有依赖是否可达、数据连接是否正常，超时 &lt;5s，200 就绪 / 503 未就绪；/live 检查数据库、Redis、外部 API、文件系统，超时 &lt;10s，结果缓存 30s。状态枚举：ok 200、degraded 200、ready 200、not_ready 503、unhealthy 503。依赖探测：SQLite/PostgreSQL SELECT 1 超时 2s 降级为缓存模式、Redis PING 超时 1s 跳过缓存直连 DB、文件系统 access(dataDir, R_OK) 超时 500ms 报错、外部 AI API 轻量 ping 超时 3s 标记 degraded、磁盘空间 statvfs 超时 500ms 标记 degraded。告警：/ready 返回 503 &gt;30s 为 P0、/health degraded &gt;60s 为 P1、依赖 responseTime &gt;5000ms 为 P1、/ready 间歇性 503 为 P2。&quot;<br>grants: &quot;无新增权力：仅约束具体做法，不授予任何新权限。&quot;<br>benefit: 存活/就绪/依赖三种信号分离，负载均衡器与监控各有明确依据，不靠单一 OK 掩盖部分故障。<br>exception: &quot;健康检查端点不需要认证（负载均衡器需访问）；端点单独限流，免于常规限流。&quot;<br>version: &quot;1.0.0 (2026-09-16)&quot;<br>status: active<br>ssot: &quot;docs/_规范/[DESIGN-OPS-003] Health Check 规范.md&quot;<br>formerly: 无<br>owner: ops-team</p>
+<hr>
+<h1 id="ops-003-health-check-规范">[OPS-003] Health Check 规范<a class="anchor" href="#ops-003-health-check-规范" aria-label="锚点">#</a></h1>
+<p>&lt;!-- RULES-REGISTRY: OPS-003 --&gt;</p>
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/_规范/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：docs/_规范/[DESIGN-OPS-003] Health Check 规范.md。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>四原则：三端点分离（/health 存活、/ready 就绪、/live 依赖检查）、轻量快速、状态精确（不返回 &quot;OK&quot; 掩盖实际故障）、分级返回。/health 检查进程是否存活、内存是否可用，超时 &lt;100ms，响应码 200 始终（存活不代表就绪）；/ready 检查所有依赖是否可达、数据连接是否正常，超时 &lt;5s，200 就绪 / 503 未就绪；/live 检查数据库、Redis、外部 API、文件系统，超时 &lt;10s，结果缓存 30s。状态枚举：ok 200、degraded 200、ready 200、not_ready 503、unhealthy 503。依赖探测：SQLite/PostgreSQL SELECT 1 超时 2s 降级为缓存模式、Redis PING 超时 1s 跳过缓存直连 DB、文件系统 access(dataDir, R_OK) 超时 500ms 报错、外部 AI API 轻量 ping 超时 3s 标记 degraded、磁盘空间 statvfs 超时 500ms 标记 degraded。告警：/ready 返回 503 &gt;30s 为 P0、/health degraded &gt;60s 为 P1、依赖 responseTime &gt;5000ms 为 P1、/ready 间歇性 503 为 P2。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>无新增权力：仅约束具体做法，不授予任何新权限。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>存活/就绪/依赖三种信号分离，负载均衡器与监控各有明确依据，不靠单一 OK 掩盖部分故障。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>见 <code>ssot</code> 指向的真源原文；本卡不复制反例，以免与真源漂移。</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p>人工评审（该规则暂无机械守卫）</p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>健康检查端点不需要认证（负载均衡器需访问）；端点单独限流，免于常规限流。</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0 (2026-09-16) 初版 / 迁移自 无</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/_规范/规则卡/[OPS-002] Graceful Shutdown 规范.html"><div class="dir">← 上一篇</div><div class="ttl">[OPS-002] Graceful Shutdown 规范</div></a><a class="next" href="../../../docs/_规范/规则卡/[PROCESS-001] 分支纪律.html"><div class="dir">下一篇 →</div><div class="ttl">[PROCESS-001] 分支纪律</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/_规范/规则卡/[OPS-003] Health Check 规范.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

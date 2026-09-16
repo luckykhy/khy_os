@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[SOURCING-005] 实现唯一性与四步检索 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[SOURCING-005] 实现唯一性与四步检索</div>
+      <header class="hero reveal"><h1>[SOURCING-005] 实现唯一性与四步检索</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#sourcing-005-实现唯一性与四步检索">[SOURCING-005] 实现唯一性与四步检索</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: 实现唯一性与四步检索<br>id: SOURCING-005<br>domain: SOURCING<br>nature: 约束为主，兼福利<br>scope: &quot;新增实现、重命名、换实现范式&quot;<br>priority: P1<br>trigger: 写任何新实现之前<br>constraint: &quot;同一功能只允许一个公开名称与一个实现层；写新代码前必须完成四步检索并留下检索结论。&quot;<br>grants: &quot;见约束边界：授权按四步检索模板自行查重，结论留档即可放行。&quot;<br>benefit: &quot;不必担心造出并行近似副本；四步模板给出明确的查重路径。&quot;<br>exception: 命名分歧由维护者一次裁决。<br>version: &quot;1.0.0 (2026-09-15)&quot;<br>status: active<br>ssot: &quot;docs/03_DESIGN_设计/[DESIGN-ARCH-104] 借鉴与实现统一规则.md §4 B-U2/B-U4 / npm run check:duplication&quot;<br>formerly: GOV-BORROW-005<br>owner: architecture-team</p>
+<hr>
+<h1 id="sourcing-005-实现唯一性与四步检索">[SOURCING-005] 实现唯一性与四步检索<a class="anchor" href="#sourcing-005-实现唯一性与四步检索" aria-label="锚点">#</a></h1>
+<p>&lt;!-- RULES-REGISTRY: SOURCING-005 --&gt;</p>
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/_规范/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：docs/03_DESIGN_设计/[DESIGN-ARCH-104] 借鉴与实现统一规则.md §4 B-U2/B-U4 / npm run check:duplication。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>同一功能只允许一个公开名称与一个实现层；写新代码前必须完成四步检索并留下检索结论。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>见约束边界：授权按四步检索模板自行查重，结论留档即可放行。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>不必担心造出并行近似副本；四步模板给出明确的查重路径。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>已存在 <code>aiGateway</code> 又新增 <code>gatewayClient</code> 并行入口。</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p><code>[DESIGN-ARCH-104]</code> §4 B-U2/B-U4；<code>check:layout</code> 的 <code>layer-registry</code> 判层级错放；命名分歧交维护者一次裁决</p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>命名分歧由维护者一次裁决。</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0 (2026-09-15) 初版 / 迁移自 GOV-BORROW-005</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/_规范/规则卡/[SOURCING-004] 能力域归属登记.html"><div class="dir">← 上一篇</div><div class="ttl">[SOURCING-004] 能力域归属登记</div></a><a class="next" href="../../../docs/_规范/规则卡/[SOURCING-006] 决策只追加不改写.html"><div class="dir">下一篇 →</div><div class="ttl">[SOURCING-006] 决策只追加不改写</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/_规范/规则卡/[SOURCING-005] 实现唯一性与四步检索.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

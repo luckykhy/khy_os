@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[MIG-001] 数据迁移规范 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[MIG-001] 数据迁移规范</div>
+      <header class="hero reveal"><h1>[MIG-001] 数据迁移规范</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#mig-001-数据迁移规范">[MIG-001] 数据迁移规范</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: 数据迁移规范<br>id: MIG-001<br>domain: API<br>nature: 约束<br>scope: &quot;services/backend/src/migrations/<strong>, services/backend/db/</strong>&quot;<br>priority: P1<br>trigger: 新增或修改数据库迁移文件时<br>constraint: &quot;五原则：每次变更一个迁移（一个文件只做一件事）、可回滚（必须带 down 函数）、不可逆向破坏（down 可能丢失数据时禁止自动回滚）、代码审查（迁移必须走 PR）、生产禁自动（生产不自动执行迁移，必须人工确认）。up/down 必须成对：createTable↔dropTable、addColumn↔removeColumn、removeColumn↔addColumn（带原定义）、addIndex↔removeIndex、changeColumn↔changeColumn（原定义）、renameColumn↔renameColumn（原名称）、bulkInsert↔bulkDelete（按条件）。禁止：迁移中删除列（可能丢失数据）、修改列类型（可能截断数据）、大表重命名（长时间锁表）、批量更新无 WHERE（不可回滚）。会丢数据的操作 down 改为数据备份。生产迁移必须：DBA 或资深开发者审批、低峰期执行、执行前自动备份、失败自动回滚。审查清单：命名符合规范（时间戳 + 描述）、up 和 down 都实现、down 能在测试环境正确恢复、不涉及不可逆数据丢失、大表分批处理、添加必要索引、迁移时间预估 &lt;30 秒（大表除外）。&quot;<br>grants: &quot;无新增权力：仅约束具体做法，不授予任何新权限。&quot;<br>benefit: &quot;回滚路径在提交前可验证，避免上线后只能手工修库；生产迁移不自动执行消除最危险的静默破坏。&quot;<br>exception: 无<br>version: &quot;1.0.0 (2026-09-16)&quot;<br>status: active<br>ssot: &quot;docs/_规范/[DESIGN-MIG-001] 数据迁移规范.md&quot;<br>formerly: MIGR-001<br>owner: data-team</p>
+<hr>
+<h1 id="mig-001-数据迁移规范">[MIG-001] 数据迁移规范<a class="anchor" href="#mig-001-数据迁移规范" aria-label="锚点">#</a></h1>
+<p>&lt;!-- RULES-REGISTRY: MIG-001 --&gt;</p>
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/_规范/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：docs/_规范/[DESIGN-MIG-001] 数据迁移规范.md。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>五原则：每次变更一个迁移（一个文件只做一件事）、可回滚（必须带 down 函数）、不可逆向破坏（down 可能丢失数据时禁止自动回滚）、代码审查（迁移必须走 PR）、生产禁自动（生产不自动执行迁移，必须人工确认）。up/down 必须成对：createTable↔dropTable、addColumn↔removeColumn、removeColumn↔addColumn（带原定义）、addIndex↔removeIndex、changeColumn↔changeColumn（原定义）、renameColumn↔renameColumn（原名称）、bulkInsert↔bulkDelete（按条件）。禁止：迁移中删除列（可能丢失数据）、修改列类型（可能截断数据）、大表重命名（长时间锁表）、批量更新无 WHERE（不可回滚）。会丢数据的操作 down 改为数据备份。生产迁移必须：DBA 或资深开发者审批、低峰期执行、执行前自动备份、失败自动回滚。审查清单：命名符合规范（时间戳 + 描述）、up 和 down 都实现、down 能在测试环境正确恢复、不涉及不可逆数据丢失、大表分批处理、添加必要索引、迁移时间预估 &lt;30 秒（大表除外）。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>无新增权力：仅约束具体做法，不授予任何新权限。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>回滚路径在提交前可验证，避免上线后只能手工修库；生产迁移不自动执行消除最危险的静默破坏。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>见 <code>ssot</code> 指向的真源原文；本卡不复制反例，以免与真源漂移。</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p>人工评审（该规则暂无机械守卫）</p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>无</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0 (2026-09-16) 初版 / 迁移自 MIGR-001</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/_规范/规则卡/[MGMT-STD-008] 规则编写与管理规范（元规则）.html"><div class="dir">← 上一篇</div><div class="ttl">[MGMT-STD-008] 规则编写与管理规范（元规则）</div></a><a class="next" href="../../../docs/_规范/规则卡/[MOD-004] 治理总纲板块入口.html"><div class="dir">下一篇 →</div><div class="ttl">[MOD-004] 治理总纲板块入口</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/_规范/规则卡/[MIG-001] 数据迁移规范.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>
