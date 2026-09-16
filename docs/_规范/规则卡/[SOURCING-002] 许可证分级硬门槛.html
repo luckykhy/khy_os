@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[SOURCING-002] 许可证分级硬门槛 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[SOURCING-002] 许可证分级硬门槛</div>
+      <header class="hero reveal"><h1>[SOURCING-002] 许可证分级硬门槛</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#sourcing-002-许可证分级硬门槛">[SOURCING-002] 许可证分级硬门槛</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: 许可证分级硬门槛<br>id: SOURCING-002<br>domain: SOURCING<br>nature: 约束为主<br>scope: 一切外部代码与文档片段<br>priority: P0<br>trigger: 引入任一外部片段时<br>constraint: &quot;许可证分级是硬门槛：无法核实许可证的文件按最严格档 idea 处理；GPL/AGPL 家族禁止进入源码目录。&quot;<br>grants: &quot;见约束边界：授权按许可证分级选择引入方式（idea / pattern / vendored）。&quot;<br>benefit: &quot;不必为每个借鉴来源重新评估法律风险；分级表给出默认路径。&quot;<br>exception: &quot;private:true 的内部 workspace 包与测试夹具不分发，跳过；LicenseRef-Source-Available 属源码可用档，按 warning 记入棘轮而非阻断。&quot;<br>version: &quot;1.0.0 (2026-09-15)&quot;<br>status: active<br>ssot: &quot;docs/03_DESIGN_设计/[DESIGN-ARCH-104] 借鉴与实现统一规则.md §1 B-S4&quot;<br>formerly: GOV-BORROW-002<br>owner: architecture-team</p>
+<hr>
+<h1 id="sourcing-002-许可证分级硬门槛">[SOURCING-002] 许可证分级硬门槛<a class="anchor" href="#sourcing-002-许可证分级硬门槛" aria-label="锚点">#</a></h1>
+<p>&lt;!-- RULES-REGISTRY: SOURCING-002 --&gt;</p>
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/_规范/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：docs/03_DESIGN_设计/[DESIGN-ARCH-104] 借鉴与实现统一规则.md §1 B-S4。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>许可证分级是硬门槛：无法核实许可证的文件按最严格档 idea 处理；GPL/AGPL 家族禁止进入源码目录。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>见约束边界：授权按许可证分级选择引入方式（idea / pattern / vendored）。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>不必为每个借鉴来源重新评估法律风险；分级表给出默认路径。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>以「大概 MIT」为由直接 vendored。</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p><code>[DESIGN-ARCH-104]</code> §1 B-S4；人工评审（许可证文件路径必须在提案中可复核）</p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>private:true 的内部 workspace 包与测试夹具不分发，跳过；LicenseRef-Source-Available 属源码可用档，按 warning 记入棘轮而非阻断。</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0 (2026-09-15) 初版 / 迁移自 GOV-BORROW-002</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/_规范/规则卡/[SOURCING-001] 上游源码不复制.html"><div class="dir">← 上一篇</div><div class="ttl">[SOURCING-001] 上游源码不复制</div></a><a class="next" href="../../../docs/_规范/规则卡/[SOURCING-003] 六字段提案先行.html"><div class="dir">下一篇 →</div><div class="ttl">[SOURCING-003] 六字段提案先行</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/_规范/规则卡/[SOURCING-002] 许可证分级硬门槛.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[LAYOUT-001] 目录层级与文件归类 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[LAYOUT-001] 目录层级与文件归类</div>
+      <header class="hero reveal"><h1>[LAYOUT-001] 目录层级与文件归类</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#layout-001-目录层级与文件归类">[LAYOUT-001] 目录层级与文件归类</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: 目录层级与文件归类<br>id: LAYOUT-001<br>domain: LAYOUT<br>nature: 约束为主，兼福利<br>scope: &quot;kernel/<strong>, platform/</strong>, services/<strong>, apps/</strong>, software/<strong>, extensions/</strong>, tools/<strong>, scripts/</strong>, packaging/<strong>, docs/</strong>（新增或移动目录/文件时；不含测试夹具与 build/ dist/ dist-electron/ *.egg-info/）&quot;<br>priority: P1<br>trigger: &quot;新建目录、新建文件、移动文件跨层，或新增跨层依赖时&quot;<br>constraint: &quot;文件必须落在 ARCH-068 登记的 L0-L6 或横切层内；跨层依赖必须经 pnpm workspace 包，禁止深层相对路径跨层 require；目录名风格必须匹配所在层语言轴；扩展名必须落在其允许层级内；docs 内 .md 必须有同名 .html 孪生；_ 前缀在代码树内表示 PRV 私有，不得被跨包依赖。&quot;<br>grants: &quot;见约束边界：授权依四问判定树自行决定文件放置位置与可见性档（PUB/INT/PRV），无需事前审批。&quot;<br>benefit: &quot;一张表回答「放哪、叫什么、谁能用」，不必跨 ARCH-068 / LAY-002 / DOCS-001 三篇拼装答案，降低首次提交流放错位置的返工成本。&quot;<br>exception: &quot;纯 re-export 单行壳（存量跨层转发，仅当保持单行）；生成目录；层内测试目录四种存量写法并存不追溯；services/backend 内历史 Python 目录不追溯迁移；docs 内文档编号与索引文件名格式归 DOCS-001/DOCS-002。&quot;<br>version: &quot;1.0.0 (2026-09-15)&quot;<br>status: active<br>ssot: &quot;docs/_规范/[DESIGN-LAY-002] 目录层级与文件归类规范.md&quot;<br>formerly: GOV-MOD-001/GOV-MOD-002<br>owner: architecture-team</p>
+<hr>
+<h1 id="layout-001-目录层级与文件归类">[LAYOUT-001] 目录层级与文件归类<a class="anchor" href="#layout-001-目录层级与文件归类" aria-label="锚点">#</a></h1>
+<p>&lt;!-- RULES-REGISTRY: LAYOUT-001 --&gt;</p>
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/_规范/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：docs/_规范/[DESIGN-LAY-002] 目录层级与文件归类规范.md。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>文件必须落在 ARCH-068 登记的 L0-L6 或横切层内；跨层依赖必须经 pnpm workspace 包，禁止深层相对路径跨层 require；目录名风格必须匹配所在层语言轴；扩展名必须落在其允许层级内；docs 内 .md 必须有同名 .html 孪生；_ 前缀在代码树内表示 PRV 私有，不得被跨包依赖。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>见约束边界：授权依四问判定树自行决定文件放置位置与可见性档（PUB/INT/PRV），无需事前审批。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>一张表回答「放哪、叫什么、谁能用」，不必跨 ARCH-068 / LAY-002 / DOCS-001 三篇拼装答案，降低首次提交流放错位置的返工成本。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>新建根级 <code>frontend/</code> 保存运行时代码。</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p><code>npm run check:layout</code> 的 <code>layer-registry</code></p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>纯 re-export 单行壳（存量跨层转发，仅当保持单行）；生成目录；层内测试目录四种存量写法并存不追溯；services/backend 内历史 Python 目录不追溯迁移；docs 内文档编号与索引文件名格式归 DOCS-001/DOCS-002。</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0 (2026-09-15) 初版 / 迁移自 GOV-MOD-001/GOV-MOD-002</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/_规范/规则卡/[IR-001] 事件响应规范.html"><div class="dir">← 上一篇</div><div class="ttl">[IR-001] 事件响应规范</div></a><a class="next" href="../../../docs/_规范/规则卡/[LAYOUT-002] 上帝文件门.html"><div class="dir">下一篇 →</div><div class="ttl">[LAYOUT-002] 上帝文件门</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/_规范/规则卡/[LAYOUT-001] 目录层级与文件归类.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

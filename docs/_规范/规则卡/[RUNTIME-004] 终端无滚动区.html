@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[RUNTIME-004] 终端无滚动区 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[RUNTIME-004] 终端无滚动区</div>
+      <header class="hero reveal"><h1>[RUNTIME-004] 终端无滚动区</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#runtime-004-终端无滚动区">[RUNTIME-004] 终端无滚动区</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: 终端无滚动区<br>id: RUNTIME-004<br>domain: RUNTIME<br>nature: 约束为主，兼福利<br>scope: &quot;与回滚输出共存的 CLI 内联 UI：REPL、交互式 prompt、状态行渲染（services/backend/src/cli/**）&quot;<br>priority: P1<br>trigger: 向 stdout 写 ANSI 转义序列或实现内联状态行时<br>constraint: &quot;禁止使用 ANSI 滚动区 DECSTBM（DECSTBM 行范围序列）——它会丢弃越界滚出内容而非加入回滚缓冲；必须用保存/恢复光标（DECSC / DECRC）+ 绝对定位（CUP）+ 清行（EL）。&quot;<br>grants: &quot;见约束边界：授权先切到备用屏幕缓冲区（\\x1B[?1049h）后再用滚动区，限全屏 TUI（内置分页器/编辑器），且退出时必须恢复（\\x1B[?1049l）。&quot;<br>benefit: &quot;用户始终可以向上滚动回看历史输出；状态行不吞输出，REPL 与状态行可安全共存。&quot;<br>exception: 先切到备用屏幕缓冲区的全屏 TUI 应用例外（守卫检测到 1049h/47h 标志时降级为 warning，需人工确认退出时恢复）。<br>version: &quot;1.0.0 (2026-09-15)&quot;<br>status: active<br>ssot: &quot;AGENTS.md#工程规则-规则4 / docs/04_IMPL_实现/[IMPL-RPT-015] 修复记录时间线.md&quot;<br>formerly: 规则4/终端渲染<br>owner: backend-team</p>
+<hr>
+<h1 id="runtime-004-终端无滚动区">[RUNTIME-004] 终端无滚动区<a class="anchor" href="#runtime-004-终端无滚动区" aria-label="锚点">#</a></h1>
+<p>&lt;!-- RULES-REGISTRY: RUNTIME-004 --&gt;</p>
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/_规范/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：AGENTS.md#工程规则-规则4 / docs/04_IMPL_实现/[IMPL-RPT-015] 修复记录时间线.md。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>禁止使用 ANSI 滚动区 DECSTBM（DECSTBM 行范围序列）——它会丢弃越界滚出内容而非加入回滚缓冲；必须用保存/恢复光标（DECSC / DECRC）+ 绝对定位（CUP）+ 清行（EL）。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>见约束边界：授权先切到备用屏幕缓冲区（\x1B[?1049h）后再用滚动区，限全屏 TUI（内置分页器/编辑器），且退出时必须恢复（\x1B[?1049l）。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>用户始终可以向上滚动回看历史输出；状态行不吞输出，REPL 与状态行可安全共存。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>❌ <code>\x1B[1;{rows-1}r</code>（DECSTBM 滚动区，丢弃越界内容、杀死回滚）→ ✅ <code>\x1B7</code> 保存光标 + 绝对定位 + <code>\x1B[K</code> 清行 + <code>\x1B8</code> 恢复</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p><code>node scripts/ci/check-agent-rules.js --changed</code>（scroll-region 检查 DECSTBM）</p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>先切到备用屏幕缓冲区的全屏 TUI 应用例外（守卫检测到 1049h/47h 标志时降级为 warning，需人工确认退出时恢复）。</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0 (2026-09-15) 初版 / 迁移自 规则4/终端渲染</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/_规范/规则卡/[RUNTIME-003] 活动式超时.html"><div class="dir">← 上一篇</div><div class="ttl">[RUNTIME-003] 活动式超时</div></a><a class="next" href="../../../docs/_规范/规则卡/[SEC-001] 安全规范（安全头 输入验证 注入防护 日志脱敏）.html"><div class="dir">下一篇 →</div><div class="ttl">[SEC-001] 安全规范（安全头 输入验证 注入防护 日志脱敏）</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/_规范/规则卡/[RUNTIME-004] 终端无滚动区.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>

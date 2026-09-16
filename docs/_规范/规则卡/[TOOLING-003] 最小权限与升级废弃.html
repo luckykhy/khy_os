@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>[TOOLING-003] 最小权限与升级废弃 · Khy-OS 文档</title>
+<link rel="stylesheet" href="../../../docs/_assets/hljs-github-dark.min.css">
+<link rel="stylesheet" href="../../../docs/_assets/docs-site.css">
+</head>
+<body>
+<div class="topbar">
+  <button class="menu-toggle" aria-label="菜单">☰</button>
+  <a class="brand" href="../../../docs/index.html">📘 Khy-OS 文档站</a>
+  <span class="spacer"></span>
+  <a href="../../../docs/02_CONCEPTS_概念入门/00_INDEX_概念入门-总览.html">🧭 新手先读：核心概念</a>
+</div>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <input class="search" type="search" placeholder="🔍 过滤文档标题…" aria-label="过滤文档">
+    <div id="nav-root"></div>
+  </aside>
+  <main class="main">
+    <div class="content">
+      <div class="breadcrumb reveal"><a href="../../../docs/index.html">首页</a><span class="sep">›</span>docs<span class="sep">›</span>_规范<span class="sep">›</span>规则卡<span class="sep">›</span>[TOOLING-003] 最小权限与升级废弃</div>
+      <header class="hero reveal"><h1>[TOOLING-003] 最小权限与升级废弃</h1></header>
+      <nav class="toc reveal"><div class="toc-title">本页目录</div><ul><li class="lvl-1"><a href="#tooling-003-最小权限与升级废弃">[TOOLING-003] 最小权限与升级废弃</a></li><li class="lvl-2"><a href="#约束">约束</a></li><li class="lvl-2"><a href="#授予权力">授予权力</a></li><li class="lvl-2"><a href="#提供福利">提供福利</a></li><li class="lvl-2"><a href="#反例">反例</a></li><li class="lvl-2"><a href="#校验方式">校验方式</a></li><li class="lvl-2"><a href="#例外">例外</a></li><li class="lvl-2"><a href="#版本记录">版本记录</a></li></ul></nav>
+      <article class="doc-body">
+<hr>
+<p>name: 最小权限与升级废弃<br>id: TOOLING-003<br>domain: TOOLING<br>nature: 约束为主，兼福利<br>scope: 工具与扩展及其 manifest 的 lifecycle 块<br>priority: P2<br>trigger: &quot;新增工具/扩展，或升级、废弃已有工具时&quot;<br>constraint: &quot;新工具或扩展必须声明最小权限边界；升级与废弃必须保留兼容期、迁移说明与移除版本（removedIn），工具名弃用须走兼容期。&quot;<br>grants: &quot;见约束边界：授权按 lifecycle 块自行声明权限与迁移窗口。&quot;<br>benefit: &quot;使用者可提前规划迁移；工具作者有明确的兼容期模板可照抄。&quot;<br>exception: 紧急安全撤回可跳过兼容期，但须在 CHANGELOG 与索引中记录。<br>version: &quot;1.0.0 (2026-09-15)&quot;<br>status: active<br>ssot: &quot;docs/_规范/[DESIGN-TOOL-001] 工具与扩展升级废弃规范.md / docs/03_DESIGN_设计/[DESIGN-ARCH-069] 拓展契约与核心边界规范.md&quot;<br>formerly: GOV-TOOL-003<br>owner: backend-team</p>
+<hr>
+<h1 id="tooling-003-最小权限与升级废弃">[TOOLING-003] 最小权限与升级废弃<a class="anchor" href="#tooling-003-最小权限与升级废弃" aria-label="锚点">#</a></h1>
+<p>&lt;!-- RULES-REGISTRY: TOOLING-003 --&gt;</p>
+<blockquote><p><strong>规则卡</strong> · 格式依据 [MGMT-STD-008] §1（frontmatter 14 字段 + 六小节）。</p>
+<p><strong>字段真源</strong>是 <code>docs/_规范/RULES-REGISTRY.json</code>（GOV-TOOL-006 校验），<br>本文件由 <code>node scripts/docs/gen-rules-cards.js</code> 生成，<strong>禁止手改</strong>（同 [MGMT-STD-007] R6 对 .html 孪生件的约束）。<br>正文原文在 <code>ssot</code> 指向的位置：docs/_规范/[DESIGN-TOOL-001] 工具与扩展升级废弃规范.md / docs/03_DESIGN_设计/[DESIGN-ARCH-069] 拓展契约与核心边界规范.md。</p></blockquote>
+<h2 id="约束">约束<a class="anchor" href="#约束" aria-label="锚点">#</a></h2>
+<p>新工具或扩展必须声明最小权限边界；升级与废弃必须保留兼容期、迁移说明与移除版本（removedIn），工具名弃用须走兼容期。</p>
+<h2 id="授予权力">授予权力<a class="anchor" href="#授予权力" aria-label="锚点">#</a></h2>
+<p>见约束边界：授权按 lifecycle 块自行声明权限与迁移窗口。</p>
+<h2 id="提供福利">提供福利<a class="anchor" href="#提供福利" aria-label="锚点">#</a></h2>
+<p>使用者可提前规划迁移；工具作者有明确的兼容期模板可照抄。</p>
+<h2 id="反例">反例<a class="anchor" href="#反例" aria-label="锚点">#</a></h2>
+<p>直接移除公开工具名且无迁移说明。</p>
+<h2 id="校验方式">校验方式<a class="anchor" href="#校验方式" aria-label="锚点">#</a></h2>
+<p>契约已冻结：<code>[DESIGN-TOOL-001]</code>（manifest <code>lifecycle</code> 块、工具名弃用兼容期、版本策略、最小权限边界）；机械守卫待工具化</p>
+<h2 id="例外">例外<a class="anchor" href="#例外" aria-label="锚点">#</a></h2>
+<p>紧急安全撤回可跳过兼容期，但须在 CHANGELOG 与索引中记录。</p>
+<h2 id="版本记录">版本记录<a class="anchor" href="#版本记录" aria-label="锚点">#</a></h2>
+<ul><li>1.0.0 (2026-09-15) 初版 / 迁移自 GOV-TOOL-003</li></ul>
+      </article>
+      <nav class="pager"><a class="prev" href="../../../docs/_规范/规则卡/[TOOLING-002] 工具注册契约.html"><div class="dir">← 上一篇</div><div class="ttl">[TOOLING-002] 工具注册契约</div></a><a class="next" href="../../../docs/_规范/规则卡/[TOOLING-004] 检查入口脚本必须存在.html"><div class="dir">下一篇 →</div><div class="ttl">[TOOLING-004] 检查入口脚本必须存在</div></a></nav>
+      <div class="footer reveal">本页由 <code>scripts/docs/build_docs_site.js</code> 从对应的 <code>.md</code> 自动生成 · 离线可用 · Khy-OS 文档站</div>
+    </div>
+  </main>
+</div>
+<script>window.__KHY_ROOT__="../../../";window.__KHY_CUR__="docs/_规范/规则卡/[TOOLING-003] 最小权限与升级废弃.html";</script>
+<script src="../../../docs/_assets/nav-data.js"></script>
+<script src="../../../docs/_assets/mermaid.min.js"></script>
+<script src="../../../docs/_assets/docs-site.js"></script>
+</body>
+</html>
