@@ -427,9 +427,26 @@ function hitTest(layout, col, row, offset) {
  * 现在滚轮走 `onWheel(dir)`:由 App 转成 `scroll:lineUp/lineDown` 喂给**应用内**
  * 视口(Viewport)。终端一个字节都收不到,也就无从合成方向键。onWheel 缺失(旧调用点)
  * 才回退 `fireNative()`,保持向后兼容。
- * @param {{hover?: boolean, motionThrottleMs?: number, onNative?: function, onWheel?: function}} [opts]
+ * ── 自绘选择(onSelectEvent)────────────────────────────────────────────────
+ * 接了 `onSelectEvent` 时,拖动手势被翻译成四个语义事件 `down` / `move` / `up` /
+ * `cancel`(模型层 `selection.js`,渲染层 `Viewport` 的 `selection` prop)。
+ * **这一层是唯一的真解法**:ink 的 use-input 丢弃 handler 返回值,事件早已从 stdin
+ * 读走,`return false` 物理上回不到终端 —— 「把事件还给终端」这条路径不存在。
+ *
+ * ⚠ 判据顺序是根因级的:① 滚轮最先(Shift+滚轮 = 横向滚动);② 修饰键放行早于
+ * motion / press / release **全部**(§6.2 硬承诺);③ motion 早于 hover 的限流
+ * (否则 30ms 节流吞掉选区轨迹 → 选区「跳格」);④ press 落空上报 `down` 后仍返回
+ * false(「不消费」只是不去吞,事件已经到过我们手里);⑤ release 的 `up` 在 return
+ * **之前**上报 —— 松手是 extractText + writeClipboard 的唯一产出点,漏了它就是
+ * 「能拖不能复制」。
+ *
+ * @param {{hover?: boolean, motionThrottleMs?: number, onNative?: function,
+ *          onWheel?: function, onSelectEvent?: function}} [opts]
  *        motionThrottleMs=0 关闭位移节流(测试用;运行时默认 30ms 防高频命中测试)。
  *        onWheel(dir, ev) 收到 'up'|'down' —— 提供了就不再走原生透传。
+ *        onSelectEvent(kind, ev) 收到 'down'|'move'|'up'|'cancel';**不提供时选择层
+ *          完全不接线**(fireSelect 是 no-op),逐字节保持老行为 —— dispatcher 在每次
+ *          鼠标事件的热路径上,不开选择的用户必须零影响。
  * @returns {{onInput:function, reset:function}}
  */
 function createMouseDispatcher({
