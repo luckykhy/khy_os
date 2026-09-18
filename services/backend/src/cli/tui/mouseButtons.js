@@ -437,6 +437,7 @@ function createMouseDispatcher({
   motionThrottleMs = 30,
   onNative,
   onWheel,
+  onSelectEvent,
 } = {}) {
   let hoverNode = null;
   let lastMoveAt = 0;
@@ -466,6 +467,32 @@ function createMouseDispatcher({
       }
     }
   };
+
+  /**
+   * 上报一次选择层事件。`kind` ∈ `'down' | 'move' | 'up'`(`'cancel'` 由 reset 触发)。
+   *
+   * 为什么是「上报」而不是「在这里改状态」:选区的模型在 `selection.js`(纯叶子),
+   * 状态活在 React 里(要触发重渲才能画出反色)。dispatcher 是极薄运行时,只负责
+   * 「把物理事件翻译成语义事件」,不持有选区 —— 与 `onWheel` 同一范式。
+   *
+   * 坐标是 `parseSgrMouse` 输出的 **0-based 屏幕绝对坐标**(parser 已把 SGR 的
+   * 1-based 减过 1)。**不在这里减视口滚动偏移**:那是 App 层 state 才知道的量,
+   * 让调度层去猜偏移正是「坐标看着对、选区总差几行」这类 bug 的来源。
+   */
+  const fireSelect = (kind, ev) => {
+    if (typeof onSelectEvent !== 'function') {
+      return;
+    }
+    try {
+      onSelectEvent(kind, ev);
+    } catch {
+      /* fail-soft —— 选择层坏掉绝不能连累键盘输入 */
+    }
+  };
+
+  // select 模式是否生效,由「有没有接 onSelectEvent」决定(没接 = 不开自绘选择,
+  // 走纯点击层的老行为)。抽成闭包变量而不是每次算,是因为 onInput 是热路径。
+  const selectEnabled = typeof onSelectEvent === 'function';
 
   return {
     onInput(input, ctx) {
@@ -526,6 +553,15 @@ function createMouseDispatcher({
       // Kept because the parser still classifies motion, and a stray motion event
       // must not fall through to press/release.
       if (ev.isMotion) {
+        // ① 自绘选择优先:1002 下按住拖动的位移就是选区的扩展轨迹。
+        //    必须先于 hover/点击层判断 —— 拖动时用户要的是选文字,不是高亮按钮。
+        //    限流只用于 hover(30ms),选区**不限流**:丢一个位移点会让选区
+        //    「跳一段」,而扩展选区是纯算术(state slice),比 hover 的整树命中测试
+        //    便宜得多,没有限流的必要。
+        if (selectEnabled) {
+          fireSelect('move', ev);
+          return true;
+        }
         if (!hover) {
           return true;
         }
@@ -578,6 +614,9 @@ function createMouseDispatcher({
         // 空白处按下:自绘选择以它为**起点**。先上报再放行 —— 放行是为了不干扰
         // 终端侧(未开追踪的场景),上报是为了本进程自己画选区。两者不冲突:
         // 「不消费」只是不去吞,事件已经到过我们手里了。
+        if (selectEnabled) {
+          fireSelect('down', ev);
+        }
         return false;
       }
 
@@ -594,6 +633,11 @@ function createMouseDispatcher({
       const wasClick = pendingClick;
       pendingClick = false;
       const item = hitTest(layout, ev.col, ev.row, offset);
+      // 自绘选择的终点:只要开着手势就上报。**必须早于 return** —— 松手即「定稿」,
+      // 之后 App 层会 extractText + writeClipboard,这是整条链路唯一真正的产出点。
+      if (selectEnabled) {
+        fireSelect('up', ev);
+      }
       if (item) {
         const node = item.node;
         const style = node && node.style ? node.style : null;
@@ -614,6 +658,7 @@ function createMouseDispatcher({
     reset() {
       hoverNode = null;
       pendingClick = false;
+      fireSelect('cancel', null);
     },
   };
 }
