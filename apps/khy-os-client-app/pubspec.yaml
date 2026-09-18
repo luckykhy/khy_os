@@ -40,6 +40,11 @@ dependencies:
   # Media & File
   cached_network_image: ^3.4.1
 
+  # QR pairing — reads the `khy mobile app` pairing code (Capacitor shell parity).
+  # Pinned exactly: `errorBuilder` takes 2 params in 7.x, so a bump must be
+  # re-checked against lib/ui/screens/qr_scan_screen.dart.
+  mobile_scanner: 7.4.2
+
   # Voice
   speech_to_text: ^7.0.0
   flutter_tts: ^4.2.0

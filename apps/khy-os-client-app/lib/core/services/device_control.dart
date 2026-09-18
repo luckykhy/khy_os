@@ -306,6 +306,80 @@ class DeviceControl {
     }
   }
 
+  // ==================== Shizuku (privilege without root) ====================
+  //
+  // Shizuku lets this app borrow the system app's uid to run privileged
+  // shell commands (am / input / pm / screencap / dumpsys) on a non-root
+  // phone. Nothing below does any harm if Shizuku is not installed: each
+  // check degrades to "not available" and callers fall back to the plain
+  // (restricted) shell.
+
+  /// Query whether Shizuku is installed and its provider is reachable.
+  static Future<ShizukuStatus> getShizukuStatus() async {
+    try {
+      final result = await _channel.invokeMethod('shizukuStatus');
+      return ShizukuStatus(
+        installed: result['installed'] == true,
+        running: result['running'] == true,
+        version: result['version']?.toString() ?? '',
+      );
+    } catch (_) {
+      return const ShizukuStatus();
+    }
+  }
+
+  /// Run a privileged shell command through Shizuku when available,
+  /// otherwise fall back to the plain restricted shell.
+  static Future<ShellResult> execShellElevated(
+    String command, {
+    int timeoutSeconds = 30,
+  }) async {
+    final status = await getShizukuStatus();
+    if (status.available) {
+      try {
+        final result = await _channel.invokeMethod('shizukuShell', {
+          'command': command,
+          'timeout': timeoutSeconds,
+        });
+        final via = result['via']?.toString() ?? 'shizuku';
+        if (via == 'shizuku' || result['success'] == true) {
+          return ShellResult(
+            success: result['success'] == true,
+            stdout: result['stdout'] ?? '',
+            stderr: result['stderr'] ?? '',
+            exitCode: result['exitCode'] ?? -1,
+          );
+        }
+        // Shizuku was available but the command still failed: surface it.
+        return ShellResult(
+          success: false,
+          stdout: '',
+          stderr: result['message']?.toString() ?? 'Shizuku 执行失败',
+          exitCode: result['exitCode'] ?? -1,
+        );
+      } catch (_) {
+        // fall through to the plain shell
+      }
+    }
+    return execShell(command, timeoutSeconds: timeoutSeconds);
+  }
+
+  /// Result of an auto-install attempt.
+  /// Trigger installation of the bundled Shizuku APK. The user still has to
+  /// confirm the install once in the system package installer (Android
+  /// security), but never has to download Shizuku from a store.
+  static Future<ShizukuInstallOutcome> autoInstallShizuku() async {
+    try {
+      final result = await _channel.invokeMethod('shizukuAutoInstall');
+      return ShizukuInstallOutcome(
+        triggered: result['triggered'] == true,
+        reason: result['reason']?.toString() ?? '',
+      );
+    } catch (e) {
+      return ShizukuInstallOutcome(triggered: false, reason: '通道错误: $e');
+    }
+  }
+
   // ==================== Permissions ====================
 
   /// Check all permission statuses
@@ -349,51 +423,59 @@ class DeviceControl {
 
   // ==================== Smart Search ====================
 
-  /// Smart search: try exact match, then fuzzy, then semantic
+  /// Smart search: semantic map first, then fuzzy match against installed apps.
+  /// Returns null when nothing in the installed set matches the query —
+  /// we never silently substitute an unrelated app.
   static Future<AppInfo?> findApp(String query) async {
-    final apps = await searchApps(query);
-    if (apps.isEmpty) return null;
-
     final q = query.toLowerCase().trim();
+    if (q.isEmpty) return null;
 
-    // 1. Exact package match
-    for (final app in apps) {
-      if (app.packageName.toLowerCase() == q) return app;
-    }
-
-    // 2. Exact label match
-    for (final app in apps) {
-      if (app.label.toLowerCase() == q) return app;
-    }
-
-    // 3. Label contains query (bidirectional)
-    for (final app in apps) {
-      final label = app.label.toLowerCase();
-      if (label.contains(q) || q.contains(label)) return app;
-    }
-
-    // 4. Package name contains query
-    for (final app in apps) {
-      if (app.packageName.toLowerCase().contains(q)) return app;
-    }
-
-    // 5. Semantic map for common Chinese/English app names
-    final semanticMap = _semanticMap;
-    for (final entry in semanticMap.entries) {
+    // 1. Semantic map for common Chinese/English app names (fast path,
+    //    does not depend on launcher enumeration returning the target).
+    for (final entry in _semanticMap.entries) {
       final key = entry.key.toLowerCase();
-      if (q.contains(key) || key.contains(q)) {
+      if (q == key || q.contains(key) || key.contains(q)) {
+        final installed = await listApps();
         for (final pkg in entry.value) {
-          final match = apps.firstWhere(
-            (a) => a.packageName == pkg,
-            orElse: () => const AppInfo(label: '', packageName: ''),
-          );
-          if (match.packageName.isNotEmpty) return match;
+          AppInfo? match;
+          for (final a in installed) {
+            if (a.packageName.toLowerCase() == pkg.toLowerCase()) {
+              match = a;
+              break;
+            }
+          }
+          if (match != null) return match;
         }
       }
     }
 
-    // 6. First result as fallback
-    return apps.first;
+    // 2. Fuzzy match against installed launcher apps
+    final apps = await searchApps(q);
+    if (apps.isEmpty) return null;
+
+    // 3. Exact package match
+    for (final app in apps) {
+      if (app.packageName.toLowerCase() == q) return app;
+    }
+
+    // 4. Exact label match
+    for (final app in apps) {
+      if (app.label.toLowerCase() == q) return app;
+    }
+
+    // 5. Label contains query (bidirectional)
+    for (final app in apps) {
+      final label = app.label.toLowerCase();
+      if (label.contains(q) || (q.length > 1 && q.contains(label))) return app;
+    }
+
+    // 6. Package name contains query
+    for (final app in apps) {
+      if (app.packageName.toLowerCase().contains(q)) return app;
+    }
+
+    // No confident match: never fall back to an arbitrary first app.
+    return null;
   }
 
   /// Comprehensive semantic app name mapping (30+ common apps)
@@ -505,6 +587,34 @@ class ShellResult {
     required this.stderr,
     required this.exitCode,
   });
+}
+
+/// Shizuku availability on this device.
+class ShizukuStatus {
+  final bool installed;
+  final bool running;
+  final String version;
+
+  const ShizukuStatus({this.installed = false, this.running = false, this.version = ''});
+
+  /// True when Shizuku is installed AND its provider IPC is reachable.
+  bool get available => installed && running;
+
+  @override
+  String toString() =>
+      available
+          ? 'Shizuku v$version 已就绪'
+          : (installed
+              ? 'Shizuku 已安装但未启动 (v$version)'
+              : '未安装 Shizuku');
+}
+
+/// Outcome of [DeviceControl.autoInstallShizuku].
+class ShizukuInstallOutcome {
+  final bool triggered;
+  final String reason;
+
+  const ShizukuInstallOutcome({required this.triggered, required this.reason});
 }
 
 /// Permission status for all required permissions

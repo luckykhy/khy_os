@@ -1,5 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import '../../core/gateway/khyos_api.dart';
+import '../../core/gateway/pairing.dart';
+import 'qr_scan_screen.dart';
 
 class ConnectionScreen extends StatefulWidget {
   final KhyOsApi api;
@@ -59,22 +61,29 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
     });
 
     try {
-      String apiUrl = payload;
-      if (payload.startsWith('{')) {
-        final data = Map<String, dynamic>.from(
-          Uri.splitQueryString(payload).map((k, v) => MapEntry(k, v)),
-        );
-        apiUrl = data['url'] ?? data['apiUrl'] ?? data['apiBaseUrl'] ?? payload;
-      }
-      await widget.api.verifyAndSave(apiUrl);
+      // Payload is `{"apiBaseUrl": "..."}` from `khy mobile app`, not a query
+      // string — see PairingPayloadParser for the full contract.
+      final pairing = PairingPayloadParser.parse(payload);
+      await widget.api.verifyAndSave(pairing.apiBaseUrl);
       if (mounted) {
         widget.onConnected();
       }
+    } on PairingParseException catch (e) {
+      if (mounted) setState(() => _error = e.message);
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _isConnecting = false);
     }
+  }
+
+  Future<void> _scanQr() async {
+    final result = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => const QrScanScreen()),
+    );
+    if (!mounted || result == null || result.trim().isEmpty) return;
+    _pairingController.text = result;
+    setState(() => _error = null);
   }
 
   @override
@@ -149,18 +158,29 @@ class _ConnectionScreenState extends State<ConnectionScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(
-                          onPressed: _isConnecting ? null : _usePairing,
-                          child: _isConnecting
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : const Text('Use Pairing Code'),
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _isConnecting ? null : _scanQr,
+                              icon: const Icon(Icons.qr_code_scanner),
+                              label: const Text('Scan QR'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: FilledButton(
+                              onPressed: _isConnecting ? null : _usePairing,
+                              child: _isConnecting
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : const Text('Use Pairing Code'),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
