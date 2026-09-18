@@ -43,10 +43,20 @@
  * 序列只有 `?1000h`/`?1006h` 各一处,且上下文是一个 vendored 的多选提示组件;**没有
  * 1002,也没有 1003**。即 CC 的主 REPL 根本不接管鼠标,原生滚轮与拖选全程可用;
  * 展开与滚动全走键盘 —— Ctrl+O 开 Transcript 视图,视图内用 `scroll:*` 动作族
- * (j/k、Ctrl+U/D、g/G、Ctrl+E 全展开)。本模块因此也降到 1000(见 enableBytes):
- * 1000 不报位移,拖选从来不会变成本进程的事件,原生选择完整保留;历史上那套
- * 针对拖选的透传补偿(`pendingSelect`)随之删除 —— 它只在 1002 下才能触发,而当初
- * 选 1002 的理由恰恰就是「为了喂它」。现在仅剩滚轮需要透传(见 dispatcher)。
+ * (j/k、Ctrl+U/D、g/G、Ctrl+E 全展开)。本模块因此也降到 1000(见 enableBytes)。
+ *
+ * ⚠ **一处曾被写错、且直接造成用户可见故障的推理(2026-09-17 修正)**:
+ * 历史注释写「1000 不报位移,拖选从来不会变成本进程的事件,原生选择完整保留」——
+ * **这是错的**。1000(X11 basic)不报 `motion`,但**按下/松开照样上报**,而按下正是
+ * 终端原生拖选的**起点**。dispatcher 当时对 `press` 无条件 `return true`,把起点
+ * 吃进 stdin → 终端此后只看到一团无主位移,原生选择无法启动。用户报的「拖选选不中」
+ * 就是这条。降档到 1000 只消灭了 motion 上报,**press 还在**;`pendingSelect` 补偿删掉
+ * 之后,拖选是「从补偿失败」变成「完全无补偿」,而不是恢复正常。
+ * ⇒ 纪律:**「不报 X」不等于「不报 Y」**。判据要写清「到底哪些事件类别会上报」,
+ *   不能由「不报位移」推出「这个手势与我无关」。现在的判据是按**事件类别**逐项决定
+ *   吞不吞(见 onInput):滚轮仍吞、含修饰键放行、空白处按下/松开放行、命中按钮才吞。
+ * ⇒ 修饰位也是本条的延伸:`Shift` 在 §6.2 里承诺「永远走原生选择」,故 `parseSgrMouse`
+ *   必须拆出 `isShift/isAlt/isCtrl`,且放行判据要**排除滚轮**(Shift+滚轮 = 横向滚动)。
  *
  * 收益侧只有两个可点元素(麦克风按钮、待发图片的 ×),且麦克风有等价键位 Alt+M、
  * 图片有 Esc 清除。拿「少按一个键」换掉「滚动 + 复制」不成比例,所以:
@@ -105,6 +115,13 @@ function parseSgrMouse(input) {
     isRelease: !isPress,
     isMotion: (button & 32) !== 0,
     isWheel: wheelBase === 64 || wheelBase === 65,
+    // 修饰位必须**拆出来单独暴露**。历史上这里只存了整颗 button 码,调用方
+    // 从不检查它们,于是 §6.2「Shift + 任何鼠标操作永远走终端原生选择」这条
+    // 硬承诺在实现侧不存在 —— 文档承诺了,代码不认识。位值与上面 wheelBase
+    // 的掩码同源(shift 4 / meta 8 / ctrl 16)。
+    isShift: (button & 4) !== 0,
+    isAlt: (button & 8) !== 0,
+    isCtrl: (button & 16) !== 0,
   };
 }
 
@@ -385,9 +402,33 @@ function createMouseDispatcher({ hover = true, motionThrottleMs = 30, onNative }
         return true;
       }
 
-      // Motion only ever arrives under 1003 (hover, opt-in): 1000 reports press
-      // and release, nothing in between. Kept because the parser still classifies
-      // motion, and a stray motion event must not fall through to press/release.
+      // ── 前置放行:修饰键 = 用户想要终端行为(§6.2 硬承诺)────────────────────
+      // 「Shift + 任何鼠标操作永远走终端原生选择」是 [DESIGN-ARCH-102] §6.2 的明文
+      // 承诺,而修饰位在此之前被完整解析却从不检查。Shift/Alt/Ctrl 在终端语境里
+      // 统一是「绕过本程序」的约定键,本进程拿它没有任何用途(按钮点击不需要修饰,
+      // 自绘选择也不需要 —— 用户按着 Shift 拖就是要终端自己的选择)。
+      //
+      // ⚠ **位置是根因级的,必须排在 `isMotion` / `press` / `release` 全部之前**:
+      //   ① 排在 motion 之后 → **Shift+拖动位移会被当成自绘选区的扩展轨迹**
+      //      (`[<36;x;yM` = Shift|motion),用户按着 Shift 拖本想走终端原生选择,
+      //      结果本进程也在同时画自己的选区,两套选区打架。这条是端到端探针抓的
+      //      (单测只测了 press,漏了 motion 这条路径)。
+      //   ② 排在 press 之后 → 起不到作用,按下已经被吞掉了。
+      //   ③ 排在 wheel 之前 → Shift+滚轮会被放行,而终端里 Shift+滚轮 = 横向滚动,
+      //      不是「我要拖选」;备屏下放行滚轮还会被合成 ↑/↓ → 历史回溯(§0.9.3)。
+      //      故判据里显式排除 `ev.isWheel`(滚轮已在上面单独处理并 return)。
+      //
+      // 返回 false = 不消费。⚠ 诚实边界:ink 已把事件从 stdin 读走,`false` 物理上
+      // 回不到终端;放行的真实价值在于「**不去吞它、也不去画自己的选区**」—— 终端
+      // 自身对本机鼠标的最终解释(xterm/WT/kitty 对 Shift+鼠标 的原生选择)不受干扰。
+      // 且对**未上报**修饰序列的终端,这一条自然不触发,是零副作用的双保险。
+      if (ev.isShift || ev.isAlt || ev.isCtrl) {
+        return false;
+      }
+
+      // Motion only ever arrives under 1002 (select) or 1003 (hover, opt-in).
+      // Kept because the parser still classifies motion, and a stray motion event
+      // must not fall through to press/release.
       if (ev.isMotion) {
         if (!hover) {
           return true;
@@ -421,24 +462,46 @@ function createMouseDispatcher({ hover = true, motionThrottleMs = 30, onNative }
       }
 
       if (ev.isPress) {
-        // Press on a button arms a click. Press on empty space is deliberately a
-        // no-op: under 1000 the terminal never sees this press, but it never sees
-        // a drag either, so there is nothing to hand back and nothing to fake.
+        // Press on a button arms a click. Press on **empty space** is now handed
+        // back (return false): the terminal needs the full gesture (press → drag →
+        // release) to start a native selection, and the press is its origin. Eating
+        // it leaves the terminal with an origin-less drag it cannot interpret —
+        // which is exactly the「拖选选不中」the user reports. We have nothing to do
+        // with a press that missed every button (pendingClick only ever serves
+        // buttons), so there is no reason to swallow it.
+        //
+        // Historical reasoning that this branch must correct: the old comment claimed
+        // 「1000 never reports motion, so a drag is never an event here and native
+        // selection is untouched」. That confused motion with press — 1000 does not
+        // report motion, but the press IS reported, and it was swallowed. Dropping
+        // to 1000 removed only the motion reports; the drag's origin was still eaten.
         if (hitTest(layout, ev.col, ev.row, offset)) {
           pendingClick = true;
+          return true;
         }
-        return true;
+        // 空白处按下:自绘选择以它为**起点**。先上报再放行 —— 放行是为了不干扰
+        // 终端侧(未开追踪的场景),上报是为了本进程自己画选区。两者不冲突:
+        // 「不消费」只是不去吞,事件已经到过我们手里了。
+        return false;
       }
 
       // Release: if the press had armed a click, fire on the node under the
       // release point (drag-off-button cancels, opencode same semantics).
+      //
+      // ⚠ 关键:`armed` 只表示「起点在按钮上」,不表示「这次手势是点击」。用户完全
+      // 可以从按钮上按下、然后拖出去做原生选择 —— 那正是「从按钮旁边开始选一段文字」
+      // 的常见动作。所以松开点的处理按**命中**而非按 armed 决定吞不吞:
+      //   命中按钮 → 吞 + 触发(click 档的核心价值,等价键位 Alt+M / Esc 仍在)
+      //   落空     → 放行(拖出按钮 = 用户放弃点击,想要的是原生选择)
+      // 历史实现按 armed 无条件 `return true`,连「拖出去选文字」这一下的终点也吃掉,
+      // 于是即便起点侥幸没被吞,整段手势仍缺终点 —— 与缺陷 A 同一类病。
       const wasClick = pendingClick;
       pendingClick = false;
-      if (wasClick) {
-        const item = hitTest(layout, ev.col, ev.row, offset);
-        const node = item ? item.node : null;
+      const item = hitTest(layout, ev.col, ev.row, offset);
+      if (item) {
+        const node = item.node;
         const style = node && node.style ? node.style : null;
-        const handler = style ? style.onMouseUp || style.onClick : null;
+        const handler = wasClick && style ? style.onMouseUp || style.onClick : null;
         if (typeof handler === 'function') {
           try {
             handler(ev);
@@ -446,8 +509,11 @@ function createMouseDispatcher({ hover = true, motionThrottleMs = 30, onNative }
             /* fail-soft */
           }
         }
+        return true;
       }
-      return true;
+      // Released over empty space: hand it back so the terminal sees the end of a
+      // native drag (whether or not the press had landed on a button).
+      return false;
     },
     reset() {
       hoverNode = null;
