@@ -95,6 +95,15 @@ class MainActivity : FlutterActivity() {
                     result
                 )
 
+                // --- Shizuku (privilege without root) ---
+                "shizukuStatus" -> shizukuStatus(result)
+                "shizukuShell" -> shizukuShell(
+                    call.argument<String>("command") ?: "",
+                    call.argument<Int>("timeout") ?: 30,
+                    result
+                )
+                "shizukuAutoInstall" -> shizukuAutoInstall(result)
+
                 // --- File System ---
                 "getWorkDir" -> result.success(mapOf(
                     "path" to (getExternalFilesDir(null)?.absolutePath ?: ""),
@@ -137,7 +146,18 @@ class MainActivity : FlutterActivity() {
     private fun openApp(packageName: String, result: MethodChannel.Result) {
         try {
             val pm = packageManager
-            val intent = pm.getLaunchIntentForPackage(packageName)
+            var intent = pm.getLaunchIntentForPackage(packageName)
+            if (intent == null) {
+                // App installed but getLaunchIntentForPackage missed it
+                // (some OEM launchers): fall back to ACTION_MAIN.
+                val main = Intent(Intent.ACTION_MAIN).apply {
+                    setPackage(packageName)
+                    addCategory(Intent.CATEGORY_LAUNCHER)
+                }
+                if (pm.queryIntentActivities(main, 0).isNotEmpty()) {
+                    intent = main
+                }
+            }
             if (intent != null) {
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 startActivity(intent)
@@ -167,16 +187,19 @@ class MainActivity : FlutterActivity() {
             val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
                 addCategory(Intent.CATEGORY_LAUNCHER)
             }
-            val apps = pm.queryIntentActivities(mainIntent, 0)
+            // Dedupe by package: an app may register multiple launcher activities
+            val appLabels = mutableMapOf<String, String>()
+            for (info in pm.queryIntentActivities(mainIntent, 0)) {
+                val pkg = info.activityInfo.packageName
+                appLabels.putIfAbsent(pkg, info.loadLabel(pm).toString())
+            }
             val q = query.lowercase().trim()
 
-            // Score-based matching: exact > contains > semantic
+            // Score-based matching: exact > contains
             data class ScoredApp(val score: Int, val label: String, val pkg: String)
             val scored = mutableListOf<ScoredApp>()
 
-            for (info in apps) {
-                val label = info.loadLabel(pm).toString()
-                val pkg = info.activityInfo.packageName
+            for ((pkg, label) in appLabels) {
                 val labelLc = label.lowercase()
                 val pkgLc = pkg.lowercase()
 
@@ -212,10 +235,15 @@ class MainActivity : FlutterActivity() {
             val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
                 addCategory(Intent.CATEGORY_LAUNCHER)
             }
-            val apps = pm.queryIntentActivities(mainIntent, 0).map { info ->
+            // Dedupe by package: an app may register multiple launcher activities
+            val appLabels = mutableMapOf<String, String>()
+            for (info in pm.queryIntentActivities(mainIntent, 0)) {
+                appLabels.putIfAbsent(info.activityInfo.packageName, info.loadLabel(pm).toString())
+            }
+            val apps = appLabels.map { (pkg, label) ->
                 mapOf(
-                    "label" to info.loadLabel(pm).toString(),
-                    "package" to info.activityInfo.packageName
+                    "label" to label,
+                    "package" to pkg
                 )
             }
             result.success(mapOf("success" to true, "apps" to apps))
@@ -522,6 +550,138 @@ class MainActivity : FlutterActivity() {
         return false
     }
 
+    // --- Shizuku (privilege without root) ---
+
+    /**
+     * Report Shizuku availability. `installed` is true when the Shizuku app
+     * is present; `running` is true when its provider IPC is currently
+     * reachable. If the class is absent (dep not bundled / not built in),
+     * everything degrades to "not available" and callers fall back to the
+     * plain restricted shell.
+     */
+    private fun shizukuStatus(result: MethodChannel.Result) {
+        val status = ShizukuServiceManager.ensureConnected(this)
+        result.success(mapOf(
+            "installed" to status.installed,
+            "running" to status.connected,
+            "version" to status.version,
+            "reason" to status.reason,
+            "available" to status.available,
+        ))
+    }
+
+    /**
+     * Auto-install the bundled Shizuku APK.
+     *
+     * khyos ships `shizuku-release.apk` inside its own assets folder. When
+     * Shizuku is not present on the device, this method copies the bundled
+     * APK to a content:// URI via FileProvider and fires an ACTION_VIEW
+     * install intent. The user still has to tap "Install" in the system
+     * package installer once (Android security model), but they never have
+     * to download Shizuku separately — that's what "one APK" means here.
+     *
+     * Returns a `Map` with `triggered: true` when the intent was fired,
+     * `triggered: false` + `reason` when it could not be (missing asset,
+     * FileProvider not configured, etc.).
+     */
+    private fun shizukuAutoInstall(result: MethodChannel.Result) {
+        // 1. Check if Shizuku is already installed — skip if so.
+        val status = ShizukuServiceManager.ensureConnected(this)
+        if (status.installed) {
+            result.success(mapOf(
+                "triggered" to false,
+                "reason" to "Shizuku 已安装 (v${status.version})，无需再次安装",
+            ))
+            return
+        }
+
+        // 2. Locate the bundled APK inside assets.
+        val apkInAssets = try {
+            assets.open("shizuku/shizuku-release.apk").use { input ->
+                val copyDest = java.io.File(filesDir, "shizuku-release.apk")
+                val out = copyDest.outputStream()
+                input.copyTo(out)
+                out.flush()
+                copyDest
+            }
+        } catch (e: Exception) {
+            result.success(mapOf(
+                "triggered" to false,
+                "reason" to "未找到内置 Shizuku APK：${e.message}",
+            ))
+            return
+        }
+
+        // 3. Expose the APK via FileProvider so the installer can read it.
+        val uri = try {
+            androidx.core.content.FileProvider.getUriForFile(
+                this,
+                "$packageName.fileprovider",
+                apkInAssets,
+            )
+        } catch (e: Exception) {
+            result.success(mapOf(
+                "triggered" to false,
+                "reason" to "FileProvider 未配置，无法安装：${e.message}",
+            ))
+            return
+        }
+
+        // 4. Fire the install intent.
+        try {
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+            result.success(mapOf(
+                "triggered" to true,
+                "reason" to "已弹出系统安装器，请点「安装」并授予 Shizuku 权限",
+            ))
+        } catch (e: Exception) {
+            result.success(mapOf(
+                "triggered" to false,
+                "reason" to "无法弹出安装器：${e.message}",
+            ))
+        }
+    }
+
+    /**
+     * Run a privileged command via Shizuku when available. The same whitelist
+     * / blacklist applied to the plain shell is enforced here first, so the
+     * elevation path can never bypass the safety gates. Falls back to the
+     * plain restricted shell when Shizuku is unavailable or the call fails.
+     */
+    private fun shizukuShell(command: String, timeoutSec: Int, result: MethodChannel.Result) {
+        if (command.isEmpty()) {
+            result.success(mapOf("success" to false, "stdout" to "", "stderr" to "空命令", "exitCode" to -1, "via" to "none"))
+            return
+        }
+        // Safety gate: enforce the same allow/deny rules as the plain shell.
+        if (!isCommandAllowed(command)) {
+            result.success(mapOf("success" to false, "stdout" to "", "stderr" to "命令被拒绝（白名单/黑名单）", "exitCode" to -1, "via" to "none"))
+            return
+        }
+
+        // Try Shizuku first. If the manager returns null (Shizuku absent /
+        // not running / not granted) or the exec fails with -1, fall back to
+        // the plain restricted shell.
+        val shizukuOut = ShizukuServiceManager.execViaShizuku(this, command)
+        if (shizukuOut != null && shizukuOut.third != -1) {
+            result.success(mapOf(
+                "success" to (shizukuOut.third == 0),
+                "stdout" to shizukuOut.first,
+                "stderr" to shizukuOut.second,
+                "exitCode" to shizukuOut.third,
+                "via" to "shizuku"
+            ))
+            return
+        }
+        // Shizuku unavailable / not privileged enough: use the plain shell.
+        shell(command, timeoutSec, result)
+    }
+
     // --- Permissions ---
 
     private fun checkPermissions(result: MethodChannel.Result) {
@@ -791,5 +951,6 @@ class MainActivity : FlutterActivity() {
     companion object {
         private const val SCREEN_CAPTURE_REQUEST = 1001
         private const val REQ_NOTIF = 1002
+        private const val SHIZUKU_PACKAGE = "moe.shizuku.server"
     }
 }

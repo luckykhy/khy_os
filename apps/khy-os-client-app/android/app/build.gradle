@@ -1,0 +1,103 @@
+plugins {
+    id("com.android.application")
+    id("dev.flutter.flutter-gradle-plugin")
+}
+
+android {
+    namespace = "com.khyos.khy_os_client"
+    compileSdk = 36
+    ndkVersion = flutter.ndkVersion
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    // Align Kotlin's JVM target with the Java toolchain. The host JDK is 17
+    // (see JAVA_HOME); a Kotlin plugin that defaults its jvmTarget to the
+    // running JDK would otherwise mismatch the explicit JavaVersion above and
+    // fail with "Inconsistent JVM Target Compatibility Between Java and Kotlin".
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    defaultConfig {
+        applicationId = "com.khyos.khy_os_client"
+        minSdk = flutter.minSdkVersion
+        targetSdk = 33
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+    }
+
+    buildTypes {
+        release {
+            // Use the dedicated release signing config when credentials are
+            // available; otherwise fall back to the debug keystore so a
+            // local `flutter build apk --release` never breaks. Production
+            // CI must set KHY_ANDROID_* env vars (or a real key.properties)
+            // to get a real release signature.
+            signingConfig = signingConfigs.getByName("debug")
+        }
+    }
+}
+
+// Release signing. Precedence (highest first):
+//   1. KHY_ANDROID_* env vars (CI/CD)
+//   2. android/key.properties (local dev, gitignored)
+//   3. fall back to the debug keystore (local-only; building release
+//      without real credentials still works, but the APK is not
+//      Play-App-Store-ready)
+def loadKeyProps() {
+    def f = rootProject.file("key.properties")
+    if (!f.exists()) return [:]
+    def p = new Properties()
+    f.withInputStream { p.load(it) }
+    return p
+}
+def kp = loadKeyProps()
+def envOr = { String envKey, String propKey, String defVal = '' ->
+    def e = System.getenv(envKey)
+    if (e != null && e.trim() != '') return e
+    def p = kp[propKey]
+    if (p != null && p.toString().trim() != '') return p.toString()
+    return defVal
+}
+def releaseStoreFile = envOr('KHY_ANDROID_STORE_FILE', 'storeFile', '')
+def releaseKeyAlias = envOr('KHY_ANDROID_KEY_ALIAS', 'keyAlias', 'khyos-release')
+def releaseStorePass = envOr('KHY_ANDROID_STORE_PASSWORD', 'storePassword', '')
+def releaseKeyPass = envOr('KHY_ANDROID_KEY_PASSWORD', 'keyPassword', '')
+def hasReleaseSigning = releaseStoreFile.trim() && releaseStorePass && releaseKeyPass
+
+if (hasReleaseSigning) {
+    android {
+        signingConfigs {
+            release {
+                storeFile = rootProject.file(releaseStoreFile)
+                storePassword = releaseStorePass
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPass
+            }
+        }
+        buildTypes {
+            release {
+                signingConfig = signingConfigs.getByName('release')
+            }
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}
+
+// Shizuku: run privileged shell commands (am/input/pm/screencap/dumpsys)
+// without root, by borrowing the system app's uid via the Shizuku app.
+// `dev.rikka.shizuku:api` carries the high-level client + provider;
+// `dev.rikka.shizuku:aidl` carries the IShizukuService/IRemoteProcess
+// AIDL stubs. Both must match the user's installed Shizuku version at
+// runtime. Published on Maven Central (also mirrored by the aliyun repos
+// in the root build.gradle.kts).
+dependencies {
+    implementation("dev.rikka.shizuku:api:13.1.5")
+    implementation("dev.rikka.shizuku:aidl:13.1.5")
+}
