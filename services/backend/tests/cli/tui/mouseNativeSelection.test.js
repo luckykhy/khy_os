@@ -91,6 +91,16 @@ test('R5/R6 Alt / Ctrl + 左键同样放行(修饰键统一是「绕过本程序
   assert.equal(createMouseDispatcher({ motionThrottleMs: 0 }).onInput('[<16;1;1M', ctx), false, 'ctrl(16)');
 });
 
+// ── R7/R8:滚轮必须**仍被吞**(§0.9.3 备屏不可交还)────────────────────────────
+test('R7/R8 滚轮与 Shift+滚轮都必须仍被吞 —— 且走 onWheel,不被修饰键放行误伤', () => {
+  const { ctx } = makeCtx();
+  const seen = [];
+  const d = createMouseDispatcher({ motionThrottleMs: 0, onWheel: (dir) => seen.push(dir) });
+  assert.equal(d.onInput('[<64;1;1M', ctx), true, '滚轮上:备屏下必须接管,否则被合成 ↑');
+  assert.equal(d.onInput('[<68;1;1M', ctx), true, 'Shift+滚轮上:终端语义是横向滚动,不是「要拖选」');
+  assert.deepEqual(seen, ['up', 'up'], 'Shift+滚轮也必须喂给 onWheel,不能被修饰键放行抢走');
+});
+
 // ── R9:命中按钮 → 吞 + 触发(click 档存在的唯一理由)────────────────────────
 test('R9 按钮上按下+松开仍被吞且触发 onClick(收窄不能收窄到闸门失效)', () => {
   const { ctx, clicks } = makeCtx();

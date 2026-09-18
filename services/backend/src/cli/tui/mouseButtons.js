@@ -162,18 +162,41 @@ function autoDetectTerminal(env = process.env) {
     if (term.includes(t)) return true;
   }
 
-  return true; // 默认开启（现代终端大概率支持）
+  // DESIGN-ARCH-102 §6.2 / P6: 未知终端不接管 —— 只有**明确识别**为支持 SGR 的
+  // 终端才默认开 click 档;兜底 false 保住原生滚轮/拖选,用户仍可用 KHY_MOUSE=click
+  // 或 KHY_MOUSE_BUTTONS=1 显式接管。
+  return false;
+}
+
+/**
+ * 三档鼠标策略(DESIGN-ARCH-102 §6.2,取代旧的「全开/全关」布尔):
+ *   off   —— 完全不接管(原生滚轮+拖选保留)
+ *   click —— 只开 1000+1006(按下/松开,不报位移);滚轮事件一律 fireNative()
+ *   full  —— 额外开 1003 悬停高亮(事件洪流,明确 opt-in)
+ * KHY_MOUSE_BUTTONS / KHY_MOUSE_HOVER 保留为显式覆盖(旧 env 优先),否则由档位决定。
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {'off'|'click'|'full'}
+ */
+function mouseTier(env = process.env) {
+  const v = String((env && env.KHY_MOUSE) || '').trim().toLowerCase();
+  if (v === 'off' || v === '0' || v === 'no') return 'off';
+  if (v === 'full') return 'full';
+  if (v === 'click' || v === '1' || v === 'on' || v === 'yes' || v === '') return 'click';
+  return 'click';
 }
 
 function mouseButtonsEnabled(env = process.env, _platform = process.platform) {
   const v = String((env && env.KHY_MOUSE_BUTTONS) || '').trim().toLowerCase();
   if (v === '1' || v === 'true' || v === 'on' || v === 'yes') return true;
   if (v === '0' || v === 'false' || v === 'off' || v === 'no') return false;
+  // 三档 + 未知终端不接管的组合语义:click/full 档默认接管,但仅当终端被**识别**;
+  // off 档恒不接管。
+  if (mouseTier(env) === 'off') return false;
   return autoDetectTerminal(env);
 }
 
 /**
- * 悬停追踪(1003)门控:默认关，显式开启后生效；未设置时 auto-detect。
+ * 悬停追踪(1003)门控:仅 full 档默认开;显式 env 可独立覆盖。
  * @param {NodeJS.ProcessEnv} [env]
  * @returns {boolean}
  */
@@ -181,29 +204,73 @@ function mouseHoverEnabled(env = process.env) {
   const v = String((env && env.KHY_MOUSE_HOVER) || '').trim().toLowerCase();
   if (v === '1' || v === 'true' || v === 'on' || v === 'yes') return true;
   if (v === '0' || v === 'false' || v === 'off' || v === 'no') return false;
-  return false; // hover 默认关（事件洪流），auto-detect 不适用
+  return mouseTier(env) === 'full';
+}
+
+/**
+ * 滚轮方向(纯叶子):SGR 按钮 64=上 / 65=下,修饰位 shift(4)/meta(8)/ctrl(16)
+ * 直接加在低位,故先 `& ~28` 剥掉再比对。非滚轮 → null。
+ * @param {number} button SGR 按钮码
+ * @returns {'up'|'down'|null}
+ */
+function wheelDirection(button) {
+  const base = Number(button) & ~28;
+  if (base === 64) return 'up';
+  if (base === 65) return 'down';
+  return null;
+}
+
+/**
+ * 用户是否**显式**关掉了鼠标层(`KHY_MOUSE=off` / `KHY_MOUSE_BUTTONS=0`)。
+ * 与 `mouseButtonsEnabled` 的区别:那个是「自动检测后的结论」,本函数只看用户有没有
+ * 明确表态 —— 备用缓冲区里要强制接管滚轮时,只有显式表态才允许否决。
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {boolean}
+ */
+function mouseExplicitlyDisabled(env = process.env) {
+  const tier = String((env && env.KHY_MOUSE) || '')
+    .trim()
+    .toLowerCase();
+  if (tier === 'off' || tier === '0' || tier === 'no') {
+    return true;
+  }
+  const v = String((env && env.KHY_MOUSE_BUTTONS) || '')
+    .trim()
+    .toLowerCase();
+  return v === '0' || v === 'false' || v === 'off' || v === 'no';
 }
 
 /**
  * 启用鼠标追踪的 ANSI 字节。写进 stdout(交给 ink 的 stdout)即可,终端立即生效。
  *
- * 用 **1000(X11 basic)**,与 Claude Code 唯一那处追踪调用同档(见头部)。1000 只报
- * 「按下 / 松开」,一个位移事件都不报 —— 这正是我们要的:点击只需要按下与松开两个
- * 端点,位移是纯负担。
+ * ── 三档追踪模式(互斥,只能开一个)────────────────────────────────────────
+ *   1000  X11 basic        报 按下 / 松开。**不报位移** → 应用内自绘选择收不到拖动
+ *                          轨迹,只能画成「端点跳变」,无法实时跟手。
+ *   1002  button-event     报 按下 / 松开 / **按住时的位移**。应用内自绘选择需要它:
+ *                          选区要随指针实时扩展(见 §4.2.1 「App 内自绘选择」)。
+ *   1003  any-motion       报 一切移动(按住与否),60~120Hz 洪流。只有悬停高亮需要,
+ *                          且必然吃掉原生拖选,故单独门控、默认关。
+ *   1006  坐标编码         与追踪模式**正交**(SGR 扩展坐标),永远都要带上。终端不发
+ *                          1006 时坐标退化成 223 列上限的老式编码,长行选区会错位。
  *
- * 曾经用的是 1002(button-event,按住键时连位移一起报),理由是「有位移事件才能判定
- * 拖拽,从而把拖选透传给终端」。那条推理是反的:1002 报出的位移意味着**按下那一下
- * 已经被本进程吃掉了** —— 终端没收到,原生选择只能从拖到一半的地方接管,选出来的范
- * 围必然是错的,补偿补不回起点。降到 1000 后位移根本不上报,按下/松开落在空白处时
- * dispatcher 什么都不做,终端自己看到完整的一次拖拽,拖选行为完全正常。
+ * ── 为什么 `select` 是「替换」而不是「叠加」──────────────────────────────
+ * 1000 与 1002 是**同一能力的不同档位**,终端按「最后一条生效的 DECSET」解释,叠加写
+ * 只会在不同终端上产生不确定行为(有的终端 1002 覆盖 1000,有的两个都置位后按 1000 报)。
+ * 所以 `select=true` 时**只写 1002h**:它向下兼容 1000 的全部事件(按下/松开照报),
+ * 又多了位移。`select=false` 时维持 1000h —— 点击层不需要位移,多报只是负担。
  *
- * 1006 是 SGR 坐标编码,与追踪模式正交,两者都要。hover 额外开 1003(任意移动),
- * 那是 60~120Hz 洪流且必然吞掉拖选,故单独门控、默认关。
- * @param {{hover?: boolean}} [opts]
+ * 这个参数的存在本身就修正了一条历史错误推理(见头部 ⚠):曾经认为「1002 报位移意味着
+ * 按下已被吃掉、所以必须降到 1000」。**因果是反的** —— 按下被吃掉是因为 dispatcher
+ * 对 `press` 无条件 `return true`,与开哪一档无关。1000 下 press 照样上报、照样被吃。
+ * 降档只是把「能自绘的位移信息」一起删掉了,问题一点没解决。
+ *
+ * @param {{hover?: boolean, select?: boolean}} [opts]
+ *        hover  额外开 1003(悬停高亮,代价是吃掉原生拖选)
+ *        select 用 1002 替换 1000(应用内自绘选择必须;未开选择时保持 1000)
  * @returns {string}
  */
-function enableBytes({ hover = false } = {}) {
-  let out = '\x1b[?1000h\x1b[?1006h';
+function enableBytes({ hover = false, select = false } = {}) {
+  let out = select ? '\x1b[?1002h\x1b[?1006h' : '\x1b[?1000h\x1b[?1006h';
   if (hover) {
     out += '\x1b[?1003h';
   }
@@ -339,21 +406,38 @@ function hitTest(layout, col, row, offset) {
  * 语义对齐 opencode:在**松开**(onMouseUp)触发点击(命中松开点);
  * 悬停开时在位移事件上做 onMouseOver/onMouseOut 高亮状态机。
  *
- * ── 滚轮透传 ────────────────────────────────────────────────────────────────
- * xterm 追踪会吞掉原生滚轮。dispatcher 只做两件事:
+ * ── 滚轮 ────────────────────────────────────────────────────────────────────
+ * xterm 追踪会吞掉原生滚轮。dispatcher 做三件事:
  *   - 按下命中按钮(pendingClick)→ 等待松开触发 onClick(拖出按钮则取消);
- *   - 滚轮事件(64/65)→ 调 onNative() 临时关追踪,让终端原生滚动接管。
- * onNative 由调用方(App.js)实现:写 disableBytes + 空闲后恢复 enableBytes。
+ *   - 滚轮事件(64/65)→ 调 `onWheel('up'|'down')`,由 App 转成应用内视口滚动
+ *     (备用缓冲区里没有回滚缓冲,交还终端只会换来合成的 ↑/↓,见上「滚轮」一节);
+ *   - onWheel 未接线 → 回退 `onNative()` 临时关追踪,让终端原生滚动接管。
  *
  * **拖选不需要补偿**:1000 不报位移,按下/松开落在空白处时下面什么都不做,终端自己
  * 看到完整的一次拖拽。历史上这里有一条 `pendingSelect` 分支试图把拖选透传给终端,
  * 它在真实终端里一次都没触发过 —— 1002 才报位移,而当初选 1002 的理由恰恰是「为了
  * 喂它」,是个循环论证。已随降档一并删除。
- * @param {{hover?: boolean, motionThrottleMs?: number, onNative?: function}} [opts]
+ * ── 滚轮:应用内滚动(不再交还终端)────────────────────────────────────────────
+ * 历史上滚轮事件只做一件事:`fireNative()` 临时关追踪,把滚动交还给终端原生
+ * scrollback。这在**主屏幕**成立,在**备用缓冲区**里是错的 —— 备屏没有回滚缓冲,
+ * 终端(Windows Terminal / xterm 的 alternate-scroll)于是把滚轮**合成 ↑/↓ 键**
+ * 送进来,而本仓 arrowRouting 把 ↑/↓ 无条件绑到 `history:previous/next` →
+ * 用户滚一下滚轮,输入框里的历史记录被召回。这就是「滚轮变成回溯历史」的根因。
+ *
+ * 现在滚轮走 `onWheel(dir)`:由 App 转成 `scroll:lineUp/lineDown` 喂给**应用内**
+ * 视口(Viewport)。终端一个字节都收不到,也就无从合成方向键。onWheel 缺失(旧调用点)
+ * 才回退 `fireNative()`,保持向后兼容。
+ * @param {{hover?: boolean, motionThrottleMs?: number, onNative?: function, onWheel?: function}} [opts]
  *        motionThrottleMs=0 关闭位移节流(测试用;运行时默认 30ms 防高频命中测试)。
+ *        onWheel(dir, ev) 收到 'up'|'down' —— 提供了就不再走原生透传。
  * @returns {{onInput:function, reset:function}}
  */
-function createMouseDispatcher({ hover = true, motionThrottleMs = 30, onNative } = {}) {
+function createMouseDispatcher({
+  hover = true,
+  motionThrottleMs = 30,
+  onNative,
+  onWheel,
+} = {}) {
   let hoverNode = null;
   let lastMoveAt = 0;
   let pendingClick = false; // 按下落在按钮上 → 等待松开触发点击
@@ -395,10 +479,22 @@ function createMouseDispatcher({ hover = true, motionThrottleMs = 30, onNative }
       const layout = getLayout(ctx.rootNode, ctx.cacheKey);
       const offset = screenOffset(layout.height, ctx);
 
-      // Wheel events: never treated as clicks — hand to the native passthrough
-      // (tracking off → terminal's own scrollback scrolling resumes).
+      // Wheel events are never clicks. Preferred path: hand the direction to the
+      // in-app viewport (onWheel). The native passthrough is only a fallback for
+      // callers that did not wire onWheel — inside the alternate screen it is
+      // actively harmful (no scrollback → the terminal synthesizes ↑/↓ → the app
+      // reads that as input-history recall).
       if (ev.isWheel) {
-        fireNative();
+        const dir = wheelDirection(ev.button);
+        if (typeof onWheel === 'function' && dir) {
+          try {
+            onWheel(dir, ev);
+          } catch {
+            /* fail-soft — a scroll handler must never kill the input path */
+          }
+        } else {
+          fireNative();
+        }
         return true;
       }
 
@@ -528,8 +624,11 @@ module.exports = {
   isMouseSequence,
   parseSgrMouse,
   autoDetectTerminal,
+  mouseTier,
   mouseButtonsEnabled,
   mouseHoverEnabled,
+  mouseExplicitlyDisabled,
+  wheelDirection,
   enableBytes,
   disableBytes,
   collectLayout,
