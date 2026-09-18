@@ -2686,6 +2686,51 @@ const FLAGS = {
   // shouldContinue 恒 false → 逐字节回退历史「尾部 \ 直接提交」行为。
   KHY_BACKSLASH_NEWLINE: { mode: 'default-on', off: 'CANON', default: true },
 
+  // ── 终端鼠标层与备用缓冲区(TUI 原生拖选/滚轮可用性;三档 + 独立覆写)────────────────
+  // 为什么必须登记(2026-09-17,[DESIGN-ARCH-119]):这些 flag 此前**只存在于代码里**,
+  // 483 个已登记 flag 中一个都没有。后果是用户遇到「拖选选不中」时,唯一退路
+  // `KHY_MOUSE=off` 无从发现 —— 而这恰恰是当时唯一能自解的办法。登记本身即是修复的
+  // 一部分:一个没有出口的开关等于不存在。
+  //
+  //   KHY_MOUSE        三档主开关:off(完全不接管,原生滚轮+拖选全保留)/
+  //                    click(默认:接管滚轮与按钮,press/release 按命中条件性放行,
+  //                    拖选不受影响)/ full(额外开 1003 悬停高亮,**必然**吞掉拖选)。
+  //                    未识别终端由 autoDetectTerminal 兜底不接管。
+  //   KHY_MOUSE_BUTTONS 旧版布尔覆写(**优先于 KHY_MOUSE 档位**):1/true/on/yes 强制
+  //                    开点击层;0/false/off/no 强制关(等价 off 档)。保留为兼容入口。
+  //   KHY_MOUSE_HOVER  悬停追踪(1003)独立门控:仅 full 档默认开,显式可覆写。
+  //                    1003 是 60~120Hz 事件洪流,且**必然**吞掉拖选 —— 只在明确需要
+  //                    悬停高亮时开。
+  //   KHY_MOUSE_WHEEL  滚轮路由:默认开 → 滚轮驱动应用内视口(onWheel)。显式 0 → 回退
+  //                    「交还终端原生滚动」。⚠ 只在主屏幕下有意义;备用缓冲区没有回滚
+  //                    缓冲,交还终端会被合成为 ↑/↓ → 变成输入历史回溯(§0.9.3)。
+  //   KHY_ALT_SCREEN   备用缓冲区(1049h):legacy 模式默认开(退出时恢复原终端内容,
+  //                    防残影);CC 模式(KHY_CC_TUI=1)默认关,让原生回滚正常工作。
+  //                    开 → 强制接管滚轮(见 KHY_MOUSE_WHEEL 的备屏注意事项)。
+  KHY_MOUSE: { mode: 'opt-in', default: false },
+  KHY_MOUSE_BUTTONS: { mode: 'opt-in', default: false, parent: 'KHY_MOUSE' },
+  KHY_MOUSE_HOVER: { mode: 'opt-in', default: false, parent: 'KHY_MOUSE' },
+  KHY_MOUSE_WHEEL: { mode: 'default-on', off: 'CANON', default: true },
+  KHY_ALT_SCREEN: { mode: 'default-on', off: 'CANON', default: true },
+
+  // ── 应用内自绘文本选择([DESIGN-ARCH-119] §4.2 第二层)───────────────────────────
+  // 背景:鼠标追踪一旦开启,事件就被 ink 从 stdin 读走,而 `use-input.js:112-114` 把
+  // handler 返回值直接丢弃 —— `return false` 物理上回不到终端。所以「把拖选还给终端」
+  // 这条路不存在,只能在**本进程内**完成:开 1002 收位移 → 反色画选区 → 松手自己写
+  // 剪贴板。用户报的「无法选中复制」就是这条链路缺失。
+  //
+  //   KHY_SELECT       总闸,**默认开**。开 → 接管拖选(1002 替换 1000)、画反色、
+  //                    松手复制。关 → 逐字节回到旧行为(不开 1002、不画、不复制),
+  //                    给「我的终端原生拖选本来就正常」的用户留出口。
+  //                    注意:开它意味着**替换**终端原生拖选(1002 吃掉 press 起点),
+  //                    这是为「备屏下原生拖选本就被追踪吃掉」付出的对称代价。
+  //   KHY_SELECT_CLIP  松手自动写剪贴板(默认开)。关 → 能选中能看但不自动复制
+  //                    (仍可走既有 Ctrl+C 路径)。用于「不想让程序碰剪贴板」的场景。
+  //   KHY_SELECT_DRAG  1002 拖动位移追踪(默认开)。关 → 只认按下/松开两点式选择,
+  //                    不跟手。**诊断用**:用来区分「1002 没收到位移」与「选区模型算错」。
+  KHY_SELECT: { mode: 'default-on', off: 'CANON', default: true },
+  KHY_SELECT_CLIP: { mode: 'default-on', off: 'CANON', default: true },
+  KHY_SELECT_DRAG: { mode: 'default-on', off: 'CANON', default: true },
   // ── 键盘快捷键对齐 Claude Code:Ctrl+R 反向增量历史搜索(historyReverseSearch)──────────
   // Ctrl+R 打开反向增量历史搜索浮层,复用既有 ~/.khyquant_history 持久化 + session 历史;纯叶子
   // 只做「query → 命中(新→旧序)」搜索计算,IO/渲染留 App.js 薄壳与 HistorySearchOverlay。关 →
