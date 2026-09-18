@@ -103,7 +103,7 @@ void main() {
       expect(await DeviceControl.searchApps('x'), isEmpty);
     });
 
-    test('findApp falls back to first app when no match', () async {
+    test('findApp returns null when no confident match (no random fallback)', () async {
       mockChannel((_) => {
         'success': true,
         'apps': [
@@ -111,14 +111,55 @@ void main() {
         ],
       });
       final found = await DeviceControl.findApp('completely unrelated');
-      expect(found, isNotNull);
-      expect(found!.label, 'Some App');
+      expect(found, isNull);
     });
 
-    test('findApp returns null when searchApps empty', () async {
-      mockChannel((_) => {'success': true, 'apps': <Object?>[]});
-      final found = await DeviceControl.findApp('anything');
+    test('findApp matches installed semantic app by Chinese label', () async {
+      mockChannel((call) {
+        switch (call.method) {
+          case 'listApps':
+            return {
+              'success': true,
+              'apps': [
+                {'label': '微信', 'package': 'com.tencent.mm'},
+                {'label': 'Other', 'package': 'com.example.other'},
+              ],
+            };
+          case 'searchApps':
+            return {'success': true, 'apps': <Object?>[]};
+          default:
+            return <Object?>{};
+        }
+      });
+      final found = await DeviceControl.findApp('微信');
+      expect(found, isNotNull);
+      expect(found!.packageName, 'com.tencent.mm');
+    });
+
+    test('findApp returns null for semantic app that is not installed', () async {
+      mockChannel((call) {
+        switch (call.method) {
+          case 'listApps':
+            return {
+              'success': true,
+              'apps': [
+                {'label': 'Other', 'package': 'com.example.other'},
+              ],
+            };
+          case 'searchApps':
+            return {'success': true, 'apps': <Object?>[]};
+          default:
+            return <Object?>{};
+        }
+      });
+      final found = await DeviceControl.findApp('微信');
       expect(found, isNull);
+    });
+
+    test('findApp empty query returns null', () async {
+      mockChannel((_) => {'success': true, 'apps': <Object?>[]});
+      expect(await DeviceControl.findApp(''), isNull);
+      expect(await DeviceControl.findApp('  '), isNull);
     });
   });
 

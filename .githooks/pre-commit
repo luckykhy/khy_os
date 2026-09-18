@@ -1,0 +1,103 @@
+#!/bin/bash
+# .githooks/pre-commit
+# 
+# Git pre-commit hook
+# 检查：
+# 1. 无 tmp-* 临时文件
+# 2. 无大文件（>10MB）
+# 3. 无敏感信息
+# 4. 规则执行器 commit 快档（[DESIGN-ARCH-111]：只跑支持 --changed 的执行器）
+# 5. Commit message 格式正确
+
+set -e
+
+# 获取仓库根目录
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+echo "🔍 Pre-commit 检查...\n"
+
+# 1. 检查是否有 tmp-* 文件
+echo "📋 检查临时文件..."
+TEMP_FILES=$(git diff --cached --name-only | grep -E "^tmp-|^.*\.tmp$" || true)
+if [ -n "$TEMP_FILES" ]; then
+  echo "❌ 错误：检测到临时文件："
+  echo "$TEMP_FILES"
+  echo ""
+  echo "请先清理这些文件："
+  echo "  git reset HEAD <file>"
+  echo "  rm <file>"
+  exit 1
+fi
+echo "  ✅ 无临时文件\n"
+
+# 2. 检查是否有大文件（>10MB）
+echo "📏 检查大文件..."
+LARGE_FILES=""
+for file in $(git diff --cached --name-only); do
+  if [ -f "$file" ]; then
+    # 跨平台获取文件大小
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      SIZE=$(stat -f%z "$file" 2>/dev/null || echo 0)
+    else
+      SIZE=$(stat -c%s "$file" 2>/dev/null || echo 0)
+    fi
+    
+    if [ "$SIZE" -gt 10485760 ]; then
+      LARGE_FILES="$LARGE_FILES$file ($(echo "scale=2; $SIZE/1048576" | bc)MB)\n"
+    fi
+  fi
+done
+
+if [ -n "$LARGE_FILES" ]; then
+  echo "❌ 错误：检测到大文件（>10MB）："
+  echo -e "$LARGE_FILES"
+  echo "请使用 Git LFS 或移至外部存储"
+  exit 1
+fi
+echo "  ✅ 无大文件\n"
+
+# 3. 检查是否有敏感信息
+echo "🔒 检查敏感信息..."
+SENSITIVE_PATTERNS="sk-[a-z0-9]{16,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{20,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----"
+FOUND_SECRETS=$(git diff --cached -U0 | grep -iE "$SENSITIVE_PATTERNS" || true)
+if [ -n "$FOUND_SECRETS" ]; then
+  echo "❌ 错误：检测到可能的密钥泄露："
+  echo "$FOUND_SECRETS" | head -5
+  echo ""
+  echo "请确保密钥未被提交："
+  echo "  git reset HEAD <file>"
+  echo "  将密钥移至 .env 文件"
+  exit 1
+fi
+echo "  ✅ 无敏感信息\n"
+
+# 4. 规则执行器 commit 快档（[DESIGN-ARCH-111]）
+#    门成员资格从 docs/_规范/RULES-REGISTRY.json 派生，不在此硬编码。
+#    commit 档只跑 gate=commit 且声明了 --changed 的执行器（秒级），
+#    全仓库检查留给 PR 门（npm run rules:gate）。
+#    违规留痕在 .khy/ruleguard/violations.jsonl；抑制用
+#    `// khy-allow-<RULE-ID>: 理由`，必须带理由且只作用于所在行。
+echo "📐 规则检查（commit 快档）..."
+# check-change-safety 的基线限定：默认 HEAD 即「只统计本次暂存内容」
+# （git diff HEAD...HEAD 为空，执行器 fall through 到 --cached 分支）。
+# 若需按远端基线统计全部未提交改动，设 KHY_RULEGUARD_BASE=origin/main。
+export GIT_BASE_REF="${KHY_RULEGUARD_BASE:-HEAD}"
+if ! node "$ROOT/scripts/ruleguard/index.js" run --mode commit --no-ledger; then
+  echo ""
+  echo "❌ 规则检查未通过。修复后重新提交，或先查看："
+  echo "  npm run rules:manifest   # 看每条规则的执行器与归类"
+  echo "  npm run rules:apply -- <文件路径>   # 看某文件适用哪些规则"
+  exit 1
+fi
+echo "  ✅ commit 快档通过\n"
+
+# 5. 检查 commit message 格式
+echo "📝 检查 commit message..."
+COMMIT_MSG_FILE="$ROOT/.git/COMMIT_EDITMSG"
+if [ -f "$COMMIT_MSG_FILE" ]; then
+  node "$ROOT/scripts/ci/check-commit-message.js" "$COMMIT_MSG_FILE"
+  echo ""
+fi
+
+echo "✅ Pre-commit 检查通过\n"

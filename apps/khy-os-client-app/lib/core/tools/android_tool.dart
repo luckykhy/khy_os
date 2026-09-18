@@ -199,9 +199,10 @@ Future<ToolResult> _cmdFile(String action, Map<String, dynamic> args) async {
     case '':
       final r = await FileService.listFiles(path);
       if (r['success'] == true) {
-        final files = (r['files'] as List).cast<Map<String, dynamic>>();
+        final rawFiles = (r['files'] as List? ?? []).cast<Map>();
+        final files = rawFiles.map((f) => f.map((k, v) => MapEntry(k.toString(), v))).toList();
         if (files.isEmpty) return ToolResult.ok('empty dir: $path');
-        return ToolResult.ok(files.map((f) => '${f['isDir']==true ? "D" : "F"} ${f['name']}').join('\n'));
+        return ToolResult.ok(files.map((f) => '${f['isDir'] == true ? "D" : "F"} ${f['name']}').join('\n'));
       }
       return ToolResult.fail(r['error']?.toString() ?? 'list failed');
     case 'mkdir':

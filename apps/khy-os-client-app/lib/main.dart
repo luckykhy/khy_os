@@ -5,6 +5,7 @@ import 'ui/screens/chat_screen_new.dart';
 import 'ui/screens/skills_screen_new.dart';
 import 'ui/screens/device_screen_new.dart';
 import 'ui/screens/settings_screen_new.dart';
+import 'ui/screens/trading_panel_screen.dart';
 import 'core/gateway/khyos_api.dart';
 import 'core/services/app_logger.dart';
 
@@ -45,15 +46,17 @@ class _KhyOsHomeState extends ConsumerState<KhyOsHome> {
   final KhyOsApi _api = KhyOsApi();
   bool _isLoading = true;
 
-  static const _tabTitles = ['AI', '技能', '设备', '设置'];
+  static const _tabTitles = ['AI', '交易', '技能', '设备', '设置'];
   static const _tabIcons = [
     Icons.chat_bubble_outline,
+    Icons.candlestick_chart_outlined,
     Icons.bolt_outlined,
     Icons.devices_outlined,
     Icons.settings_outlined,
   ];
   static const _tabSelectedIcons = [
     Icons.chat_bubble,
+    Icons.candlestick_chart,
     Icons.bolt,
     Icons.devices,
     Icons.settings,
@@ -108,6 +111,10 @@ class _KhyOsHomeState extends ConsumerState<KhyOsHome> {
 
     final screens = [
       ChatScreenNew(api: _api),
+      TradingPanelScreen(
+        connection: _api.connection,
+        connectionStream: _api.connectionStream,
+      ),
       SkillsScreenNew(),
       DeviceScreenNew(),
       SettingsScreenNew(),
@@ -122,7 +129,7 @@ class _KhyOsHomeState extends ConsumerState<KhyOsHome> {
         selectedIndex: _tabIndex,
         onDestinationSelected: (i) => setState(() => _tabIndex = i),
         destinations: [
-          for (var i = 0; i < 4; i++)
+          for (var i = 0; i < 5; i++)
             NavigationDestination(
               icon: Icon(_tabIcons[i]),
               selectedIcon: Icon(_tabSelectedIcons[i]),

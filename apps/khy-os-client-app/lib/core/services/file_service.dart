@@ -1,5 +1,13 @@
 import 'package:flutter/services.dart';
 
+/// Result shape returned by [FileService] methods.
+typedef FileResult = Map<String, dynamic>;
+
+/// Coerce a raw MethodChannel map (Object?, Object?) into a String-keyed map
+/// so callers can safely index with string keys and cast element types.
+FileResult _mapResult(Map raw) =>
+    raw.map((key, value) => MapEntry(key.toString(), value));
+
 /// File system operations within the app's working directory.
 /// All paths are relative to the app's external files dir.
 class FileService {
@@ -9,7 +17,7 @@ class FileService {
   static Future<Map<String, dynamic>> getWorkDir() async {
     try {
       final result = await _channel.invokeMethod('getWorkDir');
-      return Map<String, dynamic>.from(result as Map);
+      return _mapResult(result as Map);
     } catch (_) {
       return {'path': '', 'exists': false};
     }
@@ -19,7 +27,7 @@ class FileService {
   static Future<Map<String, dynamic>> listFiles(String path) async {
     try {
       final result = await _channel.invokeMethod('fileList', {'path': path});
-      return Map<String, dynamic>.from(result as Map);
+      return _mapResult(result as Map);
     } catch (_) {
       return {'success': false, 'error': 'channel error'};
     }
@@ -29,7 +37,7 @@ class FileService {
   static Future<Map<String, dynamic>> readFile(String path) async {
     try {
       final result = await _channel.invokeMethod('fileRead', {'path': path});
-      return Map<String, dynamic>.from(result as Map);
+      return _mapResult(result as Map);
     } catch (_) {
       return {'success': false, 'error': 'channel error'};
     }
@@ -42,7 +50,7 @@ class FileService {
         'path': path,
         'content': content,
       });
-      return Map<String, dynamic>.from(result as Map);
+      return _mapResult(result as Map);
     } catch (_) {
       return {'success': false, 'error': 'channel error'};
     }
@@ -52,7 +60,7 @@ class FileService {
   static Future<Map<String, dynamic>> createDir(String path) async {
     try {
       final result = await _channel.invokeMethod('fileCreateDir', {'path': path});
-      return Map<String, dynamic>.from(result as Map);
+      return _mapResult(result as Map);
     } catch (_) {
       return {'success': false, 'error': 'channel error'};
     }
@@ -72,7 +80,7 @@ class FileService {
         'newText': newText,
         'replaceAll': replaceAll,
       });
-      return Map<String, dynamic>.from(result as Map);
+      return _mapResult(result as Map);
     } catch (_) {
       return {'success': false, 'error': 'channel error'};
     }
@@ -90,7 +98,7 @@ class FileService {
         'pattern': pattern,
         'maxResults': maxResults,
       });
-      return Map<String, dynamic>.from(result as Map);
+      return _mapResult(result as Map);
     } catch (_) {
       return {'success': false, 'error': 'channel error'};
     }
@@ -110,7 +118,7 @@ class FileService {
         'filePattern': filePattern,
         'maxResults': maxResults,
       });
-      return Map<String, dynamic>.from(result as Map);
+      return _mapResult(result as Map);
     } catch (_) {
       return {'success': false, 'error': 'channel error'};
     }
