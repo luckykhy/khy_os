@@ -50,9 +50,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 'lts/*'
 
@@ -70,7 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # 官方安装脚本，不钉版本（跟随当前稳定版）。
       # 它把工具链装到 ~/.moon/bin，需要显式加进 PATH 才能被后续步骤看到。
@@ -119,7 +119,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # 内核需要 nasm + gcc + ld。不装 grub-mkrescue / xorriso：
       # 默认目标 `all` 会去做 ISO，而我们只需要验证内核二进制能链出来，
@@ -147,7 +147,7 @@ jobs:
         run: make -C kernel SHELL=/bin/bash MOONBIT_PREBUILT=1 check
 
       - name: Upload kernel binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: khy-os-kernel-bin
